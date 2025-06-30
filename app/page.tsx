@@ -1,13 +1,18 @@
 // app/page.tsx
 import { getAllRows, addRow } from "./actions";
 
+// 型定義を追加
+type SampleRow = {
+  id: number;
+  value: string;
+};
+
 export default async function Home() {
-  const rows = await getAllRows();
+  const rows = (await getAllRows()) as unknown as SampleRow[];
 
   return (
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>Turso Sample</h1>
-
       <form
         action={async (formData) => {
           "use server";
@@ -27,7 +32,7 @@ export default async function Home() {
 
       <h2 style={{ marginTop: "2rem" }}>データ一覧</h2>
       <ul>
-        {rows.map((row: any) => (
+        {rows.map((row) => (
           <li key={row.id}>
             #{row.id}: {row.value}
           </li>
