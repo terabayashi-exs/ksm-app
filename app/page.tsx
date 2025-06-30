@@ -19,13 +19,13 @@ export default async function Home() {
         <input
           type="text"
           name="value"
-          placeholder="V‚µ‚¢’l‚ğ“ü—Í"
+          placeholder="æ–°ã—ã„å€¤ã‚’å…¥åŠ›"
           style={{ marginRight: "1rem", padding: "0.5rem" }}
         />
-        <button type="submit">’Ç‰Á</button>
+        <button type="submit">è¿½åŠ </button>
       </form>
 
-      <h2 style={{ marginTop: "2rem" }}>ƒf[ƒ^ˆê——</h2>
+      <h2 style={{ marginTop: "2rem" }}>ãƒ‡ãƒ¼ã‚¿ä¸€è¦§</h2>
       <ul>
         {rows.map((row: any) => (
           <li key={row.id}>

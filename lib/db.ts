@@ -2,7 +2,7 @@
 
 import { createClient } from "@libsql/client";
 
-// Turso ‚ÌÚ‘±î•ñ‚ğ .env.local ‚©‚ç“Ç‚İ‚ñ‚ÅƒNƒ‰ƒCƒAƒ“ƒg‚ğ¶¬
+// Turso ã®æ¥ç¶šæƒ…å ±ã‚’ .env.local ã‹ã‚‰èª­ã¿è¾¼ã‚“ã§ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã‚’ç”Ÿæˆ
 export const db = createClient({
   url: process.env.DATABASE_URL!,
   authToken: process.env.DATABASE_AUTH_TOKEN,

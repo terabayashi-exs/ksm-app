@@ -2,13 +2,13 @@
 
 import { db } from "@/lib/db";
 
-// ƒf[ƒ^‚ğæ“¾‚·‚é Server Action
+// ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—ã™ã‚‹ Server Action
 export async function getAllRows() {
   const result = await db.execute("SELECT * FROM sample_data;");
   return result.rows;
 }
 
-// ƒf[ƒ^‚ğ’Ç‰Á‚·‚é Server Action
+// ãƒ‡ãƒ¼ã‚¿ã‚’è¿½åŠ ã™ã‚‹ Server Action
 export async function addRow(value: string) {
   await db.execute({
     sql: "INSERT INTO sample_data (value) VALUES (?)",
