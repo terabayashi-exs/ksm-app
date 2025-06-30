@@ -24,7 +24,7 @@ export default async function Home() {
         <input
           type="text"
           name="value"
-          placeholder="新しい値を入力"
+          placeholder="新しい値を入力して下さい"
           style={{ marginRight: "1rem", padding: "0.5rem" }}
         />
         <button type="submit">追加</button>
