@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { db } from "../lib/db";
 
 // データを取得する Server Action
 export async function getAllRows() {
