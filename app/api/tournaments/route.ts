@@ -59,8 +59,11 @@ export async function POST(request: NextRequest) {
         walkover_winner_goals,
         walkover_loser_goals,
         status,
-        visibility
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?)
+        visibility,
+        public_start_date,
+        recruitment_start_date,
+        recruitment_end_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?)
     `, [
       data.tournament_name,
       data.format_id,
@@ -75,14 +78,18 @@ export async function POST(request: NextRequest) {
       data.loss_points,
       data.walkover_winner_goals,
       data.walkover_loser_goals,
-      data.is_public ? 'open' : 'preparing'
+      data.is_public ? 'open' : 'preparing',
+      data.public_start_date,
+      data.recruitment_start_date,
+      data.recruitment_end_date
     ]);
 
     const tournamentId = result.lastInsertRowid;
 
     // テンプレートからマッチブロックとマッチを生成（スケジュール計算付き）
     try {
-      const customSchedule = (body as any).customSchedule as Array<{
+      const customSchedule = (body as { customSchedule?: Array<{ match_number: number; start_time: string; court_number: number; }> }).customSchedule || [];
+      const typedCustomSchedule = customSchedule as Array<{
         match_number: number;
         start_time: string;
         court_number: number;
@@ -94,7 +101,7 @@ export async function POST(request: NextRequest) {
         breakDurationMinutes: data.break_duration_minutes,
         startTime: '09:00',
         tournamentDates: data.tournament_dates
-      }, customSchedule);
+      }, typedCustomSchedule);
       
       // Match generation completed for tournament
     } catch (matchError) {
@@ -513,7 +520,6 @@ async function generateMatchesFromTemplate(
       ]);
     }
 
-    const totalBlocks = preliminaryBlocks.size + (hasFinal ? 1 : 0);
     // Tournament matches and blocks generated successfully
 
   } catch (error) {

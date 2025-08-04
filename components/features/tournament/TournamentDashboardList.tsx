@@ -117,6 +117,12 @@ export default function TournamentDashboardList() {
             <span>{tournament.start_time} - {tournament.end_time}</span>
           </div>
         )}
+        {(!tournament.start_time || !tournament.end_time) && tournament.status === 'planning' && (
+          <div className="flex items-center text-sm text-gray-500">
+            <Clock className="w-4 h-4 mr-2" />
+            <span>試合時刻未設定</span>
+          </div>
+        )}
         <div className="flex items-center text-sm text-gray-600">
           <MapPin className="w-4 h-4 mr-2" />
           <span>{tournament.venue_name || `会場ID: ${tournament.venue_id}`}</span>

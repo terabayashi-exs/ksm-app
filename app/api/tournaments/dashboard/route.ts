@@ -44,7 +44,8 @@ export async function GET() {
         t.created_at DESC
     `);
 
-    const tournaments = result.rows.map(row => {
+    // 各大会の試合時刻データを取得
+    const tournamentsWithTimes = await Promise.all(result.rows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
@@ -59,6 +60,48 @@ export async function GET() {
         } catch (error) {
           console.error('Error parsing tournament_dates:', error);
         }
+      }
+
+      // 大会の実際の試合時刻を取得
+      let startTime = '';
+      let endTime = '';
+      
+      try {
+        const matchTimesResult = await db.execute(`
+          SELECT 
+            MIN(start_time) as earliest_start,
+            MAX(start_time) as latest_start,
+            match_duration_minutes,
+            break_duration_minutes
+          FROM t_matches_live ml
+          JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
+          WHERE mb.tournament_id = ?
+          AND ml.start_time IS NOT NULL
+          AND ml.start_time != ''
+        `, [row.tournament_id]);
+
+        if (matchTimesResult.rows.length > 0 && matchTimesResult.rows[0].earliest_start) {
+          const matchData = matchTimesResult.rows[0];
+          startTime = matchData.earliest_start as string;
+          
+          // 最後の試合開始時刻 + 試合時間で終了時刻を計算
+          if (matchData.latest_start) {
+            const latestStartTime = matchData.latest_start as string;
+            const matchDuration = Number(matchData.match_duration_minutes) || Number(row.match_duration_minutes) || 15;
+            
+            // 時刻を分に変換
+            const [hours, minutes] = latestStartTime.split(':').map(Number);
+            const totalMinutes = hours * 60 + minutes + matchDuration;
+            
+            // 分を時刻に変換
+            const endHours = Math.floor(totalMinutes / 60);
+            const endMinutes = totalMinutes % 60;
+            endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching match times for tournament:', row.tournament_id, error);
       }
       
       return {
@@ -88,21 +131,21 @@ export async function GET() {
         is_public: row.visibility === 'open',
         event_start_date: eventStartDate,
         event_end_date: eventEndDate,
-        start_time: '09:00',
-        end_time: '17:00'
+        start_time: startTime,
+        end_time: endTime
       } as Tournament;
-    });
+    }));
 
     // 募集中と開催中に分類
-    const recruiting = tournaments.filter(t => t.status === 'planning');
-    const ongoing = tournaments.filter(t => t.status === 'ongoing');
+    const recruiting = tournamentsWithTimes.filter(t => t.status === 'planning');
+    const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
 
     return NextResponse.json({
       success: true,
       data: {
         recruiting,
         ongoing,
-        total: tournaments.length
+        total: tournamentsWithTimes.length
       }
     });
 

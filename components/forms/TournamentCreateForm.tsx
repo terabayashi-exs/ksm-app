@@ -656,8 +656,75 @@ export default function TournamentCreateForm() {
             </CardContent>
           </Card>
 
-          {/* 公開設定（非表示・デフォルトで公開） */}
-          <input type="hidden" {...form.register('is_public')} value="true" />
+          {/* 公開・募集設定 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2" />
+                公開・募集設定
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="public_start_date">公開開始日 *</Label>
+                  <Input
+                    id="public_start_date"
+                    type="date"
+                    {...form.register('public_start_date')}
+                    className={form.formState.errors.public_start_date ? 'border-red-500' : ''}
+                  />
+                  {form.formState.errors.public_start_date && (
+                    <p className="text-sm text-red-600">
+                      {form.formState.errors.public_start_date.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recruitment_start_date">募集開始日 *</Label>
+                  <Input
+                    id="recruitment_start_date"
+                    type="date"
+                    {...form.register('recruitment_start_date')}
+                    className={form.formState.errors.recruitment_start_date ? 'border-red-500' : ''}
+                  />
+                  {form.formState.errors.recruitment_start_date && (
+                    <p className="text-sm text-red-600">
+                      {form.formState.errors.recruitment_start_date.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recruitment_end_date">募集終了日 *</Label>
+                  <Input
+                    id="recruitment_end_date"
+                    type="date"
+                    {...form.register('recruitment_end_date')}
+                    className={form.formState.errors.recruitment_end_date ? 'border-red-500' : ''}
+                  />
+                  {form.formState.errors.recruitment_end_date && (
+                    <p className="text-sm text-red-600">
+                      {form.formState.errors.recruitment_end_date.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">日程設定について</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• 公開開始日: 一般ユーザーが大会情報を閲覧できるようになる日</li>
+                  <li>• 募集開始日: チームが大会への参加申込みを開始できる日</li>
+                  <li>• 募集終了日: チームの参加申込みを締め切る日</li>
+                </ul>
+              </div>
+
+              {/* 公開フラグは自動的にtrueに設定 */}
+              <input type="hidden" {...form.register('is_public')} value="true" />
+            </CardContent>
+          </Card>
 
           {/* アクションボタン */}
           <div className="flex justify-between">

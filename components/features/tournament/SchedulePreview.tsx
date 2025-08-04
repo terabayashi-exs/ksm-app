@@ -239,20 +239,45 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
             };
           });
 
+          // その日の総所要時間を計算
+          const dayStartTime = scheduleMatches.length > 0 
+            ? Math.min(...scheduleMatches.map(m => timeToMinutes(m.startTime)))
+            : timeToMinutes(settings.startTime);
+          const dayEndTime = scheduleMatches.length > 0 
+            ? Math.max(...scheduleMatches.map(m => timeToMinutes(m.endTime)))
+            : timeToMinutes(settings.startTime);
+          const dayDuration = minutesToTime(dayEndTime - dayStartTime);
+
           return {
             date: date,
             dayNumber: dayIndex + 1,
             matches: scheduleMatches,
-            totalDuration: '8:00',
+            totalDuration: dayDuration,
             requiredCourts: Math.max(...scheduleMatches.map(m => m.courtNumber)),
             timeSlots: scheduleMatches.length
           };
         });
 
+      // 全体の総所要時間を計算（すべての日の最早開始時刻から最遅終了時刻まで）
+      let overallStartTime = Infinity;
+      let overallEndTime = 0;
+      
+      for (const day of days) {
+        if (day.matches.length > 0) {
+          const dayStart = Math.min(...day.matches.map(m => timeToMinutes(m.startTime)));
+          const dayEnd = Math.max(...day.matches.map(m => timeToMinutes(m.endTime)));
+          overallStartTime = Math.min(overallStartTime, dayStart);
+          overallEndTime = Math.max(overallEndTime, dayEnd);
+        }
+      }
+      
+      const totalDurationMinutes = overallEndTime - overallStartTime;
+      const overallTotalDuration = totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00';
+
       const editSchedule = {
         days: days,
         totalMatches: actualMatches.length,
-        totalDuration: '8:00',
+        totalDuration: overallTotalDuration,
         warnings: [],
         feasible: true,
         timeConflicts: []
@@ -327,7 +352,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   // デバッグ: 表示スケジュールの状態をログ出力
   useEffect(() => {
     if (editMode && (customSchedule || schedule)) {
-      const currentDisplaySchedule = customSchedule || schedule;
+      // 現在の表示スケジュールを取得
       // Display schedule updated in edit mode
     }
   }, [customSchedule, schedule, editMode]);
@@ -371,6 +396,22 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       : timeToMinutes(settings.startTime);
     const dayStartTime = Math.min(...targetDay.matches.map(m => timeToMinutes(m.startTime)));
     targetDay.totalDuration = minutesToTime(dayEndTime - dayStartTime);
+    
+    // 全体の総所要時間を再計算
+    let overallStartTime = Infinity;
+    let overallEndTime = 0;
+    
+    for (const day of newSchedule.days) {
+      if (day.matches.length > 0) {
+        const dayStart = Math.min(...day.matches.map(m => timeToMinutes(m.startTime)));
+        const dayEnd = Math.max(...day.matches.map(m => timeToMinutes(m.endTime)));
+        overallStartTime = Math.min(overallStartTime, dayStart);
+        overallEndTime = Math.max(overallEndTime, dayEnd);
+      }
+    }
+    
+    const totalDurationMinutes = overallEndTime - overallStartTime;
+    newSchedule.totalDuration = totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00';
     
     // 時間重複をチェックして警告を更新
     const timeConflicts = checkTimeConflictsForSchedule(newSchedule.days);

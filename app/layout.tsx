@@ -1,7 +1,10 @@
 // app/layout.tsx
+import AuthSessionProvider from "@/components/providers/session-provider";
+import "./globals.css";
+
 export const metadata = {
-  title: "KSM App",
-  description: "My Next.js + Turso App",
+  title: "PK選手権大会システム",
+  description: "PK選手権大会の運営管理システム",
 };
 
 export default function RootLayout({
@@ -11,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <AuthSessionProvider>
+          {children}
+        </AuthSessionProvider>
+      </body>
     </html>
   );
 }

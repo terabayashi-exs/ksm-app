@@ -1,0 +1,14 @@
+[
+  {
+    "venue_name": "ダミー",
+    "address": "",
+    "available_courts": 8,
+    "is_active": 1
+  },
+  {
+    "venue_name": "富山県総合運動公園ファミリー広場",
+    "address": "富山県富山市任海１２４８ 総合運動公園",
+    "available_courts": 8,
+    "is_active": 1
+  }
+]

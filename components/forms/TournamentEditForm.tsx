@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tournament, Venue, TournamentDate } from '@/lib/types';
-import { Loader2, Save, AlertCircle, Calendar, Plus, Trash2, Eye } from 'lucide-react';
+import { Loader2, Save, AlertCircle, Calendar, Plus, Trash2, Eye, Target, Settings } from 'lucide-react';
 import SchedulePreview from '@/components/features/tournament/SchedulePreview';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -59,6 +59,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     walkover_winner_goals: number;
     walkover_loser_goals: number;
     is_public: boolean;
+    public_start_date: string;
+    recruitment_start_date: string;
+    recruitment_end_date: string;
   }
 
   const form = useForm<EditFormData>({
@@ -76,7 +79,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       loss_points: tournament.loss_points,
       walkover_winner_goals: tournament.walkover_winner_goals,
       walkover_loser_goals: tournament.walkover_loser_goals,
-      is_public: tournament.visibility === 1
+      is_public: tournament.visibility === 1,
+      public_start_date: tournament.public_start_date || new Date().toISOString().split('T')[0],
+      recruitment_start_date: tournament.recruitment_start_date || new Date().toISOString().split('T')[0],
+      recruitment_end_date: tournament.recruitment_end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     }
   });
 
@@ -267,40 +273,87 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             </div>
 
             {/* チーム数・コート数 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="team_count">参加チーム数 *</Label>
-                <Input
-                  id="team_count"
-                  type="number"
-                  min="2"
-                  max="32"
-                  {...form.register('team_count', { valueAsNumber: true })}
-                  className={form.formState.errors.team_count ? 'border-red-500' : ''}
-                />
-                {form.formState.errors.team_count && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.team_count.message}
-                  </p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="team_count">参加チーム数 *</Label>
+              <Input
+                id="team_count"
+                type="number"
+                min="2"
+                max="32"
+                {...form.register('team_count', { valueAsNumber: true })}
+                className={form.formState.errors.team_count ? 'border-red-500' : ''}
+              />
+              {form.formState.errors.team_count && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.team_count.message}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="court_count">使用コート数 *</Label>
-                <Input
-                  id="court_count"
-                  type="number"
-                  min="1"
-                  max="16"
-                  {...form.register('court_count', { valueAsNumber: true })}
-                  className={form.formState.errors.court_count ? 'border-red-500' : ''}
-                />
-                {form.formState.errors.court_count && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.court_count.message}
-                  </p>
-                )}
-              </div>
+        {/* 得点・勝ち点設定 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Target className="w-5 h-5 mr-2" />
+              得点・勝ち点設定
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="win_points">勝利時勝ち点</Label>
+              <Input
+                id="win_points"
+                type="number"
+                min="0"
+                max="10"
+                {...form.register('win_points', { valueAsNumber: true })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="draw_points">引分時勝ち点</Label>
+              <Input
+                id="draw_points"
+                type="number"
+                min="0"
+                max="10"
+                {...form.register('draw_points', { valueAsNumber: true })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="loss_points">敗北時勝ち点</Label>
+              <Input
+                id="loss_points"
+                type="number"
+                min="0"
+                max="10"
+                {...form.register('loss_points', { valueAsNumber: true })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="walkover_winner_goals">不戦勝時勝者得点</Label>
+              <Input
+                id="walkover_winner_goals"
+                type="number"
+                min="0"
+                max="10"
+                {...form.register('walkover_winner_goals', { valueAsNumber: true })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="walkover_loser_goals">不戦勝時敗者得点</Label>
+              <Input
+                id="walkover_loser_goals"
+                type="number"
+                min="0"
+                max="10"
+                {...form.register('walkover_loser_goals', { valueAsNumber: true })}
+              />
             </div>
           </CardContent>
         </Card>
@@ -360,93 +413,53 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           </CardContent>
         </Card>
 
-        {/* 試合設定 */}
+        {/* 運営設定 */}
         <Card>
           <CardHeader>
-            <CardTitle>試合設定</CardTitle>
+            <CardTitle className="flex items-center">
+              <Settings className="w-5 h-5 mr-2" />
+              運営設定（スケジュール調整）
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="match_duration_minutes">試合時間（分）*</Label>
-                <Input
-                  id="match_duration_minutes"
-                  type="number"
-                  min="5"
-                  max="120"
-                  {...form.register('match_duration_minutes', { valueAsNumber: true })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="break_duration_minutes">休憩時間（分）*</Label>
-                <Input
-                  id="break_duration_minutes"
-                  type="number"
-                  min="0"
-                  max="60"
-                  {...form.register('break_duration_minutes', { valueAsNumber: true })}
-                />
-              </div>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="court_count">使用コート数</Label>
+              <Input
+                id="court_count"
+                type="number"
+                min="1"
+                max="20"
+                {...form.register('court_count', { valueAsNumber: true })}
+              />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="win_points">勝利時ポイント *</Label>
-                <Input
-                  id="win_points"
-                  type="number"
-                  min="0"
-                  max="10"
-                  {...form.register('win_points', { valueAsNumber: true })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="draw_points">引分時ポイント *</Label>
-                <Input
-                  id="draw_points"
-                  type="number"
-                  min="0"
-                  max="10"
-                  {...form.register('draw_points', { valueAsNumber: true })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="loss_points">敗戦時ポイント *</Label>
-                <Input
-                  id="loss_points"
-                  type="number"
-                  min="0"
-                  max="10"
-                  {...form.register('loss_points', { valueAsNumber: true })}
-                />
-              </div>
+            <div>
+              <Label htmlFor="match_duration_minutes">1試合時間（分）</Label>
+              <Input
+                id="match_duration_minutes"
+                type="number"
+                min="5"
+                max="120"
+                {...form.register('match_duration_minutes', { valueAsNumber: true })}
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="walkover_winner_goals">不戦勝時得点 *</Label>
-                <Input
-                  id="walkover_winner_goals"
-                  type="number"
-                  min="0"
-                  max="10"
-                  {...form.register('walkover_winner_goals', { valueAsNumber: true })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="walkover_loser_goals">不戦敗時得点 *</Label>
-                <Input
-                  id="walkover_loser_goals"
-                  type="number"
-                  min="0"
-                  max="10"
-                  {...form.register('walkover_loser_goals', { valueAsNumber: true })}
-                />
-              </div>
+            <div>
+              <Label htmlFor="break_duration_minutes">試合間休憩時間（分）</Label>
+              <Input
+                id="break_duration_minutes"
+                type="number"
+                min="0"
+                max="60"
+                {...form.register('break_duration_minutes', { valueAsNumber: true })}
+              />
+            </div>
+          </CardContent>
+          <CardContent>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                📝 上記の運営設定を変更すると、自動的にスケジュールが更新されます。
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -476,12 +489,15 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           </CardContent>
         </Card>
 
-        {/* 公開設定 */}
+        {/* 公開・募集設定 */}
         <Card>
           <CardHeader>
-            <CardTitle>公開設定</CardTitle>
+            <CardTitle className="flex items-center">
+              <Calendar className="w-5 h-5 mr-2" />
+              公開・募集設定
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <div className="flex items-center space-x-2">
               <input
                 id="is_public"
@@ -491,9 +507,65 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
               />
               <Label htmlFor="is_public">一般に公開する</Label>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-500">
               チェックを入れると、一般ユーザーが大会情報を閲覧できるようになります
             </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="public_start_date">公開開始日 *</Label>
+                <Input
+                  id="public_start_date"
+                  type="date"
+                  {...form.register('public_start_date')}
+                  className={form.formState.errors.public_start_date ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.public_start_date && (
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.public_start_date.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="recruitment_start_date">募集開始日 *</Label>
+                <Input
+                  id="recruitment_start_date"
+                  type="date"
+                  {...form.register('recruitment_start_date')}
+                  className={form.formState.errors.recruitment_start_date ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.recruitment_start_date && (
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.recruitment_start_date.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="recruitment_end_date">募集終了日 *</Label>
+                <Input
+                  id="recruitment_end_date"
+                  type="date"
+                  {...form.register('recruitment_end_date')}
+                  className={form.formState.errors.recruitment_end_date ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.recruitment_end_date && (
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.recruitment_end_date.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 mb-2">日程設定について</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• 公開開始日: 一般ユーザーが大会情報を閲覧できるようになる日</li>
+                <li>• 募集開始日: チームが大会への参加申込みを開始できる日</li>
+                <li>• 募集終了日: チームの参加申込みを締め切る日</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
 

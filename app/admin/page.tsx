@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
+import SignOutButton from "@/components/features/auth/SignOutButton";
 
 export default async function AdminDashboard() {
   const session = await auth();
@@ -25,9 +26,7 @@ export default async function AdminDashboard() {
               </p>
             </div>
             <div>
-              <Button variant="outline" asChild>
-                <Link href="/api/auth/signout">ログアウト</Link>
-              </Button>
+              <SignOutButton />
             </div>
           </div>
         </div>

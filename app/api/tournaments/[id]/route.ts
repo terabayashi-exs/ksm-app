@@ -187,6 +187,9 @@ export async function PUT(
         walkover_winner_goals = ?,
         walkover_loser_goals = ?,
         visibility = ?,
+        public_start_date = ?,
+        recruitment_start_date = ?,
+        recruitment_end_date = ?,
         updated_at = datetime('now', 'localtime')
       WHERE tournament_id = ?
     `, [
@@ -203,12 +206,16 @@ export async function PUT(
       data.walkover_winner_goals,
       data.walkover_loser_goals,
       data.is_public ? 'open' : 'preparing',
+      data.public_start_date,
+      data.recruitment_start_date,
+      data.recruitment_end_date,
       tournamentId
     ]);
 
     // スケジュール再計算と更新
     try {
-      const customMatches = (body as any).customMatches as Array<{
+      const customMatches = (body as { customMatches?: Array<{ match_id: number; start_time: string; court_number: number; }> }).customMatches || [];
+      const typedCustomMatches = customMatches as Array<{
         match_id: number;
         start_time: string; 
         court_number: number;
@@ -216,10 +223,10 @@ export async function PUT(
       
       // Custom match data received for tournament update
       
-      if (customMatches && customMatches.length > 0) {
+      if (typedCustomMatches && typedCustomMatches.length > 0) {
         // カスタムスケジュールが指定されている場合、それを適用
         // Applying custom schedule to matches
-        await applyCustomSchedule(tournamentId, customMatches);
+        await applyCustomSchedule(tournamentId, typedCustomMatches);
         // Custom schedule applied successfully
       } else {
         // カスタムスケジュールがない場合は従来通りスケジュール再計算

@@ -92,7 +92,7 @@ export default function Header() {
                   )}
                   
                   <DropdownMenuItem 
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => signOut({ redirect: false }).then(() => window.location.href = '/')}
                     className="text-red-600 cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
