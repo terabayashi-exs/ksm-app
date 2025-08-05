@@ -34,6 +34,167 @@
 
 詳細な設計については`./docs/database/KSM.md`を参照してください。
 
+## 🏆 順位表システムの実装仕様
+
+### 基本概念
+
+順位表システムは以下の考え方で実装されています：
+
+1. **リアルタイム計算から事前計算への変更**
+   - 順位表は表示時にリアルタイム計算するのではなく、試合結果確定時に事前計算して保存
+   - 計算結果は`t_match_blocks.team_rankings`にJSON形式で保存
+   - 表示時は保存されたデータを読み込むだけなので高速
+
+2. **管理者による順位調整機能**
+   - 自動計算された順位を管理者が手動で調整可能
+   - 同着順位の設定（例：1位、2位、4位、4位、8位、8位、8位、8位）
+   - 3位決定戦がない場合などの柔軟な順位付けに対応
+
+### データフロー
+
+```
+試合結果入力 → t_matches_live
+     ↓
+管理者が結果確定 → POST /api/matches/confirm
+     ↓
+t_matches_live → t_matches_final（移行）
+     ↓
+順位自動計算 → t_match_blocks.team_rankings（JSON保存）
+     ↓
+順位表表示 → GET /api/tournaments/[id]/standings
+```
+
+### 主要な関数とAPI
+
+#### **順位計算・管理（lib/standings-calculator.ts）**
+- `getTournamentStandings(tournamentId)`: team_rankingsから順位表取得
+- `updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId)`: ブロック順位表更新
+- `recalculateAllTournamentRankings(tournamentId)`: 全ブロック再計算
+- `calculateBlockStandings(matchBlockId, tournamentId)`: 特定ブロックの順位計算
+
+#### **試合結果確定（lib/match-result-handler.ts）**
+- `confirmMatchResult(matchId)`: 単一試合結果確定
+- `confirmMultipleMatchResults(matchIds)`: 複数試合一括確定
+
+#### **API エンドポイント**
+- `GET /api/tournaments/[id]/standings`: 順位表取得
+- `POST /api/tournaments/[id]/update-rankings`: 順位表更新
+- `PUT /api/tournaments/[id]/manual-rankings`: 手動順位編集
+- `POST /api/matches/confirm`: 試合結果確定
+
+### 順位決定ルール
+
+自動計算時の順位決定基準（優先順）：
+1. **勝点**（勝利: 3点、引分: 1点、敗北: 0点）
+2. **得失点差**
+3. **総得点**
+4. **チーム名**（辞書順）
+
+### team_rankingsのJSON構造
+
+```json
+[
+  {
+    "team_id": "team_123",
+    "team_name": "チーム名",
+    "team_omission": "略称",
+    "position": 1,
+    "points": 9,
+    "matches_played": 3,
+    "wins": 3,
+    "draws": 0,
+    "losses": 0,
+    "goals_for": 8,
+    "goals_against": 2,
+    "goal_difference": 6
+  }
+]
+```
+
+### 使用場面
+
+1. **試合結果確定時**: 自動的に該当ブロックの順位表が更新される
+2. **管理者による手動調整**: 同着順位や特殊ルールに対応
+3. **一般ユーザー表示**: 高速な順位表表示
+4. **大会終了後**: 最終順位として確定・保存
+
+### 注意点
+
+- `t_matches_live`は結果入力中・確定前のデータ
+- `t_matches_final`は確定済みの結果データ
+- 順位計算は`t_matches_final`のデータのみを使用
+- 順位表の表示は`team_rankings`のデータのみを使用
+- 管理者による手動調整は`team_rankings`を直接更新
+
+## 🎯 大会ステータス管理システム
+
+### 基本概念
+
+大会のライフサイクルを適切に管理するため、従来の単純なステータス（planning/ongoing/completed）から、日付ベースの動的ステータス判定システムに変更しました。
+
+### ステータス分類
+
+| ステータス | 英語表記 | 条件 | 説明 |
+|------------|----------|------|------|
+| **募集前** | `before_recruitment` | 現在 < 募集開始日 | まだ募集期間に達していない状態 |
+| **募集中** | `recruiting` | 募集開始日 ≤ 現在 ≤ 募集終了日 | チーム募集を受付中の状態 |
+| **開催前** | `before_event` | 募集終了日 < 現在 < 大会開始日 | 募集は終了したが大会開催前の状態 |
+| **開催中** | `ongoing` | 大会開始日 ≤ 現在 ≤ 大会終了日 | 大会期間中の状態 |
+| **終了** | `completed` | 現在 > 大会終了日 または DB状態が完了 | 大会が終了した状態 |
+
+### 実装仕様
+
+#### **動的ステータス判定（lib/tournament-status.ts）**
+- 現在日時と各日付フィールドを比較してリアルタイム判定
+- データベースの以下フィールドを活用：
+  - `recruitment_start_date`: 募集開始日
+  - `recruitment_end_date`: 募集終了日
+  - `tournament_dates`: 大会開催日程（JSON形式）
+  - `status`: DB上の手動設定ステータス
+
+#### **主要関数**
+```typescript
+// ステータス動的判定
+calculateTournamentStatus(tournament): TournamentStatus
+
+// 表示用ラベル取得
+getStatusLabel(status): string
+
+// 表示用カラークラス取得
+getStatusColor(status): string
+
+// 開催期間フォーマット
+formatTournamentPeriod(tournamentDatesJson): string
+```
+
+### ステータス更新タイミング
+
+#### **🔄 自動更新（推奨）**
+- **募集前 → 募集中**: 募集開始日 00:00 に自動更新
+- **募集中 → 開催前**: 募集終了日 23:59 翌日に自動更新
+- **開催前 → 開催中**: 大会開始日 00:00 に自動更新
+- **開催中 → 終了**: 大会最終日 23:59 翌日に自動更新
+
+#### **⚙️ 手動更新が必要な場面**
+1. **早期終了**: 予定より早く大会を終了させる場合
+2. **全試合確定**: 管理者が明示的に大会完了を宣言する場合
+3. **例外対応**: 日程変更や特殊事情による状態調整
+
+### 運用上の利点
+
+1. **自動化**: 日付設定のみで大会ライフサイクルを自動管理
+2. **リアルタイム**: ページアクセス時に常に最新ステータスを表示
+3. **運用負荷軽減**: 手動でのステータス変更作業が不要
+4. **一貫性**: 全ての画面で統一されたステータス表示
+5. **検索精度**: より詳細な条件での大会検索が可能
+
+### 技術的考慮事項
+
+- ステータス判定は毎回計算されるため、大量データでは性能に注意
+- タイムゾーンは日本時間（JST）を基準とする
+- 日付比較は日単位で行い、時刻は考慮しない
+- データベースの`status`フィールドは管理者による強制設定用として残存
+
 ## 📋 実装タスク（優先順）
 
 Phase 1: 基盤構築

@@ -118,6 +118,13 @@ export default async function TournamentJoinPage({ params }: PageProps) {
   const session = await auth();
   const resolvedParams = await params;
   const tournamentId = parseInt(resolvedParams.id);
+  
+  console.log('TournamentJoinPage Debug:', {
+    rawId: resolvedParams.id,
+    parsedId: tournamentId,
+    isNaN: isNaN(tournamentId),
+    type: typeof resolvedParams.id
+  });
 
   // 認証チェック（チーム権限必須）
   if (!session || session.user.role !== 'team') {

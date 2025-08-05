@@ -133,7 +133,7 @@ export default function TournamentDashboardList() {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button asChild size="sm" variant="outline" className="flex-1">
           <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
             詳細
@@ -144,6 +144,13 @@ export default function TournamentDashboardList() {
             編集
           </Link>
         </Button>
+        {type === 'recruiting' && (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
+              組合せ作成
+            </Link>
+          </Button>
+        )}
         {type === 'ongoing' && (
           <Button asChild size="sm" variant="default">
             <Link href={`/admin/matches?tournament=${tournament.tournament_id}`}>

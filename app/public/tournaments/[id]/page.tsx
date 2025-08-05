@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BackButton from '@/components/ui/back-button';
 import TournamentSchedule from '@/components/features/tournament/TournamentSchedule';
+import TournamentStandings from '@/components/features/tournament/TournamentStandings';
+import TournamentResults from '@/components/features/tournament/TournamentResults';
+import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
@@ -190,46 +193,19 @@ function ScheduleResults({ tournament }: { tournament: Tournament }) {
   return <TournamentSchedule tournamentId={tournament.tournament_id} />;
 }
 
-// 順位表タブのプレースホルダー
-function Standings() {
-  return (
-    <Card>
-      <CardContent className="p-12 text-center">
-        <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">順位表</h3>
-        <p className="text-gray-600">チーム順位と成績がここに表示されます。</p>
-        <p className="text-sm text-gray-500 mt-2">（実装予定）</p>
-      </CardContent>
-    </Card>
-  );
+// 順位表タブ
+function Standings({ tournament }: { tournament: Tournament }) {
+  return <TournamentStandings tournamentId={tournament.tournament_id} />;
 }
 
-// 戦績表タブのプレースホルダー
-function Results() {
-  return (
-    <Card>
-      <CardContent className="p-12 text-center">
-        <Award className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">戦績表</h3>
-        <p className="text-gray-600">詳細な試合結果と統計がここに表示されます。</p>
-        <p className="text-sm text-gray-500 mt-2">（実装予定）</p>
-      </CardContent>
-    </Card>
-  );
+// 戦績表タブ
+function Results({ tournament }: { tournament: Tournament }) {
+  return <TournamentResults tournamentId={tournament.tournament_id} />;
 }
 
-// 参加チームタブのプレースホルダー
-function Teams() {
-  return (
-    <Card>
-      <CardContent className="p-12 text-center">
-        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">参加チーム</h3>
-        <p className="text-gray-600">参加チーム一覧と選手情報がここに表示されます。</p>
-        <p className="text-sm text-gray-500 mt-2">（実装予定）</p>
-      </CardContent>
-    </Card>
-  );
+// 参加チームタブ
+function Teams({ tournament }: { tournament: Tournament }) {
+  return <TournamentTeams tournamentId={tournament.tournament_id} />;
 }
 
 // ローディングコンポーネント
@@ -312,15 +288,15 @@ async function TournamentDetailContent({ params }: PageProps) {
           </TabsContent>
 
           <TabsContent value="standings">
-            <Standings />
+            <Standings tournament={tournament} />
           </TabsContent>
 
           <TabsContent value="results">
-            <Results />
+            <Results tournament={tournament} />
           </TabsContent>
 
           <TabsContent value="teams">
-            <Teams />
+            <Teams tournament={tournament} />
           </TabsContent>
         </Tabs>
       </div>

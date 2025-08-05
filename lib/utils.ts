@@ -16,6 +16,14 @@ export function formatDate(date: string | Date): string {
   }).format(new Date(date));
 }
 
+export function formatDateOnly(date: string | Date): string {
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date(date));
+}
+
 export function formatTime(time: string): string {
   return new Intl.DateTimeFormat('ja-JP', {
     hour: '2-digit',

@@ -1,7 +1,9 @@
-// lib/db.ts
+// lib/db-fallback.ts
+// 環境変数が読み込まれない場合の一時的なフォールバック
+
 import { createClient, Client } from "@libsql/client";
 
-// 一時的なフォールバック設定（開発用）
+// 一時的なフォールバック設定
 const FALLBACK_CONFIG = {
   url: "libsql://ksm-dev-asditd.aws-ap-northeast-1.turso.io",
   authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NTEyNDQwMzUsImlkIjoiMDM5NDVjMGYtYTg4Ny00ZjRlLWJkNGEtNTE1YzY0ZTVjOTdlIiwicmlkIjoiYWRmMWM2NDYtYWJhZS00OTJkLWI5N2UtMTM1MjgzOGE2N2Y1In0.ICP4YE3wIDH8Y51jac0O1591qr4oxGVkCAgIMvDAEqzzTpvvTNIY1C7zFy6U4JF6OvZkfg2vSCnfdgdkebnWCA"
@@ -9,7 +11,7 @@ const FALLBACK_CONFIG = {
 
 let dbInstance: Client | null = null;
 
-// データベースクライアントを遅延初期化で取得
+// データベースクライアントを取得（フォールバック付き）
 const getDbClient = (): Client => {
   if (dbInstance) {
     return dbInstance;
@@ -31,21 +33,15 @@ const getDbClient = (): Client => {
   console.log('Database client initializing:', { 
     url: url.substring(0, 30) + '...', 
     hasToken: !!authToken,
-    source: process.env.DATABASE_URL ? 'env' : 'fallback',
-    NODE_ENV: process.env.NODE_ENV
+    source: process.env.DATABASE_URL ? 'env' : 'fallback'
   });
 
-  try {
-    dbInstance = createClient({
-      url,
-      authToken,
-    });
+  dbInstance = createClient({
+    url,
+    authToken,
+  });
 
-    return dbInstance;
-  } catch (error) {
-    console.error('Failed to initialize database client:', error);
-    throw error;
-  }
+  return dbInstance;
 };
 
 // エクスポート用のProxy

@@ -65,6 +65,7 @@ export default function TournamentJoinForm({
   existingTournamentPlayers = [], 
   isEditMode = false 
 }: Props) {
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -148,34 +149,74 @@ export default function TournamentJoinForm({
     remove(index);
   };
 
+
   // フォーム送信
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch(`/api/tournaments/${tournamentId}/join`, {
+      const apiUrl = `/api/tournaments/${tournamentId}/join`;
+      const requestBody = {
+        players: data.players.map(p => ({
+          player_id: p.player_id,
+          player_name: p.player_name,
+          jersey_number: p.jersey_number,
+          is_participating: p.is_participating
+        })),
+        isEditMode: isEditMode
+      };
+
+      console.log('Submitting tournament join form:', {
+        tournamentId,
+        apiUrl,
+        tournamentIdType: typeof tournamentId,
         method: isEditMode ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          players: data.players.map(p => ({
-            player_id: p.player_id,
-            player_name: p.player_name,
-            jersey_number: p.jersey_number,
-            is_participating: p.is_participating
-          })),
-          isEditMode: isEditMode
-        }),
+        playersCount: data.players.length,
+        requestBody
       });
 
-      const result = await response.json();
+      let response;
+      let result;
+      
+      try {
+        console.log('About to fetch:', apiUrl);
+        response = await fetch(apiUrl, {
+          method: isEditMode ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        console.log('Response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          ok: response.ok
+        });
+
+        console.log('About to parse JSON...');
+        result = await response.json();
+        console.log('JSON parsed successfully:', result);
+        
+      } catch (fetchError) {
+        console.error('Fetch or JSON parsing error:', fetchError);
+        throw new Error(`ネットワークエラー: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+      }
 
       if (result.success) {
         router.push(`/team?${isEditMode ? 'updated' : 'joined'}=${tournamentId}`);
       } else {
-        setError(result.error || (isEditMode ? '参加選手の変更に失敗しました' : '参加申し込みに失敗しました'));
+        console.error('Tournament join failed:', result);
+        let errorMessage = result.error || (isEditMode ? '参加選手の変更に失敗しました' : '参加申し込みに失敗しました');
+        
+        // 開発環境でより詳細なエラーを表示
+        if (process.env.NODE_ENV === 'development' && result.details) {
+          errorMessage += `\n\n開発情報:\n${JSON.stringify(result.details, null, 2)}`;
+        }
+        
+        setError(errorMessage);
       }
     } catch (error) {
       setError('通信エラーが発生しました');
@@ -369,6 +410,7 @@ export default function TournamentJoinForm({
           {fields.length === 0 && <span className="text-red-600 ml-2">（最低1人の選手が必要です）</span>}
         </p>
       </div>
+
 
       {/* 送信ボタン */}
       <div className="flex justify-end space-x-4">

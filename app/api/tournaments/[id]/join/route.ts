@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
 
-interface RouteParams {
+interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
@@ -36,9 +36,18 @@ const tournamentJoinSchema = z.object({
 
 async function handleTournamentJoin(
   request: NextRequest,
-  params: RouteParams,
+  context: RouteContext,
   isEditMode: boolean = false
 ) {
+  console.log('=== Tournament Join API Called ===', {
+    method: request.method,
+    url: request.url,
+    isEditMode,
+    contextType: typeof context,
+    contextKeys: context ? Object.keys(context) : 'null',
+    hasParams: 'params' in context
+  });
+  
   try {
     // 認証チェック
     const session = await auth();
@@ -49,13 +58,61 @@ async function handleTournamentJoin(
       );
     }
 
-    const resolvedParams = await params;
-    const tournamentId = parseInt(resolvedParams.id);
+    let resolvedParams;
+    try {
+      console.log('About to resolve params...');
+      resolvedParams = await context.params;
+      console.log('Raw params received:', resolvedParams, typeof resolvedParams);
+    } catch (paramError) {
+      console.error('Error resolving params:', paramError);
+      return NextResponse.json(
+        { success: false, error: 'パラメータ解析エラー' },
+        { status: 400 }
+      );
+    }
+    
+    if (!resolvedParams || !resolvedParams.id) {
+      console.error('No params or id received', { resolvedParams });
+      return NextResponse.json(
+        { success: false, error: 'パラメータが見つかりません' },
+        { status: 400 }
+      );
+    }
+    
+    const tournamentId = parseInt(resolvedParams.id, 10);
     const teamId = session.user.teamId;
+    
+    console.log('API Debug - Tournament Join:', {
+      rawParams: resolvedParams,
+      rawId: resolvedParams.id,
+      rawIdType: typeof resolvedParams.id,
+      parsedTournamentId: tournamentId,
+      isNaN: isNaN(tournamentId),
+      teamId,
+      sessionUser: session.user
+    });
 
     if (isNaN(tournamentId) || !teamId) {
+      console.error('Invalid parameters:', { 
+        tournamentId, 
+        isNaN: isNaN(tournamentId), 
+        teamId, 
+        sessionUser: session.user,
+        sessionRole: session.user.role 
+      });
       return NextResponse.json(
-        { success: false, error: '無効なパラメータです' },
+        { 
+          success: false, 
+          error: '無効なパラメータです',
+          details: process.env.NODE_ENV === 'development' ? {
+            tournamentId: tournamentId,
+            tournamentIdValid: !isNaN(tournamentId),
+            teamId: teamId,
+            hasTeamId: !!teamId,
+            userRole: session.user.role,
+            userId: session.user.id
+          } : undefined
+        },
         { status: 400 }
       );
     }
@@ -262,14 +319,14 @@ async function handleTournamentJoin(
 
 export async function POST(
   request: NextRequest,
-  context: RouteParams
+  context: RouteContext
 ) {
   return handleTournamentJoin(request, context, false);
 }
 
 export async function PUT(
   request: NextRequest,
-  context: RouteParams
+  context: RouteContext
 ) {
   return handleTournamentJoin(request, context, true);
 }

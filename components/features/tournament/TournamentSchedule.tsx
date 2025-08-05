@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDateOnly } from '@/lib/utils';
 
 interface MatchData {
   match_id: number;
@@ -257,7 +257,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Calendar className="h-5 w-5 mr-2" />
-                    開催日 {dateIndex + 1}: {formatDate(date)}
+                    開催日 {dateIndex + 1}: {formatDateOnly(date)}
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="h-4 w-4 mr-1" />
