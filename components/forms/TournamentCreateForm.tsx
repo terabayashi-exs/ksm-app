@@ -578,47 +578,67 @@ export default function TournamentCreateForm() {
                 運営設定（スケジュール調整）
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="court_count">使用コート数</Label>
-                <Input
-                  id="court_count"
-                  type="number"
-                  min="1"
-                  max="20"
-                  {...form.register('court_count', { valueAsNumber: true })}
-                />
-                {form.formState.errors.court_count && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.court_count.message}</p>
-                )}
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="court_count">使用コート数</Label>
+                  <Input
+                    id="court_count"
+                    type="number"
+                    min="1"
+                    max="20"
+                    {...form.register('court_count', { valueAsNumber: true })}
+                  />
+                  {form.formState.errors.court_count && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.court_count.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="available_courts">使用コート番号（任意）</Label>
+                  <Input
+                    id="available_courts"
+                    placeholder="例: 1,3,4,7"
+                    {...form.register('available_courts')}
+                  />
+                  {form.formState.errors.available_courts && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.available_courts.message}</p>
+                  )}
+                  <p className="text-xs text-gray-600 mt-1">
+                    利用可能なコート番号をカンマ区切りで指定してください。未指定の場合は1から連番で使用されます。
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="match_duration_minutes">1試合時間（分）</Label>
-                <Input
-                  id="match_duration_minutes"
-                  type="number"
-                  min="5"
-                  max="120"
-                  {...form.register('match_duration_minutes', { valueAsNumber: true })}
-                />
-                {form.formState.errors.match_duration_minutes && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.match_duration_minutes.message}</p>
-                )}
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <div>
-                <Label htmlFor="break_duration_minutes">試合間休憩（分）</Label>
-                <Input
-                  id="break_duration_minutes"
-                  type="number"
-                  min="0"
-                  max="60"
-                  {...form.register('break_duration_minutes', { valueAsNumber: true })}
-                />
-                {form.formState.errors.break_duration_minutes && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.break_duration_minutes.message}</p>
-                )}
+                <div>
+                  <Label htmlFor="match_duration_minutes">1試合時間（分）</Label>
+                  <Input
+                    id="match_duration_minutes"
+                    type="number"
+                    min="5"
+                    max="120"
+                    {...form.register('match_duration_minutes', { valueAsNumber: true })}
+                  />
+                  {form.formState.errors.match_duration_minutes && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.match_duration_minutes.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="break_duration_minutes">試合間休憩（分）</Label>
+                  <Input
+                    id="break_duration_minutes"
+                    type="number"
+                    min="0"
+                    max="60"
+                    {...form.register('break_duration_minutes', { valueAsNumber: true })}
+                  />
+                  {form.formState.errors.break_duration_minutes && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.break_duration_minutes.message}</p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -645,6 +665,9 @@ export default function TournamentCreateForm() {
                 formatId={form.watch('format_id') || null}
                 settings={{
                   courtCount: form.watch('court_count') ?? 4,
+                  availableCourts: form.watch('available_courts') 
+                    ? form.watch('available_courts').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+                    : undefined,
                   matchDurationMinutes: form.watch('match_duration_minutes') ?? 15,
                   breakDurationMinutes: form.watch('break_duration_minutes') ?? 5,
                   startTime: '09:00',

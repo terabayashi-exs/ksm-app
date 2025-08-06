@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +13,63 @@ import { Loader2, Save, AlertCircle, Calendar, Plus, Trash2, Eye, Target, Settin
 import SchedulePreview from '@/components/features/tournament/SchedulePreview';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { z } from 'zod';
 
 interface TournamentEditFormProps {
   tournament: Tournament;
 }
+
+// 編集用のバリデーションスキーマ
+const editTournamentSchema = z.object({
+  tournament_name: z.string().min(1, '大会名は必須です').max(100, '大会名は100文字以内で入力してください'),
+  format_id: z.number().min(1, 'フォーマットIDが必要です'),
+  venue_id: z.number().min(1, '会場IDが必要です'),
+  team_count: z.number().min(2, 'チーム数は2以上で入力してください').max(64, 'チーム数は64以下で入力してください'),
+  court_count: z.number().min(1, 'コート数は1以上で入力してください').max(20, 'コート数は20以下で入力してください'),
+  available_courts: z.string().optional().refine((val) => {
+    if (!val || val.trim() === '') return true;
+    const courts = val.split(',').map(s => s.trim());
+    return courts.every(court => /^\d+$/.test(court) && parseInt(court) >= 1 && parseInt(court) <= 99);
+  }, '使用コート番号は1-99の数字をカンマ区切りで入力してください'),
+  tournament_dates: z.array(z.object({
+    dayNumber: z.number().min(1).max(10),
+    date: z.string().min(1, '日付は必須です')
+  })).min(1, '最低1つの開催日を指定してください').max(7, '開催日は最大7日まで指定可能です'),
+  match_duration_minutes: z.number().min(5, '試合時間は5分以上で入力してください').max(120, '試合時間は120分以下で入力してください'),
+  break_duration_minutes: z.number().min(0, '休憩時間は0分以上で入力してください').max(60, '休憩時間は60分以下で入力してください'),
+  win_points: z.number().min(0).max(10),
+  draw_points: z.number().min(0).max(10),
+  loss_points: z.number().min(0).max(10),
+  walkover_winner_goals: z.number().min(0).max(20),
+  walkover_loser_goals: z.number().min(0).max(20),
+  is_public: z.boolean(),
+  public_start_date: z.string().min(1, '公開開始日は必須です'),
+  recruitment_start_date: z.string().min(1, '募集開始日は必須です'),
+  recruitment_end_date: z.string().min(1, '募集終了日は必須です')
+}).refine((data) => {
+  // 使用コート番号とコート数の整合性チェック
+  if (!data.available_courts || data.available_courts.trim() === '') {
+    return true; // 未指定の場合はOK
+  }
+  const courts = data.available_courts.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  const uniqueCourts = new Set(courts);
+  return courts.length === uniqueCourts.size && uniqueCourts.size >= data.court_count;
+}, {
+  message: 'コート番号に重複があるか、使用コート数より指定されたコート番号が少ないです',
+  path: ['available_courts']
+}).refine((data) => {
+  // 引分時勝ち点 <= 勝利時勝ち点のチェック
+  return data.draw_points <= data.win_points;
+}, {
+  message: '引分時勝ち点は勝利時勝ち点以下で設定してください',
+  path: ['draw_points']
+}).refine((data) => {
+  // 敗北時勝ち点 <= 引分時勝ち点のチェック
+  return data.loss_points <= data.draw_points;
+}, {
+  message: '敗北時勝ち点は引分時勝ち点以下で設定してください',
+  path: ['loss_points']
+});
 
 export default function TournamentEditForm({ tournament }: TournamentEditFormProps) {
   const router = useRouter();
@@ -28,6 +82,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     start_time: string;
     court_number: number;
   }>>([]);
+  const [initialAvailableCourts, setInitialAvailableCourts] = useState<string>('');
 
   // 既存のtournament_datesをパース
   const parseTournamentDates = (datesJson?: string): TournamentDate[] => {
@@ -50,6 +105,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     venue_id: number;
     team_count: number;
     court_count: number;
+    available_courts?: string;
     tournament_dates: TournamentDate[];
     match_duration_minutes: number;
     break_duration_minutes: number;
@@ -65,12 +121,14 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
   }
 
   const form = useForm<EditFormData>({
+    resolver: zodResolver(editTournamentSchema),
     defaultValues: {
       tournament_name: tournament.tournament_name,
       format_id: tournament.format_id,
       venue_id: tournament.venue_id,
       team_count: tournament.team_count,
       court_count: tournament.court_count,
+      available_courts: '', // 動的に設定される
       tournament_dates: parseTournamentDates(tournament.tournament_dates),
       match_duration_minutes: tournament.match_duration_minutes,
       break_duration_minutes: tournament.break_duration_minutes,
@@ -87,6 +145,35 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
   });
 
   const watchedDates = form.watch('tournament_dates');
+
+  // 既存試合データから使用コート番号を取得
+  const fetchUsedCourts = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.tournament_id}/matches`);
+      const result = await response.json();
+      
+      if (result.success && result.data.length > 0) {
+        // 使用されているコート番号を重複なく取得
+        const usedCourts = [...new Set(
+          result.data
+            .filter((match: any) => match.court_number !== null)
+            .map((match: any) => match.court_number)
+        )].sort((a: number, b: number) => a - b);
+        
+        if (usedCourts.length > 0) {
+          const courtsString = usedCourts.join(',');
+          setInitialAvailableCourts(courtsString);
+          form.setValue('available_courts', courtsString);
+        }
+      }
+    } catch (error) {
+      console.error('使用コート情報取得エラー:', error);
+      // エラーの場合はデフォルト値を使用
+      const defaultCourts = Array.from({length: tournament.court_count}, (_, i) => i + 1).join(',');
+      setInitialAvailableCourts(defaultCourts);
+      form.setValue('available_courts', defaultCourts);
+    }
+  }, [tournament.tournament_id, tournament.court_count, form]);
 
   // onScheduleChangeコールバックを安定化
   const handleScheduleChange = useCallback((customMatches: Array<{
@@ -113,6 +200,11 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     };
     fetchVenues();
   }, []);
+
+  // 使用コート番号の初期化
+  useEffect(() => {
+    fetchUsedCourts();
+  }, [fetchUsedCourts]);
 
   // 日程の追加
   const addTournamentDate = () => {
@@ -320,7 +412,13 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 min="0"
                 max="10"
                 {...form.register('draw_points', { valueAsNumber: true })}
+                className={form.formState.errors.draw_points ? 'border-red-500' : ''}
               />
+              {form.formState.errors.draw_points && (
+                <p className="text-sm text-red-600 mt-1">
+                  {form.formState.errors.draw_points.message}
+                </p>
+              )}
             </div>
 
             <div>
@@ -331,7 +429,13 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 min="0"
                 max="10"
                 {...form.register('loss_points', { valueAsNumber: true })}
+                className={form.formState.errors.loss_points ? 'border-red-500' : ''}
               />
+              {form.formState.errors.loss_points && (
+                <p className="text-sm text-red-600 mt-1">
+                  {form.formState.errors.loss_points.message}
+                </p>
+              )}
             </div>
 
             <div>
@@ -421,45 +525,78 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
               運営設定（スケジュール調整）
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="court_count">使用コート数</Label>
-              <Input
-                id="court_count"
-                type="number"
-                min="1"
-                max="20"
-                {...form.register('court_count', { valueAsNumber: true })}
-              />
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="court_count">使用コート数</Label>
+                <Input
+                  id="court_count"
+                  type="number"
+                  min="1"
+                  max="20"
+                  {...form.register('court_count', { valueAsNumber: true })}
+                  className={form.formState.errors.court_count ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.court_count && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.court_count.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="available_courts">使用コート番号（任意）</Label>
+                <Input
+                  id="available_courts"
+                  placeholder="例: 1,3,4,7"
+                  {...form.register('available_courts')}
+                  className={form.formState.errors.available_courts ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.available_courts && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.available_courts.message}
+                  </p>
+                )}
+                <p className="text-xs text-gray-600 mt-1">
+                  利用可能なコート番号をカンマ区切りで指定してください。未指定の場合は1から連番で使用されます。
+                </p>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="match_duration_minutes">1試合時間（分）</Label>
-              <Input
-                id="match_duration_minutes"
-                type="number"
-                min="5"
-                max="120"
-                {...form.register('match_duration_minutes', { valueAsNumber: true })}
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="match_duration_minutes">1試合時間（分）</Label>
+                <Input
+                  id="match_duration_minutes"
+                  type="number"
+                  min="5"
+                  max="120"
+                  {...form.register('match_duration_minutes', { valueAsNumber: true })}
+                  className={form.formState.errors.match_duration_minutes ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.match_duration_minutes && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.match_duration_minutes.message}
+                  </p>
+                )}
+              </div>
 
-            <div>
-              <Label htmlFor="break_duration_minutes">試合間休憩時間（分）</Label>
-              <Input
-                id="break_duration_minutes"
-                type="number"
-                min="0"
-                max="60"
-                {...form.register('break_duration_minutes', { valueAsNumber: true })}
-              />
-            </div>
-          </CardContent>
-          <CardContent>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                📝 上記の運営設定を変更すると、自動的にスケジュールが更新されます。
-              </p>
+              <div>
+                <Label htmlFor="break_duration_minutes">試合間休憩時間（分）</Label>
+                <Input
+                  id="break_duration_minutes"
+                  type="number"
+                  min="0"
+                  max="60"
+                  {...form.register('break_duration_minutes', { valueAsNumber: true })}
+                  className={form.formState.errors.break_duration_minutes ? 'border-red-500' : ''}
+                />
+                {form.formState.errors.break_duration_minutes && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.break_duration_minutes.message}
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -473,10 +610,22 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-2">💡 リアルタイムプレビュー機能</p>
+              <p className="text-xs text-blue-700">
+                上記の運営設定を変更すると、自動的にスケジュールが更新されます。
+                試合時間をクリックして個別に調整したり、コート番号を変更することも可能です。
+                時間重複エラーやコート数不足がある場合は警告が表示されるので、設定を調整して最適なスケジュールを作成してください。
+              </p>
+            </div>
+            
             <SchedulePreview
               formatId={form.watch('format_id') || null}
               settings={{
                 courtCount: form.watch('court_count') ?? 4,
+                availableCourts: form.watch('available_courts') 
+                  ? form.watch('available_courts').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+                  : undefined,
                 matchDurationMinutes: form.watch('match_duration_minutes') ?? 15,
                 breakDurationMinutes: form.watch('break_duration_minutes') ?? 5,
                 startTime: '09:00',

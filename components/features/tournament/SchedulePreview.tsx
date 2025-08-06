@@ -29,6 +29,12 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   const [editingMatch, setEditingMatch] = useState<string | null>(null); // "dayIndex-matchIndex"
   const [hasManualEdits, setHasManualEdits] = useState(false); // 手動編集フラグ
   const [previousSettings, setPreviousSettings] = useState<ScheduleSettings | null>(null); // 前回のsettings
+  const [editingBlockCourt, setEditingBlockCourt] = useState<string | null>(null); // ブロックコート編集中のブロック名
+  const [blockCourtAssignments, setBlockCourtAssignments] = useState<Record<string, number>>({}); // ブロック→コート割り当て
+  const [editingMatchCourt, setEditingMatchCourt] = useState<string | null>(null); // 個別試合コート編集中の試合キー
+  const [matchCourtAssignments, setMatchCourtAssignments] = useState<Record<number, number>>({}); // 試合番号→コート割り当て
+  const [courtConflicts, setCourtConflicts] = useState<Array<{court: number; conflicts: Array<{match1: ScheduleMatch; match2: ScheduleMatch; description: string}>}>>([]);
+  const [initialSchedule, setInitialSchedule] = useState<TournamentSchedule | null>(null); // 初期スケジュール保存用（リセット用）
   
   // コンポーネントマウント/アンマウント時のログ
   useEffect(() => {
@@ -46,9 +52,13 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setCustomSchedule(null);
       setActualMatches([]);
       setSchedule(null); // scheduleもリセットして確実に初期化
+      setInitialSchedule(null); // 初期スケジュールもリセット
       setFetchingMatches(false);
       setHasManualEdits(false);
       setPreviousSettings(null);
+      setBlockCourtAssignments({});
+      setMatchCourtAssignments({});
+      setCourtConflicts([]);
     }
   }, [tournamentId]); // editModeを依存配列から除去
 
@@ -311,6 +321,12 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
       setSchedule(editSchedule);
       
+      // 初期スケジュールを保存（リセット用）- 深いコピーで保存
+      if (!initialSchedule) {
+        const deepCopySchedule = JSON.parse(JSON.stringify(editSchedule));
+        setInitialSchedule(deepCopySchedule);
+      }
+      
       // カスタムスケジュールが未設定の場合のみ、実際の試合データで初期化
       // 既にカスタムスケジュールがある場合は保持する
       setCustomSchedule(prev => {
@@ -440,14 +456,24 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     
     // 時間重複をチェックして警告を更新
     const timeConflicts = checkTimeConflictsForSchedule(newSchedule.days);
+    const courtConflicts = checkCourtConflictsForSchedule(newSchedule.days);
+    
     newSchedule.timeConflicts = timeConflicts;
-    newSchedule.feasible = timeConflicts.length === 0 && newSchedule.feasible;
+    newSchedule.feasible = timeConflicts.length === 0 && courtConflicts.length === 0 && newSchedule.feasible;
+    setCourtConflicts(courtConflicts);
     
     // 警告メッセージを更新
-    newSchedule.warnings = newSchedule.warnings.filter(w => !w.includes('試合時間が重複'));
+    newSchedule.warnings = newSchedule.warnings.filter(w => 
+      !w.includes('試合時間が重複') && !w.includes('コート重複')
+    );
     if (timeConflicts.length > 0) {
       timeConflicts.forEach(conflict => {
         newSchedule.warnings.push(`チーム「${conflict.team}」の試合時間が重複しています`);
+      });
+    }
+    if (courtConflicts.length > 0) {
+      courtConflicts.forEach(conflict => {
+        newSchedule.warnings.push(`コート${conflict.court}で試合時間が重複しています`);
       });
     }
     
@@ -485,6 +511,176 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         // Schedule updated, notifying parent component
         onScheduleChange(customMatches);
       }
+    }
+  };
+
+  // ブロック単位のコート変更ハンドラー
+  const handleBlockCourtChange = (blockDisplayName: string, newCourtNumber: number) => {
+    if (!displaySchedule) return;
+
+    // ブロック表示名から実際のブロック名を抽出 (例: "予選Aブロック" → "A")
+    const actualBlockName = blockDisplayName.includes('予選') 
+      ? blockDisplayName.replace('予選', '').replace('ブロック', '')
+      : blockDisplayName;
+
+    // 利用可能コートのチェック
+    const availableCourts = settings.availableCourts?.length 
+      ? settings.availableCourts 
+      : Array.from({length: settings.courtCount}, (_, i) => i + 1);
+
+    if (!availableCourts.includes(newCourtNumber)) {
+      alert(`コート${newCourtNumber}は利用可能コートに含まれていません`);
+      return;
+    }
+
+    // 他のブロックとの重複チェック
+    const otherBlockAssignments = Object.entries(blockCourtAssignments)
+      .filter(([block, _]) => block !== actualBlockName);
+    
+    const conflictBlock = otherBlockAssignments.find(([_, court]) => court === newCourtNumber);
+    if (conflictBlock) {
+      if (!confirm(`コート${newCourtNumber}は既に予選${conflictBlock[0]}ブロックで使用されています。変更を続行しますか？`)) {
+        return;
+      }
+    }
+
+    // ブロック割り当てを更新
+    const newBlockAssignments = {
+      ...blockCourtAssignments,
+      [actualBlockName]: newCourtNumber
+    };
+    setBlockCourtAssignments(newBlockAssignments);
+
+    // スケジュールを再計算（カスタムコート割り当て付き）
+    if (templates.length > 0) {
+      const customAssignment = {
+        blockAssignments: newBlockAssignments,
+        matchAssignments: matchCourtAssignments // 既存の個別試合割り当ても保持
+      };
+
+      const recalculatedSchedule = calculateTournamentSchedule(templates, settings, customAssignment);
+      setCustomSchedule(recalculatedSchedule);
+      setHasManualEdits(true);
+
+      // 親コンポーネントに通知
+      if (onScheduleChange) {
+        const customMatches = recalculatedSchedule.days.flatMap(day => 
+          day.matches.map(match => ({
+            match_id: match.template.match_number,
+            start_time: match.startTime,
+            court_number: match.courtNumber
+          }))
+        );
+        onScheduleChange(customMatches);
+      }
+    }
+  };
+
+  // 個別試合のコート変更ハンドラー
+  const handleMatchCourtChange = (matchNumber: number, newCourtNumber: number) => {
+    if (!displaySchedule) return;
+
+    // 利用可能コートのチェック
+    const availableCourts = settings.availableCourts?.length 
+      ? settings.availableCourts 
+      : Array.from({length: settings.courtCount}, (_, i) => i + 1);
+
+    if (!availableCourts.includes(newCourtNumber)) {
+      alert(`コート${newCourtNumber}は利用可能コートに含まれていません`);
+      return;
+    }
+
+    // 試合別割り当てを更新
+    const newMatchAssignments = {
+      ...matchCourtAssignments,
+      [matchNumber]: newCourtNumber
+    };
+    setMatchCourtAssignments(newMatchAssignments);
+
+    // スケジュールを再計算（カスタムコート割り当て付き）
+    if (templates.length > 0) {
+      const customAssignment = {
+        blockAssignments: blockCourtAssignments,
+        matchAssignments: newMatchAssignments
+      };
+
+      const recalculatedSchedule = calculateTournamentSchedule(templates, settings, customAssignment);
+      setCustomSchedule(recalculatedSchedule);
+      setHasManualEdits(true);
+
+      // 親コンポーネントに通知
+      if (onScheduleChange) {
+        const customMatches = recalculatedSchedule.days.flatMap(day => 
+          day.matches.map(match => ({
+            match_id: match.template.match_number,
+            start_time: match.startTime,
+            court_number: match.courtNumber
+          }))
+        );
+        onScheduleChange(customMatches);
+      }
+    }
+  };
+
+  // スケジュールリセット関数
+  const handleScheduleReset = () => {
+    if (!initialSchedule) return;
+
+    // 編集状態をリセット
+    setHasManualEdits(false);
+    setEditingMatch(null);
+    setEditingBlockCourt(null);
+    setEditingMatchCourt(null);
+    setBlockCourtAssignments({});
+    setMatchCourtAssignments({});
+    setCourtConflicts([]);
+
+    // カスタムスケジュールを初期状態にリセット（深いコピー）
+    const resetSchedule = JSON.parse(JSON.stringify(initialSchedule));
+    
+    // 時間重複とコート重複をチェック
+    const timeConflicts = checkTimeConflictsForSchedule(resetSchedule.days);
+    const courtConflicts = checkCourtConflictsForSchedule(resetSchedule.days);
+    
+    // リセット後のスケジュールに最新の状態を反映
+    const finalResetSchedule = {
+      ...resetSchedule,
+      timeConflicts,
+      feasible: timeConflicts.length === 0 && courtConflicts.length === 0,
+      warnings: resetSchedule.warnings.filter(w => 
+        !w.includes('試合時間が重複') && !w.includes('コート重複')
+      )
+    };
+
+    // 時間重複警告を追加
+    if (timeConflicts.length > 0) {
+      timeConflicts.forEach(conflict => {
+        finalResetSchedule.warnings.push(`チーム「${conflict.team}」の試合時間が重複しています`);
+      });
+    }
+
+    // コート重複警告を追加
+    if (courtConflicts.length > 0) {
+      courtConflicts.forEach(conflict => {
+        finalResetSchedule.warnings.push(`コート${conflict.court}で試合時間が重複しています`);
+      });
+    }
+
+    setCustomSchedule(finalResetSchedule);
+    setCourtConflicts(courtConflicts);
+
+    // 親コンポーネントにリセット済みスケジュールを通知
+    if (onScheduleChange) {
+      const resetMatches = initialSchedule.days.flatMap(day => 
+        day.matches.map(match => ({
+          match_id: editMode && actualMatches.length > 0
+            ? actualMatches.find(am => am.match_number === match.template.match_number)?.match_id || match.template.match_number
+            : match.template.match_number,
+          start_time: match.startTime,
+          court_number: match.courtNumber
+        }))
+      );
+      onScheduleChange(resetMatches);
     }
   };
 
@@ -586,6 +782,71 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     return Object.values(teamConflicts);
   };
 
+  // コート重複チェック関数
+  const checkCourtConflictsForSchedule = (days: { matches: ScheduleMatch[] }[]): Array<{
+    court: number;
+    conflicts: Array<{
+      match1: ScheduleMatch;
+      match2: ScheduleMatch;
+      description: string;
+    }>;
+  }> => {
+    const courtConflicts: Record<number, {
+      court: number;
+      conflicts: Array<{
+        match1: ScheduleMatch;
+        match2: ScheduleMatch;
+        description: string;
+      }>;
+    }> = {};
+    
+    for (const day of days) {
+      const matches = day.matches;
+      const courtMatches: Record<number, ScheduleMatch[]> = {};
+      
+      // コート別に試合をグループ化
+      for (const match of matches) {
+        if (!courtMatches[match.courtNumber]) {
+          courtMatches[match.courtNumber] = [];
+        }
+        courtMatches[match.courtNumber].push(match);
+      }
+      
+      // 各コートで時間重複をチェック
+      for (const [courtNumber, courtMatchList] of Object.entries(courtMatches)) {
+        const court = parseInt(courtNumber);
+        const sortedMatches = courtMatchList.sort((a, b) => 
+          timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+        );
+        
+        for (let i = 0; i < sortedMatches.length - 1; i++) {
+          const match1 = sortedMatches[i];
+          const match2 = sortedMatches[i + 1];
+          
+          const match1End = timeToMinutes(match1.endTime);
+          const match2Start = timeToMinutes(match2.startTime);
+          
+          if (match1End > match2Start) {
+            if (!courtConflicts[court]) {
+              courtConflicts[court] = {
+                court,
+                conflicts: []
+              };
+            }
+            
+            courtConflicts[court].conflicts.push({
+              match1,
+              match2,
+              description: `${match1.startTime}-${match1.endTime}と${match2.startTime}-${match2.endTime}が重複`
+            });
+          }
+        }
+      }
+    }
+    
+    return Object.values(courtConflicts);
+  };
+
   if (!formatId) {
     return (
       <Card>
@@ -646,15 +907,14 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               )}
               スケジュール概要
             </div>
-            {customSchedule && (
+            {hasManualEdits && initialSchedule && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setCustomSchedule(null);
-                  setHasManualEdits(false);
-                }}
+                onClick={handleScheduleReset}
+                title="編集前の状態に戻します"
               >
+                <RefreshCw className="w-4 h-4 mr-1" />
                 リセット
               </Button>
             )}
@@ -723,6 +983,32 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                       <li key={detailIndex} className="text-sm text-red-700">
                         • {detail.description}
                         <div className="text-xs text-red-600 ml-2">
+                          試合1: {detail.match1.template.match_code} | 
+                          試合2: {detail.match2.template.match_code}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* コート重複詳細 */}
+          {courtConflicts.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <h4 className="font-medium text-orange-800 mb-2 flex items-center">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                コート重複エラー
+              </h4>
+              {courtConflicts.map((conflict, index) => (
+                <div key={index} className="mb-3 last:mb-0">
+                  <div className="font-medium text-orange-800 mb-1">コート{conflict.court}</div>
+                  <ul className="space-y-1 ml-4">
+                    {conflict.conflicts.map((detail, detailIndex) => (
+                      <li key={detailIndex} className="text-sm text-orange-700">
+                        • {detail.description}
+                        <div className="text-xs text-orange-600 ml-2">
                           試合1: {detail.match1.template.match_code} | 
                           試合2: {detail.match2.template.match_code}
                         </div>
@@ -802,13 +1088,71 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               Object.entries(matchesByBlock).map(([blockKey, blockMatches]) => (
                 <Card key={blockKey}>
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
-                        {getBlockDisplayName(blockKey)}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        {blockMatches.length}試合
-                      </span>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
+                          {getBlockDisplayName(blockKey)}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {blockMatches.length}試合
+                        </span>
+                      </div>
+                      
+                      {/* ブロック単位コート変更UI（リーグ戦のみ） */}
+                      {blockKey.includes('予選') && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500">コート:</span>
+                          {editingBlockCourt === blockKey ? (
+                            <div className="flex items-center space-x-1">
+                              <select
+                                value={(() => {
+                                  const actualBlockName = blockKey.includes('予選') 
+                                    ? blockKey.replace('予選', '').replace('ブロック', '')
+                                    : blockKey;
+                                  return blockCourtAssignments[actualBlockName] ?? blockMatches[0]?.courtNumber ?? 1;
+                                })()}
+                                onChange={(e) => {
+                                  const newCourt = parseInt(e.target.value);
+                                  handleBlockCourtChange(blockKey, newCourt);
+                                  setEditingBlockCourt(null);
+                                }}
+                                onBlur={() => setEditingBlockCourt(null)}
+                                className="text-xs border rounded px-1 py-0.5 w-12"
+                                autoFocus
+                              >
+                                {(settings.availableCourts?.length 
+                                  ? settings.availableCourts 
+                                  : Array.from({length: settings.courtCount}, (_, i) => i + 1)
+                                ).map(courtNum => (
+                                  <option key={courtNum} value={courtNum}>{courtNum}</option>
+                                ))}
+                              </select>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingBlockCourt(null)}
+                                className="h-5 w-5 p-0"
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditingBlockCourt(blockKey)}
+                              className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                              title="ブロックのコート番号を変更"
+                            >
+                              <span>{(() => {
+                                const actualBlockName = blockKey.includes('予選') 
+                                  ? blockKey.replace('予選', '').replace('ブロック', '')
+                                  : blockKey;
+                                return blockCourtAssignments[actualBlockName] ?? blockMatches[0]?.courtNumber ?? 1;
+                              })()}</span>
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -883,10 +1227,49 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                                     {match.template.team1_display_name} vs {match.template.team2_display_name}
                                   </td>
                                   <td className="py-2 px-3">
-                                    <div className="flex items-center text-sm">
-                                      <MapPin className="w-3 h-3 mr-1" />
-                                      コート {match.courtNumber}
-                                    </div>
+                                    {/* 個別試合コート変更UI（トーナメント用） */}
+                                    {blockKey.includes('決勝') ? (
+                                      <div className="flex items-center text-sm">
+                                        <MapPin className="w-3 h-3 mr-1" />
+                                        {editingMatchCourt === editKey ? (
+                                          <div className="flex items-center space-x-1">
+                                            <span>コート</span>
+                                            <select
+                                              value={matchCourtAssignments[match.template.match_number] ?? match.courtNumber}
+                                              onChange={(e) => {
+                                                const newCourt = parseInt(e.target.value);
+                                                handleMatchCourtChange(match.template.match_number, newCourt);
+                                                setEditingMatchCourt(null);
+                                              }}
+                                              onBlur={() => setEditingMatchCourt(null)}
+                                              className="text-xs border rounded px-1 py-0.5 w-12"
+                                              autoFocus
+                                            >
+                                              {(settings.availableCourts?.length 
+                                                ? settings.availableCourts 
+                                                : Array.from({length: settings.courtCount}, (_, i) => i + 1)
+                                              ).map(courtNum => (
+                                                <option key={courtNum} value={courtNum}>{courtNum}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => setEditingMatchCourt(editKey)}
+                                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                            title="コート番号を変更"
+                                          >
+                                            <span>コート {matchCourtAssignments[match.template.match_number] ?? match.courtNumber}</span>
+                                            <Edit3 className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center text-sm">
+                                        <MapPin className="w-3 h-3 mr-1" />
+                                        コート {match.courtNumber}
+                                      </div>
+                                    )}
                                   </td>
                                 </tr>
                               );
@@ -903,7 +1286,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       })}
 
       {/* 調整のヒント */}
-      {!schedule.feasible && (
+      {(!displaySchedule.feasible || courtConflicts.length > 0) && (
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="text-blue-800">💡 スケジュール調整のヒント</CardTitle>
@@ -911,6 +1294,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
           <CardContent className="text-blue-700">
             <ul className="space-y-2 text-sm">
               <li>• <strong>コート数を増やす</strong> - 同時進行できる試合数が増えます</li>
+              <li>• <strong>使用コート番号を変更する</strong> - 運営設定で異なるコート番号を指定できます</li>
+              <li>• <strong>ブロック別コート割り当て</strong> - 予選ブロックごとに固定コートを設定できます</li>
+              <li>• <strong>個別試合コート変更</strong> - 決勝戦など重要な試合のコートを個別に指定できます</li>
               <li>• <strong>試合時間を短縮する</strong> - 全体のスケジュールが短縮されます</li>
               <li>• <strong>休憩時間を調整する</strong> - 試合間の空き時間を最適化できます</li>
               <li>• <strong>開催日を追加する</strong> - 1日あたりの試合数を減らせます</li>

@@ -33,6 +33,14 @@ export const tournamentCreateSchema = z.object({
     .min(1, 'コート数は1以上で入力してください')
     .max(20, 'コート数は20以下で入力してください'),
   
+  available_courts: z.string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true; // 空文字は許可
+      const courts = val.split(',').map(s => s.trim());
+      return courts.every(court => /^\d+$/.test(court) && parseInt(court) >= 1 && parseInt(court) <= 99);
+    }, '使用コート番号は1-99の数字をカンマ区切りで入力してください（例: 1,3,4,7）'),
+  
   match_duration_minutes: z.number()
     .min(5, '試合時間は5分以上で入力してください')
     .max(120, '試合時間は120分以下で入力してください'),
@@ -99,6 +107,17 @@ export const tournamentCreateSchema = z.object({
 }, {
   message: '同じ日付は複数回指定できません',
   path: ['tournament_dates']
+}).refine((data) => {
+  // 使用コート番号とコート数の整合性チェック
+  if (!data.available_courts || data.available_courts.trim() === '') {
+    return true; // 未指定の場合はOK
+  }
+  const courts = data.available_courts.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  const uniqueCourts = new Set(courts);
+  return courts.length === uniqueCourts.size && uniqueCourts.size >= data.court_count;
+}, {
+  message: 'コート番号に重複があるか、使用コート数より指定されたコート番号が少ないです',
+  path: ['available_courts']
 }).refine((data) => {
   // 引分時勝ち点 <= 勝利時勝ち点のチェック
   return data.draw_points <= data.win_points;

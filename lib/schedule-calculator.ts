@@ -26,6 +26,7 @@ export interface TournamentSchedule {
   warnings: string[];
   feasible: boolean;
   timeConflicts: TimeConflict[];
+  customCourtAssignment?: CustomCourtAssignment; // カスタムコート割り当て
 }
 
 export interface TimeConflict {
@@ -37,8 +38,14 @@ export interface TimeConflict {
   }[];
 }
 
+export interface CustomCourtAssignment {
+  blockAssignments?: Record<string, number>; // "A" → 3, "B" → 4
+  matchAssignments?: Record<number, number>;  // 25 → 4, 26 → 7 (決勝戦用)
+}
+
 export interface ScheduleSettings {
   courtCount: number;
+  availableCourts?: number[]; // 使用するコート番号のリスト
   matchDurationMinutes: number;
   breakDurationMinutes: number;
   startTime: string; // HH:MM format
@@ -47,7 +54,8 @@ export interface ScheduleSettings {
 
 export function calculateTournamentSchedule(
   templates: MatchTemplate[],
-  settings: ScheduleSettings
+  settings: ScheduleSettings,
+  customAssignment?: CustomCourtAssignment
 ): TournamentSchedule {
   const warnings: string[] = [];
   let feasible = true;
@@ -78,7 +86,8 @@ export function calculateTournamentSchedule(
       dayTemplates,
       tournamentDate.date,
       dayNumber,
-      settings
+      settings,
+      customAssignment
     );
 
     if (daySchedule.requiredCourts > settings.courtCount) {
@@ -122,7 +131,8 @@ export function calculateTournamentSchedule(
     totalDuration: totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00',
     warnings,
     feasible,
-    timeConflicts
+    timeConflicts,
+    customCourtAssignment: customAssignment
   };
 }
 
@@ -130,23 +140,29 @@ function calculateDaySchedule(
   templates: MatchTemplate[],
   date: string,
   dayNumber: number,
-  settings: ScheduleSettings
+  settings: ScheduleSettings,
+  customAssignment?: CustomCourtAssignment
 ): DaySchedule {
+  // 利用可能コート番号の取得（指定がない場合は1からの連番）
+  const availableCourts = settings.availableCourts?.length 
+    ? settings.availableCourts 
+    : Array.from({length: settings.courtCount}, (_, i) => i + 1);
+
   // ブロック名からコート番号へのマッピングを作成
   const uniqueBlocks = [...new Set(templates.map(t => t.block_name).filter((name): name is string => Boolean(name)))];
   const blockToCourtMap: Record<string, number> = {};
   
   uniqueBlocks.forEach((blockName, index) => {
-    blockToCourtMap[blockName] = (index % settings.courtCount) + 1;
+    blockToCourtMap[blockName] = availableCourts[index % availableCourts.length];
   });
 
-  // コート別の最新終了時刻管理（全コートを管理）
+  // コート別の最新終了時刻管理（利用可能コートのみ管理）
   const courtEndTimes: Record<number, number> = {};
   
-  // 初期化：全コートを開始時刻に設定
-  for (let i = 1; i <= settings.courtCount; i++) {
-    courtEndTimes[i] = timeToMinutes(settings.startTime);
-  }
+  // 初期化：利用可能コートを開始時刻に設定
+  availableCourts.forEach(courtNumber => {
+    courtEndTimes[courtNumber] = timeToMinutes(settings.startTime);
+  });
 
   // execution_priorityでグループ化（同時進行する試合）
   const priorityGroups = templates.reduce((acc, template) => {
@@ -179,20 +195,19 @@ function calculateDaySchedule(
     for (let i = 0; i < groupMatches.length; i++) {
       const template = groupMatches[i];
       
-      // ブロック名に基づいてコート番号を決定
-      let courtNumber: number;
-      if (template.block_name && blockToCourtMap[template.block_name]) {
-        // 予選ブロック: ブロック固定のコート番号
-        courtNumber = blockToCourtMap[template.block_name];
-      } else {
-        // 決勝トーナメント: 利用可能なコートを順番に割り当て
-        courtNumber = ((i % settings.courtCount) + 1);
-      }
+      // コート番号を決定（カスタム割り当て対応）
+      const courtNumber = getCourtNumber(
+        template,
+        i,
+        availableCourts,
+        blockToCourtMap,
+        customAssignment
+      );
 
       // priority間の依存関係とコート使用時間の両方を考慮
       let matchStartTime: number;
-      if (template.block_name && blockToCourtMap[template.block_name]) {
-        // 予選ブロック: 該当コートの終了時刻から開始
+      if (template.block_name) {
+        // 予選ブロック: 該当コートの終了時刻から開始（ブロック内で連続実行）
         matchStartTime = courtEndTimes[courtNumber];
       } else {
         // 決勝トーナメント: priority制御とコート制御の両方を適用
@@ -304,6 +319,35 @@ function checkTimeConflicts(days: DaySchedule[]): TimeConflict[] {
   }
   
   return Object.values(teamConflicts);
+}
+
+/**
+ * コート番号を決定する関数（カスタム割り当て対応）
+ */
+function getCourtNumber(
+  template: MatchTemplate,
+  index: number,
+  availableCourts: number[],
+  blockToCourtMap: Record<string, number>,
+  customAssignment?: CustomCourtAssignment
+): number {
+  // 1. 個別試合のカスタム割り当てをチェック（最優先）
+  if (customAssignment?.matchAssignments?.[template.match_number]) {
+    return customAssignment.matchAssignments[template.match_number];
+  }
+
+  // 2. ブロック単位のカスタム割り当てをチェック（リーグ戦用）
+  if (template.block_name && customAssignment?.blockAssignments?.[template.block_name]) {
+    return customAssignment.blockAssignments[template.block_name];
+  }
+
+  // 3. デフォルトのブロック固定割り当て（リーグ戦用）
+  if (template.block_name && blockToCourtMap[template.block_name]) {
+    return blockToCourtMap[template.block_name];
+  }
+
+  // 4. デフォルトの順次割り当て（トーナメント用）
+  return availableCourts[index % availableCourts.length];
 }
 
 // APIエンドポイント用のスケジュール計算（未使用）
