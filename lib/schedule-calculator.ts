@@ -140,8 +140,13 @@ function calculateDaySchedule(
     blockToCourtMap[blockName] = (index % settings.courtCount) + 1;
   });
 
-  // ブロック別のタイムスロット管理
-  const blockTimeSlots: Record<string, number> = {};
+  // コート別の最新終了時刻管理（全コートを管理）
+  const courtEndTimes: Record<number, number> = {};
+  
+  // 初期化：全コートを開始時刻に設定
+  for (let i = 1; i <= settings.courtCount; i++) {
+    courtEndTimes[i] = timeToMinutes(settings.startTime);
+  }
 
   // execution_priorityでグループ化（同時進行する試合）
   const priorityGroups = templates.reduce((acc, template) => {
@@ -153,7 +158,6 @@ function calculateDaySchedule(
   }, {} as Record<number, MatchTemplate[]>);
 
   const matches: ScheduleMatch[] = [];
-  let currentTimeMinutes = timeToMinutes(settings.startTime);
   let maxRequiredCourts = 0;
 
   // 各優先度グループを順番に処理
@@ -167,40 +171,43 @@ function calculateDaySchedule(
     
     maxRequiredCourts = Math.max(maxRequiredCourts, simultaneousMatches);
 
+    // 前のpriorityグループの全試合完了まで待機する時刻を計算
+    // 同一priority内の試合は同時進行、異なるpriorityは完全に分離
+    let groupStartTime = Math.max(...Object.values(courtEndTimes));
+
     // 同時進行する試合のスケジュール作成
     for (let i = 0; i < groupMatches.length; i++) {
       const template = groupMatches[i];
       
       // ブロック名に基づいてコート番号を決定
-      const courtNumber = template.block_name && blockToCourtMap[template.block_name] 
-        ? blockToCourtMap[template.block_name]
-        : (i % settings.courtCount) + 1; // フォールバック: 従来の方式
-
-      // ブロック別の時間管理
-      let matchStartTime = currentTimeMinutes;
+      let courtNumber: number;
       if (template.block_name && blockToCourtMap[template.block_name]) {
-        // 同じコートを使う他のブロックとの重複を避ける
-        const sameCourtBlocks = uniqueBlocks.filter(block => 
-          template.block_name && blockToCourtMap[block] === blockToCourtMap[template.block_name]
-        );
-        
-        // このコートを使う最後の試合終了時刻を確認
-        let latestEndTime = timeToMinutes(settings.startTime);
-        for (const block of sameCourtBlocks) {
-          if (blockTimeSlots[block]) {
-            latestEndTime = Math.max(latestEndTime, blockTimeSlots[block]);
-          }
-        }
-        
-        // 重複を避けるために時刻を調整
-        matchStartTime = Math.max(currentTimeMinutes, latestEndTime);
-        
-        // このブロックの次回使用可能時刻を更新（休憩時間が0なら追加しない）
-        blockTimeSlots[template.block_name] = matchStartTime + settings.matchDurationMinutes + (settings.breakDurationMinutes || 0);
+        // 予選ブロック: ブロック固定のコート番号
+        courtNumber = blockToCourtMap[template.block_name];
+      } else {
+        // 決勝トーナメント: 利用可能なコートを順番に割り当て
+        courtNumber = ((i % settings.courtCount) + 1);
+      }
+
+      // priority間の依存関係とコート使用時間の両方を考慮
+      let matchStartTime: number;
+      if (template.block_name && blockToCourtMap[template.block_name]) {
+        // 予選ブロック: 該当コートの終了時刻から開始
+        matchStartTime = courtEndTimes[courtNumber];
+      } else {
+        // 決勝トーナメント: priority制御とコート制御の両方を適用
+        // - groupStartTime: 前のpriorityの全試合完了まで待機
+        // - courtEndTimes[courtNumber]: 同じコートでの時間重複回避
+        matchStartTime = Math.max(groupStartTime, courtEndTimes[courtNumber]);
       }
       
+      const matchEndTime = matchStartTime + settings.matchDurationMinutes;
+      
+      // コートの次回使用可能時刻を更新（休憩時間を追加）
+      courtEndTimes[courtNumber] = matchEndTime + (settings.breakDurationMinutes || 0);
+      
       const startTime = minutesToTime(matchStartTime);
-      const endTime = minutesToTime(matchStartTime + settings.matchDurationMinutes);
+      const endTime = minutesToTime(matchEndTime);
 
       matches.push({
         template,
@@ -211,9 +218,6 @@ function calculateDaySchedule(
         timeSlot: priority
       });
     }
-
-    // 次のタイムスロットまでの時間を計算（休憩時間が0なら追加しない）
-    currentTimeMinutes += settings.matchDurationMinutes + (settings.breakDurationMinutes || 0);
   }
 
   // その日の実際の総所要時間を計算（最早開始時刻から最遅終了時刻まで）

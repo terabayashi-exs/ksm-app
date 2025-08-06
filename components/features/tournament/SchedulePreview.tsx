@@ -27,6 +27,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingMatch, setEditingMatch] = useState<string | null>(null); // "dayIndex-matchIndex"
+  const [hasManualEdits, setHasManualEdits] = useState(false); // 手動編集フラグ
+  const [previousSettings, setPreviousSettings] = useState<ScheduleSettings | null>(null); // 前回のsettings
   
   // コンポーネントマウント/アンマウント時のログ
   useEffect(() => {
@@ -45,8 +47,32 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setActualMatches([]);
       setSchedule(null); // scheduleもリセットして確実に初期化
       setFetchingMatches(false);
+      setHasManualEdits(false);
+      setPreviousSettings(null);
     }
   }, [tournamentId]); // editModeを依存配列から除去
+
+  // settings変更検出とcustomScheduleリセット（新規作成モードのみ）
+  useEffect(() => {
+    if (editMode) return; // 編集モードでは無効
+
+    if (previousSettings && templates.length > 0) {
+      // settingsの変更を検出
+      const settingsChanged = 
+        previousSettings.courtCount !== settings.courtCount ||
+        previousSettings.matchDurationMinutes !== settings.matchDurationMinutes ||
+        previousSettings.breakDurationMinutes !== settings.breakDurationMinutes ||
+        previousSettings.startTime !== settings.startTime ||
+        JSON.stringify(previousSettings.tournamentDates) !== JSON.stringify(settings.tournamentDates);
+
+      if (settingsChanged && !hasManualEdits) {
+        // 手動編集がない場合のみcustomScheduleをリセット
+        setCustomSchedule(null);
+      }
+    }
+
+    setPreviousSettings(settings);
+  }, [settings, templates.length, editMode, hasManualEdits]);
   const [actualMatches, setActualMatches] = useState<Array<{
     match_id: number;
     tournament_date: string;
@@ -180,7 +206,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setError('スケジュール計算エラー');
       console.error('スケジュール計算エラー:', err);
     }
-  }, [templates, settings, customSchedule, editMode, actualMatches]);
+  }, [templates, settings, editMode]); // customScheduleとactualMatchesを依存配列から除去
 
   // 編集モードでの実際の試合データからスケジュール表示を生成
   useEffect(() => {
@@ -336,17 +362,16 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     }
   }, [editMode, actualMatches.length, schedule?.days?.length]); // fetchingMatchesを依存配列から除去
 
-  // 設定変更時はカスタムスケジュールをリセット（新規作成モードのみ）
-  // ただし、フォーマットが変更された場合のみリセットし、試合時間などのパラメータ変更では保持
+  // フォーマット変更時の状態リセット
   useEffect(() => {
     // 編集モードで実際の試合データがある場合はリセットしない
     if (editMode && actualMatches.length > 0) {
       return;
     }
-    // 新規作成モードでフォーマットが未選択の場合のみリセット
-    if (!formatId) {
-      setCustomSchedule(null);
-    }
+    // 新規作成モードでフォーマットが未選択またはフォーマットが変更された場合はリセット
+    setCustomSchedule(null);
+    setHasManualEdits(false);
+    setPreviousSettings(null);
   }, [formatId, editMode, actualMatches.length]);
 
   // デバッグ: 表示スケジュールの状態をログ出力
@@ -428,6 +453,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     
     setCustomSchedule(newSchedule);
     setEditingMatch(null);
+    setHasManualEdits(true); // 手動編集フラグを設定
     
     // カスタムスケジュールが変更された場合、親コンポーネントに通知
     if (onScheduleChange) {
@@ -624,7 +650,10 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCustomSchedule(null)}
+                onClick={() => {
+                  setCustomSchedule(null);
+                  setHasManualEdits(false);
+                }}
               >
                 リセット
               </Button>
@@ -654,7 +683,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
           </div>
 
           {/* カスタム編集中表示 */}
-          {customSchedule && (
+          {customSchedule && hasManualEdits && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-blue-800 font-medium flex items-center">
                 <Edit3 className="w-4 h-4 mr-1" />
@@ -662,6 +691,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               </p>
             </div>
           )}
+
 
           {/* 警告メッセージ */}
           {displaySchedule.warnings.length > 0 && (
