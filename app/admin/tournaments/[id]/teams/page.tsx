@@ -16,7 +16,7 @@ import {
   AlertCircle,
   FileText,
   Key,
-  Mail
+  Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -47,6 +47,20 @@ interface Player {
   position: string;
 }
 
+interface TeamData {
+  tournament_team_id: number;
+  team_id: string;
+  team_name: string;
+  team_omission: string;
+  master_team_name: string;
+  contact_person: string;
+  contact_email: string;
+  contact_phone?: string;
+  registration_type: 'self_registered' | 'admin_proxy';
+  player_count: number;
+  created_at: string;
+}
+
 export default function TeamRegistrationPage() {
   const router = useRouter();
   const params = useParams();
@@ -55,7 +69,7 @@ export default function TeamRegistrationPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
-  const [existingTeams, setExistingTeams] = useState<any[]>([]);
+  const [existingTeams, setExistingTeams] = useState<TeamData[]>([]);
 
   // 手動登録用の状態
   const [manualForm, setManualForm] = useState<TeamRegistration>({
@@ -64,6 +78,8 @@ export default function TeamRegistrationPage() {
     contact_person: '',
     contact_email: '',
     contact_phone: '',
+    tournament_team_name: '',
+    tournament_team_omission: '',
     players: [{ player_name: '', uniform_number: 1, position: '' }]
   });
 
@@ -72,6 +88,7 @@ export default function TeamRegistrationPage() {
   const [csvPreview, setCsvPreview] = useState<TeamRegistration[]>([]);
   const [csvUploading, setCsvUploading] = useState(false);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
 
   // 大会情報と既存参加チーム取得
   useEffect(() => {
@@ -101,7 +118,6 @@ export default function TeamRegistrationPage() {
 
   // 仮パスワード生成
   const generateTemporaryPassword = (): string => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const prefix = 'temp';
     const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `${prefix}${suffix}`;
@@ -138,8 +154,9 @@ export default function TeamRegistrationPage() {
 
       if (result.success) {
         // 成功時: 既存チーム一覧に追加
-        const newExistingTeam = {
+        const newExistingTeam: TeamData = {
           tournament_team_id: result.data.tournament_team_id,
+          team_id: result.data.team_id,
           team_name: result.data.tournament_team_name,
           team_omission: teamData.tournament_team_omission,
           master_team_name: result.data.team_name,
@@ -159,6 +176,8 @@ export default function TeamRegistrationPage() {
           contact_person: '',
           contact_email: '',
           contact_phone: '',
+          tournament_team_name: '',
+          tournament_team_omission: '',
           players: [{ player_name: '', uniform_number: undefined, position: '' }]
         });
 
@@ -327,7 +346,7 @@ export default function TeamRegistrationPage() {
         }
 
         // 最終バリデーション
-        teams.forEach((team, teamIndex) => {
+        teams.forEach((team) => {
           if (team.players.length === 0) {
             errors.push(`チーム「${team.team_name}」: 最低1人の選手が必要です`);
           }
@@ -363,7 +382,7 @@ export default function TeamRegistrationPage() {
       const { teams, errors } = await parseCsvFile(file);
       setCsvPreview(teams);
       setCsvErrors(errors);
-    } catch (error) {
+    } catch {
       setCsvErrors(['CSVファイルの読み込みに失敗しました']);
     }
   };
@@ -417,7 +436,7 @@ export default function TeamRegistrationPage() {
               error: result.error
             });
           }
-        } catch (error) {
+        } catch {
           results.push({
             success: false,
             teamName: team.team_name,
@@ -475,6 +494,42 @@ export default function TeamRegistrationPage() {
       alert('CSV一括登録中にエラーが発生しました');
     } finally {
       setCsvUploading(false);
+    }
+  };
+
+  // チーム削除処理
+  const handleDeleteTeam = async (team: TeamData) => {
+    const teamName = team.team_name || team.master_team_name;
+    
+    if (!confirm(`チーム「${teamName}」を削除しますか？\n\n※この操作は取り消せません。関連する選手データもすべて削除されます。`)) {
+      return;
+    }
+
+    setDeletingTeamId(team.team_id);
+
+    try {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/teams/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId: team.team_id }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // UI状態を更新
+        setExistingTeams(prev => prev.filter(t => t.team_id !== team.team_id));
+        alert(`チーム「${teamName}」を正常に削除しました。`);
+      } else {
+        throw new Error(result.error || 'チーム削除に失敗しました');
+      }
+    } catch (error) {
+      console.error('Team deletion error:', error);
+      alert(`チーム削除に失敗しました。\n\n${error instanceof Error ? error.message : 'エラーが発生しました'}`);
+    } finally {
+      setDeletingTeamId(null);
     }
   };
 
@@ -883,13 +938,36 @@ export default function TeamRegistrationPage() {
                             <h4 className={`font-medium ${isAdminProxy ? 'text-yellow-900' : 'text-green-900'}`}>
                               {team.team_name}
                             </h4>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              isAdminProxy
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {isAdminProxy ? '管理者代行' : '申し込み済み'}
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                isAdminProxy
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {isAdminProxy ? '管理者代行' : '申し込み済み'}
+                              </span>
+                              {isAdminProxy && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteTeam(team)}
+                                  disabled={deletingTeamId === team.team_id}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                >
+                                  {deletingTeamId === team.team_id ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                                      削除中
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Trash2 className="w-3 h-3 mr-1" />
+                                      削除
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           <p className="text-sm text-gray-600">略称: {team.team_omission}</p>
                           <p className="text-sm text-gray-600">マスター: {team.master_team_name}</p>
