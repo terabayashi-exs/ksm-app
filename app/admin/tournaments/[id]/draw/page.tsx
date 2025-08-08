@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin } from 'lucide-react';
+import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Team {
   team_id: string;
@@ -61,6 +61,7 @@ export default function TournamentDrawPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingDraw, setHasExistingDraw] = useState<boolean>(false);
 
   // 大会情報と参加チーム、試合データの取得
   useEffect(() => {
@@ -143,13 +144,81 @@ export default function TournamentDrawPage() {
       }
     });
 
-    const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
-      block_name: blockName,
-      phase: 'preliminary',
-      teams: []
-    }));
+    // 既存の振分け情報を取得
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/teams`);
+      const teamsData = await response.json();
+      
+      if (response.ok && teamsData.success) {
+        // APIから返されるデータ構造に合わせて処理
+        let assignedTeams = [];
+        if (teamsData.data && typeof teamsData.data === 'object') {
+          if (Array.isArray(teamsData.data)) {
+            assignedTeams = teamsData.data;
+          } else if (teamsData.data.teams && Array.isArray(teamsData.data.teams)) {
+            assignedTeams = teamsData.data.teams;
+          }
+        }
 
-    setBlocks(initialBlocks);
+        // ブロック別にチームを整理
+        const blockTeamMap: Record<string, Team[]> = {};
+        
+        // 初期化
+        Array.from(preliminaryBlocks).forEach(blockName => {
+          blockTeamMap[blockName] = [];
+        });
+
+        // 振分け済みチームを各ブロックに配置
+        let hasAssignedTeams = false;
+        assignedTeams.forEach((team: any) => {
+          if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block)) {
+            const formattedTeam: Team = {
+              team_id: team.team_id,
+              team_name: team.team_name,
+              team_omission: team.team_omission,
+              contact_person: team.contact_person,
+              contact_email: team.contact_email,
+              registered_players_count: team.player_count || 0
+            };
+            
+            blockTeamMap[team.assigned_block][team.block_position - 1] = formattedTeam;
+            hasAssignedTeams = true;
+          }
+        });
+
+        // 既存の振分けがあるかを記録
+        setHasExistingDraw(hasAssignedTeams);
+
+        // ブロック構造を作成（既存の振分け情報を反映）
+        const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
+          block_name: blockName,
+          phase: 'preliminary',
+          teams: blockTeamMap[blockName].filter(team => team) // undefinedを除外
+        }));
+
+        setBlocks(initialBlocks);
+      } else {
+        // エラーの場合は空のブロックを作成
+        const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
+          block_name: blockName,
+          phase: 'preliminary',
+          teams: []
+        }));
+
+        setBlocks(initialBlocks);
+      }
+    } catch (error) {
+      console.error('振分け情報の取得に失敗:', error);
+      
+      // エラーの場合は空のブロックを作成
+      const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
+        block_name: blockName,
+        phase: 'preliminary',
+        teams: []
+      }));
+
+      setBlocks(initialBlocks);
+    }
   };
 
   // ランダム振分実行
@@ -188,6 +257,22 @@ export default function TournamentDrawPage() {
     setBlocks(newBlocks);
   };
 
+  // ブロック内でチームの順番を変更
+  const moveTeamWithinBlock = (blockIndex: number, teamIndex: number, direction: 'up' | 'down') => {
+    const newBlocks = [...blocks];
+    const block = newBlocks[blockIndex];
+    
+    if (direction === 'up' && teamIndex === 0) return; // 既に先頭
+    if (direction === 'down' && teamIndex === block.teams.length - 1) return; // 既に末尾
+
+    const targetIndex = direction === 'up' ? teamIndex - 1 : teamIndex + 1;
+    
+    // チームの位置を入れ替え
+    [block.teams[teamIndex], block.teams[targetIndex]] = [block.teams[targetIndex], block.teams[teamIndex]];
+    
+    setBlocks(newBlocks);
+  };
+
   // 振分結果を保存
   const handleSave = async () => {
     try {
@@ -210,11 +295,12 @@ export default function TournamentDrawPage() {
       const result = await response.json();
       
       if (!response.ok || !result.success) {
-        throw new Error(result.error || '振分結果の保存に失敗しました');
+        const errorMessage = result.error || '振分結果の保存に失敗しました';
+        const detailsMessage = result.details ? ` (詳細: ${result.details})` : '';
+        throw new Error(errorMessage + detailsMessage);
       }
 
-      alert('組合せが正常に保存されました！');
-      router.push(`/admin/tournaments/${tournamentId}`);
+      router.push('/admin');
 
     } catch (err) {
       console.error('保存エラー:', err);
@@ -270,9 +356,12 @@ export default function TournamentDrawPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">組合せ作成</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {hasExistingDraw ? '組合せ編集' : '組合せ作成'}
+              </h1>
               <p className="text-sm text-gray-500 mt-1">
                 {tournament.tournament_name}
+                {hasExistingDraw && <span className="ml-2 text-green-600">※ 既存の組合せを編集中</span>}
               </p>
             </div>
             <div className="flex space-x-3">
@@ -325,6 +414,7 @@ export default function TournamentDrawPage() {
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-3">
               <Button 
+                variant="outline"
                 onClick={handleRandomDraw}
                 disabled={registeredTeams.length === 0}
                 className="flex items-center"
@@ -341,6 +431,7 @@ export default function TournamentDrawPage() {
                 リセット
               </Button>
               <Button 
+                variant="outline"
                 onClick={handleSave}
                 disabled={saving || blocks.every(block => block.teams.length === 0)}
                 className="flex items-center"
@@ -356,7 +447,14 @@ export default function TournamentDrawPage() {
           {/* 参加チーム一覧 */}
           <Card>
             <CardHeader>
-              <CardTitle>参加チーム一覧 ({registeredTeams.length}チーム)</CardTitle>
+              <CardTitle>
+                参加チーム一覧 ({registeredTeams.length}チーム)
+                {hasExistingDraw && (
+                  <span className="text-sm font-normal text-green-600 ml-2">
+                    ※ 振分け済みチームは各ブロックに表示
+                  </span>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {registeredTeams.length === 0 ? (
@@ -365,25 +463,36 @@ export default function TournamentDrawPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {registeredTeams.map((team) => (
-                    <div 
-                      key={team.team_id}
-                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-move"
-                      draggable
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{team.team_name}</p>
-                          <p className="text-sm text-gray-500">
-                            代表者: {team.contact_person}
-                          </p>
+                  {registeredTeams.map((team) => {
+                    // このチームが既にブロックに振分けされているかチェック
+                    const isAssigned = blocks.some(block => 
+                      block.teams.some(blockTeam => blockTeam.team_id === team.team_id)
+                    );
+                    
+                    return (
+                      <div 
+                        key={team.team_id}
+                        className={`p-3 border rounded-lg hover:bg-gray-50 ${
+                          isAssigned ? 'bg-gray-50 border-gray-300 opacity-75' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className={`font-medium ${isAssigned ? 'text-gray-600' : ''}`}>
+                              {team.team_name}
+                              {isAssigned && <span className="text-xs text-green-600 ml-2">(振分け済み)</span>}
+                            </p>
+                            <p className={`text-sm ${isAssigned ? 'text-gray-400' : 'text-gray-500'}`}>
+                              代表者: {team.contact_person}
+                            </p>
+                          </div>
+                          <Badge variant={isAssigned ? "secondary" : "outline"}>
+                            {team.registered_players_count}名
+                          </Badge>
                         </div>
-                        <Badge variant="outline">
-                          {team.registered_players_count}名
-                        </Badge>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -401,7 +510,7 @@ export default function TournamentDrawPage() {
                 <CardContent>
                   {block.teams.length === 0 ? (
                     <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                      <p className="text-gray-500">チームをドラッグ＆ドロップ</p>
+                      <p className="text-gray-500">チームが振り分けられていません</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -411,7 +520,7 @@ export default function TournamentDrawPage() {
                           className="p-3 bg-blue-50 border border-blue-200 rounded-lg"
                         >
                           <div className="flex justify-between items-center">
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium text-blue-900">
                                 {block.block_name}{teamIndex + 1}. {team.team_name}
                               </p>
@@ -419,20 +528,47 @@ export default function TournamentDrawPage() {
                                 {team.contact_person}
                               </p>
                             </div>
-                            <div className="flex space-x-1">
-                              {blocks.map((_, otherBlockIndex) => (
-                                blockIndex !== otherBlockIndex && (
-                                  <Button
-                                    key={otherBlockIndex}
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => moveTeam(team.team_id, blockIndex, otherBlockIndex)}
-                                    className="text-xs"
-                                  >
-                                    → {blocks[otherBlockIndex].block_name}
-                                  </Button>
-                                )
-                              ))}
+                            <div className="flex items-center space-x-1">
+                              {/* 順番変更ボタン */}
+                              <div className="flex flex-col space-y-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => moveTeamWithinBlock(blockIndex, teamIndex, 'up')}
+                                  disabled={teamIndex === 0}
+                                  className="p-1 h-6 w-6"
+                                  title="上に移動"
+                                >
+                                  <ChevronUp className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => moveTeamWithinBlock(blockIndex, teamIndex, 'down')}
+                                  disabled={teamIndex === block.teams.length - 1}
+                                  className="p-1 h-6 w-6"
+                                  title="下に移動"
+                                >
+                                  <ChevronDown className="w-3 h-3" />
+                                </Button>
+                              </div>
+                              
+                              {/* ブロック間移動ボタン */}
+                              <div className="flex flex-wrap">
+                                {blocks.map((_, otherBlockIndex) => (
+                                  blockIndex !== otherBlockIndex && (
+                                    <Button
+                                      key={otherBlockIndex}
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => moveTeam(team.team_id, blockIndex, otherBlockIndex)}
+                                      className="text-xs ml-1"
+                                    >
+                                      → {blocks[otherBlockIndex].block_name}
+                                    </Button>
+                                  )
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>

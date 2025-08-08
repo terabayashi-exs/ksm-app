@@ -9,6 +9,16 @@ import Link from 'next/link';
 import { Calendar, MapPin, Users, Trophy, Clock, CheckCircle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
+interface TournamentTeam {
+  tournament_team_id: number;
+  tournament_team_name: string;
+  tournament_team_omission: string;
+  assigned_block: string | null;
+  block_position: number | null;
+  joined_at: string | null;
+  player_count: number;
+}
+
 interface Tournament {
   tournament_id: number;
   tournament_name: string;
@@ -20,6 +30,8 @@ interface Tournament {
   venue_name: string | null;
   tournament_dates: string | null;
   event_start_date: string | null;
+  teams?: TournamentTeam[]; // 複数チーム参加対応
+  // 後方互換性のため保持
   assigned_block?: string | null;
   block_position?: number | null;
   joined_at?: string | null;
@@ -71,51 +83,90 @@ export default function TeamTournaments() {
     }
   };
 
-  const TournamentCard = ({ tournament, isJoined = false }: { tournament: Tournament; isJoined?: boolean }) => (
-    <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex items-center justify-between mb-2">
-          {getStatusBadge(tournament.status)}
-          {isJoined && (
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              参加済み
-            </span>
+  const TournamentCard = ({ tournament, isJoined = false }: { tournament: Tournament; isJoined?: boolean }) => {
+    const teamCount = tournament.teams?.length || 0;
+    const hasMultipleTeams = teamCount > 1;
+    
+    return (
+      <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow">
+        <CardHeader>
+          <div className="flex items-center justify-between mb-2">
+            {getStatusBadge(tournament.status)}
+            {isJoined && (
+              <div className="flex items-center space-x-2">
+                {hasMultipleTeams && (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {teamCount}チーム参加
+                  </span>
+                )}
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  参加済み
+                </span>
+              </div>
+            )}
+          </div>
+          <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
+          {tournament.format_name && (
+            <p className="text-sm text-gray-600">{tournament.format_name}</p>
           )}
-        </div>
-        <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
-        {tournament.format_name && (
-          <p className="text-sm text-gray-600">{tournament.format_name}</p>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm text-gray-600 mb-4">
-          {tournament.venue_name && (
-            <div className="flex items-center">
-              <MapPin className="h-4 w-4 mr-2" />
-              {tournament.venue_name}
-            </div>
-          )}
-          {tournament.recruitment_start_date && tournament.recruitment_end_date && (
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2" />
-              募集期間: {formatDate(tournament.recruitment_start_date)} 〜 {formatDate(tournament.recruitment_end_date)}
-            </div>
-          )}
-          {isJoined && tournament.assigned_block && (
-            <div className="flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              {tournament.assigned_block}ブロック
-              {tournament.block_position && ` (${tournament.block_position}番目)`}
-            </div>
-          )}
-          {isJoined && tournament.joined_at && (
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              申込日: {formatDate(tournament.joined_at)}
-            </div>
-          )}
-        </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm text-gray-600 mb-4">
+            {tournament.venue_name && (
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2" />
+                {tournament.venue_name}
+              </div>
+            )}
+            {tournament.recruitment_start_date && tournament.recruitment_end_date && (
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                募集期間: {formatDate(tournament.recruitment_start_date)} 〜 {formatDate(tournament.recruitment_end_date)}
+              </div>
+            )}
+            
+            {/* 複数チーム参加情報の表示 */}
+            {isJoined && tournament.teams && tournament.teams.length > 0 && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Users className="h-4 w-4 mr-2" />
+                  参加チーム一覧
+                </h4>
+                <div className="space-y-2">
+                  {tournament.teams.map((team, index) => (
+                    <div key={team.tournament_team_id} className="flex items-center justify-between p-2 border border-gray-200 rounded-md bg-white">
+                      <div className="flex items-center space-x-2 flex-1">
+                        <span className="font-medium text-gray-900">
+                          {team.tournament_team_name}
+                        </span>
+                        <span className="text-gray-500">
+                          ({team.tournament_team_omission})
+                        </span>
+                        {team.assigned_block && (
+                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                            {team.assigned_block}ブロック
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 text-xs text-gray-500 mr-2">
+                          <span>{team.player_count}人</span>
+                          <span>•</span>
+                          <span>{formatDate(team.joined_at || '')}</span>
+                        </div>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/tournaments/${tournament.tournament_id}/join?team=${team.tournament_team_id}`}>
+                            編集
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         
         <div className="space-y-2">
           <Button asChild variant="outline" className="w-full">
@@ -131,16 +182,23 @@ export default function TeamTournaments() {
             </Button>
           )}
           {isJoined && (
-            <Button asChild variant="outline" className="w-full">
-              <Link href={`/tournaments/${tournament.tournament_id}/join`}>
-                参加選手の変更
-              </Link>
-            </Button>
+            <>
+              <div className="text-sm text-gray-600 p-2 bg-blue-50 rounded-md">
+                <p className="font-medium">📝 選手変更は各チーム別に行います</p>
+                <p className="text-xs mt-1">上記のチーム一覧から個別に編集してください</p>
+              </div>
+              <Button asChild variant="outline" className="w-full">
+                <Link href={`/tournaments/${tournament.tournament_id}/join?mode=new`}>
+                  参加チームを追加する
+                </Link>
+              </Button>
+            </>
           )}
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   if (loading) {
     return (

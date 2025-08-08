@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       ORDER BY t.recruitment_end_date ASC
     `, [teamId]);
 
-    // 申し込み済の大会を取得
+    // 申し込み済の大会を取得（複数チーム参加対応）
     const joinedTournamentsResult = await db.execute(`
       SELECT 
         t.tournament_id,
@@ -67,15 +67,19 @@ export async function GET(request: NextRequest) {
         f.format_name,
         v.venue_name,
         t.tournament_dates,
+        tt.tournament_team_id,
+        tt.team_name as tournament_team_name,
+        tt.team_omission as tournament_team_omission,
         tt.assigned_block,
         tt.block_position,
-        tt.created_at as joined_at
+        tt.created_at as joined_at,
+        (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id) as player_count
       FROM t_tournaments t
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       INNER JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       WHERE tt.team_id = ?
-      ORDER BY t.created_at DESC
+      ORDER BY t.tournament_id DESC, tt.created_at DESC
     `, [teamId]);
 
     // データベースの行オブジェクトをプレーンオブジェクトに変換
@@ -92,7 +96,8 @@ export async function GET(request: NextRequest) {
       event_start_date: null // tournament_datesをパースする場合は後で追加
     }));
 
-    const joinedTournaments = joinedTournamentsResult.rows.map(row => ({
+    // 複数チーム参加データを整理
+    const joinedTournamentTeams = joinedTournamentsResult.rows.map(row => ({
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       recruitment_start_date: row.recruitment_start_date ? String(row.recruitment_start_date) : null,
@@ -102,11 +107,48 @@ export async function GET(request: NextRequest) {
       format_name: row.format_name ? String(row.format_name) : null,
       venue_name: row.venue_name ? String(row.venue_name) : null,
       tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
+      tournament_team_id: Number(row.tournament_team_id),
+      tournament_team_name: String(row.tournament_team_name),
+      tournament_team_omission: String(row.tournament_team_omission),
       assigned_block: row.assigned_block ? String(row.assigned_block) : null,
       block_position: row.block_position ? Number(row.block_position) : null,
       joined_at: row.joined_at ? String(row.joined_at) : null,
+      player_count: Number(row.player_count),
       event_start_date: null
     }));
+
+    // 大会ごとにグループ化
+    const tournamentGroups = new Map();
+    joinedTournamentTeams.forEach(team => {
+      const tournamentId = team.tournament_id;
+      if (!tournamentGroups.has(tournamentId)) {
+        tournamentGroups.set(tournamentId, {
+          tournament_id: team.tournament_id,
+          tournament_name: team.tournament_name,
+          recruitment_start_date: team.recruitment_start_date,
+          recruitment_end_date: team.recruitment_end_date,
+          status: team.status,
+          visibility: team.visibility,
+          format_name: team.format_name,
+          venue_name: team.venue_name,
+          tournament_dates: team.tournament_dates,
+          event_start_date: null,
+          teams: []
+        });
+      }
+      
+      tournamentGroups.get(tournamentId).teams.push({
+        tournament_team_id: team.tournament_team_id,
+        tournament_team_name: team.tournament_team_name,
+        tournament_team_omission: team.tournament_team_omission,
+        assigned_block: team.assigned_block,
+        block_position: team.block_position,
+        joined_at: team.joined_at,
+        player_count: team.player_count
+      });
+    });
+
+    const joinedTournaments = Array.from(tournamentGroups.values());
 
     console.log('Available tournaments:', availableTournaments.length);
     console.log('Joined tournaments:', joinedTournaments.length);

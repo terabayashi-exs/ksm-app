@@ -141,15 +141,27 @@ export default function TournamentDashboardList() {
         </Button>
         <Button asChild size="sm" variant="outline">
           <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-            編集
+            大会編集
           </Link>
         </Button>
         {type === 'recruiting' && (
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
-              組合せ作成
-            </Link>
-          </Button>
+          <>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
+                チーム登録
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
+                組合せ作成・編集
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/results`}>
+                結果入力
+              </Link>
+            </Button>
+          </>
         )}
         {type === 'ongoing' && (
           <Button asChild size="sm" variant="default">

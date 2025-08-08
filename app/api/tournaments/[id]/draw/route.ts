@@ -28,9 +28,6 @@ export async function POST(
       );
     }
 
-    // トランザクション開始
-    await db.execute('BEGIN TRANSACTION');
-
     try {
       // 既存の振分情報をクリア
       await db.execute(`
@@ -74,14 +71,14 @@ export async function POST(
         const team1Id = await getTeamIdByPosition(tournamentId, blockName, team1DisplayName);
         const team2Id = await getTeamIdByPosition(tournamentId, blockName, team2DisplayName);
 
-        await db.execute(`
-          UPDATE t_matches_live 
-          SET team1_id = ?, team2_id = ?
-          WHERE match_id = ?
-        `, [team1Id, team2Id, match.match_id]);
+        if (team1Id && team2Id) {
+          await db.execute(`
+            UPDATE t_matches_live 
+            SET team1_id = ?, team2_id = ?
+            WHERE match_id = ?
+          `, [team1Id, team2Id, match.match_id]);
+        }
       }
-
-      await db.execute('COMMIT');
 
       return NextResponse.json({
         success: true,
@@ -89,7 +86,7 @@ export async function POST(
       });
 
     } catch (error) {
-      await db.execute('ROLLBACK');
+      console.error('組合せ保存処理エラー:', error);
       throw error;
     }
 

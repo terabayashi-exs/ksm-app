@@ -24,6 +24,7 @@ erDiagram
         text contact_phone "連絡先電話番号"
         integer representative_player_id FK "代表者選手ID"
         text password_hash "ログインパスワード"
+        text registration_type "登録種別"
         integer is_active "有効フラグ"
         datetime created_at "作成日時"
         datetime updated_at "更新日時"
@@ -103,7 +104,9 @@ erDiagram
     t_tournament_teams {
         integer tournament_team_id PK "大会参加チームID"
         integer tournament_id FK "大会ID"
-        text team_id FK "チームID"
+        text team_id FK "マスターチームID"
+        text team_name "大会エントリー時チーム名"
+        text team_omission "大会エントリー時チーム略称"
         text assigned_block "割り当てブロック"
         integer block_position "ブロック内位置"
         datetime created_at "作成日時"

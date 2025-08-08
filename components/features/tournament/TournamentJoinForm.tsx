@@ -26,11 +26,19 @@ interface ExistingTournamentPlayer {
   jersey_number: number | null;
 }
 
+interface ExistingTournamentTeamInfo {
+  team_name: string;
+  team_omission: string;
+}
+
 interface Props {
   tournamentId: number;
   teamPlayers: TeamPlayer[];
   existingTournamentPlayers?: ExistingTournamentPlayer[];
+  existingTournamentTeamInfo?: ExistingTournamentTeamInfo | null;
   isEditMode?: boolean;
+  isNewTeamMode?: boolean;
+  specificTeamId?: number;
 }
 
 const playerSchema = z.object({
@@ -42,6 +50,8 @@ const playerSchema = z.object({
 });
 
 const formSchema = z.object({
+  tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
+  tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(10, 'チーム略称は10文字以内で入力してください'),
   players: z.array(playerSchema)
     .min(1, '最低1人の選手が必要です')
     .max(20, '選手は最大20人まで登録可能です')
@@ -62,8 +72,11 @@ type FormData = z.infer<typeof formSchema>;
 export default function TournamentJoinForm({ 
   tournamentId, 
   teamPlayers, 
-  existingTournamentPlayers = [], 
-  isEditMode = false 
+  existingTournamentPlayers = [],
+  existingTournamentTeamInfo = null,
+  isEditMode = false,
+  isNewTeamMode = false,
+  specificTeamId
 }: Props) {
 
   const router = useRouter();
@@ -74,6 +87,8 @@ export default function TournamentJoinForm({
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      tournament_team_name: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_name,
+      tournament_team_omission: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_omission,
       players: []
     }
   });
@@ -158,13 +173,17 @@ export default function TournamentJoinForm({
     try {
       const apiUrl = `/api/tournaments/${tournamentId}/join`;
       const requestBody = {
+        tournament_team_name: data.tournament_team_name,
+        tournament_team_omission: data.tournament_team_omission,
         players: data.players.map(p => ({
           player_id: p.player_id,
           player_name: p.player_name,
           jersey_number: p.jersey_number,
           is_participating: p.is_participating
         })),
-        isEditMode: isEditMode
+        isEditMode: isEditMode,
+        isNewTeamMode: isNewTeamMode,
+        specificTeamId: specificTeamId
       };
 
       console.log('Submitting tournament join form:', {
@@ -228,6 +247,55 @@ export default function TournamentJoinForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* 大会参加チーム情報セクション */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Users className="h-5 w-5 mr-2" />
+            大会参加チーム情報
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            この大会での参加チーム名と略称を入力してください。既存のチームと重複しない名前を指定する必要があります。
+            {isNewTeamMode && <span className="block mt-2 text-green-700 font-medium">複数チーム参加モード: 既存参加チームとは異なる名前・略称を入力してください。</span>}
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="tournament_team_name">大会参加チーム名 *</Label>
+              <Input
+                id="tournament_team_name"
+                {...control.register('tournament_team_name')}
+                placeholder={isNewTeamMode ? "例: エクシーズ2" : "例: エクシーズ1"}
+              />
+              {errors.tournament_team_name && (
+                <p className="text-sm text-red-600 mt-1">{errors.tournament_team_name.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="tournament_team_omission">チーム略称 *</Label>
+              <Input
+                id="tournament_team_omission"
+                {...control.register('tournament_team_omission')}
+                placeholder={isNewTeamMode ? "例: EXZ2" : "例: EXZ1"}
+              />
+              {errors.tournament_team_omission && (
+                <p className="text-sm text-red-600 mt-1">{errors.tournament_team_omission.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              💡 <strong>重要:</strong> 同じマスターチームから複数エントリーする場合は、それぞれ異なるチーム名・略称を使用してください。
+              星取表などではチーム略称が表示されます。
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 既存選手選択セクション */}
       {teamPlayers.length > 0 && (
         <Card>
@@ -427,8 +495,8 @@ export default function TournamentJoinForm({
           disabled={loading || fields.length === 0}
         >
           {loading 
-            ? (isEditMode ? '変更中...' : '申し込み中...') 
-            : (isEditMode ? '参加選手を変更' : '大会に参加申し込み')
+            ? (isEditMode ? '変更中...' : (isNewTeamMode ? '追加申し込み中...' : '申し込み中...')) 
+            : (isEditMode ? '参加選手を変更' : (isNewTeamMode ? '追加チームで参加申し込み' : '大会に参加申し込み'))
           }
         </Button>
       </div>

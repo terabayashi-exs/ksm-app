@@ -60,6 +60,24 @@ export interface Player {
   updated_at: string;
 }
 
+export interface TournamentTeam {
+  tournament_team_id: number;
+  tournament_id: number;
+  team_id: string; // マスターチームID
+  team_name: string; // 大会エントリー時のチーム名
+  team_omission: string; // 大会エントリー時のチーム略称
+  assigned_block?: string;
+  block_position?: number;
+  created_at: string;
+  updated_at: string;
+  // Optional joined fields
+  master_team_name?: string; // マスターチームの元々の名前
+  contact_person?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  player_count?: number; // 登録選手数
+}
+
 export interface TournamentPlayer {
   tournament_player_id: number;
   tournament_id: number;
