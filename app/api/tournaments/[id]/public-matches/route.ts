@@ -39,7 +39,7 @@ export async function GET(
       );
     }
 
-    // t_matches_liveとt_matches_finalを結合して試合データを取得
+    // t_matches_liveとt_matches_finalを結合して試合データを取得（実際のチーム名も含む）
     const matchesResult = await db.execute(`
       SELECT 
         ml.match_id,
@@ -58,6 +58,9 @@ export async function GET(
         mb.block_name,
         mb.match_type,
         mb.block_order,
+        -- 実際のチーム名を取得
+        t1.team_name as team1_real_name,
+        t2.team_name as team2_real_name,
         -- t_matches_finalから結果データを取得
         mf.team1_goals,
         mf.team2_goals,
@@ -68,6 +71,8 @@ export async function GET(
         mf.confirmed_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
+      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
       ORDER BY mb.block_order ASC, ml.match_number ASC
@@ -82,8 +87,8 @@ export async function GET(
         match_code: String(row.match_code),
         team1_id: row.team1_id ? String(row.team1_id) : null,
         team2_id: row.team2_id ? String(row.team2_id) : null,
-        team1_display_name: String(row.team1_display_name),
-        team2_display_name: String(row.team2_display_name),
+        team1_display_name: String(row.team1_real_name || row.team1_display_name), // 実チーム名を優先、なければプレースホルダー
+        team2_display_name: String(row.team2_real_name || row.team2_display_name), // 実チーム名を優先、なければプレースホルダー
         court_number: row.court_number ? Number(row.court_number) : null,
         start_time: row.start_time ? String(row.start_time) : null,
         // ブロック情報

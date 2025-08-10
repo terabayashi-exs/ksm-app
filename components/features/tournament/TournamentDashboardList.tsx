@@ -161,12 +161,17 @@ export default function TournamentDashboardList() {
                 結果入力
               </Link>
             </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                試合管理
+              </Link>
+            </Button>
           </>
         )}
-        {type === 'ongoing' && (
+        {(type === 'ongoing' || type === 'before_event') && (
           <Button asChild size="sm" variant="default">
-            <Link href={`/admin/matches?tournament=${tournament.tournament_id}`}>
-              試合管理
+            <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+              🔴 試合管理（リアルタイム）
             </Link>
           </Button>
         )}

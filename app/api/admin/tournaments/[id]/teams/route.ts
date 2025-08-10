@@ -303,7 +303,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         is_active,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'admin_proxy', 1, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'admin_proxy', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       teamId,
       data.team_name,
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           is_active,
           created_at,
           updated_at
-        ) VALUES (?, ?, 1, datetime('now'), datetime('now'))
+        ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         player.player_name,
         teamId
@@ -346,7 +346,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         team_omission,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+      ) VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       tournamentId,
       teamId,
@@ -372,7 +372,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           registration_date,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, 'active', datetime('now'), datetime('now'), datetime('now'))
+        ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         tournamentId,
         teamId,

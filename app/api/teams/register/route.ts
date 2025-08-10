@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
           is_active,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))`,
         [
           data.team_id,
           data.team_name,
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
             is_active,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, 1, datetime('now'), datetime('now'))`,
+          ) VALUES (?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))`,
           [
             player.player_name,
             player.player_number || null,

@@ -54,7 +54,7 @@ export async function PUT(
     await db.execute({
       sql: `
         UPDATE t_match_blocks 
-        SET team_rankings = ?, updated_at = CURRENT_TIMESTAMP 
+        SET team_rankings = ?, updated_at = datetime('now', '+9 hours') 
         WHERE match_block_id = ? AND tournament_id = ?
       `,
       args: [JSON.stringify(validatedRankings), matchBlockId, tournamentId]

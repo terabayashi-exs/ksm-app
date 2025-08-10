@@ -91,16 +91,11 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                試合スケジュール、結果管理を行います
+                試合の進行状況管理とリアルタイム監視を行います
               </p>
-              <div className="space-y-2">
-                <Button asChild className="w-full">
-                  <Link href="/admin/matches">試合一覧</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/admin/matches/schedule">スケジュール作成</Link>
-                </Button>
-              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                各大会の試合管理は下記の「開催中の大会」から「試合管理」ボタンでアクセスできます
+              </p>
             </CardContent>
           </Card>
 

@@ -35,7 +35,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
           court_number, start_time, team1_goals, team2_goals,
           winner_team_id, is_draw, is_walkover, remarks,
           confirmed_by, confirmed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'))
       `,
       args: [
         match.match_block_id,
@@ -126,7 +126,7 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
             court_number, start_time, team1_goals, team2_goals,
             winner_team_id, is_draw, is_walkover, remarks,
             confirmed_by, confirmed_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'))
         `,
         args: [
           match.match_block_id,

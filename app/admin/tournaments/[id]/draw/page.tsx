@@ -163,26 +163,32 @@ export default function TournamentDrawPage() {
         // ブロック別にチームを整理
         const blockTeamMap: Record<string, Team[]> = {};
         
-        // 初期化
+        // 初期化（4チーム分のスロットを作成）
         Array.from(preliminaryBlocks).forEach(blockName => {
-          blockTeamMap[blockName] = [];
+          blockTeamMap[blockName] = new Array(4).fill(undefined);
         });
 
         // 振分け済みチームを各ブロックに配置
         let hasAssignedTeams = false;
         assignedTeams.forEach((team: any) => {
           if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block)) {
-            const formattedTeam: Team = {
-              team_id: team.team_id,
-              team_name: team.team_name,
-              team_omission: team.team_omission,
-              contact_person: team.contact_person,
-              contact_email: team.contact_email,
-              registered_players_count: team.player_count || 0
-            };
+            const blockPosition = parseInt(team.block_position);
+            const arrayIndex = blockPosition - 1;
             
-            blockTeamMap[team.assigned_block][team.block_position - 1] = formattedTeam;
-            hasAssignedTeams = true;
+            // 配列の境界チェック
+            if (arrayIndex >= 0 && arrayIndex < 4) {
+              const formattedTeam: Team = {
+                team_id: team.team_id,
+                team_name: team.team_name,
+                team_omission: team.team_omission,
+                contact_person: team.contact_person,
+                contact_email: team.contact_email,
+                registered_players_count: team.player_count || 0
+              };
+              
+              blockTeamMap[team.assigned_block][arrayIndex] = formattedTeam;
+              hasAssignedTeams = true;
+            }
           }
         });
 
@@ -193,8 +199,13 @@ export default function TournamentDrawPage() {
         const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
           block_name: blockName,
           phase: 'preliminary',
-          teams: blockTeamMap[blockName].filter(team => team) // undefinedを除外
+          teams: blockTeamMap[blockName] // undefinedも含めて位置を保持
         }));
+
+        console.log('Initial blocks created:', initialBlocks.map(block => ({
+          block_name: block.block_name,
+          teams: block.teams.map((team, index) => ({ position: index + 1, team: team?.team_name || 'undefined' }))
+        })));
 
         setBlocks(initialBlocks);
       } else {
@@ -604,9 +615,12 @@ export default function TournamentDrawPage() {
                   </thead>
                   <tbody>
                     {matches.map((match, index) => {
-                      // 振分結果に基づいてチーム名を取得
-                      const team1 = getTeamByPosition(match.team1_display_name, blocks);
-                      const team2 = getTeamByPosition(match.team2_display_name, blocks);
+                      // デバッグ用ログ
+                      if (index === 0) {
+                        console.log('First match data:', match);
+                        console.log('All matches length:', matches.length);
+                        console.log('Team names from API:', { team1_name: match.team1_name, team2_name: match.team2_name });
+                      }
                       
                       // フェーズの境界線を表示するかチェック
                       const showPhaseHeader = index === 0 || matches[index - 1].phase !== match.phase;
@@ -642,12 +656,12 @@ export default function TournamentDrawPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
-                              <span className={team1 ? 'font-medium text-blue-900' : 'text-gray-500'}>
-                                {team1 ? team1.team_name : match.team1_display_name}
+                              <span className={match.team1_name !== match.team1_display_name ? 'font-medium text-blue-900' : 'text-gray-500'}>
+                                {match.team1_name}
                               </span>
                               <span className="text-gray-400 font-bold">vs</span>
-                              <span className={team2 ? 'font-medium text-blue-900' : 'text-gray-500'}>
-                                {team2 ? team2.team_name : match.team2_display_name}
+                              <span className={match.team2_name !== match.team2_display_name ? 'font-medium text-blue-900' : 'text-gray-500'}>
+                                {match.team2_name}
                               </span>
                             </div>
                           </td>
@@ -689,14 +703,37 @@ export default function TournamentDrawPage() {
 
 // チーム表示名からブロック内の実際のチームを取得する関数
 function getTeamByPosition(displayName: string, blocks: Block[]): Team | null {
+  // デバッグ用ログ
+  console.log('getTeamByPosition called with:', displayName, 'blocks:', blocks.length);
+  
+  if (!displayName || typeof displayName !== 'string') {
+    console.log('Invalid displayName:', displayName);
+    return null;
+  }
+  
   // "A1チーム" -> ブロックA、1番目のチーム
   const match = displayName.match(/^([A-Z])(\d+)チーム$/);
-  if (!match) return null;
+  if (!match) {
+    console.log('No regex match for displayName:', displayName);
+    return null;
+  }
   
   const [, blockName, position] = match;
   const block = blocks.find(b => b.block_name === blockName);
-  if (!block) return null;
+  if (!block) {
+    console.log('Block not found:', blockName, 'Available blocks:', blocks.map(b => b.block_name));
+    return null;
+  }
   
   const teamIndex = parseInt(position) - 1;
-  return block.teams[teamIndex] || null;
+  const team = block.teams[teamIndex];
+  console.log(`Looking for position ${position} (index ${teamIndex}) in block ${blockName}:`, team?.team_name || 'undefined/null');
+  
+  // undefinedチェックを追加
+  if (!team) {
+    console.log('Team is undefined at position:', teamIndex);
+    return null;
+  }
+  
+  return team;
 }

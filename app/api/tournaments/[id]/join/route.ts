@@ -332,7 +332,7 @@ async function handleTournamentJoin(
           UPDATE t_tournament_teams SET
             team_name = ?,
             team_omission = ?,
-            updated_at = datetime('now')
+            updated_at = datetime('now', '+9 hours')
           WHERE tournament_team_id = ?
         `, [data.tournament_team_name, data.tournament_team_omission, specificTeamIdFromData]);
         
@@ -351,7 +351,7 @@ async function handleTournamentJoin(
           UPDATE t_tournament_teams SET
             team_name = ?,
             team_omission = ?,
-            updated_at = datetime('now')
+            updated_at = datetime('now', '+9 hours')
           WHERE tournament_id = ? AND team_id = ?
         `, [data.tournament_team_name, data.tournament_team_omission, tournamentId, teamId]);
         
@@ -373,7 +373,7 @@ async function handleTournamentJoin(
           team_omission,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        ) VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [tournamentId, teamId, data.tournament_team_name, data.tournament_team_omission]);
 
       tournamentTeamId = Number(joinResult.lastInsertRowid);
@@ -399,7 +399,7 @@ async function handleTournamentJoin(
           await db.execute(`
             UPDATE m_players SET
               is_active = 1,
-              updated_at = datetime('now')
+              updated_at = datetime('now', '+9 hours')
             WHERE player_id = ? AND current_team_id = ?
           `, [
             player.player_id,
@@ -415,7 +415,7 @@ async function handleTournamentJoin(
               is_active,
               created_at,
               updated_at
-            ) VALUES (?, ?, 1, datetime('now'), datetime('now'))
+            ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
           `, [
             player.player_name,
             teamId
@@ -442,7 +442,7 @@ async function handleTournamentJoin(
                 UPDATE t_tournament_players SET
                   jersey_number = ?,
                   player_status = 'active',
-                  updated_at = datetime('now')
+                  updated_at = datetime('now', '+9 hours')
                 WHERE tournament_id = ? AND team_id = ? AND player_id = ?
               `, [
                 player.jersey_number !== undefined ? player.jersey_number : null,
@@ -461,7 +461,7 @@ async function handleTournamentJoin(
                   registration_date,
                   created_at,
                   updated_at
-                ) VALUES (?, ?, ?, ?, 'active', datetime('now'), datetime('now'), datetime('now'))
+                ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
               `, [
                 tournamentId, teamId, playerId,
                 player.jersey_number !== undefined ? player.jersey_number : null
@@ -480,7 +480,7 @@ async function handleTournamentJoin(
                 registration_date,
                 created_at,
                 updated_at
-              ) VALUES (?, ?, ?, ?, 'active', datetime('now'), datetime('now'), datetime('now'))
+              ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
             `, [
               tournamentId, teamId, playerId,
               player.jersey_number !== undefined ? player.jersey_number : null
@@ -494,7 +494,7 @@ async function handleTournamentJoin(
               await db.execute(`
                 UPDATE t_tournament_players SET
                   jersey_number = ?,
-                  updated_at = datetime('now')
+                  updated_at = datetime('now', '+9 hours')
                 WHERE tournament_id = ? AND team_id = ? AND player_id = ?
               `, [
                 player.jersey_number !== undefined ? player.jersey_number : null,

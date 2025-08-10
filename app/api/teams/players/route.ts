@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest) {
             UPDATE m_players SET
               player_name = ?,
               jersey_number = ?,
-              updated_at = datetime('now')
+              updated_at = datetime('now', '+9 hours')
             WHERE player_id = ? AND current_team_id = ?
           `, [
             player.player_name,
@@ -151,7 +151,7 @@ export async function PUT(request: NextRequest) {
               is_active,
               created_at,
               updated_at
-            ) VALUES (?, ?, ?, 1, datetime('now'), datetime('now'))
+            ) VALUES (?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
           `, [
             player.player_name,
             player.jersey_number || null,
@@ -174,7 +174,7 @@ export async function PUT(request: NextRequest) {
         await db.execute(`
           UPDATE m_players SET
             is_active = 0,
-            updated_at = datetime('now')
+            updated_at = datetime('now', '+9 hours')
           WHERE player_id = ? AND current_team_id = ?
         `, [player.player_id, teamId]);
       }
