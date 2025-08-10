@@ -59,8 +59,8 @@ export async function GET(
         mb.match_type,
         mb.block_order,
         -- 実際のチーム名を取得
-        t1.team_name as team1_real_name,
-        t2.team_name as team2_real_name,
+        mt1.team_name as team1_real_name,
+        mt2.team_name as team2_real_name,
         -- t_matches_finalから結果データを取得
         mf.team1_goals,
         mf.team2_goals,
@@ -71,8 +71,10 @@ export async function GET(
         mf.confirmed_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+      LEFT JOIN t_tournament_teams tt1 ON ml.team1_id = tt1.team_id AND mb.tournament_id = tt1.tournament_id
+      LEFT JOIN m_teams mt1 ON tt1.team_id = mt1.team_id
+      LEFT JOIN t_tournament_teams tt2 ON ml.team2_id = tt2.team_id AND mb.tournament_id = tt2.tournament_id
+      LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
       ORDER BY mb.block_order ASC, ml.match_number ASC

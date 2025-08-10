@@ -15,7 +15,8 @@ import {
   Users,
   MapPin,
   Filter,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -73,6 +74,7 @@ export default function AdminMatchesPage() {
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [matchBlocks, setMatchBlocks] = useState<MatchBlock[]>([]);
   const [confirmingMatches, setConfirmingMatches] = useState<Set<number>>(new Set());
+  const [updatingRankings, setUpdatingRankings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -193,6 +195,36 @@ export default function AdminMatchesPage() {
     // 新しいタブでQRコード表示ページを開く
     const qrUrl = `/admin/matches/${matchId}/qr`;
     window.open(qrUrl, '_blank', 'width=600,height=800');
+  };
+
+  // 順位表更新
+  const updateRankings = async () => {
+    if (!window.confirm('全ブロックの順位表を再計算しますか？\n\n確定済みの試合結果をもとに順位表が更新されます。')) {
+      return;
+    }
+
+    setUpdatingRankings(true);
+    
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/update-rankings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'recalculate_all' })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('順位表を更新しました！');
+      } else {
+        alert(`順位表の更新に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Rankings update error:', error);
+      alert('順位表更新中にエラーが発生しました');
+    } finally {
+      setUpdatingRankings(false);
+    }
   };
 
   // 試合結果確定
@@ -376,6 +408,20 @@ export default function AdminMatchesPage() {
                   「{tournament.tournament_name}」の試合進行状況管理
                 </p>
               </div>
+            </div>
+            
+            {/* 順位表更新ボタン */}
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={updateRankings}
+                disabled={updatingRankings}
+                className="flex items-center"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${updatingRankings ? 'animate-spin' : ''}`} />
+                {updatingRankings ? '更新中...' : '順位表更新'}
+              </Button>
             </div>
           </div>
         </div>

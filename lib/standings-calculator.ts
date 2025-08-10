@@ -288,12 +288,24 @@ async function calculateBlockStandings(
 
     // 大会設定を取得（勝点計算用）
     const tournamentResult = await db.execute({
-      sql: `SELECT win_points, draw_points FROM t_tournaments WHERE tournament_id = ?`,
+      sql: `
+        SELECT 
+          win_points, 
+          draw_points, 
+          loss_points,
+          walkover_winner_goals,
+          walkover_loser_goals
+        FROM t_tournaments 
+        WHERE tournament_id = ?
+      `,
       args: [tournamentId]
     });
 
     const winPoints = tournamentResult.rows?.[0]?.win_points as number || 3;
     const drawPoints = tournamentResult.rows?.[0]?.draw_points as number || 1;
+    const lossPoints = tournamentResult.rows?.[0]?.loss_points as number || 0;
+    const walkoverWinnerGoals = tournamentResult.rows?.[0]?.walkover_winner_goals as number || 3;
+    const walkoverLoserGoals = tournamentResult.rows?.[0]?.walkover_loser_goals as number || 0;
 
     // 各チームの成績を計算
     const teamStandings: TeamStanding[] = teamsResult.rows.map(team => {
@@ -314,12 +326,30 @@ async function calculateBlockStandings(
       // 各試合の結果を集計
       teamMatches.forEach(match => {
         const isTeam1 = match.team1_id === teamId;
-        const teamGoals = isTeam1 ? match.team1_goals : match.team2_goals;
-        const opponentGoals = isTeam1 ? match.team2_goals : match.team1_goals;
+        let teamGoals: number;
+        let opponentGoals: number;
+
+        // 不戦勝・不戦敗の場合は設定値を使用
+        if (match.is_walkover) {
+          if (match.winner_team_id === teamId) {
+            // 不戦勝
+            teamGoals = walkoverWinnerGoals;
+            opponentGoals = walkoverLoserGoals;
+          } else {
+            // 不戦敗
+            teamGoals = walkoverLoserGoals;
+            opponentGoals = walkoverWinnerGoals;
+          }
+        } else {
+          // 通常の試合
+          teamGoals = isTeam1 ? match.team1_goals : match.team2_goals;
+          opponentGoals = isTeam1 ? match.team2_goals : match.team1_goals;
+        }
 
         goalsFor += teamGoals;
         goalsAgainst += opponentGoals;
 
+        // 勝敗とポイントの集計
         if (match.is_draw) {
           draws++;
           points += drawPoints;
@@ -328,7 +358,7 @@ async function calculateBlockStandings(
           points += winPoints;
         } else {
           losses++;
-          // 敗北時は0ポイント
+          points += lossPoints; // 敗北時のポイント（通常は0）
         }
       });
 
@@ -348,28 +378,73 @@ async function calculateBlockStandings(
       };
     });
 
-    // 順位を決定（勝点 > 得失点差 > 総得点 > チーム名の順）
+    // 順位を決定（勝点 > 総得点 > 得失点差 > 直接対決 > 抽選の順）
     teamStandings.sort((a, b) => {
       // 1. 勝点の多い順
       if (a.points !== b.points) {
         return b.points - a.points;
       }
-      // 2. 得失点差の良い順
-      if (a.goal_difference !== b.goal_difference) {
-        return b.goal_difference - a.goal_difference;
-      }
-      // 3. 総得点の多い順
+      
+      // 2. 総得点の多い順
       if (a.goals_for !== b.goals_for) {
         return b.goals_for - a.goals_for;
       }
-      // 4. チーム名の辞書順
+      
+      // 3. 得失点差の良い順
+      if (a.goal_difference !== b.goal_difference) {
+        return b.goal_difference - a.goal_difference;
+      }
+      
+      // 4. 直接対決の結果
+      const headToHead = calculateHeadToHead(a.team_id, b.team_id, matches);
+      
+      // 直接対決の勝点を計算
+      let teamAHeadToHeadPoints = 0;
+      let teamBHeadToHeadPoints = 0;
+      
+      teamAHeadToHeadPoints += headToHead.teamAWins * winPoints;
+      teamAHeadToHeadPoints += headToHead.draws * drawPoints;
+      
+      teamBHeadToHeadPoints += headToHead.teamBWins * winPoints;
+      teamBHeadToHeadPoints += headToHead.draws * drawPoints;
+      
+      if (teamAHeadToHeadPoints !== teamBHeadToHeadPoints) {
+        return teamBHeadToHeadPoints - teamAHeadToHeadPoints;
+      }
+      
+      // 直接対決の得失点差
+      const headToHeadGoalDiff = headToHead.teamAGoals - headToHead.teamBGoals;
+      if (headToHeadGoalDiff !== 0) {
+        return -headToHeadGoalDiff; // チームAが上位なら負の値
+      }
+      
+      // 5. 抽選（チーム名の辞書順で代用）
       return a.team_name.localeCompare(b.team_name, 'ja');
     });
 
-    // 順位を設定
-    teamStandings.forEach((team, index) => {
-      team.position = index + 1;
-    });
+    // 同着対応の順位を設定
+    let currentPosition = 1;
+    for (let i = 0; i < teamStandings.length; i++) {
+      if (i === 0) {
+        // 1位は必ず1
+        teamStandings[i].position = 1;
+      } else {
+        const currentTeam = teamStandings[i];
+        const previousTeam = teamStandings[i - 1];
+        
+        // 勝点、総得点、得失点差が全て同じなら同着
+        if (currentTeam.points === previousTeam.points &&
+            currentTeam.goals_for === previousTeam.goals_for &&
+            currentTeam.goal_difference === previousTeam.goal_difference) {
+          // 同着なので前のチームと同じ順位
+          teamStandings[i].position = previousTeam.position;
+        } else {
+          // 順位が変わる場合は、これまでの同着も含めた実際の順位
+          currentPosition = i + 1;
+          teamStandings[i].position = currentPosition;
+        }
+      }
+    }
 
     return teamStandings;
   } catch (error) {

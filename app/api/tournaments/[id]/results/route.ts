@@ -29,11 +29,22 @@ export async function GET(
   } catch (error) {
     console.error('戦績表取得API エラー:', error);
     
+    // より詳細なエラー情報をログに出力
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
         error: error instanceof Error ? error.message : '戦績表の取得に失敗しました',
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        details: process.env.NODE_ENV === 'development' ? {
+          name: error instanceof Error ? error.name : 'Unknown',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        } : undefined
       },
       { status: 500 }
     );

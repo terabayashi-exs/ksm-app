@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -99,6 +100,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ]);
 
     console.log(`Match ${matchId} confirmed by ${confirmedBy}`);
+
+    // 順位表を更新
+    try {
+      // tournament_idはJOINで取得済み
+      const tournamentId = liveResult.rows[0].tournament_id as number;
+      const matchBlockId = liveMatch.match_block_id as number;
+      
+      await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
+      console.log(`Block ${matchBlockId} standings updated after match ${matchId} confirmation`);
+    } catch (standingsError) {
+      console.error(`Failed to update standings for match ${matchId}:`, standingsError);
+      // 順位表更新エラーでも試合確定は成功とする（ログのみ）
+    }
 
     return NextResponse.json({
       success: true,

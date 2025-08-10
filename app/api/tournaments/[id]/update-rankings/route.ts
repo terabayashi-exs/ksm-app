@@ -1,5 +1,6 @@
 // app/api/tournaments/[id]/update-rankings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { updateBlockRankingsOnMatchConfirm, recalculateAllTournamentRankings } from '@/lib/standings-calculator';
 
 export async function POST(
@@ -7,6 +8,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 認証チェック
+    const session = await auth();
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: '管理者権限が必要です' },
+        { status: 401 }
+      );
+    }
+
     const resolvedParams = await params;
     const tournamentId = parseInt(resolvedParams.id, 10);
 
