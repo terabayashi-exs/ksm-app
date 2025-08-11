@@ -66,16 +66,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // t_matches_finalにデータを移行
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     const confirmedBy = session.user.id || session.user.email;
 
     await db.execute(`
       INSERT INTO t_matches_final (
         match_id, match_block_id, tournament_date, match_number, match_code,
         team1_id, team2_id, team1_display_name, team2_display_name,
-        court_number, start_time, team1_goals, team2_goals, winner_team_id,
-        is_draw, is_walkover, remarks, confirmed_by, confirmed_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        court_number, start_time, team1_scores, team2_scores, winner_team_id,
+        is_draw, is_walkover, remarks, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       liveMatch.match_id,
       liveMatch.match_block_id,
@@ -94,7 +94,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       liveMatch.winner_team_id ? 0 : 1, // is_draw: 勝者がいない場合は引き分け
       0, // is_walkover: 通常は0
       liveMatch.remarks,
-      confirmedBy,
       now,
       now
     ]);

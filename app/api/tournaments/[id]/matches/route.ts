@@ -100,8 +100,7 @@ export async function GET(
         mf.winner_team_id as final_winner_team_id,
         mf.is_draw as final_is_draw,
         mf.is_walkover as final_is_walkover,
-        mf.confirmed_at,
-        mf.confirmed_by as final_confirmed_by
+        mf.updated_at as confirmed_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
@@ -159,7 +158,6 @@ export async function GET(
         is_draw: row.final_is_draw ? Boolean(row.final_is_draw) : false,
         is_walkover: row.final_is_walkover ? Boolean(row.final_is_walkover) : false,
         confirmed_at: row.confirmed_at,
-        confirmed_by: row.final_confirmed_by,
         remarks: row.remarks ? String(row.remarks) : null,
         // ブロック情報
         phase: String(row.phase),

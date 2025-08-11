@@ -32,10 +32,10 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         INSERT INTO t_matches_final (
           match_block_id, tournament_date, match_number, match_code,
           team1_id, team2_id, team1_display_name, team2_display_name,
-          court_number, start_time, team1_goals, team2_goals,
+          court_number, start_time, team1_scores, team2_scores,
           winner_team_id, is_draw, is_walkover, remarks,
-          confirmed_by, confirmed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'))
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `,
       args: [
         match.match_block_id,
@@ -53,8 +53,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         match.winner_team_id,
         match.is_draw,
         match.is_walkover,
-        match.remarks,
-        match.entered_by
+        match.remarks
       ]
     });
 
@@ -123,10 +122,10 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           INSERT INTO t_matches_final (
             match_block_id, tournament_date, match_number, match_code,
             team1_id, team2_id, team1_display_name, team2_display_name,
-            court_number, start_time, team1_goals, team2_goals,
+            court_number, start_time, team1_scores, team2_scores,
             winner_team_id, is_draw, is_walkover, remarks,
-            confirmed_by, confirmed_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'))
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `,
         args: [
           match.match_block_id,
@@ -144,8 +143,7 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           match.winner_team_id,
           match.is_draw,
           match.is_walkover,
-          match.remarks,
-          match.entered_by
+          match.remarks
         ]
       });
 
