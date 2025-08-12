@@ -164,10 +164,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.court_number,
           ml.start_time,
           ml.period_count,
-          ml.current_period,
+          ml.team1_scores,
+          ml.team2_scores,
+          ml.winner_team_id,
           ml.remarks,
           ms.match_status,
+          ms.current_period,
           mb.tournament_id,
+          -- 確定済み試合の情報
+          mf.match_id as is_confirmed,
+          mf.team1_scores as final_team1_scores,
+          mf.team2_scores as final_team2_scores,
+          mf.winner_team_id as final_winner_team_id,
           -- 実際のチーム名と略称を取得
           t1.team_name as team1_real_name,
           t2.team_name as team2_real_name,
@@ -180,6 +188,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
       `, [matchId]);
 
@@ -207,8 +216,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           court_number: match.court_number,
           scheduled_time: match.start_time,
           period_count: match.period_count,
-          current_period: match.current_period,
+          current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
           match_status: match.match_status || 'scheduled',
+          team1_scores: match.is_confirmed ? [Number(match.final_team1_scores) || 0] : [Number(match.team1_scores) || 0],
+          team2_scores: match.is_confirmed ? [Number(match.final_team2_scores) || 0] : [Number(match.team2_scores) || 0],
+          winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
+          is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,
           tournament_id: match.tournament_id,
           referee_access: true,
@@ -221,6 +234,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const secret = process.env.NEXTAUTH_SECRET || 'fallback-secret';
       console.log('Attempting JWT verification with secret length:', secret.length);
       console.log('Token to verify:', token?.substring(0, 50) + '...');
+      console.log('Expected match ID:', matchId);
       
       const decoded = jwt.verify(token, secret) as any;
       console.log('JWT decoded successfully:', { match_id: decoded.match_id, exp: decoded.exp, iat: decoded.iat });
@@ -245,10 +259,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.court_number,
           ml.start_time,
           ml.period_count,
-          ml.current_period,
+          ml.team1_scores,
+          ml.team2_scores,
+          ml.winner_team_id,
           ml.remarks,
           ms.match_status,
+          ms.current_period,
           mb.tournament_id,
+          -- 確定済み試合の情報
+          mf.match_id as is_confirmed,
+          mf.team1_scores as final_team1_scores,
+          mf.team2_scores as final_team2_scores,
+          mf.winner_team_id as final_winner_team_id,
           -- 実際のチーム名と略称を取得
           t1.team_name as team1_real_name,
           t2.team_name as team2_real_name,
@@ -261,6 +283,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
       `, [matchId]);
 
@@ -288,8 +311,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           court_number: match.court_number,
           scheduled_time: match.start_time,
           period_count: match.period_count,
-          current_period: match.current_period,
+          current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
           match_status: match.match_status || 'scheduled',
+          team1_scores: match.is_confirmed ? [Number(match.final_team1_scores) || 0] : [Number(match.team1_scores) || 0],
+          team2_scores: match.is_confirmed ? [Number(match.final_team2_scores) || 0] : [Number(match.team2_scores) || 0],
+          winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
+          is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,
           tournament_id: match.tournament_id,
           referee_access: true

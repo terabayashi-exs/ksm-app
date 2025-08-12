@@ -61,6 +61,7 @@ export default function RefereeMatchPage() {
   const [winnerTeam, setWinnerTeam] = useState<'team1' | 'team2' | null>(null);
   const [matchRemarks, setMatchRemarks] = useState<string>('');
   const [tournamentId, setTournamentId] = useState<number | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
 
   // トークン検証とマッチデータ取得
   useEffect(() => {
@@ -93,6 +94,9 @@ export default function RefereeMatchPage() {
           if (result.data.tournament_id) {
             setTournamentId(result.data.tournament_id);
           }
+          
+          // 確定状態を設定
+          setIsConfirmed(result.data.is_confirmed || false);
           
           // 既存のデータを復元
           if (result.data.remarks) {
@@ -411,7 +415,8 @@ export default function RefereeMatchPage() {
   // 結果編集可能かどうかを判断する関数
   const canEditResults = () => {
     if (!match) return false;
-    // t_matches_liveに存在している限り編集可能（確定されるとt_matches_finalに移動されるため）
+    // 確定済み試合は編集不可
+    if (isConfirmed) return false;
     // 試合中または完了済みなら編集可能
     return match.match_status === 'ongoing' || match.match_status === 'completed';
   };
@@ -476,6 +481,18 @@ export default function RefereeMatchPage() {
               </div>
             </div>
 
+            {/* 確定済み試合の警告 */}
+            {isConfirmed && (
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4 rounded-r-lg">
+                <div className="flex items-center">
+                  <AlertCircle className="w-5 h-5 text-amber-500 mr-2" />
+                  <p className="text-amber-800 font-medium">
+                    この試合は既に確定済みです。結果の編集はできません。
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* 現在のスコア表示 */}
             <div className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-6">
               <div className="text-center">
@@ -501,7 +518,7 @@ export default function RefereeMatchPage() {
                   className="w-full bg-green-600 hover:bg-green-700"
                   size="lg"
                   onClick={() => updateMatchStatus('start')}
-                  disabled={updating}
+                  disabled={updating || isConfirmed}
                 >
                   <Play className="w-5 h-5 mr-2" />
                   試合開始
@@ -514,7 +531,7 @@ export default function RefereeMatchPage() {
                     <Button
                       className="w-full bg-blue-600 hover:bg-blue-700"
                       onClick={advancePeriod}
-                      disabled={updating}
+                      disabled={updating || isConfirmed}
                     >
                       <RotateCcw className="w-5 h-5 mr-2" />
                       第{match.current_period + 1}ピリオドへ
@@ -524,7 +541,7 @@ export default function RefereeMatchPage() {
                   <Button
                     className="w-full bg-red-600 hover:bg-red-700"
                     onClick={() => updateMatchStatus('end')}
-                    disabled={updating}
+                    disabled={updating || isConfirmed}
                   >
                     <Square className="w-5 h-5 mr-2" />
                     試合終了
@@ -532,7 +549,7 @@ export default function RefereeMatchPage() {
                 </div>
               )}
 
-              {match.match_status === 'completed' && (
+              {match.match_status === 'completed' && !isConfirmed && (
                 <div className="space-y-3">
                   <Alert className="border-yellow-200 bg-yellow-50">
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
@@ -548,6 +565,18 @@ export default function RefereeMatchPage() {
                     <Play className="w-5 h-5 mr-2" />
                     試合再開（結果修正）
                   </Button>
+                </div>
+              )}
+
+              {match.match_status === 'completed' && isConfirmed && (
+                <div className="text-center py-4">
+                  <div className="flex items-center justify-center text-green-600 mb-2">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    <span className="font-medium">試合結果確定済み</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    この試合の結果は既に確定されており、編集できません。
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -580,7 +609,7 @@ export default function RefereeMatchPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => changeScore('team1', periodIndex, -1)}
-                            disabled={match.match_status !== 'ongoing'}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
                           >
                             <Minus className="w-4 h-4" />
                           </Button>
@@ -591,7 +620,7 @@ export default function RefereeMatchPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => changeScore('team1', periodIndex, 1)}
-                            disabled={match.match_status !== 'ongoing'}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
                           >
                             <Plus className="w-4 h-4" />
                           </Button>
@@ -602,7 +631,7 @@ export default function RefereeMatchPage() {
                           min="0"
                           value={scores.team1[periodIndex] || 0}
                           onChange={(e) => setDirectScore('team1', periodIndex, e.target.value)}
-                          disabled={match.match_status !== 'ongoing'}
+                          disabled={match.match_status !== 'ongoing' || isConfirmed}
                           className="w-16 h-8 text-center text-sm mx-auto"
                           placeholder="0"
                         />
@@ -616,7 +645,7 @@ export default function RefereeMatchPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => changeScore('team2', periodIndex, -1)}
-                            disabled={match.match_status !== 'ongoing'}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
                           >
                             <Minus className="w-4 h-4" />
                           </Button>
@@ -627,7 +656,7 @@ export default function RefereeMatchPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => changeScore('team2', periodIndex, 1)}
-                            disabled={match.match_status !== 'ongoing'}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
                           >
                             <Plus className="w-4 h-4" />
                           </Button>
@@ -638,7 +667,7 @@ export default function RefereeMatchPage() {
                           min="0"
                           value={scores.team2[periodIndex] || 0}
                           onChange={(e) => setDirectScore('team2', periodIndex, e.target.value)}
-                          disabled={match.match_status !== 'ongoing'}
+                          disabled={match.match_status !== 'ongoing' || isConfirmed}
                           className="w-16 h-8 text-center text-sm mx-auto"
                           placeholder="0"
                         />
@@ -677,6 +706,7 @@ export default function RefereeMatchPage() {
                           variant={winnerTeam === 'team1' ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setWinnerTeam('team1')}
+                          disabled={isConfirmed}
                           className={winnerTeam === 'team1' ? 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600' : 'hover:bg-blue-50 border-gray-300'}
                         >
                           {match.team1_omission || match.team1_name}
@@ -685,6 +715,7 @@ export default function RefereeMatchPage() {
                           variant={winnerTeam === null ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setWinnerTeam(null)}
+                          disabled={isConfirmed}
                           className={winnerTeam === null ? 'bg-gray-600 text-white hover:bg-gray-700 border-gray-600' : 'hover:bg-gray-50 border-gray-300'}
                         >
                           引分
@@ -693,6 +724,7 @@ export default function RefereeMatchPage() {
                           variant={winnerTeam === 'team2' ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setWinnerTeam('team2')}
+                          disabled={isConfirmed}
                           className={winnerTeam === 'team2' ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'hover:bg-red-50 border-gray-300'}
                         >
                           {match.team2_omission || match.team2_name}
@@ -709,7 +741,7 @@ export default function RefereeMatchPage() {
                         id="remarks"
                         value={matchRemarks}
                         onChange={(e) => setMatchRemarks(e.target.value)}
-                        disabled={match.match_status !== 'ongoing'}
+                        disabled={match.match_status !== 'ongoing' || isConfirmed}
                         className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                         rows={2}
                         placeholder="抽選で勝敗決定、その他特記事項など..."
@@ -720,7 +752,7 @@ export default function RefereeMatchPage() {
                     <Button
                       className="w-full border-2 border-blue-600"
                       onClick={updateScores}
-                      disabled={updating || match.match_status !== 'ongoing'}
+                      disabled={updating || match.match_status !== 'ongoing' || isConfirmed}
                     >
                       {updating ? '保存中...' : 'スコア・結果を保存'}
                     </Button>
