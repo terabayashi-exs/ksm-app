@@ -90,6 +90,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     match_code: string;
     team1_display_name: string;
     team2_display_name: string;
+    team1_name?: string; // APIから返される実チーム名
+    team2_name?: string; // APIから返される実チーム名
+    scheduled_time?: string | null; // APIから返される予定時刻
     court_number: number | null;
     start_time: string | null;
     phase: string;
@@ -242,9 +245,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
           const sortedMatches = matches.sort((a, b) => a.match_number - b.match_number);
           
           const scheduleMatches = sortedMatches.map(match => {
-            const startTime = match.start_time || '09:00';
-            const endTime = match.start_time ? 
-              minutesToTime(timeToMinutes(match.start_time) + settings.matchDurationMinutes) : 
+            const startTime = match.scheduled_time || '09:00';
+            const endTime = match.scheduled_time ? 
+              minutesToTime(timeToMinutes(match.scheduled_time) + settings.matchDurationMinutes) : 
               '09:15';
             
             // Processing match schedule data
@@ -261,8 +264,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                 block_name: match.block_name || undefined,
                 team1_source: match.team1_id || undefined,
                 team2_source: match.team2_id || undefined,
-                team1_display_name: match.team1_display_name,
-                team2_display_name: match.team2_display_name,
+                team1_display_name: match.team1_name || match.team1_display_name,
+                team2_display_name: match.team2_name || match.team2_display_name,
                 day_number: dayIndex + 1,
                 execution_priority: match.match_number,
                 created_at: ''

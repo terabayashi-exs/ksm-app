@@ -56,6 +56,7 @@ export async function GET(
     }
 
     // 試合データを取得（試合状態と確定結果も含む）
+    console.log(`Fetching matches for tournament ${tournamentId}...`);
     const matchesResult = await db.execute(`
       SELECT 
         ml.match_id,
@@ -72,11 +73,8 @@ export async function GET(
         ml.team1_scores,
         ml.team2_scores,
         ml.period_count,
-        ml.current_period,
         ml.winner_team_id,
         ml.match_status as live_match_status,
-        ml.actual_start_time,
-        ml.actual_end_time,
         ml.remarks,
         ml.confirmed_by,
         mb.phase,
@@ -95,8 +93,8 @@ export async function GET(
         ms.updated_by,
         ms.updated_at,
         -- 確定結果テーブルから情報取得
-        mf.team1_goals as final_team1_scores,
-        mf.team2_goals as final_team2_scores,
+        mf.team1_scores as final_team1_scores,
+        mf.team2_scores as final_team2_scores,
         mf.winner_team_id as final_winner_team_id,
         mf.is_draw as final_is_draw,
         mf.is_walkover as final_is_walkover,
@@ -111,16 +109,18 @@ export async function GET(
       ORDER BY mb.block_order ASC, ml.match_number ASC
     `, [tournamentId]);
 
+    console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);
+
     const matches = matchesResult.rows.map(row => {
       // 試合状態の決定（t_match_statusを優先、なければt_matches_liveから）
       const matchStatus = row.match_status || row.live_match_status || 'scheduled';
       
       // 現在のピリオド（t_match_statusを優先）
-      const currentPeriod = row.status_current_period || row.current_period || 1;
+      const currentPeriod = row.status_current_period || 1;
       
       // 実際の開始・終了時刻（t_match_statusを優先）
-      const actualStartTime = row.status_actual_start_time || row.actual_start_time;
-      const actualEndTime = row.status_actual_end_time || row.actual_end_time;
+      const actualStartTime = row.status_actual_start_time;
+      const actualEndTime = row.status_actual_end_time;
       
       // 確定済みかどうかの判定（t_matches_finalにデータがあるかで判定）
       const isConfirmed = !!row.final_team1_scores || !!row.confirmed_at;
@@ -174,12 +174,21 @@ export async function GET(
     });
 
   } catch (error) {
+    const resolvedParams = await params;
+    const tournamentId = parseInt(resolvedParams.id);
+    
     console.error('試合データ取得エラー:', error);
+    console.error('Tournament ID:', tournamentId);
+    console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    
     return NextResponse.json(
       { 
         success: false, 
         error: '試合データの取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        tournamentId: tournamentId
       },
       { status: 500 }
     );
