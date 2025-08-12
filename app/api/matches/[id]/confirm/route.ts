@@ -88,8 +88,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       liveMatch.team2_display_name,
       liveMatch.court_number,
       liveMatch.start_time,
-      liveMatch.team1_scores || 0,
-      liveMatch.team2_scores || 0,
+      Math.floor(Number(liveMatch.team1_scores) || 0),
+      Math.floor(Number(liveMatch.team2_scores) || 0),
       liveMatch.winner_team_id,
       liveMatch.winner_team_id ? 0 : 1, // is_draw: 勝者がいない場合は引き分け
       0, // is_walkover: 通常は0

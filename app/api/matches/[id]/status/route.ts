@@ -185,9 +185,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       case 'update_scores':
         // スコア・結果更新
         if (team1_scores && team2_scores) {
-          // 配列の場合は合計を計算、数値の場合はそのまま使用
-          const team1Total = Array.isArray(team1_scores) ? team1_scores.reduce((sum, score) => sum + score, 0) : team1_scores;
-          const team2Total = Array.isArray(team2_scores) ? team2_scores.reduce((sum, score) => sum + score, 0) : team2_scores;
+          // 配列の場合は合計を計算、数値の場合はそのまま使用（整数に変換）
+          const team1Total = Array.isArray(team1_scores) 
+            ? Math.floor(team1_scores.reduce((sum, score) => sum + score, 0)) 
+            : Math.floor(team1_scores || 0);
+          const team2Total = Array.isArray(team2_scores) 
+            ? Math.floor(team2_scores.reduce((sum, score) => sum + score, 0)) 
+            : Math.floor(team2_scores || 0);
 
           console.log('Updating scores:', {
             team1Total,
