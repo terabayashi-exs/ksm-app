@@ -220,9 +220,14 @@ export default function RefereeMatchPage() {
         })
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       const result = await response.json();
+      console.log('Match status update response:', result);
+      console.log('Response success:', result.success);
 
-      if (result.success) {
+      if (response.ok && result.success) {
         setMatch(prev => prev ? { ...prev, ...result.data } : null);
         
         if (action === 'start') {
@@ -231,10 +236,12 @@ export default function RefereeMatchPage() {
           alert('試合を終了しました。お疲れ様でした！');
         }
       } else {
-        alert(`エラー: ${result.error}`);
+        console.error('Match status update failed:', result);
+        alert(`エラー: ${result.error || '試合状態の更新に失敗しました'}`);
       }
     } catch (err) {
-      alert('操作に失敗しました。もう一度お試しください。');
+      console.error('Network error during match status update:', err);
+      alert('ネットワークエラーが発生しました。もう一度お試しください。');
     } finally {
       setUpdating(false);
     }

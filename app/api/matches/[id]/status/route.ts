@@ -147,7 +147,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
         await db.execute(`
           UPDATE t_matches_live 
-          SET match_status = 'ongoing', actual_start_time = datetime('now', '+9 hours'), current_period = 1
+          SET match_status = 'ongoing'
           WHERE match_id = ?
         `, [matchId]);
         break;
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
         await db.execute(`
           UPDATE t_matches_live 
-          SET match_status = 'completed', actual_end_time = datetime('now', '+9 hours')
+          SET match_status = 'completed'
           WHERE match_id = ?
         `, [matchId]);
         break;
@@ -175,11 +175,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           WHERE match_id = ?
         `, [current_period, updated_by, matchId]);
 
-        await db.execute(`
-          UPDATE t_matches_live 
-          SET current_period = ?
-          WHERE match_id = ?
-        `, [current_period, matchId]);
+        // t_matches_liveにはcurrent_periodカラムがないため、t_match_statusのみ更新
         break;
 
       case 'update_scores':
@@ -236,6 +232,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       SELECT 
         ml.*,
         ms.match_status,
+        ms.current_period,
         ms.actual_start_time,
         ms.actual_end_time,
         ms.updated_by,
@@ -253,7 +250,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       data: {
         match_id: updatedMatch.match_id,
         match_status: updatedMatch.match_status,
-        current_period: updatedMatch.current_period,
+        current_period: updatedMatch.current_period || 1,
         actual_start_time: updatedMatch.actual_start_time,
         actual_end_time: updatedMatch.actual_end_time,
         team1_scores: [Number(updatedMatch.team1_scores) || 0],
