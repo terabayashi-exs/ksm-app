@@ -1,5 +1,6 @@
 // lib/standings-calculator.ts
 import { db } from '@/lib/db';
+import { checkAndPromoteBlockWinners } from '@/lib/tournament-promotion';
 
 export interface TeamStanding {
   team_id: string;
@@ -107,11 +108,27 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
  */
 export async function updateBlockRankingsOnMatchConfirm(matchBlockId: number, tournamentId: number): Promise<void> {
   try {
+    console.log(`[STANDINGS] 順位表更新開始: Block ${matchBlockId}, Tournament ${tournamentId}`);
+    
+    // 確定済み試合数を事前確認
+    const matchCountResult = await db.execute({
+      sql: `SELECT COUNT(*) as count FROM t_matches_final WHERE match_block_id = ?`,
+      args: [matchBlockId]
+    });
+    const confirmedMatches = matchCountResult.rows[0]?.count as number || 0;
+    console.log(`[STANDINGS] 確定済み試合数: ${confirmedMatches}件`);
+    
     // ブロックの順位を計算
     const blockStandings = await calculateBlockStandings(matchBlockId, tournamentId);
+    console.log(`[STANDINGS] 計算完了: ${blockStandings.length}チームの順位を計算`);
+    
+    // 計算結果の詳細ログ
+    blockStandings.forEach(team => {
+      console.log(`[STANDINGS] ${team.position}. ${team.team_name} - ${team.points}pts (${team.wins}W ${team.draws}D ${team.losses}L) GF:${team.goals_for} GA:${team.goals_against} GD:${team.goal_difference}`);
+    });
     
     // team_rankingsをJSON形式で更新
-    await db.execute({
+    const updateResult = await db.execute({
       sql: `
         UPDATE t_match_blocks 
         SET team_rankings = ?, updated_at = datetime('now', '+9 hours') 
@@ -120,9 +137,38 @@ export async function updateBlockRankingsOnMatchConfirm(matchBlockId: number, to
       args: [JSON.stringify(blockStandings), matchBlockId]
     });
 
-    console.log(`ブロック ${matchBlockId} の順位表を更新しました`);
+    console.log(`[STANDINGS] DB更新完了: ${updateResult.rowsAffected}行が更新されました`);
+    console.log(`[STANDINGS] ブロック ${matchBlockId} の順位表を更新しました`);
+    
+    // 更新確認
+    const verifyResult = await db.execute({
+      sql: `SELECT team_rankings, updated_at FROM t_match_blocks WHERE match_block_id = ?`,
+      args: [matchBlockId]
+    });
+    
+    if (verifyResult.rows[0]?.team_rankings) {
+      const updatedAt = verifyResult.rows[0].updated_at;
+      console.log(`[STANDINGS] 更新確認: データが正常に保存されています (更新時刻: ${updatedAt})`);
+      
+      // ブロック順位確定後の進出処理チェック
+      try {
+        await checkAndPromoteBlockWinners(tournamentId, matchBlockId);
+      } catch (promotionError) {
+        console.error(`[STANDINGS] 進出処理エラー:`, promotionError);
+        // 進出処理エラーでも順位表更新は成功とする
+      }
+    } else {
+      console.log(`[STANDINGS] 警告: データが保存されていない可能性があります`);
+    }
+    
   } catch (error) {
-    console.error(`ブロック ${matchBlockId} の順位表更新エラー:`, error);
+    console.error(`[STANDINGS] ブロック ${matchBlockId} の順位表更新エラー:`, error);
+    console.error(`[STANDINGS] エラー詳細:`, {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      matchBlockId,
+      tournamentId
+    });
     throw new Error('順位表の更新に失敗しました');
   }
 }
@@ -262,8 +308,8 @@ async function calculateBlockStandings(
           match_block_id,
           team1_id,
           team2_id,
-          team1_goals,
-          team2_goals,
+          team1_scores as team1_goals,
+          team2_scores as team2_goals,
           winner_team_id,
           is_draw,
           is_walkover
@@ -342,8 +388,8 @@ async function calculateBlockStandings(
           }
         } else {
           // 通常の試合
-          teamGoals = isTeam1 ? match.team1_goals : match.team2_goals;
-          opponentGoals = isTeam1 ? match.team2_goals : match.team1_goals;
+          teamGoals = isTeam1 ? Number(match.team1_goals) : Number(match.team2_goals);
+          opponentGoals = isTeam1 ? Number(match.team2_goals) : Number(match.team1_goals);
         }
 
         goalsFor += teamGoals;
@@ -372,9 +418,9 @@ async function calculateBlockStandings(
         wins,
         draws,
         losses,
-        goals_for: goalsFor,
-        goals_against: goalsAgainst,
-        goal_difference: goalsFor - goalsAgainst
+        goals_for: Number(goalsFor),
+        goals_against: Number(goalsAgainst),
+        goal_difference: Number(goalsFor) - Number(goalsAgainst)
       };
     });
 
@@ -432,12 +478,27 @@ async function calculateBlockStandings(
         const currentTeam = teamStandings[i];
         const previousTeam = teamStandings[i - 1];
         
-        // 勝点、総得点、得失点差が全て同じなら同着
-        if (currentTeam.points === previousTeam.points &&
-            currentTeam.goals_for === previousTeam.goals_for &&
-            currentTeam.goal_difference === previousTeam.goal_difference) {
-          // 同着なので前のチームと同じ順位
-          teamStandings[i].position = previousTeam.position;
+        // 勝点、総得点、得失点差が全て同じかつ直接対決も同じなら同着
+        const isTied = currentTeam.points === previousTeam.points &&
+                       currentTeam.goals_for === previousTeam.goals_for &&
+                       currentTeam.goal_difference === previousTeam.goal_difference;
+        
+        if (isTied) {
+          // 直接対決の結果を確認
+          const headToHead = calculateHeadToHead(currentTeam.team_id, previousTeam.team_id, matches);
+          
+          // 直接対決も同じ（引き分けまたは対戦なし）なら同着
+          const sameHeadToHead = headToHead.teamAWins === headToHead.teamBWins && 
+                                headToHead.teamAGoals === headToHead.teamBGoals;
+          
+          if (sameHeadToHead) {
+            // 同着なので前のチームと同じ順位
+            teamStandings[i].position = previousTeam.position;
+          } else {
+            // 直接対決で順位が決まる場合は、これまでの同着も含めた実際の順位
+            currentPosition = i + 1;
+            teamStandings[i].position = currentPosition;
+          }
         } else {
           // 順位が変わる場合は、これまでの同着も含めた実際の順位
           currentPosition = i + 1;

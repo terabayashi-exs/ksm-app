@@ -98,7 +98,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       now
     ]);
 
-    console.log(`Match ${matchId} confirmed by ${confirmedBy}`);
+    console.log(`[MATCH_CONFIRM] Match ${matchId} confirmed by ${confirmedBy}`);
+    console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_id} vs ${liveMatch.team2_id} (${liveMatch.team1_scores}-${liveMatch.team2_scores})`);
 
     // 順位表を更新
     try {
@@ -106,10 +107,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const tournamentId = liveResult.rows[0].tournament_id as number;
       const matchBlockId = liveMatch.match_block_id as number;
       
+      console.log(`[MATCH_CONFIRM] Starting standings update for block ${matchBlockId}, tournament ${tournamentId}`);
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
-      console.log(`Block ${matchBlockId} standings updated after match ${matchId} confirmation`);
+      console.log(`[MATCH_CONFIRM] ✅ Block ${matchBlockId} standings updated successfully after match ${matchId} confirmation`);
     } catch (standingsError) {
-      console.error(`Failed to update standings for match ${matchId}:`, standingsError);
+      console.error(`[MATCH_CONFIRM] ❌ Failed to update standings for match ${matchId}:`, standingsError);
+      console.error(`[MATCH_CONFIRM] Error details:`, {
+        message: standingsError instanceof Error ? standingsError.message : 'Unknown error',
+        stack: standingsError instanceof Error ? standingsError.stack : 'No stack trace',
+        matchId,
+        matchBlockId: liveMatch.match_block_id,
+        tournamentId: liveResult.rows[0].tournament_id
+      });
       // 順位表更新エラーでも試合確定は成功とする（ログのみ）
     }
 

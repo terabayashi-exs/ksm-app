@@ -174,11 +174,11 @@ export async function GET(
               mb.block_name,
               mb.match_type,
               mb.block_order,
-              ml.team1_scores as team1_goals,
-              ml.team2_scores as team2_goals,
-              ml.winner_team_id,
-              ml.is_draw,
-              ml.is_walkover,
+              CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
+              CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
+              CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_team_id ELSE NULL END as winner_team_id,
+              CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
+              CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
               ml.remarks,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at
             FROM t_matches_live ml
@@ -219,15 +219,17 @@ export async function GET(
                 mb.block_name,
                 mb.match_type,
                 mb.block_order,
-                ml.team1_scores as team1_goals,
-                ml.team2_scores as team2_goals,
-                ml.winner_team_id,
-                ml.is_draw,
-                ml.is_walkover,
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_team_id ELSE NULL END as winner_team_id,
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
                 ml.remarks,
-                CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
+                COALESCE(ms.match_status, 'scheduled') as actual_match_status
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
@@ -254,16 +256,18 @@ export async function GET(
                 mb.block_name,
                 mb.match_type,
                 mb.block_order,
-                COALESCE(mf.team1_scores, ml.team1_scores) as team1_goals,
-                COALESCE(mf.team2_scores, ml.team2_scores) as team2_goals,
-                COALESCE(mf.winner_team_id, ml.winner_team_id) as winner_team_id,
-                COALESCE(mf.is_draw, ml.is_draw) as is_draw,
-                COALESCE(mf.is_walkover, ml.is_walkover) as is_walkover,
+                mf.team1_scores as team1_goals,
+                mf.team2_scores as team2_goals,
+                mf.winner_team_id,
+                mf.is_draw,
+                mf.is_walkover,
                 COALESCE(mf.remarks, ml.remarks) as remarks,
-                mf.updated_at as confirmed_at
+                mf.updated_at as confirmed_at,
+                COALESCE(ms.match_status, 'scheduled') as actual_match_status
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+              LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
@@ -293,15 +297,17 @@ export async function GET(
             mb.block_name,
             mb.match_type,
             mb.block_order,
-            ml.team1_scores as team1_goals,
-            ml.team2_scores as team2_goals,
-            ml.winner_team_id,
-            ml.is_draw,
-            ml.is_walkover,
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_team_id ELSE NULL END as winner_team_id,
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
             ml.remarks,
-            CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
+            COALESCE(ms.match_status, 'scheduled') as actual_match_status
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
           LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
           LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
           WHERE mb.tournament_id = ?
@@ -353,7 +359,7 @@ export async function GET(
           winner_team_id: row.winner_team_id ? String(row.winner_team_id) : null,
           is_draw: Boolean(row.is_draw),
           is_walkover: Boolean(row.is_walkover),
-          match_status: (row.team1_goals !== null && row.team1_goals !== undefined) ? 'completed' : 'scheduled',
+          match_status: String(row.actual_match_status || 'scheduled'),
           result_status: row.confirmed_at ? 'confirmed' : ((row.team1_goals !== null && row.team1_goals !== undefined) ? 'pending' : 'none'),
           remarks: row.remarks ? String(row.remarks) : null,
           has_result: (row.team1_goals !== null && row.team1_goals !== undefined) && (row.team2_goals !== null && row.team2_goals !== undefined)

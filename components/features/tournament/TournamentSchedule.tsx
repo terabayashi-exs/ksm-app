@@ -115,12 +115,35 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
 
   // 試合結果の表示
   const getMatchResult = (match: MatchData) => {
+    // 確定済みの試合結果がない場合
     if (!match.has_result) {
-      return {
-        status: 'scheduled',
-        display: <span className="text-gray-500 text-sm">未実施</span>,
-        icon: <Clock className="h-4 w-4 text-gray-400" />
-      };
+      // 試合状態に応じて表示を変更
+      switch (match.match_status) {
+        case 'ongoing':
+          return {
+            status: 'ongoing',
+            display: <span className="text-orange-600 text-sm font-medium animate-pulse">試合中</span>,
+            icon: <Clock className="h-4 w-4 text-orange-500" />
+          };
+        case 'completed':
+          return {
+            status: 'completed_unconfirmed',
+            display: <span className="text-purple-600 text-sm font-medium">試合完了</span>,
+            icon: <AlertTriangle className="h-4 w-4 text-purple-500" />
+          };
+        case 'cancelled':
+          return {
+            status: 'cancelled',
+            display: <span className="text-red-600 text-sm font-medium">中止</span>,
+            icon: <XCircle className="h-4 w-4 text-red-500" />
+          };
+        default:
+          return {
+            status: 'scheduled',
+            display: <span className="text-gray-500 text-sm">未実施</span>,
+            icon: <Clock className="h-4 w-4 text-gray-400" />
+          };
+      }
     }
 
     if (match.is_walkover) {

@@ -13,6 +13,7 @@ export interface MatchResult {
   is_walkover: boolean;
   match_code: string;
   is_confirmed: boolean;
+  match_status: string | null;
 }
 
 export interface TeamInfo {
@@ -136,7 +137,7 @@ async function getBlockResults(
       display_name: (row.team_omission as string) || (row.team_name as string)
     }));
 
-    // 全ての試合を取得（確定済み + 未確定）
+    // 確定済みの試合と未確定試合のコード情報を取得
     const matchesResult = await db.execute({
       sql: `
         SELECT 
@@ -150,9 +151,11 @@ async function getBlockResults(
           mf.winner_team_id,
           mf.is_draw,
           mf.is_walkover,
+          ms.match_status,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         WHERE ml.match_block_id = ?
         AND ml.team1_id IS NOT NULL 
         AND ml.team2_id IS NOT NULL
@@ -172,7 +175,8 @@ async function getBlockResults(
       is_draw: Boolean(row.is_draw),
       is_walkover: Boolean(row.is_walkover),
       match_code: row.match_code as string,
-      is_confirmed: Boolean(row.is_confirmed)
+      is_confirmed: Boolean(row.is_confirmed),
+      match_status: row.match_status as string | null
     }));
 
     // 星取表マトリックスを作成
@@ -225,17 +229,34 @@ function createMatchMatrix(teams: TeamInfo[], matches: MatchResult[]): MatchMatr
       return;
     }
     
-    // 未実施の試合の場合は試合コードを表示
+    // 未実施・進行中・完了（未確定）の試合の場合は状態を表示
     if (!match.is_confirmed || match.team1_goals === null || match.team2_goals === null) {
+      let displayText = match.match_code; // デフォルトは試合コード
+      
+      // 試合状態に応じて表示テキストを決定
+      switch (match.match_status) {
+        case 'scheduled':
+          displayText = '未実施';
+          break;
+        case 'ongoing':
+          displayText = '試合中';
+          break;
+        case 'completed':
+          displayText = '試合完了';
+          break;
+        default:
+          displayText = match.match_code; // 状態不明の場合は試合コード
+      }
+      
       matrix[team1Id][team2Id] = {
         result: null,
-        score: match.match_code, // 試合コードを表示（A1, A2など）
+        score: displayText,
         match_code: match.match_code
       };
       
       matrix[team2Id][team1Id] = {
         result: null,
-        score: match.match_code, // 試合コードを表示（A1, A2など）
+        score: displayText,
         match_code: match.match_code
       };
       return;
@@ -269,13 +290,13 @@ function createMatchMatrix(teams: TeamInfo[], matches: MatchResult[]): MatchMatr
       if (matrix[team1Id] && matrix[team2Id] && matrix[team1Id][team2Id] && matrix[team2Id][team1Id]) {
         matrix[team1Id][team2Id] = {
           result: 'draw',
-          score: `${team1Goals}△${team2Goals}`,
+          score: `${Math.floor(team1Goals)}△${Math.floor(team2Goals)}`,
           match_code: match.match_code
         };
         
         matrix[team2Id][team1Id] = {
           result: 'draw',
-          score: `${team2Goals}△${team1Goals}`,
+          score: `${Math.floor(team2Goals)}△${Math.floor(team1Goals)}`,
           match_code: match.match_code
         };
       }
@@ -291,13 +312,13 @@ function createMatchMatrix(teams: TeamInfo[], matches: MatchResult[]): MatchMatr
       if (matrix[winnerId] && matrix[loserId] && matrix[winnerId][loserId] && matrix[loserId][winnerId]) {
         matrix[winnerId][loserId] = {
           result: 'win',
-          score: `${winnerGoals}〇${loserGoals}`,
+          score: `${Math.floor(winnerGoals)}〇${Math.floor(loserGoals)}`,
           match_code: match.match_code
         };
         
         matrix[loserId][winnerId] = {
           result: 'loss',
-          score: `${loserGoals}●${winnerGoals}`,
+          score: `${Math.floor(loserGoals)}●${Math.floor(winnerGoals)}`,
           match_code: match.match_code
         };
       }
@@ -317,7 +338,7 @@ export function getDisplayName(team: TeamInfo): string {
 /**
  * 結果の色を取得
  */
-export function getResultColor(result: 'win' | 'loss' | 'draw' | null): string {
+export function getResultColor(result: 'win' | 'loss' | 'draw' | null, score?: string): string {
   switch (result) {
     case 'win':
       return 'text-green-600 bg-green-50';
@@ -326,6 +347,14 @@ export function getResultColor(result: 'win' | 'loss' | 'draw' | null): string {
     case 'draw':
       return 'text-blue-600 bg-blue-50';
     default:
+      // 状態表示の色分け
+      if (score === '未実施') {
+        return 'text-gray-500 bg-gray-50 font-medium';
+      } else if (score === '試合中') {
+        return 'text-orange-600 bg-orange-50 font-medium animate-pulse';
+      } else if (score === '試合完了') {
+        return 'text-purple-600 bg-purple-50 font-medium';
+      }
       return 'text-gray-600 bg-gray-100 font-medium'; // 試合コード用にスタイルを調整
   }
 }
