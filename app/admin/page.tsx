@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
 import SignOutButton from "@/components/features/auth/SignOutButton";
+import NotificationBanner from "@/components/features/tournament/NotificationBanner";
 
 export default async function AdminDashboard() {
   const session = await auth();
@@ -33,6 +34,9 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 通知バナー */}
+        <NotificationBanner />
+        
         {/* 大会一覧セクション */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">大会状況</h2>
@@ -111,9 +115,6 @@ export default async function AdminDashboard() {
               <div className="space-y-2">
                 <Button asChild className="w-full">
                   <Link href="/admin/results">結果一覧</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/admin/results/input">結果入力</Link>
                 </Button>
               </div>
             </CardContent>

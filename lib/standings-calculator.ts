@@ -1,6 +1,7 @@
 // lib/standings-calculator.ts
 import { db } from '@/lib/db';
-import { checkAndPromoteBlockWinners } from '@/lib/tournament-promotion';
+import { checkAndPromoteBlockWinners, promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
+import { createTournamentNotification } from '@/lib/notifications';
 
 export interface TeamStanding {
   team_id: string;
@@ -150,9 +151,9 @@ export async function updateBlockRankingsOnMatchConfirm(matchBlockId: number, to
       const updatedAt = verifyResult.rows[0].updated_at;
       console.log(`[STANDINGS] 更新確認: データが正常に保存されています (更新時刻: ${updatedAt})`);
       
-      // ブロック順位確定後の進出処理チェック
+      // ブロック順位確定後の処理チェック
       try {
-        await checkAndPromoteBlockWinners(tournamentId, matchBlockId);
+        await checkBlockCompletionAndPromote(tournamentId, matchBlockId, blockStandings);
       } catch (promotionError) {
         console.error(`[STANDINGS] 進出処理エラー:`, promotionError);
         // 進出処理エラーでも順位表更新は成功とする
@@ -572,4 +573,180 @@ export function calculateHeadToHead(
     teamAGoals,
     teamBGoals
   };
+}
+
+/**
+ * ブロック完了チェックと進出処理の実行
+ */
+export async function checkBlockCompletionAndPromote(
+  tournamentId: number,
+  completedBlockId: number,
+  blockStandings: TeamStanding[]
+): Promise<void> {
+  try {
+    console.log(`[PROMOTION] ブロック完了チェック開始: Block ${completedBlockId}`);
+    
+    // 1. ブロック情報を取得
+    const blockResult = await db.execute({
+      sql: `SELECT block_name, display_round_name FROM t_match_blocks WHERE match_block_id = ?`,
+      args: [completedBlockId]
+    });
+    
+    if (!blockResult.rows || blockResult.rows.length === 0) {
+      console.log(`[PROMOTION] ブロック情報が見つかりません: ${completedBlockId}`);
+      return;
+    }
+    
+    const blockName = blockResult.rows[0].block_name as string;
+    const displayRoundName = blockResult.rows[0].display_round_name as string;
+    
+    // 2. ブロック内の全試合が完了しているかチェック
+    const isBlockCompleted = await checkIfBlockAllMatchesCompleted(completedBlockId);
+    
+    if (!isBlockCompleted) {
+      console.log(`[PROMOTION] ${blockName}ブロック: まだ未完了の試合があります`);
+      return;
+    }
+    
+    console.log(`[PROMOTION] ${blockName}ブロック: 全試合完了を確認`);
+    
+    // 3. 上位2チームの自動決定可能性をチェック
+    const promotionStatus = analyzePromotionEligibility(blockStandings);
+    
+    // 4. 同順位通知の作成・保存
+    await createTieNotificationIfNeeded(tournamentId, completedBlockId, blockName, promotionStatus);
+    
+    // 5. 確定したチームについては即座に進出処理
+    if (promotionStatus.canPromoteFirst || promotionStatus.canPromoteSecond) {
+      console.log(`[PROMOTION] ${blockName}ブロック: 部分進出処理実行`);
+      await promoteTeamsToFinalTournament(tournamentId);
+    }
+    
+  } catch (error) {
+    console.error(`[PROMOTION] ブロック完了チェックエラー:`, error);
+    throw error;
+  }
+}
+
+/**
+ * ブロック内の全試合が完了しているかチェック
+ */
+async function checkIfBlockAllMatchesCompleted(matchBlockId: number): Promise<boolean> {
+  try {
+    const result = await db.execute({
+      sql: `
+        SELECT 
+          COUNT(*) as total_matches,
+          COUNT(mf.match_id) as completed_matches
+        FROM t_matches_live ml
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        WHERE ml.match_block_id = ?
+        AND ml.team1_id IS NOT NULL 
+        AND ml.team2_id IS NOT NULL
+      `,
+      args: [matchBlockId]
+    });
+    
+    const totalMatches = result.rows[0]?.total_matches as number || 0;
+    const completedMatches = result.rows[0]?.completed_matches as number || 0;
+    
+    console.log(`[PROMOTION] ブロック ${matchBlockId}: ${completedMatches}/${totalMatches} 試合完了`);
+    
+    return totalMatches > 0 && totalMatches === completedMatches;
+  } catch (error) {
+    console.error(`ブロック完了チェックエラー:`, error);
+    return false;
+  }
+}
+
+/**
+ * 上位2チームの進出可能性を分析
+ */
+function analyzePromotionEligibility(standings: TeamStanding[]): {
+  canPromoteFirst: boolean;
+  canPromoteSecond: boolean;
+  firstPlaceTeams: TeamStanding[];
+  secondPlaceTeams: TeamStanding[];
+  tieMessage: string | null;
+} {
+  const sortedStandings = standings.sort((a, b) => a.position - b.position);
+  
+  const firstPlaceTeams = sortedStandings.filter(team => team.position === 1);
+  const secondPlaceTeams = sortedStandings.filter(team => team.position === 2);
+  
+  const canPromoteFirst = firstPlaceTeams.length === 1;
+  const canPromoteSecond = secondPlaceTeams.length === 1;
+  
+  let tieMessage: string | null = null;
+  
+  if (firstPlaceTeams.length > 1) {
+    const teamNames = firstPlaceTeams.map(t => t.team_name).join('、');
+    tieMessage = `1位同着: ${teamNames} (${firstPlaceTeams.length}チーム)`;
+  } else if (secondPlaceTeams.length > 1) {
+    const teamNames = secondPlaceTeams.map(t => t.team_name).join('、');
+    tieMessage = `2位同着: ${teamNames} (${secondPlaceTeams.length}チーム)`;
+  } else if (secondPlaceTeams.length === 0) {
+    tieMessage = '2位チームが存在しません';
+  }
+  
+  return {
+    canPromoteFirst,
+    canPromoteSecond,
+    firstPlaceTeams,
+    secondPlaceTeams,
+    tieMessage
+  };
+}
+
+/**
+ * 同順位通知が必要な場合に作成
+ */
+async function createTieNotificationIfNeeded(
+  tournamentId: number,
+  blockId: number,
+  blockName: string,
+  promotionStatus: {
+    canPromoteFirst: boolean;
+    canPromoteSecond: boolean;
+    firstPlaceTeams: TeamStanding[];
+    secondPlaceTeams: TeamStanding[];
+    tieMessage: string | null;
+  }
+): Promise<void> {
+  try {
+    // 同順位が発生している場合のみ通知作成
+    if (!promotionStatus.tieMessage) {
+      console.log(`[PROMOTION] ${blockName}ブロック: 同順位なし、通知不要`);
+      return;
+    }
+    
+    const title = `${blockName}ブロック 手動順位決定が必要`;
+    const message = `${blockName}ブロックで${promotionStatus.tieMessage}が発生しました。決勝トーナメント進出チームを決定するため、手動で順位を設定してください。`;
+    
+    // 通知に含めるメタデータ
+    const metadata = {
+      block_id: blockId,
+      block_name: blockName,
+      tie_type: promotionStatus.firstPlaceTeams.length > 1 ? 'first_place' : 'second_place',
+      tied_teams: promotionStatus.firstPlaceTeams.length > 1 
+        ? promotionStatus.firstPlaceTeams.map(t => ({ team_id: t.team_id, team_name: t.team_name }))
+        : promotionStatus.secondPlaceTeams.map(t => ({ team_id: t.team_id, team_name: t.team_name })),
+      requires_manual_ranking: true
+    };
+    
+    await createTournamentNotification(
+      tournamentId,
+      'manual_ranking_needed',
+      title,
+      message,
+      'warning',
+      metadata
+    );
+    
+    console.log(`[PROMOTION] ${blockName}ブロック: 同順位通知を作成`);
+    
+  } catch (error) {
+    console.error(`[PROMOTION] 同順位通知作成エラー:`, error);
+    // エラーでも処理は続行
+  }
 }

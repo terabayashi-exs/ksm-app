@@ -157,13 +157,13 @@ export default function TournamentDashboardList() {
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/results`}>
-                結果入力
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                試合管理
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                試合管理
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                手動順位設定
               </Link>
             </Button>
           </>

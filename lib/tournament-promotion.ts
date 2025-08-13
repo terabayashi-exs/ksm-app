@@ -17,12 +17,13 @@ export interface BlockRanking {
 
 /**
  * ブロック順位確定後に決勝トーナメントに上位チームを進出させる
+ * 部分進出に対応：全ブロック完了を待たずに確定したブロックから即座に進出
  */
 export async function promoteTeamsToFinalTournament(tournamentId: number): Promise<void> {
   try {
     console.log(`[PROMOTION] 決勝トーナメント進出処理開始: Tournament ${tournamentId}`);
     
-    // 各ブロックの順位表を取得
+    // 各ブロックの順位表を取得（順位が確定したもののみ）
     const blockRankings = await getAllBlockRankings(tournamentId);
     
     if (blockRankings.length === 0) {
@@ -30,9 +31,9 @@ export async function promoteTeamsToFinalTournament(tournamentId: number): Promi
       return;
     }
     
-    // 各ブロックの上位2チームを取得
-    const promotions = extractTopTeams(blockRankings);
-    console.log(`[PROMOTION] 進出チーム:`, JSON.stringify(promotions, null, 2));
+    // 確定したブロックから上位チームを取得（部分進出対応）
+    const promotions = extractTopTeamsPartial(blockRankings);
+    console.log(`[PROMOTION] 進出チーム（部分進出対応）:`, JSON.stringify(promotions, null, 2));
     
     // 決勝トーナメント試合を更新
     await updateFinalTournamentMatches(tournamentId, promotions);
@@ -114,6 +115,51 @@ function extractTopTeams(blockRankings: { block_name: string; rankings: BlockRan
         team_id: sortedRankings[1].team_id,
         team_name: sortedRankings[1].team_name
       };
+    }
+  });
+
+  return promotions;
+}
+
+/**
+ * 部分進出対応：確定したブロックのみから上位チームを抽出
+ * 1位が確定したブロックは即座に進出、2位が同着の場合は待機
+ */
+function extractTopTeamsPartial(blockRankings: { block_name: string; rankings: BlockRanking[]; }[]): {
+  [key: string]: { team_id: string; team_name: string; };
+} {
+  const promotions: { [key: string]: { team_id: string; team_name: string; }; } = {};
+
+  blockRankings.forEach(block => {
+    const sortedRankings = block.rankings.sort((a, b) => a.position - b.position);
+    
+    // 1位チームの進出（常に可能）
+    if (sortedRankings.length >= 1) {
+      promotions[`${block.block_name}_1`] = {
+        team_id: sortedRankings[0].team_id,
+        team_name: sortedRankings[0].team_name
+      };
+      console.log(`[PROMOTION] ${block.block_name}ブロック1位確定: ${sortedRankings[0].team_name}`);
+    }
+    
+    // 2位チームの進出（同着がないかチェック）
+    if (sortedRankings.length >= 2) {
+      const secondPlace = sortedRankings.filter(team => team.position === 2);
+      
+      if (secondPlace.length === 1) {
+        // 2位が単独の場合は進出確定
+        promotions[`${block.block_name}_2`] = {
+          team_id: secondPlace[0].team_id,
+          team_name: secondPlace[0].team_name
+        };
+        console.log(`[PROMOTION] ${block.block_name}ブロック2位確定: ${secondPlace[0].team_name}`);
+      } else if (secondPlace.length > 1) {
+        // 2位が同着の場合は手動決定待ち
+        console.log(`[PROMOTION] ${block.block_name}ブロック2位同着（${secondPlace.length}チーム）: 手動決定待ち`);
+        secondPlace.forEach(team => {
+          console.log(`[PROMOTION]   同着2位: ${team.team_name}`);
+        });
+      }
     }
   });
 
