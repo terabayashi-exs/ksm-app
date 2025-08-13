@@ -54,7 +54,7 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
       tournamentName: teamInfo.tournament_name,
       contactPerson: teamInfo.contact_person,
       adminComment: data.adminComment,
-      withdrawalReason: teamInfo.withdrawal_reason,
+      withdrawalReason: teamInfo.withdrawal_reason || undefined,
       processedDate: new Date().toLocaleString('ja-JP', {
         year: 'numeric',
         month: '2-digit',
@@ -63,7 +63,7 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
         minute: '2-digit'
       }),
       tournamentDate: teamInfo.tournament_dates ? formatTournamentDates(teamInfo.tournament_dates) : undefined,
-      venueInfo: teamInfo.venue_name,
+      venueInfo: teamInfo.venue_name || undefined,
       contactEmail: data.adminEmail || process.env.ADMIN_EMAIL,
       contactPhone: process.env.ADMIN_PHONE
     };

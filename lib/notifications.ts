@@ -4,12 +4,12 @@ import { db } from '@/lib/db';
 export interface TournamentNotification {
   notification_id?: number;
   tournament_id: number;
-  notification_type: 'tie_ranking' | 'manual_ranking_needed' | 'block_completed';
+  notification_type: string;
   title: string;
   message: string;
   severity: 'info' | 'warning' | 'error';
   is_resolved: boolean;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 }
@@ -23,7 +23,7 @@ export async function createTournamentNotification(
   title: string,
   message: string,
   severity: 'info' | 'warning' | 'error' = 'info',
-  metadata?: any
+  metadata?: Record<string, unknown>
 ): Promise<number> {
   try {
     console.log(`[NOTIFICATIONS] 通知作成: ${title}`);
@@ -32,7 +32,7 @@ export async function createTournamentNotification(
     const existingNotification = await db.execute({
       sql: `
         SELECT notification_id 
-        FROM tournament_notifications 
+        FROM t_tournament_notifications 
         WHERE tournament_id = ? 
         AND notification_type = ? 
         AND title = ?
@@ -47,7 +47,7 @@ export async function createTournamentNotification(
       
       await db.execute({
         sql: `
-          UPDATE tournament_notifications 
+          UPDATE t_tournament_notifications 
           SET message = ?, severity = ?, metadata = ?, updated_at = datetime('now', '+9 hours')
           WHERE notification_id = ?
         `,
@@ -59,7 +59,7 @@ export async function createTournamentNotification(
       console.log(`[NOTIFICATIONS] 新規通知を作成`);
       const result = await db.execute({
         sql: `
-          INSERT INTO tournament_notifications 
+          INSERT INTO t_tournament_notifications 
           (tournament_id, notification_type, title, message, severity, is_resolved, metadata, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `,
@@ -73,7 +73,7 @@ export async function createTournamentNotification(
         ]
       });
       
-      return result.lastInsertRowid as number;
+      return Number(result.lastInsertRowid);
     }
   } catch (error) {
     console.error('[NOTIFICATIONS] 通知作成エラー:', error);
@@ -88,7 +88,7 @@ export async function resolveNotification(notificationId: number): Promise<void>
   try {
     await db.execute({
       sql: `
-        UPDATE tournament_notifications 
+        UPDATE t_tournament_notifications 
         SET is_resolved = 1, updated_at = datetime('now', '+9 hours')
         WHERE notification_id = ?
       `,
@@ -121,7 +121,7 @@ export async function getTournamentNotifications(
         metadata,
         created_at,
         updated_at
-      FROM tournament_notifications
+      FROM t_tournament_notifications
       WHERE tournament_id = ?
       ${includeResolved ? '' : 'AND is_resolved = 0'}
       ORDER BY created_at DESC
@@ -207,7 +207,7 @@ export async function autoResolveManualRankingNotifications(tournamentId: number
       
       await db.execute({
         sql: `
-          UPDATE tournament_notifications 
+          UPDATE t_tournament_notifications 
           SET is_resolved = 1, updated_at = datetime('now', '+9 hours')
           WHERE tournament_id = ? 
           AND notification_type = 'manual_ranking_needed' 
@@ -229,7 +229,7 @@ export async function getAllUnresolvedNotifications(): Promise<(TournamentNotifi
     // まず手動順位設定通知の自動解決を実行
     const tournamentIds = await db.execute(`
       SELECT DISTINCT tournament_id 
-      FROM tournament_notifications 
+      FROM t_tournament_notifications 
       WHERE notification_type = 'manual_ranking_needed' AND is_resolved = 0
     `);
     
@@ -251,7 +251,7 @@ export async function getAllUnresolvedNotifications(): Promise<(TournamentNotifi
         tn.created_at,
         tn.updated_at,
         t.tournament_name
-      FROM tournament_notifications tn
+      FROM t_tournament_notifications tn
       JOIN t_tournaments t ON tn.tournament_id = t.tournament_id
       WHERE tn.is_resolved = 0
       ORDER BY tn.created_at DESC

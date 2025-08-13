@@ -31,6 +31,7 @@ export interface BlockResults {
   teams: TeamInfo[];
   matches: MatchResult[];
   match_matrix: MatchMatrix;
+  remarks?: string | null;
 }
 
 export interface MatchMatrix {
@@ -55,7 +56,8 @@ export async function getTournamentResults(tournamentId: number): Promise<BlockR
           match_block_id,
           phase,
           display_round_name,
-          block_name
+          block_name,
+          remarks
         FROM t_match_blocks 
         WHERE tournament_id = ? 
         ORDER BY block_order, match_block_id
@@ -83,7 +85,8 @@ export async function getTournamentResults(tournamentId: number): Promise<BlockR
         block_name: block.block_name as string,
         teams: blockResult.teams,
         matches: blockResult.matches,
-        match_matrix: blockResult.match_matrix
+        match_matrix: blockResult.match_matrix,
+        remarks: block.remarks as string | null
       });
     }
 

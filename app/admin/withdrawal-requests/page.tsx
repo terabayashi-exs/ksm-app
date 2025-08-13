@@ -6,7 +6,9 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import WithdrawalRequestManagement from '@/components/features/admin/WithdrawalRequestManagement';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default async function WithdrawalRequestsPage() {
   const session = await auth();
@@ -29,6 +31,12 @@ export default async function WithdrawalRequestsPage() {
               チームからの大会辞退申請を確認・承認・却下することができます
             </p>
           </div>
+          <Button asChild variant="outline">
+            <Link href="/admin" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
         </div>
 
         {/* 辞退申請管理コンポーネント */}

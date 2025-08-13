@@ -1,10 +1,10 @@
 // app/api/admin/notifications/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getAllUnresolvedNotifications } from '@/lib/notifications';
 
 // 全未解決通知を取得
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // 認証チェック
     const session = await auth();

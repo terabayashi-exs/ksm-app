@@ -128,7 +128,7 @@ async function getExistingTournamentTeamInfo(tournamentId: number, teamId: strin
     FROM t_tournament_teams
     WHERE tournament_id = ? AND team_id = ?
   `;
-  let params: any[] = [tournamentId, teamId];
+  const params: (string | number)[] = [tournamentId, teamId];
 
   // 特定のtournament_team_idが指定されている場合はそれを条件に追加
   if (tournamentTeamId) {

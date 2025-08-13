@@ -109,6 +109,12 @@ erDiagram
         text team_omission "大会エントリー時チーム略称"
         text assigned_block "割り当てブロック"
         integer block_position "ブロック内位置"
+        text withdrawal_status "辞退ステータス"
+        text withdrawal_reason "辞退理由"
+        datetime withdrawal_requested_at "辞退申請日時"
+        datetime withdrawal_processed_at "辞退処理完了日時"
+        text withdrawal_processed_by "辞退処理者"
+        text withdrawal_admin_comment "管理者コメント"
         datetime created_at "作成日時"
         datetime updated_at "更新日時"
     }
@@ -157,6 +163,10 @@ erDiagram
         text team2_scores "チーム2得点"
         integer period_count "ピリオド数"
         text winner_team_id FK "勝利チームID"
+        integer is_draw "引分フラグ"
+        integer is_walkover "不戦勝フラグ"
+        text match_status "試合状態"
+        text result_status "結果状態"
         text remarks "備考"
         text confirmed_by "確定者"
         datetime created_at "作成日時"
@@ -179,9 +189,37 @@ erDiagram
         text team2_scores "チーム2得点"
         integer period_count "ピリオド数"
         text winner_team_id FK "勝利チームID"
+        integer is_draw "引分フラグ"
+        integer is_walkover "不戦勝フラグ"
+        text match_status "試合状態"
+        text result_status "結果状態"
         text remarks "備考"
-        datetime confirmed_at "確定日時"
         datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+    }
+
+    t_match_status {
+        integer match_id PK "試合ID"
+        integer match_block_id FK "試合ブロックID"
+        text match_status "試合状態"
+        datetime actual_start_time "実際の開始時刻"
+        datetime actual_end_time "実際の終了時刻"
+        integer current_period "現在のピリオド"
+        text updated_by "更新者"
+        datetime updated_at "更新日時"
+    }
+
+    t_tournament_notifications {
+        integer notification_id PK "通知ID"
+        integer tournament_id FK "大会ID"
+        text notification_type "通知種別"
+        text title "通知タイトル"
+        text message "通知メッセージ"
+        text severity "重要度"
+        integer is_resolved "解決フラグ"
+        text metadata "メタデータ(JSON)"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
     }
 
     %% リレーションシップ
@@ -195,6 +233,7 @@ erDiagram
     t_tournaments ||--o{ t_tournament_teams : "参加"
     t_tournaments ||--o{ t_tournament_players : "選手参加"
     t_tournaments ||--o{ t_match_blocks : "ブロック構成"
+    t_tournaments ||--o{ t_tournament_notifications : "通知"
 
     m_teams ||--o{ t_tournament_teams : "チーム参加"
     m_teams ||--o{ t_tournament_players : "チーム選手参加"
@@ -202,6 +241,7 @@ erDiagram
 
     t_match_blocks ||--o{ t_matches_live : "試合実施"
     t_match_blocks ||--o{ t_matches_final : "試合確定"
+    t_match_blocks ||--o{ t_match_status : "試合状態管理"
 
     m_teams ||--o{ t_matches_live : "チーム1"
     m_teams ||--o{ t_matches_live : "チーム2"
@@ -210,4 +250,6 @@ erDiagram
     m_teams ||--o{ t_matches_final : "チーム1"
     m_teams ||--o{ t_matches_final : "チーム2"
     m_teams ||--o{ t_matches_final : "勝者"
+
+    t_matches_live ||--|| t_match_status : "状態管理"
 ```

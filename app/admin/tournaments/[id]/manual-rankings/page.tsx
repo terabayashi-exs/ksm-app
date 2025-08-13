@@ -60,7 +60,8 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         phase,
         display_round_name,
         block_name,
-        team_rankings
+        team_rankings,
+        remarks
       FROM t_match_blocks 
       WHERE tournament_id = ? 
       AND phase = 'preliminary'
@@ -74,7 +75,8 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     phase: row.phase as string,
     display_round_name: row.display_round_name as string,
     block_name: row.block_name as string,
-    team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : []
+    team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : [],
+    remarks: row.remarks as string | null
   }));
 
   return (

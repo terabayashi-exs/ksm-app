@@ -32,7 +32,7 @@ const playersUpdateSchema = z.object({
 });
 
 // テスト用のGETハンドラー
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('GET /api/teams/players - Test endpoint');
     return NextResponse.json({

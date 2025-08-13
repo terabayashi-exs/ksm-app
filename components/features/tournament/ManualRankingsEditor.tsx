@@ -30,7 +30,7 @@ interface Block {
   display_round_name: string;
   block_name: string;
   team_rankings: TeamRanking[];
-  remarks?: string;
+  remarks?: string | null;
 }
 
 interface ManualRankingsEditorProps {
@@ -43,7 +43,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     blocks.map(block => ({
       ...block,
       team_rankings: [...block.team_rankings], // 深いコピー
-      remarks: block.remarks || '' // 備考のデフォルト値
+      remarks: block.remarks || '' // 備考のデフォルト値（nullを空文字に変換）
     }))
   );
   const [saving, setSaving] = useState(false);
@@ -93,7 +93,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     updatedBlocks[blockIndex] = {
       ...updatedBlocks[blockIndex],
       team_rankings: [...blocks[blockIndex].team_rankings],
-      remarks: blocks[blockIndex].remarks || '' // 備考もリセット
+      remarks: blocks[blockIndex].remarks || '' // 備考もリセット（nullを空文字に変換）
     };
     setEditedBlocks(updatedBlocks);
     setMessage({ type: 'success', text: `${blocks[blockIndex].block_name}ブロックをリセットしました` });
@@ -104,7 +104,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     setEditedBlocks(blocks.map(block => ({
       ...block,
       team_rankings: [...block.team_rankings],
-      remarks: block.remarks || '' // 備考もリセット
+      remarks: block.remarks || '' // 備考もリセット（nullを空文字に変換）
     })));
     setMessage({ type: 'success', text: '全ての変更をリセットしました' });
   };

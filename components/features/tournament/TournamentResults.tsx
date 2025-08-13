@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Users, Calendar, Target, Award, Hash, Medal } from 'lucide-react';
+import { Trophy, Users, Calendar, Target, Award, Hash, Medal, MessageSquare } from 'lucide-react';
 import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
 
 interface TeamStanding {
@@ -461,6 +461,23 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                     ※ 対戦結果：縦のチーム名が横のチーム名に対する結果を表示
                   </div>
                 </div>
+
+                {/* ブロック備考 */}
+                {block.remarks && (
+                  <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-medium text-amber-800 mb-1">
+                          {block.block_name}ブロック 備考
+                        </h4>
+                        <p className="text-sm text-amber-700 whitespace-pre-wrap">
+                          {block.remarks}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
