@@ -236,6 +236,34 @@ export default function TeamTournaments() {
 
   return (
     <div className="space-y-8">
+      {/* 申し込み済の大会 */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+          <CheckCircle className="h-6 w-6 mr-2 text-green-600" />
+          申し込み済の大会
+        </h2>
+        
+        {tournaments.joined.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tournaments.joined.map((tournament) => (
+              <TournamentCard key={tournament.tournament_id} tournament={tournament} isJoined={true} />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                参加申し込みした大会はありません
+              </h3>
+              <p className="text-gray-600 mb-4">
+                まだ大会に参加申し込みをしていません。下記の参加可能な大会から申し込みできます。
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       {/* 参加可能な大会 */}
       <div>
         <div className="mb-6">
@@ -264,34 +292,6 @@ export default function TeamTournaments() {
               <Button asChild variant="outline">
                 <Link href="/public/tournaments">大会一覧を確認する</Link>
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* 申し込み済の大会 */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <CheckCircle className="h-6 w-6 mr-2 text-green-600" />
-          申し込み済の大会
-        </h2>
-        
-        {tournaments.joined.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tournaments.joined.map((tournament) => (
-              <TournamentCard key={tournament.tournament_id} tournament={tournament} isJoined={true} />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                参加申し込みした大会はありません
-              </h3>
-              <p className="text-gray-600 mb-4">
-                まだ大会に参加申し込みをしていません。上記の参加可能な大会から申し込みできます。
-              </p>
             </CardContent>
           </Card>
         )}

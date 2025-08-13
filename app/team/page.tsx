@@ -7,6 +7,7 @@ import Link from "next/link";
 import SignOutButton from "@/components/features/auth/SignOutButton";
 import TeamProfile from "@/components/features/team/TeamProfile";
 import TeamTournaments from "@/components/features/team/TeamTournaments";
+import TeamMembers from "@/components/features/team/TeamMembers";
 
 interface SearchParams {
   joined?: string;
@@ -68,12 +69,17 @@ export default async function TeamDashboard({ searchParams }: PageProps) {
           </div>
         )}
 
-        {/* チーム情報とメンバー管理 */}
+        {/* チーム情報 */}
         <TeamProfile />
 
         {/* 大会情報 */}
         <div className="mt-12">
           <TeamTournaments />
+        </div>
+
+        {/* メンバー管理 */}
+        <div className="mt-12">
+          <TeamMembers />
         </div>
       </div>
     </div>
