@@ -9,6 +9,15 @@ export default auth((req) => {
   const isLoggedIn = !!session?.user;
   const userRole = session?.user?.role;
 
+  // Edge browser localStorage fix headers
+  const response = NextResponse.next();
+  const userAgent = req.headers.get('user-agent') || '';
+  
+  if (userAgent.includes('Edg') && process.env.NODE_ENV === 'development') {
+    response.headers.set('X-Edge-Fix', 'true');
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  }
+
   // 認証が必要なルートの定義
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
   const isTeamRoute = nextUrl.pathname.startsWith("/team");
@@ -48,7 +57,7 @@ export default auth((req) => {
     }
   }
 
-  return NextResponse.next();
+  return response;
 });
 
 export const config = {
