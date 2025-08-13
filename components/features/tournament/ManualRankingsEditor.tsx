@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trophy, Save, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Trophy, Save, RotateCcw, AlertTriangle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 interface TeamRanking {
@@ -29,6 +30,7 @@ interface Block {
   display_round_name: string;
   block_name: string;
   team_rankings: TeamRanking[];
+  remarks?: string;
 }
 
 interface ManualRankingsEditorProps {
@@ -40,7 +42,8 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
   const [editedBlocks, setEditedBlocks] = useState<Block[]>(
     blocks.map(block => ({
       ...block,
-      team_rankings: [...block.team_rankings] // 深いコピー
+      team_rankings: [...block.team_rankings], // 深いコピー
+      remarks: block.remarks || '' // 備考のデフォルト値
     }))
   );
   const [saving, setSaving] = useState(false);
@@ -74,12 +77,23 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     }
   };
 
+  // 備考の変更
+  const updateBlockRemarks = (blockIndex: number, remarks: string) => {
+    const updatedBlocks = [...editedBlocks];
+    updatedBlocks[blockIndex] = {
+      ...updatedBlocks[blockIndex],
+      remarks: remarks
+    };
+    setEditedBlocks(updatedBlocks);
+  };
+
   // 元の順位にリセット
   const resetBlock = (blockIndex: number) => {
     const updatedBlocks = [...editedBlocks];
     updatedBlocks[blockIndex] = {
       ...updatedBlocks[blockIndex],
-      team_rankings: [...blocks[blockIndex].team_rankings]
+      team_rankings: [...blocks[blockIndex].team_rankings],
+      remarks: blocks[blockIndex].remarks || '' // 備考もリセット
     };
     setEditedBlocks(updatedBlocks);
     setMessage({ type: 'success', text: `${blocks[blockIndex].block_name}ブロックをリセットしました` });
@@ -89,7 +103,8 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
   const resetAll = () => {
     setEditedBlocks(blocks.map(block => ({
       ...block,
-      team_rankings: [...block.team_rankings]
+      team_rankings: [...block.team_rankings],
+      remarks: block.remarks || '' // 備考もリセット
     })));
     setMessage({ type: 'success', text: '全ての変更をリセットしました' });
   };
@@ -108,7 +123,8 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
         body: JSON.stringify({
           blocks: editedBlocks.map(block => ({
             match_block_id: block.match_block_id,
-            team_rankings: block.team_rankings
+            team_rankings: block.team_rankings,
+            remarks: block.remarks || ''
           }))
         }),
       });
@@ -136,7 +152,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
   const hasChanges = editedBlocks.some((block, blockIndex) => 
     block.team_rankings.some((team, teamIndex) => 
       team.position !== blocks[blockIndex]?.team_rankings[teamIndex]?.position
-    )
+    ) || block.remarks !== (blocks[blockIndex]?.remarks || '')
   );
 
   return (
@@ -161,12 +177,13 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
           <Button 
             onClick={saveChanges}
             disabled={saving || !hasChanges}
+            className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white"
           >
             <Save className="w-4 h-4 mr-1" />
             {saving ? '保存中...' : '変更を保存'}
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/admin/tournaments/${tournamentId}`}>戻る</Link>
+            <Link href="/admin">戻る</Link>
           </Button>
         </div>
       </div>
@@ -247,6 +264,28 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
                   ))}
                 </div>
               )}
+
+              {/* 備考欄 */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Label htmlFor={`remarks-${block.match_block_id}`} className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <MessageSquare className="w-4 h-4 mr-1" />
+                  順位設定の備考
+                </Label>
+                <Textarea
+                  id={`remarks-${block.match_block_id}`}
+                  placeholder="順位決定の理由や特記事項を入力してください（例：同着1位のため抽選で決定、3位決定戦なしのため同着3位など）"
+                  value={block.remarks || ''}
+                  onChange={(e) => updateBlockRemarks(blockIndex, e.target.value)}
+                  disabled={saving}
+                  rows={3}
+                  className="text-sm"
+                />
+                {block.remarks && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {block.remarks.length} / 500文字
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -262,6 +301,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
               <ul className="list-disc list-inside space-y-1 text-xs">
                 <li>同着順位を設定する場合は、同じ順位番号を入力してください</li>
                 <li>順位変更後は自動的に決勝トーナメントの進出チームが更新されます</li>
+                <li>備考欄に順位決定の理由や特記事項を記録できます</li>
                 <li>変更は保存ボタンを押すまで反映されません</li>
                 <li>元の順位は各ブロックの成績に基づいて自動計算されています</li>
               </ul>

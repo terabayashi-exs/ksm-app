@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
+import { autoResolveManualRankingNotifications } from '@/lib/notifications';
 
 interface RouteParams {
   params: Promise<{ id: string }> | { id: string };
@@ -26,6 +27,7 @@ interface TeamRanking {
 interface BlockUpdate {
   match_block_id: number;
   team_rankings: TeamRanking[];
+  remarks?: string;
 }
 
 // 手動順位の更新
@@ -95,10 +97,10 @@ export async function PUT(
       const updateResult = await db.execute({
         sql: `
           UPDATE t_match_blocks 
-          SET team_rankings = ?, updated_at = datetime('now', '+9 hours') 
+          SET team_rankings = ?, remarks = ?, updated_at = datetime('now', '+9 hours') 
           WHERE match_block_id = ?
         `,
-        args: [JSON.stringify(block.team_rankings), block.match_block_id]
+        args: [JSON.stringify(block.team_rankings), block.remarks || null, block.match_block_id]
       });
 
       console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 更新完了: ${updateResult.rowsAffected}行`);
@@ -109,6 +111,10 @@ export async function PUT(
       console.log('[MANUAL_RANKINGS] 決勝トーナメント進出処理開始...');
       await promoteTeamsToFinalTournament(tournamentId);
       console.log('[MANUAL_RANKINGS] 決勝トーナメント進出処理完了');
+      
+      // 進出完了後、手動順位設定通知を自動解決
+      await autoResolveManualRankingNotifications(tournamentId);
+      console.log('[MANUAL_RANKINGS] 通知自動解決処理完了');
     } catch (promotionError) {
       console.error('[MANUAL_RANKINGS] 進出処理エラー:', promotionError);
       // 進出処理エラーでも順位更新は成功とする
@@ -171,7 +177,8 @@ export async function GET(
           phase,
           display_round_name,
           block_name,
-          team_rankings
+          team_rankings,
+          remarks
         FROM t_match_blocks 
         WHERE tournament_id = ? 
         AND phase = 'preliminary'
@@ -185,7 +192,8 @@ export async function GET(
       phase: row.phase as string,
       display_round_name: row.display_round_name as string,
       block_name: row.block_name as string,
-      team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : []
+      team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : [],
+      remarks: row.remarks as string | null
     }));
 
     return NextResponse.json({

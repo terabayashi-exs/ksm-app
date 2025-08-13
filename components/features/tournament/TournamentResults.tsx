@@ -188,7 +188,13 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {results.reduce((sum, block) => sum + block.matches.length, 0)}
+                {results.reduce((sum, block) => 
+                  sum + block.matches.filter(match => 
+                    match.is_confirmed && 
+                    match.team1_goals !== null && 
+                    match.team2_goals !== null
+                  ).length, 0
+                )}
               </div>
               <div className="text-sm text-gray-600">実施済み試合数</div>
             </div>

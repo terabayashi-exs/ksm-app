@@ -151,10 +151,93 @@ export async function getTournamentNotifications(
 }
 
 /**
+ * 決勝トーナメント進出チームが決定しているかチェック
+ */
+export async function checkFinalTournamentPromotionCompleted(tournamentId: number): Promise<boolean> {
+  try {
+    // 決勝トーナメントブロックを取得
+    const finalBlockResult = await db.execute({
+      sql: `
+        SELECT match_block_id
+        FROM t_match_blocks 
+        WHERE tournament_id = ? AND phase = 'final'
+      `,
+      args: [tournamentId]
+    });
+
+    if (finalBlockResult.rows.length === 0) {
+      // 決勝トーナメントブロックがない場合は進出完了とみなす
+      return true;
+    }
+
+    const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
+    
+    // 決勝トーナメント試合で実チーム名が設定されているかチェック
+    const matchesResult = await db.execute({
+      sql: `
+        SELECT 
+          COUNT(*) as total_matches,
+          COUNT(CASE WHEN team1_id NOT LIKE '%_%' AND team2_id NOT LIKE '%_%' THEN 1 END) as real_team_matches
+        FROM t_matches_live
+        WHERE match_block_id = ?
+      `,
+      args: [finalBlockId]
+    });
+
+    const totalMatches = matchesResult.rows[0]?.total_matches as number || 0;
+    const realTeamMatches = matchesResult.rows[0]?.real_team_matches as number || 0;
+
+    // 全ての試合で実チーム名が設定されていれば進出完了
+    return totalMatches > 0 && realTeamMatches === totalMatches;
+  } catch (error) {
+    console.error('[NOTIFICATIONS] 進出完了チェックエラー:', error);
+    return false;
+  }
+}
+
+/**
+ * 手動順位設定が不要になった通知を自動解決
+ */
+export async function autoResolveManualRankingNotifications(tournamentId: number): Promise<void> {
+  try {
+    const isPromotionCompleted = await checkFinalTournamentPromotionCompleted(tournamentId);
+    
+    if (isPromotionCompleted) {
+      console.log(`[NOTIFICATIONS] 大会${tournamentId}: 進出決定により手動順位設定通知を自動解決`);
+      
+      await db.execute({
+        sql: `
+          UPDATE tournament_notifications 
+          SET is_resolved = 1, updated_at = datetime('now', '+9 hours')
+          WHERE tournament_id = ? 
+          AND notification_type = 'manual_ranking_needed' 
+          AND is_resolved = 0
+        `,
+        args: [tournamentId]
+      });
+    }
+  } catch (error) {
+    console.error('[NOTIFICATIONS] 自動解決エラー:', error);
+  }
+}
+
+/**
  * 管理者ダッシュボード用：全大会の未解決通知を取得
  */
 export async function getAllUnresolvedNotifications(): Promise<(TournamentNotification & { tournament_name: string })[]> {
   try {
+    // まず手動順位設定通知の自動解決を実行
+    const tournamentIds = await db.execute(`
+      SELECT DISTINCT tournament_id 
+      FROM tournament_notifications 
+      WHERE notification_type = 'manual_ranking_needed' AND is_resolved = 0
+    `);
+    
+    for (const row of tournamentIds.rows) {
+      const tournamentId = row.tournament_id as number;
+      await autoResolveManualRankingNotifications(tournamentId);
+    }
+    
     const result = await db.execute(`
       SELECT 
         tn.notification_id,
