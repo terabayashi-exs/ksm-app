@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Calendar, MapPin, Users, Trophy, Clock, CheckCircle } from 'lucide-react';
+import { MapPin, Users, Trophy, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 interface TournamentTeam {
@@ -16,6 +16,10 @@ interface TournamentTeam {
   assigned_block: string | null;
   block_position: number | null;
   joined_at: string | null;
+  withdrawal_status: string;
+  withdrawal_reason?: string | null;
+  withdrawal_requested_at?: string | null;
+  withdrawal_processed_at?: string | null;
   player_count: number;
 }
 
@@ -83,6 +87,34 @@ export default function TeamTournaments() {
     }
   };
 
+  const getWithdrawalStatusBadge = (withdrawalStatus: string) => {
+    switch (withdrawalStatus) {
+      case 'withdrawal_requested':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            辞退申請中
+          </Badge>
+        );
+      case 'withdrawal_approved':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+            <XCircle className="w-3 h-3" />
+            辞退承認済み
+          </Badge>
+        );
+      case 'withdrawal_rejected':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" />
+            辞退却下
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   const TournamentCard = ({ tournament, isJoined = false }: { tournament: Tournament; isJoined?: boolean }) => {
     const teamCount = tournament.teams?.length || 0;
     const hasMultipleTeams = teamCount > 1;
@@ -134,32 +166,52 @@ export default function TeamTournaments() {
                   参加チーム一覧
                 </h4>
                 <div className="space-y-2">
-                  {tournament.teams.map((team, index) => (
-                    <div key={team.tournament_team_id} className="flex items-center justify-between p-2 border border-gray-200 rounded-md bg-white">
-                      <div className="flex items-center space-x-2 flex-1">
-                        <span className="font-medium text-gray-900">
-                          {team.tournament_team_name}
-                        </span>
-                        <span className="text-gray-500">
-                          ({team.tournament_team_omission})
-                        </span>
-                        {team.assigned_block && (
-                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                            {team.assigned_block}ブロック
+                  {tournament.teams.map((team) => (
+                    <div key={team.tournament_team_id} className="p-3 border border-gray-200 rounded-md bg-white">
+                      {/* チーム情報 */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2 flex-1">
+                          <span className="font-medium text-gray-900">
+                            {team.tournament_team_name}
                           </span>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center space-x-2 text-xs text-gray-500 mr-2">
-                          <span>{team.player_count}人</span>
-                          <span>•</span>
-                          <span>{formatDate(team.joined_at || '')}</span>
+                          <span className="text-gray-500">
+                            ({team.tournament_team_omission})
+                          </span>
+                          {team.assigned_block && (
+                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                              {team.assigned_block}ブロック
+                            </span>
+                          )}
+                          {getWithdrawalStatusBadge(team.withdrawal_status)}
                         </div>
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/tournaments/${tournament.tournament_id}/join?team=${team.tournament_team_id}`}>
-                            編集
-                          </Link>
-                        </Button>
+                        <div className="flex items-center text-xs text-gray-500">
+                          <span>{team.player_count}人</span>
+                        </div>
+                      </div>
+                      
+                      {/* アクションボタン */}
+                      <div className="flex items-center space-x-2">
+                        {team.withdrawal_status === 'withdrawal_approved' ? (
+                          <span className="text-xs text-gray-500 px-3 py-1 bg-gray-100 rounded">
+                            辞退済み
+                          </span>
+                        ) : (
+                          <>
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/tournaments/${tournament.tournament_id}/join?team=${team.tournament_team_id}`}>
+                                編集
+                              </Link>
+                            </Button>
+                            {/* 辞退申請ボタン */}
+                            {team.withdrawal_status === 'active' && tournament.status !== 'completed' && (
+                              <Button asChild size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
+                                <Link href={`/tournaments/${tournament.tournament_id}/withdrawal`}>
+                                  辞退申請
+                                </Link>
+                              </Button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -187,11 +239,23 @@ export default function TeamTournaments() {
                 <p className="font-medium">📝 選手変更は各チーム別に行います</p>
                 <p className="text-xs mt-1">上記のチーム一覧から個別に編集してください</p>
               </div>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={`/tournaments/${tournament.tournament_id}/join?mode=new`}>
-                  参加チームを追加する
-                </Link>
-              </Button>
+              
+              {/* 参加中のチームがある場合のみ新規追加ボタンを表示 */}
+              {tournament.teams && tournament.teams.some(team => team.withdrawal_status === 'active') && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/tournaments/${tournament.tournament_id}/join?mode=new`}>
+                    参加チームを追加する
+                  </Link>
+                </Button>
+              )}
+              
+              {/* 全チーム辞退済みの場合の表示 */}
+              {tournament.teams && tournament.teams.every(team => team.withdrawal_status === 'withdrawal_approved') && (
+                <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-md border border-gray-200">
+                  <p className="font-medium text-red-600">⚠️ 全チーム辞退済み</p>
+                  <p className="text-xs mt-1">この大会から全ての参加チームが辞退済みです</p>
+                </div>
+              )}
             </>
           )}
         </div>

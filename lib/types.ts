@@ -60,6 +60,13 @@ export interface Player {
   updated_at: string;
 }
 
+// 辞退ステータスの型定義
+export type WithdrawalStatus = 
+  | 'active'                    // 参加中（通常状態）
+  | 'withdrawal_requested'      // 辞退申請中
+  | 'withdrawal_approved'       // 辞退承認済み
+  | 'withdrawal_rejected';      // 辞退却下
+
 export interface TournamentTeam {
   tournament_team_id: number;
   tournament_id: number;
@@ -70,12 +77,35 @@ export interface TournamentTeam {
   block_position?: number;
   created_at: string;
   updated_at: string;
+  // 辞退関連フィールド
+  withdrawal_status: WithdrawalStatus; // 辞退ステータス
+  withdrawal_reason?: string; // 辞退理由
+  withdrawal_requested_at?: string; // 辞退申請日時
+  withdrawal_processed_at?: string; // 辞退処理完了日時
+  withdrawal_processed_by?: string; // 辞退処理者（管理者ID）
   // Optional joined fields
   master_team_name?: string; // マスターチームの元々の名前
   contact_person?: string;
   contact_email?: string;
   contact_phone?: string;
   player_count?: number; // 登録選手数
+}
+
+// 辞退申請フォームのデータ型
+export interface WithdrawalRequest {
+  tournament_team_id: number;
+  withdrawal_reason: string;
+}
+
+// 辞退申請の詳細情報型（管理者用）
+export interface WithdrawalDetail extends TournamentTeam {
+  tournament_name: string;
+  master_team_name: string;
+  contact_person: string;
+  contact_email: string;
+  format_name?: string;
+  venue_name?: string;
+  recruitment_end_date?: string;
 }
 
 export interface TournamentPlayer {

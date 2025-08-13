@@ -13,6 +13,7 @@
     "db:seed": "tsx scripts/init-db.ts",
     "db:seed-master": "node scripts/seed-master-data.js",
     "db:migrate-team-names": "node scripts/migrate-tournament-team-names.mjs",
+    "db:migrate-withdrawal": "node scripts/migrate-tournament-withdrawal.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

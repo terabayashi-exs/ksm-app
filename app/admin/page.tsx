@@ -140,6 +140,23 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
 
+          {/* 辞退申請管理 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>辞退申請管理</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                チームからの大会辞退申請を確認・承認・却下します
+              </p>
+              <div className="space-y-2">
+                <Button asChild className="w-full">
+                  <Link href="/admin/withdrawal-requests">辞退申請一覧</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* システム管理 */}
           <Card>
             <CardHeader>

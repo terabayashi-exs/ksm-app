@@ -223,16 +223,20 @@ export async function initializeDatabaseSimple() {
 
     console.log('Creating indexes...');
 
-    // インデックス作成
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_tournaments_status ON t_tournaments(status)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_tournaments_public ON t_tournaments(is_public)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_tournament_teams_tournament ON t_tournament_teams(tournament_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_tournament_teams_team ON t_tournament_teams(team_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_match_blocks_tournament ON t_match_blocks(tournament_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_block ON t_matches_live(match_block_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_status ON t_matches_live(match_status)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_result_status ON t_matches_live(result_status)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_final_block ON t_matches_final(match_block_id)');
+    // インデックス作成（テーブル作成後に実行）
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_tournaments_status ON t_tournaments(status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_tournaments_public ON t_tournaments(is_public)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_tournament_teams_tournament ON t_tournament_teams(tournament_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_tournament_teams_team ON t_tournament_teams(team_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_match_blocks_tournament ON t_match_blocks(tournament_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_block ON t_matches_live(match_block_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_status ON t_matches_live(match_status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_result_status ON t_matches_live(result_status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_final_block ON t_matches_final(match_block_id)');
+    } catch (indexError) {
+      console.warn('インデックス作成でエラーが発生しました（継続します）:', indexError.message);
+    }
 
     console.log('Database tables and indexes created successfully');
     return { success: true, message: 'Database initialized successfully' };

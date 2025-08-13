@@ -73,6 +73,10 @@ export async function GET(request: NextRequest) {
         tt.assigned_block,
         tt.block_position,
         tt.created_at as joined_at,
+        tt.withdrawal_status,
+        tt.withdrawal_reason,
+        tt.withdrawal_requested_at,
+        tt.withdrawal_processed_at,
         (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id) as player_count
       FROM t_tournaments t
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -113,6 +117,10 @@ export async function GET(request: NextRequest) {
       assigned_block: row.assigned_block ? String(row.assigned_block) : null,
       block_position: row.block_position ? Number(row.block_position) : null,
       joined_at: row.joined_at ? String(row.joined_at) : null,
+      withdrawal_status: row.withdrawal_status ? String(row.withdrawal_status) : 'active',
+      withdrawal_reason: row.withdrawal_reason ? String(row.withdrawal_reason) : null,
+      withdrawal_requested_at: row.withdrawal_requested_at ? String(row.withdrawal_requested_at) : null,
+      withdrawal_processed_at: row.withdrawal_processed_at ? String(row.withdrawal_processed_at) : null,
       player_count: Number(row.player_count),
       event_start_date: null
     }));
@@ -144,6 +152,10 @@ export async function GET(request: NextRequest) {
         assigned_block: team.assigned_block,
         block_position: team.block_position,
         joined_at: team.joined_at,
+        withdrawal_status: team.withdrawal_status,
+        withdrawal_reason: team.withdrawal_reason,
+        withdrawal_requested_at: team.withdrawal_requested_at,
+        withdrawal_processed_at: team.withdrawal_processed_at,
         player_count: team.player_count
       });
     });
