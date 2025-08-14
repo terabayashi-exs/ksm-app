@@ -11,7 +11,7 @@ import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, GitBranch } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
 
@@ -193,9 +193,37 @@ function ScheduleResults({ tournament }: { tournament: Tournament }) {
   return <TournamentSchedule tournamentId={tournament.tournament_id} />;
 }
 
-// 順位表タブ
-function Standings({ tournament }: { tournament: Tournament }) {
-  return <TournamentStandings tournamentId={tournament.tournament_id} />;
+// トーナメント試合があるかチェックする関数
+async function hasTournamentMatches(tournamentId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/tournaments/${tournamentId}/bracket`, {
+      cache: 'no-store'
+    });
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+}
+
+// トーナメント表タブ
+async function Bracket({ tournament }: { tournament: Tournament }) {
+  const hasMatches = await hasTournamentMatches(tournament.tournament_id);
+  
+  if (!hasMatches) {
+    return (
+      <div className="text-center py-16">
+        <GitBranch className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">トーナメント戦なし</h3>
+        <p className="text-gray-600 mb-4">この大会は予選リーグ戦のみで構成されています</p>
+        <p className="text-sm text-gray-500">決勝トーナメントはありません</p>
+      </div>
+    );
+  }
+
+  // 動的importでTournamentBracketコンポーネントを読み込み
+  const TournamentBracket = (await import('@/components/features/tournament/TournamentBracket')).default;
+  
+  return <TournamentBracket tournamentId={tournament.tournament_id} />;
 }
 
 // 戦績表タブ
@@ -229,6 +257,9 @@ function TournamentDetailLoading() {
 async function TournamentDetailContent({ params }: PageProps) {
   const resolvedParams = await params;
   const tournament = await getTournamentDetail(resolvedParams.id);
+  
+  // トーナメント試合があるかチェック
+  const hasMatches = await hasTournamentMatches(tournament.tournament_id);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -256,7 +287,7 @@ async function TournamentDetailContent({ params }: PageProps) {
 
         {/* タブナビゲーション */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
+          <TabsList className={`grid w-full ${hasMatches ? 'grid-cols-5' : 'grid-cols-4'} mb-8`}>
             <TabsTrigger value="overview" className="flex items-center">
               <Trophy className="h-4 w-4 mr-2" />
               大会概要
@@ -265,10 +296,12 @@ async function TournamentDetailContent({ params }: PageProps) {
               <Calendar className="h-4 w-4 mr-2" />
               日程・結果
             </TabsTrigger>
-            <TabsTrigger value="standings" className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              順位表
-            </TabsTrigger>
+            {hasMatches && (
+              <TabsTrigger value="bracket" className="flex items-center">
+                <GitBranch className="h-4 w-4 mr-2" />
+                トーナメント表
+              </TabsTrigger>
+            )}
             <TabsTrigger value="results" className="flex items-center">
               <Award className="h-4 w-4 mr-2" />
               戦績表
@@ -287,9 +320,11 @@ async function TournamentDetailContent({ params }: PageProps) {
             <ScheduleResults tournament={tournament} />
           </TabsContent>
 
-          <TabsContent value="standings">
-            <Standings tournament={tournament} />
-          </TabsContent>
+          {hasMatches && (
+            <TabsContent value="bracket">
+              <Bracket tournament={tournament} />
+            </TabsContent>
+          )}
 
           <TabsContent value="results">
             <Results tournament={tournament} />
