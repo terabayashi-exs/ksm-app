@@ -16,7 +16,7 @@ export async function GET(
       );
     }
 
-    // トーナメント戦（決勝トーナメント）の試合のみを取得
+    // まず基本的なクエリでデータを取得
     const query = `
       SELECT DISTINCT
         ml.match_id,
@@ -41,6 +41,17 @@ export async function GET(
       ORDER BY ml.match_number, ml.match_code
     `;
 
+    // execution_groupを取得するための別クエリ
+    const executionGroupQuery = `
+      SELECT 
+        mt.match_code,
+        mt.execution_group
+      FROM m_match_templates mt
+      INNER JOIN t_tournaments t ON t.format_id = mt.format_id
+      WHERE t.tournament_id = ?
+        AND mt.phase = 'final'
+    `;
+
     const matches = await db.execute(query, [tournamentId]);
 
     // トーナメント試合が存在しない場合は404を返す
@@ -49,6 +60,18 @@ export async function GET(
         { success: false, error: 'この大会にはトーナメント戦がありません' },
         { status: 404 }
       );
+    }
+
+    // execution_groupを取得
+    let executionGroupMap = new Map<string, number>();
+    try {
+      const executionGroupResult = await db.execute(executionGroupQuery, [tournamentId]);
+      executionGroupResult.rows.forEach(row => {
+        executionGroupMap.set(row.match_code as string, row.execution_group as number);
+      });
+    } catch (error) {
+      console.warn('execution_group取得に失敗しました:', error);
+      // execution_groupが取得できなくても続行（フォールバック処理がある）
     }
 
     // データを整形
@@ -67,6 +90,7 @@ export async function GET(
       execution_priority: row.execution_priority as number,
       start_time: row.start_time as string | null,
       court_number: row.court_number as number | null,
+      execution_group: executionGroupMap.get(row.match_code as string) || null,
     }));
 
     return NextResponse.json({
