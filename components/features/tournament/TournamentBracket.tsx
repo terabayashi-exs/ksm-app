@@ -7,6 +7,8 @@ import { Trophy } from 'lucide-react';
 interface BracketMatch {
   match_id: number;
   match_code: string;
+  team1_id?: string;
+  team2_id?: string;
   team1_display_name: string;
   team2_display_name: string;
   team1_goals: number;
@@ -49,10 +51,18 @@ function MatchCard({
 }) {
   const getWinnerTeam = () => {
     if (!match.winner_team_id || !match.is_confirmed) return null;
-    return match.winner_team_id === match.team1_display_name ? 0 : 1;
+    // winner_team_idとteam1_id/team2_idを正しく比較
+    if (match.winner_team_id === match.team1_id) return 0; // team1が勝者
+    if (match.winner_team_id === match.team2_id) return 1; // team2が勝者
+    return null;
   };
   
-  const hasResult = match.is_confirmed && (match.team1_goals > 0 || match.team2_goals > 0 || match.is_draw);
+  const hasResult = match.is_confirmed && (
+    match.team1_goals !== null || 
+    match.team2_goals !== null || 
+    match.is_draw || 
+    match.is_walkover
+  );
 
   // 試合コードからブロック色を取得
   const getMatchCodeColor = (matchCode: string): string => {

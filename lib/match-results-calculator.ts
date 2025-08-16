@@ -236,16 +236,16 @@ function createMatchMatrix(teams: TeamInfo[], matches: MatchResult[]): MatchMatr
     if (!match.is_confirmed || match.team1_goals === null || match.team2_goals === null) {
       let displayText = match.match_code; // デフォルトは試合コード
       
-      // 試合状態に応じて表示テキストを決定
+      // 試合状態に応じて表示テキストを決定（試合コード付き）
       switch (match.match_status) {
         case 'scheduled':
-          displayText = '未実施';
+          displayText = `${match.match_code}`;
           break;
         case 'ongoing':
-          displayText = '試合中';
+          displayText = `${match.match_code}\n試合中`;
           break;
         case 'completed':
-          displayText = '試合完了';
+          displayText = `${match.match_code}\n試合完了`;
           break;
         default:
           displayText = match.match_code; // 状態不明の場合は試合コード

@@ -313,12 +313,14 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                                 </div>
                               ) : (
                                 <div 
-                                  className={`w-full h-10 flex items-center justify-center text-sm font-medium rounded ${
-                                    getResultColor(block.match_matrix[team.team_id]?.[opponent.team_id]?.result || null)
+                                  className={`w-full h-10 flex items-center justify-center text-base font-medium rounded ${
+                                    getResultColor(block.match_matrix[team.team_id]?.[opponent.team_id]?.result || null, block.match_matrix[team.team_id]?.[opponent.team_id]?.score)
                                   }`}
                                   title={`vs ${opponent.team_name} (${block.match_matrix[team.team_id]?.[opponent.team_id]?.match_code || ''})`}
                                 >
-                                  {block.match_matrix[team.team_id]?.[opponent.team_id]?.score || '-'}
+                                  <div className="text-center leading-tight whitespace-pre-line">
+                                    {block.match_matrix[team.team_id]?.[opponent.team_id]?.score || '-'}
+                                  </div>
                                 </div>
                               )}
                             </td>
@@ -452,7 +454,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                       <div className="w-5 h-5 bg-gray-100 text-gray-600 rounded mr-2 flex items-center justify-center text-xs font-medium">
                         A1
                       </div>
-                      未実施（試合コード表示）
+未実施試合（試合コード表示）
                     </div>
                   </div>
 

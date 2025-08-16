@@ -33,12 +33,52 @@ interface Block {
   remarks?: string | null;
 }
 
+interface FinalMatch {
+  match_id: number;
+  match_code: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_display_name: string;
+  team2_display_name: string;
+  team1_scores: number | null;
+  team2_scores: number | null;
+  winner_team_id: string | null;
+  is_draw: boolean;
+  is_walkover: boolean;
+  is_confirmed: boolean;
+  match_status: string;
+  start_time: string | null;
+  court_number: number | null;
+}
+
+interface FinalRanking {
+  team_id: string;
+  team_name: string;
+  position: number;
+  is_confirmed: boolean;
+  points?: number; // 決勝トーナメントでは使用しないが、統一のため
+  matches_played?: number;
+  wins?: number;
+  draws?: number;
+  losses?: number;
+  goals_for?: number;
+  goals_against?: number;
+  goal_difference?: number;
+}
+
+interface FinalTournamentBlock {
+  block_name: string; // "決勝トーナメント"
+  team_rankings: FinalRanking[];
+  remarks?: string | null;
+}
+
 interface ManualRankingsEditorProps {
   tournamentId: number;
   blocks: Block[];
+  finalMatches?: FinalMatch[];
 }
 
-export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRankingsEditorProps) {
+export default function ManualRankingsEditor({ tournamentId, blocks, finalMatches = [] }: ManualRankingsEditorProps) {
   const [editedBlocks, setEditedBlocks] = useState<Block[]>(
     blocks.map(block => ({
       ...block,
@@ -46,6 +86,177 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
       remarks: block.remarks || '' // 備考のデフォルト値（nullを空文字に変換）
     }))
   );
+
+  // 決勝トーナメントの順位を自動計算
+  const calculateFinalRankings = (): FinalRanking[] => {
+    const rankings: FinalRanking[] = [];
+    const teamSet = new Set<string>();
+    
+    // 全てのチームを収集
+    finalMatches.forEach(match => {
+      if (match.team1_id && !match.team1_id.includes('_winner') && !match.team1_id.includes('_loser')) {
+        teamSet.add(match.team1_id);
+      }
+      if (match.team2_id && !match.team2_id.includes('_winner') && !match.team2_id.includes('_loser')) {
+        teamSet.add(match.team2_id);
+      }
+    });
+
+    // 決勝（T8）から順位を判定
+    const finalMatch = finalMatches.find(m => m.match_code === 'T8');
+    const thirdPlaceMatch = finalMatches.find(m => m.match_code === 'T7');
+    const semiFinalMatches = finalMatches.filter(m => ['T5', 'T6'].includes(m.match_code));
+    const quarterFinalMatches = finalMatches.filter(m => ['T1', 'T2', 'T3', 'T4'].includes(m.match_code));
+
+    // 1位・2位（決勝戦）
+    if (finalMatch?.is_confirmed && finalMatch.winner_team_id) {
+      const winnerId = finalMatch.winner_team_id;
+      const loserId = finalMatch.team1_id === winnerId ? finalMatch.team2_id : finalMatch.team1_id;
+      
+      if (winnerId) {
+        rankings.push({
+          team_id: winnerId,
+          team_name: finalMatch.team1_id === winnerId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
+          position: 1,
+          is_confirmed: true
+        });
+      }
+      
+      if (loserId) {
+        rankings.push({
+          team_id: loserId,
+          team_name: finalMatch.team1_id === loserId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
+          position: 2,
+          is_confirmed: true
+        });
+      }
+    }
+
+    // 3位・4位（3位決定戦）
+    if (thirdPlaceMatch?.is_confirmed && thirdPlaceMatch.winner_team_id) {
+      const winnerId = thirdPlaceMatch.winner_team_id;
+      const loserId = thirdPlaceMatch.team1_id === winnerId ? thirdPlaceMatch.team2_id : thirdPlaceMatch.team1_id;
+      
+      if (winnerId) {
+        rankings.push({
+          team_id: winnerId,
+          team_name: thirdPlaceMatch.team1_id === winnerId ? thirdPlaceMatch.team1_display_name : thirdPlaceMatch.team2_display_name,
+          position: 3,
+          is_confirmed: true
+        });
+      }
+      
+      if (loserId) {
+        rankings.push({
+          team_id: loserId,
+          team_name: thirdPlaceMatch.team1_id === loserId ? thirdPlaceMatch.team1_display_name : thirdPlaceMatch.team2_display_name,
+          position: 4,
+          is_confirmed: true
+        });
+      }
+    }
+
+    // 5位（準々決勝敗者は全て5位、準決勝敗者は5位または3位決定戦に応じて）
+    const rankedTeamIds = new Set(rankings.map(r => r.team_id));
+    
+    // 準決勝敗者（3位決定戦がない場合は3位、ある場合は後で5位）
+    const semiFinalLosers: string[] = [];
+    semiFinalMatches.forEach(match => {
+      if (match.is_confirmed && match.winner_team_id) {
+        const loserId = match.team1_id === match.winner_team_id ? match.team2_id : match.team1_id;
+        if (loserId && !rankedTeamIds.has(loserId)) {
+          semiFinalLosers.push(loserId);
+        }
+      }
+    });
+    
+    // 3位決定戦がない場合、準決勝敗者は同着3位
+    if (!thirdPlaceMatch?.is_confirmed && semiFinalLosers.length > 0) {
+      semiFinalLosers.forEach(loserId => {
+        const match = semiFinalMatches.find(m => 
+          (m.team1_id === loserId || m.team2_id === loserId) && m.winner_team_id
+        );
+        if (match) {
+          rankings.push({
+            team_id: loserId,
+            team_name: match.team1_id === loserId ? match.team1_display_name : match.team2_display_name,
+            position: 3, // 同着3位
+            is_confirmed: true
+          });
+          rankedTeamIds.add(loserId);
+        }
+      });
+    } else if (thirdPlaceMatch?.is_confirmed && semiFinalLosers.length > 0) {
+      // 3位決定戦がある場合、敗者は5位
+      semiFinalLosers.forEach(loserId => {
+        const match = semiFinalMatches.find(m => 
+          (m.team1_id === loserId || m.team2_id === loserId) && m.winner_team_id
+        );
+        if (match && !rankedTeamIds.has(loserId)) {
+          rankings.push({
+            team_id: loserId,
+            team_name: match.team1_id === loserId ? match.team1_display_name : match.team2_display_name,
+            position: 5, // 5位
+            is_confirmed: true
+          });
+          rankedTeamIds.add(loserId);
+        }
+      });
+    }
+
+    // 準々決勝敗者（全て5位）
+    quarterFinalMatches.forEach(match => {
+      if (match.is_confirmed && match.winner_team_id) {
+        const loserId = match.team1_id === match.winner_team_id ? match.team2_id : match.team1_id;
+        if (loserId && !rankedTeamIds.has(loserId)) {
+          rankings.push({
+            team_id: loserId,
+            team_name: match.team1_id === loserId ? match.team1_display_name : match.team2_display_name,
+            position: 5, // 全て5位
+            is_confirmed: true
+          });
+          rankedTeamIds.add(loserId);
+        }
+      }
+    });
+
+    // 未確定のチーム（決勝・準決勝の未確定チームは適切な順位、それ以外は5位）
+    teamSet.forEach(teamId => {
+      if (!rankedTeamIds.has(teamId)) {
+        const teamMatch = finalMatches.find(m => 
+          (m.team1_id === teamId || m.team2_id === teamId)
+        );
+        const displayName = teamMatch?.team1_id === teamId ? teamMatch.team1_display_name : teamMatch?.team2_display_name;
+        
+        // どの試合に参加しているかで順位を決定
+        let defaultPosition = 5; // デフォルトは5位
+        
+        if (finalMatch && (finalMatch.team1_id === teamId || finalMatch.team2_id === teamId)) {
+          defaultPosition = 1; // 決勝参加者は1位から
+        } else if (thirdPlaceMatch && (thirdPlaceMatch.team1_id === teamId || thirdPlaceMatch.team2_id === teamId)) {
+          defaultPosition = 3; // 3位決定戦参加者は3位から
+        } else if (semiFinalMatches.some(m => m.team1_id === teamId || m.team2_id === teamId)) {
+          defaultPosition = 3; // 準決勝参加者は3位から
+        }
+        
+        rankings.push({
+          team_id: teamId,
+          team_name: displayName || '未確定',
+          position: defaultPosition,
+          is_confirmed: false
+        });
+      }
+    });
+
+    return rankings.sort((a, b) => a.position - b.position);
+  };
+
+  const [finalTournamentBlock, setFinalTournamentBlock] = useState<FinalTournamentBlock>({
+    block_name: '決勝トーナメント',
+    team_rankings: calculateFinalRankings(),
+    remarks: ''
+  });
+
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -60,7 +271,25 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     }
   };
 
-  // 順位の変更
+  // 試合コードから色を取得
+  const getMatchCodeColor = (matchCode: string): string => {
+    if (['T1', 'T2', 'T3', 'T4'].includes(matchCode)) return 'bg-blue-100 text-blue-800 border-blue-200'; // 準々決勝
+    if (['T5', 'T6'].includes(matchCode)) return 'bg-purple-100 text-purple-800 border-purple-200'; // 準決勝
+    if (matchCode === 'T7') return 'bg-yellow-100 text-yellow-800 border-yellow-200'; // 3位決定戦
+    if (matchCode === 'T8') return 'bg-red-100 text-red-800 border-red-200'; // 決勝
+    return 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  // 勝者判定
+  const getWinner = (match: FinalMatch): 'team1' | 'team2' | 'draw' | null => {
+    if (!match.is_confirmed) return null;
+    if (match.is_draw) return 'draw';
+    if (match.winner_team_id === match.team1_id) return 'team1';
+    if (match.winner_team_id === match.team2_id) return 'team2';
+    return null;
+  };
+
+  // 順位の変更（予選ブロック）
   const updateTeamPosition = (blockIndex: number, teamIndex: number, newPosition: number) => {
     const updatedBlocks = [...editedBlocks];
     const block = updatedBlocks[blockIndex];
@@ -77,7 +306,19 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     }
   };
 
-  // 備考の変更
+  // 決勝トーナメントの順位変更
+  const updateFinalPosition = (teamIndex: number, newPosition: number) => {
+    if (newPosition >= 1 && newPosition <= finalTournamentBlock.team_rankings.length) {
+      setFinalTournamentBlock(prev => ({
+        ...prev,
+        team_rankings: prev.team_rankings.map((team, index) => 
+          index === teamIndex ? { ...team, position: newPosition } : team
+        )
+      }));
+    }
+  };
+
+  // 備考の変更（予選ブロック）
   const updateBlockRemarks = (blockIndex: number, remarks: string) => {
     const updatedBlocks = [...editedBlocks];
     updatedBlocks[blockIndex] = {
@@ -87,7 +328,15 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     setEditedBlocks(updatedBlocks);
   };
 
-  // 元の順位にリセット
+  // 決勝トーナメントの備考変更
+  const updateFinalRemarks = (remarks: string) => {
+    setFinalTournamentBlock(prev => ({
+      ...prev,
+      remarks: remarks
+    }));
+  };
+
+  // 元の順位にリセット（予選ブロック）
   const resetBlock = (blockIndex: number) => {
     const updatedBlocks = [...editedBlocks];
     updatedBlocks[blockIndex] = {
@@ -99,6 +348,16 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     setMessage({ type: 'success', text: `${blocks[blockIndex].block_name}ブロックをリセットしました` });
   };
 
+  // 決勝トーナメントをリセット
+  const resetFinalTournament = () => {
+    setFinalTournamentBlock({
+      block_name: '決勝トーナメント',
+      team_rankings: calculateFinalRankings(),
+      remarks: ''
+    });
+    setMessage({ type: 'success', text: '決勝トーナメント順位をリセットしました' });
+  };
+
   // 全て元に戻す
   const resetAll = () => {
     setEditedBlocks(blocks.map(block => ({
@@ -106,6 +365,11 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
       team_rankings: [...block.team_rankings],
       remarks: block.remarks || '' // 備考もリセット（nullを空文字に変換）
     })));
+    setFinalTournamentBlock({
+      block_name: '決勝トーナメント',
+      team_rankings: calculateFinalRankings(),
+      remarks: ''
+    });
     setMessage({ type: 'success', text: '全ての変更をリセットしました' });
   };
 
@@ -125,7 +389,11 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
             match_block_id: block.match_block_id,
             team_rankings: block.team_rankings,
             remarks: block.remarks || ''
-          }))
+          })),
+          finalTournament: finalMatches.length > 0 ? {
+            team_rankings: finalTournamentBlock.team_rankings,
+            remarks: finalTournamentBlock.remarks || ''
+          } : null
         }),
       });
 
@@ -153,6 +421,12 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
     block.team_rankings.some((team, teamIndex) => 
       team.position !== blocks[blockIndex]?.team_rankings[teamIndex]?.position
     ) || block.remarks !== (blocks[blockIndex]?.remarks || '')
+  ) || (
+    // 決勝トーナメントの変更もチェック
+    finalTournamentBlock.team_rankings.some((team, index) => {
+      const original = calculateFinalRankings()[index];
+      return !original || team.position !== original.position;
+    }) || finalTournamentBlock.remarks !== ''
   );
 
   return (
@@ -290,6 +564,103 @@ export default function ManualRankingsEditor({ tournamentId, blocks }: ManualRan
           </Card>
         ))}
       </div>
+
+      {/* 決勝トーナメント順位調整 */}
+      {finalMatches.length > 0 && (
+        <div className="space-y-4">
+          <div className="border-t border-gray-200 pt-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">決勝トーナメント順位調整</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              決勝トーナメントの結果に基づいて自動計算された順位を手動で調整できます
+            </p>
+          </div>
+
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="px-3 py-1 rounded-full text-sm font-medium mr-3 bg-red-100 text-red-800 border-red-200">
+                    {finalTournamentBlock.block_name}
+                  </div>
+                  <Trophy className="w-4 h-4" />
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetFinalTournament}
+                  disabled={saving}
+                  className="text-xs"
+                >
+                  リセット
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {finalTournamentBlock.team_rankings.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Trophy className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>決勝トーナメントが開始されていません</p>
+                  <p className="text-xs">チームが進出した後に表示されます</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {finalTournamentBlock.team_rankings
+                    .sort((a, b) => a.position - b.position)
+                    .map((team, teamIndex) => (
+                    <div key={team.team_id} className={`flex items-center gap-3 p-3 rounded-lg ${
+                      team.is_confirmed ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-200'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`final-position-${team.team_id}`} className="text-sm font-medium">
+                          順位:
+                        </Label>
+                        <Input
+                          id={`final-position-${team.team_id}`}
+                          type="number"
+                          min="1"
+                          max={finalTournamentBlock.team_rankings.length}
+                          value={team.position}
+                          onChange={(e) => updateFinalPosition(teamIndex, parseInt(e.target.value) || 1)}
+                          className="w-16 h-8 text-center"
+                          disabled={saving}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{team.team_name}</div>
+                        <div className="text-xs text-gray-600">
+                          {team.is_confirmed ? '結果確定' : '未確定'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 備考欄 */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Label htmlFor="final-remarks" className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <MessageSquare className="w-4 h-4 mr-1" />
+                  決勝トーナメント順位設定の備考
+                </Label>
+                <Textarea
+                  id="final-remarks"
+                  placeholder="順位決定の理由や特記事項を入力してください（例：3位決定戦なしのため同着3位など）"
+                  value={finalTournamentBlock.remarks || ''}
+                  onChange={(e) => updateFinalRemarks(e.target.value)}
+                  disabled={saving}
+                  rows={3}
+                  className="text-sm"
+                />
+                {finalTournamentBlock.remarks && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {finalTournamentBlock.remarks.length} / 500文字
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* 注意事項 */}
       <Card className="border-yellow-200 bg-yellow-50">

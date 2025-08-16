@@ -21,8 +21,10 @@ export async function GET(
       SELECT DISTINCT
         ml.match_id,
         ml.match_code,
-        ml.team1_display_name,
-        ml.team2_display_name,
+        ml.team1_id,
+        ml.team2_id,
+        COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
+        COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
         COALESCE(mf.team1_scores, '0') as team1_goals,
         COALESCE(mf.team2_scores, '0') as team2_goals,
         mf.winner_team_id,
@@ -36,6 +38,8 @@ export async function GET(
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
+      LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
       WHERE mb.tournament_id = ? 
         AND mb.phase = 'final'
       ORDER BY ml.match_number, ml.match_code
@@ -78,6 +82,8 @@ export async function GET(
     const bracketData = matches.rows.map(row => ({
       match_id: row.match_id as number,
       match_code: row.match_code as string,
+      team1_id: row.team1_id as string | undefined,
+      team2_id: row.team2_id as string | undefined,
       team1_display_name: row.team1_display_name as string,
       team2_display_name: row.team2_display_name as string,
       team1_goals: parseInt(row.team1_goals as string) || 0,

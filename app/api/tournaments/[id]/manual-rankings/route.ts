@@ -30,6 +30,16 @@ interface BlockUpdate {
   remarks?: string;
 }
 
+interface FinalTournamentUpdate {
+  team_rankings: {
+    team_id: string;
+    team_name: string;
+    position: number;
+    is_confirmed: boolean;
+  }[];
+  remarks?: string;
+}
+
 // 手動順位の更新
 export async function PUT(
   request: NextRequest,
@@ -65,7 +75,10 @@ export async function PUT(
 
     // リクエストボディの取得
     const body = await request.json();
-    const { blocks }: { blocks: BlockUpdate[] } = body;
+    const { blocks, finalTournament }: { 
+      blocks: BlockUpdate[]; 
+      finalTournament?: FinalTournamentUpdate | null;
+    } = body;
 
     if (!blocks || !Array.isArray(blocks)) {
       return NextResponse.json(
@@ -104,6 +117,51 @@ export async function PUT(
       });
 
       console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 更新完了: ${updateResult.rowsAffected}行`);
+    }
+
+    // 決勝トーナメントの順位保存処理
+    if (finalTournament) {
+      console.log('[MANUAL_RANKINGS] 決勝トーナメント順位保存開始...');
+      
+      // 決勝トーナメントブロックを取得
+      const finalBlockResult = await db.execute({
+        sql: `
+          SELECT match_block_id 
+          FROM t_match_blocks 
+          WHERE tournament_id = ? AND phase = 'final'
+        `,
+        args: [tournamentId]
+      });
+
+      if (finalBlockResult.rows.length > 0) {
+        const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
+        
+        // 順位の妥当性チェック
+        const positions = finalTournament.team_rankings.map(t => t.position).sort((a, b) => a - b);
+        const teamCount = finalTournament.team_rankings.length;
+        
+        const invalidPositions = positions.filter(pos => pos < 1 || pos > teamCount);
+        if (invalidPositions.length > 0) {
+          return NextResponse.json(
+            { success: false, error: `決勝トーナメントで不正な順位が設定されています: ${invalidPositions.join(', ')}` },
+            { status: 400 }
+          );
+        }
+
+        // 決勝トーナメントブロックの順位を更新
+        const finalUpdateResult = await db.execute({
+          sql: `
+            UPDATE t_match_blocks 
+            SET team_rankings = ?, remarks = ?, updated_at = datetime('now', '+9 hours') 
+            WHERE match_block_id = ?
+          `,
+          args: [JSON.stringify(finalTournament.team_rankings), finalTournament.remarks || null, finalBlockId]
+        });
+
+        console.log(`[MANUAL_RANKINGS] 決勝トーナメント順位更新完了: ${finalUpdateResult.rowsAffected}行`);
+      } else {
+        console.log('[MANUAL_RANKINGS] 決勝トーナメントブロックが見つかりません');
+      }
     }
 
     // 決勝トーナメント進出処理をトリガー

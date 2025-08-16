@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, User, Mail, Phone, Hash, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, User, Hash, ChevronDown, ChevronRight } from 'lucide-react';
 import { 
   SimpleTournamentTeamsData, 
   SimpleTournamentTeam
@@ -262,16 +262,6 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                                   <User className="h-3 w-3 mr-2 text-gray-400" />
                                   {team.contact_person}
                                 </div>
-                                <div className="flex items-center">
-                                  <Mail className="h-3 w-3 mr-2 text-gray-400" />
-                                  {team.contact_email}
-                                </div>
-                                {team.contact_phone && (
-                                  <div className="flex items-center">
-                                    <Phone className="h-3 w-3 mr-2 text-gray-400" />
-                                    {team.contact_phone}
-                                  </div>
-                                )}
                               </div>
                             </div>
                             <div>

@@ -1,6 +1,7 @@
 // lib/match-result-handler.ts
 import { db } from '@/lib/db';
 import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
+import { processTournamentProgression } from '@/lib/tournament-progression';
 
 /**
  * 試合結果をt_matches_liveからt_matches_finalに移行し、順位表を更新する
@@ -63,7 +64,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       args: [matchId]
     });
 
-    // ブロック情報を取得して順位表を更新
+    // ブロック情報を取得してトーナメント進出処理と順位表を更新
     const blockResult = await db.execute({
       sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
       args: [matchBlockId]
@@ -71,6 +72,21 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
 
     if (blockResult.rows && blockResult.rows.length > 0) {
       const tournamentId = blockResult.rows[0].tournament_id as number;
+      
+      // トーナメント進出処理（決勝トーナメントの場合）
+      try {
+        const matchCode = match.match_code as string;
+        const team1Id = match.team1_id as string | null;
+        const team2Id = match.team2_id as string | null;
+        const winnerId = match.winner_team_id as string | null;
+        const isDraw = Boolean(match.is_draw);
+        
+        await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
+        console.log(`トーナメント進出処理完了: ${matchCode}`);
+      } catch (progressionError) {
+        console.error('トーナメント進出処理エラー:', progressionError);
+        // トーナメント進出処理エラーでも処理を継続
+      }
       
       // 順位表を更新
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
@@ -146,6 +162,29 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           match.remarks
         ]
       });
+
+      // トーナメント進出処理（各試合ごと）
+      try {
+        const blockResult = await db.execute({
+          sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
+          args: [match.match_block_id]
+        });
+        
+        if (blockResult.rows && blockResult.rows.length > 0) {
+          const tournamentId = blockResult.rows[0].tournament_id as number;
+          const matchCode = match.match_code as string;
+          const team1Id = match.team1_id as string | null;
+          const team2Id = match.team2_id as string | null;
+          const winnerId = match.winner_team_id as string | null;
+          const isDraw = Boolean(match.is_draw);
+          
+          await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
+          console.log(`一括確定でトーナメント進出処理完了: ${matchCode}`);
+        }
+      } catch (progressionError) {
+        console.error(`一括確定でトーナメント進出処理エラー (${matchId}):`, progressionError);
+        // エラーでも処理を継続
+      }
 
       // t_matches_liveから削除
       await db.execute({

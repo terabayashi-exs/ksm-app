@@ -33,6 +33,7 @@ interface TournamentStandingsProps {
 
 export default function TournamentStandings({ tournamentId }: TournamentStandingsProps) {
   const [standings, setStandings] = useState<BlockStanding[]>([]);
+  const [totalMatches, setTotalMatches] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +55,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
 
         if (result.success) {
           setStandings(result.data);
+          setTotalMatches(result.totalMatches || 0);
         } else {
           console.error('API Error Details:', result);
           setError(result.error || '順位表データの取得に失敗しました');
@@ -75,13 +77,18 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     if (blockName.includes('B')) return 'bg-green-100 text-green-800';
     if (blockName.includes('C')) return 'bg-yellow-100 text-yellow-800';
     if (blockName.includes('D')) return 'bg-purple-100 text-purple-800';
-    if (blockName.includes('決勝')) return 'bg-red-100 text-red-800';
+    if (blockName.includes('決勝') || blockName === '決勝トーナメント') return 'bg-red-100 text-red-800';
     return 'bg-gray-100 text-gray-800';
   };
 
   // フェーズ判定（予選リーグかトーナメントか）
   const isPreliminaryPhase = (phase: string): boolean => {
     return phase === 'preliminary' || phase.includes('予選') || phase.includes('リーグ');
+  };
+
+  // 決勝トーナメントかどうかの判定
+  const isFinalPhase = (phase: string): boolean => {
+    return phase === 'final' || phase.includes('決勝') || phase.includes('トーナメント');
   };
 
   // 順位アイコンの取得
@@ -170,9 +177,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {standings.reduce((sum, block) => sum + block.teams.reduce((teamSum, team) => teamSum + team.matches_played, 0), 0)}
+                {totalMatches}
               </div>
-              <div className="text-sm text-gray-600">総試合数</div>
+              <div className="text-sm text-gray-600">確定済み試合数</div>
             </div>
           </div>
         </CardContent>
@@ -212,6 +219,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                         <th className="text-center py-3 px-3 font-medium text-gray-700">総失点</th>
                         <th className="text-center py-3 px-3 font-medium text-gray-700">得失差</th>
                       </>
+                    )}
+                    {isFinalPhase(block.phase) && (
+                      <th className="text-center py-3 px-3 font-medium text-gray-700">備考</th>
                     )}
                   </tr>
                 </thead>
@@ -270,6 +280,18 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                             </span>
                           </td>
                         </>
+                      )}
+                      {isFinalPhase(block.phase) && (
+                        <td className="py-3 px-3 text-center">
+                          <span className="text-sm text-gray-600">
+                            {team.position === 1 && '優勝'}
+                            {team.position === 2 && '準優勝'}
+                            {team.position === 3 && '3位'}
+                            {team.position === 4 && '4位'}
+                            {team.position >= 5 && '準々決勝敗退'}
+                            {team.position === 0 && '-'}
+                          </span>
+                        </td>
                       )}
                     </tr>
                   ))}

@@ -231,6 +231,11 @@ function Results({ tournament }: { tournament: Tournament }) {
   return <TournamentResults tournamentId={tournament.tournament_id} />;
 }
 
+// 順位表タブ
+function Standings({ tournament }: { tournament: Tournament }) {
+  return <TournamentStandings tournamentId={tournament.tournament_id} />;
+}
+
 // 参加チームタブ
 function Teams({ tournament }: { tournament: Tournament }) {
   return <TournamentTeams tournamentId={tournament.tournament_id} />;
@@ -287,7 +292,7 @@ async function TournamentDetailContent({ params }: PageProps) {
 
         {/* タブナビゲーション */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className={`grid w-full ${hasMatches ? 'grid-cols-5' : 'grid-cols-4'} mb-8`}>
+          <TabsList className={`grid w-full ${hasMatches ? 'grid-cols-6' : 'grid-cols-5'} mb-8`}>
             <TabsTrigger value="overview" className="flex items-center">
               <Trophy className="h-4 w-4 mr-2" />
               大会概要
@@ -305,6 +310,10 @@ async function TournamentDetailContent({ params }: PageProps) {
             <TabsTrigger value="results" className="flex items-center">
               <Award className="h-4 w-4 mr-2" />
               戦績表
+            </TabsTrigger>
+            <TabsTrigger value="standings" className="flex items-center">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              順位表
             </TabsTrigger>
             <TabsTrigger value="teams" className="flex items-center">
               <Users className="h-4 w-4 mr-2" />
@@ -328,6 +337,10 @@ async function TournamentDetailContent({ params }: PageProps) {
 
           <TabsContent value="results">
             <Results tournament={tournament} />
+          </TabsContent>
+
+          <TabsContent value="standings">
+            <Standings tournament={tournament} />
           </TabsContent>
 
           <TabsContent value="teams">

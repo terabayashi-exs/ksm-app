@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
+import { processTournamentProgression } from '@/lib/tournament-progression';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -100,6 +101,23 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     console.log(`[MATCH_CONFIRM] Match ${matchId} confirmed by ${confirmedBy}`);
     console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_id} vs ${liveMatch.team2_id} (${liveMatch.team1_scores}-${liveMatch.team2_scores})`);
+
+    // トーナメント進出処理（決勝トーナメントの場合）
+    try {
+      const tournamentId = liveResult.rows[0].tournament_id as number;
+      const matchCode = liveMatch.match_code as string;
+      const team1Id = liveMatch.team1_id as string | null;
+      const team2Id = liveMatch.team2_id as string | null;
+      const winnerId = liveMatch.winner_team_id as string | null;
+      const isDraw = liveMatch.winner_team_id === null;
+      
+      console.log(`[MATCH_CONFIRM] Processing tournament progression for match ${matchCode}`);
+      await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
+      console.log(`[MATCH_CONFIRM] ✅ Tournament progression processed for match ${matchCode}`);
+    } catch (progressionError) {
+      console.error(`[MATCH_CONFIRM] ❌ Failed to process tournament progression for match ${matchId}:`, progressionError);
+      // トーナメント進出処理エラーでも試合確定は成功とする（ログのみ）
+    }
 
     // 順位表を更新
     try {
