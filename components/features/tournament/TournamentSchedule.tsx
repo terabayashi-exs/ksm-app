@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
+import MatchNewsArea from './MatchNewsArea';
 
 interface MatchData {
   match_id: number;
@@ -224,6 +225,9 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
 
   return (
     <div className="space-y-6">
+      {/* 試合速報エリア */}
+      <MatchNewsArea tournamentId={tournamentId} />
+
       {/* 概要情報 */}
       <Card>
         <CardHeader>
