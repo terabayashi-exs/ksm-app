@@ -140,6 +140,51 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // 順位表更新エラーでも試合確定は成功とする（ログのみ）
     }
 
+    // 全試合が確定されたかチェックして、大会を完了に変更
+    try {
+      const tournamentId = liveResult.rows[0].tournament_id as number;
+      
+      console.log(`[MATCH_CONFIRM] Checking if tournament ${tournamentId} is complete...`);
+      
+      // 大会の全試合数を取得
+      const totalMatchesResult = await db.execute(`
+        SELECT COUNT(*) as total_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+      `, [tournamentId]);
+      
+      const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+      
+      // 確定済み試合数を取得
+      const confirmedMatchesResult = await db.execute(`
+        SELECT COUNT(*) as confirmed_matches
+        FROM t_matches_final mf
+        INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+      `, [tournamentId]);
+      
+      const confirmedMatches = confirmedMatchesResult.rows[0]?.confirmed_matches as number || 0;
+      
+      console.log(`[MATCH_CONFIRM] Tournament ${tournamentId}: ${confirmedMatches}/${totalMatches} matches confirmed`);
+      
+      // 全試合が確定されている場合
+      if (totalMatches > 0 && confirmedMatches >= totalMatches) {
+        console.log(`[MATCH_CONFIRM] All matches confirmed for tournament ${tournamentId}. Setting status to completed.`);
+        
+        await db.execute(`
+          UPDATE t_tournaments 
+          SET status = 'completed', updated_at = datetime('now', '+9 hours')
+          WHERE tournament_id = ?
+        `, [tournamentId]);
+        
+        console.log(`[MATCH_CONFIRM] ✅ Tournament ${tournamentId} status updated to completed`);
+      }
+    } catch (completionError) {
+      console.error(`[MATCH_CONFIRM] ❌ Failed to check tournament completion for tournament ID ${liveResult.rows[0].tournament_id}:`, completionError);
+      // 大会完了チェックエラーでも試合確定は成功とする（ログのみ）
+    }
+
     return NextResponse.json({
       success: true,
       message: '試合結果を確定しました',

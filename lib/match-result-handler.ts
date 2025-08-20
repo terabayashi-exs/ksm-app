@@ -4,6 +4,62 @@ import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 
 /**
+ * 大会の全試合が確定されているかチェックし、完了していれば大会ステータスを更新する
+ */
+async function checkAndCompleteTournament(tournamentId: number): Promise<void> {
+  try {
+    console.log(`[TOURNAMENT_COMPLETION] Checking if tournament ${tournamentId} is complete...`);
+    
+    // 大会の全試合数を取得
+    const totalMatchesResult = await db.execute({
+      sql: `
+        SELECT COUNT(*) as total_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+      `,
+      args: [tournamentId]
+    });
+    
+    const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+    
+    // 確定済み試合数を取得
+    const confirmedMatchesResult = await db.execute({
+      sql: `
+        SELECT COUNT(*) as confirmed_matches
+        FROM t_matches_final mf
+        INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+      `,
+      args: [tournamentId]
+    });
+    
+    const confirmedMatches = confirmedMatchesResult.rows[0]?.confirmed_matches as number || 0;
+    
+    console.log(`[TOURNAMENT_COMPLETION] Tournament ${tournamentId}: ${confirmedMatches}/${totalMatches} matches confirmed`);
+    
+    // 全試合が確定されている場合
+    if (totalMatches > 0 && confirmedMatches >= totalMatches) {
+      console.log(`[TOURNAMENT_COMPLETION] All matches confirmed for tournament ${tournamentId}. Setting status to completed.`);
+      
+      await db.execute({
+        sql: `
+          UPDATE t_tournaments 
+          SET status = 'completed', updated_at = datetime('now', '+9 hours')
+          WHERE tournament_id = ?
+        `,
+        args: [tournamentId]
+      });
+      
+      console.log(`[TOURNAMENT_COMPLETION] ✅ Tournament ${tournamentId} status updated to completed`);
+    }
+  } catch (completionError) {
+    console.error(`[TOURNAMENT_COMPLETION] ❌ Failed to check tournament completion for tournament ID ${tournamentId}:`, completionError);
+    // エラーが発生してもメイン処理は継続
+  }
+}
+
+/**
  * 試合結果をt_matches_liveからt_matches_finalに移行し、順位表を更新する
  */
 export async function confirmMatchResult(matchId: number): Promise<void> {
@@ -90,6 +146,9 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       
       // 順位表を更新
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
+      
+      // 大会完了チェック
+      await checkAndCompleteTournament(tournamentId);
     }
 
     // トランザクション確定
@@ -194,6 +253,8 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
     }
 
     // 更新されたブロックの順位表を一括更新
+    const affectedTournaments = new Set<number>();
+    
     for (const matchBlockId of updatedBlocks) {
       const blockResult = await db.execute({
         sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
@@ -202,8 +263,14 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
 
       if (blockResult.rows && blockResult.rows.length > 0) {
         const tournamentId = blockResult.rows[0].tournament_id as number;
+        affectedTournaments.add(tournamentId);
         await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
       }
+    }
+
+    // 影響を受けた大会の完了チェック
+    for (const tournamentId of affectedTournaments) {
+      await checkAndCompleteTournament(tournamentId);
     }
 
     await db.execute({ sql: 'COMMIT' });
