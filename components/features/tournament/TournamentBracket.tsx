@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Download } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface BracketMatch {
   match_id: number;
@@ -170,52 +168,34 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMatches = async () => {
       try {
         setLoading(true);
+        const response = await fetch(`/api/tournaments/${tournamentId}/bracket`);
         
-        // ブラケットデータと大会情報を並列取得
-        const [bracketResponse, tournamentResponse] = await Promise.all([
-          fetch(`/api/tournaments/${tournamentId}/bracket`),
-          fetch(`/api/tournaments/${tournamentId}`)
-        ]);
-        
-        if (!bracketResponse.ok) {
-          if (bracketResponse.status === 404) {
+        if (!response.ok) {
+          if (response.status === 404) {
             setError('この大会にはトーナメント戦がありません');
             return;
           }
           throw new Error('データの取得に失敗しました');
         }
 
-        const bracketResult = await bracketResponse.json();
-        if (bracketResult.success) {
-          setMatches(bracketResult.data);
+        const result = await response.json();
+        if (result.success) {
+          setMatches(result.data);
         } else {
-          throw new Error(bracketResult.error || 'データの取得に失敗しました');
+          throw new Error(result.error || 'データの取得に失敗しました');
         }
-
-        // 大会名を取得
-        if (tournamentResponse.ok) {
-          const tournamentData = await tournamentResponse.json();
-          if (tournamentData.success) {
-            setTournamentName(tournamentData.data.tournament_name);
-          } else {
-            setTournamentName(`大会${tournamentId}`);
-          }
-        } else {
-          setTournamentName(`大会${tournamentId}`);
-        }
-
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Error fetching bracket:', err);
         setError(err instanceof Error ? err.message : 'エラーが発生しました');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchMatches();
   }, [tournamentId]);
 
   // SVG線を描画する関数
@@ -355,8 +335,10 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, [matches]);
 
-  // PDFダウンロード機能
+  // PDFダウンロード機能（oklch対応シンプルキャプチャ方式）
   const handleDownloadPdf = async () => {
+    if (!bracketRef.current) return;
+    
     setDownloadingPdf(true);
     try {
       // 動的インポートでjsPDFとhtml2canvasを読み込み
@@ -365,554 +347,95 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
         import('html2canvas')
       ]);
 
-      const pdf = new jsPDF('portrait', 'mm', 'a4'); // A4縦向きに変更
-      const pageWidth = 210; // A4縦向きの幅（mm）
-      const pageHeight = 297; // A4縦向きの高さ（mm）
-
-      // 簡易テスト用のPDF生成関数
-      const generateSimplePdfContent = () => `
-        <div style="
-          width: 1120px; 
-          height: 1000px; 
-          font-family: Arial, sans-serif; 
-          background: white; 
-          padding: 20px;
-          box-sizing: border-box;
-        ">
-          <h1 style="text-align: center; margin-bottom: 20px;">
-            ${tournamentName} - 決勝トーナメント表
-          </h1>
-          <div style="border: 2px solid red; padding: 20px; margin: 20px 0;">
-            <h2>テスト表示</h2>
-            <p>ブラケット数: ${bracket.groups.length}</p>
-            ${bracket.groups.map(group => `
-              <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc;">
-                <h3>${group.groupName}</h3>
-                <p>試合数: ${group.matches.length}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-
-      // 現在のページレイアウトに合わせたPDF専用HTMLを生成
-      const generatePdfContent = () => {
-        const maxMatchCount = Math.max(...bracket.groups.map(g => g.matches.length));
-        const cardHeight = 90; // 高さを縮小
-        const cardGap = 20; // ギャップも縮小
-        const headerHeight = 44;
-        const paddingBottom = 150; // 下部パディングを増加
-        
-        // 3位決定戦の位置を考慮した高さ計算
-        const thirdPlaceGroup = bracket.groups.find(g => g.groupName.includes('3位決定戦'));
-        let adjustedHeight = headerHeight + (maxMatchCount * cardHeight) + ((maxMatchCount - 1) * cardGap) + paddingBottom + 200;
-        
-        if (thirdPlaceGroup) {
-          // 3位決定戦がある場合、さらに高さを追加
-          adjustedHeight += 300; // 3位決定戦用の追加高さ
-        }
-        
-        const minHeight = Math.max(adjustedHeight, 900); // 最小高さを900pxに設定
-
-        return `
-        <div style="
-          width: 800px; 
-          height: 1100px; 
-          font-family: Arial, sans-serif; 
-          background: white; 
-          padding: 20px;
-          box-sizing: border-box;
-          overflow: visible;
-        ">
-          <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">
-            <h1 style="font-size: 18px; margin: 0;">${tournamentName} - 決勝トーナメント表</h1>
-          </div>
-          
-          <div style="
-            position: relative;
-            background: white;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 24px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            overflow-x: auto;
-            min-height: ${minHeight}px;
-          ">
-            <div style="
-              position: relative;
-              display: grid;
-              grid-template-columns: repeat(${bracket.columnCount}, minmax(120px, 1fr));
-              gap: 20px;
-              min-width: ${bracket.columnCount * 140 + (bracket.columnCount - 1) * 20}px;
-              min-height: ${minHeight}px;
-            " id="bracket-container">
-              
-              <!-- SVG接続線 -->
-              <svg style="
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                height: 100%; 
-                pointer-events: none; 
-                z-index: 1;
-              " id="connection-lines">
-              </svg>
-
-              ${bracket.groups.map((group, groupIndex) => {
-                // グループごとの色を決定
-                const getGroupColor = (groupName: string) => {
-                  if (groupName.includes('準々決勝')) return 'background: #dbeafe; color: #1e40af;';
-                  if (groupName.includes('準決勝')) return 'background: #e9d5ff; color: #7c3aed;';
-                  if (groupName.includes('3位決定戦')) return 'background: #fef3c7; color: #d97706;';
-                  if (groupName.includes('決勝')) return 'background: #fee2e2; color: #dc2626;';
-                  return 'background: #f3f4f6; color: #374151;';
-                };
-
-                return `
-                  <div style="z-index: 2;">
-                    <h3 style="
-                      font-size: 14px; 
-                      font-weight: 500; 
-                      padding: 6px 12px; 
-                      border-radius: 9999px; 
-                      text-align: center; 
-                      letter-spacing: 0.025em; 
-                      margin-bottom: 24px; 
-                      ${getGroupColor(group.groupName)}
-                    ">
-                      ${group.groupName}
-                    </h3>
-                    
-                    ${groupIndex === 0 ? `
-                      <!-- 最初のグループ（準々決勝など）は通常配置 -->
-                      <div style="display: flex; flex-direction: column; gap: 24px;">
-                        ${group.matches.map((match, matchIndex) => {
-                          return generateMatchCard(match, `G${group.groupId}M${matchIndex + 1}`);
-                        }).join('')}
-                      </div>
-                    ` : `
-                      <!-- 後続のグループは前のグループのカードの中央に配置 -->
-                      <div style="position: relative;">
-                        ${group.matches.map((match, matchIndex) => {
-                          let topMargin = 0;
-                          
-                          // 決勝と3位決定戦の場合は特別な位置計算
-                          if (group.groupName === '決勝' || group.groupName === '3位決定戦') {
-                            // 準決勝グループ（T5, T6）を探す
-                            const semiFinalGroup = bracket.groups.find(g => g.groupName.includes('準決勝'));
-                            
-                            if (semiFinalGroup && semiFinalGroup.matches.length >= 2) {
-                              const quarterFinalGroup = bracket.groups.find(g => g.groupName.includes('準々決勝'));
-                              let semiFinalBaseY = 0;
-                              
-                              if (quarterFinalGroup && quarterFinalGroup.matches.length >= 2) {
-                                const actualGap = 24;
-                                const qf1CenterY = (cardHeight / 2);
-                                const qf2CenterY = cardHeight + actualGap + (cardHeight / 2);
-                                const qfCenterY = (qf1CenterY + qf2CenterY) / 2;
-                                semiFinalBaseY = qfCenterY - (cardHeight / 2);
-                              }
-                              
-                              const t5TopMargin = semiFinalBaseY;
-                              const t6TopMargin = semiFinalBaseY + cardHeight + cardGap;
-                              const t5CenterY = t5TopMargin + (cardHeight / 2);
-                              const t6CenterY = t6TopMargin + (cardHeight / 2);
-                              const semiFinalCenterY = (t5CenterY + t6CenterY) / 2;
-                              
-                              if (group.groupName === '決勝') {
-                                const fineAdjustment = 20;
-                                topMargin = semiFinalCenterY - (cardHeight / 2) + fineAdjustment;
-                              } else if (group.groupName === '3位決定戦') {
-                                const semiFinalHeight = t6CenterY - t5CenterY;
-                                const dynamicSeparationOffset = Math.max(
-                                  semiFinalHeight * 0.8,
-                                  120
-                                );
-                                topMargin = t6CenterY + (cardHeight / 2) + dynamicSeparationOffset;
-                              }
-                            } else {
-                              const prevGroup = bracket.groups[groupIndex - 1];
-                              const matchesPerGroup = Math.ceil(prevGroup.matches.length / group.matches.length);
-                              const startIdx = matchIndex * matchesPerGroup;
-                              const endIdx = Math.min(startIdx + matchesPerGroup, prevGroup.matches.length);
-                              const avgPosition = (startIdx + endIdx - 1) / 2;
-                              const centerPosition = headerHeight + (cardHeight / 2) + (avgPosition * (cardHeight + cardGap));
-                              topMargin = centerPosition - headerHeight - (cardHeight / 2);
-                            }
-                          } else {
-                            const prevGroup = bracket.groups[groupIndex - 1];
-                            const matchesPerGroup = Math.ceil(prevGroup.matches.length / group.matches.length);
-                            const startIdx = matchIndex * matchesPerGroup;
-                            const endIdx = Math.min(startIdx + matchesPerGroup, prevGroup.matches.length);
-                            const avgPosition = (startIdx + endIdx - 1) / 2;
-                            const centerPosition = headerHeight + (cardHeight / 2) + (avgPosition * (cardHeight + cardGap));
-                            topMargin = centerPosition - headerHeight - (cardHeight / 2);
-                          }
-                          
-                          return `
-                            <div style="
-                              position: absolute; 
-                              width: 100%; 
-                              top: ${topMargin}px;
-                            ">
-                              ${generateMatchCard(match, `G${group.groupId}M${matchIndex + 1}`)}
-                            </div>
-                          `;
-                        }).join('')}
-                      </div>
-                    `}
-                  </div>
-                `;
-              }).join('')}
-
-            </div>
-          </div>
-          
-          <div style="
-            position: absolute; 
-            bottom: 10px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            font-size: 8px; 
-            color: #666;
-          ">
-            <span style="margin-right: 15px;">🟢 勝利</span>
-            <span>🔴 敗北</span>
-          </div>
-        </div>
+      // oklch色を一時的にRGB色に変換する関数
+      const applyTempColorFix = () => {
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+          .bg-blue-100 { background-color: #dbeafe !important; }
+          .text-blue-800 { color: #1e40af !important; }
+          .bg-purple-100 { background-color: #e9d5ff !important; }
+          .text-purple-800 { color: #6b21a8 !important; }
+          .bg-yellow-100 { background-color: #fef3c7 !important; }
+          .text-yellow-800 { color: #854d0e !important; }
+          .bg-red-100 { background-color: #fee2e2 !important; }
+          .text-red-800 { color: #991b1b !important; }
+          .bg-gray-100 { background-color: #f3f4f6 !important; }
+          .text-gray-800 { color: #1f2937 !important; }
+          .bg-green-50 { background-color: #f0fdf4 !important; }
+          .text-green-600 { color: #16a34a !important; }
+          .border-green-300 { border-color: #86efac !important; }
+          .bg-red-50 { background-color: #fef2f2 !important; }
+          .text-red-600 { color: #dc2626 !important; }
+          .border-red-300 { border-color: #fca5a5 !important; }
+          .bg-blue-50 { background-color: #eff6ff !important; }
+          .text-blue-600 { color: #2563eb !important; }
+          .border-blue-300 { border-color: #93c5fd !important; }
+          .bg-orange-50 { background-color: #fff7ed !important; }
+          .text-orange-600 { color: #ea580c !important; }
+          .border-orange-300 { border-color: #fdba74 !important; }
+          .bg-purple-50 { background-color: #faf5ff !important; }
+          .text-purple-600 { color: #9333ea !important; }
+          .border-purple-300 { border-color: #c4b5fd !important; }
+          .bg-gray-50 { background-color: #f9fafb !important; }
+          .text-gray-700 { color: #374151 !important; }
+          .text-gray-500 { color: #6b7280 !important; }
+          .border-gray-300 { border-color: #d1d5db !important; }
+          .text-gray-600 { color: #4b5563 !important; }
+          .bg-white { background-color: #ffffff !important; }
         `;
+        document.head.appendChild(styleSheet);
+        return styleSheet;
       };
 
-      // チーム名のフォントサイズを動的に決定する関数
-      const getTeamNameFontSize = (teamName: string) => {
-        const length = teamName.length;
-        if (length <= 8) return '12px';
-        if (length <= 12) return '11px';
-        if (length <= 16) return '10px';
-        return '9px';
-      };
+      // 一時的にoklch色をRGB色に変換
+      const tempStyleSheet = applyTempColorFix();
 
-      // マッチカードを生成する関数
-      const generateMatchCard = (match: BracketMatch, dataMatch: string) => {
-        const getWinnerTeam = () => {
-          if (!match.winner_team_id || !match.is_confirmed) return null;
-          if (match.winner_team_id === match.team1_id) return 0;
-          if (match.winner_team_id === match.team2_id) return 1;
-          return null;
-        };
-
-        const hasResult = match.is_confirmed && (
-          match.team1_goals !== null || 
-          match.team2_goals !== null || 
-          match.is_draw || 
-          match.is_walkover
-        );
-
-        const winnerIndex = getWinnerTeam();
-
-        // 試合コードからブロック色を取得
-        const getMatchCodeColor = (matchCode: string) => {
-          if (['T1', 'T2', 'T3', 'T4'].includes(matchCode)) return 'background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd;';
-          if (['T5', 'T6'].includes(matchCode)) return 'background: #e9d5ff; color: #7c3aed; border: 1px solid #c4b5fd;';
-          if (matchCode === 'T7') return 'background: #fef3c7; color: #d97706; border: 1px solid #fcd34d;';
-          if (matchCode === 'T8') return 'background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;';
-          return 'background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;';
-        };
-
-        return `
-          <div data-match="${dataMatch}" style="
-            position: relative; 
-            background: white; 
-            border: 1px solid #d1d5db; 
-            border-radius: 8px; 
-            padding: 12px; 
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            height: fit-content;
-          ">
-            <!-- 試合コード -->
-            <div style="
-              position: absolute; 
-              top: -8px; 
-              left: 50%; 
-              transform: translateX(-50%);
-              padding: 4px 8px; 
-              border-radius: 9999px; 
-              font-size: 12px; 
-              font-weight: 500;
-              ${getMatchCodeColor(match.match_code)}
-            ">
-              ${match.match_code}
-            </div>
-            
-            <!-- チーム1 -->
-            <div style="
-              display: flex; 
-              align-items: center; 
-              justify-content: space-between; 
-              height: 28px; 
-              padding: 0 12px; 
-              margin-bottom: 8px; 
-              border: 1px solid #d1d5db; 
-              border-radius: 4px; 
-              cursor: default; 
-              transition: all 0.2s;
-              ${winnerIndex === 0 ? 
-                'background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-weight: 500;' : 
-                hasResult && winnerIndex === 1 ? 
-                'background: #fef2f2; color: #dc2626; border-color: #fecaca;' : 
-                hasResult && match.is_draw ? 
-                'background: #eff6ff; color: #2563eb; border-color: #bfdbfe;' : 
-                'background: #f9fafb; color: #374151;'
-              }
-            ">
-              <span style="
-                font-size: ${getTeamNameFontSize(match.team1_display_name || '未確定')}; 
-                overflow: hidden; 
-                text-overflow: ellipsis; 
-                white-space: nowrap; 
-                flex: 1;
-                vertical-align: middle;
-                line-height: 28px;
-              ">
-                ${winnerIndex === 0 && hasResult ? '👑 ' : ''}${match.team1_display_name || '未確定'}
-              </span>
-              ${hasResult && !match.is_draw ? `
-                <span style="font-size: 12px; font-weight: bold; margin-left: 8px; vertical-align: middle; line-height: 28px;">
-                  ${match.team1_goals}
-                </span>
-              ` : ''}
-              ${hasResult && match.is_draw ? `
-                <span style="font-size: 12px; font-weight: bold; margin-left: 8px; color: #2563eb; vertical-align: middle; line-height: 28px;">
-                  ${match.team1_goals}
-                </span>
-              ` : ''}
-            </div>
-
-            <!-- チーム2 -->
-            <div style="
-              display: flex; 
-              align-items: center; 
-              justify-content: space-between; 
-              height: 28px; 
-              padding: 0 12px; 
-              border: 1px solid #d1d5db; 
-              border-radius: 4px; 
-              cursor: default; 
-              transition: all 0.2s;
-              ${winnerIndex === 1 ? 
-                'background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-weight: 500;' : 
-                hasResult && winnerIndex === 0 ? 
-                'background: #fef2f2; color: #dc2626; border-color: #fecaca;' : 
-                hasResult && match.is_draw ? 
-                'background: #eff6ff; color: #2563eb; border-color: #bfdbfe;' : 
-                'background: #f9fafb; color: #374151;'
-              }
-            ">
-              <span style="
-                font-size: ${getTeamNameFontSize(match.team2_display_name || '未確定')}; 
-                overflow: hidden; 
-                text-overflow: ellipsis; 
-                white-space: nowrap; 
-                flex: 1;
-                vertical-align: middle;
-                line-height: 28px;
-              ">
-                ${winnerIndex === 1 && hasResult ? '👑 ' : ''}${match.team2_display_name || '未確定'}
-              </span>
-              ${hasResult && !match.is_draw ? `
-                <span style="font-size: 12px; font-weight: bold; margin-left: 8px; vertical-align: middle; line-height: 28px;">
-                  ${match.team2_goals}
-                </span>
-              ` : ''}
-              ${hasResult && match.is_draw ? `
-                <span style="font-size: 12px; font-weight: bold; margin-left: 8px; color: #2563eb; vertical-align: middle; line-height: 28px;">
-                  ${match.team2_goals}
-                </span>
-              ` : ''}
-            </div>
-
-          </div>
-        `;
-      };
-
-      // 一時的な要素を作成してPDF化
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = generatePdfContent();
-      tempElement.style.position = 'absolute';
-      tempElement.style.left = '-9999px';
-      tempElement.style.top = '0';
-      document.body.appendChild(tempElement);
-
-      // 少し待ってからレンダリング（レイアウト確定のため）
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // 接続線描画の復活
-      const svgElement = tempElement.querySelector('#connection-lines') as SVGElement;
-      if (svgElement && bracket.groups.length > 1) {
-        // DOM要素を取得
-        const container = tempElement.children[0] as HTMLElement;
-        
-        // 固定レイアウトベースの座標計算（PDF用）
-        const getCardPosition = (groupIndex: number, matchIndex: number) => {
-          const cardWidth = 120;
-          const cardHeight = 90;
-          const gap = 20;
-          const headerHeight = 44;
-          const padding = 24;
-          
-          // グループの基準X座標
-          const baseX = padding + (groupIndex * (cardWidth + gap));
-          
-          // 決勝・3位決定戦の特別な位置計算
-          if (groupIndex === 3) { // 決勝グループ
-            // 準決勝の中間位置に配置
-            const semiFinalY1 = padding + headerHeight + (0 * (cardHeight + gap));
-            const semiFinalY2 = padding + headerHeight + (1 * (cardHeight + gap));
-            const baseY = (semiFinalY1 + semiFinalY2) / 2;
-            return { x: baseX, y: baseY, width: cardWidth, height: cardHeight };
-          } else if (groupIndex === 2) { // 3位決定戦グループ
-            // 準決勝より下に配置（準決勝の下端から適切な間隔）
-            const semiFinalBottomY = padding + headerHeight + (1 * (cardHeight + gap)) + cardHeight;
-            const baseY = semiFinalBottomY + gap * 2; // 十分な間隔を確保
-            return { x: baseX, y: baseY, width: cardWidth, height: cardHeight };
-          } else {
-            // 通常の配置
-            const baseY = padding + headerHeight + (matchIndex * (cardHeight + gap));
-            return { x: baseX, y: baseY, width: cardWidth, height: cardHeight };
-          }
-        };
-        
-        const midRight = (groupIndex: number, matchIndex: number) => {
-          const pos = getCardPosition(groupIndex, matchIndex);
-          return { x: pos.x + pos.width, y: pos.y + pos.height / 2 };
-        };
-        
-        const midLeft = (groupIndex: number, matchIndex: number) => {
-          const pos = getCardPosition(groupIndex, matchIndex);
-          return { x: pos.x, y: pos.y + pos.height / 2 };
-        };
-        
-        // トーナメント形式の線を描画する関数
-        const addTournamentBracket = (group1Index: number, match1Index: number, match2Index: number, targetGroupIndex: number, targetMatchIndex: number, isDashed = false) => {
-          const p1 = midRight(group1Index, match1Index);  // 第1試合の右端
-          const p2 = midRight(group1Index, match2Index);  // 第2試合の右端
-          const p3 = midLeft(targetGroupIndex, targetMatchIndex);  // ターゲット試合の左端
-          
-          console.log(`PDF線描画: グループ${group1Index}の試合${match1Index},${match2Index} → グループ${targetGroupIndex}の試合${targetMatchIndex}`);
-          console.log(`座標: p1(${p1.x},${p1.y}) p2(${p2.x},${p2.y}) p3(${p3.x},${p3.y})`);
-          
-          // 中間点を計算（トーナメントブラケット形式）
-          const gapBetweenCards = p3.x - p1.x; // カード間の距離
-          const midX = p1.x + (gapBetweenCards * 0.6); // カード間の60%の位置
-          const midY = (p1.y + p2.y) / 2;  // 2試合の中間Y座標
-          
-          console.log(`中間点: midX=${midX}, midY=${midY}`);
-          
-          // トーナメント形式の線を分割して描画
-          // 1. T1からコの字部分
-          const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          const d1 = `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${midY}`;
-          path1.setAttribute('d', d1);
-          path1.setAttribute('stroke', '#999');
-          path1.setAttribute('stroke-width', '2');
-          path1.setAttribute('fill', 'none');
-          svgElement.appendChild(path1);
-          
-          // 2. T2からコの字部分
-          const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          const d2 = `M ${p2.x} ${p2.y} L ${midX} ${p2.y} L ${midX} ${midY}`;
-          path2.setAttribute('d', d2);
-          path2.setAttribute('stroke', '#999');
-          path2.setAttribute('stroke-width', '2');
-          path2.setAttribute('fill', 'none');
-          svgElement.appendChild(path2);
-          
-          // 3. コの字中央からターゲットへ
-          const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          const d3 = `M ${midX} ${midY} L ${p3.x} ${p3.y}`;
-          path3.setAttribute('d', d3);
-          path3.setAttribute('stroke', '#999');
-          path3.setAttribute('stroke-width', '2');
-          path3.setAttribute('fill', 'none');
-          svgElement.appendChild(path3);
-        };
-        
-        // 単純な直線を描画する関数
-        const addSinglePath = (fromGroupIndex: number, fromMatchIndex: number, toGroupIndex: number, toMatchIndex: number, isDashed = false) => {
-          const p1 = midRight(fromGroupIndex, fromMatchIndex);
-          const p2 = midLeft(toGroupIndex, toMatchIndex);
-          
-          // 直線の接続線
-          const midX = p1.x + ((p2.x - p1.x) * 0.5);
-          const d = `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
-          
-          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', d);
-          path.setAttribute('stroke', '#999');
-          path.setAttribute('stroke-width', '2');
-          path.setAttribute('fill', 'none');
-          if (isDashed) {
-            path.setAttribute('stroke-dasharray', '5,5');
-          }
-          
-          svgElement.appendChild(path);
-        };
-        
-        // 現在のページと同じ接続線パターンを使用
-        // data-matchの形式で接続線を描画
-        
-        // 準々決勝 → 準決勝（グループ別の接続）
-        const quarterFinalGroup = bracket.groups.find(g => g.groupName.includes('準々決勝'));
-        const semiFinalGroup = bracket.groups.find(g => g.groupName.includes('準決勝'));
-        const thirdPlaceGroup = bracket.groups.find(g => g.groupName.includes('3位決定戦'));
-        const finalGroup = bracket.groups.find(g => g.groupName === '決勝');
-        
-        // 正しいトーナメント形式の線描画
-        
-        // 準々決勝 → 準決勝（トーナメントブラケット形式）
-        // デバッグ: ブラケット構造を確認
-        console.log('Bracket groups for PDF:', bracket.groups.map((g, i) => ({
-          groupIndex: i, 
-          groupName: g.groupName,
-          matches: g.matches.map((m, j) => ({ matchIndex: j, matchCode: m.match_code }))
-        })));
-        
-        addTournamentBracket(0, 0, 1, 1, 0);  // T1(0),T2(1) → T5(group1,match0)
-        addTournamentBracket(0, 2, 3, 1, 1);  // T3(2),T4(3) → T6(group1,match1)
-        
-        // 準決勝 → 決勝（トーナメントブラケット形式）
-        addTournamentBracket(1, 0, 1, 3, 0);  // T5,T6 → T8
-        
-        // 準決勝 → 3位決定戦（点線、単純な接続）
-        addSinglePath(1, 0, 2, 0, true);  // T5 → T7（点線）
-        addSinglePath(1, 1, 2, 0, true);  // T6 → T7（点線）
-        
-        // SVGサイズを設定
-        svgElement.setAttribute('width', '100%');
-        svgElement.setAttribute('height', '100%');
-      }
-
-      // html2canvasでキャプチャ - A4縦向き用サイズ指定
-      const canvas = await html2canvas(tempElement, {
-        scale: 1,
+      // 現在表示されているトーナメント表をキャプチャ
+      const canvas = await html2canvas(bracketRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 800,
-        height: 1100
+        logging: false
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      
-      // A4横向きに強制フィット
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
+      // 一時的なスタイルシートを削除
+      document.head.removeChild(tempStyleSheet);
 
-      // 一時要素を削除
-      document.body.removeChild(tempElement);
+      // A4横向きのPDFを作成
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const margin = 15;
+      
+      // キャンバスのサイズを取得
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      
+      // PDF内での画像サイズを計算（余白を考慮）
+      const maxWidth = pageWidth - (margin * 2);
+      const maxHeight = pageHeight - (margin * 2);
+      
+      // アスペクト比を維持しながらサイズ調整
+      const aspectRatio = canvasWidth / canvasHeight;
+      let imgWidth = maxWidth;
+      let imgHeight = imgWidth / aspectRatio;
+      
+      if (imgHeight > maxHeight) {
+        imgHeight = maxHeight;
+        imgWidth = imgHeight * aspectRatio;
+      }
+      
+      // 中央に配置するための計算
+      const x = (pageWidth - imgWidth) / 2;
+      const y = (pageHeight - imgHeight) / 2;
+      
+      // キャンバスをPDFに追加
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
 
       // PDFをダウンロード
-      const fileName = `トーナメント表_${tournamentName.replace(/[\/\\:*?"<>|]/g, '')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      const fileName = `トーナメント表_${new Date().toISOString().slice(0, 10)}.pdf`;
       pdf.save(fileName);
 
     } catch (error) {
@@ -1040,29 +563,23 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Trophy className="h-5 w-5 mr-2 text-yellow-600" />
-              決勝トーナメント
-            </div>
-            <Button
-              onClick={handleDownloadPdf}
-              disabled={downloadingPdf}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {downloadingPdf ? 'PDF生成中...' : 'PDFダウンロード'}
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">各ブロック上位2チームによるトーナメント表</p>
-        </CardContent>
-      </Card>
+      <div className="text-center">
+        <div className="flex items-center justify-center mb-2">
+          <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
+          <h2 className="text-2xl font-bold text-gray-900">決勝トーナメント</h2>
+          <Button
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 ml-4"
+          >
+            <Download className="h-4 w-4" />
+            {downloadingPdf ? 'PDF生成中...' : 'PDFダウンロード'}
+          </Button>
+        </div>
+        <p className="text-gray-600">各ブロック上位2チームによるトーナメント表</p>
+      </div>
 
       {/* トーナメントブラケット */}
       <div className="relative bg-white border border-gray-300 rounded-lg p-6 shadow-sm overflow-x-auto">
