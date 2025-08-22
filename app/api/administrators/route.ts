@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { admin_name, email, password, role, is_active } = body;
+    const { admin_name, email, password } = body;
 
     // バリデーション
     if (!admin_name || !admin_name.trim()) {
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // 利用者を作成
-    const result = await db.execute(`
+    await db.execute(`
       INSERT INTO m_administrators (admin_login_id, password_hash, email, created_at, updated_at)
       VALUES (?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [

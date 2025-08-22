@@ -1,7 +1,6 @@
 // app/admin/venues/page.tsx
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import VenueManagement from "@/components/features/admin/VenueManagement";

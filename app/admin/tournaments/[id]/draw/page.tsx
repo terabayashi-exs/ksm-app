@@ -97,7 +97,7 @@ export default function TournamentDrawPage() {
           }
         }
         
-        const formattedTeams = teams.map((team: any) => ({
+        const formattedTeams = teams.map((team: { team_id: string; team_name: string; team_omission: string; contact_person: string; player_count: number; registration_type: string }) => ({
           team_id: team.team_id,
           team_name: team.team_name,
           team_omission: team.team_omission,
@@ -170,7 +170,7 @@ export default function TournamentDrawPage() {
 
         // 振分け済みチームを各ブロックに配置
         let hasAssignedTeams = false;
-        assignedTeams.forEach((team: any) => {
+        assignedTeams.forEach((team: { team_id: string; team_name: string; assigned_block: string; block_position: string }) => {
           if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block)) {
             const blockPosition = parseInt(team.block_position);
             const arrayIndex = blockPosition - 1;
@@ -701,39 +701,39 @@ export default function TournamentDrawPage() {
   );
 }
 
-// チーム表示名からブロック内の実際のチームを取得する関数
-function getTeamByPosition(displayName: string, blocks: Block[]): Team | null {
-  // デバッグ用ログ
-  console.log('getTeamByPosition called with:', displayName, 'blocks:', blocks.length);
-  
-  if (!displayName || typeof displayName !== 'string') {
-    console.log('Invalid displayName:', displayName);
-    return null;
-  }
-  
-  // "A1チーム" -> ブロックA、1番目のチーム
-  const match = displayName.match(/^([A-Z])(\d+)チーム$/);
-  if (!match) {
-    console.log('No regex match for displayName:', displayName);
-    return null;
-  }
-  
-  const [, blockName, position] = match;
-  const block = blocks.find(b => b.block_name === blockName);
-  if (!block) {
-    console.log('Block not found:', blockName, 'Available blocks:', blocks.map(b => b.block_name));
-    return null;
-  }
-  
-  const teamIndex = parseInt(position) - 1;
-  const team = block.teams[teamIndex];
-  console.log(`Looking for position ${position} (index ${teamIndex}) in block ${blockName}:`, team?.team_name || 'undefined/null');
-  
-  // undefinedチェックを追加
-  if (!team) {
-    console.log('Team is undefined at position:', teamIndex);
-    return null;
-  }
-  
-  return team;
-}
+// チーム表示名からブロック内の実際のチームを取得する関数（将来使用予定）
+// function getTeamByPosition(displayName: string, blocks: Block[]): Team | null {
+//   // デバッグ用ログ
+//   console.log('getTeamByPosition called with:', displayName, 'blocks:', blocks.length);
+//   
+//   if (!displayName || typeof displayName !== 'string') {
+//     console.log('Invalid displayName:', displayName);
+//     return null;
+//   }
+//   
+//   // "A1チーム" -> ブロックA、1番目のチーム
+//   const match = displayName.match(/^([A-Z])(\d+)チーム$/);
+//   if (!match) {
+//     console.log('No regex match for displayName:', displayName);
+//     return null;
+//   }
+//   
+//   const [, blockName, position] = match;
+//   const block = blocks.find(b => b.block_name === blockName);
+//   if (!block) {
+//     console.log('Block not found:', blockName, 'Available blocks:', blocks.map(b => b.block_name));
+//     return null;
+//   }
+//   
+//   const teamIndex = parseInt(position) - 1;
+//   const team = block.teams[teamIndex];
+//   console.log(`Looking for position ${position} (index ${teamIndex}) in block ${blockName}:`, team?.team_name || 'undefined/null');
+//   
+//   // undefinedチェックを追加
+//   if (!team) {
+//     console.log('Team is undefined at position:', teamIndex);
+//     return null;
+//   }
+//   
+//   return team;
+// }

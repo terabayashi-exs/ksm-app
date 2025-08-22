@@ -12,7 +12,6 @@ import {
   CheckCircle,
   XCircle,
   QrCode,
-  Users,
   MapPin,
   Filter,
   Eye,
@@ -117,7 +116,7 @@ export default function AdminMatchesPage() {
         
         if (matchesResult.success) {
           console.log('Matches data from API:', matchesResult.data); // デバッグログ
-          const matchesData = matchesResult.data.map((match: any) => ({
+          const matchesData = matchesResult.data.map((match: MatchData) => ({
             ...match,
             is_confirmed: match.is_confirmed || !!match.final_team1_scores // APIから返される値を優先
           }));
@@ -171,7 +170,7 @@ export default function AdminMatchesPage() {
         if (data.type === 'status_update') {
           setMatches(prevMatches => 
             prevMatches.map(match => {
-              const update = data.updates.find((u: any) => u.match_id === match.match_id);
+              const update = data.updates.find((u: { match_id: number }) => u.match_id === match.match_id);
               return update ? { ...match, ...update } : match;
             })
           );
@@ -191,7 +190,7 @@ export default function AdminMatchesPage() {
   }, [tournamentId]);
 
   // QRコード生成
-  const generateQR = (matchId: number, matchCode: string) => {
+  const generateQR = (matchId: number) => {
     // 新しいタブでQRコード表示ページを開く
     const qrUrl = `/admin/matches/${matchId}/qr`;
     window.open(qrUrl, '_blank', 'width=600,height=800');

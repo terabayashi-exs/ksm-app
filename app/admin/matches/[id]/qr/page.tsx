@@ -39,7 +39,7 @@ export default function MatchQRCodePage() {
         } else {
           setError(result.error || 'QRコードの取得に失敗しました');
         }
-      } catch (err) {
+      } catch {
         setError('サーバーとの通信に失敗しました');
       } finally {
         setLoading(false);

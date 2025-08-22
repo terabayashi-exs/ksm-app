@@ -91,7 +91,7 @@ export async function PUT(
     const adminId = resolvedParams.id;
 
     const body = await request.json();
-    const { admin_name, email, password, role, is_active } = body;
+    const { admin_name, email, password } = body;
 
     // バリデーション
     if (!admin_name || !admin_name.trim()) {
