@@ -189,7 +189,7 @@ function calculateDaySchedule(
 
     // 前のpriorityグループの全試合完了まで待機する時刻を計算
     // 同一priority内の試合は同時進行、異なるpriorityは完全に分離
-    let groupStartTime = Math.max(...Object.values(courtEndTimes));
+    const groupStartTime = Math.max(...Object.values(courtEndTimes));
 
     // 同時進行する試合のスケジュール作成
     for (let i = 0; i < groupMatches.length; i++) {

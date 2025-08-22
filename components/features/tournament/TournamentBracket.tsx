@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Download } from 'lucide-react';
@@ -48,7 +48,7 @@ function MatchCard({
 }: { 
   match: BracketMatch;
   className?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }) {
   const getWinnerTeam = () => {
     if (!match.winner_team_id || !match.is_confirmed) return null;
@@ -162,7 +162,6 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tournamentName, setTournamentName] = useState<string>('');
   const bracketRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -198,7 +197,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   }, [tournamentId]);
 
   // SVG線を描画する関数
-  const drawLines = () => {
+  const drawLines = useCallback(() => {
     if (!bracketRef.current || !svgRef.current) return;
     
     const svg = svgRef.current;
@@ -283,9 +282,9 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     
     // 勝者進出の接続線のみを描画（敗者進出は線を引かない）
     // 明示的に接続パターンを定義
-    bracket.groups.forEach((group, groupIndex) => {
+    bracket.groups.forEach((group) => {
       // 現在のグループから適切な次のグループへの接続を決定
-      let targetGroups: BracketGroup[] = [];
+      const targetGroups: BracketGroup[] = [];
       
       if (group.groupName.includes('準々決勝')) {
         // 準々決勝 → 準決勝
@@ -321,7 +320,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     svg.setAttribute('width', Math.ceil(box.width).toString());
     svg.setAttribute('height', Math.ceil(box.height).toString());
     svg.setAttribute('viewBox', `0 0 ${Math.ceil(box.width)} ${Math.ceil(box.height)}`);
-  };
+  }, [bracket.groups]);
 
   // リサイズ時に線を再描画
   useEffect(() => {
@@ -332,7 +331,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     setTimeout(drawLines, 100);
     
     return () => window.removeEventListener('resize', handleResize);
-  }, [matches]);
+  }, [matches, drawLines]);
 
   // 印刷機能（PDF保存可）
   const handlePrint = () => {

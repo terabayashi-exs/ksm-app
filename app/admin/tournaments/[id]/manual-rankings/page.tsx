@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import ManualRankingsEditor from "@/components/features/tournament/ManualRankingsEditor";
 
 interface PageProps {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ManualRankingsPage({ params }: PageProps) {
@@ -15,14 +15,8 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     redirect("/auth/login");
   }
 
-  // Next.js 15対応：paramsがPromiseかどうかチェック
-  let resolvedParams;
-  if (params && typeof params.then === 'function') {
-    resolvedParams = await params;
-  } else {
-    resolvedParams = params as { id: string };
-  }
-
+  // Next.js 15対応：paramsは常にPromise
+  const resolvedParams = await params;
   const tournamentId = parseInt(resolvedParams.id);
 
   if (isNaN(tournamentId)) {

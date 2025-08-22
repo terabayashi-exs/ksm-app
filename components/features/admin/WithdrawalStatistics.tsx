@@ -3,7 +3,7 @@
 // components/features/admin/WithdrawalStatistics.tsx
 // 辞退申請統計レポートコンポーネント
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -78,7 +78,7 @@ export default function WithdrawalStatistics() {
   // const [tournamentFilter, setTournamentFilter] = useState('all'); // 未使用のため削除
 
   // 統計データの取得
-  const fetchStatistics = async () => {
+  const fetchStatistics = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -99,11 +99,11 @@ export default function WithdrawalStatistics() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
 
   useEffect(() => {
     fetchStatistics();
-  }, [period]);
+  }, [period, fetchStatistics]);
 
   // CSV出力
   const exportToCSV = () => {

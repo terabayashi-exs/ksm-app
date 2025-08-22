@@ -93,33 +93,29 @@ async function getAllBlockRankings(tournamentId: number): Promise<{
 }
 
 /**
- * 各ブロックの上位2チームを抽出
+ * 各ブロックの上位2チームを抽出（未使用）
  */
-function extractTopTeams(blockRankings: { block_name: string; rankings: BlockRanking[]; }[]): {
-  [key: string]: { team_id: string; team_name: string; };
-} {
-  const promotions: { [key: string]: { team_id: string; team_name: string; }; } = {};
-
-  blockRankings.forEach(block => {
-    const sortedRankings = block.rankings.sort((a, b) => a.position - b.position);
-    
-    if (sortedRankings.length >= 1) {
-      promotions[`${block.block_name}_1`] = {
-        team_id: sortedRankings[0].team_id,
-        team_name: sortedRankings[0].team_name
-      };
-    }
-    
-    if (sortedRankings.length >= 2) {
-      promotions[`${block.block_name}_2`] = {
-        team_id: sortedRankings[1].team_id,
-        team_name: sortedRankings[1].team_name
-      };
-    }
-  });
-
-  return promotions;
-}
+// function extractTopTeams(blockRankings: { block_name: string; rankings: BlockRanking[]; }[]): {
+//   [key: string]: { team_id: string; team_name: string; };
+// } {
+//   const promotions: { [key: string]: { team_id: string; team_name: string; }; } = {};
+//   blockRankings.forEach(block => {
+//     const sortedRankings = block.rankings.sort((a, b) => a.position - b.position);
+//     if (sortedRankings.length >= 1) {
+//       promotions[`${block.block_name}_1`] = {
+//         team_id: sortedRankings[0].team_id,
+//         team_name: sortedRankings[0].team_name
+//       };
+//     }
+//     if (sortedRankings.length >= 2) {
+//       promotions[`${block.block_name}_2`] = {
+//         team_id: sortedRankings[1].team_id,
+//         team_name: sortedRankings[1].team_name
+//       };
+//     }
+//   });
+//   return promotions;
+// }
 
 /**
  * 部分進出対応：確定したブロックのみから上位チームを抽出

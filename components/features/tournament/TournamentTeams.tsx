@@ -50,7 +50,7 @@ interface TournamentTeamsProps {
 export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) {
   const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(null);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
-  const [teamPlayers, setTeamPlayers] = useState<Record<string, any[]>>({});
+  const [teamPlayers, setTeamPlayers] = useState<Record<string, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

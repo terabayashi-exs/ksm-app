@@ -141,7 +141,7 @@ export async function PUT(
 
     // パスワード更新の場合はハッシュ化
     let updateQuery = '';
-    let updateParams: any[] = [];
+    let updateParams: (string | number | null)[] = [];
 
     if (password && password.trim()) {
       const hashedPassword = await bcrypt.hash(password, 10);

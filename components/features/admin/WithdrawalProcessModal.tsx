@@ -3,7 +3,7 @@
 // components/features/admin/WithdrawalProcessModal.tsx
 // 辞退申請処理モーダル（承認・却下時のコメント入力）
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -139,7 +139,7 @@ export default function WithdrawalProcessModal({
   };
 
   // 承認の場合のみ影響分析を取得
-  const fetchImpactAnalysis = async () => {
+  const fetchImpactAnalysis = useCallback(async () => {
     if (action !== 'approve') return;
     
     try {
@@ -157,14 +157,14 @@ export default function WithdrawalProcessModal({
     } finally {
       setLoadingImpact(false);
     }
-  };
+  }, [action, request.tournament_team_id]);
 
   // モーダルが開かれたときに影響分析を取得
   useEffect(() => {
     if (isOpen && action === 'approve') {
       fetchImpactAnalysis();
     }
-  }, [isOpen, action, request.tournament_team_id]);
+  }, [isOpen, action, request.tournament_team_id, fetchImpactAnalysis]);
 
   if (!isOpen) return null;
 

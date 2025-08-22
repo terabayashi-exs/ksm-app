@@ -3,7 +3,7 @@
 // components/features/tournament/WithdrawalForm.tsx
 // 大会エントリー辞退申請フォーム
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -64,9 +64,9 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
   // 辞退状況の取得
   useEffect(() => {
     fetchWithdrawalInfo();
-  }, [tournamentId]);
+  }, [tournamentId, fetchWithdrawalInfo]);
 
-  const fetchWithdrawalInfo = async () => {
+  const fetchWithdrawalInfo = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/tournaments/${tournamentId}/withdrawal`);
@@ -87,7 +87,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tournamentId]);
 
   // 辞退申請の送信
   const onSubmit = async (data: WithdrawalFormData) => {

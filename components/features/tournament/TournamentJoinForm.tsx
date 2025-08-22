@@ -82,9 +82,8 @@ export default function TournamentJoinForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       tournament_team_name: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_name,
@@ -98,7 +97,6 @@ export default function TournamentJoinForm({
     name: 'players'
   });
 
-  const watchedPlayers = watch('players');
 
   // 既存選手の選択状態を管理
   const [selectedExistingPlayers, setSelectedExistingPlayers] = useState<Set<number>>(new Set());

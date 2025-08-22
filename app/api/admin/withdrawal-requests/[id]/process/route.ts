@@ -10,7 +10,7 @@ import { sendWithdrawalApprovedNotification, sendWithdrawalRejectedNotification 
 // 辞退申請の承認・却下処理
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 管理者権限チェック
@@ -19,7 +19,8 @@ export async function POST(
       return NextResponse.json({ error: '管理者権限が必要です' }, { status: 401 });
     }
 
-    const tournamentTeamId = parseInt(params.id);
+    const resolvedParams = await params;
+    const tournamentTeamId = parseInt(resolvedParams.id);
     const { action, admin_comment } = await request.json();
 
     // 入力値検証
@@ -163,7 +164,7 @@ export async function POST(
 // 特定の辞退申請詳細を取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 管理者権限チェック
@@ -172,7 +173,8 @@ export async function GET(
       return NextResponse.json({ error: '管理者権限が必要です' }, { status: 401 });
     }
 
-    const tournamentTeamId = parseInt(params.id);
+    const resolvedParams = await params;
+    const tournamentTeamId = parseInt(resolvedParams.id);
 
     // 辞退申請詳細を取得
     const withdrawalDetail = await db.execute(`

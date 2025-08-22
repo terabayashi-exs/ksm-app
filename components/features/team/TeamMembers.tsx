@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ export default function TeamMembers() {
   });
 
   // チームメンバーを取得
-  const fetchTeamMembers = async () => {
+  const fetchTeamMembers = useCallback(async () => {
     try {
       const response = await fetch('/api/teams/profile');
       const result = await response.json();
@@ -70,11 +70,11 @@ export default function TeamMembers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [form]);
 
   useEffect(() => {
     fetchTeamMembers();
-  }, []);
+  }, [fetchTeamMembers]);
 
   // 選手情報の更新
   const onSubmit = async (data: PlayersFormData) => {
@@ -114,7 +114,7 @@ export default function TeamMembers() {
       } else {
         setError(result.error || '更新に失敗しました');
         if (result.details && Array.isArray(result.details)) {
-          const errorMessages = result.details.map((detail: any) => `${detail.field}: ${detail.message}`).join(', ');
+          const errorMessages = (result.details as Array<{field: string; message: string}>).map((detail) => `${detail.field}: ${detail.message}`).join(', ');
           setError(`${result.error}: ${errorMessages}`);
         }
       }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, CheckCircle, AlertTriangle, XCircle, Users, Zap } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, Zap } from 'lucide-react';
 
 interface MatchNewsData {
   match_id: number;

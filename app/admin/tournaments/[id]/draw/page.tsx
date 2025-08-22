@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -97,7 +97,7 @@ export default function TournamentDrawPage() {
           }
         }
         
-        const formattedTeams = teams.map((team: { team_id: string; team_name: string; team_omission: string; contact_person: string; player_count: number; registration_type: string }) => ({
+        const formattedTeams = teams.map((team: { team_id: string; team_name: string; team_omission: string; contact_person: string; contact_email: string; player_count: number; registration_type: string }) => ({
           team_id: team.team_id,
           team_name: team.team_name,
           team_omission: team.team_omission,
@@ -132,10 +132,10 @@ export default function TournamentDrawPage() {
     if (tournamentId) {
       fetchData();
     }
-  }, [tournamentId]);
+  }, [tournamentId]); // initializeBlocksは削除（useCallback内でtournamentIdを使用しているため）
 
   // ブロック構造の初期化
-  const initializeBlocks = async (teams: Team[], matches: Match[]) => {
+  const initializeBlocks = useCallback(async (teams: Team[], matches: Match[]) => {
     // 予選ブロックを抽出
     const preliminaryBlocks = new Set<string>();
     matches.forEach(match => {
@@ -230,7 +230,7 @@ export default function TournamentDrawPage() {
 
       setBlocks(initialBlocks);
     }
-  };
+  }, [tournamentId]);
 
   // ランダム振分実行
   const handleRandomDraw = () => {

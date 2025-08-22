@@ -245,7 +245,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       console.log('Token to verify:', token?.substring(0, 50) + '...');
       console.log('Expected match ID:', matchId);
       
-      const decoded = jwt.verify(token, secret) as any;
+      const decoded = jwt.verify(token, secret) as jwt.JwtPayload & { match_id: number };
       console.log('JWT decoded successfully:', { match_id: decoded.match_id, exp: decoded.exp, iat: decoded.iat });
 
       // トークンの試合IDが一致するかチェック

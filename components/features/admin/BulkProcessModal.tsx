@@ -3,7 +3,7 @@
 // components/features/admin/BulkProcessModal.tsx
 // 一括処理モーダル
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -101,7 +101,7 @@ export default function BulkProcessModal({
   }, [watchedIndividualEnabled]);
 
   // 影響分析の取得
-  const fetchAnalysis = async () => {
+  const fetchAnalysis = useCallback(async () => {
     if (requests.length === 0) return;
     
     try {
@@ -120,7 +120,7 @@ export default function BulkProcessModal({
     } finally {
       setLoadingAnalysis(false);
     }
-  };
+  }, [requests, action]);
 
   // モーダルが開かれたときに影響分析を取得
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function BulkProcessModal({
       fetchAnalysis();
       setSelectedRequests(new Set(requests.map(r => r.tournament_team_id)));
     }
-  }, [isOpen, requests]);
+  }, [isOpen, requests, fetchAnalysis]);
 
   const onSubmit = async (data: BulkProcessFormData) => {
     try {

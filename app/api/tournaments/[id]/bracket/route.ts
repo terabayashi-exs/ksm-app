@@ -67,7 +67,7 @@ export async function GET(
     }
 
     // execution_groupを取得
-    let executionGroupMap = new Map<string, number>();
+    const executionGroupMap = new Map<string, number>();
     try {
       const executionGroupResult = await db.execute(executionGroupQuery, [tournamentId]);
       executionGroupResult.rows.forEach(row => {

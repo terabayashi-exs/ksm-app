@@ -200,7 +200,7 @@ async function hasTournamentMatches(tournamentId: number): Promise<boolean> {
       cache: 'no-store'
     });
     return response.ok;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

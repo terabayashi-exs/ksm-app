@@ -168,7 +168,7 @@ export default function VenueManagement() {
         // 使用中の大会がある場合の詳細エラー表示
         if (result.usedTournaments && result.usedTournaments.length > 0) {
           const tournamentList = result.usedTournaments
-            .map((t: any) => `・${t.tournament_name}（${t.status === 'planning' ? '準備中' : t.status === 'ongoing' ? '開催中' : '完了'}）`)
+            .map((t: { tournament_name: string; status: string }) => `・${t.tournament_name}（${t.status === 'planning' ? '準備中' : t.status === 'ongoing' ? '開催中' : '完了'}）`)
             .join('\n');
           
           setError(`${result.error}\n\n使用中の大会一覧:\n${tournamentList}`);

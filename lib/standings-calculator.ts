@@ -1,6 +1,6 @@
 // lib/standings-calculator.ts
 import { db } from '@/lib/db';
-import { checkAndPromoteBlockWinners, promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
+import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
 import { createTournamentNotification } from '@/lib/notifications';
 
 export interface TeamStanding {
@@ -252,7 +252,7 @@ async function getParticipatingTeamsForBlock(
     }
 
     // 空の順位データを作成
-    return teamsResult.rows.map((team, index) => ({
+    return teamsResult.rows.map((team) => ({
       team_id: team.team_id as string,
       team_name: team.team_name as string,
       team_omission: team.team_omission as string || undefined,
@@ -602,7 +602,7 @@ export async function checkBlockCompletionAndPromote(
     }
     
     const blockName = blockResult.rows[0].block_name as string;
-    const displayRoundName = blockResult.rows[0].display_round_name as string;
+    // const displayRoundName = blockResult.rows[0].display_round_name as string;
     
     // 2. ブロック内の全試合が完了しているかチェック
     const isBlockCompleted = await checkIfBlockAllMatchesCompleted(completedBlockId);

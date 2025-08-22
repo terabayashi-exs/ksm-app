@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, Calendar, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
 import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface TeamStanding {
   team_id: string;
@@ -136,7 +134,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
 
       // デバッグ情報をコンソールに出力
       console.log(`[PDF Generation] ブロック数: ${preliminaryBlocks.length}, 1ページあたり: ${blocksPerPage}ブロック, ページ数: ${pageGroups.length}`);
-      preliminaryBlocks.forEach((block, index) => {
+      preliminaryBlocks.forEach((block) => {
         console.log(`[PDF Generation] ${block.block_name}ブロック: ${block.teams.length}チーム`);
       });
 
@@ -263,7 +261,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   };
 
   // ページ容量計算関数
-  const calculateBlocksPerPage = (blocks: any[]): number => {
+  const calculateBlocksPerPage = (blocks: BlockResults[]): number => {
     if (blocks.length === 0) return 2;
     
     // 最大チーム数を取得
@@ -290,21 +288,21 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   };
 
   // ページ別HTML生成関数
-  const generatePage1HTML = (blocks: any[]): string => {
+  const generatePage1HTML = (blocks: BlockResults[]): string => {
     return `
       <div style="font-family: Arial, sans-serif; padding: 40px 60px; background: white;">
         <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #2563EB; padding-bottom: 20px;">
           <h1 style="font-size: 42px; color: #1F2937; margin-bottom: 15px;">${tournamentName} 戦績表</h1>
         </div>
-        ${blocks.map((block, index) => generateBlockHTML(block, index)).join('')}
+        ${blocks.map((block) => generateBlockHTML(block)).join('')}
       </div>
     `;
   };
 
-  const generatePage2HTML = (blocks: any[]): string => {
+  const generatePage2HTML = (blocks: BlockResults[]): string => {
     return `
       <div style="font-family: Arial, sans-serif; padding: 40px 60px; background: white;">
-        ${blocks.map((block, index) => generateBlockHTML(block, index)).join('')}
+        ${blocks.map((block) => generateBlockHTML(block)).join('')}
       </div>
     `;
   };
@@ -379,7 +377,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   };
 
   // ブロックHTML生成関数
-  const generateBlockHTML = (block: any, index: number): string => {
+  const generateBlockHTML = (block: BlockResults): string => {
     const blockStandings = getStandingsForBlock(block.match_block_id);
     const teamCount = block.teams.length;
     
@@ -499,7 +497,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
     return '#6B7280';
   };
 
-  const getResultBackgroundColor = (result: string | null, score: string): string => {
+  const getResultBackgroundColor = (result: string | null): string => {
     if (!result) return '#F3F4F6';
     if (result === 'win') return '#D1FAE5';
     if (result === 'loss') return '#FEE2E2';

@@ -6,7 +6,7 @@ import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
 import { autoResolveManualRankingNotifications } from '@/lib/notifications';
 
 interface RouteParams {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 interface TeamRanking {
@@ -57,13 +57,8 @@ export async function PUT(
       );
     }
 
-    // Next.js 15対応：paramsがPromiseかどうかチェック
-    let resolvedParams;
-    if (params && typeof params.then === 'function') {
-      resolvedParams = await params;
-    } else {
-      resolvedParams = params as { id: string };
-    }
+    // Next.js 15対応：paramsは常にPromise
+    const resolvedParams = await params;
 
     const tournamentId = parseInt(resolvedParams.id);
     if (isNaN(tournamentId)) {
@@ -211,13 +206,8 @@ export async function GET(
       );
     }
 
-    // Next.js 15対応：paramsがPromiseかどうかチェック
-    let resolvedParams;
-    if (params && typeof params.then === 'function') {
-      resolvedParams = await params;
-    } else {
-      resolvedParams = params as { id: string };
-    }
+    // Next.js 15対応：paramsは常にPromise
+    const resolvedParams = await params;
 
     const tournamentId = parseInt(resolvedParams.id);
     if (isNaN(tournamentId)) {

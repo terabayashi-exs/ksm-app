@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     let blockResults;
     try {
       blockResults = await getTournamentResults(tournamentId);
-    } catch (resultsError) {
+    } catch {
       return NextResponse.json(
         { success: false, error: '戦績表データの取得に失敗しました' },
         { status: 500 }
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 // PDF APIから同じ関数を再利用
-function generateResultsHTML(tournament: any, blockResults: any[]): string {
+function generateResultsHTML(tournament: { tournament_name: string; venue_name?: string; tournament_dates?: string }, blockResults: { block_name: string; phase: string; results: { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } }; teams: string[] }[]): string {
   const tournamentName = String(tournament.tournament_name);
   const venueName = String(tournament.venue_name || '');
   
@@ -92,7 +92,7 @@ function generateResultsHTML(tournament: any, blockResults: any[]): string {
     if (dates.length > 0) {
       tournamentDate = new Date(dates[0]).toLocaleDateString('ja-JP');
     }
-  } catch (e) {
+  } catch {
     tournamentDate = '';
   }
 
@@ -106,7 +106,7 @@ function generateResultsHTML(tournament: any, blockResults: any[]): string {
   };
 
   // 結果の色分け
-  const getResultColor = (result: string | null, score: string): string => {
+  const getResultColor = (result: string | null): string => {
     if (!result) return '#F3F4F6'; // gray-100
     
     if (result === 'win') return '#D1FAE5'; // green-100

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, UserPlus, AlertCircle, CheckCircle, Plus, Trash2, Users } from 'lucide-react';
-import { teamWithPlayersRegisterSchema, type TeamWithPlayersRegisterForm, type PlayerRegisterForm } from '@/lib/validations';
+import { teamWithPlayersRegisterSchema, type TeamWithPlayersRegisterForm } from '@/lib/validations';
 
 function TeamRegisterForm() {
   const router = useRouter();

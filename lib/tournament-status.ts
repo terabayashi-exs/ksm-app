@@ -62,8 +62,8 @@ export function calculateTournamentStatus(
       tournamentStartDate = dates[0];
       tournamentEndDate = dates[dates.length - 1];
     }
-  } catch (e) {
-    console.warn('tournament_datesのJSON解析に失敗:', tournament.tournament_dates);
+  } catch (error) {
+    console.warn('tournament_datesのJSON解析に失敗:', tournament.tournament_dates, error);
   }
 
   // DBのstatusが'completed'の場合は終了とする
@@ -146,7 +146,8 @@ export function formatTournamentPeriod(tournamentDatesJson: string): string {
     } else {
       return `${dates[0]} - ${dates[dates.length - 1]}`;
     }
-  } catch (e) {
+  } catch (error) {
+    console.warn('tournament_datesのJSON解析に失敗:', error);
     return '未設定';
   }
 }

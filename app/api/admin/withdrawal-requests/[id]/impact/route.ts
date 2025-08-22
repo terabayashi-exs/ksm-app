@@ -9,7 +9,7 @@ import { analyzeWithdrawalImpact } from '@/lib/withdrawal-processor';
 // 辞退承認時の影響分析
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 管理者権限チェック
@@ -18,7 +18,8 @@ export async function GET(
       return NextResponse.json({ error: '管理者権限が必要です' }, { status: 401 });
     }
 
-    const tournamentTeamId = parseInt(params.id);
+    const resolvedParams = await params;
+    const tournamentTeamId = parseInt(resolvedParams.id);
 
     // 対象の辞退申請を確認
     const withdrawalCheck = await db.execute(`

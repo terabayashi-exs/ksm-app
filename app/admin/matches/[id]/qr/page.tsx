@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { QrCode, Copy, ExternalLink, Clock, Users } from 'lucide-react';
@@ -144,10 +145,12 @@ export default function MatchQRCodePage() {
           <CardContent className="p-8">
             <div className="text-center">
               <div className="inline-block p-4 bg-white rounded-lg shadow-inner">
-                <img 
+                <Image 
                   src={qrCodeImageUrl} 
                   alt="QRコード"
-                  className="w-72 h-72 mx-auto"
+                  width={288}
+                  height={288}
+                  className="mx-auto"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';

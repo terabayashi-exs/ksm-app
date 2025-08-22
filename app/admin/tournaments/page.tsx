@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ export default function AdminTournamentsList() {
   });
 
   // 大会データを取得する関数
-  const fetchTournaments = async (params: SearchParams = searchParams, offset: number = 0) => {
+  const fetchTournaments = useCallback(async (params: SearchParams = searchParams, offset: number = 0) => {
     setSearching(true);
     setError(null);
     
@@ -84,12 +84,12 @@ export default function AdminTournamentsList() {
       setSearching(false);
       setLoading(false);
     }
-  };
+  }, [searchParams, pagination.limit]);
 
   // 初回読み込み
   useEffect(() => {
     fetchTournaments();
-  }, []);
+  }, [fetchTournaments]);
 
   // 検索実行
   const handleSearch = () => {

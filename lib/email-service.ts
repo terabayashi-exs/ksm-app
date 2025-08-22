@@ -103,12 +103,12 @@ export class EmailService {
   /**
    * 開発環境用コンソール出力
    */
-  private async sendConsoleEmail(payload: Record<string, any>): Promise<EmailResult> {
+  private async sendConsoleEmail(payload: Record<string, unknown>): Promise<EmailResult> {
     console.log('\n📧 ========== メール送信 (開発環境) ==========');
     console.log(`From: ${payload.from}`);
     console.log(`To: ${payload.to}`);
-    if (payload.cc) console.log(`CC: ${payload.cc.join(', ')}`);
-    if (payload.bcc) console.log(`BCC: ${payload.bcc.join(', ')}`);
+    if (payload.cc && Array.isArray(payload.cc)) console.log(`CC: ${payload.cc.join(', ')}`);
+    if (payload.bcc && Array.isArray(payload.bcc)) console.log(`BCC: ${payload.bcc.join(', ')}`);
     if (payload.replyTo) console.log(`Reply-To: ${payload.replyTo}`);
     console.log(`Subject: ${payload.subject}`);
     console.log('\n--- HTML Body ---');
@@ -126,7 +126,9 @@ export class EmailService {
   /**
    * SMTP経由でのメール送信（本番用）
    */
-  private async sendSMTPEmail(_payload: Record<string, any>): Promise<EmailResult> {
+  private async sendSMTPEmail(payload: Record<string, unknown>): Promise<EmailResult> {
+    // payload parameter is used for future SMTP implementation
+    console.log('SMTP payload ready for implementation:', Object.keys(payload).length, 'properties');
     // 本番環境でのSMTP実装
     // nodemailerなどのライブラリを使用する場合はここに実装
     

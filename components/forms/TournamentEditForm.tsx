@@ -82,7 +82,6 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     start_time: string;
     court_number: number;
   }>>([]);
-  const [initialAvailableCourts, setInitialAvailableCourts] = useState<string>('');
 
   // 既存のtournament_datesをパース
   const parseTournamentDates = (datesJson?: string): TournamentDate[] => {
@@ -156,13 +155,12 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
         // 使用されているコート番号を重複なく取得
         const usedCourts = [...new Set(
           result.data
-            .filter((match: any) => match.court_number !== null)
-            .map((match: any) => match.court_number)
+            .filter((match: {court_number: number | null}) => match.court_number !== null)
+            .map((match: {court_number: number}) => match.court_number)
         )].sort((a: number, b: number) => a - b);
         
         if (usedCourts.length > 0) {
           const courtsString = usedCourts.join(',');
-          setInitialAvailableCourts(courtsString);
           form.setValue('available_courts', courtsString);
         }
       }

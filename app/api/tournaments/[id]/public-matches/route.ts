@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 interface RouteParams {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // 大会の公開用試合一覧を取得（認証不要）
@@ -19,15 +19,8 @@ export async function GET(
   console.log('Params type:', typeof params);
   
   try {
-    // Next.js 15対応：paramsがPromiseかどうかチェック
-    let resolvedParams;
-    if (params && typeof params.then === 'function') {
-      // Promise の場合
-      resolvedParams = await params;
-    } else {
-      // 直接オブジェクトの場合
-      resolvedParams = params as { id: string };
-    }
+    // Next.js 15対応：paramsは常にPromise
+    const resolvedParams = await params;
     
     console.log('Resolved params:', resolvedParams);
     

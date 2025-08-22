@@ -88,7 +88,7 @@ async function processMatchAdjustments(withdrawalInfo: WithdrawalInfo): Promise<
     const matchId = Number(match.match_id);
     const isTeam1 = match.team1_id === team_id;
     const opponentId = isTeam1 ? match.team2_id : match.team1_id;
-    const opponentName = isTeam1 ? match.team2_display_name : match.team1_display_name;
+    // const opponentName = isTeam1 ? match.team2_display_name : match.team1_display_name;
 
     // 確定済み試合の場合はスキップ（手動対応が必要）
     if (match.final_match_id) {
@@ -272,7 +272,7 @@ async function logWithdrawalProcess(
  */
 async function logWithdrawalError(
   tournamentTeamId: number,
-  error: any
+  error: Error | unknown
 ): Promise<void> {
   const errorMessage = `辞退承認後処理エラー: ${error.message || 'Unknown error'}`;
   

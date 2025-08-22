@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { resolveNotification } from '@/lib/notifications';
 
 interface RouteParams {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // 通知を解決済みにする
@@ -22,13 +22,8 @@ export async function POST(
       );
     }
 
-    // Next.js 15対応：paramsがPromiseかどうかチェック
-    let resolvedParams;
-    if (params && typeof params.then === 'function') {
-      resolvedParams = await params;
-    } else {
-      resolvedParams = params as { id: string };
-    }
+    // Next.js 15対応：paramsは常にPromise
+    const resolvedParams = await params;
 
     const notificationId = parseInt(resolvedParams.id);
     if (isNaN(notificationId)) {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Info, XCircle, CheckCircle, X } from 'lucide-react';
+import { AlertTriangle, Info, XCircle, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface TournamentNotification {
@@ -14,7 +14,7 @@ interface TournamentNotification {
   message: string;
   severity: 'info' | 'warning' | 'error';
   is_resolved: boolean;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   created_at: string;
   tournament_name: string;
 }

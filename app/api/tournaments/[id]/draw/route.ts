@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 認証チェック（管理者のみ）
@@ -17,7 +17,8 @@ export async function POST(
       );
     }
 
-    const tournamentId = parseInt(params.id);
+    const resolvedParams = await params;
+    const tournamentId = parseInt(resolvedParams.id);
     const body = await request.json();
     const { blocks } = body;
 

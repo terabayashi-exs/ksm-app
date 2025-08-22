@@ -271,23 +271,6 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     }
   };
 
-  // 試合コードから色を取得
-  const getMatchCodeColor = (matchCode: string): string => {
-    if (['T1', 'T2', 'T3', 'T4'].includes(matchCode)) return 'bg-blue-100 text-blue-800 border-blue-200'; // 準々決勝
-    if (['T5', 'T6'].includes(matchCode)) return 'bg-purple-100 text-purple-800 border-purple-200'; // 準決勝
-    if (matchCode === 'T7') return 'bg-yellow-100 text-yellow-800 border-yellow-200'; // 3位決定戦
-    if (matchCode === 'T8') return 'bg-red-100 text-red-800 border-red-200'; // 決勝
-    return 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
-  // 勝者判定
-  const getWinner = (match: FinalMatch): 'team1' | 'team2' | 'draw' | null => {
-    if (!match.is_confirmed) return null;
-    if (match.is_draw) return 'draw';
-    if (match.winner_team_id === match.team1_id) return 'team1';
-    if (match.winner_team_id === match.team2_id) return 'team2';
-    return null;
-  };
 
   // 順位の変更（予選ブロック）
   const updateTeamPosition = (blockIndex: number, teamIndex: number, newPosition: number) => {

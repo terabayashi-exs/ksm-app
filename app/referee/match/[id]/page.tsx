@@ -129,8 +129,8 @@ export default function RefereeMatchPage() {
           // APIからスコアデータがある場合はそれを使用
           if (result.data.team1_scores && result.data.team2_scores) {
             currentScores = {
-              team1: result.data.team1_scores.map((score: any) => Number(score) || 0),
-              team2: result.data.team2_scores.map((score: any) => Number(score) || 0)
+              team1: (result.data.team1_scores as (string | number)[]).map((score) => Number(score) || 0),
+              team2: (result.data.team2_scores as (string | number)[]).map((score) => Number(score) || 0)
             };
           } else {
             // スコアデータがない場合は0で初期化
@@ -173,8 +173,8 @@ export default function RefereeMatchPage() {
           // スコアを更新（確実に数値として処理）
           if (result.data.team1_scores && result.data.team2_scores) {
             setScores({
-              team1: result.data.team1_scores.map((score: any) => Number(score) || 0),
-              team2: result.data.team2_scores.map((score: any) => Number(score) || 0)
+              team1: (result.data.team1_scores as (string | number)[]).map((score) => Number(score) || 0),
+              team2: (result.data.team2_scores as (string | number)[]).map((score) => Number(score) || 0)
             });
           }
           
@@ -202,10 +202,10 @@ export default function RefereeMatchPage() {
     if (match) {
       loadCurrentMatchStatus();
     }
-  }, [matchId, match?.match_id]);
+  }, [matchId, match]);
 
   // 試合状態更新
-  const updateMatchStatus = async (action: string, additionalData?: any) => {
+  const updateMatchStatus = async (action: string, additionalData?: Record<string, unknown>) => {
     if (!match) return;
 
     setUpdating(true);
@@ -419,14 +419,6 @@ export default function RefereeMatchPage() {
     }
   };
 
-  // 結果編集可能かどうかを判断する関数
-  const canEditResults = () => {
-    if (!match) return false;
-    // 確定済み試合は編集不可
-    if (isConfirmed) return false;
-    // 試合中または完了済みなら編集可能
-    return match.match_status === 'ongoing' || match.match_status === 'completed';
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">

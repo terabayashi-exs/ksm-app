@@ -125,8 +125,8 @@ export async function updateTournamentProgression(
       return;
     }
     
-    const winnerTeamName = await getTeamDisplayName(winnerId, tournamentId);
-    const loserTeamName = await getTeamDisplayName(loserId, tournamentId);
+    const winnerTeamName = await getTeamDisplayName(winnerId);
+    const loserTeamName = await getTeamDisplayName(loserId);
     
     console.log(`[TOURNAMENT_PROGRESSION] Winner team name: ${winnerTeamName}, Loser team name: ${loserTeamName}`);
     
@@ -251,7 +251,7 @@ async function updateMatchTeamName(
 /**
  * チームIDから表示用チーム名を取得
  */
-async function getTeamDisplayName(teamId: string | null, tournamentId: number): Promise<string | null> {
+async function getTeamDisplayName(teamId: string | null): Promise<string | null> {
   if (!teamId) return null;
   
   try {

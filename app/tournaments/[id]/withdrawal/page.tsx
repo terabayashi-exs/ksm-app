@@ -10,7 +10,7 @@ import BackButton from '@/components/ui/back-button';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 async function getTournamentInfo(tournamentId: number, userEmail: string) {
@@ -43,7 +43,8 @@ export default async function WithdrawalPage({ params }: PageProps) {
     redirect('/auth/login');
   }
 
-  const tournamentId = parseInt(params.id);
+  const resolvedParams = await params;
+  const tournamentId = parseInt(resolvedParams.id);
   
   if (isNaN(tournamentId)) {
     redirect('/team');

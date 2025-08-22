@@ -9,7 +9,7 @@ import { sendWithdrawalReceivedNotification } from '@/lib/withdrawal-notificatio
 // 辞退申請の送信
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -17,7 +17,8 @@ export async function POST(
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const tournamentId = parseInt(params.id);
+    const resolvedParams = await params;
+    const tournamentId = parseInt(resolvedParams.id);
     const { tournament_team_id, withdrawal_reason } = await request.json();
 
     // 入力値検証
@@ -131,7 +132,7 @@ export async function POST(
 // 辞退申請状況の取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -139,7 +140,8 @@ export async function GET(
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const tournamentId = parseInt(params.id);
+    const resolvedParams = await params;
+    const tournamentId = parseInt(resolvedParams.id);
 
     // ユーザーのチームIDを取得
     const teamCheck = await db.execute(`

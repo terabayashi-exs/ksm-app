@@ -538,9 +538,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
     // 他のブロックとの重複チェック
     const otherBlockAssignments = Object.entries(blockCourtAssignments)
-      .filter(([block, _]) => block !== actualBlockName);
+      .filter(([block]) => block !== actualBlockName);
     
-    const conflictBlock = otherBlockAssignments.find(([_, court]) => court === newCourtNumber);
+    const conflictBlock = otherBlockAssignments.find(([, court]) => court === newCourtNumber);
     if (conflictBlock) {
       if (!confirm(`コート${newCourtNumber}は既に予選${conflictBlock[0]}ブロックで使用されています。変更を続行しますか？`)) {
         return;
