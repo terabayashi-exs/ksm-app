@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // 試合情報を取得
+    // 試合情報を取得（実際のチーム名も含む）
     const result = await db.execute(`
       SELECT 
         ml.match_id,
@@ -30,9 +30,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
         ml.court_number,
         ml.start_time,
         ml.tournament_date,
-        mb.tournament_id
+        mb.tournament_id,
+        -- 実際のチーム名と略称を取得
+        t1.team_name as team1_real_name,
+        t2.team_name as team2_real_name,
+        mt1.team_omission as team1_omission,
+        mt2.team_omission as team2_omission
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
+      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+      LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
+      LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
       WHERE ml.match_id = ?
     `, [matchId]);
 
@@ -103,8 +112,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       data: {
         match_id: matchId,
         match_code: match.match_code,
-        team1_name: match.team1_display_name,
-        team2_name: match.team2_display_name,
+        team1_name: match.team1_real_name || match.team1_display_name, // 実チーム名を優先
+        team2_name: match.team2_real_name || match.team2_display_name, // 実チーム名を優先
         court_number: match.court_number,
         scheduled_time: match.start_time,
         qr_url: qrUrl,

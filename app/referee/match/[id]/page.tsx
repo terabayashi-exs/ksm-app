@@ -600,9 +600,14 @@ export default function RefereeMatchPage() {
                   <div key={periodIndex} className="border rounded-lg p-4">
                     <Label className="block text-sm font-medium mb-3">
                       第{periodIndex + 1}ピリオド
-                      {periodIndex + 1 === match.current_period && (
+                      {periodIndex + 1 === match.current_period && match.match_status === 'ongoing' && !isConfirmed && (
                         <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                           進行中
+                        </span>
+                      )}
+                      {periodIndex + 1 === match.current_period && match.match_status === 'completed' && (
+                        <span className="ml-2 text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                          終了
                         </span>
                       )}
                     </Label>
