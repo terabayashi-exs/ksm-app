@@ -134,34 +134,34 @@ export default function TournamentDashboardList() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Button asChild size="sm" variant="outline" className="flex-1">
+        <Button asChild size="sm" variant="outline" className="flex-1 hover:border-blue-300 hover:bg-blue-50">
           <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
             詳細
           </Link>
         </Button>
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
           <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
             大会編集
           </Link>
         </Button>
         {type === 'recruiting' && (
           <>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                 チーム登録
               </Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
                 組合せ作成・編集
               </Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                 試合管理
               </Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                 手動順位設定
               </Link>
@@ -238,7 +238,7 @@ export default function TournamentDashboardList() {
             <p className="text-gray-600 mb-6">
               新しい大会を作成して参加チームの募集を開始しましょう
             </p>
-            <Button asChild>
+            <Button asChild className="hover:bg-blue-600">
               <Link href="/admin/tournaments/create">
                 新規大会作成
               </Link>

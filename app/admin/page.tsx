@@ -58,10 +58,10 @@ export default async function AdminDashboard() {
                 大会の作成、編集、管理を行います
               </p>
               <div className="space-y-2">
-                <Button asChild className="w-full">
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/tournaments">大会一覧</Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full">
+                <Button asChild variant="outline" className="w-full hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/tournaments/create">新規大会作成</Link>
                 </Button>
               </div>
@@ -78,67 +78,36 @@ export default async function AdminDashboard() {
                 参加チームの登録、管理を行います
               </p>
               <div className="space-y-2">
-                <Button asChild className="w-full">
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/teams">チーム一覧</Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full">
+                <Button asChild variant="outline" className="w-full hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/teams/register">チーム登録</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* 試合管理 */}
+          {/* マスタ管理 */}
           <Card>
             <CardHeader>
-              <CardTitle>試合管理</CardTitle>
+              <CardTitle>マスタ管理</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                試合の進行状況管理とリアルタイム監視を行います
-              </p>
-              <p className="text-sm text-gray-500 mb-4">
-                各大会の試合管理は下記の「開催中の大会」から「試合管理」ボタンでアクセスできます
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* 結果管理 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>結果管理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                試合結果の入力、確定を行います
+                システムの基本データを管理します
               </p>
               <div className="space-y-2">
-                <Button asChild className="w-full">
-                  <Link href="/admin/results">結果一覧</Link>
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
+                  <Link href="/admin/venues">会場マスタ</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
+                  <Link href="/admin/administrators">利用者マスタ</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* 公開設定 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>公開設定</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                一般向け公開ページの設定を行います
-              </p>
-              <div className="space-y-2">
-                <Button asChild className="w-full">
-                  <Link href="/public" target="_blank">公開ページ確認</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/admin/settings">公開設定</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* 辞退申請管理 */}
           <Card>
@@ -150,32 +119,13 @@ export default async function AdminDashboard() {
                 チームからの大会辞退申請を確認・承認・却下します
               </p>
               <div className="space-y-2">
-                <Button asChild className="w-full">
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/withdrawal-requests">辞退申請一覧</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* システム管理 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>システム管理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                システム全体の設定、管理を行います
-              </p>
-              <div className="space-y-2">
-                <Button asChild className="w-full">
-                  <Link href="/admin/system">システム設定</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/admin/backup">データバックアップ</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

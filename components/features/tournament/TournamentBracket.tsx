@@ -162,7 +162,6 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [tournamentName, setTournamentName] = useState<string>('');
   const bracketRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -335,115 +334,9 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, [matches]);
 
-  // PDFダウンロード機能（oklch対応シンプルキャプチャ方式）
-  const handleDownloadPdf = async () => {
-    if (!bracketRef.current) return;
-    
-    setDownloadingPdf(true);
-    try {
-      // 動的インポートでjsPDFとhtml2canvasを読み込み
-      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas')
-      ]);
-
-      // oklch色を一時的にRGB色に変換する関数
-      const applyTempColorFix = () => {
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = `
-          .bg-blue-100 { background-color: #dbeafe !important; }
-          .text-blue-800 { color: #1e40af !important; }
-          .bg-purple-100 { background-color: #e9d5ff !important; }
-          .text-purple-800 { color: #6b21a8 !important; }
-          .bg-yellow-100 { background-color: #fef3c7 !important; }
-          .text-yellow-800 { color: #854d0e !important; }
-          .bg-red-100 { background-color: #fee2e2 !important; }
-          .text-red-800 { color: #991b1b !important; }
-          .bg-gray-100 { background-color: #f3f4f6 !important; }
-          .text-gray-800 { color: #1f2937 !important; }
-          .bg-green-50 { background-color: #f0fdf4 !important; }
-          .text-green-600 { color: #16a34a !important; }
-          .border-green-300 { border-color: #86efac !important; }
-          .bg-red-50 { background-color: #fef2f2 !important; }
-          .text-red-600 { color: #dc2626 !important; }
-          .border-red-300 { border-color: #fca5a5 !important; }
-          .bg-blue-50 { background-color: #eff6ff !important; }
-          .text-blue-600 { color: #2563eb !important; }
-          .border-blue-300 { border-color: #93c5fd !important; }
-          .bg-orange-50 { background-color: #fff7ed !important; }
-          .text-orange-600 { color: #ea580c !important; }
-          .border-orange-300 { border-color: #fdba74 !important; }
-          .bg-purple-50 { background-color: #faf5ff !important; }
-          .text-purple-600 { color: #9333ea !important; }
-          .border-purple-300 { border-color: #c4b5fd !important; }
-          .bg-gray-50 { background-color: #f9fafb !important; }
-          .text-gray-700 { color: #374151 !important; }
-          .text-gray-500 { color: #6b7280 !important; }
-          .border-gray-300 { border-color: #d1d5db !important; }
-          .text-gray-600 { color: #4b5563 !important; }
-          .bg-white { background-color: #ffffff !important; }
-        `;
-        document.head.appendChild(styleSheet);
-        return styleSheet;
-      };
-
-      // 一時的にoklch色をRGB色に変換
-      const tempStyleSheet = applyTempColorFix();
-
-      // 現在表示されているトーナメント表をキャプチャ
-      const canvas = await html2canvas(bracketRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false
-      });
-
-      // 一時的なスタイルシートを削除
-      document.head.removeChild(tempStyleSheet);
-
-      // A4横向きのPDFを作成
-      const pdf = new jsPDF('landscape', 'mm', 'a4');
-      const pageWidth = 297;
-      const pageHeight = 210;
-      const margin = 15;
-      
-      // キャンバスのサイズを取得
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      
-      // PDF内での画像サイズを計算（余白を考慮）
-      const maxWidth = pageWidth - (margin * 2);
-      const maxHeight = pageHeight - (margin * 2);
-      
-      // アスペクト比を維持しながらサイズ調整
-      const aspectRatio = canvasWidth / canvasHeight;
-      let imgWidth = maxWidth;
-      let imgHeight = imgWidth / aspectRatio;
-      
-      if (imgHeight > maxHeight) {
-        imgHeight = maxHeight;
-        imgWidth = imgHeight * aspectRatio;
-      }
-      
-      // 中央に配置するための計算
-      const x = (pageWidth - imgWidth) / 2;
-      const y = (pageHeight - imgHeight) / 2;
-      
-      // キャンバスをPDFに追加
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-
-      // PDFをダウンロード
-      const fileName = `トーナメント表_${new Date().toISOString().slice(0, 10)}.pdf`;
-      pdf.save(fileName);
-
-    } catch (error) {
-      console.error('PDFダウンロードエラー:', error);
-      alert('PDFのダウンロードに失敗しました。再度お試しください。');
-    } finally {
-      setDownloadingPdf(false);
-    }
+  // 印刷機能（PDF保存可）
+  const handlePrint = () => {
+    window.print();
   };
 
   // トーナメント構造を整理（execution_group基準）
@@ -561,28 +454,113 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   const bracket = organizeBracket(matches);
 
   return (
-    <div className="space-y-6">
-      {/* ヘッダー */}
-      <div className="text-center">
-        <div className="flex items-center justify-center mb-2">
-          <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-          <h2 className="text-2xl font-bold text-gray-900">決勝トーナメント</h2>
-          <Button
-            onClick={handleDownloadPdf}
-            disabled={downloadingPdf}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 ml-4"
-          >
-            <Download className="h-4 w-4" />
-            {downloadingPdf ? 'PDF生成中...' : 'PDFダウンロード'}
-          </Button>
-        </div>
-        <p className="text-gray-600">各ブロック上位2チームによるトーナメント表</p>
-      </div>
+    <>
+      {/* 印刷用スタイル */}
+      <style jsx>{`
+        @page { 
+          size: A4 landscape; 
+          margin: 4mm; 
+        }
+        
+        @media print {
+          .no-print { 
+            display: none !important; 
+          }
+          
+          body { 
+            background: white !important; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            font-size: 12px !important;
+          }
+          
+          /* トーナメント表全体の印刷最適化 */
+          .print-container { 
+            overflow: visible !important; 
+            box-shadow: none !important; 
+            border: none !important;
+            transform: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 8px !important;
+          }
+          
+          /* 文字の明瞭性向上 */
+          * { 
+            line-height: 1.2 !important; 
+            font-weight: 500 !important;
+          }
+          
+          /* 試合カードの最適化 */
+          [data-match] { 
+            break-inside: avoid !important; 
+            page-break-inside: avoid !important; 
+            border: 1px solid #666 !important;
+            background: white !important;
+          }
+          
+          /* チーム名とスコアの視認性向上 */
+          [data-match] .text-sm {
+            font-size: 10px !important;
+            font-weight: 600 !important;
+          }
+          
+          /* 試合コードバッジの最適化 */
+          [data-match] .text-xs {
+            font-size: 9px !important;
+            font-weight: 700 !important;
+          }
+          
+          /* SVG接続線の最適化 */
+          svg path {
+            stroke: #333 !important;
+            stroke-width: 2px !important;
+          }
+          
+          /* 位置精度向上 */
+          .absolute { 
+            transform: translateZ(0); 
+          }
+          
+          /* グループヘッダーの最適化 */
+          h3 {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            margin-bottom: 6px !important;
+          }
+          
+          /* コンパクト配置のための余白調整 */
+          .space-y-6 > * + * {
+            margin-top: 18px !important;
+          }
+          
+          .gap-10 {
+            gap: 32px !important;
+          }
+        }
+      `}</style>
 
-      {/* トーナメントブラケット */}
-      <div className="relative bg-white border border-gray-300 rounded-lg p-6 shadow-sm overflow-x-auto">
+      <div className="space-y-6">
+        {/* ヘッダー */}
+        <div className="text-center no-print">
+          <div className="flex items-center justify-center mb-2">
+            <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
+            <h2 className="text-2xl font-bold text-gray-900">決勝トーナメント</h2>
+            <Button
+              onClick={handlePrint}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 ml-4"
+            >
+              <Download className="h-4 w-4" />
+              PDF出力（印刷）
+            </Button>
+          </div>
+          <p className="text-gray-600">各ブロック上位2チームによるトーナメント表</p>
+        </div>
+
+        {/* トーナメントブラケット */}
+        <div className="print-container relative bg-white border border-gray-300 rounded-lg p-6 shadow-sm overflow-x-auto">
         <div 
           ref={bracketRef}
           className="relative grid gap-10 min-w-fit"
@@ -740,25 +718,47 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
         </div>
       </div>
 
-      {/* 注意事項 */}
-      <Card className="bg-blue-50 border-blue-200 mt-8">
-        <CardContent className="pt-4">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <div className="h-2 w-2 bg-blue-400 rounded-full"></div>
+      {/* 操作ガイドと注意事項 */}
+      <div className="grid md:grid-cols-2 gap-6 mt-8">
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="pt-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+              </div>
+              <div className="text-sm text-green-700">
+                <p className="font-medium mb-1">PDF出力方法</p>
+                <ul className="list-disc list-inside space-y-1 text-green-600">
+                  <li>「PDF出力（印刷）」ボタンをクリック</li>
+                  <li>印刷ダイアログで「送信先」を「PDFに保存」を選択</li>
+                  <li>用紙サイズを「A4」、向きを「横」に設定</li>
+                  <li>「詳細設定」で「背景のグラフィック」をオンにする</li>
+                </ul>
+              </div>
             </div>
-            <div className="text-sm text-blue-700">
-              <p className="font-medium mb-1">トーナメント表の見方</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-600">
-                <li>実線は勝利チームの勝ち上がり、点線は敗者の進出先（3位決定戦）</li>
-                <li>太字は勝利チーム、数字は得点を表示</li>
-                <li>［T1］などは試合コードを表示</li>
-                <li>各ブロック上位2チームが決勝トーナメントに進出</li>
-              </ul>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="h-2 w-2 bg-blue-400 rounded-full"></div>
+              </div>
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-1">トーナメント表の見方</p>
+                <ul className="list-disc list-inside space-y-1 text-blue-600">
+                  <li>実線は勝利チームの勝ち上がり、点線は敗者の進出先（3位決定戦）</li>
+                  <li>太字は勝利チーム、数字は得点を表示</li>
+                  <li>［T1］などは試合コードを表示</li>
+                  <li>各ブロック上位2チームが決勝トーナメントに進出</li>
+                </ul>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+      </div>
+    </>
   );
 }
