@@ -119,7 +119,7 @@ function TournamentOverview({ tournament }: { tournament: Tournament }) {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">第{dayNumber}日</p>
-                    <p className="font-medium">{formatDate(date)}</p>
+                    <p className="font-medium">{formatDate(date as string)}</p>
                   </div>
                 </div>
               ))}

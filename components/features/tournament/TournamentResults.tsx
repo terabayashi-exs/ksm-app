@@ -435,7 +435,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                     const matchData = block.match_matrix[team.team_id]?.[opponent.team_id];
                     const result = matchData?.result || null;
                     const score = matchData?.score || '-';
-                    const backgroundColor = getResultBackgroundColor(result, score);
+                    const backgroundColor = getResultBackgroundColor(result);
                     
                     return `
                       <td style="border: 1px solid #D1D5DB; padding: 10px; background-color: ${backgroundColor}; text-align: center; font-weight: bold; font-size: 14px; width: ${cellSizes.matchResult};">

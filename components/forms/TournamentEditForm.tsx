@@ -157,7 +157,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           result.data
             .filter((match: {court_number: number | null}) => match.court_number !== null)
             .map((match: {court_number: number}) => match.court_number)
-        )].sort((a: number, b: number) => a - b);
+        )].sort((a, b) => (a as number) - (b as number));
         
         if (usedCourts.length > 0) {
           const courtsString = usedCourts.join(',');
@@ -168,7 +168,6 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       console.error('使用コート情報取得エラー:', error);
       // エラーの場合はデフォルト値を使用
       const defaultCourts = Array.from({length: tournament.court_count}, (_, i) => i + 1).join(',');
-      setInitialAvailableCourts(defaultCourts);
       form.setValue('available_courts', defaultCourts);
     }
   }, [tournament.tournament_id, tournament.court_count, form]);
@@ -622,7 +621,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
               settings={{
                 courtCount: form.watch('court_count') ?? 4,
                 availableCourts: form.watch('available_courts') 
-                  ? form.watch('available_courts').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+                  ? form.watch('available_courts')?.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
                   : undefined,
                 matchDurationMinutes: form.watch('match_duration_minutes') ?? 15,
                 breakDurationMinutes: form.watch('break_duration_minutes') ?? 5,

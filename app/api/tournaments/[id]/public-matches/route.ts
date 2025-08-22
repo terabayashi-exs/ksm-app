@@ -18,6 +18,8 @@ export async function GET(
   console.log('API called with params:', params);
   console.log('Params type:', typeof params);
   
+  let tournamentId: number = 0; // Initialize with default value
+  
   try {
     // Next.js 15対応：paramsは常にPromise
     const resolvedParams = await params;
@@ -35,7 +37,7 @@ export async function GET(
     const tournamentIdStr = resolvedParams.id;
     console.log('Tournament ID string:', tournamentIdStr);
     
-    const tournamentId = parseInt(tournamentIdStr);
+    tournamentId = parseInt(tournamentIdStr);
     console.log('Parsed tournament ID:', tournamentId);
 
     if (isNaN(tournamentId) || !tournamentIdStr) {

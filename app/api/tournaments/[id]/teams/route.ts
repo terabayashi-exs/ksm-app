@@ -6,9 +6,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let tournamentId: number = 0; // Initialize with default value
+  
   try {
     const resolvedParams = await params;
-    const tournamentId = parseInt(resolvedParams.id, 10);
+    tournamentId = parseInt(resolvedParams.id, 10);
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(

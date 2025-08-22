@@ -135,7 +135,7 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
 
     return {
       tournament_id: tournamentId,
-      tournament_name,
+      tournament_name: tournamentName,
       teams,
       total_teams: teams.length,
       total_players: totalPlayers

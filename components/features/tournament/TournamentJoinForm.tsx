@@ -45,7 +45,7 @@ const playerSchema = z.object({
   player_id: z.number().optional(),
   player_name: z.string().min(1, '選手名は必須です').max(50, '選手名は50文字以内で入力してください'),
   jersey_number: z.number().min(1, '背番号は1以上で入力してください').max(99, '背番号は99以下で入力してください').optional(),
-  is_participating: z.boolean().default(true),
+  is_participating: z.boolean(),
   is_selected: z.boolean().optional(), // UI用：既存選手の選択状態
 });
 
@@ -154,7 +154,6 @@ export default function TournamentJoinForm({
       jersey_number: undefined,
       is_participating: true
     });
-    setShowAddPlayer(true);
   };
 
   // 新規選手を削除

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: 'バリデーションエラー',
-          details: validationResult.error.errors.map(err => ({
+          details: validationResult.error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message
           }))

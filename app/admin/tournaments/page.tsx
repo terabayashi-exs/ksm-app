@@ -99,7 +99,7 @@ export default function AdminTournamentsList() {
 
   // 検索条件クリア
   const handleClearSearch = () => {
-    const clearedParams = {
+    const clearedParams: SearchParams = {
       year: '',
       month: '',
       day: '',
@@ -206,7 +206,7 @@ export default function AdminTournamentsList() {
               </div>
               <div>
                 <Label htmlFor="status">ステータス</Label>
-                <Select value={displayStatus} onValueChange={(value) => setSearchParams({ ...searchParams, status: value === 'all' ? '' : value })}>
+                <Select value={displayStatus} onValueChange={(value) => setSearchParams({ ...searchParams, status: value === 'all' ? '' : value as TournamentStatus })}>
                   <SelectTrigger>
                     <SelectValue placeholder="全て" />
                   </SelectTrigger>

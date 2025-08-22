@@ -89,13 +89,13 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
           tournament_team_id: teamRow.tournament_team_id as number,
           team_id: teamRow.team_id as string,
           team_name: teamRow.team_name as string,
-          team_omission: teamRow.team_omission || undefined,
-          display_name: teamRow.team_omission || teamRow.team_name,
-          assigned_block: teamRow.assigned_block || undefined,
-          block_position: teamRow.block_position || undefined,
+          team_omission: teamRow.team_omission ? String(teamRow.team_omission) : undefined,
+          display_name: (teamRow.team_omission ? String(teamRow.team_omission) : String(teamRow.team_name)),
+          assigned_block: teamRow.assigned_block ? String(teamRow.assigned_block) : undefined,
+          block_position: teamRow.block_position ? Number(teamRow.block_position) : undefined,
           contact_person: teamRow.contact_person as string,
           contact_email: teamRow.contact_email as string,
-          contact_phone: teamRow.contact_phone || undefined,
+          contact_phone: teamRow.contact_phone ? String(teamRow.contact_phone) : undefined,
           player_count: playerCount
         });
       }

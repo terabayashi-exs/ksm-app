@@ -64,7 +64,7 @@ export default async function WithdrawalPage({ params }: PageProps) {
           <BackButton />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">大会エントリー辞退</h1>
-            <p className="text-gray-600 mt-1">{tournamentInfo.tournament_name}</p>
+            <p className="text-gray-600 mt-1">{String(tournamentInfo.tournament_name)}</p>
           </div>
         </div>
 

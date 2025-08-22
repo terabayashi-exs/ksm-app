@@ -666,7 +666,7 @@ export default function TournamentCreateForm() {
                 settings={{
                   courtCount: form.watch('court_count') ?? 4,
                   availableCourts: form.watch('available_courts') 
-                    ? form.watch('available_courts').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+                    ? form.watch('available_courts')?.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
                     : undefined,
                   matchDurationMinutes: form.watch('match_duration_minutes') ?? 15,
                   breakDurationMinutes: form.watch('break_duration_minutes') ?? 5,

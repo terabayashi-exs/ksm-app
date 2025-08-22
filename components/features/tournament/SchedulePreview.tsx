@@ -650,7 +650,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       ...resetSchedule,
       timeConflicts,
       feasible: timeConflicts.length === 0 && courtConflicts.length === 0,
-      warnings: resetSchedule.warnings.filter(w => 
+      warnings: resetSchedule.warnings.filter((w: string) => 
         !w.includes('試合時間が重複') && !w.includes('コート重複')
       )
     };

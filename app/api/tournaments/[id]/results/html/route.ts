@@ -37,7 +37,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const tournament = tournamentResult.rows[0];
+    const tournamentRow = tournamentResult.rows[0];
+    const tournament = {
+      tournament_name: tournamentRow.tournament_name as string,
+      venue_name: tournamentRow.venue_name as string | undefined,
+      tournament_dates: tournamentRow.tournament_dates as string | undefined
+    };
     
     // 戦績表データを取得
     let blockResults;
@@ -62,8 +67,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
+    // データ構造をHTML生成関数の期待する形式に変換
+    const htmlBlockData = preliminaryBlocks.map(block => ({
+      block_name: block.block_name,
+      phase: block.phase,
+      display_round_name: block.display_round_name,
+      results: block.match_matrix as { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } },
+      teams: block.teams // Keep the full team objects instead of just IDs
+    }));
+
     // PDF用HTMLを生成（PDF APIと同じ関数を流用）
-    const htmlContent = generateResultsHTML(tournament, preliminaryBlocks);
+    const htmlContent = generateResultsHTML(tournament, htmlBlockData);
 
     return new NextResponse(htmlContent, {
       headers: {
@@ -81,7 +95,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 // PDF APIから同じ関数を再利用
-function generateResultsHTML(tournament: { tournament_name: string; venue_name?: string; tournament_dates?: string }, blockResults: { block_name: string; phase: string; results: { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } }; teams: string[] }[]): string {
+function generateResultsHTML(tournament: { tournament_name: string; venue_name?: string; tournament_dates?: string }, blockResults: { block_name: string; phase: string; display_round_name: string; results: { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } }; teams: { team_id: string; team_name: string; team_omission?: string; }[] }[]): string {
   const tournamentName = String(tournament.tournament_name);
   const venueName = String(tournament.venue_name || '');
   
@@ -335,10 +349,10 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
                       return '<td class="match-result same-team">-</td>';
                     }
                     
-                    const matchData = block.match_matrix[team.team_id]?.[opponent.team_id];
+                    const matchData = block.results[team.team_id]?.[opponent.team_id];
                     const result = matchData?.result || null;
                     const score = matchData?.score || '-';
-                    const backgroundColor = getResultColor(result, score);
+                    const backgroundColor = getResultColor(result);
                     const formattedScore = formatResult(result, score);
                     
                     return `

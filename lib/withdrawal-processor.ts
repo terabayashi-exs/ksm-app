@@ -99,10 +99,14 @@ async function processMatchAdjustments(withdrawalInfo: WithdrawalInfo): Promise<
     // 試合ステータスによる処理分岐
     if (match.match_status === 'scheduled') {
       // 未開始試合: 不戦勝として処理
-      await processWalkoverMatch(matchId, opponentId, withdrawalInfo, match.match_code);
+      if (opponentId) {
+        await processWalkoverMatch(matchId, String(opponentId), withdrawalInfo, String(match.match_code));
+      } else {
+        console.log(`⚠️  試合 ${match.match_code} に対戦相手がいないため、処理をスキップします`);
+      }
     } else if (match.match_status === 'ongoing') {
       // 進行中試合: 中止として処理（手動確認が必要）
-      await processCancelledMatch(matchId, withdrawalInfo, match.match_code);
+      await processCancelledMatch(matchId, withdrawalInfo, String(match.match_code));
     } else if (match.match_status === 'completed') {
       // 完了済み試合: 結果を維持（確定処理は手動）
       console.log(`📋 試合 ${match.match_code} は完了済みです。確定処理は手動で行ってください`);
@@ -274,7 +278,7 @@ async function logWithdrawalError(
   tournamentTeamId: number,
   error: Error | unknown
 ): Promise<void> {
-  const errorMessage = `辞退承認後処理エラー: ${error.message || 'Unknown error'}`;
+  const errorMessage = `辞退承認後処理エラー: ${error instanceof Error ? error.message : String(error)}`;
   
   console.log(`❌ エラーログ記録: ${errorMessage}`);
   

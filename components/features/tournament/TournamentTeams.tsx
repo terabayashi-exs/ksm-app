@@ -290,8 +290,8 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {teamPlayers[team.team_id]?.map((player) => (
-                                      <tr key={player.tournament_player_id} className="border-b">
+                                    {teamPlayers[team.team_id]?.map((player, index) => (
+                                      <tr key={`${team.team_id}-${index}`} className="border-b">
                                         <td className="py-2 px-3">
                                           {player.jersey_number ? (
                                             <span className="flex items-center">

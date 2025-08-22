@@ -60,13 +60,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // 実際の試合日程を使用
     let matchDate;
     try {
-      if (match.tournament_date && match.tournament_date.startsWith('{')) {
+      const tournamentDateStr = match.tournament_date ? String(match.tournament_date) : '';
+      
+      if (tournamentDateStr && tournamentDateStr.startsWith('{')) {
         // JSON形式の場合
-        const dateObj = JSON.parse(match.tournament_date);
+        const dateObj = JSON.parse(tournamentDateStr);
         matchDate = dateObj[1] || dateObj['1'] || new Date().toISOString().split('T')[0];
-      } else if (match.tournament_date && match.tournament_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      } else if (tournamentDateStr && tournamentDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
         // YYYY-MM-DD形式の場合
-        matchDate = match.tournament_date;
+        matchDate = tournamentDateStr;
       } else {
         // デフォルトは今日の日付
         matchDate = new Date().toISOString().split('T')[0];

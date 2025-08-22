@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       match_status: String(row.match_status),
       has_result: Boolean(row.has_result || false),
       phase: 'unknown',
-      block_name: row.match_code ? row.match_code.match(/([A-Z]+)/)?.[1] || null : null,
+      block_name: row.match_code ? String(row.match_code).match(/([A-Z]+)/)?.[1] || null : null,
       court_number: row.court_number ? Number(row.court_number) : null,
       start_time: row.start_time ? String(row.start_time) : null,
       end_time: null, // 基本データのみのため

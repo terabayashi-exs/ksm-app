@@ -168,7 +168,7 @@ export default function TournamentDashboardList() {
             </Button>
           </>
         )}
-        {(type === 'ongoing' || type === 'before_event') && (
+        {type === 'ongoing' && (
           <Button asChild size="sm" variant="default">
             <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
               🔴 試合管理（リアルタイム）

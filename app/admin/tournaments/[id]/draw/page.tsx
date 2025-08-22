@@ -36,6 +36,8 @@ interface Match {
   round_name: string;
   team1_display_name: string;
   team2_display_name: string;
+  team1_name?: string;
+  team2_name?: string;
   team1_id?: string;
   team2_id?: string;
   tournament_date: string;
@@ -170,7 +172,16 @@ export default function TournamentDrawPage() {
 
         // 振分け済みチームを各ブロックに配置
         let hasAssignedTeams = false;
-        assignedTeams.forEach((team: { team_id: string; team_name: string; assigned_block: string; block_position: string }) => {
+        assignedTeams.forEach((team: { 
+          team_id: string; 
+          team_name: string; 
+          team_omission?: string;
+          contact_person?: string;
+          contact_email?: string;
+          player_count?: number;
+          assigned_block: string; 
+          block_position: string 
+        }) => {
           if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block)) {
             const blockPosition = parseInt(team.block_position);
             const arrayIndex = blockPosition - 1;
@@ -180,9 +191,9 @@ export default function TournamentDrawPage() {
               const formattedTeam: Team = {
                 team_id: team.team_id,
                 team_name: team.team_name,
-                team_omission: team.team_omission,
-                contact_person: team.contact_person,
-                contact_email: team.contact_email,
+                team_omission: team.team_omission || '',
+                contact_person: team.contact_person || '',
+                contact_email: team.contact_email || '',
                 registered_players_count: team.player_count || 0
               };
               
@@ -656,12 +667,12 @@ export default function TournamentDrawPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
-                              <span className={match.team1_name !== match.team1_display_name ? 'font-medium text-blue-900' : 'text-gray-500'}>
-                                {match.team1_name}
+                              <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-gray-500'}>
+                                {match.team1_name || match.team1_display_name}
                               </span>
                               <span className="text-gray-400 font-bold">vs</span>
-                              <span className={match.team2_name !== match.team2_display_name ? 'font-medium text-blue-900' : 'text-gray-500'}>
-                                {match.team2_name}
+                              <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-gray-500'}>
+                                {match.team2_name || match.team2_display_name}
                               </span>
                             </div>
                           </td>

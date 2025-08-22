@@ -62,14 +62,29 @@ export async function POST(
       }, { status: 404 });
     }
 
-    const withdrawal = withdrawalCheck.rows[0];
+    const withdrawalRow = withdrawalCheck.rows[0];
 
     // 申請状態チェック
-    if (withdrawal.withdrawal_status !== 'withdrawal_requested') {
+    if (withdrawalRow.withdrawal_status !== 'withdrawal_requested') {
       return NextResponse.json({ 
         error: '申請中の辞退申請のみ処理できます' 
       }, { status: 400 });
     }
+
+    // WithdrawalInfo型に変換
+    const withdrawal = {
+      tournament_team_id: withdrawalRow.tournament_team_id as number,
+      tournament_id: withdrawalRow.tournament_id as number,
+      team_id: withdrawalRow.team_id as string,
+      team_name: withdrawalRow.team_name as string,
+      withdrawal_status: withdrawalRow.withdrawal_status as string,
+      withdrawal_reason: withdrawalRow.withdrawal_reason as string | null,
+      withdrawal_requested_at: withdrawalRow.withdrawal_requested_at as string | null,
+      tournament_name: withdrawalRow.tournament_name as string,
+      tournament_status: withdrawalRow.tournament_status as string,
+      contact_email: withdrawalRow.contact_email as string,
+      contact_person: withdrawalRow.contact_person as string
+    };
 
     // 処理実行
     const newStatus = action === 'approve' ? 'withdrawal_approved' : 'withdrawal_rejected';

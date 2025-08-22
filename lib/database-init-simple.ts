@@ -235,7 +235,7 @@ export async function initializeDatabaseSimple() {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_live_result_status ON t_matches_live(result_status)');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_matches_final_block ON t_matches_final(match_block_id)');
     } catch (indexError) {
-      console.warn('インデックス作成でエラーが発生しました（継続します）:', indexError.message);
+      console.warn('インデックス作成でエラーが発生しました（継続します）:', indexError instanceof Error ? indexError.message : String(indexError));
     }
 
     console.log('Database tables and indexes created successfully');

@@ -86,12 +86,12 @@ export async function PUT(request: NextRequest) {
     console.log('Validation result:', validationResult.success);
     
     if (!validationResult.success) {
-      console.log('Validation errors:', validationResult.error.errors);
+      console.log('Validation errors:', validationResult.error.issues);
       return NextResponse.json(
         { 
           success: false, 
           error: 'バリデーションエラー',
-          details: validationResult.error.errors.map(err => ({
+          details: validationResult.error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message
           }))

@@ -429,6 +429,11 @@ async function handleTournamentJoin(
         
         // 大会参加選手テーブルに登録 - 重複エラーをハンドリング
         try {
+          // playerId が undefined でないことを確認
+          if (!playerId) {
+            throw new Error(`Player ID is undefined for player: ${player.player_name}`);
+          }
+
           if (specificTeamIdFromData) {
             // 特定チーム編集時: 既存レコードがあれば更新、なければ挿入
             const existingPlayerCheck = await db.execute(`
@@ -491,6 +496,10 @@ async function handleTournamentJoin(
             console.log(`Player ${playerId} already registered - skipping (this is expected behavior for existing players)`);
             // 既存選手の場合は背番号のみ更新
             try {
+              if (!playerId) {
+                throw new Error(`Player ID is undefined for player: ${player.player_name}`);
+              }
+              
               await db.execute(`
                 UPDATE t_tournament_players SET
                   jersey_number = ?,

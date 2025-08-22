@@ -44,7 +44,13 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     redirect("/admin/tournaments");
   }
 
-  const tournament = tournamentResult.rows[0];
+  const tournament = {
+    tournament_id: tournamentResult.rows[0].tournament_id as number,
+    tournament_name: tournamentResult.rows[0].tournament_name as string,
+    status: tournamentResult.rows[0].status as string,
+    venue_name: tournamentResult.rows[0].venue_name as string,
+    format_name: tournamentResult.rows[0].format_name as string
+  };
 
   // ブロック情報と順位表を取得
   const blocksResult = await db.execute({

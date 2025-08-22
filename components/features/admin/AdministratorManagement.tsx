@@ -129,10 +129,10 @@ export default function AdministratorManagement() {
       
       const method = editingAdmin ? 'PUT' : 'POST';
 
-      const requestData = { ...formData };
+      const requestData: Partial<AdministratorFormData> = { ...formData };
       // 編集時でパスワードが空の場合は削除
       if (editingAdmin && !formData.password.trim()) {
-        delete requestData.password;
+        delete (requestData as { password?: string }).password;
       }
 
       const response = await fetch(url, {

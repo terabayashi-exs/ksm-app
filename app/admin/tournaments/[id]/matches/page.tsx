@@ -601,7 +601,7 @@ export default function AdminMatchesPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => generateQR(match.match_id, match.match_code)}
+                                onClick={() => generateQR(match.match_id)}
                               >
                                 <QrCode className="w-4 h-4 mr-1" />
                                 QR

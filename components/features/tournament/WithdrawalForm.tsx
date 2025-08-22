@@ -61,11 +61,6 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
     resolver: zodResolver(withdrawalSchema)
   });
 
-  // 辞退状況の取得
-  useEffect(() => {
-    fetchWithdrawalInfo();
-  }, [tournamentId, fetchWithdrawalInfo]);
-
   const fetchWithdrawalInfo = useCallback(async () => {
     try {
       setLoading(true);
@@ -88,6 +83,11 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
       setLoading(false);
     }
   }, [tournamentId]);
+
+  // 辞退状況の取得
+  useEffect(() => {
+    fetchWithdrawalInfo();
+  }, [fetchWithdrawalInfo]);
 
   // 辞退申請の送信
   const onSubmit = async (data: WithdrawalFormData) => {
