@@ -15,6 +15,7 @@ import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarCh
 import { formatDate } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
 import { getTournamentById } from '@/lib/tournament-detail';
+import { hasTournamentMatches } from '@/lib/bracket-checker';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -187,17 +188,7 @@ function ScheduleResults({ tournament }: { tournament: Tournament }) {
   return <TournamentSchedule tournamentId={tournament.tournament_id} />;
 }
 
-// トーナメント試合があるかチェックする関数
-async function hasTournamentMatches(tournamentId: number): Promise<boolean> {
-  try {
-    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/tournaments/${tournamentId}/bracket`, {
-      cache: 'no-store'
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
+// インポート済みのhasTournamentMatchesを使用
 
 // トーナメント表タブ
 async function Bracket({ tournament }: { tournament: Tournament }) {

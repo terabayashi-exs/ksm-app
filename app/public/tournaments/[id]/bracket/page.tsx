@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { ArrowLeft, Trophy } from 'lucide-react';
 import { Tournament } from '@/lib/types';
+import { getTournamentById } from '@/lib/tournament-detail';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -14,20 +15,13 @@ interface PageProps {
 
 // 大会詳細データを取得する関数
 async function getTournamentDetail(id: string): Promise<Tournament> {
-  const response = await fetch(`${process.env.NEXTAUTH_URL}/api/tournaments/${id}`, {
-    cache: 'no-store'
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch tournament');
+  const tournamentId = parseInt(id);
+  
+  if (isNaN(tournamentId)) {
+    throw new Error('有効な大会IDを指定してください');
   }
 
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to fetch tournament');
-  }
-
-  return result.data;
+  return await getTournamentById(tournamentId);
 }
 
 // ローディングコンポーネント
