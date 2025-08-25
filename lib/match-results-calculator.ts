@@ -293,13 +293,13 @@ function createMatchMatrix(teams: TeamInfo[], matches: MatchResult[]): MatchMatr
       if (matrix[team1Id] && matrix[team2Id] && matrix[team1Id][team2Id] && matrix[team2Id][team1Id]) {
         matrix[team1Id][team2Id] = {
           result: 'draw',
-          score: `${Math.floor(team1Goals)}△${Math.floor(team2Goals)}`,
+          score: `△\n${Math.floor(team1Goals)}-${Math.floor(team2Goals)}`,
           match_code: match.match_code
         };
         
         matrix[team2Id][team1Id] = {
           result: 'draw',
-          score: `${Math.floor(team2Goals)}△${Math.floor(team1Goals)}`,
+          score: `△\n${Math.floor(team2Goals)}-${Math.floor(team1Goals)}`,
           match_code: match.match_code
         };
       }
@@ -315,13 +315,13 @@ function createMatchMatrix(teams: TeamInfo[], matches: MatchResult[]): MatchMatr
       if (matrix[winnerId] && matrix[loserId] && matrix[winnerId][loserId] && matrix[loserId][winnerId]) {
         matrix[winnerId][loserId] = {
           result: 'win',
-          score: `${Math.floor(winnerGoals)}〇${Math.floor(loserGoals)}`,
+          score: `〇\n${Math.floor(winnerGoals)}-${Math.floor(loserGoals)}`,
           match_code: match.match_code
         };
         
         matrix[loserId][winnerId] = {
           result: 'loss',
-          score: `${Math.floor(loserGoals)}●${Math.floor(winnerGoals)}`,
+          score: `×\n${Math.floor(loserGoals)}-${Math.floor(winnerGoals)}`,
           match_code: match.match_code
         };
       }
@@ -344,20 +344,20 @@ export function getDisplayName(team: TeamInfo): string {
 export function getResultColor(result: 'win' | 'loss' | 'draw' | null, score?: string): string {
   switch (result) {
     case 'win':
-      return 'text-green-600 bg-green-50';
+      return 'text-black bg-white';
     case 'loss':
-      return 'text-red-600 bg-red-50';
+      return 'text-gray-500 bg-white';
     case 'draw':
-      return 'text-blue-600 bg-blue-50';
+      return 'text-black bg-white';
     default:
       // 状態表示の色分け
       if (score === '未実施') {
-        return 'text-gray-500 bg-gray-50 font-medium';
+        return 'text-gray-500 bg-white font-medium';
       } else if (score === '試合中') {
-        return 'text-orange-600 bg-orange-50 font-medium animate-pulse';
+        return 'text-orange-600 bg-white font-medium animate-pulse';
       } else if (score === '試合完了') {
-        return 'text-purple-600 bg-purple-50 font-medium';
+        return 'text-purple-600 bg-white font-medium';
       }
-      return 'text-gray-600 bg-gray-100 font-medium'; // 試合コード用にスタイルを調整
+      return 'text-gray-600 bg-white font-medium'; // 試合コード用にスタイルを調整
   }
 }

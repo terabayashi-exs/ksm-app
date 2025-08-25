@@ -11,7 +11,7 @@ export async function hasTournamentMatches(tournamentId: number): Promise<boolea
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ? 
-        AND mb.block_name LIKE '%決勝%'
+        AND mb.phase = 'final'
     `, [tournamentId]);
 
     const count = result.rows?.[0]?.count as number || 0;

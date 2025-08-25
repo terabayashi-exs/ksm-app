@@ -10,7 +10,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, Menu } from "lucide-react";
+import { User, Settings, LogOut } from "lucide-react";
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -22,35 +22,38 @@ export default function Header() {
           {/* ロゴ・タイトル */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <span className="font-bold text-lg">PK</span>
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-2 rounded-lg shadow-md">
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* トーナメント構造を表現 */}
+                  <path 
+                    d="M4 6h4v2H4V6zM4 16h4v2H4v-2zM16 6h4v2h-4V6zM16 16h4v2h-4v-2z" 
+                    fill="currentColor" 
+                    opacity="0.8"
+                  />
+                  {/* 中央の接続線 */}
+                  <path 
+                    d="M8 7h4v1H8V7zM8 17h4v-1H8v1zM12 8v8h1V8h-1z" 
+                    fill="currentColor"
+                  />
+                  {/* 勝者の表現（星） */}
+                  <path 
+                    d="M12 2l1.09 3.26L16 5l-2.91 1.74L14 10l-2-1.2L10 10l.91-3.26L8 5l2.91.26L12 2z" 
+                    fill="#FFD700" 
+                    opacity="0.9"
+                  />
+                </svg>
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  PK選手権大会
+                  Rakusyo GO
                 </h1>
                 <p className="text-xs text-gray-500">
-                  Tournament Management System
+                  Sports Tournament Management
                 </p>
               </div>
             </Link>
           </div>
 
-          {/* ナビゲーション */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link 
-              href="/public/tournaments" 
-              className="text-gray-700 hover:text-blue-600 transition-colors"
-            >
-              大会一覧
-            </Link>
-            <Link 
-              href="/about" 
-              className="text-gray-700 hover:text-blue-600 transition-colors"
-            >
-              システムについて
-            </Link>
-          </nav>
 
           {/* ユーザーメニュー */}
           <div className="flex items-center space-x-4">
@@ -111,24 +114,6 @@ export default function Header() {
               </div>
             )}
 
-            {/* モバイルメニュー */}
-            <div className="md:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link href="/public/tournaments">大会一覧</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/about">システムについて</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
         </div>
       </div>

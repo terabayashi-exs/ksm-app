@@ -27,15 +27,15 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              PK選手権大会
+              Rakusyo GO
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-blue-100">
-              Tournament Management System
+              Sports Tournament Management System
             </p>
             <p className="text-lg mb-10 text-blue-100 max-w-3xl mx-auto">
-              大会の運営から結果公開まで、すべてを一元管理できる
+              あらゆるスポーツ大会の運営から結果公開まで、すべてを一元管理
               <br />
-              総合的なトーナメント管理システムです
+              簡単・楽勝で大会運営ができる総合管理システムです
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -161,7 +161,7 @@ export default async function Home() {
                       {/* 参加済みの場合は参加選手変更ボタンを表示 */}
                       {tournament.is_joined && session?.user?.role === 'team' && (
                         <Button asChild variant="outline" className="w-full">
-                          <Link href={`/tournaments/${tournament.tournament_id}/join`}>
+                          <Link href={`/tournaments/${tournament.tournament_id}/teams`}>
                             参加選手の変更
                           </Link>
                         </Button>
@@ -209,9 +209,14 @@ export default async function Home() {
           )}
 
           <div className="text-center">
-            <Button asChild size="lg">
-              <Link href="/public/tournaments">すべての大会を見る</Link>
-            </Button>
+            <div className="border-2 border-blue-600 rounded-lg p-6 bg-blue-50 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                もっと大会を探してみませんか？
+              </h3>
+              <Button asChild size="lg" className="w-full">
+                <Link href="/tournaments">大会を探す</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -222,7 +227,7 @@ export default async function Home() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">システムの特徴</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              PK選手権大会システムは、大会運営に必要な機能を網羅した総合管理システムです
+              Rakusyo GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
             </p>
           </div>
 
@@ -234,7 +239,7 @@ export default async function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600">
-                  大会の作成から運営まで、直感的な操作で効率的に管理できます。
+                  大会の作成から運営まで、直感的な操作で効率的に管理。様々なスポーツ・競技に対応しています。
                 </p>
               </CardContent>
             </Card>
