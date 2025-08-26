@@ -60,6 +60,18 @@ export function calculateTournamentSchedule(
   const warnings: string[] = [];
   let feasible = true;
   
+  // デバッグ情報（開発時のみ）
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🚀 Schedule calculation started with ${templates.length} templates`);
+    console.log(`⚙️ Settings:`, {
+      courtCount: settings.courtCount,
+      startTime: settings.startTime,
+      matchDuration: settings.matchDurationMinutes,
+      breakDuration: settings.breakDurationMinutes,
+      tournamentDates: settings.tournamentDates?.length
+    });
+  }
+  
   // 日程別にテンプレートを分類
   const templatesByDay = templates.reduce((acc, template) => {
     if (!acc[template.day_number]) {
@@ -148,7 +160,7 @@ function calculateDaySchedule(
     ? settings.availableCourts 
     : Array.from({length: settings.courtCount}, (_, i) => i + 1);
 
-  // ブロック名からコート番号へのマッピングを作成
+  // ブロック名からコート番号へのマッピングを作成（テンプレート指定がない場合のフォールバック）
   const uniqueBlocks = [...new Set(templates.map(t => t.block_name).filter((name): name is string => Boolean(name)))];
   const blockToCourtMap: Record<string, number> = {};
   
@@ -195,31 +207,68 @@ function calculateDaySchedule(
     for (let i = 0; i < groupMatches.length; i++) {
       const template = groupMatches[i];
       
-      // コート番号を決定（カスタム割り当て対応）
-      const courtNumber = getCourtNumber(
-        template,
-        i,
-        availableCourts,
-        blockToCourtMap,
-        customAssignment
-      );
+      // テンプレートデータのデバッグログ（開発時のみ）
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 Template ${template.match_code} data:`, {
+          suggested_start_time: template.suggested_start_time,
+          court_number: template.court_number,
+          block_name: template.block_name,
+          phase: template.phase
+        });
+      }
 
+      // 個別試合コート割り当て：テンプレートのcourt_numberを最優先
+      const courtNumber = template.court_number && Number(template.court_number) > 0
+        ? Number(template.court_number)
+        : getCourtNumber(template, i, availableCourts, blockToCourtMap, customAssignment);
+      
       // priority間の依存関係とコート使用時間の両方を考慮
       let matchStartTime: number;
-      if (template.block_name) {
+      
+      // テンプレートにsuggested_start_timeが設定されている場合はそれを最優先
+      if (template.suggested_start_time && String(template.suggested_start_time).trim() !== '') {
+        matchStartTime = timeToMinutes(String(template.suggested_start_time));
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🎯 Template ${template.match_code}: Using suggested_start_time ${template.suggested_start_time} (${matchStartTime} minutes)`);
+        }
+      } else if (template.block_name) {
         // 予選ブロック: 該当コートの終了時刻から開始（ブロック内で連続実行）
         matchStartTime = courtEndTimes[courtNumber];
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📅 Template ${template.match_code}: Using block schedule (court ${courtNumber} ends at ${minutesToTime(courtEndTimes[courtNumber])})`);
+        }
       } else {
         // 決勝トーナメント: priority制御とコート制御の両方を適用
         // - groupStartTime: 前のpriorityの全試合完了まで待機
         // - courtEndTimes[courtNumber]: 同じコートでの時間重複回避
         matchStartTime = Math.max(groupStartTime, courtEndTimes[courtNumber]);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🏆 Template ${template.match_code}: Using tournament schedule (max of ${minutesToTime(groupStartTime)} and ${minutesToTime(courtEndTimes[courtNumber])})`);
+        }
       }
       
       const matchEndTime = matchStartTime + settings.matchDurationMinutes;
       
       // コートの次回使用可能時刻を更新（休憩時間を追加）
-      courtEndTimes[courtNumber] = matchEndTime + (settings.breakDurationMinutes || 0);
+      // テンプレートの時間を使用した場合でも、終了時刻は正しく更新する
+      // ただし、テンプレートでsuggested_start_timeが指定されている場合は、
+      // そのコートの時間管理は慎重に行う
+      if (template.suggested_start_time && String(template.suggested_start_time).trim() !== '') {
+        // 固定時間指定の場合は、最低限の終了時刻のみ設定
+        courtEndTimes[courtNumber] = Math.max(
+          courtEndTimes[courtNumber], 
+          matchEndTime + (settings.breakDurationMinutes || 0)
+        );
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`⏰ Template ${template.match_code}: Fixed time mode - court ${courtNumber} end time set to ${minutesToTime(courtEndTimes[courtNumber])}`);
+        }
+      } else {
+        // 通常の連続スケジュールの場合
+        courtEndTimes[courtNumber] = matchEndTime + (settings.breakDurationMinutes || 0);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`⏰ Template ${template.match_code}: Sequential mode - court ${courtNumber} end time set to ${minutesToTime(courtEndTimes[courtNumber])}`);
+        }
+      }
       
       const startTime = minutesToTime(matchStartTime);
       const endTime = minutesToTime(matchEndTime);

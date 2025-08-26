@@ -188,9 +188,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
   // スケジュール計算（新規作成モード） 
   useEffect(() => {
-    // 編集モードの場合は常にスキップ
-    if (editMode) {
-      // Skipping schedule calculation in edit mode
+    // 編集モードでもtournamentIdがない場合（新規作成時）はスケジュール計算を行う
+    if (editMode && tournamentId) {
+      // Skipping schedule calculation in edit mode with tournamentId
       return;
     }
     
@@ -401,7 +401,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     }
   }, [customSchedule, schedule, editMode]);
 
-  // 時刻変更ハンドラー（時間重複チェック付き） 
+  // 時刻変更ハンドラー（個別試合のみ変更） 
   const handleTimeChange = (dayIndex: number, matchIndex: number, newStartTime: string) => {
     // Processing time change for match
     
@@ -416,23 +416,14 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     const targetDay = newSchedule.days[dayIndex];
     const targetMatch = targetDay.matches[matchIndex];
     
-    // 新しい開始時刻を設定
-    const oldStartMinutes = timeToMinutes(targetMatch.startTime);
+    // 新しい開始時刻を設定（対象試合のみ変更、他の試合は連動しない）
     const newStartMinutes = timeToMinutes(newStartTime);
-    const timeDiff = newStartMinutes - oldStartMinutes;
+    const matchDurationMinutes = timeToMinutes(targetMatch.endTime) - timeToMinutes(targetMatch.startTime);
     
     targetMatch.startTime = newStartTime;
-    targetMatch.endTime = minutesToTime(timeToMinutes(targetMatch.endTime) + timeDiff);
+    targetMatch.endTime = minutesToTime(newStartMinutes + matchDurationMinutes);
     
-    // 同じ日の後続試合の時刻を調整
-    for (let i = matchIndex + 1; i < targetDay.matches.length; i++) {
-      const laterMatch = targetDay.matches[i];
-      const laterStartMinutes = timeToMinutes(laterMatch.startTime);
-      const laterEndMinutes = timeToMinutes(laterMatch.endTime);
-      
-      laterMatch.startTime = minutesToTime(laterStartMinutes + timeDiff);
-      laterMatch.endTime = minutesToTime(laterEndMinutes + timeDiff);
-    }
+    // 他の試合への連動は行わない（個別修正を優先）
     
     // その日の総所要時間を再計算
     const dayEndTime = targetDay.matches.length > 0 
@@ -1101,12 +1092,13 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                         </span>
                       </div>
                       
-                      {/* ブロック単位コート変更UI（リーグ戦のみ） */}
+                      {/* ブロック単位コート変更UI（リーグ戦のみ・まとめて変更用） */}
                       {blockKey.includes('予選') && (
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">コート:</span>
+                          <span className="text-xs text-gray-500">ブロック一括設定:</span>
                           {editingBlockCourt === blockKey ? (
                             <div className="flex items-center space-x-1">
+                              <span className="text-xs">コート</span>
                               <select
                                 value={(() => {
                                   const actualBlockName = blockKey.includes('予選') 
@@ -1142,10 +1134,10 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                           ) : (
                             <button
                               onClick={() => setEditingBlockCourt(blockKey)}
-                              className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                              title="ブロックのコート番号を変更"
+                              className="flex items-center space-x-1 text-xs text-orange-600 hover:text-orange-800 transition-colors"
+                              title="このブロックの全試合を同じコートに一括設定"
                             >
-                              <span>{(() => {
+                              <span>コート{(() => {
                                 const actualBlockName = blockKey.includes('予選') 
                                   ? blockKey.replace('予選', '').replace('ブロック', '')
                                   : blockKey;
@@ -1154,6 +1146,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                               <Edit3 className="w-3 h-3" />
                             </button>
                           )}
+                          <span className="text-xs text-gray-400">（個別設定が優先）</span>
                         </div>
                       )}
                     </CardTitle>
@@ -1230,49 +1223,42 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                                     {match.template.team1_display_name} vs {match.template.team2_display_name}
                                   </td>
                                   <td className="py-2 px-3">
-                                    {/* 個別試合コート変更UI（トーナメント用） */}
-                                    {blockKey.includes('決勝') ? (
-                                      <div className="flex items-center text-sm">
-                                        <MapPin className="w-3 h-3 mr-1" />
-                                        {editingMatchCourt === editKey ? (
-                                          <div className="flex items-center space-x-1">
-                                            <span>コート</span>
-                                            <select
-                                              value={matchCourtAssignments[match.template.match_number] ?? match.courtNumber}
-                                              onChange={(e) => {
-                                                const newCourt = parseInt(e.target.value);
-                                                handleMatchCourtChange(match.template.match_number, newCourt);
-                                                setEditingMatchCourt(null);
-                                              }}
-                                              onBlur={() => setEditingMatchCourt(null)}
-                                              className="text-xs border rounded px-1 py-0.5 w-12"
-                                              autoFocus
-                                            >
-                                              {(settings.availableCourts?.length 
-                                                ? settings.availableCourts 
-                                                : Array.from({length: settings.courtCount}, (_, i) => i + 1)
-                                              ).map(courtNum => (
-                                                <option key={courtNum} value={courtNum}>{courtNum}</option>
-                                              ))}
-                                            </select>
-                                          </div>
-                                        ) : (
-                                          <button
-                                            onClick={() => setEditingMatchCourt(editKey)}
-                                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
-                                            title="コート番号を変更"
+                                    {/* 個別試合コート変更UI（全試合対応） */}
+                                    <div className="flex items-center text-sm">
+                                      <MapPin className="w-3 h-3 mr-1" />
+                                      {editingMatchCourt === editKey ? (
+                                        <div className="flex items-center space-x-1">
+                                          <span>コート</span>
+                                          <select
+                                            value={matchCourtAssignments[match.template.match_number] ?? match.courtNumber}
+                                            onChange={(e) => {
+                                              const newCourt = parseInt(e.target.value);
+                                              handleMatchCourtChange(match.template.match_number, newCourt);
+                                              setEditingMatchCourt(null);
+                                            }}
+                                            onBlur={() => setEditingMatchCourt(null)}
+                                            className="text-xs border rounded px-1 py-0.5 w-12"
+                                            autoFocus
                                           >
-                                            <span>コート {matchCourtAssignments[match.template.match_number] ?? match.courtNumber}</span>
-                                            <Edit3 className="w-3 h-3" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center text-sm">
-                                        <MapPin className="w-3 h-3 mr-1" />
-                                        コート {match.courtNumber}
-                                      </div>
-                                    )}
+                                            {(settings.availableCourts?.length 
+                                              ? settings.availableCourts 
+                                              : Array.from({length: settings.courtCount}, (_, i) => i + 1)
+                                            ).map(courtNum => (
+                                              <option key={courtNum} value={courtNum}>{courtNum}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => setEditingMatchCourt(editKey)}
+                                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                          title="コート番号を変更（個別設定）"
+                                        >
+                                          <span>コート {matchCourtAssignments[match.template.match_number] ?? match.courtNumber}</span>
+                                          <Edit3 className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -1298,8 +1284,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
             <ul className="space-y-2 text-sm">
               <li>• <strong>コート数を増やす</strong> - 同時進行できる試合数が増えます</li>
               <li>• <strong>使用コート番号を変更する</strong> - 運営設定で異なるコート番号を指定できます</li>
-              <li>• <strong>ブロック別コート割り当て</strong> - 予選ブロックごとに固定コートを設定できます</li>
-              <li>• <strong>個別試合コート変更</strong> - 決勝戦など重要な試合のコートを個別に指定できます</li>
+              <li>• <strong>個別試合コート変更</strong> - 各試合のコート番号を個別に指定できます（青色ボタン）</li>
+              <li>• <strong>ブロック一括コート設定</strong> - 予選ブロック全試合を同じコートに一括設定できます（オレンジ色ボタン）</li>
               <li>• <strong>試合時間を短縮する</strong> - 全体のスケジュールが短縮されます</li>
               <li>• <strong>休憩時間を調整する</strong> - 試合間の空き時間を最適化できます</li>
               <li>• <strong>開催日を追加する</strong> - 1日あたりの試合数を減らせます</li>

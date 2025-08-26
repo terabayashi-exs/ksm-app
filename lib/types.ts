@@ -179,6 +179,8 @@ export interface MatchTemplate {
   team2_display_name: string;
   day_number: number;
   execution_priority: number;
+  court_number?: number;
+  suggested_start_time?: string;
   created_at: string;
 }
 

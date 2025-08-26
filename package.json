@@ -21,6 +21,8 @@
     "db:export-schema": "node scripts/export-schema.js",
     "db:reset-production": "node scripts/reset-production.js",
     "db:create-admin": "node scripts/create-admin.js",
+    "db:add-court-time-columns": "node scripts/add-court-time-columns.js",
+    "db:update-template-court-time": "node scripts/update-template-court-time.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

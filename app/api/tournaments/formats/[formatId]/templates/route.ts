@@ -35,6 +35,8 @@ export async function GET(
         team2_display_name,
         day_number,
         execution_priority,
+        court_number,
+        suggested_start_time,
         created_at
       FROM m_match_templates
       WHERE format_id = ?
@@ -56,6 +58,8 @@ export async function GET(
       team2_display_name: String(row.team2_display_name),
       day_number: Number(row.day_number),
       execution_priority: Number(row.execution_priority),
+      court_number: row.court_number ? Number(row.court_number) : undefined,
+      suggested_start_time: row.suggested_start_time ? String(row.suggested_start_time) : undefined,
       created_at: String(row.created_at)
     })) as MatchTemplate[];
 
