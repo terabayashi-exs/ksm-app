@@ -16,6 +16,11 @@
     "db:seed-master": "node scripts/seed-master-data.js",
     "db:migrate-team-names": "node scripts/migrate-tournament-team-names.mjs",
     "db:migrate-withdrawal": "node scripts/migrate-tournament-withdrawal.js",
+    "db:migrate-production": "node scripts/migrate-to-production.js",
+    "db:copy-master-data": "node scripts/copy-master-data.js",
+    "db:export-schema": "node scripts/export-schema.js",
+    "db:reset-production": "node scripts/reset-production.js",
+    "db:create-admin": "node scripts/create-admin.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

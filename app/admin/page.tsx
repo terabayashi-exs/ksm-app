@@ -104,6 +104,11 @@ export default async function AdminDashboard() {
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/administrators">利用者マスタ</Link>
                 </Button>
+                {session.user.id === "admin" && (
+                  <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
+                    <Link href="/admin/tournament-formats">大会フォーマット</Link>
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
