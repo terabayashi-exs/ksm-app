@@ -15,7 +15,8 @@ import {
   MapPin,
   Filter,
   Eye,
-  RefreshCw
+  RefreshCw,
+  RotateCcw
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -73,6 +74,7 @@ export default function AdminMatchesPage() {
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [matchBlocks, setMatchBlocks] = useState<MatchBlock[]>([]);
   const [confirmingMatches, setConfirmingMatches] = useState<Set<number>>(new Set());
+  const [unconfirmingMatches, setUnconfirmingMatches] = useState<Set<number>>(new Set());
   const [updatingRankings, setUpdatingRankings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -272,6 +274,59 @@ export default function AdminMatchesPage() {
       alert('結果確定中にエラーが発生しました');
     } finally {
       setConfirmingMatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(matchId);
+        return newSet;
+      });
+    }
+  };
+
+  // 試合結果確定解除
+  const unconfirmMatch = async (matchId: number, matchCode: string) => {
+    if (!window.confirm(`${matchCode}の確定を解除しますか？\n\n確定解除後は結果の編集が可能になります。\n順位表も自動的に再計算されます。`)) {
+      return;
+    }
+
+    setUnconfirmingMatches(prev => new Set([...prev, matchId]));
+    
+    try {
+      const response = await fetch(`/api/matches/${matchId}/unconfirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`${matchCode}の確定を解除しました！\n結果の編集が可能になりました。`);
+        
+        // マッチリストを更新して確定解除状態を反映
+        setMatches(prevMatches => 
+          prevMatches.map(match => 
+            match.match_id === matchId 
+              ? { ...match, is_confirmed: false }
+              : match
+          )
+        );
+        
+        setMatchBlocks(prevBlocks =>
+          prevBlocks.map(block => ({
+            ...block,
+            matches: block.matches.map(match =>
+              match.match_id === matchId
+                ? { ...match, is_confirmed: false }
+                : match
+            )
+          }))
+        );
+      } else {
+        alert(`確定解除に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Match unconfirmation error:', error);
+      alert('確定解除中にエラーが発生しました');
+    } finally {
+      setUnconfirmingMatches(prev => {
         const newSet = new Set(prev);
         newSet.delete(matchId);
         return newSet;
@@ -624,6 +679,19 @@ export default function AdminMatchesPage() {
                                   disabled={confirmingMatches.has(match.match_id)}
                                 >
                                   {confirmingMatches.has(match.match_id) ? '確定中...' : '結果確定'}
+                                </Button>
+                              )}
+                              
+                              {match.is_confirmed && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  onClick={() => unconfirmMatch(match.match_id, match.match_code)}
+                                  disabled={unconfirmingMatches.has(match.match_id)}
+                                >
+                                  <RotateCcw className="w-4 h-4 mr-1" />
+                                  {unconfirmingMatches.has(match.match_id) ? '解除中...' : '確定解除'}
                                 </Button>
                               )}
                             </div>

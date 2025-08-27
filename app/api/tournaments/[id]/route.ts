@@ -359,34 +359,90 @@ export async function DELETE(
       );
     }
 
-    // 関連するマッチデータがある場合は削除を拒否（安全のため）
-    const matchesResult = await db.execute(`
-      SELECT COUNT(*) as count 
-      FROM t_matches_live ml
-      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      WHERE mb.tournament_id = ?
-    `, [tournamentId]);
+    // 大会削除処理：正しい順序で依存データを削除
+    console.log(`大会削除開始 (ID: ${tournamentId})`);
+    
+    try {
+      // Step 1: 試合関連データを削除（match_block_idへの依存）
+      console.log('Step 1: 試合関連データ削除中...');
+      
+      // t_match_status から削除（テーブルが存在する場合のみ）
+      try {
+        await db.execute(`
+          DELETE FROM t_match_status 
+          WHERE match_block_id IN (
+            SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+          )
+        `, [tournamentId]);
+        console.log('✓ t_match_status削除完了');
+      } catch {
+        console.log('t_match_status テーブルが存在しないか、データがありません');
+      }
+      
+      // t_matches_final から削除（テーブルが存在する場合のみ）
+      try {
+        await db.execute(`
+          DELETE FROM t_matches_final 
+          WHERE match_block_id IN (
+            SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+          )
+        `, [tournamentId]);
+        console.log('✓ t_matches_final削除完了');
+      } catch {
+        console.log('t_matches_final テーブルが存在しないか、データがありません');
+      }
+      
+      // t_matches_live から削除
+      try {
+        await db.execute(`
+          DELETE FROM t_matches_live 
+          WHERE match_block_id IN (
+            SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+          )
+        `, [tournamentId]);
+        console.log('✓ t_matches_live削除完了');
+      } catch (err) {
+        console.log('t_matches_live削除エラー:', err);
+        // t_matches_liveは重要なので、エラーの場合は処理を続行しない
+        throw err;
+      }
 
-    const matchCount = Number(matchesResult.rows[0]?.count) || 0;
-    if (matchCount > 0) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'この大会にはマッチデータが存在するため削除できません。先にマッチデータを削除してください。'
-        },
-        { status: 400 }
-      );
+      // Step 2: 大会直接依存データを削除（tournament_idへの依存）
+      console.log('Step 2: 大会関連データ削除中...');
+      
+      // t_tournament_notifications から削除
+      await db.execute(`
+        DELETE FROM t_tournament_notifications WHERE tournament_id = ?
+      `, [tournamentId]);
+      
+      // t_tournament_players から削除  
+      await db.execute(`
+        DELETE FROM t_tournament_players WHERE tournament_id = ?
+      `, [tournamentId]);
+      
+      // t_tournament_teams から削除
+      await db.execute(`
+        DELETE FROM t_tournament_teams WHERE tournament_id = ?
+      `, [tournamentId]);
+
+      // Step 3: マッチブロックを削除（依存が解消された後）
+      console.log('Step 3: マッチブロック削除中...');
+      await db.execute(`
+        DELETE FROM t_match_blocks WHERE tournament_id = ?
+      `, [tournamentId]);
+
+      // Step 4: 大会本体を削除
+      console.log('Step 4: 大会本体削除中...');
+      await db.execute(`
+        DELETE FROM t_tournaments WHERE tournament_id = ?
+      `, [tournamentId]);
+      
+      console.log('大会削除完了');
+      
+    } catch (deleteError) {
+      console.error('大会削除処理中にエラーが発生:', deleteError);
+      throw new Error(`大会削除に失敗しました: ${deleteError instanceof Error ? deleteError.message : 'Unknown error'}`);
     }
-
-    // マッチブロックを削除
-    await db.execute(`
-      DELETE FROM t_match_blocks WHERE tournament_id = ?
-    `, [tournamentId]);
-
-    // 大会を削除
-    await db.execute(`
-      DELETE FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
 
     return NextResponse.json({
       success: true,

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
-import { CalendarDays, MapPin, Users, Clock, Trophy } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2 } from 'lucide-react';
 
 interface TournamentDashboardData {
   recruiting: Tournament[];
@@ -27,6 +27,7 @@ export default function TournamentDashboardList() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -49,6 +50,41 @@ export default function TournamentDashboardList() {
 
     fetchTournaments();
   }, []);
+
+  const handleDeleteTournament = async (tournament: Tournament) => {
+    const confirmMessage = `大会「${tournament.tournament_name}」を削除してもよろしいですか？\n\n⚠️ この操作は取り消せません。関連する以下のデータも全て削除されます：\n・参加チーム情報\n・選手情報\n・試合データ\n・結果データ`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeleting(tournament.tournament_id);
+
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.tournament_id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 削除成功時、リストから該当大会を除去
+        setTournaments(prev => ({
+          recruiting: prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id),
+          ongoing: prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id),
+          total: prev.total - 1
+        }));
+        alert(result.message || '大会を削除しました');
+      } else {
+        alert(`削除エラー: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('削除エラー:', err);
+      alert('削除中にエラーが発生しました');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -165,6 +201,25 @@ export default function TournamentDashboardList() {
               <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                 手動順位設定
               </Link>
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => handleDeleteTournament(tournament)}
+              disabled={deleting === tournament.tournament_id}
+              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              {deleting === tournament.tournament_id ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                  削除中...
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  削除
+                </div>
+              )}
             </Button>
           </>
         )}
