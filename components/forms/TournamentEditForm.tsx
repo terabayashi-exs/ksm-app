@@ -24,7 +24,7 @@ const editTournamentSchema = z.object({
   tournament_name: z.string().min(1, '大会名は必須です').max(100, '大会名は100文字以内で入力してください'),
   format_id: z.number().min(1, 'フォーマットIDが必要です'),
   venue_id: z.number().min(1, '会場IDが必要です'),
-  team_count: z.number().min(2, 'チーム数は2以上で入力してください').max(64, 'チーム数は64以下で入力してください'),
+  team_count: z.number().min(2, 'チーム数は2以上で入力してください').max(128, 'チーム数は128以下で入力してください'),
   court_count: z.number().min(1, 'コート数は1以上で入力してください').max(20, 'コート数は20以下で入力してください'),
   available_courts: z.string().optional().refine((val) => {
     if (!val || val.trim() === '') return true;
@@ -368,7 +368,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 id="team_count"
                 type="number"
                 min="2"
-                max="32"
+                max="128"
                 {...form.register('team_count', { valueAsNumber: true })}
                 className={form.formState.errors.team_count ? 'border-red-500' : ''}
               />

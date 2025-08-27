@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft,
   Clock,
@@ -16,7 +18,8 @@ import {
   Filter,
   Eye,
   RefreshCw,
-  RotateCcw
+  RotateCcw,
+  Undo2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -62,7 +65,7 @@ interface MatchBlock {
   matches: MatchData[];
 }
 
-type FilterType = 'all' | 'scheduled' | 'ongoing' | 'completed' | 'pending_confirmation';
+type FilterType = 'all' | 'scheduled' | 'ongoing' | 'completed' | 'pending_confirmation' | 'cancelled';
 
 export default function AdminMatchesPage() {
   const router = useRouter();
@@ -75,6 +78,11 @@ export default function AdminMatchesPage() {
   const [matchBlocks, setMatchBlocks] = useState<MatchBlock[]>([]);
   const [confirmingMatches, setConfirmingMatches] = useState<Set<number>>(new Set());
   const [unconfirmingMatches, setUnconfirmingMatches] = useState<Set<number>>(new Set());
+  const [cancellingMatches, setCancellingMatches] = useState<Set<number>>(new Set());
+  const [uncancellingMatches, setUncancellingMatches] = useState<Set<number>>(new Set());
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<MatchData | null>(null);
+  const [cancellationType, setCancellationType] = useState<'no_show_both' | 'no_show_team1' | 'no_show_team2' | 'no_count'>('no_show_both');
   const [updatingRankings, setUpdatingRankings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -334,6 +342,131 @@ export default function AdminMatchesPage() {
     }
   };
 
+  // 中止ダイアログを開く
+  const openCancelDialog = (match: MatchData) => {
+    setSelectedMatch(match);
+    setCancellationType('no_show_both');
+    setCancelDialogOpen(true);
+  };
+
+  // 試合中止処理
+  const cancelMatch = async () => {
+    if (!selectedMatch) return;
+
+    setCancellingMatches(prev => new Set([...prev, selectedMatch.match_id]));
+    
+    try {
+      const response = await fetch(`/api/matches/${selectedMatch.match_id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancellation_type: cancellationType })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`${selectedMatch.match_code}を中止しました。\n\n種別: ${getCancellationTypeLabel(cancellationType)}\n順位表への影響: ${result.data.affects_standings ? 'あり' : 'なし'}`);
+        
+        // マッチリストを更新して中止状態を反映
+        setMatches(prevMatches => 
+          prevMatches.map(match => 
+            match.match_id === selectedMatch.match_id 
+              ? { ...match, match_status: 'cancelled' as const }
+              : match
+          )
+        );
+        
+        setMatchBlocks(prevBlocks =>
+          prevBlocks.map(block => ({
+            ...block,
+            matches: block.matches.map(match =>
+              match.match_id === selectedMatch.match_id
+                ? { ...match, match_status: 'cancelled' as const }
+                : match
+            )
+          }))
+        );
+        
+        setCancelDialogOpen(false);
+      } else {
+        alert(`試合中止に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Match cancellation error:', error);
+      alert('試合中止中にエラーが発生しました');
+    } finally {
+      setCancellingMatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(selectedMatch.match_id);
+        return newSet;
+      });
+    }
+  };
+
+  // 試合中止解除処理
+  const uncancelMatch = async (matchId: number, matchCode: string) => {
+    if (!window.confirm(`${matchCode}の中止を解除しますか？\n\n中止解除後は「試合前」状態に戻り、通常の試合として進行できるようになります。\n順位表も自動的に再計算されます。`)) {
+      return;
+    }
+
+    setUncancellingMatches(prev => new Set([...prev, matchId]));
+    
+    try {
+      const response = await fetch(`/api/matches/${matchId}/uncancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`${matchCode}の中止を解除しました！\n\n状態: 「試合前」に復帰\n前回の中止種別: ${getCancellationTypeLabel(result.data.previous_cancellation_type)}`);
+        
+        // マッチリストを更新して中止解除状態を反映
+        setMatches(prevMatches => 
+          prevMatches.map(match => 
+            match.match_id === matchId 
+              ? { ...match, match_status: 'scheduled' as const, is_confirmed: false }
+              : match
+          )
+        );
+        
+        setMatchBlocks(prevBlocks =>
+          prevBlocks.map(block => ({
+            ...block,
+            matches: block.matches.map(match =>
+              match.match_id === matchId
+                ? { ...match, match_status: 'scheduled' as const, is_confirmed: false }
+                : match
+            )
+          }))
+        );
+      } else {
+        alert(`中止解除に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Match uncancellation error:', error);
+      alert('中止解除中にエラーが発生しました');
+    } finally {
+      setUncancellingMatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(matchId);
+        return newSet;
+      });
+    }
+  };
+
+  // 中止種別のラベル取得
+  const getCancellationTypeLabel = (type: string): string => {
+    switch (type) {
+      case 'no_show_both': return '両チーム不参加（両者0勝点）';
+      case 'no_show_team1': return `${selectedMatch?.team1_name || 'チーム1'}不参加（${selectedMatch?.team2_name || 'チーム2'}不戦勝）`;
+      case 'no_show_team2': return `${selectedMatch?.team2_name || 'チーム2'}不参加（${selectedMatch?.team1_name || 'チーム1'}不戦勝）`;
+      case 'no_count': return '天候等による中止（試合数カウントしない）';
+      default: return '不明';
+    }
+  };
+
   // 勝者チーム名を取得
   const getWinnerName = (match: MatchData) => {
     // スコアがない場合は勝者なし
@@ -370,6 +503,10 @@ export default function AdminMatchesPage() {
 
   // ステータス表示
   const getStatusBadge = (match: MatchData) => {
+    if (match.match_status === 'cancelled') {
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" />中止</Badge>;
+    }
+    
     if (match.match_status === 'completed' && !match.is_confirmed) {
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">確定待ち</Badge>;
     }
@@ -381,8 +518,6 @@ export default function AdminMatchesPage() {
         return <Badge className="bg-green-600 text-white hover:bg-green-600 animate-pulse"><Play className="w-3 h-3 mr-1" />進行中</Badge>;
       case 'completed':
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><CheckCircle className="w-3 h-3 mr-1" />完了</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" />中止</Badge>;
       default:
         return <Badge variant="outline">不明</Badge>;
     }
@@ -522,6 +657,13 @@ export default function AdminMatchesPage() {
               >
                 確定待ち ({matches.filter(m => m.match_status === 'completed' && !m.is_confirmed).length})
               </Button>
+              <Button
+                variant={filter === 'cancelled' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('cancelled')}
+              >
+                中止 ({matches.filter(m => m.match_status === 'cancelled').length})
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -542,6 +684,7 @@ export default function AdminMatchesPage() {
                   case 'ongoing': return match.match_status === 'ongoing';
                   case 'completed': return match.match_status === 'completed';
                   case 'pending_confirmation': return match.match_status === 'completed' && !match.is_confirmed;
+                  case 'cancelled': return match.match_status === 'cancelled';
                   default: return true;
                 }
               });
@@ -682,7 +825,7 @@ export default function AdminMatchesPage() {
                                 </Button>
                               )}
                               
-                              {match.is_confirmed && (
+                              {match.is_confirmed && match.match_status !== 'cancelled' && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -692,6 +835,31 @@ export default function AdminMatchesPage() {
                                 >
                                   <RotateCcw className="w-4 h-4 mr-1" />
                                   {unconfirmingMatches.has(match.match_id) ? '解除中...' : '確定解除'}
+                                </Button>
+                              )}
+                              
+                              {match.match_status !== 'cancelled' && !match.is_confirmed && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => openCancelDialog(match)}
+                                  disabled={cancellingMatches.has(match.match_id)}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  {cancellingMatches.has(match.match_id) ? '中止中...' : '中止'}
+                                </Button>
+                              )}
+                              
+                              {match.match_status === 'cancelled' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 border-green-200 hover:bg-green-50"
+                                  onClick={() => uncancelMatch(match.match_id, match.match_code)}
+                                  disabled={uncancellingMatches.has(match.match_id)}
+                                >
+                                  <Undo2 className="w-4 h-4 mr-1" />
+                                  {uncancellingMatches.has(match.match_id) ? '解除中...' : '中止解除'}
                                 </Button>
                               )}
                             </div>
@@ -712,7 +880,7 @@ export default function AdminMatchesPage() {
             <CardTitle>試合進行状況</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-gray-600">
                   {matches.filter(m => m.match_status === 'scheduled').length}
@@ -737,9 +905,103 @@ export default function AdminMatchesPage() {
                 </div>
                 <div className="text-sm text-gray-500">確定済み</div>
               </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600">
+                  {matches.filter(m => m.match_status === 'cancelled').length}
+                </div>
+                <div className="text-sm text-gray-500">中止</div>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* 中止ダイアログ */}
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>試合中止 - {selectedMatch?.match_code}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  「{selectedMatch?.team1_name} vs {selectedMatch?.team2_name}」を中止します。
+                </p>
+                <Label className="text-base font-medium">中止理由を選択してください</Label>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    value="no_show_both"
+                    checked={cancellationType === 'no_show_both'}
+                    onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
+                    className="text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium">両チーム不参加</div>
+                    <div className="text-sm text-gray-500">両チーム0勝点、試合数にカウント</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    value="no_show_team1"
+                    checked={cancellationType === 'no_show_team1'}
+                    onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
+                    className="text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium">{selectedMatch?.team1_name}不参加</div>
+                    <div className="text-sm text-gray-500">{selectedMatch?.team2_name}不戦勝（3-0）</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    value="no_show_team2"
+                    checked={cancellationType === 'no_show_team2'}
+                    onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
+                    className="text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium">{selectedMatch?.team2_name}不参加</div>
+                    <div className="text-sm text-gray-500">{selectedMatch?.team1_name}不戦勝（3-0）</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    value="no_count"
+                    checked={cancellationType === 'no_count'}
+                    onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
+                    className="text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium">天候等による中止</div>
+                    <div className="text-sm text-gray-500">試合数にカウントしない</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                キャンセル
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={cancelMatch}
+                disabled={!selectedMatch || cancellingMatches.has(selectedMatch.match_id)}
+              >
+                {selectedMatch && cancellingMatches.has(selectedMatch.match_id) ? '中止中...' : '中止実行'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

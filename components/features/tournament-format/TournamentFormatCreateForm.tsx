@@ -70,7 +70,7 @@ const templateSchema = z.object({
 
 const formatSchema = z.object({
   format_name: z.string().min(1, "フォーマット名は必須です").max(100),
-  target_team_count: z.number().min(4, "チーム数は4以上で入力してください").max(32),
+  target_team_count: z.number().min(4, "チーム数は4以上で入力してください").max(128),
   format_description: z.string().min(0).default(""),
   templates: z.array(templateSchema).min(1, "試合テンプレートを最低1つ作成してください")
 });
@@ -224,7 +224,7 @@ export default function TournamentFormatCreateForm() {
                 type="number"
                 {...register("target_team_count", { valueAsNumber: true })}
                 min={4}
-                max={32}
+                max={128}
                 className={errors.target_team_count ? "border-red-500" : ""}
               />
               {errors.target_team_count && (

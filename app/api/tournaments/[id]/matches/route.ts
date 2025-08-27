@@ -122,8 +122,10 @@ export async function GET(
       const actualStartTime = row.status_actual_start_time;
       const actualEndTime = row.status_actual_end_time;
       
-      // 確定済みかどうかの判定（t_matches_finalにデータがあるかで判定）
-      const isConfirmed = !!row.final_team1_scores || !!row.confirmed_at;
+      // 確定済みかどうかの判定
+      // 1. t_matches_finalにデータがある場合（通常の確定 or 順位に影響する中止）
+      // 2. match_statusが'cancelled'の場合（中止済みは常に確定扱い）
+      const isConfirmed = !!row.final_team1_scores || !!row.confirmed_at || matchStatus === 'cancelled';
       
       // スコア情報（確定済みなら最終結果、そうでなければライブスコア）
       const team1ScoresStr = isConfirmed ? row.final_team1_scores : row.team1_scores;

@@ -55,7 +55,7 @@ const tournamentCreateSchema = z.object({
   tournament_name: z.string().min(1, "大会名は必須です").max(100, "大会名は100文字以内で入力してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
   venue_id: z.number().min(1, "会場を選択してください"),
-  team_count: z.number().min(4, "チーム数は4以上で入力してください").max(32, "チーム数は32以下で入力してください"),
+  team_count: z.number().min(4, "チーム数は4以上で入力してください").max(128, "チーム数は128以下で入力してください"),
   court_count: z.number().min(1, "コート数は1以上で入力してください").max(8, "コート数は8以下で入力してください"),
   tournament_dates: z.array(z.object({
     dayNumber: z.number(),
@@ -261,21 +261,21 @@ export default function TournamentCreateNewForm() {
               id="team_count_input"
               type="number"
               min={4}
-              max={32}
+              max={128}
               value={teamCount}
               onChange={(e) => setTeamCount(parseInt(e.target.value) || 4)}
               placeholder="例: 16"
               className="text-center text-xl font-semibold"
             />
             <p className="text-xs text-gray-500">
-              4チーム以上、32チーム以下で入力してください
+              4チーム以上、128チーム以下で入力してください
             </p>
           </div>
           
           <Button
             type="button"
             onClick={handleTeamCountSubmit}
-            disabled={teamCount < 4 || teamCount > 32}
+            disabled={teamCount < 4 || teamCount > 128}
             className="w-full"
           >
             おすすめフォーマットを表示
@@ -490,7 +490,7 @@ export default function TournamentCreateNewForm() {
                 type="number"
                 {...register("team_count", { valueAsNumber: true })}
                 min={4}
-                max={32}
+                max={128}
                 className={errors.team_count ? "border-red-500" : ""}
                 readOnly
               />

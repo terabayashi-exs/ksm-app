@@ -26,7 +26,7 @@ export const tournamentCreateSchema = z.object({
   
   team_count: z.number()
     .min(2, 'チーム数は2以上で入力してください')
-    .max(64, 'チーム数は64以下で入力してください'),
+    .max(128, 'チーム数は128以下で入力してください'),
 
   // 運営設定
   court_count: z.number()
