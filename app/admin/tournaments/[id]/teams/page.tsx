@@ -80,7 +80,7 @@ export default function TeamRegistrationPage() {
     contact_phone: '',
     tournament_team_name: '',
     tournament_team_omission: '',
-    players: [{ player_name: '', uniform_number: 1, position: '' }]
+    players: []
   });
 
   // CSV登録用の状態
@@ -178,7 +178,7 @@ export default function TeamRegistrationPage() {
           contact_phone: '',
           tournament_team_name: '',
           tournament_team_omission: '',
-          players: [{ player_name: '', uniform_number: undefined, position: '' }]
+          players: []
         });
 
         alert(`チーム「${result.data.team_name}」の管理者代行登録が完了しました。\n\n【重要】以下の情報をチーム代表者にお伝えください：\n\n- ログインID: ${result.data.team_id}\n- 仮パスワード: ${tempPassword}\n- メールアドレス: ${result.data.contact_email}\n\n※代表者には初回ログイン時のパスワード変更をお願いしてください。`);
@@ -238,8 +238,9 @@ export default function TeamRegistrationPage() {
       '# 2. PLAYER行: 選手情報を入力（チーム名・代表者情報は空欄）',
       '# 3. 背番号・ポジションは任意項目（空欄可）',
       '# 4. 電話番号は任意項目',
-      '# 5. 1チームにつき最大20人まで選手登録可能',
-      '# 6. #で始まる行は無視されます'
+      '# 5. 選手なしでもチーム登録可能（TEAM行のみでOK）',
+      '# 6. 1チームにつき最大20人まで選手登録可能',
+      '# 7. #で始まる行は無視されます'
     ].join('\n');
 
     // BOMを追加してExcelでの文字化けを防ぐ
@@ -347,9 +348,6 @@ export default function TeamRegistrationPage() {
 
         // 最終バリデーション
         teams.forEach((team) => {
-          if (team.players.length === 0) {
-            errors.push(`チーム「${team.team_name}」: 最低1人の選手が必要です`);
-          }
           if (team.players.length > 20) {
             errors.push(`チーム「${team.team_name}」: 選手は最大20人までです（現在${team.players.length}人）`);
           }
@@ -695,27 +693,31 @@ export default function TeamRegistrationPage() {
                     <div className="border-t pt-6">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <h3 className="font-medium">選手登録</h3>
+                        <h3 className="font-medium">選手登録（任意）</h3>
                         <Button type="button" variant="outline" size="sm" onClick={addPlayer}>
                           <UserPlus className="w-4 h-4 mr-1" />
                           選手追加
                         </Button>
                       </div>
                       
+                      {manualForm.players.length === 0 && (
+                        <p className="text-gray-500 text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+                          選手は後から追加することも可能です。「選手追加」ボタンで選手を登録してください。
+                        </p>
+                      )}
+                      
                       {manualForm.players.map((player, index) => (
                         <div key={index} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-center mb-3">
                             <span className="font-medium text-sm">選手 {index + 1}</span>
-                            {manualForm.players.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removePlayer(index)}
-                              >
-                                削除
-                              </Button>
-                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removePlayer(index)}
+                            >
+                              削除
+                            </Button>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div>

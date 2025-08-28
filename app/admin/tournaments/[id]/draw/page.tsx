@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
 
 interface Team {
   team_id: string;
@@ -90,7 +91,7 @@ export default function TournamentDrawPage() {
         }
         
         // APIから返されるデータ構造に合わせて処理
-        let teams = [];
+        let teams: unknown[] = [];
         if (teamsData.data && typeof teamsData.data === 'object') {
           if (Array.isArray(teamsData.data)) {
             teams = teamsData.data;
@@ -99,16 +100,33 @@ export default function TournamentDrawPage() {
           }
         }
         
-        const formattedTeams = teams.map((team: { team_id: string; team_name: string; team_omission: string; contact_person: string; contact_email: string; player_count: number; registration_type: string }) => ({
-          team_id: team.team_id,
-          team_name: team.team_name,
-          team_omission: team.team_omission,
-          contact_person: team.contact_person,
-          contact_email: team.contact_email,
-          registered_players_count: team.player_count || 0
-        }));
+        // データ構造をログ出力してデバッグ
+        if (teams.length === 0) {
+          console.warn('No teams found. API response structure:', teamsData);
+        }
+        
+        const formattedTeams = teams
+          .filter((team: unknown): team is SimpleTournamentTeam => {
+            return team != null && typeof team === 'object' && 'team_id' in team && Boolean((team as SimpleTournamentTeam).team_id);
+          }) // undefinedやnullのチームを除外
+          .map((team: SimpleTournamentTeam) => ({
+            team_id: team.team_id || '',
+            team_name: team.team_name || '',
+            team_omission: team.team_omission || '',
+            contact_person: team.contact_person || '',
+            contact_email: team.contact_email || '',
+            registered_players_count: team.player_count || 0
+          }));
         
         setRegisteredTeams(formattedTeams);
+        
+        // デバッグ情報
+        console.log('Debug: teams data structure:', {
+          originalData: teamsData.data,
+          extractedTeams: teams,
+          formattedTeams: formattedTeams,
+          teamCount: formattedTeams.length
+        });
 
         // 試合情報を取得
         const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches`);
@@ -182,7 +200,7 @@ export default function TournamentDrawPage() {
           assigned_block: string; 
           block_position: string 
         }) => {
-          if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block)) {
+          if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block) && team.team_id && team.team_name) {
             const blockPosition = parseInt(team.block_position);
             const arrayIndex = blockPosition - 1;
             
@@ -247,7 +265,9 @@ export default function TournamentDrawPage() {
   const handleRandomDraw = () => {
     if (blocks.length === 0) return;
 
-    const shuffledTeams = [...registeredTeams].sort(() => Math.random() - 0.5);
+    // 有効なチームのみをシャッフル対象にする
+    const validTeams = registeredTeams.filter(team => team && team.team_id && team.team_name);
+    const shuffledTeams = [...validTeams].sort(() => Math.random() - 0.5);
     const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
     
     const newBlocks = blocks.map((block, index) => {
@@ -270,11 +290,17 @@ export default function TournamentDrawPage() {
     const fromBlock = newBlocks[fromBlockIndex];
     const toBlock = newBlocks[toBlockIndex];
     
-    const teamIndex = fromBlock.teams.findIndex(team => team.team_id === teamId);
+    const teamIndex = fromBlock.teams.findIndex(team => team && team.team_id === teamId);
     if (teamIndex === -1) return;
 
     const [team] = fromBlock.teams.splice(teamIndex, 1);
-    toBlock.teams.push(team);
+    
+    // 移動するチームが有効か確認
+    if (team && team.team_id && team.team_name) {
+      toBlock.teams.push(team);
+    } else {
+      console.error('Invalid team data during move operation:', team);
+    }
 
     setBlocks(newBlocks);
   };
@@ -289,8 +315,16 @@ export default function TournamentDrawPage() {
 
     const targetIndex = direction === 'up' ? teamIndex - 1 : teamIndex + 1;
     
-    // チームの位置を入れ替え
-    [block.teams[teamIndex], block.teams[targetIndex]] = [block.teams[targetIndex], block.teams[teamIndex]];
+    // チームの位置を入れ替え（安全性チェック付き）
+    const currentTeam = block.teams[teamIndex];
+    const targetTeam = block.teams[targetIndex];
+    
+    if (currentTeam && targetTeam && currentTeam.team_id && targetTeam.team_id) {
+      [block.teams[teamIndex], block.teams[targetIndex]] = [targetTeam, currentTeam];
+    } else {
+      console.error('Invalid team data during position swap:', { currentTeam, targetTeam });
+      return;
+    }
     
     setBlocks(newBlocks);
   };
@@ -302,10 +336,12 @@ export default function TournamentDrawPage() {
       
       const drawData = blocks.map(block => ({
         block_name: block.block_name,
-        teams: block.teams.map((team, index) => ({
-          team_id: team.team_id,
-          block_position: index + 1
-        }))
+        teams: block.teams
+          .filter(team => team && team.team_id)
+          .map((team, index) => ({
+            team_id: team.team_id,
+            block_position: index + 1
+          }))
       }));
 
       const response = await fetch(`/api/tournaments/${tournamentId}/draw`, {
@@ -486,9 +522,12 @@ export default function TournamentDrawPage() {
               ) : (
                 <div className="space-y-3">
                   {registeredTeams.map((team) => {
+                    // team_idが存在することを確認
+                    if (!team || !team.team_id) return null;
+                    
                     // このチームが既にブロックに振分けされているかチェック
                     const isAssigned = blocks.some(block => 
-                      block.teams.some(blockTeam => blockTeam.team_id === team.team_id)
+                      block.teams && block.teams.some(blockTeam => blockTeam && blockTeam.team_id === team.team_id)
                     );
                     
                     return (
@@ -536,65 +575,76 @@ export default function TournamentDrawPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {block.teams.map((team, teamIndex) => (
-                        <div 
-                          key={team.team_id}
-                          className="p-3 bg-blue-50 border border-blue-200 rounded-lg"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex-1">
-                              <p className="font-medium text-blue-900">
+                      {block.teams.map((team, teamIndex) => {
+                        // 安全性チェック: teamオブジェクトが有効か確認
+                        if (!team || !team.team_id || !team.team_name) {
+                          return null;
+                        }
+                        
+                        return (
+                          <div 
+                            key={team.team_id}
+                            className="p-4 bg-blue-50 border border-blue-200 rounded-lg"
+                          >
+                            {/* チーム情報エリア */}
+                            <div className="mb-3">
+                              <p className="font-medium text-blue-900 text-base leading-relaxed">
                                 {block.block_name}{teamIndex + 1}. {team.team_name}
                               </p>
-                              <p className="text-sm text-blue-700">
-                                {team.contact_person}
+                              <p className="text-sm text-blue-700 mt-1">
+                                {team.contact_person || '連絡先不明'}
                               </p>
                             </div>
-                            <div className="flex items-center space-x-1">
+                            
+                            {/* ボタンエリア */}
+                            <div className="flex justify-between items-center">
                               {/* 順番変更ボタン */}
-                              <div className="flex flex-col space-y-1">
+                              <div className="flex items-center space-x-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => moveTeamWithinBlock(blockIndex, teamIndex, 'up')}
                                   disabled={teamIndex === 0}
-                                  className="p-1 h-6 w-6"
+                                  className="px-2 py-1 h-8 w-8"
                                   title="上に移動"
                                 >
-                                  <ChevronUp className="w-3 h-3" />
+                                  <ChevronUp className="w-4 h-4" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => moveTeamWithinBlock(blockIndex, teamIndex, 'down')}
                                   disabled={teamIndex === block.teams.length - 1}
-                                  className="p-1 h-6 w-6"
+                                  className="px-2 py-1 h-8 w-8"
                                   title="下に移動"
                                 >
-                                  <ChevronDown className="w-3 h-3" />
+                                  <ChevronDown className="w-4 h-4" />
                                 </Button>
                               </div>
                               
                               {/* ブロック間移動ボタン */}
-                              <div className="flex flex-wrap">
-                                {blocks.map((_, otherBlockIndex) => (
-                                  blockIndex !== otherBlockIndex && (
-                                    <Button
-                                      key={otherBlockIndex}
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => moveTeam(team.team_id, blockIndex, otherBlockIndex)}
-                                      className="text-xs ml-1"
-                                    >
-                                      → {blocks[otherBlockIndex].block_name}
-                                    </Button>
-                                  )
-                                ))}
+                              <div className="flex flex-wrap gap-1">
+                                {blocks.map((_, otherBlockIndex) => {
+                                  if (blockIndex !== otherBlockIndex) {
+                                    return (
+                                      <Button
+                                        key={otherBlockIndex}
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => moveTeam(team.team_id, blockIndex, otherBlockIndex)}
+                                        className="text-xs px-2 py-1 h-7 min-w-[2.5rem]"
+                                      >
+                                        → {blocks[otherBlockIndex].block_name}
+                                      </Button>
+                                    );
+                                  }
+                                  return null;
+                                })}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>

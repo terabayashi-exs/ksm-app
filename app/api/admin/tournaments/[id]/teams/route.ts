@@ -13,10 +13,10 @@ interface RouteContext {
 const adminTeamRegistrationSchema = z.object({
   team_name: z.string()
     .min(1, 'チーム名は必須です')
-    .max(50, 'チーム名は50文字以内で入力してください'),
+    .max(100, 'チーム名は100文字以内で入力してください'),
   team_omission: z.string()
     .min(1, 'チーム略称は必須です')
-    .max(10, 'チーム略称は10文字以内で入力してください'),
+    .max(30, 'チーム略称は30文字以内で入力してください'),
   contact_person: z.string()
     .min(1, '代表者名は必須です')
     .max(50, '代表者名は50文字以内で入力してください'),
@@ -28,10 +28,10 @@ const adminTeamRegistrationSchema = z.object({
     .optional(),
   tournament_team_name: z.string()
     .min(1, '大会参加チーム名は必須です')
-    .max(50, '大会参加チーム名は50文字以内で入力してください'),
+    .max(100, '大会参加チーム名は100文字以内で入力してください'),
   tournament_team_omission: z.string()
     .min(1, '大会参加チーム略称は必須です')
-    .max(10, '大会参加チーム略称は10文字以内で入力してください'),
+    .max(30, '大会参加チーム略称は30文字以内で入力してください'),
   players: z.array(z.object({
     player_name: z.string()
       .min(1, '選手名は必須です')
@@ -44,7 +44,6 @@ const adminTeamRegistrationSchema = z.object({
       .max(10, 'ポジションは10文字以内で入力してください')
       .optional()
   }))
-  .min(1, '最低1人の選手が必要です')
   .max(20, '選手は最大20人まで登録可能です')
   .refine((players) => {
     // 背番号の重複チェック（背番号が設定されている選手のみ）
@@ -262,8 +261,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // 一意なチームIDを生成
-    let teamId = data.team_omission.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-    const baseTeamId = teamId;
+    // より識別しやすいIDを生成するため、複数のソースから抽出
+    let baseTeamId = '';
+    
+    // 1. 略称から英数字を抽出
+    const omissionAlphaNum = data.team_omission.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+    if (omissionAlphaNum && omissionAlphaNum.length >= 2) {
+      baseTeamId = omissionAlphaNum.substring(0, 8);
+    } else {
+      // 2. チーム名から英数字を抽出
+      const teamNameAlphaNum = data.team_name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+      if (teamNameAlphaNum && teamNameAlphaNum.length >= 2) {
+        baseTeamId = teamNameAlphaNum.substring(0, 8);
+      } else {
+        // 3. メールアドレスのユーザー名部分を使用
+        const emailUser = data.contact_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+        if (emailUser && emailUser.length >= 2) {
+          baseTeamId = emailUser.substring(0, 8);
+        } else {
+          // 4. 最終的に"team" + ランダム文字列
+          const randomSuffix = Math.random().toString(36).substring(2, 6);
+          baseTeamId = `team${randomSuffix}`;
+        }
+      }
+    }
+    
+    let teamId = baseTeamId;
     let counter = 1;
     
     while (true) {
@@ -275,8 +298,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
         break;
       }
       
+      // カウンターを追加して一意性を確保
       teamId = `${baseTeamId}${counter}`;
       counter++;
+      
+      // 無限ループを防ぐため、カウンターが999を超えたらランダム文字列を使用
+      if (counter > 999) {
+        const randomSuffix = Math.random().toString(36).substring(2, 6);
+        teamId = `team${randomSuffix}`;
+        break;
+      }
     }
 
     // パスワードハッシュ化
@@ -316,25 +347,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     console.log('Master team created successfully');
 
-    // 選手をマスター選手テーブルに登録
+    // 選手をマスター選手テーブルに登録（選手がいる場合のみ）
     const playerIds: number[] = [];
     
-    for (const player of data.players) {
-      const playerResult = await db.execute(`
-        INSERT INTO m_players (
-          player_name,
-          current_team_id,
-          is_active,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [
-        player.player_name,
-        teamId
-      ]);
-      
-      playerIds.push(Number(playerResult.lastInsertRowid));
-      console.log(`Created player: ${player.player_name} with ID: ${playerResult.lastInsertRowid}`);
+    if (data.players.length > 0) {
+      for (const player of data.players) {
+        const playerResult = await db.execute(`
+          INSERT INTO m_players (
+            player_name,
+            current_team_id,
+            is_active,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [
+          player.player_name,
+          teamId
+        ]);
+        
+        playerIds.push(Number(playerResult.lastInsertRowid));
+        console.log(`Created player: ${player.player_name} with ID: ${playerResult.lastInsertRowid}`);
+      }
     }
 
     // 大会参加テーブルに登録
@@ -357,30 +390,34 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const tournamentTeamId = Number(tournamentTeamResult.lastInsertRowid);
     console.log('Tournament team registration created with ID:', tournamentTeamId);
 
-    // 大会参加選手テーブルに登録
-    for (let i = 0; i < data.players.length; i++) {
-      const player = data.players[i];
-      const playerId = playerIds[i];
-      
-      await db.execute(`
-        INSERT INTO t_tournament_players (
-          tournament_id,
-          team_id,
-          player_id,
-          jersey_number,
-          player_status,
-          registration_date,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [
-        tournamentId,
-        teamId,
-        playerId,
-        player.uniform_number || null
-      ]);
-      
-      console.log(`Registered player ${playerId} for tournament with jersey ${player.uniform_number}`);
+    // 大会参加選手テーブルに登録（選手がいる場合のみ）
+    if (data.players.length > 0) {
+      for (let i = 0; i < data.players.length; i++) {
+        const player = data.players[i];
+        const playerId = playerIds[i];
+        
+        await db.execute(`
+          INSERT INTO t_tournament_players (
+            tournament_id,
+            team_id,
+            player_id,
+            jersey_number,
+            player_status,
+            registration_date,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [
+          tournamentId,
+          teamId,
+          playerId,
+          player.uniform_number || null
+        ]);
+        
+        console.log(`Registered player ${playerId} for tournament with jersey ${player.uniform_number}`);
+      }
+    } else {
+      console.log('No players to register for this team');
     }
 
     return NextResponse.json({
