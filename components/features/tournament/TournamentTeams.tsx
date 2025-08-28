@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, User, Hash, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, Hash, ChevronDown, ChevronRight } from 'lucide-react';
 import { 
   SimpleTournamentTeamsData, 
   SimpleTournamentTeam
@@ -250,28 +250,12 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                     {isExpanded && (
                       <div className="border-t bg-gray-50">
                         <div className="p-4 space-y-4">
-                          {/* 連絡先情報 */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="font-medium text-gray-700 mb-2 flex items-center">
-                                <User className="h-4 w-4 mr-1" />
-                                連絡先
-                              </h4>
-                              <div className="space-y-1 text-sm">
-                                <div className="flex items-center">
-                                  <User className="h-3 w-3 mr-2 text-gray-400" />
-                                  {team.contact_person}
-                                </div>
-                              </div>
+                          {/* ブロック情報 */}
+                          {team.assigned_block && (
+                            <div className="text-sm text-gray-600">
+                              所属ブロック: {team.assigned_block}
                             </div>
-                            <div>
-                              <div className="space-y-1 text-sm">
-                                {team.assigned_block && (
-                                  <div>所属ブロック: {team.assigned_block}</div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                          )}
 
                           {/* 選手一覧 */}
                           {teamPlayers[team.team_id] && teamPlayers[team.team_id].length > 0 ? (

@@ -649,62 +649,76 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
             {block.teams.length > 0 ? (
               <div className="overflow-x-auto">
                 {/* 統合された戦績表（順位表情報 + 対戦結果） */}
-                <table className="w-full border-collapse border border-gray-300">
+                <table className="w-full border-collapse border border-gray-300 min-w-[800px] md:min-w-0">
                   <thead>
                     <tr>
-                      <th className="border border-gray-300 p-3 bg-gray-100 text-base font-medium text-gray-700 min-w-[90px]">
+                      <th className="border border-gray-300 p-2 md:p-3 bg-gray-100 text-sm md:text-base font-medium text-gray-700 min-w-[70px] md:min-w-[90px]">
                         チーム
                       </th>
                       {/* 対戦結果の列ヘッダー（チーム略称を縦書き表示） */}
                       {block.teams.map((opponent) => (
                         <th 
                           key={opponent.team_id}
-                          className="border border-gray-300 p-2 bg-green-50 text-base font-medium text-gray-700 min-w-[70px] max-w-[90px]"
+                          className="border border-gray-300 p-1 md:p-2 bg-green-50 text-xs md:text-base font-medium text-gray-700 min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
                         >
                           <div 
-                            className="flex flex-col items-center justify-center h-20 overflow-hidden"
+                            className="flex flex-col items-center justify-center h-16 md:h-20 overflow-hidden"
                             style={{ 
-                              fontSize: '15px',
+                              fontSize: '12px',
                               fontWeight: '500',
-                              lineHeight: '1.1'
+                              lineHeight: '1.0'
                             }}
                             title={opponent.team_name}
                           >
-                            {(opponent.team_omission || opponent.team_name).split('').map((char, index) => (
-                              <span key={index} className="block leading-tight">{char}</span>
-                            ))}
+                            {/* モバイルでは略称を短縮、デスクトップでは通常表示 */}
+                            <div className="md:hidden">
+                              {(opponent.team_omission || opponent.team_name).substring(0, 3).split('').map((char, index) => (
+                                <span key={index} className="block leading-tight">{char}</span>
+                              ))}
+                            </div>
+                            <div className="hidden md:flex md:flex-col md:items-center">
+                              {(opponent.team_omission || opponent.team_name).split('').map((char, index) => (
+                                <span key={index} className="block leading-tight">{char}</span>
+                              ))}
+                            </div>
                           </div>
                         </th>
                       ))}
                       {/* 予選リーグの場合は順位表の列を追加 */}
                       {isPreliminaryPhase(block.phase) && (
                         <>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[55px]">
-                            順位
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[40px] md:min-w-[55px]">
+                            <span className="md:hidden">順</span>
+                            <span className="hidden md:inline">順位</span>
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[55px]">
-                            勝点
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[40px] md:min-w-[55px]">
+                            <span className="md:hidden">点</span>
+                            <span className="hidden md:inline">勝点</span>
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[50px]">
-                            試合数
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[35px] md:min-w-[50px]">
+                            <span className="md:hidden">試</span>
+                            <span className="hidden md:inline">試合数</span>
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[45px]">
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[30px] md:min-w-[45px]">
                             勝
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[45px]">
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[30px] md:min-w-[45px]">
                             分
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[45px]">
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[30px] md:min-w-[45px]">
                             敗
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[50px]">
-                            得点
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[35px] md:min-w-[50px]">
+                            <span className="md:hidden">得</span>
+                            <span className="hidden md:inline">得点</span>
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[50px]">
-                            失点
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[35px] md:min-w-[50px]">
+                            <span className="md:hidden">失</span>
+                            <span className="hidden md:inline">失点</span>
                           </th>
-                          <th className="border border-gray-300 p-2 bg-blue-50 text-base font-medium text-gray-700 min-w-[55px]">
-                            得失差
+                          <th className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-700 min-w-[40px] md:min-w-[55px]">
+                            <span className="md:hidden">差</span>
+                            <span className="hidden md:inline">得失差</span>
                           </th>
                         </>
                       )}
@@ -717,12 +731,18 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                       return (
                         <tr key={team.team_id}>
                           {/* チーム名（略称優先） */}
-                          <td className="border border-gray-300 p-3 bg-gray-50 font-medium text-base">
+                          <td className="border border-gray-300 p-2 md:p-3 bg-gray-50 font-medium text-sm md:text-base">
                             <div 
-                              className="truncate max-w-[80px]" 
+                              className="truncate max-w-[60px] md:max-w-[80px]" 
                               title={team.team_name}
                             >
-                              {team.team_omission || team.team_name}
+                              {/* モバイルでは短縮表示 */}
+                              <span className="md:hidden">
+                                {(team.team_omission || team.team_name).substring(0, 4)}
+                              </span>
+                              <span className="hidden md:inline">
+                                {team.team_omission || team.team_name}
+                              </span>
                             </div>
                           </td>
                           
@@ -730,20 +750,20 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                           {block.teams.map((opponent) => (
                             <td 
                               key={opponent.team_id}
-                              className="border border-gray-300 p-2 text-center bg-white"
+                              className="border border-gray-300 p-1 md:p-2 text-center bg-white"
                             >
                               {team.team_id === opponent.team_id ? (
-                                <div className="w-full h-10 bg-gray-200 flex items-center justify-center">
-                                  <span className="text-gray-500 text-base">-</span>
+                                <div className="w-full h-8 md:h-10 bg-gray-200 flex items-center justify-center">
+                                  <span className="text-gray-500 text-sm md:text-base">-</span>
                                 </div>
                               ) : (
                                 <div 
-                                  className={`w-full h-10 flex items-center justify-center text-lg font-medium rounded ${
+                                  className={`w-full h-8 md:h-10 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
                                     getResultColor(block.match_matrix[team.team_id]?.[opponent.team_id]?.result || null, block.match_matrix[team.team_id]?.[opponent.team_id]?.score)
                                   }`}
                                   title={`vs ${opponent.team_name} (${block.match_matrix[team.team_id]?.[opponent.team_id]?.match_code || ''})`}
                                 >
-                                  <div className="text-center leading-tight whitespace-pre-line">
+                                  <div className="text-center leading-tight whitespace-pre-line text-xs md:text-sm">
                                     {block.match_matrix[team.team_id]?.[opponent.team_id]?.score || '-'}
                                   </div>
                                 </div>
@@ -755,71 +775,71 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                           {isPreliminaryPhase(block.phase) && (
                             <>
                               {/* 順位 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
                                 <div className="flex items-center justify-center">
                                   {teamStanding ? (
                                     <>
-                                      {getPositionIcon(teamStanding.position)}
-                                      <span className="ml-1 font-bold text-base">
+                                      <span className="hidden md:inline-block mr-1">{getPositionIcon(teamStanding.position)}</span>
+                                      <span className="font-bold text-sm md:text-base">
                                         {teamStanding.position > 0 ? teamStanding.position : '-'}
                                       </span>
                                     </>
                                   ) : (
-                                    <span className="text-gray-400 text-sm">-</span>
+                                    <span className="text-gray-400 text-xs md:text-sm">-</span>
                                   )}
                                 </div>
                               </td>
                               
                               {/* 勝点 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="font-bold text-lg text-black">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="font-bold text-sm md:text-lg text-black">
                                   {teamStanding?.points || 0}
                                 </span>
                               </td>
                               
                               {/* 試合数 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="text-base text-black">{teamStanding?.matches_played || 0}</span>
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="text-xs md:text-base text-black">{teamStanding?.matches_played || 0}</span>
                               </td>
                               
                               {/* 勝利 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="text-black font-medium text-base">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="text-black font-medium text-xs md:text-base">
                                   {teamStanding?.wins || 0}
                                 </span>
                               </td>
                               
                               {/* 引分 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="text-black font-medium text-base">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="text-black font-medium text-xs md:text-base">
                                   {teamStanding?.draws || 0}
                                 </span>
                               </td>
                               
                               {/* 敗北 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="text-black font-medium text-base">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="text-black font-medium text-xs md:text-base">
                                   {teamStanding?.losses || 0}
                                 </span>
                               </td>
                               
                               {/* 総得点 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="font-medium text-base text-black">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="font-medium text-xs md:text-base text-black">
                                   {teamStanding?.goals_for || 0}
                                 </span>
                               </td>
                               
                               {/* 総失点 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="font-medium text-base text-black">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="font-medium text-xs md:text-base text-black">
                                   {teamStanding?.goals_against || 0}
                                 </span>
                               </td>
                               
                               {/* 得失差 */}
-                              <td className="border border-gray-300 p-2 bg-blue-50 text-center">
-                                <span className="font-bold text-base text-black">
+                              <td className="border border-gray-300 p-1 md:p-2 bg-blue-50 text-center">
+                                <span className="font-bold text-xs md:text-base text-black">
                                   {teamStanding ? (
                                     `${(teamStanding.goal_difference || 0) > 0 ? '+' : ''}${teamStanding.goal_difference || 0}`
                                   ) : '0'}
@@ -848,30 +868,30 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                   </div>
                   
                   {/* 対戦結果の凡例 */}
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                     <div className="flex items-center">
-                      <div className="w-5 h-5 bg-white border border-gray-300 text-black rounded mr-2 flex items-center justify-center text-xs">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-white border border-gray-300 text-black rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
                         〇
                       </div>
                       勝利
                     </div>
                     <div className="flex items-center">
-                      <div className="w-5 h-5 bg-white border border-gray-300 text-gray-500 rounded mr-2 flex items-center justify-center text-xs">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-white border border-gray-300 text-gray-500 rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
                         ×
                       </div>
                       敗北
                     </div>
                     <div className="flex items-center">
-                      <div className="w-5 h-5 bg-white border border-gray-300 text-black rounded mr-2 flex items-center justify-center text-xs">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-white border border-gray-300 text-black rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
                         △
                       </div>
                       引分
                     </div>
-                    <div className="flex items-center">
-                      <div className="w-5 h-5 bg-gray-100 text-gray-600 rounded mr-2 flex items-center justify-center text-xs font-medium">
+                    <div className="flex items-center col-span-2 md:col-span-1">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-gray-100 text-gray-600 rounded mr-1 md:mr-2 flex items-center justify-center text-xs font-medium">
                         A1
                       </div>
-未実施試合（試合コード表示）
+                      未実施試合（試合コード表示）
                     </div>
                   </div>
 

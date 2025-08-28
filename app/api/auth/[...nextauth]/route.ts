@@ -1,7 +1,7 @@
 // app/api/auth/[...nextauth]/route.ts
-import { handlers } from "@/lib/auth";
+import { GET, POST } from "@/lib/auth";
 
-export const { GET, POST } = handlers;
+export { GET, POST };
 
 // Node.js runtimeを明示的に指定
 export const runtime = 'nodejs';

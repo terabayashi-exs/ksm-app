@@ -203,25 +203,40 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse min-w-[700px] md:min-w-0">
                 <thead>
                   <tr className="border-b bg-gray-50">
-                    <th className="text-left py-3 px-3 font-medium text-gray-700">順位</th>
-                    <th className="text-left py-3 px-3 font-medium text-gray-700">チーム名</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
                     {isPreliminaryPhase(block.phase) && (
                       <>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">勝点</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">試合数</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">勝利</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">引分</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">敗北</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">総得点</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">総失点</th>
-                        <th className="text-center py-3 px-3 font-medium text-gray-700">得失差</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                          <span className="md:hidden">点</span>
+                          <span className="hidden md:inline">勝点</span>
+                        </th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                          <span className="md:hidden">試</span>
+                          <span className="hidden md:inline">試合数</span>
+                        </th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[30px] md:min-w-[50px]">勝</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[30px] md:min-w-[50px]">分</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[30px] md:min-w-[50px]">敗</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                          <span className="md:hidden">得</span>
+                          <span className="hidden md:inline">総得点</span>
+                        </th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                          <span className="md:hidden">失</span>
+                          <span className="hidden md:inline">総失点</span>
+                        </th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                          <span className="md:hidden">差</span>
+                          <span className="hidden md:inline">得失差</span>
+                        </th>
                       </>
                     )}
                     {isFinalPhase(block.phase) && (
-                      <th className="text-center py-3 px-3 font-medium text-gray-700">備考</th>
+                      <th className="text-center py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[80px] md:min-w-[100px]">備考</th>
                     )}
                   </tr>
                 </thead>
@@ -231,44 +246,56 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                       key={team.team_id} 
                       className={`border-b transition-colors ${team.position > 0 ? getPositionBgColor(team.position) : 'hover:bg-gray-50'}`}
                     >
-                      <td className="py-3 px-3">
+                      <td className="py-2 md:py-3 px-2 md:px-3">
                         <div className="flex items-center">
-                          {team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
-                          <span className="ml-2 font-bold text-lg">{team.position > 0 ? team.position : '-'}</span>
+                          <span className="hidden md:inline-block mr-2">
+                            {team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
+                          </span>
+                          <span className="font-bold text-base md:text-lg">{team.position > 0 ? team.position : '-'}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-2 md:py-3 px-2 md:px-3">
                         <div>
-                          <div className="font-medium text-gray-900">{team.team_name}</div>
+                          {/* モバイルでは略称優先、デスクトップでは正式名称 */}
+                          <div className="font-medium text-gray-900 text-sm md:text-base">
+                            <span className="md:hidden">
+                              {(team.team_omission || team.team_name).substring(0, 6)}
+                            </span>
+                            <span className="hidden md:inline">
+                              {team.team_name}
+                            </span>
+                          </div>
                           {team.team_omission && (
-                            <div className="text-xs text-gray-500">({team.team_omission})</div>
+                            <div className="text-xs text-gray-500 hidden md:block">({team.team_omission})</div>
                           )}
                         </div>
                       </td>
                       {isPreliminaryPhase(block.phase) && (
                         <>
-                          <td className="py-3 px-3 text-center">
-                            <span className="font-bold text-lg text-blue-600">{team.points || 0}</span>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="font-bold text-sm md:text-lg text-blue-600">{team.points || 0}</span>
                           </td>
-                          <td className="py-3 px-3 text-center">{team.matches_played || 0}</td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="text-green-600 font-medium">{team.wins || 0}</span>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="text-xs md:text-base">{team.matches_played || 0}</span>
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="text-yellow-600 font-medium">{team.draws || 0}</span>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="text-green-600 font-medium text-xs md:text-base">{team.wins || 0}</span>
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="text-red-600 font-medium">{team.losses || 0}</span>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="text-yellow-600 font-medium text-xs md:text-base">{team.draws || 0}</span>
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="font-medium">{team.goals_for || 0}</span>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="text-red-600 font-medium text-xs md:text-base">{team.losses || 0}</span>
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="font-medium">{team.goals_against || 0}</span>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="font-medium text-xs md:text-base">{team.goals_for || 0}</span>
                           </td>
-                          <td className="py-3 px-3 text-center">
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                            <span className="font-medium text-xs md:text-base">{team.goals_against || 0}</span>
+                          </td>
+                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
                             <span 
-                              className={`font-bold ${
+                              className={`font-bold text-xs md:text-base ${
                                 (team.goal_difference || 0) > 0 
                                   ? 'text-green-600' 
                                   : (team.goal_difference || 0) < 0 
@@ -282,13 +309,18 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                         </>
                       )}
                       {isFinalPhase(block.phase) && (
-                        <td className="py-3 px-3 text-center">
-                          <span className="text-sm text-gray-600">
+                        <td className="py-2 md:py-3 px-2 md:px-3 text-center">
+                          <span className="text-xs md:text-sm text-gray-600">
                             {team.position === 1 && '優勝'}
                             {team.position === 2 && '準優勝'}
                             {team.position === 3 && '3位'}
                             {team.position === 4 && '4位'}
-                            {team.position >= 5 && '準々決勝敗退'}
+                            {team.position >= 5 && (
+                              <>
+                                <span className="md:hidden">準々敗退</span>
+                                <span className="hidden md:inline">準々決勝敗退</span>
+                              </>
+                            )}
                             {team.position === 0 && '-'}
                           </span>
                         </td>

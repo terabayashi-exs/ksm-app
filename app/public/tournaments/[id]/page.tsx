@@ -277,32 +277,36 @@ async function TournamentDetailContent({ params }: PageProps) {
 
         {/* タブナビゲーション */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className={`grid w-full ${hasMatches ? 'grid-cols-6' : 'grid-cols-5'} mb-8`}>
-            <TabsTrigger value="overview" className="flex items-center">
-              <Trophy className="h-4 w-4 mr-2" />
-              大会概要
+          <TabsList className={`grid w-full mb-8 ${
+            hasMatches 
+              ? 'grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-6 sm:grid-rows-1' 
+              : 'grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-5 sm:grid-rows-1'
+          }`}>
+            <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline sm:inline">大会</span>概要
             </TabsTrigger>
-            <TabsTrigger value="schedule" className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              日程・結果
+            <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline sm:inline">日程・</span>結果
             </TabsTrigger>
             {hasMatches && (
-              <TabsTrigger value="bracket" className="flex items-center">
-                <GitBranch className="h-4 w-4 mr-2" />
-                トーナメント表
+              <TabsTrigger value="bracket" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">トーナメント</span>表
               </TabsTrigger>
             )}
-            <TabsTrigger value="results" className="flex items-center">
-              <Award className="h-4 w-4 mr-2" />
+            <TabsTrigger value="results" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               戦績表
             </TabsTrigger>
-            <TabsTrigger value="standings" className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
+            <TabsTrigger value="standings" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               順位表
             </TabsTrigger>
-            <TabsTrigger value="teams" className="flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              参加チーム
+            <TabsTrigger value="teams" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline sm:inline">参加</span>チーム
             </TabsTrigger>
           </TabsList>
 

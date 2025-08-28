@@ -309,14 +309,14 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                    <table className="w-full border-collapse min-w-[600px]">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-3 px-3 font-medium">時間</th>
-                          <th className="text-left py-3 px-3 font-medium">試合</th>
-                          <th className="text-left py-3 px-3 font-medium">対戦</th>
-                          <th className="text-left py-3 px-3 font-medium">結果</th>
-                          <th className="text-left py-3 px-3 font-medium">コート</th>
+                          <th className="text-left py-3 px-2 font-medium w-16 md:w-20">時間</th>
+                          <th className="text-left py-3 px-2 font-medium w-16 md:w-20">試合</th>
+                          <th className="text-left py-3 px-2 font-medium w-32 md:w-auto">対戦</th>
+                          <th className="text-left py-3 px-2 font-medium w-20 md:w-24">結果</th>
+                          <th className="text-left py-3 px-2 font-medium w-16 md:w-20">コート</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -331,46 +331,62 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                             
                             return (
                               <tr key={match.match_id} className="border-b hover:bg-gray-50">
-                                <td className="py-3 px-3">
-                                  <div className="flex items-center text-sm">
+                                <td className="py-2 px-2">
+                                  <div className="flex items-center text-xs md:text-sm">
                                     <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                                    {formatTime(match.start_time)}
+                                    <span className="truncate">{formatTime(match.start_time)}</span>
                                   </div>
                                 </td>
-                                <td className="py-3 px-3">
-                                  <div className="font-medium">{match.match_code}</div>
-                                  <div className="text-xs text-gray-600">{match.match_type}</div>
+                                <td className="py-2 px-2">
+                                  <div className="font-medium text-xs md:text-sm">{match.match_code}</div>
+                                  <div className="text-xs text-gray-600 hidden md:block">{match.match_type}</div>
                                 </td>
-                                <td className="py-3 px-3">
-                                  <div className="space-y-1">
-                                    <div className={`text-sm ${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
-                                      {match.team1_display_name}
+                                <td className="py-2 px-2">
+                                  <div className="text-xs md:text-sm">
+                                    <div className="hidden md:block space-y-1">
+                                      {/* デスクトップ表示: 縦並び */}
+                                      <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
+                                        {match.team1_display_name}
+                                      </div>
+                                      <div className="text-xs text-gray-400">vs</div>
+                                      <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
+                                        {match.team2_display_name}
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-gray-400">vs</div>
-                                    <div className={`text-sm ${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
-                                      {match.team2_display_name}
+                                    <div className="md:hidden">
+                                      {/* モバイル表示: 横並び */}
+                                      <div className="flex items-center space-x-1 text-xs">
+                                        <span className={`truncate max-w-[3.5rem] ${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
+                                          {match.team1_display_name}
+                                        </span>
+                                        <span className="text-gray-400 text-xs">vs</span>
+                                        <span className={`truncate max-w-[3.5rem] ${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
+                                          {match.team2_display_name}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="py-3 px-3">
-                                  <div className="flex items-center space-x-2">
-                                    {result.icon}
-                                    {result.display}
+                                <td className="py-2 px-2">
+                                  <div className="flex items-center space-x-1">
+                                    <div className="hidden md:inline">{result.icon}</div>
+                                    <div className="text-xs md:text-sm">{result.display}</div>
                                   </div>
                                   {match.remarks && (
-                                    <div className="text-xs text-gray-500 mt-1">
+                                    <div className="text-xs text-gray-500 mt-1 hidden md:block">
                                       {match.remarks}
                                     </div>
                                   )}
                                 </td>
-                                <td className="py-3 px-3">
+                                <td className="py-2 px-2">
                                   {match.court_number ? (
-                                    <div className="flex items-center text-sm">
-                                      <MapPin className="h-3 w-3 mr-1 text-gray-400" />
-                                      コート {match.court_number}
+                                    <div className="flex items-center text-xs md:text-sm">
+                                      <MapPin className="h-3 w-3 mr-1 text-gray-400 hidden md:inline" />
+                                      <span className="md:hidden">C{match.court_number}</span>
+                                      <span className="hidden md:inline">コート{match.court_number}</span>
                                     </div>
                                   ) : (
-                                    <span className="text-gray-400 text-sm">-</span>
+                                    <span className="text-gray-400 text-xs">-</span>
                                   )}
                                 </td>
                               </tr>

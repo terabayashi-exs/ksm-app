@@ -1,7 +1,7 @@
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
 
 import { shouldApplyBasicAuth } from './lib/basic-auth-config';
 
@@ -49,7 +49,7 @@ function checkBasicAuth(req: NextRequest): NextResponse | null {
   return null; // 認証成功
 }
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { nextUrl } = req;
   
   // BASIC認証チェック（本番環境のみ）
@@ -58,9 +58,9 @@ export default auth((req) => {
     return basicAuthResponse;
   }
   
-  const session = req.auth;
-  const isLoggedIn = !!session?.user;
-  const userRole = session?.user?.role;
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isLoggedIn = !!token;
+  const userRole = token?.role;
 
   // Edge browser localStorage fix headers
   const response = NextResponse.next();
@@ -111,7 +111,7 @@ export default auth((req) => {
   }
 
   return response;
-});
+}
 
 export const config = {
   matcher: [

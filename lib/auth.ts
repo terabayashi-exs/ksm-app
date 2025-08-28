@@ -1,5 +1,7 @@
 // lib/auth.ts
 import NextAuth from "next-auth";
+import { getServerSession } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
@@ -12,7 +14,7 @@ export interface ExtendedUser extends User {
   teamId?: string;
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const authConfig: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "admin",
@@ -140,5 +142,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt" as const,
     maxAge: 24 * 60 * 60 // 24時間
   },
-  secret: process.env.NEXTAUTH_SECRET
-});
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development'
+};
+
+const handler = NextAuth(authConfig);
+
+export { handler as GET, handler as POST };
+
+// v4 では getServerSession を使用  
+export async function auth() {
+  return await getServerSession(authConfig);
+}

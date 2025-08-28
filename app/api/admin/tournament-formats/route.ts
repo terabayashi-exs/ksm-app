@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+// Node.js runtimeを明示的に指定
+export const runtime = 'nodejs';
+
 // GET: フォーマット一覧取得
 export async function GET() {
   try {

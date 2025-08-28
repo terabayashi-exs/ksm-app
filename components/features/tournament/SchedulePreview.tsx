@@ -1079,7 +1079,29 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                 </CardContent>
               </Card>
             ) : (
-              Object.entries(matchesByBlock).map(([blockKey, blockMatches]) => (
+              Object.entries(matchesByBlock)
+                .sort(([blockKeyA], [blockKeyB]) => {
+                  // フェーズ別の優先順位を設定（予選 → 決勝）
+                  const phaseOrderA = blockKeyA.includes('予選') ? 0 : 1;
+                  const phaseOrderB = blockKeyB.includes('予選') ? 0 : 1;
+                  
+                  if (phaseOrderA !== phaseOrderB) {
+                    return phaseOrderA - phaseOrderB;
+                  }
+                  
+                  // 同じフェーズ内でblock_nameの昇順でソート
+                  // 予選の場合: "予選Aブロック" → "A"を抽出してソート
+                  // 決勝の場合: "決勝トーナメント" → そのまま比較
+                  if (blockKeyA.includes('予選') && blockKeyB.includes('予選')) {
+                    const blockA = blockKeyA.replace('予選', '').replace('ブロック', '');
+                    const blockB = blockKeyB.replace('予選', '').replace('ブロック', '');
+                    return blockA.localeCompare(blockB);
+                  }
+                  
+                  // 決勝同士の場合はそのまま比較
+                  return blockKeyA.localeCompare(blockKeyB);
+                })
+                .map(([blockKey, blockMatches]) => (
                 <Card key={blockKey}>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
