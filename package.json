@@ -25,6 +25,7 @@
     "db:create-admin": "node scripts/create-admin.js",
     "db:add-court-time-columns": "node scripts/add-court-time-columns.js",
     "db:update-template-court-time": "node scripts/update-template-court-time.js",
+    "reset-test-tournaments": "node scripts/reset-test-tournaments.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

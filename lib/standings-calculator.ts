@@ -400,7 +400,7 @@ async function calculateBlockStandings(
         goalsFor += teamGoals;
         goalsAgainst += opponentGoals;
 
-        // 勝敗とポイントの集計
+        // 勝敗とポイントの集計（PK選手権では延長戦により引き分けなし）
         if (match.is_draw) {
           draws++;
           points += drawPoints;
@@ -429,27 +429,17 @@ async function calculateBlockStandings(
       };
     });
 
-    // 順位を決定（勝点 > 総得点 > 得失点差 > 直接対決 > 抽選の順）
+    // 順位を決定（新レギュレーション: 1.勝点 > 2.直接対決 > 3.抽選）
     teamStandings.sort((a, b) => {
       // 1. 勝点の多い順
       if (a.points !== b.points) {
         return b.points - a.points;
       }
       
-      // 2. 総得点の多い順
-      if (a.goals_for !== b.goals_for) {
-        return b.goals_for - a.goals_for;
-      }
-      
-      // 3. 得失点差の良い順
-      if (a.goal_difference !== b.goal_difference) {
-        return b.goal_difference - a.goal_difference;
-      }
-      
-      // 4. 直接対決の結果
+      // 2. 直接対決の結果
       const headToHead = calculateHeadToHead(a.team_id, b.team_id, matches);
       
-      // 直接対決の勝点を計算
+      // 直接対決の勝点を計算（PK選手権では延長戦により引き分けなし）
       let teamAHeadToHeadPoints = 0;
       let teamBHeadToHeadPoints = 0;
       
@@ -463,13 +453,7 @@ async function calculateBlockStandings(
         return teamBHeadToHeadPoints - teamAHeadToHeadPoints;
       }
       
-      // 直接対決の得失点差
-      const headToHeadGoalDiff = headToHead.teamAGoals - headToHead.teamBGoals;
-      if (headToHeadGoalDiff !== 0) {
-        return -headToHeadGoalDiff; // チームAが上位なら負の値
-      }
-      
-      // 5. 抽選（チーム名の辞書順で代用）
+      // 3. 抽選（チーム名の辞書順で代用）
       return a.team_name.localeCompare(b.team_name, 'ja');
     });
 
@@ -483,10 +467,8 @@ async function calculateBlockStandings(
         const currentTeam = teamStandings[i];
         const previousTeam = teamStandings[i - 1];
         
-        // 勝点、総得点、得失点差が全て同じかつ直接対決も同じなら同着
-        const isTied = currentTeam.points === previousTeam.points &&
-                       currentTeam.goals_for === previousTeam.goals_for &&
-                       currentTeam.goal_difference === previousTeam.goal_difference;
+        // 新レギュレーション: 勝点が同じかつ直接対決も同じなら同着
+        const isTied = currentTeam.points === previousTeam.points;
         
         if (isTied) {
           // 直接対決の結果を確認

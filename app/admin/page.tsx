@@ -117,6 +117,25 @@ export default async function AdminDashboard() {
           </Card>
 
 
+          {/* 大会データリセット機能 */}
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="text-yellow-800 flex items-center">
+                ⚠️ 大会データリセット
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-yellow-700 mb-4">
+                テスト用大会（ID: 9, 10, 11）の試合データをリセットできます
+              </p>
+              <div className="space-y-2">
+                <Button asChild variant="outline" className="w-full border-2 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-100">
+                  <Link href="/admin/tournaments/reset">リセット機能を開く</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* 辞退申請管理 */}
           <Card>
             <CardHeader>
