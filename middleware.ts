@@ -3,60 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-import { shouldApplyBasicAuth } from './lib/basic-auth-config';
-
-// BASIC認証チェック関数
-function checkBasicAuth(req: NextRequest): NextResponse | null {
-  const environment = process.env.NODE_ENV || 'development';
-  
-  // 設定に基づいてBASIC認証適用判定
-  if (!shouldApplyBasicAuth(req.nextUrl.pathname, environment)) {
-    return null;
-  }
-
-  // BASIC認証の設定値
-  const BASIC_AUTH_USERNAME = process.env.BASIC_AUTH_USERNAME;
-  const BASIC_AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD;
-
-  // 環境変数が設定されていない場合はBASIC認証をスキップ
-  if (!BASIC_AUTH_USERNAME || !BASIC_AUTH_PASSWORD) {
-    return null;
-  }
-
-  const authorization = req.headers.get('authorization');
-
-  if (!authorization || !authorization.startsWith('Basic ')) {
-    return new NextResponse('Unauthorized', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Secure Area"',
-      },
-    });
-  }
-
-  const basic = authorization.split(' ')[1];
-  const [username, password] = Buffer.from(basic, 'base64').toString().split(':');
-
-  if (username !== BASIC_AUTH_USERNAME || password !== BASIC_AUTH_PASSWORD) {
-    return new NextResponse('Unauthorized', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Secure Area"',
-      },
-    });
-  }
-
-  return null; // 認証成功
-}
-
 export default async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  
-  // BASIC認証チェック（本番環境のみ）
-  const basicAuthResponse = checkBasicAuth(req);
-  if (basicAuthResponse) {
-    return basicAuthResponse;
-  }
   
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isLoggedIn = !!token;
