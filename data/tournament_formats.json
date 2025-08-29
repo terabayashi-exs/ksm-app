@@ -1,8 +1,8 @@
 [
   {
-    "format_id": 1,
-    "format_name": "16チーム予選リーグ+決勝トーナメント",
-    "target_team_count": 16,
-    "format_description": "16チームを4ブロック（A・B・C・D）に分け、各ブロック4チームのリーグ戦。各ブロック上位2チームが決勝トーナメントに進出。3位決定戦あり。1日開催。"
+    "format_id": 10,
+    "format_name": "48チーム大規模リーグ+決勝トーナメント",
+    "target_team_count": 48,
+    "format_description": "48チーム大規模リーグ戦+決勝トーナメント形式"
   }
 ]

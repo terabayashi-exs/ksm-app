@@ -55,7 +55,7 @@ const tournamentCreateSchema = z.object({
   tournament_name: z.string().min(1, "大会名は必須です").max(100, "大会名は100文字以内で入力してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
   venue_id: z.number().min(1, "会場を選択してください"),
-  team_count: z.number().min(4, "チーム数は4以上で入力してください").max(128, "チーム数は128以下で入力してください"),
+  team_count: z.number().min(2, "チーム数は2以上で入力してください").max(128, "チーム数は128以下で入力してください"),
   court_count: z.number().min(1, "コート数は1以上で入力してください").max(8, "コート数は8以下で入力してください"),
   tournament_dates: z.array(z.object({
     dayNumber: z.number(),
@@ -83,7 +83,7 @@ export default function TournamentCreateNewForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [step, setStep] = useState<'team-count' | 'format-selection' | 'details'>('team-count');
-  const [teamCount, setTeamCount] = useState<number>(8);
+  const [teamCount, setTeamCount] = useState<number>(2);
   const [recommendation, setRecommendation] = useState<FormatRecommendation | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(true);
@@ -178,7 +178,7 @@ export default function TournamentCreateNewForm() {
 
   // チーム数確定
   const handleTeamCountSubmit = () => {
-    if (teamCount >= 4) {
+    if (teamCount >= 2) {
       fetchRecommendation(teamCount);
       setStep('format-selection');
     }
@@ -260,22 +260,22 @@ export default function TournamentCreateNewForm() {
             <Input
               id="team_count_input"
               type="number"
-              min={4}
+              min={2}
               max={128}
               value={teamCount}
-              onChange={(e) => setTeamCount(parseInt(e.target.value) || 4)}
+              onChange={(e) => setTeamCount(parseInt(e.target.value) || 2)}
               placeholder="例: 16"
               className="text-center text-xl font-semibold"
             />
             <p className="text-xs text-gray-500">
-              4チーム以上、128チーム以下で入力してください
+              2チーム以上、128チーム以下で入力してください
             </p>
           </div>
           
           <Button
             type="button"
             onClick={handleTeamCountSubmit}
-            disabled={teamCount < 4 || teamCount > 128}
+            disabled={teamCount < 2 || teamCount > 128}
             className="w-full"
           >
             おすすめフォーマットを表示
@@ -489,7 +489,7 @@ export default function TournamentCreateNewForm() {
                 id="team_count"
                 type="number"
                 {...register("team_count", { valueAsNumber: true })}
-                min={4}
+                min={2}
                 max={128}
                 className={errors.team_count ? "border-red-500" : ""}
                 readOnly

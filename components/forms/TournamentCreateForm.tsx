@@ -30,7 +30,7 @@ interface FormatRecommendation {
 export default function TournamentCreateForm() {
   const router = useRouter();
   const [step, setStep] = useState<'team-count' | 'format-selection' | 'details'>('team-count');
-  const [teamCount, setTeamCount] = useState<number>(8);
+  const [teamCount, setTeamCount] = useState<number>(2);
   const [recommendation, setRecommendation] = useState<FormatRecommendation | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export default function TournamentCreateForm() {
     resolver: zodResolver(tournamentCreateSchema),
     defaultValues: {
       ...tournamentCreateDefaults,
-      team_count: 8,
+      team_count: 2,
       is_public: true
     }
   });
@@ -87,18 +87,33 @@ export default function TournamentCreateForm() {
     fetchVenues();
   }, []);
 
+  // teamCountの変化を監視
+  useEffect(() => {
+    console.log('teamCount state changed to:', teamCount, 'type:', typeof teamCount, 'condition (>=2):', teamCount >= 2);
+  }, [teamCount]);
+
   // フォーマット推奨の取得
   const fetchRecommendation = async (count: number) => {
+    console.log('fetchRecommendation called with count:', count);
     setLoading(true);
     try {
-      const response = await fetch(`/api/tournaments/formats/recommend?teamCount=${count}`);
+      const url = `/api/tournaments/formats/recommend?teamCount=${count}`;
+      console.log('Fetching from URL:', url);
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
       const result = await response.json();
+      console.log('API response:', result);
       if (result.success) {
+        console.log('Setting recommendation with data:', result.data);
         setRecommendation(result.data);
         form.setValue('team_count', count);
+      } else {
+        console.error('API returned error:', result.error);
+        alert(`エラー: ${result.error}`);
       }
     } catch (error) {
       console.error('推奨取得エラー:', error);
+      alert(`ネットワークエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
     } finally {
       setLoading(false);
     }
@@ -106,10 +121,15 @@ export default function TournamentCreateForm() {
 
   // チーム数確定ボタン
   const handleTeamCountSubmit = () => {
-    if (teamCount >= 2) {
-      fetchRecommendation(teamCount);
-      setStep('format-selection');
-    }
+    console.log('handleTeamCountSubmit called, teamCount:', teamCount, 'condition check:', teamCount >= 2);
+    
+    // teamCountが2未満の場合は強制的に2に設定
+    const actualTeamCount = teamCount < 2 ? 2 : teamCount;
+    console.log('Using teamCount:', actualTeamCount);
+    
+    console.log('Calling fetchRecommendation and setting step');
+    fetchRecommendation(actualTeamCount);
+    setStep('format-selection');
   };
 
   // フォーマット選択
@@ -225,25 +245,99 @@ export default function TournamentCreateForm() {
           <CardContent className="space-y-6">
             <div className="flex items-center justify-center space-x-4">
               <Label htmlFor="teamCount" className="text-lg">参加予定チーム数:</Label>
-              <Input
+              <input
                 id="teamCount"
                 type="number"
                 min="2"
-                max="64"
+                max="128"
                 value={teamCount}
-                onChange={(e) => setTeamCount(parseInt(e.target.value) || 2)}
-                className="w-24 text-center text-lg"
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  console.log('Input changed to:', inputValue);
+                  
+                  // 空文字の場合は最小値を設定
+                  if (inputValue === '') {
+                    console.log('Empty input, setting to 2');
+                    setTeamCount(2);
+                    return;
+                  }
+                  
+                  const numValue = parseInt(inputValue, 10);
+                  console.log('Parsed value:', numValue, 'isNaN:', isNaN(numValue));
+                  
+                  if (!isNaN(numValue)) {
+                    console.log('Setting teamCount to:', numValue);
+                    setTeamCount(numValue);
+                  } else {
+                    console.log('Invalid number, keeping current value');
+                  }
+                }}
+                onInput={(e) => {
+                  console.log('Input event triggered:', e.currentTarget.value);
+                }}
+                onFocus={() => console.log('Input focused')}
+                onBlur={() => console.log('Input blurred')}
+                className="flex h-10 w-24 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background text-center text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ width: '96px' }}
               />
               <span className="text-lg">チーム</span>
             </div>
             
             <div className="text-center">
+              <div className="mb-2 text-sm text-gray-600">
+                現在のチーム数: {teamCount} (型: {typeof teamCount})
+                {teamCount < 2 && <span className="text-red-600"> - ボタン無効</span>}
+              </div>
               <Button 
-                onClick={handleTeamCountSubmit}
-                disabled={teamCount < 2}
+                onClick={() => {
+                  console.log('Button clicked, teamCount:', teamCount, 'type:', typeof teamCount);
+                  // 強制的にteamCountを2に設定して進む
+                  if (teamCount < 2) {
+                    console.log('Force setting teamCount to 2');
+                    setTeamCount(2);
+                  }
+                  handleTeamCountSubmit();
+                }}
+                disabled={false}
                 size="lg"
               >
                 おすすめフォーマットを表示
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  console.log('Debug: Force setting teamCount to 2 and step to format-selection');
+                  setTeamCount(2);
+                  setStep('format-selection');
+                  // 2チーム用のフォーマットデータを手動で設定
+                  setRecommendation({
+                    teamCount: 2,
+                    recommendedFormats: [{
+                      format_id: 14,
+                      format_name: "2チーム2回戦制リーグ",
+                      target_team_count: 2,
+                      format_description: "2チームによる2回戦制のリーグ戦。同じ対戦カードを2回行い、総合成績で順位を決定。",
+                      created_at: "",
+                      updated_at: "",
+                      recommendationReason: "2チームに最適化されたフォーマットです",
+                      matchType: 'exact'
+                    }],
+                    allFormats: [{
+                      format_id: 14,
+                      format_name: "2チーム2回戦制リーグ",
+                      target_team_count: 2,
+                      format_description: "2チームによる2回戦制のリーグ戦。同じ対戦カードを2回行い、総合成績で順位を決定。",
+                      created_at: "",
+                      updated_at: "",
+                      isRecommended: true
+                    }]
+                  });
+                }}
+                variant="outline"
+                size="sm"
+                className="mt-2"
+              >
+                🐛 デバッグ: 強制進行
               </Button>
             </div>
           </CardContent>

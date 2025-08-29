@@ -11,11 +11,11 @@ import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, GitBranch } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
 import { getTournamentById } from '@/lib/tournament-detail';
-import { hasTournamentMatches } from '@/lib/bracket-checker';
+import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,7 +33,15 @@ async function getTournamentDetail(id: string): Promise<Tournament> {
 }
 
 // 大会概要タブのコンテンツ
-function TournamentOverview({ tournament }: { tournament: Tournament }) {
+function TournamentOverview({ 
+  tournament, 
+  bracketPdfExists, 
+  resultsPdfExists 
+}: { 
+  tournament: Tournament;
+  bracketPdfExists: boolean;
+  resultsPdfExists: boolean;
+}) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ongoing':
@@ -95,6 +103,85 @@ function TournamentOverview({ tournament }: { tournament: Tournament }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* PDF ダウンロードエリア - 存在するPDFのみ表示 */}
+      {(bracketPdfExists || resultsPdfExists) && (
+        <div className={`grid grid-cols-1 ${bracketPdfExists && resultsPdfExists ? 'lg:grid-cols-2' : ''} gap-6`}>
+          {/* PDF トーナメント表リンク */}
+          {bracketPdfExists && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-green-600" />
+                  トーナメント表（PDF版）
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-green-800 mb-1">PDFでトーナメント表を表示</h4>
+                    <p className="text-sm text-green-700">
+                      手動作成されたトーナメント表をPDF形式でご覧いただけます。印刷や詳細確認に最適です。
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      ※ 最新の試合結果は「日程・結果」ページをご確認ください
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button asChild className="bg-green-600 hover:bg-green-700">
+                      <Link 
+                        href={`/public/tournaments/${tournament.tournament_id}/bracket-pdf`}
+                        className="flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        PDF表示
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PDF 結果表リンク */}
+          {resultsPdfExists && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                  結果表（PDF版）
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-blue-800 mb-1">PDFで結果表を表示</h4>
+                    <p className="text-sm text-blue-700">
+                      手動作成された結果表をPDF形式でご覧いただけます。順位・戦績の確認に最適です。
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      ※ 最新の順位・戦績は「順位表」「戦績表」ページをご確認ください
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                      <Link 
+                        href={`/public/tournaments/${tournament.tournament_id}/results-pdf`}
+                        className="flex items-center gap-2"
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                        PDF表示
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* 開催日程 */}
       {dateEntries.length > 0 && (
@@ -188,28 +275,6 @@ function ScheduleResults({ tournament }: { tournament: Tournament }) {
   return <TournamentSchedule tournamentId={tournament.tournament_id} />;
 }
 
-// インポート済みのhasTournamentMatchesを使用
-
-// トーナメント表タブ
-async function Bracket({ tournament }: { tournament: Tournament }) {
-  const hasMatches = await hasTournamentMatches(tournament.tournament_id);
-  
-  if (!hasMatches) {
-    return (
-      <div className="text-center py-16">
-        <GitBranch className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">トーナメント戦なし</h3>
-        <p className="text-gray-600 mb-4">この大会は予選リーグ戦のみで構成されています</p>
-        <p className="text-sm text-gray-500">決勝トーナメントはありません</p>
-      </div>
-    );
-  }
-
-  // 動的importでTournamentBracketコンポーネントを読み込み
-  const TournamentBracket = (await import('@/components/features/tournament/TournamentBracket')).default;
-  
-  return <TournamentBracket tournamentId={tournament.tournament_id} />;
-}
 
 // 戦績表タブ
 function Results({ tournament }: { tournament: Tournament }) {
@@ -248,8 +313,8 @@ async function TournamentDetailContent({ params }: PageProps) {
   const resolvedParams = await params;
   const tournament = await getTournamentDetail(resolvedParams.id);
   
-  // トーナメント試合があるかチェック
-  const hasMatches = await hasTournamentMatches(tournament.tournament_id);
+  // PDFファイルの存在チェック
+  const { bracketPdfExists, resultsPdfExists } = await checkTournamentPdfFiles(tournament.tournament_id);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -277,11 +342,7 @@ async function TournamentDetailContent({ params }: PageProps) {
 
         {/* タブナビゲーション */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className={`grid w-full mb-8 ${
-            hasMatches 
-              ? 'grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-6 sm:grid-rows-1' 
-              : 'grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-5 sm:grid-rows-1'
-          }`}>
+          <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-5 sm:grid-rows-1">
             <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
               <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden xs:inline sm:inline">大会</span>概要
@@ -290,12 +351,6 @@ async function TournamentDetailContent({ params }: PageProps) {
               <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden xs:inline sm:inline">日程・</span>結果
             </TabsTrigger>
-            {hasMatches && (
-              <TabsTrigger value="bracket" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline sm:inline">トーナメント</span>表
-              </TabsTrigger>
-            )}
             <TabsTrigger value="results" className="flex items-center justify-center py-3 text-xs sm:text-sm">
               <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               戦績表
@@ -311,18 +366,16 @@ async function TournamentDetailContent({ params }: PageProps) {
           </TabsList>
 
           <TabsContent value="overview">
-            <TournamentOverview tournament={tournament} />
+            <TournamentOverview 
+              tournament={tournament} 
+              bracketPdfExists={bracketPdfExists} 
+              resultsPdfExists={resultsPdfExists} 
+            />
           </TabsContent>
 
           <TabsContent value="schedule">
             <ScheduleResults tournament={tournament} />
           </TabsContent>
-
-          {hasMatches && (
-            <TabsContent value="bracket">
-              <Bracket tournament={tournament} />
-            </TabsContent>
-          )}
 
           <TabsContent value="results">
             <Results tournament={tournament} />

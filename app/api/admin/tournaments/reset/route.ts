@@ -153,6 +153,115 @@ async function executeReset(tournament_ids: number[], reset_level: string): Prom
         )
       `);
 
+      // 5. 大会ステータスをplanningに戻す
+      await db.execute(`
+        UPDATE t_tournaments SET
+          status = 'planning',
+          updated_at = datetime('now', '+9 hours')
+        WHERE tournament_id IN (${tournamentIdList})
+      `);
+
+      // 6. 大会通知を削除
+      await db.execute(`
+        DELETE FROM t_tournament_notifications 
+        WHERE tournament_id IN (${tournamentIdList})
+      `);
+
+      // 7. 決勝トーナメントのみチーム割り当てをクリア（元の表示名に戻すため）
+      console.log(`[DEBUG] 決勝トーナメントチーム割り当てクリア: tournament_ids=[${tournamentIdList}]`);
+      
+      // まず対象のmatch_block_idを確認
+      const finalBlocksResult = await db.execute(`
+        SELECT mb.match_block_id, mb.block_name, mb.phase 
+        FROM t_match_blocks mb 
+        WHERE mb.tournament_id IN (${tournamentIdList}) AND mb.phase = 'final'
+      `);
+      console.log(`[DEBUG] 対象決勝ブロック:`, finalBlocksResult.rows);
+      
+      // 対象の試合を確認
+      const finalMatchesBeforeResult = await db.execute(`
+        SELECT ml.match_id, ml.match_code, ml.team1_id, ml.team2_id, ml.team1_display_name, ml.team2_display_name
+        FROM t_matches_live ml 
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id 
+        WHERE mb.tournament_id IN (${tournamentIdList}) AND mb.phase = 'final'
+      `);
+      console.log(`[DEBUG] 更新前の決勝試合:`, finalMatchesBeforeResult.rows);
+      
+      const updateFinalResult = await db.execute(`
+        UPDATE t_matches_live SET
+          team1_id = NULL,
+          team2_id = NULL,
+          updated_at = datetime('now', '+9 hours')
+        WHERE match_block_id IN (
+          SELECT mb.match_block_id 
+          FROM t_match_blocks mb 
+          WHERE mb.tournament_id IN (${tournamentIdList}) AND mb.phase = 'final'
+        )
+      `);
+      console.log(`[DEBUG] 決勝トーナメントチーム割り当て更新結果: ${updateFinalResult.rowsAffected}行更新`);
+      
+      // 更新後の確認
+      const finalMatchesAfterResult = await db.execute(`
+        SELECT ml.match_id, ml.match_code, ml.team1_id, ml.team2_id, ml.team1_display_name, ml.team2_display_name
+        FROM t_matches_live ml 
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id 
+        WHERE mb.tournament_id IN (${tournamentIdList}) AND mb.phase = 'final'
+      `);
+      console.log(`[DEBUG] 更新後の決勝試合:`, finalMatchesAfterResult.rows);
+      
+      // 8. 決勝トーナメントのdisplay_nameをテンプレートから復元
+      console.log(`[DEBUG] 決勝トーナメントdisplay_name復元開始`);
+      
+      // 各大会のformat_idを取得
+      const formatResult = await db.execute(`
+        SELECT tournament_id, format_id 
+        FROM t_tournaments 
+        WHERE tournament_id IN (${tournamentIdList})
+      `);
+      
+      for (const tournament of formatResult.rows) {
+        const tournamentId = tournament.tournament_id;
+        const formatId = tournament.format_id;
+        
+        console.log(`[DEBUG] Tournament ${tournamentId}: format_id=${formatId}`);
+        
+        // このformat_idの決勝テンプレートを取得
+        const templatesResult = await db.execute(`
+          SELECT match_code, team1_display_name, team2_display_name
+          FROM m_match_templates 
+          WHERE format_id = ? AND phase = 'final'
+        `, [formatId]);
+        
+        console.log(`[DEBUG] Templates for format ${formatId}:`, templatesResult.rows.length);
+        
+        // 各テンプレートに基づいてdisplay_nameを更新
+        for (const template of templatesResult.rows) {
+          const updateDisplayResult = await db.execute(`
+            UPDATE t_matches_live SET
+              team1_display_name = ?,
+              team2_display_name = ?,
+              updated_at = datetime('now', '+9 hours')
+            WHERE match_code = ? AND match_block_id IN (
+              SELECT mb.match_block_id 
+              FROM t_match_blocks mb 
+              WHERE mb.tournament_id = ? AND mb.phase = 'final'
+            )
+          `, [
+            template.team1_display_name, 
+            template.team2_display_name, 
+            template.match_code, 
+            tournamentId
+          ]);
+          
+          console.log(`[DEBUG] Updated ${template.match_code} display names: ${updateDisplayResult.rowsAffected} rows`);
+        }
+      }
+      
+      console.log(`[DEBUG] 決勝トーナメントdisplay_name復元完了`);
+
+      // 注意: 予選リーグの組合せ（team1_id, team2_id）は保持する
+      // 予選リーグのチーム振り分けクリアはlevel2以上で実行
+
     } else if (reset_level === 'level2') {
       // Level 2: 組み合わせもリセット（チーム振り分けクリア）
       
@@ -170,7 +279,7 @@ async function executeReset(tournament_ids: number[], reset_level: string): Prom
         WHERE tournament_id IN (${tournamentIdList})
       `);
 
-      // 試合のチーム割り当てをクリア
+      // 追加: 予選リーグの試合チーム割り当てをクリア（決勝はlevel1で既に実行済み）
       await db.execute(`
         UPDATE t_matches_live SET
           team1_id = NULL,
@@ -179,7 +288,7 @@ async function executeReset(tournament_ids: number[], reset_level: string): Prom
         WHERE match_block_id IN (
           SELECT mb.match_block_id 
           FROM t_match_blocks mb 
-          WHERE mb.tournament_id IN (${tournamentIdList})
+          WHERE mb.tournament_id IN (${tournamentIdList}) AND mb.phase = 'preliminary'
         )
       `);
 
