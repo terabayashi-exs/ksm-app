@@ -119,6 +119,11 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
       return '不戦勝';
     }
 
+    // 結果があるがスコアがnullの場合のチェック
+    if (match.team1_goals === null || match.team2_goals === null) {
+      return '結果確認中';
+    }
+
     if (match.is_draw) {
       return `${match.team1_goals} - ${match.team2_goals} (引分)`;
     }

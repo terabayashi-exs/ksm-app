@@ -322,9 +322,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                       <tbody>
                         {blockMatches
                           .sort((a, b) => {
-                            const timeA = a.start_time || '00:00';
-                            const timeB = b.start_time || '00:00';
-                            return timeA.localeCompare(timeB);
+                            return a.match_code.localeCompare(b.match_code, undefined, { numeric: true });
                           })
                           .map((match) => {
                             const result = getMatchResult(match);

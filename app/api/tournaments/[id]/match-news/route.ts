@@ -35,6 +35,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
           ml.start_time,
           ml.match_status,
           ml.updated_at,
+          ml.team1_scores,
+          ml.team2_scores,
+          ml.winner_team_id,
+          ml.is_draw,
+          ml.is_walkover,
+          mb.phase,
+          mb.block_name,
+          -- 確定済み結果があればそちらを優先
+          COALESCE(mf.team1_scores, ml.team1_scores) as final_team1_scores,
+          COALESCE(mf.team2_scores, ml.team2_scores) as final_team2_scores,
+          COALESCE(mf.winner_team_id, ml.winner_team_id) as final_winner_team_id,
+          COALESCE(mf.is_draw, ml.is_draw) as final_is_draw,
+          COALESCE(mf.is_walkover, ml.is_walkover) as final_is_walkover,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as has_result
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
@@ -57,28 +70,43 @@ export async function GET(request: NextRequest, context: RouteContext) {
         LIMIT 6
     `, [tournamentId, thirtyMinutesAgoJST]);
 
-    // データ整形（安全な方法で）
-    const formattedMatches = matchesResult.rows.map(row => ({
-      match_id: Number(row.match_id),
-      match_code: String(row.match_code),
-      team1_display_name: String(row.team1_display_name),
-      team2_display_name: String(row.team2_display_name),
-      team1_goals: null, // 基本データのみのため
-      team2_goals: null, // 基本データのみのため
-      winner_team_id: row.team1_id ? String(row.team1_id) : null,
-      team1_id: row.team1_id ? String(row.team1_id) : null,
-      team2_id: row.team2_id ? String(row.team2_id) : null,
-      is_draw: false,
-      is_walkover: false,
-      match_status: String(row.match_status),
-      has_result: Boolean(row.has_result || false),
-      phase: 'unknown',
-      block_name: row.match_code ? String(row.match_code).match(/([A-Z]+)/)?.[1] || null : null,
-      court_number: row.court_number ? Number(row.court_number) : null,
-      start_time: row.start_time ? String(row.start_time) : null,
-      end_time: null, // 基本データのみのため
-      updated_at: String(row.updated_at)
-    }));
+    // データ整形（実際の結果データを使用）
+    const formattedMatches = matchesResult.rows.map(row => {
+      // 確定済み結果があればそちらを使用、なければライブデータを使用
+      const team1Goals = row.final_team1_scores !== null ? 
+        (typeof row.final_team1_scores === 'string' ? parseInt(row.final_team1_scores) : Number(row.final_team1_scores)) :
+        (row.team1_scores !== null ? 
+          (typeof row.team1_scores === 'string' ? parseInt(row.team1_scores) : Number(row.team1_scores)) : 
+          null);
+      
+      const team2Goals = row.final_team2_scores !== null ? 
+        (typeof row.final_team2_scores === 'string' ? parseInt(row.final_team2_scores) : Number(row.final_team2_scores)) :
+        (row.team2_scores !== null ? 
+          (typeof row.team2_scores === 'string' ? parseInt(row.team2_scores) : Number(row.team2_scores)) : 
+          null);
+
+      return {
+        match_id: Number(row.match_id),
+        match_code: String(row.match_code),
+        team1_display_name: String(row.team1_display_name),
+        team2_display_name: String(row.team2_display_name),
+        team1_goals: team1Goals,
+        team2_goals: team2Goals,
+        winner_team_id: row.final_winner_team_id ? String(row.final_winner_team_id) : null,
+        team1_id: row.team1_id ? String(row.team1_id) : null,
+        team2_id: row.team2_id ? String(row.team2_id) : null,
+        is_draw: Boolean(row.final_is_draw || false),
+        is_walkover: Boolean(row.final_is_walkover || false),
+        match_status: String(row.match_status),
+        has_result: Boolean(row.has_result || false),
+        phase: String(row.phase || 'preliminary'),
+        block_name: String(row.block_name || ''),
+        court_number: row.court_number ? Number(row.court_number) : null,
+        start_time: row.start_time ? String(row.start_time) : null,
+        end_time: null, // 終了時刻は別途取得が必要な場合は追加
+        updated_at: String(row.updated_at)
+      };
+    });
 
     return NextResponse.json({
       success: true,

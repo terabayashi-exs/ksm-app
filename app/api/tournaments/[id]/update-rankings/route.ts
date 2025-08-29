@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { updateBlockRankingsOnMatchConfirm, recalculateAllTournamentRankings } from '@/lib/standings-calculator';
+import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
 
 export async function POST(
   request: NextRequest,
@@ -34,9 +35,19 @@ export async function POST(
       // 全ブロックの順位表を再計算
       await recalculateAllTournamentRankings(tournamentId);
       
+      // 順位表再計算後に進出処理を実行
+      try {
+        console.log(`[MANUAL] 大会${tournamentId}の手動進出処理を開始`);
+        await promoteTeamsToFinalTournament(tournamentId);
+        console.log(`[MANUAL] 大会${tournamentId}の手動進出処理完了`);
+      } catch (promotionError) {
+        console.error(`[MANUAL] 進出処理エラー:`, promotionError);
+        // 進出処理がエラーでも順位表更新は成功とする
+      }
+      
       return NextResponse.json({
         success: true,
-        message: '全ブロックの順位表を再計算しました'
+        message: '全ブロックの順位表を再計算し、進出処理を実行しました'
       });
       
     } else if (matchBlockId) {

@@ -7,7 +7,7 @@ interface RouteContext {
 }
 
 // 試合状態の取得
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const resolvedParams = await context.params;
     const matchId = parseInt(resolvedParams.id);
@@ -33,10 +33,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         ml.team1_scores,
         ml.team2_scores,
         ml.period_count,
-        ml.current_period,
         ml.winner_team_id,
         ml.remarks,
         ms.match_status,
+        ms.current_period,
         ms.actual_start_time,
         ms.actual_end_time,
         ms.updated_by,
@@ -65,10 +65,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const match = result.rows[0];
-    
-    // デバッグログ：winner_team_idの状態を確認
-    console.log('Match status API - winner_team_id:', match.winner_team_id);
-    console.log('Match status API - team IDs:', { team1_id: match.team1_id, team2_id: match.team2_id });
 
     return NextResponse.json({
       success: true,

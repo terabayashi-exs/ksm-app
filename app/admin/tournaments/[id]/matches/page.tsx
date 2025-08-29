@@ -86,6 +86,7 @@ export default function AdminMatchesPage() {
   const [updatingRankings, setUpdatingRankings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [blockFilter, setBlockFilter] = useState<string>('all');
 
   // 大会情報と試合一覧取得
   useEffect(() => {
@@ -151,6 +152,11 @@ export default function AdminMatchesPage() {
             blocksMap.get(match.match_block_id)!.matches.push(match);
           });
           
+          // 各ブロック内の試合を試合コード順にソート
+          blocksMap.forEach(block => {
+            block.matches.sort((a, b) => a.match_code.localeCompare(b.match_code, undefined, { numeric: true }));
+          });
+          
           const blocks = Array.from(blocksMap.values())
             .sort((a, b) => a.block_order - b.block_order);
           
@@ -208,7 +214,7 @@ export default function AdminMatchesPage() {
 
   // 順位表更新
   const updateRankings = async () => {
-    if (!window.confirm('全ブロックの順位表を再計算しますか？\n\n確定済みの試合結果をもとに順位表が更新されます。')) {
+    if (!window.confirm('全ブロックの順位表を再計算し、進出処理を実行しますか？\n\n・確定済みの試合結果をもとに順位表が更新されます\n・決勝トーナメントのプレースホルダー（「A1位」等）が実際のチーム名に更新されます')) {
       return;
     }
 
@@ -224,7 +230,7 @@ export default function AdminMatchesPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert('順位表を更新しました！');
+        alert('順位表を更新し、進出処理を実行しました！\n\n決勝トーナメントのチーム名が更新されている場合があります。');
       } else {
         alert(`順位表の更新に失敗しました: ${result.error}`);
       }
@@ -559,6 +565,24 @@ export default function AdminMatchesPage() {
     }
   };
 
+  // 利用可能なブロック一覧を取得
+  const getAvailableBlocks = () => {
+    const blocks = [...new Set(matches.map(match => match.block_name))].sort();
+    return blocks;
+  };
+
+  // ブロック色を取得
+  const getBlockColor = (blockName: string) => {
+    const colors: { [key: string]: string } = {
+      'A': 'bg-blue-600 text-white',
+      'B': 'bg-green-600 text-white', 
+      'C': 'bg-yellow-600 text-white',
+      'D': 'bg-purple-600 text-white',
+      '決勝トーナメント': 'bg-red-600 text-white',
+    };
+    return colors[blockName] || 'bg-gray-600 text-white';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -609,7 +633,7 @@ export default function AdminMatchesPage() {
                 className="flex items-center"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${updatingRankings ? 'animate-spin' : ''}`} />
-                {updatingRankings ? '更新中...' : '順位表更新'}
+                {updatingRankings ? '更新中...' : '順位表更新・進出処理'}
               </Button>
             </div>
           </div>
@@ -619,9 +643,11 @@ export default function AdminMatchesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* フィルター */}
         <Card className="mb-6">
-          <CardContent className="p-4">
+          <CardContent className="p-4 space-y-4">
+            {/* 試合状態フィルター */}
             <div className="flex items-center space-x-2 flex-wrap gap-2">
               <Filter className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">試合状態:</span>
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
                 size="sm"
@@ -665,6 +691,35 @@ export default function AdminMatchesPage() {
                 中止 ({matches.filter(m => m.match_status === 'cancelled').length})
               </Button>
             </div>
+
+            {/* ブロックフィルター */}
+            <div className="flex items-center space-x-2 flex-wrap gap-2">
+              <Filter className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">ブロック:</span>
+              <Button
+                variant={blockFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setBlockFilter('all')}
+              >
+                全ブロック
+              </Button>
+              {getAvailableBlocks().map(blockName => (
+                <Button
+                  key={blockName}
+                  variant={blockFilter === blockName ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBlockFilter(blockName)}
+                  className="flex items-center space-x-2"
+                >
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBlockColor(blockName)}`}>
+                    {blockName}
+                  </span>
+                  <span className="text-sm">
+                    ({matches.filter(m => m.block_name === blockName).length})
+                  </span>
+                </Button>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -678,7 +733,13 @@ export default function AdminMatchesPage() {
             </Card>
           ) : (
             matchBlocks.map((block) => {
+              // ブロックフィルターをまず適用
+              if (blockFilter !== 'all' && block.block_name !== blockFilter) {
+                return null;
+              }
+
               const blockMatches = block.matches.filter(match => {
+                // 試合状態フィルターを適用
                 switch (filter) {
                   case 'scheduled': return match.match_status === 'scheduled';
                   case 'ongoing': return match.match_status === 'ongoing';
@@ -693,7 +754,14 @@ export default function AdminMatchesPage() {
               if (blockMatches.length === 0) return null;
               
               return (
-                <Card key={block.match_block_id} className="border-l-4 border-l-blue-500">
+                <Card key={block.match_block_id} className={`border-l-4 ${
+                  block.block_name === 'A' ? 'border-l-blue-500' :
+                  block.block_name === 'B' ? 'border-l-green-500' :
+                  block.block_name === 'C' ? 'border-l-yellow-500' :
+                  block.block_name === 'D' ? 'border-l-purple-500' :
+                  block.block_name === '決勝トーナメント' ? 'border-l-red-500' :
+                  'border-l-gray-500'
+                }`}>
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">

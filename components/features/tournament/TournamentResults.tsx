@@ -41,6 +41,38 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
+  // ブロック分類関数（TournamentSchedule.tsxと同じロジック）
+  const getBlockKey = (phase: string, blockName: string, matchCode?: string): string => {
+    if (phase === 'preliminary') {
+      if (blockName) {
+        return `予選${blockName}ブロック`;
+      }
+      // match_codeから推測（フォールバック）
+      if (matchCode) {
+        const blockMatch = matchCode.match(/([ABCD])\d+/);
+        if (blockMatch) {
+          return `予選${blockMatch[1]}ブロック`;
+        }
+      }
+      return '予選リーグ';
+    } else if (phase === 'final') {
+      return '決勝トーナメント';
+    } else {
+      return phase || 'その他';
+    }
+  };
+
+  // ブロック色分け関数（日程・結果ページと同様）
+  const getBlockColor = (blockKey: string): string => {
+    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
+    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
+    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
+    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
+    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800';
+    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
+  };
+
   // 戦績表データと順位表データの取得
   useEffect(() => {
     const fetchData = async () => {
@@ -384,11 +416,18 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
     // チーム数に基づく列幅調整
     const cellSizes = getTableCellSizes(teamCount);
     
+    // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
+    const isJapaneseDisplayName = block.display_round_name && 
+      (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
+    const blockDisplayName = isJapaneseDisplayName 
+      ? block.display_round_name 
+      : getBlockKey(block.phase, block.block_name);
+    
     return `
       <div style="margin-bottom: 40px;">
         <div style="display: flex; align-items: center; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #F8FAFC;">
           <div style="font-size: 26px; font-weight: bold; color: white; padding: 15px 25px; border-radius: 10px; margin-right: 25px; background: ${getBlockColorValue(block.block_name)};">
-            ${block.display_round_name || `${block.phase} ${block.block_name}ブロック`}
+            ${blockDisplayName}
           </div>
           <div style="font-size: 20px; color: #4B5563;">${block.teams.length}チーム参加</div>
         </div>
@@ -502,15 +541,6 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
     return '#FFFFFF'; // 全て白背景に統一
   };
 
-  // ブロック色の取得（順位表と同じスタイル）
-  const getBlockColor = (blockName: string): string => {
-    if (blockName.includes('A')) return 'bg-blue-100 text-blue-800';
-    if (blockName.includes('B')) return 'bg-green-100 text-green-800';
-    if (blockName.includes('C')) return 'bg-yellow-100 text-yellow-800';
-    if (blockName.includes('D')) return 'bg-purple-100 text-purple-800';
-    if (blockName.includes('決勝')) return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-800';
-  };
 
   // 予選リーグかどうかの判定
   const isPreliminaryPhase = (phase: string): boolean => {
@@ -630,21 +660,33 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
       {/* ブロック別戦績表 */}
       {results
         .filter(block => isPreliminaryPhase(block.phase)) // 予選リーグのみ表示
-        .map((block) => (
-        <Card key={block.match_block_id}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
-                  {block.display_round_name || `${block.phase} ${block.block_name}ブロック`}
-                </span>
-                <span className="text-sm text-gray-600 flex items-center">
-                  <Users className="h-4 w-4 mr-1" />
-                  {block.teams.length}チーム
-                </span>
-              </div>
-            </CardTitle>
-          </CardHeader>
+        .sort((a, b) => {
+          // ブロック名でソート（A → B → C → D の順）
+          return (a.block_name || '').localeCompare(b.block_name || '', undefined, { numeric: true });
+        })
+        .map((block) => {
+          // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
+          const isJapaneseDisplayName = block.display_round_name && 
+            (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
+          const blockKey = isJapaneseDisplayName 
+            ? block.display_round_name 
+            : getBlockKey(block.phase, block.block_name);
+          
+          return (
+            <Card key={block.match_block_id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
+                      {blockKey}
+                    </span>
+                    <span className="text-sm text-gray-600 flex items-center">
+                      <Users className="h-4 w-4 mr-1" />
+                      {block.teams.length}チーム
+                    </span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
           <CardContent>
             {block.teams.length > 0 ? (
               <div className="overflow-x-auto">
@@ -925,7 +967,8 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
             )}
           </CardContent>
         </Card>
-      ))}
+          );
+        })}
 
       {/* トーナメント戦の場合の注意書き */}
       {results.some(block => !isPreliminaryPhase(block.phase)) && (

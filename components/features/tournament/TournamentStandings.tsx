@@ -71,13 +71,35 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     fetchStandings();
   }, [tournamentId]);
 
+  // ブロック分類関数（日程・結果ページと同じロジック）
+  const getBlockKey = (phase: string, blockName: string, matchCode?: string): string => {
+    if (phase === 'preliminary') {
+      if (blockName) {
+        return `予選${blockName}ブロック`;
+      }
+      // match_codeから推測（フォールバック）
+      if (matchCode) {
+        const blockMatch = matchCode.match(/([ABCD])\d+/);
+        if (blockMatch) {
+          return `予選${blockMatch[1]}ブロック`;
+        }
+      }
+      return '予選リーグ';
+    } else if (phase === 'final') {
+      return '決勝トーナメント';
+    } else {
+      return phase || 'その他';
+    }
+  };
+
   // ブロック色の取得（日程・結果ページと同じスタイル）
-  const getBlockColor = (blockName: string): string => {
-    if (blockName.includes('A')) return 'bg-blue-100 text-blue-800';
-    if (blockName.includes('B')) return 'bg-green-100 text-green-800';
-    if (blockName.includes('C')) return 'bg-yellow-100 text-yellow-800';
-    if (blockName.includes('D')) return 'bg-purple-100 text-purple-800';
-    if (blockName.includes('決勝') || blockName === '決勝トーナメント') return 'bg-red-100 text-red-800';
+  const getBlockColor = (blockKey: string): string => {
+    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
+    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
+    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
+    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
+    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800';
+    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
     return 'bg-gray-100 text-gray-800';
   };
 
@@ -191,9 +213,19 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
-                  {block.display_round_name || `${block.phase} ${block.block_name}ブロック`}
-                </span>
+                {(() => {
+                  // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
+                  const isJapaneseDisplayName = block.display_round_name && 
+                    (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
+                  const blockKey = isJapaneseDisplayName 
+                    ? block.display_round_name 
+                    : getBlockKey(block.phase, block.block_name);
+                  return (
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
+                      {blockKey}
+                    </span>
+                  );
+                })()}
                 <span className="text-sm text-gray-600 flex items-center">
                   <Users className="h-4 w-4 mr-1" />
                   {block.teams.length}チーム
@@ -202,6 +234,14 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* 決勝トーナメントでチームがない場合の表示 */}
+            {isFinalPhase(block.phase) && block.teams.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">順位未確定</p>
+                <p className="text-sm">試合結果が確定次第、順位が表示されます。</p>
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[700px] md:min-w-0">
                 <thead>
@@ -251,7 +291,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                           <span className="hidden md:inline-block mr-2">
                             {team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
                           </span>
-                          <span className="font-bold text-base md:text-lg">{team.position > 0 ? team.position : '-'}</span>
+                          <span className="font-bold text-base md:text-lg">{team.position}</span>
                         </div>
                       </td>
                       <td className="py-2 md:py-3 px-2 md:px-3">
@@ -315,13 +355,30 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                             {team.position === 2 && '準優勝'}
                             {team.position === 3 && '3位'}
                             {team.position === 4 && '4位'}
-                            {team.position >= 5 && (
+                            {team.position === 5 && (
                               <>
                                 <span className="md:hidden">準々敗退</span>
                                 <span className="hidden md:inline">準々決勝敗退</span>
                               </>
                             )}
-                            {team.position === 0 && '-'}
+                            {team.position === 9 && (
+                              <>
+                                <span className="md:hidden">ベスト16</span>
+                                <span className="hidden md:inline">ベスト16</span>
+                              </>
+                            )}
+                            {team.position === 17 && (
+                              <>
+                                <span className="md:hidden">ベスト32</span>
+                                <span className="hidden md:inline">ベスト32</span>
+                              </>
+                            )}
+                            {team.position === 25 && (
+                              <>
+                                <span className="md:hidden">1回戦敗退</span>
+                                <span className="hidden md:inline">1回戦敗退</span>
+                              </>
+                            )}
                           </span>
                         </td>
                       )}
@@ -330,6 +387,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                 </tbody>
               </table>
             </div>
+            )}
           </CardContent>
         </Card>
       ))}

@@ -66,8 +66,6 @@ export default function RefereeMatchPage() {
   // トークン検証とマッチデータ取得
   useEffect(() => {
     const verifyTokenAndLoadMatch = async () => {
-      console.log('Token from URL:', token); // デバッグログ追加
-      
       if (!token) {
         setError('アクセストークンが必要です');
         setLoading(false);
@@ -75,7 +73,6 @@ export default function RefereeMatchPage() {
       }
 
       try {
-        console.log('Sending token to API:', token); // デバッグログ追加
         const response = await fetch(`/api/matches/${matchId}/qr`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -83,11 +80,8 @@ export default function RefereeMatchPage() {
         });
 
         const result = await response.json();
-        console.log('API response:', result); // デバッグログ追加
 
         if (result.success) {
-          console.log('Referee page - API response data:', result.data);
-          console.log('Team names from API:', { team1_name: result.data.team1_name, team2_name: result.data.team2_name });
           setMatch(result.data);
           
           // トーナメントIDを取得
@@ -158,7 +152,7 @@ export default function RefereeMatchPage() {
     verifyTokenAndLoadMatch();
   }, [matchId, token]);
 
-  // 現在の試合状態を取得
+  // 初回のみ現在の試合状態を取得
   useEffect(() => {
     const loadCurrentMatchStatus = async () => {
       if (!match) return;
@@ -168,8 +162,6 @@ export default function RefereeMatchPage() {
         const result = await response.json();
 
         if (result.success) {
-          setMatch(prev => prev ? { ...prev, ...result.data } : null);
-          
           // スコアを更新（確実に数値として処理）
           if (result.data.team1_scores && result.data.team2_scores) {
             setScores({
@@ -180,18 +172,18 @@ export default function RefereeMatchPage() {
           
           // 勝者情報を復元（状態取得時も実行）
           if (result.data.winner_team_id) {
-            console.log('Restoring winner from status API:', result.data.winner_team_id);
             if (result.data.winner_team_id === result.data.team1_id) {
               setWinnerTeam('team1');
-              console.log('Set winner to team1');
             } else if (result.data.winner_team_id === result.data.team2_id) {
               setWinnerTeam('team2');
-              console.log('Set winner to team2');
             }
           } else {
-            // winner_team_idがnullの場合は引き分けまたは未設定
-            console.log('No winner_team_id found, setting to null');
             setWinnerTeam(null);
+          }
+          
+          // matchの備考を更新
+          if (result.data.remarks) {
+            setMatchRemarks(result.data.remarks);
           }
         }
       } catch (err) {
@@ -199,10 +191,10 @@ export default function RefereeMatchPage() {
       }
     };
 
-    if (match) {
+    if (match && !loading) {
       loadCurrentMatchStatus();
     }
-  }, [matchId, match]);
+  }, [matchId, loading]); // matchを依存配列から削除して無限ループを防ぐ
 
   // 試合状態更新
   const updateMatchStatus = async (action: string, additionalData?: Record<string, unknown>) => {
@@ -219,13 +211,8 @@ export default function RefereeMatchPage() {
           ...additionalData
         })
       });
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
       
       const result = await response.json();
-      console.log('Match status update response:', result);
-      console.log('Response success:', result.success);
 
       if (response.ok && result.success) {
         setMatch(prev => prev ? { ...prev, ...result.data } : null);

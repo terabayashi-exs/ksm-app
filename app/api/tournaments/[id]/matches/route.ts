@@ -106,7 +106,7 @@ export async function GET(
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
-      ORDER BY mb.block_order ASC, ml.match_number ASC
+      ORDER BY ml.match_code ASC
     `, [tournamentId]);
 
     console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);

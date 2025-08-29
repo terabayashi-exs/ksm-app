@@ -116,13 +116,29 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
     setExpandedTeams(newExpanded);
   };
 
+  // ブロック分類関数（他のページと統一）
+  const getBlockKey = (blockName: string): string => {
+    // blockNameが既に「予選Aブロック」形式の場合はそのまま返す
+    if (blockName.includes('予選') || blockName.includes('決勝')) {
+      return blockName;
+    }
+    
+    // 単純なブロック名（A, B, C, D）の場合
+    if (['A', 'B', 'C', 'D'].includes(blockName)) {
+      return `予選${blockName}ブロック`;
+    }
+    
+    return blockName;
+  };
+
   // ブロック色の取得
-  const getBlockColor = (blockName: string): string => {
-    if (blockName.includes('A')) return 'bg-blue-100 text-blue-800';
-    if (blockName.includes('B')) return 'bg-green-100 text-green-800';
-    if (blockName.includes('C')) return 'bg-yellow-100 text-yellow-800';
-    if (blockName.includes('D')) return 'bg-purple-100 text-purple-800';
-    if (blockName.includes('決勝')) return 'bg-red-100 text-red-800';
+  const getBlockColor = (blockKey: string): string => {
+    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
+    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
+    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
+    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
+    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800';
+    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
     return 'bg-gray-100 text-gray-800';
   };
 
@@ -192,9 +208,14 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockName)}`}>
-                  {blockName}
-                </span>
+                {(() => {
+                  const blockKey = getBlockKey(blockName);
+                  return (
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
+                      {blockKey}
+                    </span>
+                  );
+                })()}
                 <span className="text-sm text-gray-600 flex items-center">
                   <Users className="h-4 w-4 mr-1" />
                   {teams.length}チーム
