@@ -1,6 +1,6 @@
 // lib/match-result-handler.ts
 import { db } from '@/lib/db';
-import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
+import { updateBlockRankingsOnMatchConfirm, updateFinalTournamentRankings } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 
 /**
@@ -147,6 +147,17 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       // 順位表を更新
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
       
+      // 決勝トーナメントの場合は決勝順位も更新
+      const blockPhaseResult = await db.execute({
+        sql: 'SELECT phase FROM t_match_blocks WHERE match_block_id = ?',
+        args: [matchBlockId]
+      });
+      
+      if (blockPhaseResult.rows.length > 0 && blockPhaseResult.rows[0].phase === 'final') {
+        console.log(`[MATCH_CONFIRM] 決勝トーナメント試合確定: ${match.match_code}`);
+        await updateFinalTournamentRankings(tournamentId);
+      }
+      
       // 大会完了チェック
       await checkAndCompleteTournament(tournamentId);
     }
@@ -254,18 +265,32 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
 
     // 更新されたブロックの順位表を一括更新
     const affectedTournaments = new Set<number>();
+    const finalTournamentsToUpdate = new Set<number>();
     
     for (const matchBlockId of updatedBlocks) {
       const blockResult = await db.execute({
-        sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
+        sql: 'SELECT tournament_id, phase FROM t_match_blocks WHERE match_block_id = ?',
         args: [matchBlockId]
       });
 
       if (blockResult.rows && blockResult.rows.length > 0) {
         const tournamentId = blockResult.rows[0].tournament_id as number;
+        const phase = blockResult.rows[0].phase as string;
+        
         affectedTournaments.add(tournamentId);
         await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
+        
+        // 決勝トーナメントの場合は決勝順位更新対象に追加
+        if (phase === 'final') {
+          finalTournamentsToUpdate.add(tournamentId);
+        }
       }
+    }
+
+    // 決勝トーナメントの順位を更新
+    for (const tournamentId of finalTournamentsToUpdate) {
+      console.log(`[BULK_CONFIRM] 決勝トーナメント順位一括更新: Tournament ${tournamentId}`);
+      await updateFinalTournamentRankings(tournamentId);
     }
 
     // 影響を受けた大会の完了チェック

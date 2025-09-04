@@ -32,7 +32,7 @@ export async function POST(
     const { matchBlockId, action } = body;
 
     if (action === 'recalculate_all') {
-      // 全ブロックの順位表を再計算
+      // 全ブロックの順位表を再計算（旧処理・互換性のため残す）
       await recalculateAllTournamentRankings(tournamentId);
       
       // 順位表再計算後に進出処理を実行
@@ -49,6 +49,38 @@ export async function POST(
         success: true,
         message: '全ブロックの順位表を再計算し、進出処理を実行しました'
       });
+      
+    } else if (action === 'recalculate_only') {
+      // 順位表の再計算のみ（手動設定はリセットされる）
+      await recalculateAllTournamentRankings(tournamentId);
+      
+      return NextResponse.json({
+        success: true,
+        message: '全ブロックの順位表を再計算しました（手動設定はリセットされました）'
+      });
+      
+    } else if (action === 'promote_only') {
+      // 進出処理のみ（現在の順位表を維持）
+      try {
+        console.log(`[MANUAL] 大会${tournamentId}の進出処理のみ実行を開始`);
+        await promoteTeamsToFinalTournament(tournamentId);
+        console.log(`[MANUAL] 大会${tournamentId}の進出処理のみ実行完了`);
+        
+        return NextResponse.json({
+          success: true,
+          message: '決勝トーナメント進出処理を実行しました'
+        });
+      } catch (promotionError) {
+        console.error(`[MANUAL] 進出処理エラー:`, promotionError);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: '進出処理中にエラーが発生しました',
+            details: promotionError instanceof Error ? promotionError.message : String(promotionError)
+          },
+          { status: 500 }
+        );
+      }
       
     } else if (matchBlockId) {
       // 特定ブロックの順位表を更新

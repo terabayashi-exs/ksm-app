@@ -2182,6 +2182,213 @@ npm run db:seed-master
 npm run dev
 ```
 
+## 🔮 将来の開発計画
+
+### 🎯 **中期対応: 汎用的順位判定システム（来年実装予定）**
+
+#### **背景・目的**
+- **現状**: 36チーム決勝トーナメント専用の順位判定ロジック（ハードコード）
+- **課題**: 38チーム、48チームなど他のフォーマットで意図した順位にならない
+- **目標**: `m_match_templates`を活用した汎用的順位判定システム
+
+#### **実装計画（推奨開発期間: 1-2週間）**
+
+##### **Phase 1: データベース拡張（2-3日）**
+```sql
+-- m_match_templatesテーブル拡張
+ALTER TABLE m_match_templates ADD COLUMN round_type TEXT;
+-- 'elimination', 'round_of_32', 'round_of_16', 'quarterfinal', 'semifinal', 'third_place', 'final'
+
+ALTER TABLE m_match_templates ADD COLUMN eliminated_position_start INTEGER;
+-- このラウンドで敗退した場合の開始順位
+
+ALTER TABLE m_match_templates ADD COLUMN eliminated_position_end INTEGER;
+-- このラウンドで敗退した場合の終了順位
+
+ALTER TABLE m_match_templates ADD COLUMN round_level INTEGER;
+-- ラウンドレベル（1=決勝、2=準決勝、3=準々決勝...）
+
+-- m_tournament_formatsテーブル拡張
+ALTER TABLE m_tournament_formats ADD COLUMN elimination_match_count INTEGER;
+-- 削り戦試合数（36チーム=4, 38チーム=6）
+
+ALTER TABLE m_tournament_formats ADD COLUMN ranking_strategy TEXT DEFAULT 'round_based';
+-- 'round_based', 'points_based', 'custom'
+```
+
+##### **Phase 2: テンプレート駆動型順位判定エンジン（3-4日）**
+```typescript
+// lib/generic-standings-calculator.ts（新規作成）
+
+interface RoundStructure {
+  round_name: string;
+  round_type: string;
+  execution_priority: number;
+  match_codes: string[];
+  participating_teams: number;
+  eliminated_teams: number;
+  eliminated_position_start: number;
+  eliminated_position_end: number;
+  round_level: number;
+}
+
+/**
+ * フォーマットから動的にラウンド構造を構築
+ */
+async function buildTournamentRoundStructure(formatId: number): Promise<RoundStructure[]> {
+  const templates = await db.execute(`
+    SELECT 
+      round_name,
+      round_type,
+      execution_priority,
+      match_code,
+      eliminated_position_start,
+      eliminated_position_end,
+      round_level
+    FROM m_match_templates 
+    WHERE format_id = ? AND phase = 'final'
+    ORDER BY round_level DESC, execution_priority DESC
+  `, [formatId]);
+
+  return groupAndAnalyzeRounds(templates.rows);
+}
+
+/**
+ * テンプレート駆動型順位判定
+ */
+function calculateGenericTournamentPosition(
+  teamId: string,
+  finalMatches: MatchData[],
+  roundStructure: RoundStructure[]
+): number {
+  // 1. チームの最後の試合を特定
+  const lastMatch = findTeamLastMatch(teamId, finalMatches);
+  
+  // 2. 試合コードから該当ラウンドを特定
+  const currentRound = roundStructure.find(round => 
+    round.match_codes.includes(lastMatch.match_code)
+  );
+  
+  // 3. 勝敗・確定状況に応じた順位決定
+  return determinePositionFromRoundAndResult(lastMatch, currentRound);
+}
+```
+
+##### **Phase 3: 既存システム統合（2-3日）**
+```typescript
+// lib/standings-calculator.ts 修正
+
+/**
+ * フォーマット対応版順位計算（旧関数を置換）
+ */
+export async function updateFinalTournamentRankings(tournamentId: number): Promise<void> {
+  try {
+    // 1. トーナメントフォーマット取得
+    const tournament = await getTournamentInfo(tournamentId);
+    
+    // 2. フォーマットに応じた順位計算方式選択
+    const rankings = await calculateTournamentRankingsByFormat(
+      tournamentId, 
+      tournament.format_id,
+      tournament.ranking_strategy || 'round_based'
+    );
+    
+    // 3. 結果保存（既存処理と同一）
+    await saveFinalRankingsToDatabase(tournamentId, rankings);
+    
+  } catch (error) {
+    console.error('汎用順位計算エラー:', error);
+    // フォールバック: 従来の36チーム専用ロジック実行
+    await updateFinalTournamentRankingsLegacy(tournamentId);
+  }
+}
+```
+
+##### **Phase 4: 新フォーマット対応（1-2日）**
+```json
+// data/match_templates_38teams.json（新規作成例）
+[
+  {
+    "format_id": 3,
+    "match_code": "E1", "round_name": "削り戦", "round_type": "elimination",
+    "eliminated_position_start": 33, "eliminated_position_end": 38,
+    "round_level": 6, "execution_priority": 1
+  },
+  {
+    "format_id": 3,
+    "match_code": "R1", "round_name": "ベスト32", "round_type": "round_of_32",
+    "eliminated_position_start": 17, "eliminated_position_end": 32,
+    "round_level": 5, "execution_priority": 7
+  }
+]
+```
+
+#### **実装優先順位**
+1. **緊急度**: 低（現36チーム機能は正常動作中）
+2. **重要度**: 高（来年の多様な大会対応に必須）
+3. **依存関係**: なし（既存機能を破壊せずに拡張可能）
+4. **リスク**: 低（フォールバック機能により安全性確保）
+
+#### **期待効果**
+- ✅ **38チーム、48チーム等への対応**
+- ✅ **新フォーマット作成の簡素化** 
+- ✅ **順位判定ロジックの保守性向上**
+- ✅ **データ設定のみでの運用柔軟性**
+
+#### **検証計画**
+```bash
+# テスト用フォーマット作成
+npm run create-test-format -- --teams=38 --elimination=6
+
+# 順位計算テスト実行
+npm run test-generic-rankings -- --format=3 --teams=38
+
+# 既存36チーム大会での後方互換性確認
+npm run test-legacy-compatibility -- --tournament=9
+```
+
+#### **後方互換性保証**
+- 既存の36チーム大会データは無変更で継続動作
+- 新システムエラー時は従来ロジックへ自動フォールバック
+- 既存API動作に影響なし
+
+### 📋 **長期対応: 完全自動化システム（将来検討）**
+
+#### **概要**
+- **AI解析**: テンプレート依存関係からトーナメント構造を自動推論
+- **ゼロ設定**: 新フォーマット作成時の順位設定作業完全廃止
+- **高度アルゴリズム**: グラフ理論を活用した依存関係解析
+
+#### **技術的アプローチ**
+- **依存グラフ解析**: `team1_source`、`team2_source`の依存関係をグラフ化
+- **トポロジカルソート**: 試合実行順序の自動最適化
+- **動的順位計算**: 進出パターンから順位範囲を自動算出
+
+#### **開発規模**: 3-4週間（研究開発含む）
+
+#### **実装タイミング**: 中期対応運用後、必要性を評価してから決定
+
+---
+
+### 💡 **来年の開発再開時のアクションプラン**
+
+#### **ステップ1: 現状確認（1日目）**
+1. 36チーム決勝トーナメント順位ロジックの動作確認
+2. 来年の大会フォーマット要件確定（チーム数、構造）
+3. 必要な新フォーマット数の特定
+
+#### **ステップ2: 中期対応実装開始（2日目以降）**
+1. データベース拡張の実行
+2. `lib/generic-standings-calculator.ts`の作成
+3. 既存`lib/standings-calculator.ts`の統合
+
+#### **ステップ3: テスト・検証（最終週）**
+1. 新フォーマットでの順位計算テスト
+2. 既存システムとの並行運用テスト
+3. パフォーマンス・安定性確認
+
+**重要**: この計画により、来年の多様な大会フォーマットに柔軟対応可能な拡張性を確保できます。
+
 ## 💬 その他の支援依頼（任意）
 
 - 設計書をテーブルごとに `.jpg` または `.md` に変換して可視化

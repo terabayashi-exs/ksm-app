@@ -24,6 +24,7 @@ export interface BlockStanding {
   display_round_name: string;
   block_name: string;
   teams: TeamStanding[];
+  remarks?: string | null;
 }
 
 export interface MatchResult {
@@ -43,7 +44,7 @@ export interface MatchResult {
  */
 export async function getTournamentStandings(tournamentId: number): Promise<BlockStanding[]> {
   try {
-    // ブロック情報とteam_rankingsを取得
+    // ブロック情報とteam_rankingsを取得（予選・決勝順、予選は試合コード順）
     const blocks = await db.execute({
       sql: `
         SELECT 
@@ -51,10 +52,17 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
           phase,
           display_round_name,
           block_name,
-          team_rankings
+          team_rankings,
+          remarks
         FROM t_match_blocks 
         WHERE tournament_id = ? 
-        ORDER BY block_order, match_block_id
+        ORDER BY 
+          CASE phase 
+            WHEN 'preliminary' THEN 1 
+            WHEN 'final' THEN 2 
+            ELSE 3 
+          END,
+          block_name
       `,
       args: [tournamentId]
     });
@@ -97,7 +105,8 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
         phase: block.phase as string,
         display_round_name: block.display_round_name as string,
         block_name: block.block_name as string,
-        teams: teams
+        teams: teams,
+        remarks: block.remarks as string | null
       });
     }
 
@@ -105,6 +114,58 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
   } catch (error) {
     console.error('順位表取得エラー:', error);
     throw new Error('順位表の取得に失敗しました');
+  }
+}
+
+/**
+ * 決勝トーナメントの順位を計算してteam_rankingsに保存する
+ */
+export async function updateFinalTournamentRankings(tournamentId: number): Promise<void> {
+  try {
+    console.log(`[FINAL_RANKINGS] 決勝トーナメント順位更新開始: Tournament ${tournamentId}`);
+    
+    // 決勝トーナメントブロックを取得
+    const finalBlockResult = await db.execute({
+      sql: `
+        SELECT match_block_id
+        FROM t_match_blocks 
+        WHERE tournament_id = ? AND phase = 'final'
+      `,
+      args: [tournamentId]
+    });
+
+    if (finalBlockResult.rows.length === 0) {
+      console.log(`[FINAL_RANKINGS] 決勝トーナメントブロックが見つかりません`);
+      return;
+    }
+
+    const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
+    
+    // 決勝トーナメントの順位を計算（詳細版）
+    const finalRankings = await calculateDetailedFinalTournamentStandings(tournamentId);
+    
+    if (finalRankings.length > 0) {
+      // team_rankingsに保存
+      await db.execute({
+        sql: `
+          UPDATE t_match_blocks 
+          SET team_rankings = ?, updated_at = datetime('now', '+9 hours')
+          WHERE match_block_id = ?
+        `,
+        args: [JSON.stringify(finalRankings), finalBlockId]
+      });
+      
+      console.log(`[FINAL_RANKINGS] 決勝トーナメント順位更新完了: ${finalRankings.length}チーム`);
+      finalRankings.forEach(team => {
+        console.log(`[FINAL_RANKINGS]   ${team.position}位: ${team.team_name} (${team.team_id})`);
+      });
+    } else {
+      console.log(`[FINAL_RANKINGS] 計算できる順位がありません`);
+    }
+    
+  } catch (error) {
+    console.error(`[FINAL_RANKINGS] 決勝トーナメント順位更新エラー:`, error);
+    // エラーでも処理は継続
   }
 }
 
@@ -1015,4 +1076,205 @@ async function calculateFinalTournamentStandings(tournamentId: number): Promise<
     console.error('決勝トーナメント順位表計算エラー:', error);
     return [];
   }
+}
+
+/**
+ * 決勝トーナメントの詳細順位を計算する（ラウンド別順位付け）
+ */
+async function calculateDetailedFinalTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+  try {
+    console.log(`[DETAILED_FINAL_RANKINGS] 詳細順位計算開始: Tournament ${tournamentId}`);
+    
+    // 決勝トーナメントの試合情報を取得
+    const finalMatchesResult = await db.execute({
+      sql: `
+        SELECT 
+          ml.match_id,
+          ml.match_code,
+          ml.team1_id,
+          ml.team2_id,
+          COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
+          COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
+          mf.team1_scores,
+          mf.team2_scores,
+          mf.winner_team_id,
+          mf.is_draw,
+          mf.is_walkover,
+          CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
+        FROM t_matches_live ml
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
+        LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+        WHERE mb.tournament_id = ? 
+          AND mb.phase = 'final'
+          AND ml.team1_id IS NOT NULL
+        ORDER BY ml.match_code
+      `,
+      args: [tournamentId]
+    });
+
+    const finalMatches = finalMatchesResult.rows.map(row => ({
+      match_id: row.match_id as number,
+      match_code: row.match_code as string,
+      team1_id: row.team1_id as string | null,
+      team2_id: row.team2_id as string | null,
+      team1_display_name: row.team1_display_name as string,
+      team2_display_name: row.team2_display_name as string,
+      team1_scores: row.team1_scores as number | null,
+      team2_scores: row.team2_scores as number | null,
+      winner_team_id: row.winner_team_id as string | null,
+      is_draw: Boolean(row.is_draw),
+      is_walkover: Boolean(row.is_walkover),
+      is_confirmed: Boolean(row.is_confirmed)
+    }));
+
+    console.log(`[DETAILED_FINAL_RANKINGS] 取得した決勝トーナメント試合: ${finalMatches.length}試合`);
+
+    // 全参加チームを収集
+    const allTeams = new Set<string>();
+    finalMatches.forEach(match => {
+      if (match.team1_id && !match.team1_id.includes('_winner') && !match.team1_id.includes('_loser')) {
+        allTeams.add(match.team1_id);
+      }
+      if (match.team2_id && !match.team2_id.includes('_winner') && !match.team2_id.includes('_loser')) {
+        allTeams.add(match.team2_id);
+      }
+    });
+
+    console.log(`[DETAILED_FINAL_RANKINGS] 決勝トーナメント参加チーム数: ${allTeams.size}`);
+
+    const rankings: TeamStanding[] = [];
+
+    // 各チームの最終順位を決定
+    allTeams.forEach(teamId => {
+      const position = calculateDetailedTournamentPosition(teamId, finalMatches);
+      const teamMatch = finalMatches.find(m => 
+        m.team1_id === teamId || m.team2_id === teamId
+      );
+      const teamName = teamMatch?.team1_id === teamId 
+        ? teamMatch.team1_display_name 
+        : teamMatch?.team2_display_name || '未確定';
+
+      rankings.push({
+        team_id: teamId,
+        team_name: teamName,
+        team_omission: undefined,
+        position,
+        points: 0,
+        matches_played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goals_for: 0,
+        goals_against: 0,
+        goal_difference: 0
+      });
+    });
+
+    // 順位順でソート、同順位内はチーム名順
+    const sortedRankings = rankings.sort((a, b) => {
+      if (a.position === b.position) {
+        return a.team_name.localeCompare(b.team_name, 'ja');
+      }
+      return a.position - b.position;
+    });
+
+    // ログ出力：順位分布
+    const positionGroups = sortedRankings.reduce((acc, team) => {
+      if (!acc[team.position]) acc[team.position] = [];
+      acc[team.position].push(team.team_name);
+      return acc;
+    }, {} as Record<number, string[]>);
+
+    Object.entries(positionGroups).forEach(([position, teams]) => {
+      console.log(`[DETAILED_FINAL_RANKINGS] ${position}位: ${teams.join(', ')} (${teams.length}チーム)`);
+    });
+
+    return sortedRankings;
+
+  } catch (error) {
+    console.error('[DETAILED_FINAL_RANKINGS] 詳細順位計算エラー:', error);
+    return [];
+  }
+}
+
+/**
+ * チームの詳細トーナメント順位を計算する（ラウンド別順位付け）
+ */
+function calculateDetailedTournamentPosition(
+  teamId: string, 
+  finalMatches: Array<{
+    match_id: number;
+    match_code: string;
+    team1_id: string | null;
+    team2_id: string | null;
+    team1_display_name: string;
+    team2_display_name: string;
+    team1_scores: number | null;
+    team2_scores: number | null;
+    winner_team_id: string | null;
+    is_draw: boolean;
+    is_walkover: boolean;
+    is_confirmed: boolean;
+  }>
+): number {
+  // このチームが参加した試合を全て取得
+  const teamMatches = finalMatches.filter(m => 
+    m.team1_id === teamId || m.team2_id === teamId
+  );
+
+  if (teamMatches.length === 0) return 33; // デフォルト（最下位グループ）
+
+  // 試合コードから数値を抽出して最大値（最も進んだ試合）を取得
+  const maxMatchNum = Math.max(...teamMatches.map(m => {
+    const matchNum = parseInt(m.match_code.replace('M', ''));
+    return isNaN(matchNum) ? 0 : matchNum;
+  }));
+
+  // 最も進んだ試合での結果を確認
+  const lastMatch = teamMatches.find(m => {
+    const matchNum = parseInt(m.match_code.replace('M', ''));
+    return matchNum === maxMatchNum;
+  });
+
+  // 勝ち進み中または未確定の場合の仮順位
+  if (!lastMatch?.is_confirmed || !lastMatch?.winner_team_id) {
+    if (maxMatchNum >= 36) return 1;      // 決勝戦参加 → 1位候補
+    if (maxMatchNum >= 35) return 3;      // 3位決定戦参加 → 3位候補
+    if (maxMatchNum >= 33) return 3;      // 準決勝参加 → 3位候補
+    if (maxMatchNum >= 29) return 5;      // 準々決勝参加 → 5位候補
+    if (maxMatchNum >= 21) return 9;      // ベスト16参加 → 9位候補
+    if (maxMatchNum >= 5) return 17;      // ベスト32参加 → 17位候補
+    return 33;                            // 削り戦のみ → 33位候補
+  }
+
+  // 確定済み試合での結果による順位判定
+  if (lastMatch.winner_team_id === teamId) {
+    // 勝ち進んでいる場合
+    if (maxMatchNum === 36) return 1;     // 決勝戦勝利 → 1位
+    if (maxMatchNum === 35) return 3;     // 3位決定戦勝利 → 3位
+    
+    // その他の勝利は次ラウンド進出のため仮順位
+    if (maxMatchNum >= 33) return 3;      // 準決勝勝利 → 決勝or3位決定戦進出
+    if (maxMatchNum >= 29) return 5;      // 準々決勝勝利 → 準決勝進出
+    if (maxMatchNum >= 21) return 9;      // ベスト16勝利 → 準々決勝進出
+    if (maxMatchNum >= 5) return 17;      // ベスト32勝利 → 上位ラウンド進出
+    return 33;                            // 削り戦勝利 → ベスト32進出
+  }
+
+  // 敗退している場合の順位判定（36チーム構成対応）
+  if (maxMatchNum === 36) return 2;                          // 決勝戦敗者 → 2位
+  if (maxMatchNum === 35) return 4;                          // 3位決定戦敗者 → 4位
+  if (maxMatchNum >= 33 && maxMatchNum <= 34) {
+    // 準決勝敗者 → 3位決定戦進出済みなので、この段階での敗退はない
+    // （3位決定戦の結果は上記で処理済み）
+    return 5; // 念のため5位
+  }
+  if (maxMatchNum >= 29 && maxMatchNum <= 32) return 5;      // 準々決勝敗者 → 5位（4チーム）
+  if (maxMatchNum >= 21 && maxMatchNum <= 28) return 9;      // ベスト16敗者 → 9位（8チーム）
+  if (maxMatchNum >= 5 && maxMatchNum <= 20) return 17;      // ベスト32敗者 → 17位（16チーム）
+  if (maxMatchNum >= 1 && maxMatchNum <= 4) return 33;       // 削り戦敗者 → 33位（4チーム）
+
+  return 33; // デフォルト（最下位グループ）
 }

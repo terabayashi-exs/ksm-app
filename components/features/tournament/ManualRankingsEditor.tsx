@@ -361,23 +361,47 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     setSaving(true);
     setMessage(null);
     
+    // デバッグ用：送信データの詳細ログ
+    const requestData = {
+      blocks: editedBlocks.map(block => ({
+        match_block_id: block.match_block_id,
+        team_rankings: block.team_rankings,
+        remarks: block.remarks || ''
+      })),
+      finalTournament: finalMatches.length > 0 ? {
+        team_rankings: finalTournamentBlock.team_rankings,
+        remarks: finalTournamentBlock.remarks || ''
+      } : null
+    };
+    
+    console.log('[MANUAL_RANKINGS_FRONTEND] 送信データ:', JSON.stringify(requestData, null, 2));
+    
+    // デバッグ用：変更内容の詳細ログ
+    editedBlocks.forEach((block, blockIndex) => {
+      const originalBlock = blocks[blockIndex];
+      console.log(`[MANUAL_RANKINGS_FRONTEND] ${block.block_name}ブロック変更状況:`);
+      
+      // 順位変更のチェック
+      block.team_rankings.forEach((editedTeam) => {
+        const originalTeam = originalBlock?.team_rankings.find(t => t.team_id === editedTeam.team_id);
+        if (originalTeam && editedTeam.position !== originalTeam.position) {
+          console.log(`  順位変更: ${editedTeam.team_name} ${originalTeam.position}位 → ${editedTeam.position}位`);
+        }
+      });
+      
+      // 備考変更のチェック
+      if (block.remarks !== (originalBlock?.remarks || '')) {
+        console.log(`  備考変更: "${originalBlock?.remarks || ''}" → "${block.remarks}"`);
+      }
+    });
+    
     try {
       const response = await fetch(`/api/tournaments/${tournamentId}/manual-rankings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          blocks: editedBlocks.map(block => ({
-            match_block_id: block.match_block_id,
-            team_rankings: block.team_rankings,
-            remarks: block.remarks || ''
-          })),
-          finalTournament: finalMatches.length > 0 ? {
-            team_rankings: finalTournamentBlock.team_rankings,
-            remarks: finalTournamentBlock.remarks || ''
-          } : null
-        }),
+        body: JSON.stringify(requestData),
       });
 
       const result = await response.json();
@@ -399,17 +423,27 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     }
   };
 
-  // 変更があるかチェック
-  const hasChanges = editedBlocks.some((block, blockIndex) => 
-    block.team_rankings.some((team, teamIndex) => 
-      team.position !== blocks[blockIndex]?.team_rankings[teamIndex]?.position
-    ) || block.remarks !== (blocks[blockIndex]?.remarks || '')
-  ) || (
-    // 決勝トーナメントの変更もチェック
+  // 変更があるかチェック（チームIDベースの正確な比較）
+  const hasChanges = editedBlocks.some((block, blockIndex) => {
+    const originalBlock = blocks[blockIndex];
+    
+    // 順位変更のチェック（チームIDで正確に比較）
+    const hasPositionChanges = block.team_rankings.some((editedTeam) => {
+      const originalTeam = originalBlock?.team_rankings.find(t => t.team_id === editedTeam.team_id);
+      return originalTeam && editedTeam.position !== originalTeam.position;
+    });
+    
+    // 備考変更のチェック
+    const hasRemarksChanges = block.remarks !== (originalBlock?.remarks || '');
+    
+    return hasPositionChanges || hasRemarksChanges;
+  }) || (
+    // 決勝トーナメントの変更もチェック（初期状態との比較）
+    finalTournamentBlock.remarks !== '' ||
     finalTournamentBlock.team_rankings.some((team, index) => {
-      const original = calculateFinalRankings()[index];
-      return !original || team.position !== original.position;
-    }) || finalTournamentBlock.remarks !== ''
+      // 初期計算結果と比較（重い計算を避けるため、remarksか順位に変更があればtrueと判定）
+      return team.position !== (index + 1); // 簡略化：連番以外なら変更とみなす
+    })
   );
 
   return (
@@ -467,7 +501,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
-                    {block.display_round_name}
+                    {block.phase === 'preliminary' ? `予選${block.block_name}ブロック` : block.display_round_name}
                   </div>
                   <Trophy className="w-4 h-4" />
                 </div>

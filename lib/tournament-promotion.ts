@@ -176,43 +176,46 @@ async function extractTopTeamsDynamic(
     
     const formatId = formatResult.rows[0].format_id as number;
     
-    // 決勝トーナメントのテンプレートから必要な進出条件を取得
+    // 決勝トーナメントのテンプレートから必要な進出条件を取得（動的対応）
     const templateResult = await db.execute({
       sql: `
         SELECT DISTINCT team1_source, team2_source
         FROM m_match_templates
         WHERE format_id = ? AND phase = 'final'
-        AND (team1_source LIKE '%_1' OR team1_source LIKE '%_2' OR team1_source LIKE '%_3' OR team1_source LIKE '%_4'
-             OR team2_source LIKE '%_1' OR team2_source LIKE '%_2' OR team2_source LIKE '%_3' OR team2_source LIKE '%_4')
       `,
       args: [formatId]
     });
     
-    // 必要な進出パターンを抽出
+    // 必要な進出パターンを抽出（ブロック_順位形式のみ、試合の勝敗は除外）
     const requiredPromotions = new Set<string>();
     templateResult.rows.forEach(row => {
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
       
-      if (team1Source && team1Source.match(/^[ABCD]_[1-4]$/)) {
+      // ブロック名_順位の形式のみを抽出（予選ブロック進出条件のみ）
+      // パターン: 単一文字ブロック名_数字順位 (例: A_1, B_2, F_3, L_4)
+      if (team1Source && team1Source.match(/^[A-Z]_\d+$/)) {
         requiredPromotions.add(team1Source);
       }
-      if (team2Source && team2Source.match(/^[ABCD]_[1-4]$/)) {
+      if (team2Source && team2Source.match(/^[A-Z]_\d+$/)) {
         requiredPromotions.add(team2Source);
       }
     });
     
     console.log(`[PROMOTION] 必要な進出条件:`, Array.from(requiredPromotions));
     
-    // 各ブロックから必要な順位のチームを抽出
+    // 各ブロックから必要な順位のチームを抽出（動的順位対応）
     blockRankings.forEach(block => {
       const sortedRankings = block.rankings.sort((a, b) => a.position - b.position);
       
-      // 1位～4位まで確認
-      for (let position = 1; position <= 4; position++) {
-        const promotionKey = `${block.block_name}_${position}`;
+      // このブロックに必要な順位を動的に取得
+      const blockPromotions = Array.from(requiredPromotions).filter(key => key.startsWith(`${block.block_name}_`));
+      
+      blockPromotions.forEach(promotionKey => {
+        const [, positionStr] = promotionKey.split('_'); // blockNameは使用しないため、アンダースコアでスキップ
+        const position = parseInt(positionStr);
         
-        if (requiredPromotions.has(promotionKey)) {
+        if (!isNaN(position)) {
           const teamsAtPosition = sortedRankings.filter(team => team.position === position);
           
           if (teamsAtPosition.length === 1) {
@@ -232,7 +235,7 @@ async function extractTopTeamsDynamic(
             console.log(`[PROMOTION] ${block.block_name}ブロック${position}位: チームなし`);
           }
         }
-      }
+      });
     });
 
     return promotions;
@@ -387,13 +390,59 @@ async function updateFinalTournamentMatches(
 
 /**
  * プレースホルダーテキストから対応する進出チームを検索
+ * 利用可能な進出パターンから動的に正規表現を生成
  */
 function findMatchingPromotion(
   displayName: string, 
   promotions: { [key: string]: { team_id: string; team_name: string; }; }
 ): { team_id: string; team_name: string; } | null {
-  // パターン1: "A1位", "B2位", "C3位", "D4位" などの形式（1-4位対応）
-  const blockPositionMatch = displayName.match(/([ABCD])([1-4])位/);
+  // 利用可能な進出パターンからブロックと順位の範囲を動的に取得
+  const availableBlocks = new Set<string>();
+  const availablePositions = new Set<number>();
+  
+  Object.keys(promotions).forEach(key => {
+    const parts = key.split('_');
+    if (parts.length === 2) {
+      const block = parts[0];
+      const position = parseInt(parts[1]);
+      if (block && !isNaN(position)) {
+        availableBlocks.add(block);
+        availablePositions.add(position);
+      }
+    }
+  });
+  
+  // ブロック文字を正規表現パターンに変換 (例: A,B,C,D,E,F,G,H,I,J,K,L → [A-L])
+  const blockChars = Array.from(availableBlocks).sort();
+  const positionRange = Array.from(availablePositions).sort((a, b) => a - b);
+  
+  console.log(`[PROMOTION] 動的パターン生成: ブロック[${blockChars.join(',')}], 順位[${positionRange.join(',')}]`);
+  
+  if (blockChars.length === 0 || positionRange.length === 0) {
+    console.log(`[PROMOTION] 利用可能な進出パターンがありません`);
+    return null;
+  }
+  
+  // 連続するブロック文字の場合は範囲表記、そうでなければ選択表記
+  const blockPattern = blockChars.length > 1 && 
+                      blockChars.every((char, index) => 
+                        index === 0 || char.charCodeAt(0) === blockChars[index - 1].charCodeAt(0) + 1
+                      ) && 
+                      blockChars.length === (blockChars[blockChars.length - 1].charCodeAt(0) - blockChars[0].charCodeAt(0) + 1)
+    ? `[${blockChars[0]}-${blockChars[blockChars.length - 1]}]` // 連続範囲 (例: [A-L])
+    : `[${blockChars.join('')}]`; // 選択文字列 (例: [ACEGI])
+  
+  const positionPattern = positionRange.length > 1 && 
+                          positionRange.every((pos, index) => 
+                            index === 0 || pos === positionRange[index - 1] + 1
+                          ) && 
+                          positionRange.length === (positionRange[positionRange.length - 1] - positionRange[0] + 1)
+    ? `[${positionRange[0]}-${positionRange[positionRange.length - 1]}]` // 連続範囲 (例: [1-3])
+    : `[${positionRange.join('')}]`; // 選択文字列 (例: [135])
+  
+  // パターン1: "A1位", "B2位", "F2位", "H2位" などの形式（動的対応）
+  const blockPositionRegex = new RegExp(`(${blockPattern})(${positionPattern})位`);
+  const blockPositionMatch = displayName.match(blockPositionRegex);
   if (blockPositionMatch) {
     const block = blockPositionMatch[1];
     const position = blockPositionMatch[2];
@@ -404,8 +453,9 @@ function findMatchingPromotion(
     }
   }
 
-  // パターン2: "A組1位", "B組2位", "C組3位", "D組4位" などの形式（1-4位対応）
-  const blockGroupMatch = displayName.match(/([ABCD])組([1-4])位/);
+  // パターン2: "A組1位", "B組2位", "F組2位", "H組2位" などの形式（動的対応）
+  const blockGroupRegex = new RegExp(`(${blockPattern})組(${positionPattern})位`);
+  const blockGroupMatch = displayName.match(blockGroupRegex);
   if (blockGroupMatch) {
     const block = blockGroupMatch[1];
     const position = blockGroupMatch[2];
@@ -416,10 +466,9 @@ function findMatchingPromotion(
     }
   }
 
-  // パターン3: "K2位 vs A2位" のような形式での個別マッチング
-  // "K2位", "A2位", "B3位", "C4位" などの個別パターン
+  // パターン3: 個別パターンマッチング（全ての利用可能な進出パターンを確認）
   for (const [promotionKey, teamInfo] of Object.entries(promotions)) {
-    // promotionKeyは "A_1", "B_2", "C_3", "D_4" の形式
+    // promotionKeyは "A_1", "B_2", "C_3" などの形式
     const [block, position] = promotionKey.split('_');
     const blockPositionPattern = `${block}${position}位`;
     
@@ -438,6 +487,7 @@ function findMatchingPromotion(
   }
 
   console.log(`[PROMOTION] マッチ失敗: "${displayName}" に対応する進出チームが見つかりません`);
+  console.log(`[PROMOTION] 利用可能な進出パターン: ${Object.keys(promotions).join(', ')}`);
   return null;
 }
 

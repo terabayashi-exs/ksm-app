@@ -75,6 +75,8 @@ export async function PUT(
       finalTournament?: FinalTournamentUpdate | null;
     } = body;
 
+    console.log(`[MANUAL_RANKINGS] リクエストボディ:`, JSON.stringify(body, null, 2));
+
     if (!blocks || !Array.isArray(blocks)) {
       return NextResponse.json(
         { success: false, error: 'ブロックデータが不正です' },
@@ -87,6 +89,9 @@ export async function PUT(
     // 各ブロックの順位表を更新
     for (const block of blocks) {
       console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 更新中...`);
+      console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} チーム順位:`, 
+        block.team_rankings.map(t => `${t.position}位:${t.team_name}(${t.team_id})`).join(', '));
+      console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 備考:`, block.remarks);
       
       // 順位の妥当性チェック
       const positions = block.team_rankings.map(t => t.position).sort((a, b) => a - b);
@@ -95,11 +100,19 @@ export async function PUT(
       // 順位が1からteamCountの範囲内かチェック
       const invalidPositions = positions.filter(pos => pos < 1 || pos > teamCount);
       if (invalidPositions.length > 0) {
+        console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} バリデーションエラー:`, invalidPositions);
         return NextResponse.json(
           { success: false, error: `不正な順位が設定されています: ${invalidPositions.join(', ')}` },
           { status: 400 }
         );
       }
+
+      // データベース更新前の状態をログ出力
+      const beforeUpdate = await db.execute({
+        sql: 'SELECT team_rankings, remarks FROM t_match_blocks WHERE match_block_id = ?',
+        args: [block.match_block_id]
+      });
+      console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 更新前:`, beforeUpdate.rows[0]);
 
       // データベースを更新
       const updateResult = await db.execute({
@@ -112,6 +125,13 @@ export async function PUT(
       });
 
       console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 更新完了: ${updateResult.rowsAffected}行`);
+
+      // 更新後の状態を確認
+      const afterUpdate = await db.execute({
+        sql: 'SELECT team_rankings, remarks FROM t_match_blocks WHERE match_block_id = ?',
+        args: [block.match_block_id]
+      });
+      console.log(`[MANUAL_RANKINGS] ブロック ${block.match_block_id} 更新後:`, afterUpdate.rows[0]);
     }
 
     // 決勝トーナメントの順位保存処理
@@ -175,7 +195,9 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message: '順位表を更新しました'
+      message: '順位表を更新しました',
+      updatedBlocks: blocks.length,
+      promotionExecuted: true
     });
 
   } catch (error) {
