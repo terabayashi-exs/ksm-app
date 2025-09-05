@@ -224,11 +224,18 @@ export default function TournamentDashboardList() {
           </>
         )}
         {type === 'ongoing' && (
-          <Button asChild size="sm" variant="default">
-            <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-              🔴 試合管理（リアルタイム）
-            </Link>
-          </Button>
+          <>
+            <Button asChild size="sm" variant="default" className="bg-red-600 hover:bg-red-700">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                🔴 試合管理（リアルタイム）
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                手動順位設定
+              </Link>
+            </Button>
+          </>
         )}
       </div>
     </div>

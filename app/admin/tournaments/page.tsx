@@ -310,7 +310,7 @@ export default function AdminTournamentsList() {
                             {new Date(tournament.created_at).toLocaleDateString('ja-JP')}
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-2 flex-wrap">
                               <Button asChild size="sm" variant="outline">
                                 <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
                                   詳細
@@ -319,6 +319,16 @@ export default function AdminTournamentsList() {
                               <Button asChild size="sm" variant="outline">
                                 <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
                                   編集
+                                </Link>
+                              </Button>
+                              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                                  試合管理
+                                </Link>
+                              </Button>
+                              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                                  手動順位設定
                                 </Link>
                               </Button>
                             </div>
