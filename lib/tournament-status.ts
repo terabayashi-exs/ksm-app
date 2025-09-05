@@ -36,15 +36,17 @@ export function calculateTournamentStatus(
     recruitment_end_date: string | null;
   }
 ): TournamentStatus {
+  // JST基準での現在日付を取得
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JST に変換
+  const today = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate());
 
-  // 募集日程の確認
+  // 募集日程の確認（JST 00:00として解釈）
   const recruitmentStart = tournament.recruitment_start_date 
-    ? new Date(tournament.recruitment_start_date) 
+    ? new Date(tournament.recruitment_start_date + 'T00:00:00+09:00')
     : null;
   const recruitmentEnd = tournament.recruitment_end_date 
-    ? new Date(tournament.recruitment_end_date) 
+    ? new Date(tournament.recruitment_end_date + 'T23:59:59+09:00')
     : null;
 
   // 大会日程の確認
@@ -55,12 +57,15 @@ export function calculateTournamentStatus(
     const tournamentDates = JSON.parse(tournament.tournament_dates);
     const dates = Object.values(tournamentDates)
       .filter(date => date)
-      .map(date => new Date(date as string))
+      .map(date => new Date((date as string) + 'T00:00:00+09:00'))
       .sort((a, b) => a.getTime() - b.getTime());
     
     if (dates.length > 0) {
       tournamentStartDate = dates[0];
-      tournamentEndDate = dates[dates.length - 1];
+      // 大会最終日は23:59:59まで「開催中」とする
+      const lastDate = dates[dates.length - 1];
+      tournamentEndDate = new Date(lastDate.getTime());
+      tournamentEndDate.setHours(23, 59, 59, 999);
     }
   } catch (error) {
     console.warn('tournament_datesのJSON解析に失敗:', tournament.tournament_dates, error);

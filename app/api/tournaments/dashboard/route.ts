@@ -2,10 +2,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
+import { calculateTournamentStatus } from '@/lib/tournament-status';
 
 export async function GET() {
   try {
-    // 募集中（planning）と開催中（ongoing）の大会を取得
+    // 全ての大会を取得して動的にステータス判定を行う
     const result = await db.execute(`
       SELECT 
         t.tournament_id,
@@ -34,14 +35,7 @@ export async function GET() {
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-      WHERE t.status IN ('planning', 'ongoing')
-      ORDER BY 
-        CASE t.status 
-          WHEN 'ongoing' THEN 1 
-          WHEN 'planning' THEN 2 
-          ELSE 3 
-        END,
-        t.created_at DESC
+      ORDER BY t.created_at DESC
     `);
 
     // 各大会の試合時刻データを取得
@@ -136,16 +130,39 @@ export async function GET() {
       } as Tournament;
     }));
 
-    // 募集中と開催中に分類
-    const recruiting = tournamentsWithTimes.filter(t => t.status === 'planning');
-    const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
+    // 動的ステータス判定を実行して募集中と開催中の大会を分類
+    const recruiting = [];
+    const ongoing = [];
+
+    for (const tournament of tournamentsWithTimes) {
+      const calculatedStatus = calculateTournamentStatus({
+        status: tournament.status,
+        tournament_dates: tournament.tournament_dates || '',
+        recruitment_start_date: tournament.recruitment_start_date || null,
+        recruitment_end_date: tournament.recruitment_end_date || null
+      });
+
+      // 募集中または開催前の場合は「募集中」として表示
+      if (calculatedStatus === 'recruiting' || calculatedStatus === 'before_event') {
+        recruiting.push(tournament);
+      }
+      // 開催中の場合は「開催中」として表示
+      else if (calculatedStatus === 'ongoing') {
+        ongoing.push(tournament);
+      }
+      // completed, before_recruitmentは表示しない
+    }
+
+    // 優先度順にソート（開催中 > 募集中）
+    ongoing.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    recruiting.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return NextResponse.json({
       success: true,
       data: {
         recruiting,
         ongoing,
-        total: tournamentsWithTimes.length
+        total: recruiting.length + ongoing.length
       }
     });
 
