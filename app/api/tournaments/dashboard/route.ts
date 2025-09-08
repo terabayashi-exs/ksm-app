@@ -1,10 +1,23 @@
 // app/api/tournaments/dashboard/route.ts
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
 
 export async function GET() {
   try {
+    // 認証チェック
+    const session = await auth();
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: '管理者権限が必要です' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    const isAdmin = userId === 'admin';
+
     // 現在日時（JST）
     const now = new Date();
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -42,6 +55,7 @@ export async function GET() {
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.status IN ('planning', 'ongoing')
+        AND (t.created_by = ? OR ? = 1)
       ORDER BY 
         CASE t.status 
           WHEN 'ongoing' THEN 1 
@@ -49,7 +63,7 @@ export async function GET() {
           ELSE 3 
         END,
         t.created_at DESC
-    `);
+    `, [userId, isAdmin ? 1 : 0]);
 
     // 完了した大会を取得（開催日から1年以内）
     const completedResult = await db.execute(`
@@ -81,8 +95,9 @@ export async function GET() {
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.status = 'completed'
+        AND (t.created_by = ? OR ? = 1)
       ORDER BY t.created_at DESC
-    `);
+    `, [userId, isAdmin ? 1 : 0]);
 
     // 完了した大会から開催日から1年経過したものを除外
     const filteredCompletedRows = completedResult.rows.filter(row => {

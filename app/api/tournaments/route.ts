@@ -62,8 +62,9 @@ export async function POST(request: NextRequest) {
         visibility,
         public_start_date,
         recruitment_start_date,
-        recruitment_end_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?)
+        recruitment_end_date,
+        created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?)
     `, [
       data.tournament_name,
       data.format_id,
@@ -81,7 +82,8 @@ export async function POST(request: NextRequest) {
       data.is_public ? 'open' : 'preparing',
       data.public_start_date,
       data.recruitment_start_date,
-      data.recruitment_end_date
+      data.recruitment_end_date,
+      session.user.id
     ]);
 
     const tournamentId = result.lastInsertRowid;

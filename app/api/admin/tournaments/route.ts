@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const userId = session.user.id;
+    const isAdmin = userId === 'admin';
+
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
     const month = searchParams.get('month');
@@ -50,6 +53,12 @@ export async function GET(request: NextRequest) {
 
     const params: (string | number)[] = [];
     const conditions: string[] = [];
+
+    // 作成者フィルタリング（adminユーザー以外は自分が作成した大会のみ）
+    if (!isAdmin) {
+      conditions.push('t.created_by = ?');
+      params.push(userId);
+    }
 
     // 大会名の部分検索
     if (tournamentName) {
