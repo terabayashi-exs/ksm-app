@@ -5,8 +5,15 @@ import { Tournament } from '@/lib/types';
 
 export async function GET() {
   try {
+    // 現在日時（JST）
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(jstNow);
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+
     // 募集中（planning）と開催中（ongoing）の大会を取得
-    const result = await db.execute(`
+    const activeResult = await db.execute(`
       SELECT 
         t.tournament_id,
         t.tournament_name,
@@ -44,8 +51,61 @@ export async function GET() {
         t.created_at DESC
     `);
 
+    // 完了した大会を取得（開催日から1年以内）
+    const completedResult = await db.execute(`
+      SELECT 
+        t.tournament_id,
+        t.tournament_name,
+        t.format_id,
+        t.venue_id,
+        t.team_count,
+        t.court_count,
+        t.tournament_dates,
+        t.match_duration_minutes,
+        t.break_duration_minutes,
+        t.win_points,
+        t.draw_points,
+        t.loss_points,
+        t.walkover_winner_goals,
+        t.walkover_loser_goals,
+        t.status,
+        t.visibility,
+        t.public_start_date,
+        t.recruitment_start_date,
+        t.recruitment_end_date,
+        t.created_at,
+        t.updated_at,
+        v.venue_name,
+        f.format_name
+      FROM t_tournaments t
+      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      WHERE t.status = 'completed'
+      ORDER BY t.created_at DESC
+    `);
+
+    // 完了した大会から開催日から1年経過したものを除外
+    const filteredCompletedRows = completedResult.rows.filter(row => {
+      if (row.tournament_dates) {
+        try {
+          const dates = JSON.parse(row.tournament_dates as string);
+          const dateValues = Object.values(dates) as string[];
+          const latestDate = dateValues.sort().pop();
+          if (latestDate && latestDate >= oneYearAgoStr) {
+            return true;
+          }
+        } catch (error) {
+          console.error('Error parsing tournament_dates:', error);
+        }
+      }
+      return false;
+    });
+
+    // アクティブな大会と1年以内の完了大会を結合
+    const allRows = [...activeResult.rows, ...filteredCompletedRows];
+
     // 各大会の試合時刻データを取得
-    const tournamentsWithTimes = await Promise.all(result.rows.map(async (row) => {
+    const tournamentsWithTimes = await Promise.all(allRows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
@@ -136,15 +196,17 @@ export async function GET() {
       } as Tournament;
     }));
 
-    // 募集中と開催中に分類
+    // 募集中、開催中、完了に分類
     const recruiting = tournamentsWithTimes.filter(t => t.status === 'planning');
     const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
+    const completed = tournamentsWithTimes.filter(t => t.status === 'completed');
 
     return NextResponse.json({
       success: true,
       data: {
         recruiting,
         ongoing,
+        completed,
         total: tournamentsWithTimes.length
       }
     });

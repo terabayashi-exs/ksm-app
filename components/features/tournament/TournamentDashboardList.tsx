@@ -10,6 +10,7 @@ import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2 } from 'lucide-react
 interface TournamentDashboardData {
   recruiting: Tournament[];
   ongoing: Tournament[];
+  completed: Tournament[];
   total: number;
 }
 
@@ -23,6 +24,7 @@ export default function TournamentDashboardList() {
   const [tournaments, setTournaments] = useState<TournamentDashboardData>({
     recruiting: [],
     ongoing: [],
+    completed: [],
     total: 0
   });
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,7 @@ export default function TournamentDashboardList() {
         setTournaments(prev => ({
           recruiting: prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id),
           ongoing: prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id),
+          completed: prev.completed.filter(t => t.tournament_id !== tournament.tournament_id),
           total: prev.total - 1
         }));
         alert(result.message || '大会を削除しました');
@@ -118,7 +121,7 @@ export default function TournamentDashboardList() {
     });
   };
 
-  const TournamentCard = ({ tournament, type }: { tournament: Tournament; type: 'recruiting' | 'ongoing' }) => (
+  const TournamentCard = ({ tournament, type }: { tournament: Tournament; type: 'recruiting' | 'ongoing' | 'completed' }) => (
     <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -131,9 +134,11 @@ export default function TournamentDashboardList() {
         <div className={`px-3 py-1 rounded-full text-xs font-medium ${
           type === 'ongoing' 
             ? 'bg-green-100 text-green-800' 
-            : 'bg-blue-100 text-blue-800'
+            : type === 'recruiting'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-gray-100 text-gray-800'
         }`}>
-          {type === 'ongoing' ? '開催中' : '募集中'}
+          {type === 'ongoing' ? '開催中' : type === 'recruiting' ? '募集中' : '完了'}
         </div>
       </div>
 
@@ -199,7 +204,40 @@ export default function TournamentDashboardList() {
             </Button>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                手動順位設定
+                順位設定
+              </Link>
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => handleDeleteTournament(tournament)}
+              disabled={deleting === tournament.tournament_id}
+              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              {deleting === tournament.tournament_id ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                  削除中...
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  削除
+                </div>
+              )}
+            </Button>
+          </>
+        )}
+        {type === 'completed' && (
+          <>
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                試合管理
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                順位設定
               </Link>
             </Button>
             <Button 
@@ -232,7 +270,7 @@ export default function TournamentDashboardList() {
             </Button>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                手動順位設定
+                順位設定
               </Link>
             </Button>
           </>
@@ -289,13 +327,36 @@ export default function TournamentDashboardList() {
         </Card>
       )}
 
+      {/* 完了した大会 */}
+      {tournaments.completed.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-gray-700">
+              <Trophy className="w-5 h-5 mr-2" />
+              完了した大会（過去1年以内） ({tournaments.completed.length}件)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              {tournaments.completed.map((tournament) => (
+                <TournamentCard
+                  key={tournament.tournament_id}
+                  tournament={tournament}
+                  type="completed"
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 大会がない場合 */}
       {tournaments.total === 0 && (
         <Card>
           <CardContent className="text-center py-12">
             <Trophy className="w-12 h-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              現在、募集中・開催中の大会はありません
+              現在、表示可能な大会はありません
             </h3>
             <p className="text-gray-600 mb-6">
               新しい大会を作成して参加チームの募集を開始しましょう
