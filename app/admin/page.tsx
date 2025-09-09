@@ -61,10 +61,7 @@ export default async function AdminDashboard() {
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/tournaments">大会一覧</Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full hover:border-blue-300 hover:bg-blue-50">
-                  <Link href="/admin/tournaments/create">新規大会作成</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full border-2 border-green-200 hover:border-green-300 hover:bg-green-50">
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50">
                   <Link href="/admin/tournaments/create-new">大会作成</Link>
                 </Button>
               </div>

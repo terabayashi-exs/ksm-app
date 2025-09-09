@@ -155,7 +155,7 @@ export default function AdminTournamentsList() {
                 ダッシュボードに戻る
               </Button>
               <Button asChild>
-                <Link href="/admin/tournaments/create">新規大会作成</Link>
+                <Link href="/admin/tournaments/create-new">大会作成</Link>
               </Button>
             </div>
           </div>

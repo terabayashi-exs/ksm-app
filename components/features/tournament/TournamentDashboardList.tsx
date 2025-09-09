@@ -362,8 +362,8 @@ export default function TournamentDashboardList() {
               新しい大会を作成して参加チームの募集を開始しましょう
             </p>
             <Button asChild className="hover:bg-blue-600">
-              <Link href="/admin/tournaments/create">
-                新規大会作成
+              <Link href="/admin/tournaments/create-new">
+                大会作成
               </Link>
             </Button>
           </CardContent>

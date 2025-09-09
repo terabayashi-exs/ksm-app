@@ -201,7 +201,7 @@ export default async function Home() {
                 </p>
                 {session?.user?.role === "admin" && (
                   <Button asChild>
-                    <Link href="/admin/tournaments/create">新規大会を作成</Link>
+                    <Link href="/admin/tournaments/create-new">大会を作成</Link>
                   </Button>
                 )}
               </CardContent>
