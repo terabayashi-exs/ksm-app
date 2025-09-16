@@ -16,7 +16,7 @@ export default function Header() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-card shadow-sm border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* ロゴ・タイトル */}
@@ -44,10 +44,10 @@ export default function Header() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-xl font-bold text-foreground">
                   Rakusyo GO
                 </h1>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Sports Tournament Management
                 </p>
               </div>
@@ -58,7 +58,7 @@ export default function Header() {
           {/* ユーザーメニュー */}
           <div className="flex items-center space-x-4">
             {status === "loading" ? (
-              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="w-8 h-8 bg-muted rounded-full animate-pulse"></div>
             ) : session?.user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -67,15 +67,15 @@ export default function Header() {
                     <span className="hidden sm:inline">
                       {session.user.name}
                     </span>
-                    <span className="text-xs text-gray-500 hidden sm:inline">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
                       ({session.user.role === "admin" ? "管理者" : "チーム"})
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b">
-                    <p className="font-medium">{session.user.name}</p>
-                    <p className="text-sm text-gray-500">{session.user.email}</p>
+                  <div className="px-3 py-2 border-b border-border">
+                    <p className="font-medium text-foreground">{session.user.name}</p>
+                    <p className="text-sm text-muted-foreground">{session.user.email}</p>
                   </div>
                   
                   {session.user.role === "admin" ? (

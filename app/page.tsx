@@ -19,7 +19,7 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
       {/* ヒーローセクション */}
@@ -76,24 +76,24 @@ export default async function Home() {
             <Card className="text-center">
               <CardContent className="pt-6">
                 <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">{stats.total}</h3>
-                <p className="text-gray-600">開催された大会数</p>
+                <h3 className="text-3xl font-bold text-foreground mb-2">{stats.total}</h3>
+                <p className="text-muted-foreground">開催された大会数</p>
               </CardContent>
             </Card>
             
             <Card className="text-center">
               <CardContent className="pt-6">
                 <Clock className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">{stats.ongoing}</h3>
-                <p className="text-gray-600">進行中の大会数</p>
+                <h3 className="text-3xl font-bold text-foreground mb-2">{stats.ongoing}</h3>
+                <p className="text-muted-foreground">進行中の大会数</p>
               </CardContent>
             </Card>
             
             <Card className="text-center">
               <CardContent className="pt-6">
                 <TrendingUp className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">{stats.completed}</h3>
-                <p className="text-gray-600">完了した大会数</p>
+                <h3 className="text-3xl font-bold text-foreground mb-2">{stats.completed}</h3>
+                <p className="text-muted-foreground">完了した大会数</p>
               </CardContent>
             </Card>
           </div>
@@ -101,11 +101,11 @@ export default async function Home() {
       </section>
 
       {/* 最新大会セクション */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">最新の大会情報</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-foreground mb-4">最新の大会情報</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               現在公開中の大会や最近開催された大会の情報をご覧いただけます
             </p>
           </div>
@@ -137,7 +137,7 @@ export default async function Home() {
                     <CardDescription>{tournament.format_name}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 text-sm text-gray-600">
+                    <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2" />
                         {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
@@ -191,11 +191,11 @@ export default async function Home() {
           ) : (
             <Card className="text-center py-12">
               <CardContent>
-                <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <Trophy className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
                   公開中の大会はありません
                 </h3>
-                <p className="text-gray-600 mb-6">
+                <p className="text-muted-foreground mb-6">
                   現在公開されている大会情報がありません。
                   新しい大会が開催されるまでお待ちください。
                 </p>
@@ -209,8 +209,8 @@ export default async function Home() {
           )}
 
           <div className="text-center">
-            <div className="border-2 border-blue-600 rounded-lg p-6 bg-blue-50 max-w-md mx-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            <div className="border-2 border-blue-600 rounded-lg p-6 bg-blue-50 dark:bg-blue-950/20 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold text-foreground mb-3">
                 もっと大会を探してみませんか？
               </h3>
               <Button asChild size="lg" className="w-full">
@@ -222,11 +222,11 @@ export default async function Home() {
       </section>
 
       {/* 機能紹介セクション */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">システムの特徴</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-foreground mb-4">システムの特徴</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               Rakusyo GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
             </p>
           </div>
@@ -238,7 +238,7 @@ export default async function Home() {
                 <CardTitle>大会管理</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   大会の作成から運営まで、直感的な操作で効率的に管理。様々なスポーツ・競技に対応しています。
                 </p>
               </CardContent>
@@ -250,7 +250,7 @@ export default async function Home() {
                 <CardTitle>チーム管理</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   参加チームの登録・管理から選手情報の管理まで一元化されています。
                 </p>
               </CardContent>
@@ -262,7 +262,7 @@ export default async function Home() {
                 <CardTitle>スケジュール管理</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   試合スケジュールの自動生成と管理で、運営負荷を大幅に軽減します。
                 </p>
               </CardContent>
