@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ArchiveVersionManager } from "@/lib/archive-version-manager";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 現在のアーカイブUIバージョンを取得
+    const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
+
     // 大会を作成 - 既存APIと同じフィールド構造を使用
     const tournamentResult = await db.execute(`
       INSERT INTO t_tournaments (
@@ -66,8 +70,11 @@ export async function POST(request: NextRequest) {
         public_start_date,
         recruitment_start_date,
         recruitment_end_date,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?)
+        created_by,
+        archive_ui_version,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       tournament_name,
       format_id,
@@ -86,7 +93,8 @@ export async function POST(request: NextRequest) {
       public_start_date,
       recruitment_start_date,
       recruitment_end_date,
-      session.user.id
+      session.user.id,
+      currentArchiveVersion
     ]);
 
     const tournamentId = tournamentResult.lastInsertRowid;

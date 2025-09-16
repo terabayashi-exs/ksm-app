@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { tournamentCreateSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
+import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,9 @@ export async function POST(request: NextRequest) {
       }, {} as Record<string, string>)
     );
 
+    // 現在のアーカイブUIバージョンを取得
+    const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
+
     // 大会作成
     const result = await db.execute(`
       INSERT INTO t_tournaments (
@@ -63,8 +67,11 @@ export async function POST(request: NextRequest) {
         public_start_date,
         recruitment_start_date,
         recruitment_end_date,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?)
+        created_by,
+        archive_ui_version,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       data.tournament_name,
       data.format_id,
@@ -83,7 +90,8 @@ export async function POST(request: NextRequest) {
       data.public_start_date,
       data.recruitment_start_date,
       data.recruitment_end_date,
-      session.user.id
+      session.user.id,
+      currentArchiveVersion
     ]);
 
     const tournamentId = result.lastInsertRowid;
@@ -133,6 +141,7 @@ export async function POST(request: NextRequest) {
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.archive_ui_version,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -217,6 +226,7 @@ export async function GET(request: NextRequest) {
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.archive_ui_version,
         t.created_at,
         t.updated_at,
         v.venue_name,

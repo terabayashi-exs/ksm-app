@@ -42,9 +42,11 @@ export async function GET(request: NextRequest) {
         t.recruitment_end_date,
         t.created_at,
         t.updated_at,
+        t.is_archived,
+        t.team_count,
         v.venue_name,
         f.format_name,
-        COUNT(tt.team_id) as registered_teams
+        COUNT(tt.team_id) as current_registered_teams
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -136,6 +138,11 @@ export async function GET(request: NextRequest) {
 
       const calculatedStatus = calculateTournamentStatus(tournamentData);
       const tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates));
+      
+      // アーカイブ済みの場合はt_tournamentsのteam_countを使用、そうでなければ実際の登録チーム数
+      const displayTeamCount = Boolean(row.is_archived) 
+        ? Number(row.team_count) 
+        : Number(row.current_registered_teams);
 
       return {
         tournament_id: Number(row.tournament_id),
@@ -147,9 +154,10 @@ export async function GET(request: NextRequest) {
         tournament_period: tournamentPeriod,
         venue_name: row.venue_name as string,
         format_name: row.format_name as string,
-        registered_teams: Number(row.registered_teams),
+        registered_teams: displayTeamCount,
         created_at: String(row.created_at),
         updated_at: String(row.updated_at),
+        is_archived: Boolean(row.is_archived),
         calculated_status: calculatedStatus
       };
     });

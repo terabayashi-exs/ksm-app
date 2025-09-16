@@ -32,6 +32,9 @@ export interface Tournament {
   end_time?: string;
   // 参加状況
   is_joined?: boolean;
+  // アーカイブ関連
+  is_archived?: boolean;
+  archive_ui_version?: string;
 }
 
 // 大会開催日程の型

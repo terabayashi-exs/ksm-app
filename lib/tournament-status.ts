@@ -20,6 +20,7 @@ export interface TournamentWithStatus {
   registered_teams: number;
   created_at: string;
   updated_at: string;
+  is_archived?: boolean; // アーカイブ済みフラグ
   // 計算されたステータス
   calculated_status: TournamentStatus;
   tournament_period: string;
@@ -122,12 +123,12 @@ export function getStatusLabel(status: TournamentStatus): string {
  */
 export function getStatusColor(status: TournamentStatus): string {
   switch (status) {
-    case 'before_recruitment': return 'bg-gray-100 text-gray-800';
-    case 'recruiting': return 'bg-blue-100 text-blue-800';
-    case 'before_event': return 'bg-yellow-100 text-yellow-800';
-    case 'ongoing': return 'bg-green-100 text-green-800';
-    case 'completed': return 'bg-red-100 text-red-800';
-    default: return 'bg-gray-100 text-gray-800';
+    case 'before_recruitment': return 'bg-gray-100 !text-black border border-gray-400';
+    case 'recruiting': return 'bg-blue-100 !text-black border border-blue-400';
+    case 'before_event': return 'bg-yellow-100 !text-black border border-yellow-400';
+    case 'ongoing': return 'bg-green-100 !text-black border border-green-400';
+    case 'completed': return 'bg-red-100 !text-black border border-red-400';
+    default: return 'bg-gray-100 !text-black border border-gray-400';
   }
 }
 

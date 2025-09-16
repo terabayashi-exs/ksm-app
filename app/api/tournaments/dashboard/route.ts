@@ -47,6 +47,8 @@ export async function GET() {
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.is_archived,
+        t.archive_ui_version,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -87,6 +89,8 @@ export async function GET() {
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.is_archived,
+        t.archive_ui_version,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -207,7 +211,9 @@ export async function GET() {
         event_start_date: eventStartDate,
         event_end_date: eventEndDate,
         start_time: startTime,
-        end_time: endTime
+        end_time: endTime,
+        is_archived: Boolean(row.is_archived),
+        archive_ui_version: row.archive_ui_version as string
       } as Tournament;
     }));
 

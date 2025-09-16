@@ -288,7 +288,14 @@ export default function AdminTournamentsList() {
                         <tr key={tournament.tournament_id} className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div>
-                              <p className="font-medium text-gray-900">{tournament.tournament_name}</p>
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-900">{tournament.tournament_name}</span>
+                                {tournament.is_archived && (
+                                  <Badge className="ml-2 bg-purple-100 !text-black border border-purple-400">
+                                    アーカイブ済み
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-500">{tournament.format_name}</p>
                             </div>
                           </td>
@@ -316,21 +323,25 @@ export default function AdminTournamentsList() {
                                   詳細
                                 </Link>
                               </Button>
-                              <Button asChild size="sm" variant="outline">
-                                <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                                  編集
-                                </Link>
-                              </Button>
-                              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                                  試合管理
-                                </Link>
-                              </Button>
-                              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                                  手動順位設定
-                                </Link>
-                              </Button>
+                              {!tournament.is_archived && (
+                                <>
+                                  <Button asChild size="sm" variant="outline">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                                      編集
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                                      試合管理
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                                      手動順位設定
+                                    </Link>
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

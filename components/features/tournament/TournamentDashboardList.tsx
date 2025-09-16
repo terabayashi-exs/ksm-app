@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2 } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive } from 'lucide-react';
 
 interface TournamentDashboardData {
   recruiting: Tournament[];
@@ -30,6 +30,7 @@ export default function TournamentDashboardList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [archiving, setArchiving] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -89,6 +90,70 @@ export default function TournamentDashboardList() {
     }
   };
 
+  const handleArchiveTournament = async (tournament: Tournament) => {
+    const confirmMessage = `大会「${tournament.tournament_name}」をアーカイブしますか？\n\nアーカイブすると：\n1. 現在のデータが完全に保存されます\n2. 関連するデータベースのデータが削除されます\n3. アーカイブページからのみ表示可能になります\n\n⚠️ この操作は取り消せません。\n事前にバックアップを作成することを推奨します。`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setArchiving(tournament.tournament_id);
+
+    try {
+      // Step 1: アーカイブ作成
+      console.log('Step 1: アーカイブ作成開始...');
+      const archiveResponse = await fetch(`/api/tournaments/${tournament.tournament_id}/archive`, {
+        method: 'POST',
+      });
+
+      const archiveResult = await archiveResponse.json();
+
+      if (!archiveResult.success) {
+        alert(`アーカイブエラー: ${archiveResult.error}`);
+        return;
+      }
+
+      console.log('Step 1: アーカイブ作成完了');
+
+      // Step 2: データ削除実行
+      console.log('Step 2: データ削除開始...');
+      const deleteResponse = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/delete-data`, {
+        method: 'DELETE',
+      });
+
+      const deleteResult = await deleteResponse.json();
+
+      if (deleteResult.success) {
+        alert(`アーカイブとデータ削除が完了しました。\n\n【アーカイブ情報】\n• 大会名: ${tournament.tournament_name}\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【削除情報】\n• 削除されたレコード数: ${deleteResult.deletionSummary.totalDeletedRecords}\n• 削除ステップ: ${deleteResult.deletionSummary.successfulSteps}/${deleteResult.deletionSummary.totalSteps}\n• 実行時間: ${(deleteResult.deletionSummary.totalExecutionTime / 1000).toFixed(1)}秒\n\nアーカイブページ: /public/tournaments/${tournament.tournament_id}/archived`);
+      } else {
+        // アーカイブは成功したが削除に失敗
+        alert(`アーカイブは完了しましたが、データ削除でエラーが発生しました。\n\n【アーカイブ完了】\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【削除エラー】\n${deleteResult.error}\n\n管理者ダッシュボードで「結果削除」ボタンから後でデータ削除を実行してください。`);
+      }
+      
+      // いずれの場合もリストを更新
+      const fetchTournaments = async () => {
+        try {
+          const response = await fetch('/api/tournaments/dashboard');
+          const result: ApiResponse = await response.json();
+          
+          if (result.success && result.data) {
+            setTournaments(result.data);
+          }
+        } catch (err) {
+          console.error('大会リスト更新エラー:', err);
+        }
+      };
+      
+      fetchTournaments();
+    } catch (err) {
+      console.error('アーカイブ・削除エラー:', err);
+      alert('アーカイブ・削除処理中にエラーが発生しました');
+    } finally {
+      setArchiving(null);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -131,14 +196,21 @@ export default function TournamentDashboardList() {
             <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-          type === 'ongoing' 
-            ? 'bg-green-100 text-green-800' 
-            : type === 'recruiting'
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-gray-100 text-gray-800'
-        }`}>
-          {type === 'ongoing' ? '開催中' : type === 'recruiting' ? '募集中' : '完了'}
+        <div className="flex gap-2">
+          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+            type === 'ongoing' 
+              ? 'bg-green-100 text-green-800' 
+              : type === 'recruiting'
+              ? 'bg-blue-100 text-blue-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {type === 'ongoing' ? '開催中' : type === 'recruiting' ? '募集中' : '完了'}
+          </div>
+          {tournament.is_archived && (
+            <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              アーカイブ済み
+            </div>
+          )}
         </div>
       </div>
 
@@ -240,25 +312,27 @@ export default function TournamentDashboardList() {
                 順位設定
               </Link>
             </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => handleDeleteTournament(tournament)}
-              disabled={deleting === tournament.tournament_id}
-              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-            >
-              {deleting === tournament.tournament_id ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                  削除中...
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  削除
-                </div>
-              )}
-            </Button>
+            {!tournament.is_archived && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleArchiveTournament(tournament)}
+                disabled={archiving === tournament.tournament_id}
+                className="border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+              >
+                {archiving === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-1"></div>
+                    アーカイブ中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Archive className="w-3 h-3 mr-1" />
+                    アーカイブ
+                  </div>
+                )}
+              </Button>
+            )}
           </>
         )}
         {type === 'ongoing' && (

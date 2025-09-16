@@ -11,6 +11,7 @@ import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
@@ -29,7 +30,14 @@ async function getTournamentDetail(id: string): Promise<Tournament> {
     throw new Error('有効な大会IDを指定してください');
   }
 
-  return await getTournamentById(tournamentId);
+  const tournament = await getTournamentById(tournamentId);
+  
+  // アーカイブされた大会の場合は専用ページにリダイレクト
+  if (tournament.is_archived) {
+    throw new Error('ARCHIVED_TOURNAMENT');
+  }
+
+  return tournament;
 }
 
 // 大会概要タブのコンテンツ
@@ -311,89 +319,100 @@ function TournamentDetailLoading() {
 // メインコンポーネント
 async function TournamentDetailContent({ params }: PageProps) {
   const resolvedParams = await params;
-  const tournament = await getTournamentDetail(resolvedParams.id);
   
-  // PDFファイルの存在チェック
-  const { bracketPdfExists, resultsPdfExists } = await checkTournamentPdfFiles(tournament.tournament_id);
+  try {
+    const tournament = await getTournamentDetail(resolvedParams.id);
+    
+    // PDFファイルの存在チェック
+    const { bracketPdfExists, resultsPdfExists } = await checkTournamentPdfFiles(tournament.tournament_id);
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ナビゲーション */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <BackButton />
-            <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                TOPページに戻る
-              </Link>
-            </Button>
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* ナビゲーション */}
+          <div className="mb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <BackButton />
+              <Button variant="ghost" asChild>
+                <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  TOPページに戻る
+                </Link>
+              </Button>
+            </div>
           </div>
+
+          {/* ページヘッダー */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{tournament.tournament_name}</h1>
+            <p className="text-gray-600">大会の詳細情報をご覧いただけます</p>
+          </div>
+
+          {/* タブナビゲーション */}
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-5 sm:grid-rows-1">
+              <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">大会</span>概要
+              </TabsTrigger>
+              <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">日程・</span>結果
+              </TabsTrigger>
+              <TabsTrigger value="results" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                戦績表
+              </TabsTrigger>
+              <TabsTrigger value="standings" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                順位表
+              </TabsTrigger>
+              <TabsTrigger value="teams" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">参加</span>チーム
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview">
+              <TournamentOverview 
+                tournament={tournament} 
+                bracketPdfExists={bracketPdfExists} 
+                resultsPdfExists={resultsPdfExists} 
+              />
+            </TabsContent>
+
+            <TabsContent value="schedule">
+              <ScheduleResults tournament={tournament} />
+            </TabsContent>
+
+            <TabsContent value="results">
+              <Results tournament={tournament} />
+            </TabsContent>
+
+            <TabsContent value="standings">
+              <Standings tournament={tournament} />
+            </TabsContent>
+
+            <TabsContent value="teams">
+              <Teams tournament={tournament} />
+            </TabsContent>
+          </Tabs>
         </div>
 
-        {/* ページヘッダー */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{tournament.tournament_name}</h1>
-          <p className="text-gray-600">大会の詳細情報をご覧いただけます</p>
-        </div>
-
-        {/* タブナビゲーション */}
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-5 sm:grid-rows-1">
-            <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-              <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline sm:inline">大会</span>概要
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline sm:inline">日程・</span>結果
-            </TabsTrigger>
-            <TabsTrigger value="results" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              戦績表
-            </TabsTrigger>
-            <TabsTrigger value="standings" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              順位表
-            </TabsTrigger>
-            <TabsTrigger value="teams" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline sm:inline">参加</span>チーム
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            <TournamentOverview 
-              tournament={tournament} 
-              bracketPdfExists={bracketPdfExists} 
-              resultsPdfExists={resultsPdfExists} 
-            />
-          </TabsContent>
-
-          <TabsContent value="schedule">
-            <ScheduleResults tournament={tournament} />
-          </TabsContent>
-
-          <TabsContent value="results">
-            <Results tournament={tournament} />
-          </TabsContent>
-
-          <TabsContent value="standings">
-            <Standings tournament={tournament} />
-          </TabsContent>
-
-          <TabsContent value="teams">
-            <Teams tournament={tournament} />
-          </TabsContent>
-        </Tabs>
+        <Footer />
       </div>
-
-      <Footer />
-    </div>
-  );
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === 'ARCHIVED_TOURNAMENT') {
+      // アーカイブされた大会の場合は専用ページにリダイレクト
+      redirect(`/public/tournaments/${resolvedParams.id}/archived`);
+    }
+    
+    // その他のエラーの場合はエラーページを表示
+    throw error;
+  }
 }
 
 export default function TournamentDetailPage({ params }: PageProps) {
