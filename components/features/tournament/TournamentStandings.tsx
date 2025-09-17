@@ -95,13 +95,13 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
 
   // ブロック色の取得（日程・結果ページと同じスタイル）
   const getBlockColor = (blockKey: string): string => {
-    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
-    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
-    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
-    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
-    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800';
-    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-800';
+    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
+    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   };
 
   // フェーズ判定（予選リーグかトーナメントか）
@@ -132,13 +132,13 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
   const getPositionBgColor = (position: number): string => {
     switch (position) {
       case 1:
-        return 'bg-yellow-50 border-l-4 border-yellow-400';
+        return 'bg-yellow-50 border-l-4 border-yellow-400 dark:bg-yellow-950/20 dark:border-yellow-500';
       case 2:
-        return 'bg-gray-50 border-l-4 border-gray-400';
+        return 'bg-gray-50 border-l-4 border-gray-400 dark:bg-gray-800 dark:border-gray-500';
       case 3:
-        return 'bg-amber-50 border-l-4 border-amber-400';
+        return 'bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-950/20 dark:border-amber-500';
       default:
-        return 'hover:bg-gray-50';
+        return 'hover:bg-gray-50 dark:hover:bg-gray-800';
     }
   };
 
@@ -246,7 +246,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[700px] md:min-w-0">
                 <thead>
-                  <tr className="border-b bg-gray-50">
+                  <tr className="border-b bg-gray-50 dark:bg-gray-800">
                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
                     {isPreliminaryPhase(block.phase) && (

@@ -162,13 +162,13 @@ function TournamentOverview({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex flex-col space-y-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex-1">
-                    <h4 className="font-medium text-blue-800 mb-1">PDFで結果表を表示</h4>
-                    <p className="text-sm text-blue-700">
+                    <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">PDFで結果表を表示</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
                       手動作成された結果表をPDF形式でご覧いただけます。順位・戦績の確認に最適です。
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                       ※ 最新の順位・戦績は「順位表」「戦績表」ページをご確認ください
                     </p>
                   </div>
@@ -258,17 +258,17 @@ function TournamentOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
               <div>
-                <p className="text-sm text-muted-foreground">開始</p>
-                <p className="font-medium">{formatDate(tournament.recruitment_start_date)}</p>
+                <p className="text-sm text-orange-700 dark:text-orange-300">開始</p>
+                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDate(tournament.recruitment_start_date)}</p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-0.5 bg-orange-300"></div>
+                <div className="w-12 h-0.5 bg-orange-300 dark:bg-orange-600"></div>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">終了</p>
-                <p className="font-medium">{formatDate(tournament.recruitment_end_date)}</p>
+                <p className="text-sm text-orange-700 dark:text-orange-300">終了</p>
+                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDate(tournament.recruitment_end_date)}</p>
               </div>
             </div>
           </CardContent>

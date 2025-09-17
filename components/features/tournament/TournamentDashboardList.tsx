@@ -199,15 +199,15 @@ export default function TournamentDashboardList() {
         <div className="flex gap-2">
           <div className={`px-3 py-1 rounded-full text-xs font-medium ${
             type === 'ongoing' 
-              ? 'bg-green-100 text-green-800' 
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
               : type === 'recruiting'
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-gray-100 text-gray-800'
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
           }`}>
             {type === 'ongoing' ? '開催中' : type === 'recruiting' ? '募集中' : '完了'}
           </div>
           {tournament.is_archived && (
-            <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
               アーカイブ済み
             </div>
           )}

@@ -28,8 +28,8 @@ export async function GET(
         FROM t_matches_live ml
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ? 
-        AND ml.team1_goals IS NOT NULL 
-        AND ml.team2_goals IS NOT NULL
+        AND ml.team1_scores IS NOT NULL 
+        AND ml.team2_scores IS NOT NULL
       `,
       args: [tournamentId]
     });
