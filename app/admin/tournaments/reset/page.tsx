@@ -180,21 +180,21 @@ export default function TournamentResetPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">読み込み中...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">大会データリセット</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-3xl font-bold text-foreground">大会データリセット</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 大会ID 9, 10, 11 のテスト用データをリセットできます
               </p>
             </div>
@@ -266,7 +266,7 @@ export default function TournamentResetPage() {
                   対象大会選択
                 </CardTitle>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-600">リセットする大会を選択してください</p>
+                  <p className="text-sm text-muted-foreground">リセットする大会を選択してください</p>
                   <Button variant="outline" size="sm" onClick={handleSelectAll}>
                     {selectedTournaments.length === tournaments.length ? '全解除' : '全選択'}
                   </Button>
@@ -285,22 +285,22 @@ export default function TournamentResetPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-foreground">
                           大会ID {tournament.tournament_id}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           {tournament.tournament_name}
                         </p>
                         <div className="flex space-x-4 mt-2">
-                          <div className="flex items-center text-xs text-gray-500">
+                          <div className="flex items-center text-xs text-muted-foreground">
                             <Users className="w-3 h-3 mr-1" />
                             {tournament.team_count}チーム
                           </div>
-                          <div className="flex items-center text-xs text-gray-500">
+                          <div className="flex items-center text-xs text-muted-foreground">
                             <Calendar className="w-3 h-3 mr-1" />
                             {tournament.match_count}試合
                           </div>
-                          <div className="flex items-center text-xs text-gray-500">
+                          <div className="flex items-center text-xs text-muted-foreground">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             {tournament.results_count}結果
                           </div>
@@ -326,7 +326,7 @@ export default function TournamentResetPage() {
                   <Shield className="w-5 h-5 mr-2" />
                   リセットレベル選択
                 </CardTitle>
-                <p className="text-sm text-gray-600">実行するリセットの種類を選択してください</p>
+                <p className="text-sm text-muted-foreground">実行するリセットの種類を選択してください</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {RESET_LEVELS.map((level) => (
@@ -343,15 +343,15 @@ export default function TournamentResetPage() {
                       <div className="flex-1">
                         <div className="flex items-center">
                           <span className="text-lg mr-2">{level.icon}</span>
-                          <p className="font-medium text-gray-900">{level.name}</p>
+                          <p className="font-medium text-foreground">{level.name}</p>
                           <Badge className={`ml-2 ${getSafetyColor(level.safety)}`} variant="outline">
                             {level.safety === 'safe' && '安全'}
                             {level.safety === 'caution' && '注意'}
                             {level.safety === 'danger' && '危険'}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{level.description}</p>
-                        <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                        <p className="text-sm text-muted-foreground mt-1">{level.description}</p>
+                        <ul className="text-xs text-muted-foreground mt-2 space-y-1">
                           {level.details.map((detail, index) => (
                             <li key={index}>• {detail}</li>
                           ))}
@@ -382,12 +382,12 @@ export default function TournamentResetPage() {
       {/* 確認ダイアログ */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">リセット実行の確認</h3>
+          <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-foreground mb-4">リセット実行の確認</h3>
             
             <div className="space-y-3 mb-6">
-              <p className="text-sm text-gray-600">以下の内容でリセットを実行します：</p>
-              <div className="bg-gray-50 p-3 rounded">
+              <p className="text-sm text-muted-foreground">以下の内容でリセットを実行します：</p>
+              <div className="bg-muted p-3 rounded">
                 <p className="text-sm">
                   <strong>対象大会:</strong> {selectedTournaments.join(', ')}
                 </p>

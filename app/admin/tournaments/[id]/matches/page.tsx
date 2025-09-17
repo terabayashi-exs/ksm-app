@@ -541,11 +541,11 @@ export default function AdminMatchesPage() {
   // ステータス表示
   const getStatusBadge = (match: MatchData) => {
     if (match.match_status === 'cancelled') {
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" />中止</Badge>;
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-200"><XCircle className="w-3 h-3 mr-1" />中止</Badge>;
     }
     
     if (match.match_status === 'completed' && !match.is_confirmed) {
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">確定待ち</Badge>;
+      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-200">確定待ち</Badge>;
     }
 
     switch (match.match_status) {
@@ -554,7 +554,7 @@ export default function AdminMatchesPage() {
       case 'ongoing':
         return <Badge className="bg-green-600 text-white hover:bg-green-600 animate-pulse"><Play className="w-3 h-3 mr-1" />進行中</Badge>;
       case 'completed':
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><CheckCircle className="w-3 h-3 mr-1" />完了</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-950/20 dark:text-blue-200"><CheckCircle className="w-3 h-3 mr-1" />完了</Badge>;
       default:
         return <Badge variant="outline">不明</Badge>;
     }
@@ -611,15 +611,15 @@ export default function AdminMatchesPage() {
       'D': 'bg-purple-600 text-white',
       '決勝トーナメント': 'bg-red-600 text-white',
     };
-    return colors[blockName] || 'bg-gray-600 text-white';
+    return colors[blockName] || 'bg-secondary text-secondary-foreground';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">読み込み中...</p>
+          <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
     );
@@ -627,16 +627,16 @@ export default function AdminMatchesPage() {
 
   if (!tournament) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">大会情報が見つかりません</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">大会情報が見つかりません</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
             <div className="flex items-center space-x-4">
@@ -647,8 +647,8 @@ export default function AdminMatchesPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">試合管理</h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <h1 className="text-3xl font-bold text-foreground">試合管理</h1>
+                <p className="text-sm text-muted-foreground mt-1">
                   「{tournament.tournament_name}」の試合進行状況管理
                 </p>
               </div>
@@ -687,8 +687,8 @@ export default function AdminMatchesPage() {
           <CardContent className="p-4 space-y-4">
             {/* 試合状態フィルター */}
             <div className="flex items-center space-x-2 flex-wrap gap-2">
-              <Filter className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">試合状態:</span>
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">試合状態:</span>
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
                 size="sm"
@@ -735,8 +735,8 @@ export default function AdminMatchesPage() {
 
             {/* ブロックフィルター */}
             <div className="flex items-center space-x-2 flex-wrap gap-2">
-              <Filter className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">ブロック:</span>
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">ブロック:</span>
               <Button
                 variant={blockFilter === 'all' ? 'default' : 'outline'}
                 size="sm"
@@ -769,7 +769,7 @@ export default function AdminMatchesPage() {
           {matchBlocks.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <p className="text-gray-500">試合データがありません</p>
+                <p className="text-muted-foreground">試合データがありません</p>
               </CardContent>
             </Card>
           ) : (
@@ -816,7 +816,7 @@ export default function AdminMatchesPage() {
                           {block.match_type}
                         </Badge>
                       </div>
-                      <Badge variant="outline" className="text-xs text-gray-500">
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
                         {blockMatches.length}/{block.matches.length}試合
                       </Badge>
                     </CardTitle>
@@ -829,11 +829,11 @@ export default function AdminMatchesPage() {
                             {/* 試合情報 */}
                             <div className="lg:col-span-2">
                               <div className="flex items-center space-x-3 mb-2">
-                                <span className="font-mono text-sm text-gray-600">
+                                <span className="font-mono text-sm text-muted-foreground">
                                   {match.match_code}
                                 </span>
                               </div>
-                              <div className="text-lg font-bold text-gray-900 mb-1">
+                              <div className="text-lg font-bold text-foreground mb-1">
                                 {(() => {
                                   const winnerName = getWinnerName(match);
                                   const scoreDisplay = getScoreDisplay(match);
@@ -865,7 +865,7 @@ export default function AdminMatchesPage() {
                                   {getWinnerName(match) && (
                                     <div className={`text-sm font-medium ${
                                       getWinnerName(match) === '引き分け' 
-                                        ? 'text-gray-600' 
+                                        ? 'text-muted-foreground' 
                                         : match.is_confirmed 
                                           ? 'text-blue-600' 
                                           : 'text-orange-600'
@@ -876,7 +876,7 @@ export default function AdminMatchesPage() {
                                 </div>
                               )}
 
-                              <div className="flex items-center space-x-4 text-sm text-gray-600 flex-wrap">
+                              <div className="flex items-center space-x-4 text-sm text-muted-foreground flex-wrap">
                                 {match.tournament_date && (
                                   <div className="flex items-center">
                                     📅 {getDateDisplay(match.tournament_date)}
@@ -938,7 +938,7 @@ export default function AdminMatchesPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  className="text-orange-600 border-orange-200 hover:bg-muted"
                                   onClick={() => unconfirmMatch(match.match_id, match.match_code)}
                                   disabled={unconfirmingMatches.has(match.match_id)}
                                 >
@@ -963,7 +963,7 @@ export default function AdminMatchesPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="text-green-600 border-green-200 hover:bg-green-50"
+                                  className="text-green-600 border-green-200 hover:bg-muted"
                                   onClick={() => uncancelMatch(match.match_id, match.match_code)}
                                   disabled={uncancellingMatches.has(match.match_id)}
                                 >
@@ -991,34 +991,34 @@ export default function AdminMatchesPage() {
           <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-gray-600">
+                <div className="text-2xl font-bold text-muted-foreground">
                   {matches.filter(m => m.match_status === 'scheduled').length}
                 </div>
-                <div className="text-sm text-gray-500">試合前</div>
+                <div className="text-sm text-muted-foreground">試合前</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600">
                   {matches.filter(m => m.match_status === 'ongoing').length}
                 </div>
-                <div className="text-sm text-gray-500">進行中</div>
+                <div className="text-sm text-muted-foreground">進行中</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-yellow-600">
                   {matches.filter(m => m.match_status === 'completed' && !m.is_confirmed).length}
                 </div>
-                <div className="text-sm text-gray-500">確定待ち</div>
+                <div className="text-sm text-muted-foreground">確定待ち</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-blue-600">
                   {matches.filter(m => m.is_confirmed).length}
                 </div>
-                <div className="text-sm text-gray-500">確定済み</div>
+                <div className="text-sm text-muted-foreground">確定済み</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-red-600">
                   {matches.filter(m => m.match_status === 'cancelled').length}
                 </div>
-                <div className="text-sm text-gray-500">中止</div>
+                <div className="text-sm text-muted-foreground">中止</div>
               </div>
             </div>
           </CardContent>
@@ -1032,14 +1032,14 @@ export default function AdminMatchesPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   「{selectedMatch?.team1_name} vs {selectedMatch?.team2_name}」を中止します。
                 </p>
                 <Label className="text-base font-medium">中止理由を選択してください</Label>
               </div>
               
               <div className="space-y-3">
-                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-background">
                   <input
                     type="radio"
                     value="no_show_both"
@@ -1049,11 +1049,11 @@ export default function AdminMatchesPage() {
                   />
                   <div>
                     <div className="font-medium">両チーム不参加</div>
-                    <div className="text-sm text-gray-500">両チーム0勝点、試合数にカウント</div>
+                    <div className="text-sm text-muted-foreground">両チーム0勝点、試合数にカウント</div>
                   </div>
                 </label>
 
-                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-background">
                   <input
                     type="radio"
                     value="no_show_team1"
@@ -1063,11 +1063,11 @@ export default function AdminMatchesPage() {
                   />
                   <div>
                     <div className="font-medium">{selectedMatch?.team1_name}不参加</div>
-                    <div className="text-sm text-gray-500">{selectedMatch?.team2_name}不戦勝（3-0）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（3-0）</div>
                   </div>
                 </label>
 
-                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-background">
                   <input
                     type="radio"
                     value="no_show_team2"
@@ -1077,11 +1077,11 @@ export default function AdminMatchesPage() {
                   />
                   <div>
                     <div className="font-medium">{selectedMatch?.team2_name}不参加</div>
-                    <div className="text-sm text-gray-500">{selectedMatch?.team1_name}不戦勝（3-0）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（3-0）</div>
                   </div>
                 </label>
 
-                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-background">
                   <input
                     type="radio"
                     value="no_count"
@@ -1091,7 +1091,7 @@ export default function AdminMatchesPage() {
                   />
                   <div>
                     <div className="font-medium">天候等による中止</div>
-                    <div className="text-sm text-gray-500">試合数にカウントしない</div>
+                    <div className="text-sm text-muted-foreground">試合数にカウントしない</div>
                   </div>
                 </label>
               </div>

@@ -42,11 +42,11 @@ export default async function Home() {
               {session?.user ? (
                 <>
                   {session.user.role === "admin" ? (
-                    <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+                    <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-muted dark:bg-card dark:hover:bg-muted">
                       <Link href="/admin">管理者ダッシュボード</Link>
                     </Button>
                   ) : (
-                    <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+                    <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-muted dark:bg-card dark:hover:bg-muted">
                       <Link href="/team">チームダッシュボード</Link>
                     </Button>
                   )}
@@ -56,7 +56,7 @@ export default async function Home() {
                 </>
               ) : (
                 <>
-                  <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+                  <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-muted dark:bg-card dark:hover:bg-muted">
                     <Link href="/auth/login">ログイン</Link>
                   </Button>
                   <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
@@ -120,7 +120,7 @@ export default async function Home() {
                         tournament.status === 'ongoing' 
                           ? 'bg-green-100 text-green-800'
                           : tournament.status === 'completed'
-                          ? 'bg-gray-100 text-gray-800'
+                          ? 'bg-muted text-foreground'
                           : 'bg-blue-100 text-blue-800'
                       }`}>
                         {tournament.status === 'ongoing' ? '進行中' : 

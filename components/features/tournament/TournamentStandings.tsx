@@ -194,7 +194,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {standings.reduce((sum, block) => sum + block.teams.length, 0)}
+                {standings.filter(block => block.phase === 'preliminary').reduce((sum, block) => sum + block.teams.length, 0)}
               </div>
               <div className="text-sm text-gray-600">参加チーム数</div>
             </div>
@@ -202,7 +202,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
               <div className="text-2xl font-bold text-purple-600">
                 {totalMatches}
               </div>
-              <div className="text-sm text-gray-600">確定済み試合数</div>
+              <div className="text-sm text-gray-600">実施済み試合数</div>
             </div>
           </div>
         </CardContent>

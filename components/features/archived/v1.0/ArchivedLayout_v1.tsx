@@ -938,7 +938,7 @@ function ArchivedTournamentResults_v1({ results, teams, standings }: { results: 
 }
 
 // アーカイブ用順位表コンポーネント（v1.0固定版 - TournamentStandingsと同じ設計）
-function ArchivedTournamentStandings_v1({ standings }: { standings: StandingData[] }) {
+function ArchivedTournamentStandings_v1({ standings, matches }: { standings: StandingData[], matches?: MatchData[] }) {
   
   // ブロック分類関数（TournamentStandings.tsxと同じロジック）
   const getBlockKey = (phase: string, blockName: string): string => {
@@ -1015,18 +1015,8 @@ function ArchivedTournamentStandings_v1({ standings }: { standings: StandingData
     );
   }
 
-  // 総試合数を計算（仮の値）
-  const totalMatches = standings.reduce((sum, block) => {
-    if (block.team_rankings) {
-      try {
-        const rankings = JSON.parse(block.team_rankings);
-        return sum + rankings.reduce((blockSum: number, team: TeamRanking) => blockSum + (team.matches_played || 0), 0);
-      } catch {
-        return sum;
-      }
-    }
-    return sum;
-  }, 0);
+  // 総試合数を計算（実際の試合データから）
+  const totalMatches = matches ? matches.filter(match => match.has_result).length : 0;
 
   return (
     <div className="space-y-6">
@@ -1046,7 +1036,7 @@ function ArchivedTournamentStandings_v1({ standings }: { standings: StandingData
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {standings.reduce((sum, block) => {
+                {standings.filter(block => block.phase === 'preliminary').reduce((sum, block) => {
                   if (block.team_rankings) {
                     try {
                       const rankings = JSON.parse(block.team_rankings);
@@ -1062,9 +1052,9 @@ function ArchivedTournamentStandings_v1({ standings }: { standings: StandingData
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {Math.floor(totalMatches / 2)} {/* 各試合は2チームで計算されるため半分にする */}
+                {totalMatches}
               </div>
-              <div className="text-sm text-gray-600">確定済み試合数</div>
+              <div className="text-sm text-gray-600">実施済み試合数</div>
             </div>
           </div>
         </CardContent>
@@ -1814,7 +1804,7 @@ export default function ArchivedLayout_v1({ archived, uiVersion, versionInfo }: 
         </TabsContent>
 
         <TabsContent value="standings">
-          <ArchivedTournamentStandings_v1 standings={archived.standings} />
+          <ArchivedTournamentStandings_v1 standings={archived.standings} matches={archived.matches} />
         </TabsContent>
 
         <TabsContent value="teams">

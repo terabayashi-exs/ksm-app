@@ -21,14 +21,15 @@ export async function GET(
     // 順位表を取得（team_rankingsから）
     const standings = await getTournamentStandings(tournamentId);
 
-    // 総試合数を正確に計算（確定済み試合数）
+    // 総試合数を正確に計算（結果入力済み試合数）
     const totalMatchesResult = await db.execute({
       sql: `
         SELECT COUNT(*) as total_matches
-        FROM t_matches_final mf
-        JOIN t_matches_live ml ON mf.match_id = ml.match_id
+        FROM t_matches_live ml
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        WHERE mb.tournament_id = ?
+        WHERE mb.tournament_id = ? 
+        AND ml.team1_goals IS NOT NULL 
+        AND ml.team2_goals IS NOT NULL
       `,
       args: [tournamentId]
     });

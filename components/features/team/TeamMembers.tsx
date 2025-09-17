@@ -147,7 +147,7 @@ export default function TeamMembers() {
       <Card>
         <CardContent className="text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">メンバー情報を読み込み中...</p>
+          <p className="text-muted-foreground">メンバー情報を読み込み中...</p>
         </CardContent>
       </Card>
     );
@@ -250,14 +250,14 @@ export default function TeamMembers() {
                               {player.jersey_number}
                             </div>
                           ) : (
-                            <div className="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center">
+                            <div className="w-10 h-10 bg-muted text-muted-foreground rounded-full flex items-center justify-center">
                               -
                             </div>
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{player.player_name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-medium text-foreground">{player.player_name}</p>
+                          <p className="text-sm text-muted-foreground">
                             {player.jersey_number ? `背番号 ${player.jersey_number}` : '背番号未設定'}
                           </p>
                         </div>
@@ -266,7 +266,7 @@ export default function TeamMembers() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">登録されている選手がいません</p>
+                <p className="text-muted-foreground text-center py-8">登録されている選手がいません</p>
               )}
             </div>
           ) : (

@@ -71,27 +71,27 @@ function MatchCard({
     if (['T5', 'T6'].includes(matchCode)) return 'bg-purple-100 text-purple-800'; // 準決勝
     if (matchCode === 'T7') return 'bg-yellow-100 text-yellow-800'; // 3位決定戦
     if (matchCode === 'T8') return 'bg-red-100 text-red-800'; // 決勝
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-muted text-muted-foreground';
   };
 
   const winnerIndex = getWinnerTeam();
 
   return (
-    <div className={`relative bg-white border border-gray-300 rounded-lg p-3 shadow-sm ${className}`} {...props}>
+    <div className={`relative bg-card border border-border rounded-lg p-3 shadow-sm ${className}`} {...props}>
       {/* 試合コード */}
       <div className={`absolute -top-2 left-3 border px-2 py-1 rounded-full text-xs font-medium ${getMatchCodeColor(match.match_code)}`}>
         {match.match_code}
       </div>
       
       {/* チーム1 */}
-      <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-gray-300 rounded cursor-default transition-all ${
+      <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-border rounded cursor-default transition-all ${
         winnerIndex === 0 
           ? 'bg-green-50 text-green-600 border-green-300 font-medium' 
           : hasResult && winnerIndex === 1
           ? 'bg-red-50 text-red-600 border-red-300' 
           : hasResult && match.is_draw
           ? 'bg-blue-50 text-blue-600 border-blue-300'
-          : 'bg-gray-50 text-gray-700'
+          : 'bg-muted text-muted-foreground'
       }`}>
         <span className="text-sm truncate flex-1">
           {winnerIndex === 0 && hasResult ? '👑 ' : ''}{match.team1_display_name || '未確定'}
@@ -109,14 +109,14 @@ function MatchCard({
       </div>
 
       {/* チーム2 */}
-      <div className={`flex items-center justify-between h-8 px-3 border border-gray-300 rounded cursor-default transition-all ${
+      <div className={`flex items-center justify-between h-8 px-3 border border-border rounded cursor-default transition-all ${
         winnerIndex === 1 
           ? 'bg-green-50 text-green-600 border-green-300 font-medium' 
           : hasResult && winnerIndex === 0
           ? 'bg-red-50 text-red-600 border-red-300' 
           : hasResult && match.is_draw
           ? 'bg-blue-50 text-blue-600 border-blue-300'
-          : 'bg-gray-50 text-gray-700'
+          : 'bg-muted text-muted-foreground'
       }`}>
         <span className="text-sm truncate flex-1">
           {winnerIndex === 1 && hasResult ? '👑 ' : ''}{match.team2_display_name || '未確定'}
@@ -148,7 +148,7 @@ function MatchCard({
             試合完了
           </span>
         ) : (
-          <span className="text-xs bg-gray-100 text-gray-500 border border-gray-300 px-2 py-1 rounded-full">
+          <span className="text-xs bg-muted text-muted-foreground border border-border px-2 py-1 rounded-full">
             未実施
           </span>
         )}
@@ -369,7 +369,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
       
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', d);
-      path.setAttribute('stroke', '#9ca3af'); // gray-400
+      path.setAttribute('stroke', 'hsl(var(--muted-foreground))'); // dynamic color
       path.setAttribute('stroke-width', '2');
       path.setAttribute('fill', 'transparent');
       
@@ -438,7 +438,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600">トーナメント表を読み込み中...</span>
+        <span className="ml-3 text-muted-foreground">トーナメント表を読み込み中...</span>
       </div>
     );
   }
@@ -446,9 +446,9 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   if (error) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 text-lg mb-2">{error}</p>
-        <p className="text-gray-500 text-sm">この大会は予選リーグ戦のみで構成されています。</p>
+        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg mb-2">{error}</p>
+        <p className="text-muted-foreground text-sm">この大会は予選リーグ戦のみで構成されています。</p>
       </div>
     );
   }
@@ -545,7 +545,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
         <div className="text-center no-print">
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-            <h2 className="text-2xl font-bold text-gray-900">決勝トーナメント</h2>
+            <h2 className="text-2xl font-bold text-foreground">決勝トーナメント</h2>
             <Button
               onClick={handlePrint}
               variant="outline"
@@ -556,11 +556,11 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
               PDF出力（印刷）
             </Button>
           </div>
-          <p className="text-gray-600">各ブロック上位2チームによるトーナメント表</p>
+          <p className="text-muted-foreground">各ブロック上位2チームによるトーナメント表</p>
         </div>
 
         {/* トーナメントブラケット */}
-        <div className="print-container relative bg-white border border-gray-300 rounded-lg p-6 shadow-sm overflow-x-auto">
+        <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
         <div 
           ref={bracketRef}
           className="relative grid gap-10 min-w-fit"
@@ -595,7 +595,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
               if (groupName.includes('準決勝')) return 'bg-purple-100 text-purple-800';
               if (groupName.includes('3位決定戦')) return 'bg-yellow-100 text-yellow-800';
               if (groupName.includes('決勝')) return 'bg-red-100 text-red-800';
-              return 'bg-gray-100 text-gray-800';
+              return 'bg-muted text-muted-foreground';
             };
 
             return (

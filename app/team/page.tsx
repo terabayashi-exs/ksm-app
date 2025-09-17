@@ -26,13 +26,13 @@ export default async function TeamDashboard({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">チーム管理</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-3xl font-bold text-foreground">チーム管理</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 ようこそ、{session.user.name}さん
               </p>
             </div>
@@ -49,7 +49,7 @@ export default async function TeamDashboard({ searchParams }: PageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 成功メッセージ */}
         {(params.joined || params.updated) && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
+          <div className="mb-6 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md p-4">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -57,10 +57,10 @@ export default async function TeamDashboard({ searchParams }: PageProps) {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">
                   {params.joined ? '大会への参加申し込みが完了しました！' : '参加選手の変更が完了しました！'}
                 </p>
-                <p className="text-sm text-green-700 mt-1">
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                   {params.joined ? '参加申し込み済みの大会欄でご確認いただけます。' : '変更内容が反映されました。'}
                 </p>
               </div>

@@ -252,11 +252,13 @@ export default function TournamentDashboardList() {
             詳細
           </Link>
         </Button>
-        <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-          <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-            大会編集
-          </Link>
-        </Button>
+        {!tournament.is_archived && (
+          <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+            <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+              大会編集
+            </Link>
+          </Button>
+        )}
         {type === 'recruiting' && (
           <>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
@@ -300,7 +302,7 @@ export default function TournamentDashboardList() {
             </Button>
           </>
         )}
-        {type === 'completed' && (
+        {type === 'completed' && !tournament.is_archived && (
           <>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>

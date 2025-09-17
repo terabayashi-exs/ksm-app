@@ -109,9 +109,9 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
     if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
     if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
-    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800';
+    if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
     if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-muted text-muted-foreground';
   };
 
   // 試合結果の表示
@@ -141,8 +141,8 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
         default:
           return {
             status: 'scheduled',
-            display: <span className="text-gray-500 text-sm">未実施</span>,
-            icon: <Clock className="h-4 w-4 text-gray-400" />
+            display: <span className="text-muted-foreground text-sm">未実施</span>,
+            icon: <Clock className="h-4 w-4 text-muted-foreground" />
           };
       }
     }
@@ -192,7 +192,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       <Card>
         <CardContent className="text-center py-12">
           <Clock className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">スケジュールを読み込み中...</p>
+          <p className="text-muted-foreground">スケジュールを読み込み中...</p>
         </CardContent>
       </Card>
     );
@@ -213,9 +213,9 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">試合スケジュール</h3>
-          <p className="text-gray-600">まだ試合スケジュールが作成されていません。</p>
+          <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">試合スケジュール</h3>
+          <p className="text-muted-foreground">まだ試合スケジュールが作成されていません。</p>
         </CardContent>
       </Card>
     );
@@ -240,23 +240,23 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{matches.length}</div>
-              <div className="text-sm text-gray-600">総試合数</div>
+              <div className="text-sm text-muted-foreground">総試合数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{sortedDates.length}</div>
-              <div className="text-sm text-gray-600">開催日数</div>
+              <div className="text-sm text-muted-foreground">開催日数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {matches.filter(m => m.has_result).length}
               </div>
-              <div className="text-sm text-gray-600">実施済み試合</div>
+              <div className="text-sm text-muted-foreground">実施済み試合</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
                 {Math.max(...matches.map(m => m.court_number || 0), 0)}
               </div>
-              <div className="text-sm text-gray-600">使用コート数</div>
+              <div className="text-sm text-muted-foreground">使用コート数</div>
             </div>
           </div>
         </CardContent>
@@ -286,7 +286,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                     <Calendar className="h-5 w-5 mr-2" />
                     開催日 {dateIndex + 1}: {formatDateOnly(date)}
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Clock className="h-4 w-4 mr-1" />
                     {dayMatches.length}試合
                   </div>
@@ -302,7 +302,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                     <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                       {blockKey}
                     </span>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       {blockMatches.length}試合
                     </span>
                   </CardTitle>
@@ -328,16 +328,16 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                             const result = getMatchResult(match);
                             
                             return (
-                              <tr key={match.match_id} className="border-b hover:bg-gray-50">
+                              <tr key={match.match_id} className="border-b hover:bg-muted">
                                 <td className="py-2 px-2">
                                   <div className="flex items-center text-xs md:text-sm">
-                                    <Clock className="h-3 w-3 mr-1 text-gray-400" />
+                                    <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
                                     <span className="truncate">{formatTime(match.start_time)}</span>
                                   </div>
                                 </td>
                                 <td className="py-2 px-2">
                                   <div className="font-medium text-xs md:text-sm">{match.match_code}</div>
-                                  <div className="text-xs text-gray-600 hidden md:block">{match.match_type}</div>
+                                  <div className="text-xs text-muted-foreground hidden md:block">{match.match_type}</div>
                                 </td>
                                 <td className="py-2 px-2">
                                   <div className="text-xs md:text-sm">
@@ -346,7 +346,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                                       <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
                                         {match.team1_display_name}
                                       </div>
-                                      <div className="text-xs text-gray-400">vs</div>
+                                      <div className="text-xs text-muted-foreground">vs</div>
                                       <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
                                         {match.team2_display_name}
                                       </div>
@@ -357,7 +357,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                                         <span className={`truncate max-w-[3.5rem] ${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
                                           {match.team1_display_name}
                                         </span>
-                                        <span className="text-gray-400 text-xs">vs</span>
+                                        <span className="text-muted-foreground text-xs">vs</span>
                                         <span className={`truncate max-w-[3.5rem] ${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
                                           {match.team2_display_name}
                                         </span>
@@ -371,7 +371,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                                     <div className="text-xs md:text-sm">{result.display}</div>
                                   </div>
                                   {match.remarks && (
-                                    <div className="text-xs text-gray-500 mt-1 hidden md:block">
+                                    <div className="text-xs text-muted-foreground mt-1 hidden md:block">
                                       {match.remarks}
                                     </div>
                                   )}
@@ -379,12 +379,12 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                                 <td className="py-2 px-2">
                                   {match.court_number ? (
                                     <div className="flex items-center text-xs md:text-sm">
-                                      <MapPin className="h-3 w-3 mr-1 text-gray-400 hidden md:inline" />
+                                      <MapPin className="h-3 w-3 mr-1 text-muted-foreground hidden md:inline" />
                                       <span className="md:hidden">C{match.court_number}</span>
                                       <span className="hidden md:inline">コート{match.court_number}</span>
                                     </div>
                                   ) : (
-                                    <span className="text-gray-400 text-xs">-</span>
+                                    <span className="text-muted-foreground text-xs">-</span>
                                   )}
                                 </td>
                               </tr>

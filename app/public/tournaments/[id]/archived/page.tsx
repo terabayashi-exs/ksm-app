@@ -806,13 +806,13 @@ function ArchivedTournamentOverview({
 // ローディングコンポーネント
 function ArchivedTournamentLoading() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
-          <div className="h-64 bg-gray-200 rounded mb-6"></div>
-          <div className="h-96 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/3 mb-6"></div>
+          <div className="h-64 bg-muted rounded mb-6"></div>
+          <div className="h-96 bg-muted rounded"></div>
         </div>
       </div>
       <Footer />
@@ -827,12 +827,12 @@ async function ArchivedTournamentContent({ params }: PageProps) {
   
   if (!archived) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">アーカイブデータが見つかりません</h1>
-            <p className="text-gray-600 mb-8">指定された大会のアーカイブデータが存在しません。</p>
+            <h1 className="text-2xl font-bold text-foreground mb-4">アーカイブデータが見つかりません</h1>
+            <p className="text-muted-foreground mb-8">指定された大会のアーカイブデータが存在しません。</p>
             <Button asChild>
               <Link href="/">TOPページに戻る</Link>
             </Button>
@@ -880,7 +880,7 @@ async function ArchivedTournamentContent({ params }: PageProps) {
 // フォールバック用のインラインレンダリング関数
 function renderInlineComponent(archived: ReturnType<typeof getArchivedTournamentJson> extends Promise<infer T> ? NonNullable<T> : never) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -889,7 +889,7 @@ function renderInlineComponent(archived: ReturnType<typeof getArchivedTournament
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
             <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900">
+              <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 TOPページに戻る
               </Link>
@@ -914,8 +914,8 @@ function renderInlineComponent(archived: ReturnType<typeof getArchivedTournament
 
         {/* 基本情報のみ表示 */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{archived.tournament.tournament_name}</h1>
-          <p className="text-gray-600">アーカイブ日時: {formatDate(archived.archived_at as string)}</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">{archived.tournament.tournament_name}</h1>
+          <p className="text-muted-foreground">アーカイブ日時: {formatDate(archived.archived_at as string)}</p>
         </div>
       </div>
 

@@ -242,16 +242,16 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             {actualEditMode 
               ? (specificTeamId ? `「${existingTournamentTeamInfo?.team_name || 'チーム'}」の参加選手変更` : '参加選手の変更')
               : (isNewTeamMode ? '参加チームを追加' : '大会参加申し込み')
             }
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {actualEditMode 
               ? specificTeamId
                 ? `${tournament.tournament_name} の「${existingTournamentTeamInfo?.team_name}」チームの参加選手を変更してください`
@@ -284,25 +284,25 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">大会情報</h2>
+        <div className="bg-card rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">大会情報</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium text-gray-700">大会名:</span>
+              <span className="font-medium text-muted-foreground">大会名:</span>
               <span className="ml-2">{tournament.tournament_name}</span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">形式:</span>
+              <span className="font-medium text-muted-foreground">形式:</span>
               <span className="ml-2">{tournament.format_name}</span>
             </div>
             {tournament.venue_name && (
               <div>
-                <span className="font-medium text-gray-700">会場:</span>
+                <span className="font-medium text-muted-foreground">会場:</span>
                 <span className="ml-2">{tournament.venue_name}</span>
               </div>
             )}
             <div>
-              <span className="font-medium text-gray-700">募集期間:</span>
+              <span className="font-medium text-muted-foreground">募集期間:</span>
               <span className="ml-2">
                 {tournament.recruitment_start_date} 〜 {tournament.recruitment_end_date}
               </span>

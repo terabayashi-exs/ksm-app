@@ -347,10 +347,10 @@ export default function RefereeMatchPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">認証中...</p>
+          <p className="mt-4 text-muted-foreground">認証中...</p>
         </div>
       </div>
     );
@@ -358,12 +358,12 @@ export default function RefereeMatchPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
-            <Alert className="border-red-200 bg-red-50">
+            <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
               <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
+              <AlertDescription className="text-red-800 dark:text-red-200">
                 {error}
               </AlertDescription>
             </Alert>
@@ -381,15 +381,15 @@ export default function RefereeMatchPage() {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">試合データが見つかりません</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">試合データが見つかりません</p>
       </div>
     );
   }
 
   const getStatusIcon = () => {
     switch (match.match_status) {
-      case 'scheduled': return <Clock className="w-5 h-5 text-gray-600" />;
+      case 'scheduled': return <Clock className="w-5 h-5 text-muted-foreground" />;
       case 'ongoing': return <Play className="w-5 h-5 text-green-600" />;
       case 'completed': return <CheckCircle className="w-5 h-5 text-blue-600" />;
       default: return <AlertCircle className="w-5 h-5 text-red-600" />;
@@ -408,7 +408,7 @@ export default function RefereeMatchPage() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* ヘッダー */}
         <Card className="border-l-4 border-l-blue-500">
@@ -437,7 +437,7 @@ export default function RefereeMatchPage() {
                 {getStatusIcon()}
                 <span className={`font-medium ${
                   match.match_status === 'ongoing' ? 'text-green-600' : 
-                  match.match_status === 'completed' ? 'text-blue-600' : 'text-gray-600'
+                  match.match_status === 'completed' ? 'text-blue-600' : 'text-muted-foreground'
                 }`}>
                   {getStatusLabel()}
                 </span>
@@ -446,10 +446,10 @@ export default function RefereeMatchPage() {
           </CardHeader>
           <CardContent>
             <div className="text-center mb-4">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {match.team1_name} vs {match.team2_name}
               </h1>
-              <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center justify-center space-x-6 text-sm text-muted-foreground">
                 <div className="flex items-center">
                   <MapPin className="w-4 h-4 mr-1" />
                   コート{match.court_number}
@@ -469,10 +469,10 @@ export default function RefereeMatchPage() {
 
             {/* 確定済み試合の警告 */}
             {isConfirmed && (
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4 rounded-r-lg">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-400 dark:border-amber-600 p-4 mb-4 rounded-r-lg">
                 <div className="flex items-center">
                   <AlertCircle className="w-5 h-5 text-amber-500 mr-2" />
-                  <p className="text-amber-800 font-medium">
+                  <p className="text-amber-800 dark:text-amber-200 font-medium">
                     この試合は既に確定済みです。結果の編集はできません。
                   </p>
                 </div>
@@ -480,12 +480,12 @@ export default function RefereeMatchPage() {
             )}
 
             {/* 現在のスコア表示 */}
-            <div className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-6">
+            <div className="bg-card p-6 rounded-lg border-2 border-border mb-6">
               <div className="text-center">
-                <div className="text-4xl font-bold text-gray-800 mb-2">
+                <div className="text-4xl font-bold text-foreground mb-2">
                   {getTotalScore(scores.team1)} - {getTotalScore(scores.team2)}
                 </div>
-                <div className="text-sm text-gray-500">現在のスコア</div>
+                <div className="text-sm text-muted-foreground">現在のスコア</div>
               </div>
             </div>
           </CardContent>
@@ -537,9 +537,9 @@ export default function RefereeMatchPage() {
 
               {match.match_status === 'completed' && !isConfirmed && (
                 <div className="space-y-3">
-                  <Alert className="border-yellow-200 bg-yellow-50">
+                  <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800">
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <AlertDescription className="text-yellow-800">
+                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
                       試合が完了しましたが、結果は確定前です。必要に応じて修正できます。
                     </AlertDescription>
                   </Alert>
@@ -560,7 +560,7 @@ export default function RefereeMatchPage() {
                     <CheckCircle className="w-5 h-5 mr-2" />
                     <span className="font-medium">試合結果確定済み</span>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     この試合の結果は既に確定されており、編集できません。
                   </p>
                 </div>
@@ -585,7 +585,7 @@ export default function RefereeMatchPage() {
                         </span>
                       )}
                       {periodIndex + 1 === match.current_period && match.match_status === 'completed' && (
-                        <span className="ml-2 text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                        <span className="ml-2 text-xs bg-muted text-foreground px-2 py-1 rounded">
                           終了
                         </span>
                       )}
@@ -594,7 +594,7 @@ export default function RefereeMatchPage() {
                     <div className="grid grid-cols-2 gap-4">
                       {/* チーム1 */}
                       <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-2">{match.team1_name}</div>
+                        <div className="text-xs text-muted-foreground mb-2">{match.team1_name}</div>
                         <div className="flex items-center justify-center space-x-2 mb-2">
                           <Button
                             variant="outline"
@@ -630,7 +630,7 @@ export default function RefereeMatchPage() {
 
                       {/* チーム2 */}
                       <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-2">{match.team2_name}</div>
+                        <div className="text-xs text-muted-foreground mb-2">{match.team2_name}</div>
                         <div className="flex items-center justify-center space-x-2 mb-2">
                           <Button
                             variant="outline"
@@ -668,17 +668,17 @@ export default function RefereeMatchPage() {
                 ))}
 
                 {/* 合計スコア表示 */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">合計スコア</h4>
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="text-sm font-medium text-foreground mb-3">合計スコア</h4>
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                      <div className="text-xs text-gray-500">{match.team1_name}</div>
+                      <div className="text-xs text-muted-foreground">{match.team1_name}</div>
                       <div className="text-3xl font-bold text-blue-600">
                         {getTotalScore(scores.team1)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">{match.team2_name}</div>
+                      <div className="text-xs text-muted-foreground">{match.team2_name}</div>
                       <div className="text-3xl font-bold text-red-600">
                         {getTotalScore(scores.team2)}
                       </div>
@@ -707,7 +707,7 @@ export default function RefereeMatchPage() {
                           size="sm"
                           onClick={() => setWinnerTeam(null)}
                           disabled={isConfirmed}
-                          className={winnerTeam === null ? 'bg-gray-600 text-white hover:bg-gray-700 border-gray-600' : 'hover:bg-gray-50 border-gray-300'}
+                          className={winnerTeam === null ? 'bg-secondary text-white hover:bg-secondary/80 border-secondary' : 'hover:bg-muted border-border'}
                         >
                           引分
                         </Button>
@@ -733,7 +733,7 @@ export default function RefereeMatchPage() {
                         value={matchRemarks}
                         onChange={(e) => setMatchRemarks(e.target.value)}
                         disabled={match.match_status !== 'ongoing' || isConfirmed}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                        className="mt-1 w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-muted disabled:text-muted-foreground"
                         rows={2}
                         placeholder="抽選で勝敗決定、その他特記事項など..."
                       />
@@ -755,7 +755,7 @@ export default function RefereeMatchPage() {
         </div>
 
         {/* フッター */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-muted-foreground">
           <p>審判専用画面 - 試合ID: {match.match_id}</p>
           <p>問題がある場合は大会運営スタッフにお知らせください</p>
         </div>

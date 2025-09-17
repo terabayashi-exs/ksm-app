@@ -101,9 +101,9 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
             <div className="flex items-center space-x-4">
@@ -114,8 +114,8 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
                 </Link>
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">大会編集</h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <h1 className="text-3xl font-bold text-foreground">大会編集</h1>
+                <p className="text-sm text-muted-foreground mt-1">
                   「{tournament.tournament_name}」の設定を編集します
                 </p>
               </div>

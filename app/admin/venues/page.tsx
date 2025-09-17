@@ -13,13 +13,13 @@ export default async function VenuePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">会場マスタ管理</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-3xl font-bold text-foreground">会場マスタ管理</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 会場情報の登録・編集・削除を行います
               </p>
             </div>

@@ -63,8 +63,8 @@ export default async function WithdrawalPage({ params }: PageProps) {
         <div className="flex items-center gap-4">
           <BackButton />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">大会エントリー辞退</h1>
-            <p className="text-gray-600 mt-1">{String(tournamentInfo.tournament_name)}</p>
+            <h1 className="text-2xl font-bold text-foreground">大会エントリー辞退</h1>
+            <p className="text-muted-foreground mt-1">{String(tournamentInfo.tournament_name)}</p>
           </div>
         </div>
 
@@ -73,7 +73,7 @@ export default async function WithdrawalPage({ params }: PageProps) {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">読み込み中...</div>
+                <div className="text-muted-foreground">読み込み中...</div>
               </div>
             </CardContent>
           </Card>

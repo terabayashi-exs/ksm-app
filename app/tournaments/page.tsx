@@ -146,12 +146,12 @@ export default function TournamentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">読み込み中...</p>
+            <p className="mt-4 text-muted-foreground">読み込み中...</p>
           </div>
         </div>
         <Footer />
@@ -160,15 +160,15 @@ export default function TournamentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">大会を探す</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-3xl font-bold text-foreground">大会を探す</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 参加可能な大会や開催中の大会を探してみましょう
               </p>
             </div>
@@ -280,7 +280,7 @@ export default function TournamentsPage() {
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>検索結果</span>
-              <span className="text-sm font-normal text-gray-500">
+              <span className="text-sm font-normal text-muted-foreground">
                 {pagination.total}件中 {pagination.offset + 1}-{Math.min(pagination.offset + tournaments.length, pagination.total)}件
               </span>
             </CardTitle>
@@ -288,7 +288,7 @@ export default function TournamentsPage() {
           <CardContent>
             {tournaments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">該当する大会が見つかりませんでした。</p>
+                <p className="text-muted-foreground">該当する大会が見つかりませんでした。</p>
               </div>
             ) : (
               <>
@@ -306,12 +306,12 @@ export default function TournamentsPage() {
                     </thead>
                     <tbody>
                       {tournaments.map((tournament) => (
-                        <tr key={tournament.tournament_id} className="border-b hover:bg-gray-50">
+                        <tr key={tournament.tournament_id} className="border-b hover:bg-muted/50">
                           <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
                               <div>
-                                <p className="font-medium text-gray-900">{tournament.tournament_name}</p>
-                                <p className="text-sm text-gray-500">{tournament.format_name}</p>
+                                <p className="font-medium text-foreground">{tournament.tournament_name}</p>
+                                <p className="text-sm text-muted-foreground">{tournament.format_name}</p>
                               </div>
                               {tournament.is_joined && (
                                 <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
@@ -326,13 +326,13 @@ export default function TournamentsPage() {
                               {getStatusLabel(tournament.status)}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {tournament.tournament_period || tournament.event_start_date}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {tournament.venue_name}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {tournament.team_count}チーム
                           </td>
                           <td className="px-4 py-3">
@@ -386,7 +386,7 @@ export default function TournamentsPage() {
                     >
                       前のページ
                     </Button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       ページ {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
                     </span>
                     <Button

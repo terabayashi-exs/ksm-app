@@ -719,9 +719,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
     if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
     if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
-    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800';
+    if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
     if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-muted text-muted-foreground';
   };
 
   // 時間重複チェック関数（SchedulePreview用）
@@ -845,8 +845,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     return (
       <Card>
         <CardContent className="text-center py-8">
-          <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600">フォーマットを選択するとスケジュールプレビューが表示されます</p>
+          <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">フォーマットを選択するとスケジュールプレビューが表示されます</p>
         </CardContent>
       </Card>
     );
@@ -857,7 +857,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       <Card>
         <CardContent className="text-center py-8">
           <RefreshCw className="w-8 h-8 mx-auto animate-spin text-blue-600 mb-4" />
-          <p className="text-gray-600">スケジュールを計算中...</p>
+          <p className="text-muted-foreground">スケジュールを計算中...</p>
         </CardContent>
       </Card>
     );
@@ -878,7 +878,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     return (
       <Card>
         <CardContent className="text-center py-8">
-          <p className="text-gray-600">スケジュールデータがありません</p>
+          <p className="text-muted-foreground">スケジュールデータがありません</p>
         </CardContent>
       </Card>
     );
@@ -918,21 +918,21 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{displaySchedule.totalMatches}</div>
-              <div className="text-sm text-gray-600">総試合数</div>
+              <div className="text-sm text-muted-foreground">総試合数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{displaySchedule.days.length}</div>
-              <div className="text-sm text-gray-600">開催日数</div>
+              <div className="text-sm text-muted-foreground">開催日数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {Math.max(...displaySchedule.days.map(d => d.requiredCourts), 0)}
               </div>
-              <div className="text-sm text-gray-600">最大必要コート数</div>
+              <div className="text-sm text-muted-foreground">最大必要コート数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">{displaySchedule.totalDuration}</div>
-              <div className="text-sm text-gray-600">総所要時間</div>
+              <div className="text-sm text-muted-foreground">総所要時間</div>
             </div>
           </div>
 
@@ -1042,7 +1042,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                       weekday: 'short'
                     })}
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 mr-1" />
                     所要時間: {day.totalDuration}
                   </div>
@@ -1051,21 +1051,21 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               <CardContent>
                 {/* 日程統計 */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="bg-gray-50 rounded p-2 text-center">
+                  <div className="bg-muted rounded p-2 text-center">
                     <div className="font-medium">{day.matches.length}</div>
-                    <div className="text-gray-600">試合数</div>
+                    <div className="text-muted-foreground">試合数</div>
                   </div>
-                  <div className="bg-gray-50 rounded p-2 text-center">
+                  <div className="bg-muted rounded p-2 text-center">
                     <div className="font-medium">{day.requiredCourts}</div>
-                    <div className="text-gray-600">必要コート数</div>
+                    <div className="text-muted-foreground">必要コート数</div>
                   </div>
-                  <div className="bg-gray-50 rounded p-2 text-center">
+                  <div className="bg-muted rounded p-2 text-center">
                     <div className="font-medium">{day.timeSlots}</div>
-                    <div className="text-gray-600">タイムスロット</div>
+                    <div className="text-muted-foreground">タイムスロット</div>
                   </div>
-                  <div className="bg-gray-50 rounded p-2 text-center">
+                  <div className="bg-muted rounded p-2 text-center">
                     <div className="font-medium">{Object.keys(matchesByBlock).length}</div>
-                    <div className="text-gray-600">ブロック数</div>
+                    <div className="text-muted-foreground">ブロック数</div>
                   </div>
                 </div>
               </CardContent>
@@ -1075,7 +1075,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
             {Object.keys(matchesByBlock).length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
-                  <p className="text-gray-600">この日は試合がありません</p>
+                  <p className="text-muted-foreground">この日は試合がありません</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1109,7 +1109,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                         <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                           {getBlockDisplayName(blockKey)}
                         </span>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-muted-foreground">
                           {blockMatches.length}試合
                         </span>
                       </div>
@@ -1117,7 +1117,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                       {/* ブロック単位コート変更UI（リーグ戦のみ・まとめて変更用） */}
                       {blockKey.includes('予選') && (
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">ブロック一括設定:</span>
+                          <span className="text-xs text-muted-foreground">ブロック一括設定:</span>
                           {editingBlockCourt === blockKey ? (
                             <div className="flex items-center space-x-1">
                               <span className="text-xs">コート</span>
@@ -1193,7 +1193,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                               const isEditing = editingMatch === editKey;
                               
                               return (
-                                <tr key={originalMatchIndex} className="border-b hover:bg-gray-50">
+                                <tr key={originalMatchIndex} className="border-b hover:bg-muted">
                                   <td className="py-2 px-3 text-sm">
                                     {!isEditing ? (
                                       <div className="flex items-center space-x-1">
@@ -1239,7 +1239,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                                   </td>
                                   <td className="py-2 px-3">
                                     <div className="font-medium">{match.template.match_code}</div>
-                                    <div className="text-xs text-gray-600">{match.template.match_type}</div>
+                                    <div className="text-xs text-muted-foreground">{match.template.match_type}</div>
                                   </td>
                                   <td className="py-2 px-3 text-sm">
                                     {match.template.team1_display_name} vs {match.template.team2_display_name}
