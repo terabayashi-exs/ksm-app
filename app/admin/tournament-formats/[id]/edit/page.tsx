@@ -81,7 +81,12 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             day_number: Number(t.day_number || 1),
             execution_priority: Number(t.execution_priority || 1),
             court_number: t.court_number ? Number(t.court_number) : undefined,
-            suggested_start_time: String(t.suggested_start_time || "")
+            suggested_start_time: String(t.suggested_start_time || ""),
+            // 新しい順位設定フィールド
+            loser_position_start: t.loser_position_start ? Number(t.loser_position_start) : undefined,
+            loser_position_end: t.loser_position_end ? Number(t.loser_position_end) : undefined,
+            winner_position: t.winner_position ? Number(t.winner_position) : undefined,
+            position_note: String(t.position_note || "")
           }))}
         />
       </div>

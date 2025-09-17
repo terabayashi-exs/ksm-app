@@ -39,6 +39,11 @@ interface MatchTemplate {
   execution_priority: number;
   court_number?: number;
   suggested_start_time: string;
+  // 新しい順位設定フィールド
+  loser_position_start?: number;
+  loser_position_end?: number;
+  winner_position?: number;
+  position_note?: string;
 }
 
 interface TournamentFormatFormData {
@@ -106,7 +111,12 @@ export default function TournamentFormatCreateForm() {
         day_number: 1,
         execution_priority: 1,
         court_number: undefined,
-        suggested_start_time: ""
+        suggested_start_time: "",
+        // 新しい順位設定フィールドのデフォルト値
+        loser_position_start: undefined,
+        loser_position_end: undefined,
+        winner_position: undefined,
+        position_note: ""
       }]
     }
   });
@@ -133,7 +143,12 @@ export default function TournamentFormatCreateForm() {
       day_number: 1,
       execution_priority: nextNumber,
       court_number: undefined,
-      suggested_start_time: ""
+      suggested_start_time: "",
+      // 新しい順位設定フィールド
+      loser_position_start: undefined,
+      loser_position_end: undefined,
+      winner_position: undefined,
+      position_note: ""
     });
   };
 
@@ -292,6 +307,10 @@ export default function TournamentFormatCreateForm() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">実行優先度</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">コート番号</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合開始時間</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">敗者順位開始</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">敗者順位終了</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">勝者順位</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">順位説明</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                 </tr>
               </thead>
@@ -417,6 +436,43 @@ export default function TournamentFormatCreateForm() {
                         {...register(`templates.${index}.suggested_start_time`)}
                         className="w-24"
                         placeholder="09:00"
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        type="number"
+                        {...register(`templates.${index}.loser_position_start`, { valueAsNumber: true })}
+                        className="w-16"
+                        min={1}
+                        max={50}
+                        placeholder="5"
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        type="number"
+                        {...register(`templates.${index}.loser_position_end`, { valueAsNumber: true })}
+                        className="w-16"
+                        min={1}
+                        max={50}
+                        placeholder="5"
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        type="number"
+                        {...register(`templates.${index}.winner_position`, { valueAsNumber: true })}
+                        className="w-16"
+                        min={1}
+                        max={50}
+                        placeholder="1"
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        {...register(`templates.${index}.position_note`)}
+                        className="w-24"
+                        placeholder="決勝戦"
                       />
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-center">

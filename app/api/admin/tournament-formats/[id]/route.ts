@@ -83,9 +83,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         INSERT INTO m_match_templates (
           format_id, match_number, match_code, match_type, phase, round_name, 
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
-          day_number, execution_priority, court_number, suggested_start_time, created_at, updated_at
+          day_number, execution_priority, court_number, suggested_start_time, 
+          loser_position_start, loser_position_end, winner_position, position_note,
+          created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         formatId,
         template.match_number || 1,
@@ -101,7 +103,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         template.day_number || 1,
         template.execution_priority || 1,
         template.court_number || null,
-        template.suggested_start_time || null
+        template.suggested_start_time || null,
+        // 新しい順位設定フィールド
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.winner_position || null,
+        template.position_note || null
       ]);
     }
 

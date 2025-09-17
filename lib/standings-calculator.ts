@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
 import { createTournamentNotification } from '@/lib/notifications';
+import { handleTemplateBasedPositions, hasManualRankings } from '@/lib/template-position-handler';
 
 export interface TeamStanding {
   team_id: string;
@@ -124,6 +125,13 @@ export async function updateFinalTournamentRankings(tournamentId: number): Promi
   try {
     console.log(`[FINAL_RANKINGS] 決勝トーナメント順位更新開始: Tournament ${tournamentId}`);
     
+    // 手動順位設定があるかチェック
+    const hasManualSettings = await hasManualRankings(tournamentId);
+    if (hasManualSettings) {
+      console.log(`[FINAL_RANKINGS] 手動順位設定が存在するため、自動順位計算をスキップします`);
+      return;
+    }
+    
     // 決勝トーナメントブロックを取得
     const finalBlockResult = await db.execute({
       sql: `
@@ -141,8 +149,18 @@ export async function updateFinalTournamentRankings(tournamentId: number): Promi
 
     const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
     
-    // 決勝トーナメントの順位を計算（詳細版）
-    const finalRankings = await calculateDetailedFinalTournamentStandings(tournamentId);
+    // テンプレートベースの順位計算も利用可能か確認
+    const templateRankings = await calculateTemplateBasedRankings(tournamentId);
+    let finalRankings: TeamStanding[] = [];
+    
+    if (templateRankings.length > 0) {
+      console.log(`[FINAL_RANKINGS] テンプレートベース順位計算を使用`);
+      finalRankings = templateRankings;
+    } else {
+      console.log(`[FINAL_RANKINGS] 従来の詳細順位計算を使用`);
+      // 従来の計算方法を使用
+      finalRankings = await calculateDetailedFinalTournamentStandings(tournamentId);
+    }
     
     if (finalRankings.length > 0) {
       // team_rankingsに保存
@@ -1277,4 +1295,113 @@ function calculateDetailedTournamentPosition(
   if (maxMatchNum >= 1 && maxMatchNum <= 4) return 33;       // 削り戦敗者 → 33位（4チーム）
 
   return 33; // デフォルト（最下位グループ）
+}
+
+/**
+ * テンプレートベースの順位計算を実行する
+ */
+async function calculateTemplateBasedRankings(tournamentId: number): Promise<TeamStanding[]> {
+  try {
+    console.log(`[TEMPLATE_RANKINGS] テンプレートベース順位計算開始: Tournament ${tournamentId}`);
+    
+    // 決勝トーナメントブロックを取得
+    const finalBlockResult = await db.execute({
+      sql: `
+        SELECT match_block_id, team_rankings
+        FROM t_match_blocks 
+        WHERE tournament_id = ? AND phase = 'final'
+        LIMIT 1
+      `,
+      args: [tournamentId]
+    });
+
+    if (finalBlockResult.rows.length === 0) {
+      console.log(`[TEMPLATE_RANKINGS] 決勝トーナメントブロックが見つかりません`);
+      return [];
+    }
+
+    const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
+    const existingRankings = finalBlockResult.rows[0].team_rankings as string | null;
+    
+    // 既存の順位設定があるかチェック
+    if (existingRankings) {
+      try {
+        const rankings = JSON.parse(existingRankings);
+        if (rankings.length > 0) {
+          console.log(`[TEMPLATE_RANKINGS] 既存の順位設定を使用: ${rankings.length}チーム`);
+          return rankings;
+        }
+      } catch {
+        console.log(`[TEMPLATE_RANKINGS] 既存順位データのパースに失敗、新規計算を実行`);
+      }
+    }
+    
+    // 確定済みの決勝トーナメント試合を取得
+    const finalMatchesResult = await db.execute({
+      sql: `
+        SELECT 
+          ml.match_id,
+          ml.match_code,
+          ml.team1_id,
+          ml.team2_id,
+          mf.winner_team_id,
+          mf.is_draw,
+          CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
+        FROM t_matches_live ml
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        WHERE ml.match_block_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
+          AND mf.match_id IS NOT NULL
+        ORDER BY ml.match_code
+      `,
+      args: [finalBlockId]
+    });
+
+    console.log(`[TEMPLATE_RANKINGS] 確定済み決勝トーナメント試合: ${finalMatchesResult.rows.length}試合`);
+
+    if (finalMatchesResult.rows.length === 0) {
+      console.log(`[TEMPLATE_RANKINGS] 確定済み試合がないため、テンプレートベース計算をスキップ`);
+      return [];
+    }
+
+    // 各確定済み試合でテンプレートベース順位設定を実行
+    for (const match of finalMatchesResult.rows) {
+      const matchId = match.match_id as number;
+      const winnerId = match.winner_team_id as string | null;
+      const loserId = match.team1_id === winnerId ? match.team2_id as string : match.team1_id as string;
+      
+      console.log(`[TEMPLATE_RANKINGS] 試合 ${match.match_code}: 勝者=${winnerId}, 敗者=${loserId}`);
+      
+      try {
+        await handleTemplateBasedPositions(matchId, winnerId, loserId, tournamentId);
+      } catch (templateError) {
+        console.error(`[TEMPLATE_RANKINGS] テンプレート処理エラー (試合${matchId}):`, templateError);
+        // エラーでも他の試合の処理は継続
+      }
+    }
+
+    // 更新後の順位データを取得
+    const updatedResult = await db.execute({
+      sql: `SELECT team_rankings FROM t_match_blocks WHERE match_block_id = ?`,
+      args: [finalBlockId]
+    });
+    
+    if (updatedResult.rows[0]?.team_rankings) {
+      try {
+        const rankings = JSON.parse(updatedResult.rows[0].team_rankings as string);
+        console.log(`[TEMPLATE_RANKINGS] テンプレートベース順位計算完了: ${rankings.length}チーム`);
+        return rankings;
+      } catch (error) {
+        console.error(`[TEMPLATE_RANKINGS] 更新後順位データのパースに失敗:`, error);
+      }
+    }
+
+    console.log(`[TEMPLATE_RANKINGS] テンプレートベース順位データなし`);
+    return [];
+    
+  } catch (error) {
+    console.error(`[TEMPLATE_RANKINGS] テンプレートベース順位計算エラー:`, error);
+    return [];
+  }
 }

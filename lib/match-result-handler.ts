@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { updateBlockRankingsOnMatchConfirm, updateFinalTournamentRankings } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
+import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
 
 /**
  * 大会の全試合が確定されているかチェックし、完了していれば大会ステータスを更新する
@@ -155,6 +156,22 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       
       if (blockPhaseResult.rows.length > 0 && blockPhaseResult.rows[0].phase === 'final') {
         console.log(`[MATCH_CONFIRM] 決勝トーナメント試合確定: ${match.match_code}`);
+        
+        // テンプレートベースの順位設定を実行
+        try {
+          const winnerId = match.winner_team_id as string | null;
+          const loserId = match.team1_id === winnerId ? match.team2_id as string : match.team1_id as string;
+          
+          if (winnerId && loserId) {
+            console.log(`[MATCH_CONFIRM] テンプレートベース順位設定: 勝者=${winnerId}, 敗者=${loserId}`);
+            await handleTemplateBasedPositions(matchId, winnerId, loserId, tournamentId);
+          }
+        } catch (templateError) {
+          console.error(`[MATCH_CONFIRM] テンプレートベース順位設定エラー:`, templateError);
+          // エラーでも処理は継続
+        }
+        
+        // 従来の決勝順位計算も実行（フォールバック）
         await updateFinalTournamentRankings(tournamentId);
       }
       
@@ -280,9 +297,44 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
         affectedTournaments.add(tournamentId);
         await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
         
-        // 決勝トーナメントの場合は決勝順位更新対象に追加
+        // 決勝トーナメントの場合はテンプレートベース順位設定と決勝順位更新対象に追加
         if (phase === 'final') {
           finalTournamentsToUpdate.add(tournamentId);
+          
+          // 一括確定でもテンプレートベース順位設定を実行
+          try {
+            // 該当ブロックの確定済み試合でテンプレート処理
+            const confirmedMatchesResult = await db.execute({
+              sql: `
+                SELECT 
+                  ml.match_id,
+                  ml.match_code,
+                  ml.team1_id,
+                  ml.team2_id,
+                  mf.winner_team_id
+                FROM t_matches_live ml
+                LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+                WHERE ml.match_block_id = ?
+                  AND mf.match_id IS NOT NULL
+                  AND mf.winner_team_id IS NOT NULL
+                ORDER BY ml.match_code DESC
+                LIMIT 1
+              `,
+              args: [matchBlockId]
+            });
+            
+            if (confirmedMatchesResult.rows.length > 0) {
+              const latestMatch = confirmedMatchesResult.rows[0];
+              const winnerId = latestMatch.winner_team_id as string;
+              const loserId = latestMatch.team1_id === winnerId ? latestMatch.team2_id as string : latestMatch.team1_id as string;
+              
+              console.log(`[BULK_CONFIRM] テンプレートベース順位設定 (${latestMatch.match_code}): 勝者=${winnerId}, 敗者=${loserId}`);
+              await handleTemplateBasedPositions(latestMatch.match_id as number, winnerId, loserId, tournamentId);
+            }
+          } catch (templateError) {
+            console.error(`[BULK_CONFIRM] テンプレートベース順位設定エラー (Block ${matchBlockId}):`, templateError);
+            // エラーでも処理は継続
+          }
         }
       }
     }
