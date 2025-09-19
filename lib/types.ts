@@ -19,6 +19,7 @@ export interface Tournament {
   public_start_date?: string; // 公開開始日
   recruitment_start_date?: string; // 募集開始日
   recruitment_end_date?: string; // 募集終了日
+  sport_type_id?: number; // 競技種別ID
   created_at: string;
   updated_at: string;
   // Optional joined fields
@@ -184,6 +185,7 @@ export interface MatchTemplate {
   execution_priority: number;
   court_number?: number;
   suggested_start_time?: string;
+  period_count?: number;
   created_at: string;
 }
 

@@ -1,6 +1,7 @@
 // lib/api/tournaments.ts
 import { db } from "@/lib/db";
 import type { Tournament } from "@/lib/types";
+import { calculateTournamentStatus } from "@/lib/tournament-status";
 
 export async function getPublicTournaments(teamId?: string): Promise<Tournament[]> {
   try {
@@ -42,7 +43,8 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
 
     const result = await db.execute(query, teamId ? [teamId] : []);
 
-    return result.rows.map(row => {
+    // 非同期でステータス計算を実行
+    const tournaments = await Promise.all(result.rows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
@@ -59,6 +61,14 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         }
       }
 
+      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
+      const calculatedStatus = await calculateTournamentStatus({
+        status: (row.status as string) || 'planning',
+        recruitment_start_date: row.recruitment_start_date as string | null,
+        recruitment_end_date: row.recruitment_end_date as string | null,
+        tournament_dates: (row.tournament_dates as string) || '{}'
+      }, Number(row.tournament_id)); // tournamentIdを渡して試合進行状況もチェック
+
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
@@ -74,7 +84,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         loss_points: Number(row.loss_points),
         walkover_winner_goals: Number(row.walkover_winner_goals),
         walkover_loser_goals: Number(row.walkover_loser_goals),
-        status: row.status as 'planning' | 'ongoing' | 'completed',
+        status: calculatedStatus as 'planning' | 'ongoing' | 'completed',
         visibility: row.visibility === 'open' ? 1 : 0,
         public_start_date: row.public_start_date as string,
         recruitment_start_date: row.recruitment_start_date as string,
@@ -89,7 +99,9 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         // 参加状況
         is_joined: Boolean(row.is_joined)
       };
-    });
+    }));
+
+    return tournaments;
   } catch (error) {
     console.error("Failed to fetch public tournaments:", error);
     return [];
@@ -98,16 +110,42 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
 
 export async function getTournamentStats() {
   try {
-    const [totalResult, ongoingResult, completedResult] = await Promise.all([
-      db.execute("SELECT COUNT(*) as count FROM t_tournaments WHERE visibility = 'open' AND public_start_date <= date('now')"),
-      db.execute("SELECT COUNT(*) as count FROM t_tournaments WHERE visibility = 'open' AND public_start_date <= date('now') AND status = 'ongoing'"),
-      db.execute("SELECT COUNT(*) as count FROM t_tournaments WHERE visibility = 'open' AND public_start_date <= date('now') AND status = 'completed'")
-    ]);
+    // 全ての公開大会を取得してステータスを計算する（統計精度を向上）
+    const tournamentsResult = await db.execute(`
+      SELECT 
+        tournament_id,
+        status,
+        recruitment_start_date,
+        recruitment_end_date,
+        tournament_dates
+      FROM t_tournaments 
+      WHERE visibility = 'open' AND public_start_date <= date('now')
+    `);
+
+    const tournaments = tournamentsResult.rows;
+    let ongoingCount = 0;
+    let completedCount = 0;
+
+    // 各大会のステータスを動的に計算（試合進行状況を含む）
+    for (const tournament of tournaments) {
+      const calculatedStatus = await calculateTournamentStatus({
+        status: (tournament.status as string) || 'planning',
+        recruitment_start_date: tournament.recruitment_start_date as string | null,
+        recruitment_end_date: tournament.recruitment_end_date as string | null,
+        tournament_dates: (tournament.tournament_dates as string) || '{}'
+      }, Number(tournament.tournament_id));
+
+      if (calculatedStatus === 'ongoing') {
+        ongoingCount++;
+      } else if (calculatedStatus === 'completed') {
+        completedCount++;
+      }
+    }
 
     return {
-      total: totalResult.rows[0]?.count as number || 0,
-      ongoing: ongoingResult.rows[0]?.count as number || 0,
-      completed: completedResult.rows[0]?.count as number || 0
+      total: tournaments.length,
+      ongoing: ongoingCount,
+      completed: completedCount
     };
   } catch (error) {
     console.error("Failed to fetch tournament stats:", error);

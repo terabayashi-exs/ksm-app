@@ -257,14 +257,14 @@ function calculateDaySchedule(
         // 固定時間指定の場合は、最低限の終了時刻のみ設定
         courtEndTimes[courtNumber] = Math.max(
           courtEndTimes[courtNumber], 
-          matchEndTime + (settings.breakDurationMinutes || 0)
+          matchEndTime + settings.breakDurationMinutes
         );
         if (process.env.NODE_ENV === 'development') {
           console.log(`⏰ Template ${template.match_code}: Fixed time mode - court ${courtNumber} end time set to ${minutesToTime(courtEndTimes[courtNumber])}`);
         }
       } else {
         // 通常の連続スケジュールの場合
-        courtEndTimes[courtNumber] = matchEndTime + (settings.breakDurationMinutes || 0);
+        courtEndTimes[courtNumber] = matchEndTime + settings.breakDurationMinutes;
         if (process.env.NODE_ENV === 'development') {
           console.log(`⏰ Template ${template.match_code}: Sequential mode - court ${courtNumber} end time set to ${minutesToTime(courtEndTimes[courtNumber])}`);
         }
@@ -298,6 +298,7 @@ function calculateDaySchedule(
     timeSlots: sortedPriorities.length
   };
 }
+
 
 // ユーティリティ関数
 function timeToMinutes(timeStr: string): number {

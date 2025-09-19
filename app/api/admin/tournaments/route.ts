@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { 
-  calculateTournamentStatus, 
+  calculateTournamentStatusSync, 
   formatTournamentPeriod, 
   type TournamentStatus,
   type TournamentWithStatus 
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
         recruitment_end_date: row.recruitment_end_date as string | null
       };
 
-      const calculatedStatus = calculateTournamentStatus(tournamentData);
+      const calculatedStatus = calculateTournamentStatusSync(tournamentData);
       const tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates));
       
       // アーカイブ済みの場合はt_tournamentsのteam_countを使用、そうでなければ実際の登録チーム数

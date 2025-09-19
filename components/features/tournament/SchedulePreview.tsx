@@ -22,6 +22,7 @@ interface SchedulePreviewProps {
 
 export default function SchedulePreview({ formatId, settings, tournamentId, editMode = false, onScheduleChange }: SchedulePreviewProps) {
   const [templates, setTemplates] = useState<MatchTemplate[]>([]);
+  // const [sportCode, setSportCode] = useState<string | null>(null); // Removed: no longer needed for period-based duration
   const [schedule, setSchedule] = useState<TournamentSchedule | null>(null);
   const [customSchedule, setCustomSchedule] = useState<TournamentSchedule | null>(null);
   const [loading, setLoading] = useState(false);
@@ -172,6 +173,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         
         if (result.success) {
           setTemplates(result.data.templates);
+          // setSportCode(result.data.sportCode || null); // Removed: no longer needed for period-based duration
         } else {
           setError(result.error || 'テンプレートの取得に失敗しました');
         }

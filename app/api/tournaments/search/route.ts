@@ -149,8 +149,8 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // 結果の整形（動的ステータス計算付き）
-    const allTournaments = result.rows.map(row => {
+    // 結果の整形（非同期ステータス計算付き）
+    const allTournaments = await Promise.all(result.rows.map(async (row) => {
       const tournamentData = {
         status: String(row.status),
         tournament_dates: String(row.tournament_dates),
@@ -158,7 +158,8 @@ export async function GET(request: NextRequest) {
         recruitment_end_date: row.recruitment_end_date as string | null
       };
 
-      const calculatedStatus = calculateTournamentStatus(tournamentData);
+      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
+      const calculatedStatus = await calculateTournamentStatus(tournamentData, Number(row.tournament_id));
       const tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates));
 
       // tournament_datesからevent_start_dateとevent_end_dateを計算
@@ -193,7 +194,7 @@ export async function GET(request: NextRequest) {
         created_at: String(row.created_at),
         is_joined: Boolean(row.is_joined)
       };
-    });
+    }));
 
     // ステータスフィルタリング（動的ステータスベース）
     const tournaments = statusFilter 

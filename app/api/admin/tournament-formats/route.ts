@@ -14,18 +14,22 @@ export async function GET() {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
-    // フォーマット一覧を取得（テンプレート数も含む）
+    // フォーマット一覧を取得（競技種別・テンプレート数も含む）
     const result = await db.execute(`
       SELECT 
         tf.format_id,
         tf.format_name,
+        tf.sport_type_id,
         tf.target_team_count,
         tf.format_description,
         tf.created_at,
+        st.sport_name,
+        st.sport_code,
         COUNT(mt.template_id) as template_count
       FROM m_tournament_formats tf
+      LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
       LEFT JOIN m_match_templates mt ON tf.format_id = mt.format_id
-      GROUP BY tf.format_id, tf.format_name, tf.target_team_count, tf.format_description, tf.created_at
+      GROUP BY tf.format_id, tf.format_name, tf.sport_type_id, tf.target_team_count, tf.format_description, tf.created_at, st.sport_name, st.sport_code
       ORDER BY tf.created_at DESC
     `);
 
@@ -50,10 +54,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { format_name, target_team_count, format_description, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, templates } = body;
 
     // バリデーション
-    if (!format_name || !target_team_count || !Array.isArray(templates)) {
+    if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
       return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
     }
 
@@ -63,9 +67,9 @@ export async function POST(request: NextRequest) {
 
     // フォーマット作成
     const formatResult = await db.execute(`
-      INSERT INTO m_tournament_formats (format_name, target_team_count, format_description, created_at, updated_at)
-      VALUES (?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-    `, [format_name, target_team_count, format_description || ""]);
+      INSERT INTO m_tournament_formats (format_name, sport_type_id, target_team_count, format_description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+    `, [format_name, sport_type_id, target_team_count, format_description || ""]);
 
     const formatId = Number(formatResult.lastInsertRowid);
 
@@ -107,7 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "フォーマットを作成しました",
-      format: { format_id: formatId, format_name, target_team_count, format_description }
+      format: { format_id: formatId, format_name, sport_type_id, target_team_count, format_description }
     });
 
   } catch (error) {

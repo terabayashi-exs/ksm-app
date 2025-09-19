@@ -47,6 +47,7 @@ export async function GET(
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.sport_type_id,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -85,6 +86,7 @@ export async function GET(
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
+      sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : undefined,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
@@ -136,14 +138,31 @@ export async function PUT(
 
     // リクエストボディの取得と検証
     const body = await request.json();
+    console.log('[TOURNAMENT_EDIT] 受信データ:', {
+      tournamentId,
+      bodyKeys: Object.keys(body),
+      tournament_name: body.tournament_name,
+      format_id: body.format_id,
+      venue_id: body.venue_id,
+      is_public: body.is_public,
+      tournament_dates: body.tournament_dates
+    });
+    
     const validationResult = tournamentCreateSchema.safeParse(body);
     
     if (!validationResult.success) {
+      console.error('[TOURNAMENT_EDIT] バリデーションエラー:', {
+        tournamentId,
+        errors: validationResult.error.issues,
+        receivedData: body
+      });
+      
       return NextResponse.json(
         { 
           success: false, 
           error: '入力データが不正です',
-          details: validationResult.error.issues
+          details: validationResult.error.issues,
+          message: `バリデーションエラー: ${validationResult.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ')}`
         },
         { status: 400 }
       );
@@ -407,23 +426,55 @@ export async function DELETE(
         throw err;
       }
 
+      // t_match_status から削除（match_block_id外部キー制約のため）
+      try {
+        await db.execute(`
+          DELETE FROM t_match_status 
+          WHERE match_block_id IN (
+            SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+          )
+        `, [tournamentId]);
+        console.log('✓ t_match_status削除完了');
+      } catch (err) {
+        console.log('t_match_status削除エラー:', err);
+        // このテーブルは外部キー制約があるため重要
+        throw err;
+      }
+
       // Step 2: 大会直接依存データを削除（tournament_idへの依存）
       console.log('Step 2: 大会関連データ削除中...');
       
       // t_tournament_notifications から削除
-      await db.execute(`
-        DELETE FROM t_tournament_notifications WHERE tournament_id = ?
-      `, [tournamentId]);
+      try {
+        await db.execute(`
+          DELETE FROM t_tournament_notifications WHERE tournament_id = ?
+        `, [tournamentId]);
+        console.log('✓ t_tournament_notifications削除完了');
+      } catch (err) {
+        console.log('t_tournament_notifications削除エラー（テーブルが存在しない可能性）:', err);
+      }
+      
+      // t_tournament_rules から削除
+      try {
+        await db.execute(`
+          DELETE FROM t_tournament_rules WHERE tournament_id = ?
+        `, [tournamentId]);
+        console.log('✓ t_tournament_rules削除完了');
+      } catch (err) {
+        console.log('t_tournament_rules削除エラー（テーブルが存在しない可能性）:', err);
+      }
       
       // t_tournament_players から削除  
       await db.execute(`
         DELETE FROM t_tournament_players WHERE tournament_id = ?
       `, [tournamentId]);
+      console.log('✓ t_tournament_players削除完了');
       
       // t_tournament_teams から削除
       await db.execute(`
         DELETE FROM t_tournament_teams WHERE tournament_id = ?
       `, [tournamentId]);
+      console.log('✓ t_tournament_teams削除完了');
 
       // Step 3: マッチブロックを削除（依存が解消された後）
       console.log('Step 3: マッチブロック削除中...');

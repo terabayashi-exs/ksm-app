@@ -73,16 +73,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // データ整形（実際の結果データを使用）
     const formattedMatches = matchesResult.rows.map(row => {
       // 確定済み結果があればそちらを使用、なければライブデータを使用
+      // カンマ区切りスコアの合計を計算
       const team1Goals = row.final_team1_scores !== null ? 
-        (typeof row.final_team1_scores === 'string' ? parseInt(row.final_team1_scores) : Number(row.final_team1_scores)) :
+        (typeof row.final_team1_scores === 'string' ? 
+          row.final_team1_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+          Number(row.final_team1_scores)) :
         (row.team1_scores !== null ? 
-          (typeof row.team1_scores === 'string' ? parseInt(row.team1_scores) : Number(row.team1_scores)) : 
+          (typeof row.team1_scores === 'string' ? 
+            row.team1_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+            Number(row.team1_scores)) : 
           null);
       
       const team2Goals = row.final_team2_scores !== null ? 
-        (typeof row.final_team2_scores === 'string' ? parseInt(row.final_team2_scores) : Number(row.final_team2_scores)) :
+        (typeof row.final_team2_scores === 'string' ? 
+          row.final_team2_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+          Number(row.final_team2_scores)) :
         (row.team2_scores !== null ? 
-          (typeof row.team2_scores === 'string' ? parseInt(row.team2_scores) : Number(row.team2_scores)) : 
+          (typeof row.team2_scores === 'string' ? 
+            row.team2_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+            Number(row.team2_scores)) : 
           null);
 
       return {

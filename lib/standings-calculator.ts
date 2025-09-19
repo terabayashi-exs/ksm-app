@@ -3,6 +3,58 @@ import { db } from '@/lib/db';
 import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
 import { createTournamentNotification } from '@/lib/notifications';
 import { handleTemplateBasedPositions, hasManualRankings } from '@/lib/template-position-handler';
+import { 
+  MultiSportTeamStanding, 
+  getSportScoreConfig, 
+  extractSoccerScoreData, 
+  getTournamentSportCode,
+  getMultiSportMatchResults
+} from '@/lib/sport-standings-calculator';
+
+/**
+ * スコア文字列を数値に変換（カンマ区切り対応）
+ */
+function parseScore(score: string | number | bigint | ArrayBuffer | null | undefined): number {
+  if (score === null || score === undefined) {
+    return 0;
+  }
+  
+  if (typeof score === 'number') {
+    return isNaN(score) ? 0 : score;
+  }
+  
+  if (typeof score === 'bigint') {
+    return Number(score);
+  }
+  
+  if (score instanceof ArrayBuffer) {
+    const decoder = new TextDecoder();
+    const stringValue = decoder.decode(score);
+    return parseScore(stringValue);
+  }
+  
+  if (typeof score === 'string') {
+    // 空文字列の場合
+    if (score.trim() === '') {
+      return 0;
+    }
+    
+    // カンマ区切りの場合は合計を計算
+    if (score.includes(',')) {
+      const total = score.split(',').reduce((sum, s) => sum + (parseInt(s.trim()) || 0), 0);
+      return isNaN(total) ? 0 : total;
+    }
+    
+    // 単一値の場合
+    const parsed = parseInt(score.trim());
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  
+  return 0;
+}
+
+// Re-export for other modules
+export type { MultiSportTeamStanding };
 
 export interface TeamStanding {
   team_id: string;
@@ -454,7 +506,8 @@ async function calculateBlockStandings(
       let points = 0;
 
       // 各試合の結果を集計
-      teamMatches.forEach(match => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      teamMatches.forEach((match: any) => {
         const isTeam1 = match.team1_id === teamId;
         let teamGoals: number;
         let opponentGoals: number;
@@ -471,9 +524,9 @@ async function calculateBlockStandings(
             opponentGoals = walkoverWinnerGoals;
           }
         } else {
-          // 通常の試合
-          teamGoals = isTeam1 ? Number(match.team1_goals) : Number(match.team2_goals);
-          opponentGoals = isTeam1 ? Number(match.team2_goals) : Number(match.team1_goals);
+          // 通常の試合（カンマ区切りスコア対応）
+          teamGoals = isTeam1 ? parseScore(match.team1_goals) : parseScore(match.team2_goals);
+          opponentGoals = isTeam1 ? parseScore(match.team2_goals) : parseScore(match.team1_goals);
         }
 
         goalsFor += teamGoals;
@@ -1403,5 +1456,298 @@ async function calculateTemplateBasedRankings(tournamentId: number): Promise<Tea
   } catch (error) {
     console.error(`[TEMPLATE_RANKINGS] テンプレートベース順位計算エラー:`, error);
     return [];
+  }
+}
+
+// カンマ区切りスコアを配列に変換
+function parseScoreArray(score: string | number | bigint | ArrayBuffer | null | undefined): number[] {
+  if (score === null || score === undefined) return [0];
+  if (typeof score === 'string') {
+    if (score.trim() === '') return [0];
+    if (score.includes(',')) {
+      return score.split(',').map(s => parseInt(s.trim()) || 0);
+    }
+    const parsed = parseInt(score.trim());
+    return [isNaN(parsed) ? 0 : parsed];
+  }
+  if (typeof score === 'number') {
+    return [isNaN(score) ? 0 : score];
+  }
+  if (typeof score === 'bigint') {
+    return [Number(score)];
+  }
+  if (score instanceof ArrayBuffer) {
+    const decoder = new TextDecoder();
+    const stringValue = decoder.decode(score);
+    return parseScoreArray(stringValue);
+  }
+  return [0];
+}
+
+/**
+ * 多競技対応版: ブロック順位表計算
+ */
+export async function calculateMultiSportBlockStandings(
+  matchBlockId: number, 
+  tournamentId: number,
+  walkoverWinnerGoals: number = 3,
+  walkoverLoserGoals: number = 0,
+  winPoints: number = 3,
+  drawPoints: number = 1,
+  lossPoints: number = 0
+): Promise<MultiSportTeamStanding[]> {
+  try {
+    console.log(`[MULTI_SPORT_STANDINGS] 多競技対応順位計算開始: Block ${matchBlockId}, Tournament ${tournamentId}`);
+
+    // 競技種別設定を取得
+    const sportCode = await getTournamentSportCode(tournamentId);
+    const sportConfig = getSportScoreConfig(sportCode);
+    console.log(`[MULTI_SPORT_STANDINGS] 競技種別: ${sportCode}`, sportConfig);
+
+    // 多競技対応試合結果を取得
+    const matches = await getMultiSportMatchResults(matchBlockId, tournamentId);
+    console.log(`[MULTI_SPORT_STANDINGS] 確定済み試合数: ${matches.length}`);
+
+    // 確定済み試合がない場合でもチーム情報は表示する
+    if (matches.length === 0) {
+      console.log(`[MULTI_SPORT_STANDINGS] 確定済み試合がありません - チーム基本情報のみ表示`);
+    }
+
+    // 参加チーム一覧を取得
+    const teamsResult = await db.execute({
+      sql: `
+        SELECT DISTINCT tt.team_id, t.team_name, t.team_omission
+        FROM t_tournament_teams tt
+        INNER JOIN m_teams t ON tt.team_id = t.team_id
+        WHERE tt.tournament_id = ? AND tt.assigned_block = (
+          SELECT block_name FROM t_match_blocks WHERE match_block_id = ?
+        )
+        ORDER BY t.team_name
+      `,
+      args: [tournamentId, matchBlockId]
+    });
+
+    console.log(`[MULTI_SPORT_STANDINGS] 参加チーム数: ${teamsResult.rows.length}`);
+
+    // 各チームの成績を計算
+    const teamStandings: MultiSportTeamStanding[] = [];
+
+    for (const team of teamsResult.rows) {
+      const teamId = team.team_id as string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const teamMatches = matches.filter((m: any) => m.team1_id === teamId || m.team2_id === teamId);
+      
+      let wins = 0;
+      let draws = 0;
+      let losses = 0;
+      let scoresFor = 0;
+      let scoresAgainst = 0;
+      let points = 0;
+      const soccerDataList: { regular_goals_for: number; regular_goals_against: number; pk_goals_for?: number; pk_goals_against?: number; is_pk_game: boolean; pk_winner?: boolean }[] = []; // サッカー専用データ収集
+
+      // 各試合の結果を集計
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      teamMatches.forEach((match: any) => {
+        const isTeam1 = match.team1_id === teamId;
+        let teamScores: number;
+        let opponentScores: number;
+
+        // スコアデータの解析
+        if (match.is_walkover) {
+          // 不戦勝・不戦敗
+          if (match.winner_team_id === teamId) {
+            teamScores = walkoverWinnerGoals;
+            opponentScores = walkoverLoserGoals;
+          } else {
+            teamScores = walkoverLoserGoals;
+            opponentScores = walkoverWinnerGoals;
+          }
+        } else {
+          // 通常の試合 - カンマ区切り形式のスコアを解析
+          try {
+            const team1Scores: number[] = parseScoreArray(match.team1_scores);
+            const team2Scores: number[] = parseScoreArray(match.team2_scores);
+            
+            console.log(`[MULTI_SPORT_STANDINGS] Match ${match.match_id} scores - Team1: ${match.team1_scores} -> [${team1Scores.join(',')}], Team2: ${match.team2_scores} -> [${team2Scores.join(',')}]`);
+
+            // サッカーの場合はPK戦分離処理
+            if (sportCode === 'soccer' && match.active_periods) {
+              let activePeriods: number[] = [];
+              try {
+                activePeriods = JSON.parse(String(match.active_periods));
+              } catch {
+                activePeriods = [1, 2]; // デフォルト: 前半・後半
+              }
+
+              const soccerData = extractSoccerScoreData(
+                team1Scores,
+                team2Scores,
+                teamId,
+                match.team1_id || '',
+                match.team2_id || '',
+                match.winner_team_id,
+                activePeriods
+              );
+
+              soccerDataList.push(soccerData);
+              
+              // 通常時間のゴールのみを順位計算に使用
+              teamScores = soccerData.regular_goals_for;
+              opponentScores = soccerData.regular_goals_against;
+            } else {
+              // PK選手権や他の競技: 全スコアの合計
+              teamScores = isTeam1 
+                ? team1Scores.reduce((sum, score) => sum + (Number(score) || 0), 0)
+                : team2Scores.reduce((sum, score) => sum + (Number(score) || 0), 0);
+              opponentScores = isTeam1 
+                ? team2Scores.reduce((sum, score) => sum + (Number(score) || 0), 0)
+                : team1Scores.reduce((sum, score) => sum + (Number(score) || 0), 0);
+            }
+          } catch (error) {
+            console.warn(`[MULTI_SPORT_STANDINGS] スコア解析エラー for match ${match.match_id}:`, error);
+            teamScores = isTeam1 ? parseScore(match.team1_scores) : parseScore(match.team2_scores);
+            opponentScores = isTeam1 ? parseScore(match.team2_scores) : parseScore(match.team1_scores);
+          }
+        }
+
+        scoresFor += teamScores;
+        scoresAgainst += opponentScores;
+
+        // 勝敗とポイントの集計
+        if (match.is_draw) {
+          draws++;
+          points += drawPoints;
+        } else if (match.winner_team_id === teamId) {
+          wins++;
+          points += winPoints;
+        } else {
+          losses++;
+          points += lossPoints;
+        }
+      });
+
+      // サッカー専用データの統合
+      let consolidatedSoccerData: { regular_goals_for: number; regular_goals_against: number; pk_goals_for: number; pk_goals_against: number; is_pk_game: boolean; pk_winner?: boolean } | undefined = undefined;
+      if (sportCode === 'soccer' && soccerDataList.length > 0) {
+        consolidatedSoccerData = {
+          regular_goals_for: soccerDataList.reduce((sum, data) => sum + data.regular_goals_for, 0),
+          regular_goals_against: soccerDataList.reduce((sum, data) => sum + data.regular_goals_against, 0),
+          pk_goals_for: soccerDataList.reduce((sum, data) => sum + (data.pk_goals_for || 0), 0),
+          pk_goals_against: soccerDataList.reduce((sum, data) => sum + (data.pk_goals_against || 0), 0),
+          is_pk_game: soccerDataList.some(data => data.is_pk_game),
+          pk_winner: undefined // 複数試合では意味がないため未定義
+        };
+      }
+
+      teamStandings.push({
+        team_id: teamId,
+        team_name: team.team_name as string,
+        team_omission: team.team_omission as string || undefined,
+        position: 0, // 後で設定
+        points,
+        matches_played: teamMatches.length,
+        wins,
+        draws,
+        losses,
+        scores_for: scoresFor,
+        scores_against: scoresAgainst,
+        score_difference: scoresFor - scoresAgainst,
+        soccer_data: consolidatedSoccerData,
+        sport_config: sportConfig
+      });
+    }
+
+    // 順位決定（既存のロジックと同様）
+    const sortedStandings = [...teamStandings].sort((a, b) => {
+      if (a.points !== b.points) return b.points - a.points;
+      if (a.score_difference !== b.score_difference) return b.score_difference - a.score_difference;
+      if (a.scores_for !== b.scores_for) return b.scores_for - a.scores_for;
+      return a.team_name.localeCompare(b.team_name);
+    });
+
+    // 順位を設定（同着処理含む）
+    let currentPosition = 1;
+    for (let i = 0; i < sortedStandings.length; i++) {
+      if (i === 0) {
+        sortedStandings[i].position = 1;
+      } else {
+        const current = sortedStandings[i];
+        const previous = sortedStandings[i - 1];
+        
+        const isTied = current.points === previous.points;
+        if (isTied) {
+          sortedStandings[i].position = previous.position;
+        } else {
+          currentPosition = i + 1;
+          sortedStandings[i].position = currentPosition;
+        }
+      }
+    }
+
+    console.log(`[MULTI_SPORT_STANDINGS] 多競技対応順位計算完了: ${sortedStandings.length}チーム`);
+    return sortedStandings;
+
+  } catch (error) {
+    console.error(`[MULTI_SPORT_STANDINGS] 多競技対応順位計算エラー:`, error);
+    throw new Error('多競技対応順位表の計算に失敗しました');
+  }
+}
+
+/**
+ * 多競技対応データを従来フォーマットに変換（後方互換性）
+ */
+export function convertMultiSportToLegacyStanding(multiSportStanding: MultiSportTeamStanding): TeamStanding {
+  return {
+    team_id: multiSportStanding.team_id,
+    team_name: multiSportStanding.team_name,
+    team_omission: multiSportStanding.team_omission,
+    position: multiSportStanding.position,
+    points: multiSportStanding.points,
+    matches_played: multiSportStanding.matches_played,
+    wins: multiSportStanding.wins,
+    draws: multiSportStanding.draws,
+    losses: multiSportStanding.losses,
+    // 従来の名前にマッピング
+    goals_for: multiSportStanding.scores_for,
+    goals_against: multiSportStanding.scores_against,
+    goal_difference: multiSportStanding.score_difference
+  };
+}
+
+/**
+ * 多競技対応版の順位表更新（既存関数の拡張版）
+ */
+export async function updateBlockRankingsMultiSport(matchBlockId: number, tournamentId: number): Promise<void> {
+  try {
+    console.log(`[MULTI_SPORT_UPDATE] ブロック順位表更新開始: Block ${matchBlockId}, Tournament ${tournamentId}`);
+
+    // 多競技対応で順位を計算
+    const multiSportStandings = await calculateMultiSportBlockStandings(matchBlockId, tournamentId);
+    
+    if (multiSportStandings.length === 0) {
+      console.log(`[MULTI_SPORT_UPDATE] 計算結果が空のため、team_rankings更新をスキップします`);
+      return;
+    }
+
+    // 従来形式に変換して保存（既存システムとの互換性）
+    const legacyStandings = multiSportStandings.map(convertMultiSportToLegacyStanding);
+
+    // データベースに保存
+    await db.execute({
+      sql: `
+        UPDATE t_match_blocks 
+        SET 
+          team_rankings = ?,
+          updated_at = datetime('now', '+9 hours')
+        WHERE match_block_id = ?
+      `,
+      args: [JSON.stringify(legacyStandings), matchBlockId]
+    });
+
+    console.log(`[MULTI_SPORT_UPDATE] ブロック順位表更新完了: ${legacyStandings.length}チーム`);
+
+  } catch (error) {
+    console.error(`[MULTI_SPORT_UPDATE] ブロック順位表更新エラー:`, error);
+    throw new Error('多競技対応ブロック順位表の更新に失敗しました');
   }
 }

@@ -111,6 +111,19 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
       return '進行中';
     }
     
+    // 試合終了済みで、スコアが入力されている場合は常にスコアを表示
+    if (match.match_status === 'completed' && match.team1_goals !== null && match.team2_goals !== null) {
+      if (match.is_walkover) {
+        return '不戦勝';
+      }
+      
+      if (match.is_draw) {
+        return `${match.team1_goals} - ${match.team2_goals} (引分)`;
+      }
+      
+      return `${match.team1_goals} - ${match.team2_goals}`;
+    }
+    
     if (!match.has_result) {
       return match.match_status === 'completed' ? '結果入力中' : '試合前';
     }

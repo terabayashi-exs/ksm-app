@@ -320,7 +320,13 @@ async function generateMatchesFromTemplate(
   try {
     // フォーマットIDに対応するテンプレートを取得
     const templatesResult = await db.execute(`
-      SELECT * FROM m_match_templates 
+      SELECT 
+        template_id, format_id, match_number, match_code, match_type, 
+        phase, round_name, block_name, team1_source, team2_source, 
+        team1_display_name, team2_display_name, day_number, 
+        execution_priority, court_number, suggested_start_time, 
+        period_count, created_at, updated_at
+      FROM m_match_templates 
       WHERE format_id = ? 
       ORDER BY execution_priority ASC
     `, [formatId]);
@@ -340,6 +346,9 @@ async function generateMatchesFromTemplate(
       team2_display_name: String(row.team2_display_name),
       day_number: Number(row.day_number),
       execution_priority: Number(row.execution_priority),
+      court_number: row.court_number ? Number(row.court_number) : undefined,
+      suggested_start_time: row.suggested_start_time as string | undefined,
+      period_count: row.period_count ? Number(row.period_count) : undefined,
       created_at: String(row.created_at)
     }));
     if (templates.length === 0) {
@@ -496,6 +505,11 @@ async function generateMatchesFromTemplate(
       const courtNumber = scheduleInfo?.courtNumber || null;
       const startTime = scheduleInfo?.startTime || null;
 
+      // テンプレートのperiod_count設定を取得（未設定の場合は1）
+      const periodCount = template.period_count && Number(template.period_count) > 0 
+        ? Number(template.period_count) 
+        : 1;
+
       await db.execute(`
         INSERT INTO t_matches_live (
           match_block_id,
@@ -513,7 +527,7 @@ async function generateMatchesFromTemplate(
           period_count,
           winner_team_id,
           remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         blockId,
         tournamentDate,
@@ -527,6 +541,7 @@ async function generateMatchesFromTemplate(
         startTime,   // スケジュール計算結果から設定
         null, // team1_scores は初期状態でnull
         null, // team2_scores は初期状態でnull
+        periodCount, // テンプレートから取得したperiod_count
         null, // winner_team_id は結果確定時に設定
         null  // remarks
       ]);

@@ -18,6 +18,14 @@ interface QRData {
   token: string;
   valid_from: string;
   valid_until: string;
+  // 多競技対応のスポーツ設定
+  sport_config?: {
+    sport_code: string;
+    score_label: string;
+    score_against_label: string;
+    difference_label: string;
+    supports_pk: boolean;
+  };
 }
 
 export default function MatchQRCodePage() {
@@ -168,7 +176,7 @@ export default function MatchQRCodePage() {
                 </div>
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                審判の方はこのQRコードをスキャンして結果入力画面にアクセスしてください
+                審判の方はこのQRコードをスキャンして{qrData.sport_config?.score_label || '得点'}結果入力画面にアクセスしてください
               </p>
             </div>
           </CardContent>
@@ -206,7 +214,7 @@ export default function MatchQRCodePage() {
             <div className="text-sm text-muted-foreground space-y-1">
               <p>• 有効期間: {new Date(qrData.valid_from).toLocaleString('ja-JP')} ～ {new Date(qrData.valid_until).toLocaleString('ja-JP')}</p>
               <p>• 試合開始30分前から終了90分後まで有効</p>
-              <p>• QRコードまたはURLから審判用結果入力画面にアクセスできます</p>
+              <p>• QRコードまたはURLから審判用{qrData.sport_config?.score_label || '得点'}結果入力画面にアクセスできます</p>
               {process.env.NODE_ENV === 'development' && (
                 <div className="mt-4 p-2 bg-muted rounded text-xs break-all">
                   <strong>Debug URL:</strong> {qrData.qr_url}

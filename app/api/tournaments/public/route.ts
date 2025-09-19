@@ -46,7 +46,8 @@ export async function GET() {
         t.created_at DESC
     `, teamId ? [teamId] : []);
 
-    const tournaments = tournamentsResult.rows.map((row: Record<string, unknown>) => {
+    // 非同期でステータス計算を実行
+    const tournaments = await Promise.all(tournamentsResult.rows.map(async (row: Record<string, unknown>) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
@@ -63,13 +64,13 @@ export async function GET() {
         }
       }
 
-      // 動的ステータス判定を適用
-      const dynamicStatus = calculateTournamentStatus({
+      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
+      const dynamicStatus = await calculateTournamentStatus({
         status: String(row.status),
         recruitment_start_date: row.recruitment_start_date as string | null,
         recruitment_end_date: row.recruitment_end_date as string | null,
         tournament_dates: String(row.tournament_dates || '{}')
-      });
+      }, Number(row.tournament_id)); // tournamentIdを渡して試合進行状況もチェック
 
       return {
         tournament_id: Number(row.tournament_id),
@@ -91,7 +92,7 @@ export async function GET() {
         updated_at: String(row.updated_at),
         is_joined: Boolean(row.is_joined)
       };
-    });
+    }));
 
     // ステータス別に分類
     const recruiting = tournaments.filter(t => t.status === 'recruiting');

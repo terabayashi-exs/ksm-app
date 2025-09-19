@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
+import { SPORT_RULE_CONFIGS, SportRuleConfig } from '@/lib/tournament-rules';
 
 interface Tournament {
   tournament_id: number;
@@ -86,8 +88,16 @@ export default function AdminMatchesPage() {
   const [cancellationType, setCancellationType] = useState<'no_show_both' | 'no_show_team1' | 'no_show_team2' | 'no_count'>('no_show_both');
   const [updatingRankings, setUpdatingRankings] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [filter, setFilter] = useState<FilterType>('scheduled');
   const [blockFilter, setBlockFilter] = useState<string>('all');
+  const [sportConfig, setSportConfig] = useState<{
+    sport_code: string;
+    score_label: string;
+    score_against_label: string;
+    difference_label: string;
+    supports_pk: boolean;
+    ruleConfig?: SportRuleConfig;
+  } | null>(null);
 
   // 大会情報と試合一覧取得
   useEffect(() => {
@@ -112,6 +122,53 @@ export default function AdminMatchesPage() {
         
         if (tournamentResult.success) {
           setTournament(tournamentResult.data);
+          
+          // スポーツルール設定を取得（ピリオド名表示用） - 一旦コメントアウト
+          // 競技種別設定取得で一元化する
+        }
+
+        // 競技種別設定を取得
+        console.log('[MATCHES_PAGE] Starting sport config loading...');
+        try {
+          console.log('[MATCHES_PAGE] Calling getTournamentSportCode with:', parseInt(tournamentId));
+          const sportCode = await getTournamentSportCode(parseInt(tournamentId));
+          console.log('[MATCHES_PAGE] SportCode received:', sportCode);
+          
+          const config = getSportScoreConfig(sportCode);
+          console.log('[MATCHES_PAGE] Sport score config:', config);
+          
+          // スポーツルール設定を取得（ピリオド名表示用）
+          let ruleConfig: SportRuleConfig | undefined;
+          if (tournamentResult.success && tournamentResult.data.sport_type_id) {
+            console.log('[MATCHES_PAGE] Looking for ruleConfig with sport_type_id:', tournamentResult.data.sport_type_id);
+            ruleConfig = Object.values(SPORT_RULE_CONFIGS).find(rule => 
+              rule.sport_type_id === Number(tournamentResult.data.sport_type_id)
+            );
+            console.log('[MATCHES_PAGE] Found ruleConfig:', ruleConfig);
+          }
+          
+          const finalConfig = {
+            ...config,
+            ruleConfig
+          };
+          console.log('[MATCHES_PAGE] Setting sport config:', finalConfig);
+          setSportConfig(finalConfig);
+          console.log(`[MATCHES_PAGE] Sport config loaded: ${sportCode}`, { config, ruleConfig });
+          console.log(`[MATCHES_PAGE] RuleConfig periods:`, ruleConfig?.default_periods);
+        } catch (error) {
+          console.error('[MATCHES_PAGE] Failed to load sport config:', error);
+          console.error('[MATCHES_PAGE] Error details:', error instanceof Error ? error.message : error);
+          console.error('[MATCHES_PAGE] Error stack:', error instanceof Error ? error.stack : 'No stack');
+          // フォールバック: PK選手権設定
+          const fallbackConfig = {
+            sport_code: 'pk_championship',
+            score_label: '得点',
+            score_against_label: '失点',
+            difference_label: '得失点差',
+            supports_pk: false
+          };
+          console.log('[MATCHES_PAGE] Setting fallback config:', fallbackConfig);
+          setSportConfig(fallbackConfig);
         }
 
         // 試合一覧取得
@@ -275,7 +332,8 @@ export default function AdminMatchesPage() {
 
   // 試合結果確定
   const confirmMatch = async (matchId: number, matchCode: string) => {
-    if (!window.confirm(`${matchCode}の結果を確定しますか？\n\n確定後は結果の変更ができなくなります。`)) {
+    const scoreLabel = sportConfig?.score_label || '得点';
+    if (!window.confirm(`${matchCode}の${scoreLabel}結果を確定しますか？\n\n確定後は結果の変更ができなくなります。`)) {
       return;
     }
 
@@ -290,7 +348,8 @@ export default function AdminMatchesPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`${matchCode}の結果を確定しました！`);
+        const actionLabel = sportConfig?.score_label || '得点';
+        alert(`${matchCode}の${actionLabel}結果を確定しました！`);
         
         // マッチリストを更新して確定済み状態を反映
         setMatches(prevMatches => 
@@ -312,11 +371,13 @@ export default function AdminMatchesPage() {
           }))
         );
       } else {
-        alert(`結果確定に失敗しました: ${result.error}`);
+        const actionLabel = sportConfig?.score_label || '得点';
+        alert(`${actionLabel}結果確定に失敗しました: ${result.error}`);
       }
     } catch (error) {
       console.error('Match confirmation error:', error);
-      alert('結果確定中にエラーが発生しました');
+      const actionLabel = sportConfig?.score_label || '得点';
+      alert(`${actionLabel}結果確定中にエラーが発生しました`);
     } finally {
       setConfirmingMatches(prev => {
         const newSet = new Set(prev);
@@ -326,9 +387,10 @@ export default function AdminMatchesPage() {
     }
   };
 
-  // 試合結果確定解除
+  // 試合結果確定解除（多競技対応）
   const unconfirmMatch = async (matchId: number, matchCode: string) => {
-    if (!window.confirm(`${matchCode}の確定を解除しますか？\n\n確定解除後は結果の編集が可能になります。\n順位表も自動的に再計算されます。`)) {
+    const actionLabel = sportConfig?.score_label || '得点';
+    if (!window.confirm(`${matchCode}の${actionLabel}結果確定を解除しますか？\n\n確定解除後は結果の編集が可能になります。\n順位表も自動的に再計算されます。`)) {
       return;
     }
 
@@ -343,7 +405,8 @@ export default function AdminMatchesPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`${matchCode}の確定を解除しました！\n結果の編集が可能になりました。`);
+        const actionLabel = sportConfig?.score_label || '得点';
+        alert(`${matchCode}の${actionLabel}結果確定を解除しました！\n結果の編集が可能になりました。`);
         
         // マッチリストを更新して確定解除状態を反映
         setMatches(prevMatches => 
@@ -365,11 +428,13 @@ export default function AdminMatchesPage() {
           }))
         );
       } else {
-        alert(`確定解除に失敗しました: ${result.error}`);
+        const actionLabel = sportConfig?.score_label || '得点';
+        alert(`${actionLabel}結果確定解除に失敗しました: ${result.error}`);
       }
     } catch (error) {
       console.error('Match unconfirmation error:', error);
-      alert('確定解除中にエラーが発生しました');
+      const actionLabel = sportConfig?.score_label || '得点';
+      alert(`${actionLabel}結果確定解除中にエラーが発生しました`);
     } finally {
       setUnconfirmingMatches(prev => {
         const newSet = new Set(prev);
@@ -523,16 +588,108 @@ export default function AdminMatchesPage() {
     return '引き分け';
   };
 
-  // スコアを取得
+  // スコアを取得（多競技対応）
   const getScoreDisplay = (match: MatchData) => {
-    if (match.is_confirmed && match.final_team1_scores && match.final_team2_scores) {
-      const team1Score = match.final_team1_scores.split(',').reduce((sum, score) => sum + parseInt(score || '0'), 0);
-      const team2Score = match.final_team2_scores.split(',').reduce((sum, score) => sum + parseInt(score || '0'), 0);
-      return `${team1Score} - ${team2Score}`;
-    } else if (match.team1_scores !== undefined && match.team2_scores !== undefined) {
-      const team1Score = typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) : match.team1_scores;
-      const team2Score = typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) : match.team2_scores;
-      return `${team1Score || 0} - ${team2Score || 0}`;
+    try {
+      if (match.is_confirmed && match.final_team1_scores && match.final_team2_scores) {
+        // 確定済みスコアの処理（JSONまたはCSV形式に対応）
+        let team1Scores: number[] = [];
+        let team2Scores: number[] = [];
+        
+        console.log('[SCORE_DEBUG] Processing scores for match', match.match_id, {
+          final_team1_scores: match.final_team1_scores,
+          final_team2_scores: match.final_team2_scores,
+          final_team1_scores_type: typeof match.final_team1_scores,
+          final_team2_scores_type: typeof match.final_team2_scores
+        });
+        
+        try {
+          // JSON形式の場合
+          team1Scores = JSON.parse(match.final_team1_scores);
+          team2Scores = JSON.parse(match.final_team2_scores);
+          console.log('[SCORE_DEBUG] JSON parse successful:', { team1Scores, team2Scores });
+        } catch (jsonError) {
+          console.log('[SCORE_DEBUG] JSON parse failed, trying CSV:', jsonError);
+          // CSV形式または単一値の場合
+          if (match.final_team1_scores.includes(',')) {
+            // カンマ区切りの場合
+            team1Scores = match.final_team1_scores.split(',').map(s => parseInt(s || '0'));
+          } else {
+            // 単一値の場合
+            team1Scores = [parseInt(match.final_team1_scores || '0')];
+          }
+          
+          if (match.final_team2_scores.includes(',')) {
+            // カンマ区切りの場合
+            team2Scores = match.final_team2_scores.split(',').map(s => parseInt(s || '0'));
+          } else {
+            // 単一値の場合
+            team2Scores = [parseInt(match.final_team2_scores || '0')];
+          }
+          console.log('[SCORE_DEBUG] CSV/Single value parse result:', { team1Scores, team2Scores });
+        }
+
+        // 配列の安全性チェック
+        if (!Array.isArray(team1Scores)) {
+          console.log('[SCORE_DEBUG] team1Scores is not array, converting:', team1Scores, typeof team1Scores);
+          // 単一の数値の場合は配列に変換
+          if (typeof team1Scores === 'number') {
+            team1Scores = [team1Scores];
+          } else {
+            team1Scores = [];
+          }
+        }
+        if (!Array.isArray(team2Scores)) {
+          console.log('[SCORE_DEBUG] team2Scores is not array, converting:', team2Scores, typeof team2Scores);
+          // 単一の数値の場合は配列に変換
+          if (typeof team2Scores === 'number') {
+            team2Scores = [team2Scores];
+          } else {
+            team2Scores = [];
+          }
+        }
+
+        // サッカーでPK戦がある場合の特別処理
+        if (sportConfig?.supports_pk && team1Scores.length >= 5) {
+          const regularTeam1 = team1Scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+          const regularTeam2 = team2Scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+          const pkTeam1 = team1Scores.slice(4).reduce((sum, score) => sum + score, 0);
+          const pkTeam2 = team2Scores.slice(4).reduce((sum, score) => sum + score, 0);
+          
+          if (pkTeam1 > 0 || pkTeam2 > 0) {
+            return `${regularTeam1} - ${regularTeam2} (PK ${pkTeam1}-${pkTeam2})`;
+          }
+        }
+
+        // 通常のスコア合計
+        const team1Total = team1Scores.reduce((sum, score) => sum + score, 0);
+        const team2Total = team2Scores.reduce((sum, score) => sum + score, 0);
+        return `${team1Total} - ${team2Total}`;
+      } else if (match.team1_scores !== undefined && match.team2_scores !== undefined) {
+        // 未確定スコアの処理（カンマ区切りスコアの合計を計算）
+        let team1Total = 0;
+        let team2Total = 0;
+        
+        if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
+          // カンマ区切りの場合
+          team1Total = match.team1_scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+        } else {
+          // 単一値の場合
+          team1Total = typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) || 0 : match.team1_scores || 0;
+        }
+        
+        if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
+          // カンマ区切りの場合
+          team2Total = match.team2_scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+        } else {
+          // 単一値の場合
+          team2Total = typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) || 0 : match.team2_scores || 0;
+        }
+        
+        return `${team1Total} - ${team2Total}`;
+      }
+    } catch (error) {
+      console.error('Score display error:', error, 'Match data:', match);
     }
     return null;
   };
@@ -715,7 +872,7 @@ export default function AdminMatchesPage() {
                 size="sm"
                 onClick={() => setFilter('completed')}
               >
-                完了 ({matches.filter(m => m.match_status === 'completed').length})
+                完了 ({matches.filter(m => m.match_status === 'completed' && m.is_confirmed).length})
               </Button>
               <Button
                 variant={filter === 'pending_confirmation' ? 'default' : 'outline'}
@@ -784,7 +941,7 @@ export default function AdminMatchesPage() {
                 switch (filter) {
                   case 'scheduled': return match.match_status === 'scheduled';
                   case 'ongoing': return match.match_status === 'ongoing';
-                  case 'completed': return match.match_status === 'completed';
+                  case 'completed': return match.match_status === 'completed' && match.is_confirmed;
                   case 'pending_confirmation': return match.match_status === 'completed' && !match.is_confirmed;
                   case 'cancelled': return match.match_status === 'cancelled';
                   default: return true;
@@ -807,11 +964,8 @@ export default function AdminMatchesPage() {
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <Badge variant="secondary" className="text-sm">
-                          {block.phase}
+                          {block.display_round_name}
                         </Badge>
-                        <span className="text-lg font-bold">
-                          {block.display_round_name} {block.block_name && `- ${block.block_name}ブロック`}
-                        </span>
                         <Badge variant="outline" className="text-xs">
                           {block.match_type}
                         </Badge>
@@ -862,7 +1016,8 @@ export default function AdminMatchesPage() {
                                   }`}>
                                     {getScoreDisplay(match)}
                                   </div>
-                                  {getWinnerName(match) && (
+                                  {/* 勝利表示：試合完了時、確定待ち時、確定済み時のみ表示 */}
+                                  {getWinnerName(match) && (match.match_status === 'completed' || match.is_confirmed) && (
                                     <div className={`text-sm font-medium ${
                                       getWinnerName(match) === '引き分け' 
                                         ? 'text-muted-foreground' 
@@ -890,11 +1045,6 @@ export default function AdminMatchesPage() {
                                   <Clock className="w-4 h-4 mr-1" />
                                   {getTimeDisplay(match)}
                                 </div>
-                                {match.match_status === 'ongoing' && (
-                                  <div className="text-green-600 font-medium">
-                                    第{match.current_period}ピリオド
-                                  </div>
-                                )}
                               </div>
                             </div>
 

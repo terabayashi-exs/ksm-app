@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, Calendar, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
 import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
+import { SportScoreConfig } from '@/lib/sport-standings-calculator';
 
 interface TeamStanding {
   team_id: string;
@@ -37,6 +38,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   const [results, setResults] = useState<BlockResults[]>([]);
   const [standings, setStandings] = useState<BlockStanding[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('');
+  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -79,9 +81,9 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
       setLoading(true);
       setError(null);
       try {
-        // 戦績表データ、順位表データ、大会情報を並列取得
+        // 戦績表データ、順位表データ、大会情報を並列取得（多競技対応版）
         const [resultsResponse, standingsResponse, tournamentResponse] = await Promise.all([
-          fetch(`/api/tournaments/${tournamentId}/results`, { cache: 'no-store' }),
+          fetch(`/api/tournaments/${tournamentId}/results-enhanced`, { cache: 'no-store' }),
           fetch(`/api/tournaments/${tournamentId}/standings`, { cache: 'no-store' }),
           fetch(`/api/tournaments/${tournamentId}`, { cache: 'no-store' })
         ]);
@@ -106,6 +108,20 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
 
         if (resultsData.success) {
           setResults(resultsData.data);
+          
+          // 戦績表データから競技種別設定を取得
+          if (resultsData.data && resultsData.data.length > 0 && resultsData.data[0].sport_config) {
+            setSportConfig(resultsData.data[0].sport_config);
+          } else {
+            // フォールバック: PK選手権設定
+            setSportConfig({
+              sport_code: 'pk_championship',
+              score_label: '得点',
+              score_against_label: '失点',
+              difference_label: '得失差',
+              supports_pk: false
+            });
+          }
         } else {
           console.error('Results API Error:', resultsData);
           setError(resultsData.error || '戦績表データの取得に失敗しました');
@@ -447,9 +463,9 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
               <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.wins}; font-size: 15px;">勝</th>
               <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.draws}; font-size: 15px;">分</th>
               <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.losses}; font-size: 15px;">敗</th>
-              <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.goalsFor}; font-size: 15px;">得点</th>
-              <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.goalsAgainst}; font-size: 15px;">失点</th>
-              <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.goalDiff}; font-size: 15px;">得失差</th>
+              <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.goalsFor}; font-size: 15px;">${sportConfig?.score_label || '得点'}</th>
+              <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.goalsAgainst}; font-size: 15px;">${sportConfig?.score_against_label || '失点'}</th>
+              <th style="border: 1px solid #D1D5DB; padding: 15px; background: #EBF8FF; font-weight: bold; text-align: center; width: ${cellSizes.goalDiff}; font-size: 15px;">${sportConfig?.difference_label || '得失差'}</th>
             </tr>
           </thead>
           <tbody>
@@ -751,16 +767,16 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                             敗
                           </th>
                           <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[35px] md:min-w-[50px]">
-                            <span className="md:hidden">得</span>
-                            <span className="hidden md:inline">得点</span>
+                            <span className="md:hidden">{(sportConfig?.score_label || '得点').charAt(0)}</span>
+                            <span className="hidden md:inline">{sportConfig?.score_label || '得点'}</span>
                           </th>
                           <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[35px] md:min-w-[50px]">
-                            <span className="md:hidden">失</span>
-                            <span className="hidden md:inline">失点</span>
+                            <span className="md:hidden">{(sportConfig?.score_against_label || '失点').charAt(0)}</span>
+                            <span className="hidden md:inline">{sportConfig?.score_against_label || '失点'}</span>
                           </th>
                           <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[40px] md:min-w-[55px]">
                             <span className="md:hidden">差</span>
-                            <span className="hidden md:inline">得失差</span>
+                            <span className="hidden md:inline">{sportConfig?.difference_label || '得失差'}</span>
                           </th>
                         </>
                       )}

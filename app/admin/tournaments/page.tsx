@@ -330,6 +330,11 @@ export default function AdminTournamentsList() {
                                       編集
                                     </Link>
                                   </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                                      ルール設定
+                                    </Link>
+                                  </Button>
                                   <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                                       試合管理

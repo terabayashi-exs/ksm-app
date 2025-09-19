@@ -14,6 +14,10 @@ interface BracketMatch {
   team2_display_name: string;
   team1_goals: number;
   team2_goals: number;
+  // 多競技対応の拡張フィールド
+  team1_scores?: number[];
+  team2_scores?: number[];
+  active_periods?: number[];
   winner_team_id?: string;
   is_draw: boolean;
   is_walkover: boolean;
@@ -23,10 +27,28 @@ interface BracketMatch {
   start_time?: string;
   court_number?: number;
   execution_group?: number;
+  // サッカー専用データ（該当する場合のみ）
+  soccer_data?: {
+    regular_goals_for: number;
+    regular_goals_against: number;
+    pk_goals_for?: number;
+    pk_goals_against?: number;
+    is_pk_game: boolean;
+    pk_winner?: boolean;
+  };
 }
 
 interface BracketProps {
   tournamentId: number;
+}
+
+// 多競技対応のスポーツ設定インターフェース
+interface SportScoreConfig {
+  sport_code: string;
+  score_label: string;
+  score_against_label: string;
+  difference_label: string;
+  supports_pk: boolean;
 }
 
 interface BracketGroup {
@@ -43,10 +65,12 @@ interface BracketStructure {
 // 試合カードコンポーネント
 function MatchCard({ 
   match,
+  sportConfig,
   className = "",
   ...props
 }: { 
   match: BracketMatch;
+  sportConfig?: SportScoreConfig;
   className?: string;
   [key: string]: unknown;
 }) {
@@ -56,6 +80,35 @@ function MatchCard({
     if (match.winner_team_id === match.team1_id) return 0; // team1が勝者
     if (match.winner_team_id === match.team2_id) return 1; // team2が勝者
     return null;
+  };
+
+  // 多競技対応のスコア表示ロジック
+  const getScoreDisplay = (teamIndex: number) => {
+    if (!hasResult || match.is_walkover) return null;
+
+    const teamScores = teamIndex === 0 ? match.team1_scores : match.team2_scores;
+
+    // 多競技スコアデータがある場合
+    if (teamScores && teamScores.length > 0) {
+      // サッカーでPK戦がある場合の特別処理
+      if (sportConfig?.supports_pk && teamScores.length >= 5) {
+        const regularGoals = teamScores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+        const pkGoals = teamScores.slice(4).reduce((sum, score) => sum + score, 0);
+        
+        if (pkGoals > 0) {
+          return { regular: regularGoals, pk: pkGoals, isPkMatch: true };
+        }
+        return { regular: regularGoals, isPkMatch: false };
+      }
+      
+      // 通常のスコア合計
+      const totalScore = teamScores.reduce((sum, score) => sum + score, 0);
+      return { regular: totalScore, isPkMatch: false };
+    }
+
+    // フォールバック: 従来のgoalsを使用
+    const goals = teamIndex === 0 ? match.team1_goals : match.team2_goals;
+    return { regular: goals || 0, isPkMatch: false };
   };
   
   const hasResult = match.is_confirmed && (
@@ -96,16 +149,40 @@ function MatchCard({
         <span className="text-sm truncate flex-1">
           {winnerIndex === 0 && hasResult ? '👑 ' : ''}{match.team1_display_name || '未確定'}
         </span>
-        {hasResult && !match.is_draw && (
-          <span className="text-sm font-bold ml-2">
-            {match.team1_goals}
-          </span>
-        )}
-        {hasResult && match.is_draw && (
-          <span className="text-sm font-bold ml-2 text-blue-600">
-            {match.team1_goals}
-          </span>
-        )}
+        {hasResult && !match.is_draw && (() => {
+          const scoreData = getScoreDisplay(0);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
+        {hasResult && match.is_draw && (() => {
+          const scoreData = getScoreDisplay(0);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2 text-blue-600">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
       </div>
 
       {/* チーム2 */}
@@ -121,16 +198,40 @@ function MatchCard({
         <span className="text-sm truncate flex-1">
           {winnerIndex === 1 && hasResult ? '👑 ' : ''}{match.team2_display_name || '未確定'}
         </span>
-        {hasResult && !match.is_draw && (
-          <span className="text-sm font-bold ml-2">
-            {match.team2_goals}
-          </span>
-        )}
-        {hasResult && match.is_draw && (
-          <span className="text-sm font-bold ml-2 text-blue-600">
-            {match.team2_goals}
-          </span>
-        )}
+        {hasResult && !match.is_draw && (() => {
+          const scoreData = getScoreDisplay(1);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
+        {hasResult && match.is_draw && (() => {
+          const scoreData = getScoreDisplay(1);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2 text-blue-600">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
       </div>
 
       {/* 状態表示 */}
@@ -160,6 +261,7 @@ function MatchCard({
 // メインコンポーネント
 export default function TournamentBracket({ tournamentId }: BracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>([]);
+  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const bracketRef = useRef<HTMLDivElement>(null);
@@ -278,6 +380,10 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
         const result = await response.json();
         if (result.success) {
           setMatches(result.data);
+          // 多競技対応：スポーツ設定も取得
+          if (result.sport_config) {
+            setSportConfig(result.sport_config);
+          }
         } else {
           throw new Error(result.error || 'データの取得に失敗しました');
         }
@@ -611,6 +717,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
                       <MatchCard 
                         key={match.match_id} 
                         match={match}
+                        sportConfig={sportConfig || undefined}
                         className="h-fit"
                         data-match={`G${group.groupId}M${matchIndex + 1}`}
                       />
@@ -703,6 +810,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
                         >
                           <MatchCard 
                             match={match}
+                            sportConfig={sportConfig || undefined}
                             className="h-fit"
                             data-match={`G${group.groupId}M${matchIndex + 1}`}
                           />
@@ -749,9 +857,12 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
                 <p className="font-medium mb-1">トーナメント表の見方</p>
                 <ul className="list-disc list-inside space-y-1 text-blue-600">
                   <li>実線は勝利チームの勝ち上がり、点線は敗者の進出先（3位決定戦）</li>
-                  <li>太字は勝利チーム、数字は得点を表示</li>
+                  <li>太字は勝利チーム、数字は{sportConfig?.score_label || '得点'}を表示</li>
                   <li>［T1］などは試合コードを表示</li>
                   <li>各ブロック上位2チームが決勝トーナメントに進出</li>
+                  {sportConfig?.supports_pk && (
+                    <li>サッカーの場合、通常時間とPK戦の{sportConfig.score_label}を分けて表示</li>
+                  )}
                 </ul>
               </div>
             </div>

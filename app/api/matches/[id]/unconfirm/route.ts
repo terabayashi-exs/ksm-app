@@ -57,6 +57,13 @@ export async function POST(
       DELETE FROM t_matches_final WHERE match_id = ?
     `, [matchId]);
 
+    // 試合ステータスを完了状態に戻す（確定解除後は編集可能にするため）
+    await db.execute(`
+      UPDATE t_match_status 
+      SET match_status = 'completed', updated_at = datetime('now', '+9 hours')
+      WHERE match_id = ?
+    `, [matchId]);
+
     console.log(`✓ 試合${match.match_code}の確定を解除しました（ID: ${matchId}）`);
 
     // 順位表の再計算を実行

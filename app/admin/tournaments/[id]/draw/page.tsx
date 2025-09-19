@@ -183,9 +183,12 @@ export default function TournamentDrawPage() {
         // ブロック別にチームを整理
         const blockTeamMap: Record<string, Team[]> = {};
         
-        // 初期化（4チーム分のスロットを作成）
+        // 各ブロックの最大チーム数を動的に計算
+        const maxTeamsPerBlock = Math.max(6, Math.ceil(assignedTeams.length / preliminaryBlocks.size));
+        
+        // 初期化（動的なチーム数分のスロットを作成）
         Array.from(preliminaryBlocks).forEach(blockName => {
-          blockTeamMap[blockName] = new Array(4).fill(undefined);
+          blockTeamMap[blockName] = new Array(maxTeamsPerBlock).fill(undefined);
         });
 
         // 振分け済みチームを各ブロックに配置
@@ -204,8 +207,8 @@ export default function TournamentDrawPage() {
             const blockPosition = parseInt(team.block_position);
             const arrayIndex = blockPosition - 1;
             
-            // 配列の境界チェック
-            if (arrayIndex >= 0 && arrayIndex < 4) {
+            // 配列の境界チェック（動的なサイズに対応）
+            if (arrayIndex >= 0 && arrayIndex < maxTeamsPerBlock) {
               const formattedTeam: Team = {
                 team_id: team.team_id,
                 team_name: team.team_name,

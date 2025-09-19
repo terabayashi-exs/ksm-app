@@ -14,9 +14,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const formatId = parseInt(resolvedParams.id);
     
-    // フォーマット情報取得
+    // フォーマット情報取得（競技種別も含む）
     const formatResult = await db.execute(`
-      SELECT * FROM m_tournament_formats WHERE format_id = ?
+      SELECT 
+        tf.*,
+        st.sport_name,
+        st.sport_code
+      FROM m_tournament_formats tf
+      LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
+      WHERE tf.format_id = ?
     `, [formatId]);
 
     if (formatResult.rows.length === 0) {
@@ -54,10 +60,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const formatId = parseInt(resolvedParams.id);
     const body = await request.json();
-    const { format_name, target_team_count, format_description, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, templates } = body;
 
     // バリデーション
-    if (!format_name || !target_team_count || !Array.isArray(templates)) {
+    if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
       return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
     }
 
@@ -68,9 +74,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // フォーマット更新
     await db.execute(`
       UPDATE m_tournament_formats 
-      SET format_name = ?, target_team_count = ?, format_description = ?, updated_at = datetime('now', '+9 hours')
+      SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, updated_at = datetime('now', '+9 hours')
       WHERE format_id = ?
-    `, [format_name, target_team_count, format_description || "", formatId]);
+    `, [format_name, sport_type_id, target_team_count, format_description || "", formatId]);
 
     // 既存テンプレートを削除
     await db.execute(`

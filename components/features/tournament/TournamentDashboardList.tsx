@@ -201,10 +201,12 @@ export default function TournamentDashboardList() {
             type === 'ongoing' 
               ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
               : type === 'recruiting'
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+              ? tournament.visibility === 1
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
               : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
           }`}>
-            {type === 'ongoing' ? '開催中' : type === 'recruiting' ? '募集中' : '完了'}
+            {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (tournament.visibility === 1 ? '募集中' : '準備中') : '完了'}
           </div>
           {tournament.is_archived && (
             <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
@@ -253,11 +255,18 @@ export default function TournamentDashboardList() {
           </Link>
         </Button>
         {!tournament.is_archived && (
-          <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-            <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-              大会編集
-            </Link>
-          </Button>
+          <>
+            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                大会編集
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                ルール設定
+              </Link>
+            </Button>
+          </>
         )}
         {type === 'recruiting' && (
           <>
@@ -341,7 +350,7 @@ export default function TournamentDashboardList() {
           <>
             <Button asChild size="sm" variant="default" className="bg-red-600 hover:bg-red-700">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                🔴 試合管理（リアルタイム）
+                試合管理
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">

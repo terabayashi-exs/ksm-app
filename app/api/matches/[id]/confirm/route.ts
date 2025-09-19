@@ -89,8 +89,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       liveMatch.team2_display_name,
       liveMatch.court_number,
       liveMatch.start_time,
-      Math.floor(Number(liveMatch.team1_scores) || 0),
-      Math.floor(Number(liveMatch.team2_scores) || 0),
+      // スコアをそのまま保存（カンマ区切り形式を維持）
+      liveMatch.team1_scores || '0',
+      liveMatch.team2_scores || '0',
       liveMatch.winner_team_id,
       liveMatch.winner_team_id ? 0 : 1, // is_draw: 勝者がいない場合は引き分け
       0, // is_walkover: 通常は0
@@ -100,7 +101,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ]);
 
     console.log(`[MATCH_CONFIRM] Match ${matchId} confirmed by ${confirmedBy}`);
-    console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_id} vs ${liveMatch.team2_id} (${liveMatch.team1_scores}-${liveMatch.team2_scores})`);
+    console.log(`[MATCH_CONFIRM] Original live scores:`, {
+      team1_scores: liveMatch.team1_scores,
+      team2_scores: liveMatch.team2_scores,
+      team1_type: typeof liveMatch.team1_scores,
+      team2_type: typeof liveMatch.team2_scores
+    });
+    
+    // ログ用にスコア合計を計算
+    const team1Total = liveMatch.team1_scores ? 
+      (typeof liveMatch.team1_scores === 'string' && liveMatch.team1_scores.includes(',') ?
+        liveMatch.team1_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+        Math.floor(Number(liveMatch.team1_scores) || 0)) : 0;
+    const team2Total = liveMatch.team2_scores ? 
+      (typeof liveMatch.team2_scores === 'string' && liveMatch.team2_scores.includes(',') ?
+        liveMatch.team2_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+        Math.floor(Number(liveMatch.team2_scores) || 0)) : 0;
+    
+    console.log(`[MATCH_CONFIRM] Calculated totals: ${team1Total}-${team2Total}`);
+    console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_id} vs ${liveMatch.team2_id} (${team1Total}-${team2Total})`);
 
     // トーナメント進出処理（決勝トーナメントの場合）
     try {

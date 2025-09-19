@@ -105,29 +105,34 @@ export default async function AdminDashboard() {
                   <Link href="/admin/administrators">利用者マスタ</Link>
                 </Button>
                 {session.user.id === "admin" && (
-                  <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                    <Link href="/admin/tournament-formats">大会フォーマット</Link>
-                  </Button>
+                  <>
+                    <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
+                      <Link href="/admin/sport-types">競技種別マスタ</Link>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
+                      <Link href="/admin/tournament-formats">大会フォーマット</Link>
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>
           </Card>
 
 
-          {/* 大会データリセット機能 */}
-          <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20">
+          {/* 大会データ複製機能 */}
+          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
             <CardHeader>
-              <CardTitle className="text-yellow-800 dark:text-yellow-200 flex items-center">
-                ⚠️ 大会データリセット
+              <CardTitle className="text-green-800 dark:text-green-200 flex items-center">
+                📋 大会データ複製
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-yellow-700 dark:text-yellow-300 mb-4">
-                テスト用大会（ID: 9, 10, 11）の試合データをリセットできます
+              <p className="text-green-700 dark:text-green-300 mb-4">
+                既存の大会を複製してデモ用データを作成できます
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full border-2 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-100 dark:border-yellow-700 dark:hover:border-yellow-600 dark:hover:bg-yellow-950/30">
-                  <Link href="/admin/tournaments/reset">リセット機能を開く</Link>
+                <Button asChild variant="outline" className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-100 dark:border-green-700 dark:hover:border-green-600 dark:hover:bg-green-950/30">
+                  <Link href="/admin/tournaments/duplicate">複製機能を開く</Link>
                 </Button>
               </div>
             </CardContent>

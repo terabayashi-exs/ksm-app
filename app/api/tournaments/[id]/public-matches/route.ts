@@ -138,6 +138,22 @@ export async function GET(
       throw simpleError;
     }
     
+    // 組み合わせ作成状況を判定
+    console.log('Checking team assignment status...');
+    const teamAssignmentResult = await db.execute(`
+      SELECT COUNT(*) as total_matches,
+             COUNT(CASE WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 1 END) as assigned_matches
+      FROM t_matches_live ml
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+    `, [tournamentId]);
+    
+    const teamAssignment = teamAssignmentResult.rows[0] as unknown as { total_matches: number; assigned_matches: number };
+    const isTeamAssignmentComplete = teamAssignment.assigned_matches > 0;
+    
+    console.log(`Team assignment status: ${teamAssignment.assigned_matches}/${teamAssignment.total_matches} matches assigned`);
+    console.log(`Is assignment complete: ${isTeamAssignmentComplete}`);
+
     // 成功した場合、より詳細なクエリを実行
     try {
       console.log('Executing full query...');
@@ -196,6 +212,8 @@ export async function GET(
             console.log('Missing columns in t_matches_final:', missingColumns);
             console.log('Using t_matches_live data only due to missing columns');
             // 必要な列が存在しない場合は、t_matches_liveのデータのみを使用
+            // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
+            const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
               SELECT 
                 ml.match_id,
@@ -228,11 +246,14 @@ export async function GET(
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
+              ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
             `, [tournamentId]);
           } else {
             // すべての必要な列が存在する場合はJOINクエリを実行
             console.log('All required columns exist, using JOIN query');
+            // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
+            const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
               SELECT 
                 ml.match_id,
@@ -266,6 +287,7 @@ export async function GET(
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
+              ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
             `, [tournamentId]);
           }
@@ -348,9 +370,15 @@ export async function GET(
           block_name: row.block_name ? String(row.block_name) : 'A',
           match_type: String(row.match_type || '通常'),
           block_order: Number(row.block_order || 1),
-          // 結果情報
-          team1_goals: row.team1_goals !== null && row.team1_goals !== undefined ? Number(row.team1_goals) : null,
-          team2_goals: row.team2_goals !== null && row.team2_goals !== undefined ? Number(row.team2_goals) : null,
+          // 結果情報（カンマ区切りスコアの合計を計算）
+          team1_goals: row.team1_goals !== null && row.team1_goals !== undefined ? 
+            (typeof row.team1_goals === 'string' && row.team1_goals.includes(',') ?
+              row.team1_goals.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+              Number(row.team1_goals)) : null,
+          team2_goals: row.team2_goals !== null && row.team2_goals !== undefined ?
+            (typeof row.team2_goals === 'string' && row.team2_goals.includes(',') ?
+              row.team2_goals.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
+              Number(row.team2_goals)) : null,
           winner_team_id: row.winner_team_id ? String(row.winner_team_id) : null,
           is_draw: Boolean(row.is_draw),
           is_walkover: Boolean(row.is_walkover),

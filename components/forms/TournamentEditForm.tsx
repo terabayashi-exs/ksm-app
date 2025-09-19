@@ -69,6 +69,18 @@ const editTournamentSchema = z.object({
 }, {
   message: '敗北時勝ち点は引分時勝ち点以下で設定してください',
   path: ['loss_points']
+}).refine((data) => {
+  // 募集開始日 >= 公開開始日のチェック
+  return new Date(data.recruitment_start_date) >= new Date(data.public_start_date);
+}, {
+  message: '募集開始日は公開開始日以降で設定してください',
+  path: ['recruitment_start_date']
+}).refine((data) => {
+  // 募集終了日 >= 募集開始日のチェック
+  return new Date(data.recruitment_end_date) >= new Date(data.recruitment_start_date);
+}, {
+  message: '募集終了日は募集開始日以降で設定してください',
+  path: ['recruitment_end_date']
 });
 
 export default function TournamentEditForm({ tournament }: TournamentEditFormProps) {
@@ -283,7 +295,20 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           router.push('/admin');
         }, 2000);
       } else {
-        setError(result.error || '更新に失敗しました');
+        // より詳細なエラーメッセージを表示
+        if (result.message) {
+          // バリデーションエラーの詳細メッセージを表示
+          setError(result.message);
+        } else if (result.details && Array.isArray(result.details)) {
+          // Zodバリデーションエラーの場合
+          const detailMessages = result.details.map((detail: { path?: string[]; message: string }) => 
+            `${detail.path?.join('.') || '項目'}: ${detail.message}`
+          ).join('\n');
+          setError(`入力内容を確認してください:\n${detailMessages}`);
+        } else {
+          // デフォルトのエラーメッセージ
+          setError(result.error || '更新に失敗しました');
+        }
       }
     } catch (error) {
       console.error('更新エラー:', error);
@@ -299,7 +324,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
         </Alert>
       )}
 

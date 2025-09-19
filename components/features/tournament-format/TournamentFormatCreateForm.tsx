@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 // import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +24,19 @@ import {
 } from "lucide-react";
 
 // Simple interfaces for now
+interface SportType {
+  sport_type_id: number;
+  sport_name: string;
+  sport_code: string;
+  max_period_count: number;
+  regular_period_count: number;
+  score_type: string;
+  default_match_duration: number;
+  score_unit: string;
+  period_definitions: string;
+  result_format: string;
+}
+
 interface MatchTemplate {
   match_number: number;
   match_code: string;
@@ -48,6 +61,7 @@ interface MatchTemplate {
 
 interface TournamentFormatFormData {
   format_name: string;
+  sport_type_id: number;
   target_team_count: number;
   format_description: string;
   templates: MatchTemplate[];
@@ -86,15 +100,20 @@ type TournamentFormatForm = z.infer<typeof formatSchema>;
 export default function TournamentFormatCreateForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sportTypes, setSportTypes] = useState<SportType[]>([]);
+  const [sportTypesLoading, setSportTypesLoading] = useState(true);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    control
+    control,
+    setValue,
+    watch
   } = useForm<TournamentFormatFormData>({
     defaultValues: {
       format_name: "",
+      sport_type_id: 1, // デフォルトでPK選手権を選択
       target_team_count: 8,
       format_description: "",
       templates: [{
@@ -125,6 +144,30 @@ export default function TournamentFormatCreateForm() {
     control,
     name: "templates"
   });
+
+  const selectedSportTypeId = watch("sport_type_id");
+
+  // 競技種別データの取得
+  useEffect(() => {
+    const fetchSportTypes = async () => {
+      try {
+        const response = await fetch('/api/sport-types');
+        const result = await response.json();
+        
+        if (result.success) {
+          setSportTypes(result.data);
+        } else {
+          console.error('競技種別取得エラー:', result.error);
+        }
+      } catch (error) {
+        console.error('競技種別取得エラー:', error);
+      } finally {
+        setSportTypesLoading(false);
+      }
+    };
+
+    fetchSportTypes();
+  }, []);
 
   // 新しいテンプレート追加
   const addTemplate = () => {
@@ -218,7 +261,7 @@ export default function TournamentFormatCreateForm() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="format_name">フォーマット名 *</Label>
               <Input
@@ -229,6 +272,35 @@ export default function TournamentFormatCreateForm() {
               />
               {errors.format_name && (
                 <p className="text-sm text-red-600">{errors.format_name.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sport_type_id">競技種別 *</Label>
+              {sportTypesLoading ? (
+                <div className="flex items-center space-x-2 p-3 border rounded-md">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  <span className="text-sm text-gray-600">読み込み中...</span>
+                </div>
+              ) : (
+                <Select
+                  value={String(selectedSportTypeId || 1)}
+                  onValueChange={(value) => setValue("sport_type_id", parseInt(value), { shouldValidate: true })}
+                >
+                  <SelectTrigger className={errors.sport_type_id ? "border-red-500" : ""}>
+                    <SelectValue placeholder="競技種別を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sportTypes.map((sportType) => (
+                      <SelectItem key={sportType.sport_type_id} value={String(sportType.sport_type_id)}>
+                        {sportType.sport_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {errors.sport_type_id && (
+                <p className="text-sm text-red-600">{errors.sport_type_id.message}</p>
               )}
             </div>
 

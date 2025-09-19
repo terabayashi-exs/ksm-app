@@ -28,6 +28,20 @@ interface Format {
   format_name: string;
   target_team_count: number;
   format_description?: string;
+  sport_type_id?: number;
+}
+
+interface SportType {
+  sport_type_id: number;
+  sport_name: string;
+  sport_code: string;
+  max_period_count: number;
+  regular_period_count: number;
+  score_type: string;
+  default_match_duration: number;
+  score_unit: string;
+  period_definitions: string;
+  result_format: string;
 }
 
 interface RecommendedFormat extends Format {
@@ -37,6 +51,7 @@ interface RecommendedFormat extends Format {
 
 interface FormatRecommendation {
   teamCount: number;
+  sportTypeId: number;
   recommendedFormats: RecommendedFormat[];
   allFormats: (Format & { isRecommended: boolean })[];
 }
@@ -53,6 +68,7 @@ interface CustomScheduleMatch {
 // フォームスキーマ定義
 const tournamentCreateSchema = z.object({
   tournament_name: z.string().min(1, "大会名は必須です").max(100, "大会名は100文字以内で入力してください"),
+  sport_type_id: z.number().min(1, "競技種別を選択してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
   venue_id: z.number().min(1, "会場を選択してください"),
   team_count: z.number().min(2, "チーム数は2以上で入力してください").max(128, "チーム数は128以下で入力してください"),
@@ -82,11 +98,14 @@ export default function TournamentCreateNewForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [step, setStep] = useState<'team-count' | 'format-selection' | 'details'>('team-count');
+  const [sportTypes, setSportTypes] = useState<SportType[]>([]);
+  const [step, setStep] = useState<'sport-selection' | 'team-count' | 'format-selection' | 'details'>('sport-selection');
+  const [selectedSportType, setSelectedSportType] = useState<SportType | null>(null);
   const [teamCount, setTeamCount] = useState<number>(2);
   const [recommendation, setRecommendation] = useState<FormatRecommendation | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(true);
+  const [loadingSportTypes, setLoadingSportTypes] = useState(true);
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
   const [customSchedule, setCustomSchedule] = useState<CustomScheduleMatch[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -101,6 +120,7 @@ export default function TournamentCreateNewForm() {
   } = useForm<TournamentCreateForm>({
     resolver: zodResolver(tournamentCreateSchema),
     defaultValues: {
+      sport_type_id: 1,
       team_count: 8,
       court_count: 4,
       tournament_dates: [{
@@ -141,7 +161,7 @@ export default function TournamentCreateNewForm() {
     setCustomSchedule(extendedCustomMatches);
   }, []);
 
-  // 会場データの取得
+  // 会場データと競技種別データの取得
   useEffect(() => {
     const loadVenues = async () => {
       try {
@@ -156,18 +176,44 @@ export default function TournamentCreateNewForm() {
         setLoadingVenues(false);
       }
     };
+    
+    const loadSportTypes = async () => {
+      try {
+        const res = await fetch("/api/sport-types");
+        const data = await res.json();
+        if (data.success) {
+          setSportTypes(data.data || []);
+        }
+      } catch (error) {
+        console.error("競技種別データ取得エラー:", error);
+      } finally {
+        setLoadingSportTypes(false);
+      }
+    };
+    
     loadVenues();
+    loadSportTypes();
   }, []);
 
   // フォーマット推奨の取得
-  const fetchRecommendation = async (count: number) => {
+  const fetchRecommendation = async (count: number, sportTypeId?: number) => {
     setLoadingRecommendation(true);
     try {
-      const response = await fetch(`/api/tournaments/formats/recommend?teamCount=${count}`);
+      const currentSportTypeId = sportTypeId || selectedSportType?.sport_type_id || watch('sport_type_id');
+      
+      if (!currentSportTypeId) {
+        console.warn('競技種別が選択されていません');
+        setLoadingRecommendation(false);
+        return;
+      }
+      
+      const response = await fetch(`/api/tournaments/formats/recommend?teamCount=${count}&sportTypeId=${currentSportTypeId}`);
       const result = await response.json();
       if (result.success) {
         setRecommendation(result.data);
         setValue('team_count', count);
+      } else {
+        console.error('フォーマット推奨エラー:', result.error);
       }
     } catch (error) {
       console.error('推奨取得エラー:', error);
@@ -176,10 +222,30 @@ export default function TournamentCreateNewForm() {
     }
   };
 
+  // 競技種別選択
+  const handleSportTypeSelect = (sportType: SportType) => {
+    setSelectedSportType(sportType);
+    setValue("sport_type_id", sportType.sport_type_id);
+    
+    // 競技種別に応じてデフォルト値を設定
+    setValue("match_duration_minutes", sportType.default_match_duration);
+    
+    // 競技がサッカーの場合は試合時間を90分、その他は既存のデフォルト
+    if (sportType.sport_code === 'soccer') {
+      setValue("match_duration_minutes", 90);
+      setValue("break_duration_minutes", 10);
+    } else if (sportType.sport_code === 'pk') {
+      setValue("match_duration_minutes", 15);
+      setValue("break_duration_minutes", 5);
+    }
+    
+    setStep('team-count');
+  };
+
   // チーム数確定
   const handleTeamCountSubmit = () => {
     if (teamCount >= 2) {
-      fetchRecommendation(teamCount);
+      fetchRecommendation(teamCount, selectedSportType?.sport_type_id);
       setStep('format-selection');
     }
   };
@@ -241,19 +307,131 @@ export default function TournamentCreateNewForm() {
     }
   };
 
+  // 競技種別選択ステップ
+  if (step === 'sport-selection') {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">競技種別を選択</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            大会で実施する競技を選択してください
+          </p>
+        </div>
+
+        {loadingSportTypes ? (
+          <div className="flex justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-sm text-gray-600">競技種別を読み込み中...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sportTypes.map((sportType) => {
+              const periods = JSON.parse(sportType.period_definitions);
+              const scoreIcon = sportType.score_type === 'time' ? '⏱️' : 
+                               sportType.score_type === 'rank' ? '🏅' : '⚽';
+              
+              return (
+                <Card 
+                  key={sportType.sport_type_id} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-300"
+                  onClick={() => handleSportTypeSelect(sportType)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-3xl">{scoreIcon}</div>
+                        <div>
+                          <h3 className="text-lg font-semibold">{sportType.sport_name}</h3>
+                          <p className="text-sm text-gray-500">コード: {sportType.sport_code}</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {sportType.regular_period_count}ピリオド
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">標準試合時間</span>
+                        <span className="font-medium">{sportType.default_match_duration}分</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">スコア単位</span>
+                        <span className="font-medium">{sportType.score_unit}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">ピリオド構成:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {periods.slice(0, 3).map((period: { period_id: number; period_name: string; type: string }) => (
+                          <Badge 
+                            key={period.period_id}
+                            variant={period.type === 'extra' ? 'secondary' : period.type === 'penalty' ? 'destructive' : 'default'}
+                            className="text-xs"
+                          >
+                            {period.period_name}
+                          </Badge>
+                        ))}
+                        {periods.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{periods.length - 3}個
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button className="w-full mt-4" size="sm">
+                      この競技で大会を作成
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {sportTypes.length === 0 && !loadingSportTypes && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">競技種別が見つかりません</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // チーム数入力ステップ
   if (step === 'team-count') {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-lg">
-            <Users className="h-5 w-5 text-blue-600" />
-            <span>参加チーム数を入力</span>
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            参加予定のチーム数を入力してください。おすすめの大会フォーマットを提案します。
-          </p>
-        </CardHeader>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">参加チーム数を入力</h2>
+            <p className="text-sm text-gray-600">
+              選択した競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span>
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setStep('sport-selection')}
+          >
+            競技種別を変更
+          </Button>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Users className="h-5 w-5 text-blue-600" />
+              <span>参加チーム数を入力</span>
+            </CardTitle>
+            <p className="text-sm text-gray-600">
+              参加予定のチーム数を入力してください。おすすめの大会フォーマットを提案します。
+            </p>
+          </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="team_count_input">参加チーム数</Label>
@@ -282,6 +460,7 @@ export default function TournamentCreateNewForm() {
           </Button>
         </CardContent>
       </Card>
+      </div>
     );
   }
 
@@ -292,15 +471,32 @@ export default function TournamentCreateNewForm() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">{teamCount}チーム向けのおすすめフォーマット</h2>
-            <p className="text-sm text-gray-600">参加チーム数に最適な大会フォーマットを選択してください</p>
+            <p className="text-sm text-gray-600">
+              競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span> | 
+              参加チーム数に最適な大会フォーマットを選択してください
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setStep('team-count')}
-          >
-            チーム数を変更
-          </Button>
+          <div className="space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStep('sport-selection');
+                setRecommendation(null); // 推奨をクリア
+              }}
+            >
+              競技を変更
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setStep('team-count')}
+            >
+              チーム数を変更
+            </Button>
+          </div>
         </div>
 
         {loadingRecommendation ? (
@@ -374,15 +570,29 @@ export default function TournamentCreateNewForm() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold">大会詳細情報の入力</h2>
-          <p className="text-sm text-gray-600">選択されたフォーマット: {selectedFormat?.format_name}</p>
+          <p className="text-sm text-gray-600">
+            競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span> | 
+            フォーマット: <span className="font-medium text-green-600">{selectedFormat?.format_name}</span>
+          </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep('format-selection')}
-        >
-          フォーマットを変更
-        </Button>
+        <div className="space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setStep('sport-selection')}
+          >
+            競技を変更
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setStep('format-selection')}
+          >
+            フォーマットを変更
+          </Button>
+        </div>
       </div>
       {/* 基本情報セクション */}
       <Card>

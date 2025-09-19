@@ -4,6 +4,31 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal, Award, TrendingUp, Users, Target, Hash } from 'lucide-react';
 
+// 多競技対応の型定義
+interface SportConfig {
+  sport_code: string;
+  score_label: string;
+  score_against_label: string;
+  difference_label: string;
+  supports_pk: boolean;
+}
+
+interface SoccerScoreData {
+  regular_goals_for: number;
+  regular_goals_against: number;
+  pk_goals_for?: number;
+  pk_goals_against?: number;
+  is_pk_game: boolean;
+}
+
+interface MultiSportTeamStanding extends TeamStanding {
+  scores_for: number;
+  scores_against: number;
+  score_difference: number;
+  soccer_data?: SoccerScoreData;
+  sport_config?: SportConfig;
+}
+
 interface TeamStanding {
   team_id: string;
   team_name: string;
@@ -35,6 +60,8 @@ interface TournamentStandingsProps {
 export default function TournamentStandings({ tournamentId }: TournamentStandingsProps) {
   const [standings, setStandings] = useState<BlockStanding[]>([]);
   const [totalMatches, setTotalMatches] = useState<number>(0);
+  const [totalTeams, setTotalTeams] = useState<number>(0);
+  const [sportConfig, setSportConfig] = useState<SportConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +71,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/tournaments/${tournamentId}/standings`, {
+        const response = await fetch(`/api/tournaments/${tournamentId}/standings-enhanced`, {
           cache: 'no-store'
         });
 
@@ -56,7 +83,22 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
 
         if (result.success) {
           setStandings(result.data);
-          setTotalMatches(result.totalMatches || 0);
+          setTotalMatches(result.total_matches || 0);
+          setTotalTeams(result.total_teams || 0);
+          
+          // 拡張APIから競技種別設定を直接取得
+          if (result.sport_config) {
+            setSportConfig(result.sport_config);
+          } else {
+            // フォールバック: PK選手権設定
+            setSportConfig({
+              sport_code: 'pk_championship',
+              score_label: '得点',
+              score_against_label: '失点',
+              difference_label: '得失点差',
+              supports_pk: false
+            });
+          }
         } else {
           console.error('API Error Details:', result);
           setError(result.error || '順位表データの取得に失敗しました');
@@ -142,6 +184,27 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     }
   };
 
+  // 多競技対応：スコア表示フォーマット（現在は順位表で直接処理）
+
+  // 多競技対応：列ヘッダーラベル
+  const getScoreLabels = () => {
+    if (!sportConfig) {
+      return {
+        scoreFor: '得点',
+        scoreAgainst: '失点',
+        scoreDifference: '得失点差'
+      };
+    }
+    
+    return {
+      scoreFor: sportConfig.score_label,
+      scoreAgainst: sportConfig.score_against_label,
+      scoreDifference: sportConfig.difference_label
+    };
+  };
+
+  const scoreLabels = getScoreLabels();
+
   if (loading) {
     return (
       <Card>
@@ -194,7 +257,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {standings.filter(block => block.phase === 'preliminary').reduce((sum, block) => sum + block.teams.length, 0)}
+                {totalTeams}
               </div>
               <div className="text-sm text-gray-600">参加チーム数</div>
             </div>
@@ -264,15 +327,15 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                         <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[30px] md:min-w-[50px]">敗</th>
                         <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">得</span>
-                          <span className="hidden md:inline">総得点</span>
+                          <span className="hidden md:inline">総{scoreLabels.scoreFor}</span>
                         </th>
                         <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">失</span>
-                          <span className="hidden md:inline">総失点</span>
+                          <span className="hidden md:inline">総{scoreLabels.scoreAgainst}</span>
                         </th>
                         <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">差</span>
-                          <span className="hidden md:inline">得失差</span>
+                          <span className="hidden md:inline">{scoreLabels.scoreDifference}</span>
                         </th>
                       </>
                     )}
@@ -329,23 +392,67 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                             <span className="text-red-600 font-medium text-xs md:text-base">{team.losses || 0}</span>
                           </td>
                           <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="font-medium text-xs md:text-base">{team.goals_for || 0}</span>
+                            <div className="font-medium text-xs md:text-base">
+                              {(() => {
+                                const multiSportTeam = team as MultiSportTeamStanding;
+                                // サッカーでPK戦情報がある場合の特別表示
+                                if (sportConfig?.supports_pk && multiSportTeam.soccer_data?.is_pk_game) {
+                                  const soccerData = multiSportTeam.soccer_data;
+                                  return (
+                                    <div className="text-center">
+                                      <div>{soccerData.regular_goals_for || 0}</div>
+                                      {soccerData.pk_goals_for !== undefined && (
+                                        <div className="text-xs text-gray-500">
+                                          +PK{soccerData.pk_goals_for}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return multiSportTeam.scores_for || team.goals_for || 0;
+                              })()}
+                            </div>
                           </td>
                           <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="font-medium text-xs md:text-base">{team.goals_against || 0}</span>
+                            <div className="font-medium text-xs md:text-base">
+                              {(() => {
+                                const multiSportTeam = team as MultiSportTeamStanding;
+                                // サッカーでPK戦情報がある場合の特別表示
+                                if (sportConfig?.supports_pk && multiSportTeam.soccer_data?.is_pk_game) {
+                                  const soccerData = multiSportTeam.soccer_data;
+                                  return (
+                                    <div className="text-center">
+                                      <div>{soccerData.regular_goals_against || 0}</div>
+                                      {soccerData.pk_goals_against !== undefined && (
+                                        <div className="text-xs text-gray-500">
+                                          +PK{soccerData.pk_goals_against}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return multiSportTeam.scores_against || team.goals_against || 0;
+                              })()}
+                            </div>
                           </td>
                           <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span 
-                              className={`font-bold text-xs md:text-base ${
-                                (team.goal_difference || 0) > 0 
-                                  ? 'text-green-600' 
-                                  : (team.goal_difference || 0) < 0 
-                                  ? 'text-red-600' 
-                                  : 'text-gray-600'
-                              }`}
-                            >
-                              {(team.goal_difference || 0) > 0 ? '+' : ''}{team.goal_difference || 0}
-                            </span>
+                            {(() => {
+                              const multiSportTeam = team as MultiSportTeamStanding;
+                              const scoreDiff = multiSportTeam.score_difference || team.goal_difference || 0;
+                              return (
+                                <span 
+                                  className={`font-bold text-xs md:text-base ${
+                                    scoreDiff > 0 
+                                      ? 'text-green-600' 
+                                      : scoreDiff < 0 
+                                      ? 'text-red-600' 
+                                      : 'text-gray-600'
+                                  }`}
+                                >
+                                  {(scoreDiff > 0 ? '+' : '') + scoreDiff}
+                                </span>
+                              );
+                            })()}
                           </td>
                         </>
                       )}

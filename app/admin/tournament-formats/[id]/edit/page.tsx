@@ -18,9 +18,15 @@ export default async function EditTournamentFormatPage({ params }: Props) {
     redirect("/auth/login");
   }
 
-  // フォーマット情報を取得
+  // フォーマット情報を取得（競技種別も含む）
   const formatResult = await db.execute(`
-    SELECT * FROM m_tournament_formats WHERE format_id = ?
+    SELECT 
+      tf.*,
+      st.sport_name,
+      st.sport_code
+    FROM m_tournament_formats tf
+    LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
+    WHERE tf.format_id = ?
   `, [resolvedParams.id]);
 
   if (formatResult.rows.length === 0) {
@@ -64,6 +70,7 @@ export default async function EditTournamentFormatPage({ params }: Props) {
           format={{
             format_id: Number(format.format_id),
             format_name: String(format.format_name),
+            sport_type_id: Number(format.sport_type_id || 1),
             target_team_count: Number(format.target_team_count),
             format_description: String(format.format_description || "")
           }}

@@ -21,7 +21,6 @@ import {
   Timer,
   ArrowLeft
 } from 'lucide-react';
-
 interface MatchData {
   match_id: number;
   match_code: string;
@@ -54,6 +53,15 @@ export default function RefereeMatchPage() {
   const token = searchParams.get('token');
 
   const [match, setMatch] = useState<MatchData | null>(null);
+  const [extendedData, setExtendedData] = useState<{
+    sport_config?: {
+      default_periods: Array<{
+        period_number: number;
+        period_name: string;
+      }>;
+    };
+    active_periods?: number[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +70,7 @@ export default function RefereeMatchPage() {
   const [matchRemarks, setMatchRemarks] = useState<string>('');
   const [tournamentId, setTournamentId] = useState<number | null>(null);
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  // const [sportConfig, setSportConfig] = useState<SportRuleConfig | null>(null); // 将来の多競技対応用
 
   // トークン検証とマッチデータ取得
   useEffect(() => {
@@ -87,6 +96,12 @@ export default function RefereeMatchPage() {
           // トーナメントIDを取得
           if (result.data.tournament_id) {
             setTournamentId(result.data.tournament_id);
+          }
+          
+          // 多競技対応：スポーツ設定を取得
+          if (result.data.sport_config) {
+            // 将来の多競技対応用（現在は使用しない）
+            // setSportConfig(result.data.sport_config);
           }
           
           // 確定状態を設定
@@ -135,6 +150,24 @@ export default function RefereeMatchPage() {
           }
           
           setScores(currentScores);
+          
+          // 拡張データの取得（ピリオド名表示用）
+          try {
+            const extendedResponse = await fetch(`/api/matches/${matchId}/extended-info`);
+            const extendedResult = await extendedResponse.json();
+            
+            if (extendedResult.success) {
+              setExtendedData(extendedResult.data);
+              console.log('Extended match data loaded:', extendedResult.data);
+            } else {
+              console.warn('Extended data load failed:', extendedResult.error);
+              // 拡張データ取得失敗は警告のみ（既存機能は維持）
+            }
+          } catch (extendedErr) {
+            console.warn('Extended data fetch error:', extendedErr);
+            // 拡張データ取得エラーは警告のみ
+          }
+          
         } else {
           console.error('Token verification failed:', result);
           const errorMsg = result.error || 'アクセス権限の確認に失敗しました';
@@ -335,6 +368,20 @@ export default function RefereeMatchPage() {
     return teamScores.reduce((sum, score) => sum + (Number(score) || 0), 0);
   };
 
+  // ピリオド名を取得する関数（ルール設定に基づく）
+  const getPeriodName = (periodNumber: number): string => {
+    if (extendedData?.sport_config?.default_periods) {
+      const period = extendedData.sport_config.default_periods.find(
+        p => p.period_number === periodNumber
+      );
+      if (period) {
+        return period.period_name;
+      }
+    }
+    // フォールバック：従来の「第Nピリオド」表記
+    return `第${periodNumber}ピリオド`;
+  };
+
 
   // ピリオド進行
   const advancePeriod = async () => {
@@ -491,7 +538,7 @@ export default function RefereeMatchPage() {
           </CardContent>
         </Card>
 
-        {/* 操作パネル */}
+        {/* シンプルな試合管理インターフェース */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 試合制御 */}
           <Card>
@@ -575,16 +622,18 @@ export default function RefereeMatchPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {Array.from({ length: match.period_count }, (_, periodIndex) => (
-                  <div key={periodIndex} className="border rounded-lg p-4">
+                {(extendedData?.active_periods || Array.from({ length: match.period_count }, (_, i) => i + 1)).map((periodNumber: number) => {
+                  const periodIndex = periodNumber - 1; // スコア配列のインデックス（0ベース）
+                  return (
+                    <div key={periodNumber} className="border rounded-lg p-4">
                     <Label className="block text-sm font-medium mb-3">
-                      第{periodIndex + 1}ピリオド
-                      {periodIndex + 1 === match.current_period && match.match_status === 'ongoing' && !isConfirmed && (
+                      {getPeriodName(periodNumber)}
+                      {periodNumber === match.current_period && match.match_status === 'ongoing' && !isConfirmed && (
                         <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                           進行中
                         </span>
                       )}
-                      {periodIndex + 1 === match.current_period && match.match_status === 'completed' && (
+                      {periodNumber === match.current_period && match.match_status === 'completed' && (
                         <span className="ml-2 text-xs bg-muted text-foreground px-2 py-1 rounded">
                           終了
                         </span>
@@ -617,15 +666,18 @@ export default function RefereeMatchPage() {
                           </Button>
                         </div>
                         {/* 直接入力フィールド */}
-                        <Input
-                          type="number"
-                          min="0"
-                          value={scores.team1[periodIndex] || 0}
-                          onChange={(e) => setDirectScore('team1', periodIndex, e.target.value)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
-                          className="w-16 h-8 text-center text-sm mx-auto"
-                          placeholder="0"
-                        />
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground mb-1">直接入力</div>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={scores.team1[periodIndex] || 0}
+                            onChange={(e) => setDirectScore('team1', periodIndex, e.target.value)}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
+                            className="w-16 h-8 text-center text-sm mx-auto"
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
 
                       {/* チーム2 */}
@@ -653,19 +705,23 @@ export default function RefereeMatchPage() {
                           </Button>
                         </div>
                         {/* 直接入力フィールド */}
-                        <Input
-                          type="number"
-                          min="0"
-                          value={scores.team2[periodIndex] || 0}
-                          onChange={(e) => setDirectScore('team2', periodIndex, e.target.value)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
-                          className="w-16 h-8 text-center text-sm mx-auto"
-                          placeholder="0"
-                        />
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground mb-1">直接入力</div>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={scores.team2[periodIndex] || 0}
+                            onChange={(e) => setDirectScore('team2', periodIndex, e.target.value)}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
+                            className="w-16 h-8 text-center text-sm mx-auto"
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {/* 合計スコア表示 */}
                 <div className="mt-6 p-4 bg-muted/50 rounded-lg">
