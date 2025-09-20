@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Clock, Users, MapPin, Settings, Sparkles, Target, Plus, Trash2 } from "lucide-react";
+import { Calendar, Clock, Users, MapPin, Settings, Sparkles, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import SchedulePreview from "@/components/features/tournament/SchedulePreview";
 import React from "react";
@@ -80,11 +80,6 @@ const tournamentCreateSchema = z.object({
   match_duration_minutes: z.number().min(5, "試合時間は5分以上で入力してください").max(60, "試合時間は60分以下で入力してください"),
   break_duration_minutes: z.number().min(0, "休憩時間は0分以上で入力してください").max(30, "休憩時間は30分以下で入力してください"),
   start_time: z.string().min(1, "開始時刻は必須です"),
-  win_points: z.number().min(0).max(10),
-  draw_points: z.number().min(0).max(10),
-  loss_points: z.number().min(0).max(10),
-  walkover_winner_goals: z.number().min(0).max(20),
-  walkover_loser_goals: z.number().min(0).max(20),
   is_public: z.boolean(),
   public_start_date: z.string().min(1, "公開開始日は必須です"),
   recruitment_start_date: z.string().min(1, "募集開始日は必須です"),
@@ -130,11 +125,6 @@ export default function TournamentCreateNewForm() {
       match_duration_minutes: 15,
       break_duration_minutes: 5,
       start_time: "13:00",
-      win_points: 3,
-      draw_points: 1,
-      loss_points: 0,
-      walkover_winner_goals: 3,
-      walkover_loser_goals: 0,
       is_public: true,
       public_start_date: new Date(Date.now()).toISOString().split('T')[0],
       recruitment_start_date: new Date(Date.now()).toISOString().split('T')[0],
@@ -733,69 +723,6 @@ export default function TournamentCreateNewForm() {
         </CardContent>
       </Card>
 
-      {/* 得点・勝ち点設定 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2 text-lg">
-            <Target className="h-5 w-5 text-yellow-600" />
-            <span>得点・勝ち点設定</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="win_points">勝利時勝ち点</Label>
-              <Input
-                id="win_points"
-                type="number"
-                min="0"
-                max="10"
-                {...register('win_points', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="draw_points">引分時勝ち点</Label>
-              <Input
-                id="draw_points"
-                type="number"
-                min="0"
-                max="10"
-                {...register('draw_points', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="loss_points">敗北時勝ち点</Label>
-              <Input
-                id="loss_points"
-                type="number"
-                min="0"
-                max="10"
-                {...register('loss_points', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="walkover_winner_goals">不戦勝時勝者得点</Label>
-              <Input
-                id="walkover_winner_goals"
-                type="number"
-                min="0"
-                max="20"
-                {...register('walkover_winner_goals', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="walkover_loser_goals">不戦勝時敗者得点</Label>
-              <Input
-                id="walkover_loser_goals"
-                type="number"
-                min="0"
-                max="20"
-                {...register('walkover_loser_goals', { valueAsNumber: true })}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* 開催日程 */}
       <Card>

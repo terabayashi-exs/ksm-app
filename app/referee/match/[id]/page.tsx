@@ -70,6 +70,7 @@ export default function RefereeMatchPage() {
   const [matchRemarks, setMatchRemarks] = useState<string>('');
   const [tournamentId, setTournamentId] = useState<number | null>(null);
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false); // 結果が保存されているかどうか
   // const [sportConfig, setSportConfig] = useState<SportRuleConfig | null>(null); // 将来の多競技対応用
 
   // トークン検証とマッチデータ取得
@@ -252,6 +253,8 @@ export default function RefereeMatchPage() {
         
         if (action === 'start') {
           alert('試合を開始しました！');
+          // 試合開始時は初期スコア（0-0）が既に保存されているとみなす
+          setIsSaved(true);
         } else if (action === 'end') {
           alert('試合を終了しました。お疲れ様でした！');
         }
@@ -306,11 +309,17 @@ export default function RefereeMatchPage() {
       winner_team_id: winner_team_id,
       remarks: matchRemarks.trim() || null
     });
+    
+    // 結果が正常に保存されたらisSavedをtrueに設定
+    setIsSaved(true);
   };
 
   // ピリオドスコア変更（スコア変更時に勝者を自動決定）
   const changeScore = useCallback((team: 'team1' | 'team2', period: number, delta: number) => {
     console.log('changeScore called:', { team, period, delta });
+    
+    // スコア変更時に保存状態をリセット
+    setIsSaved(false);
     
     setScores(prev => {
       // 現在のスコアを確実に数値として取得
@@ -322,9 +331,16 @@ export default function RefereeMatchPage() {
       newScores[team] = [...newScores[team]];
       newScores[team][period] = newScore;
       
-      // スコア変更後に勝者を自動決定
-      const team1Total = newScores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      const team2Total = newScores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
+      return newScores;
+    });
+  }, []);
+
+  // スコア変更後の勝者自動決定（PK戦考慮）
+  useEffect(() => {
+    if (!extendedData?.active_periods) {
+      // 拡張データがない場合は従来の計算
+      const team1Total = scores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
+      const team2Total = scores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
       
       if (team1Total > team2Total) {
         setWinnerTeam('team1');
@@ -333,39 +349,80 @@ export default function RefereeMatchPage() {
       } else {
         setWinnerTeam(null); // 同点の場合
       }
+    } else {
+      // 通常時間での勝者判定
+      const team1RegularTotal = getTotalScore(scores.team1);
+      const team2RegularTotal = getTotalScore(scores.team2);
       
-      return newScores;
-    });
-  }, []);
+      if (team1RegularTotal > team2RegularTotal) {
+        setWinnerTeam('team1');
+      } else if (team2RegularTotal > team1RegularTotal) {
+        setWinnerTeam('team2');
+      } else {
+        // 通常時間が同点の場合、PK戦の結果をチェック
+        const pkPeriods = extendedData.active_periods.filter(p => {
+          const periodName = getPeriodName(p);
+          return periodName.includes('PK');
+        });
+        
+        if (pkPeriods.length > 0) {
+          // PK戦のスコアを取得
+          let team1PkTotal = 0;
+          let team2PkTotal = 0;
+          
+          pkPeriods.forEach(p => {
+            const scoreIndex = p - 1;
+            team1PkTotal += Number(scores.team1[scoreIndex]) || 0;
+            team2PkTotal += Number(scores.team2[scoreIndex]) || 0;
+          });
+          
+          if (team1PkTotal > team2PkTotal) {
+            setWinnerTeam('team1');
+          } else if (team2PkTotal > team1PkTotal) {
+            setWinnerTeam('team2');
+          } else {
+            setWinnerTeam(null); // PK戦でも同点
+          }
+        } else {
+          setWinnerTeam(null); // 通常時間同点、PK戦なし
+        }
+      }
+    }
+  }, [scores, extendedData]);
 
-  // 直接スコア入力（スコア変更時に勝者を自動決定）
+  // 直接スコア入力
   const setDirectScore = (team: 'team1' | 'team2', period: number, value: string) => {
     const numValue = Math.max(0, parseInt(value) || 0);
+    
+    // スコア変更時に保存状態をリセット
+    setIsSaved(false);
     
     setScores(prev => {
       const newScores = { ...prev };
       newScores[team] = [...newScores[team]]; // 配列を新しく作成
       newScores[team][period] = numValue;
       
-      // スコア変更後に勝者を自動決定
-      const team1Total = newScores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      const team2Total = newScores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      
-      if (team1Total > team2Total) {
-        setWinnerTeam('team1');
-      } else if (team2Total > team1Total) {
-        setWinnerTeam('team2');
-      } else {
-        setWinnerTeam(null); // 同点の場合
-      }
-      
       return newScores;
     });
   };
 
-  // 総得点計算
+  // 総得点計算（PK戦ピリオドを除外）
   const getTotalScore = (teamScores: number[]) => {
-    return teamScores.reduce((sum, score) => sum + (Number(score) || 0), 0);
+    if (!extendedData?.active_periods) {
+      // 拡張データがない場合は従来の計算
+      return teamScores.reduce((sum, score) => sum + (Number(score) || 0), 0);
+    }
+    
+    // PK戦ピリオドを除外して計算
+    const regularPeriods = extendedData.active_periods.filter(p => {
+      const periodName = getPeriodName(p);
+      return !periodName.includes('PK');
+    });
+    
+    return regularPeriods.reduce((sum, p) => {
+      const scoreIndex = p - 1; // 0ベースのインデックス
+      return sum + (Number(teamScores[scoreIndex]) || 0);
+    }, 0);
   };
 
   // ピリオド名を取得する関数（ルール設定に基づく）
@@ -380,6 +437,33 @@ export default function RefereeMatchPage() {
     }
     // フォールバック：従来の「第Nピリオド」表記
     return `第${periodNumber}ピリオド`;
+  };
+
+  // PK戦結果を取得する関数
+  const getPenaltyKickResult = () => {
+    if (!extendedData?.active_periods) return null;
+    
+    const pkPeriods = extendedData.active_periods.filter(p => {
+      const periodName = getPeriodName(p);
+      return periodName.includes('PK');
+    });
+    
+    if (pkPeriods.length === 0) return null;
+    
+    let team1PkTotal = 0;
+    let team2PkTotal = 0;
+    
+    pkPeriods.forEach(p => {
+      const scoreIndex = p - 1;
+      team1PkTotal += Number(scores.team1[scoreIndex]) || 0;
+      team2PkTotal += Number(scores.team2[scoreIndex]) || 0;
+    });
+    
+    return {
+      team1PkScore: team1PkTotal,
+      team2PkScore: team2PkTotal,
+      hasPkScore: team1PkTotal > 0 || team2PkTotal > 0
+    };
   };
 
 
@@ -533,6 +617,22 @@ export default function RefereeMatchPage() {
                   {getTotalScore(scores.team1)} - {getTotalScore(scores.team2)}
                 </div>
                 <div className="text-sm text-muted-foreground">現在のスコア</div>
+                
+                {/* PK戦結果表示 */}
+                {(() => {
+                  const pkResult = getPenaltyKickResult();
+                  if (pkResult && pkResult.hasPkScore) {
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <div className="text-lg font-semibold text-orange-600">
+                          PK戦 {pkResult.team1PkScore} - {pkResult.team2PkScore}
+                        </div>
+                        <div className="text-xs text-muted-foreground">ペナルティキック</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </CardContent>
@@ -573,7 +673,15 @@ export default function RefereeMatchPage() {
 
                   <Button
                     className="w-full bg-red-600 hover:bg-red-700"
-                    onClick={() => updateMatchStatus('end')}
+                    onClick={() => {
+                      // 結果が保存されていない場合は警告を表示
+                      if (!isSaved) {
+                        if (!window.confirm('スコア・結果が保存されていません。\n\n試合を終了する前に「スコア・結果を保存」ボタンを押して結果を保存してください。\n\nこのまま試合を終了しますか？')) {
+                          return;
+                        }
+                      }
+                      updateMatchStatus('end');
+                    }}
                     disabled={updating || isConfirmed}
                   >
                     <Square className="w-5 h-5 mr-2" />
@@ -741,6 +849,30 @@ export default function RefereeMatchPage() {
                     </div>
                   </div>
                   
+                  {/* PK戦結果表示（合計スコア内） */}
+                  {(() => {
+                    const pkResult = getPenaltyKickResult();
+                    if (pkResult && pkResult.hasPkScore) {
+                      return (
+                        <div className="mt-4 pt-3 border-t border-border">
+                          <h5 className="text-xs font-medium text-muted-foreground mb-2">PK戦結果</h5>
+                          <div className="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                              <div className="text-lg font-semibold text-orange-600">
+                                {pkResult.team1PkScore}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-semibold text-orange-600">
+                                {pkResult.team2PkScore}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {/* 勝者選択 */}

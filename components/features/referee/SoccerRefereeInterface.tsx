@@ -165,16 +165,53 @@ export default function SoccerRefereeInterface({
       
       newScores[team][period - 1] = newScore;
       
-      // スコア変更後に勝者を自動決定
-      const team1Total = newScores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      const team2Total = newScores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
+      // PK戦を除いた通常ピリオドのみで勝者を自動決定
+      const regularPeriods = extendedData.active_periods.filter(p => {
+        const periodName = getPeriodName(p);
+        return !periodName.includes('PK');
+      });
+      const team1Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team1[p - 1]) || 0), 0);
+      const team2Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team2[p - 1]) || 0), 0);
       
-      if (team1Total > team2Total) {
-        setWinnerTeam('team1');
-      } else if (team2Total > team1Total) {
-        setWinnerTeam('team2');
+      // PK戦モードでない場合は通常の勝者判定
+      if (!pkMode) {
+        if (team1Regular > team2Regular) {
+          setWinnerTeam('team1');
+        } else if (team2Regular > team1Regular) {
+          setWinnerTeam('team2');
+        } else {
+          // 通常時間が同点の場合、PK戦のスコアがあるかチェック
+          const pkPeriods = extendedData.active_periods.filter(p => {
+            const periodName = getPeriodName(p);
+            return periodName.includes('PK');
+          });
+          
+          if (pkPeriods.length > 0) {
+            // PK戦のスコアを取得
+            let team1PkTotal = 0;
+            let team2PkTotal = 0;
+            
+            pkPeriods.forEach(p => {
+              const scoreIndex = p - 1;
+              team1PkTotal += Number(newScores.team1[scoreIndex]) || 0;
+              team2PkTotal += Number(newScores.team2[scoreIndex]) || 0;
+            });
+            
+            if (team1PkTotal > team2PkTotal) {
+              setWinnerTeam('team1');
+            } else if (team2PkTotal > team1PkTotal) {
+              setWinnerTeam('team2');
+            } else {
+              setWinnerTeam(null); // PK戦でも同点
+            }
+          } else {
+            setWinnerTeam(null); // 通常時間同点、PK戦なし
+          }
+        }
       } else {
-        setWinnerTeam(null);
+        // PK戦モードの場合は通常スコアを更新
+        setRegularScores({ team1: team1Regular, team2: team2Regular });
+        // 勝者はPK戦スコアで決定（changePkScore関数内で処理）
       }
       
       return newScores;
@@ -196,16 +233,53 @@ export default function SoccerRefereeInterface({
       
       newScores[team][period - 1] = numValue;
       
-      // スコア変更後に勝者を自動決定
-      const team1Total = newScores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      const team2Total = newScores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
+      // PK戦を除いた通常ピリオドのみで勝者を自動決定
+      const regularPeriods = extendedData.active_periods.filter(p => {
+        const periodName = getPeriodName(p);
+        return !periodName.includes('PK');
+      });
+      const team1Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team1[p - 1]) || 0), 0);
+      const team2Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team2[p - 1]) || 0), 0);
       
-      if (team1Total > team2Total) {
-        setWinnerTeam('team1');
-      } else if (team2Total > team1Total) {
-        setWinnerTeam('team2');
+      // PK戦モードでない場合は通常の勝者判定
+      if (!pkMode) {
+        if (team1Regular > team2Regular) {
+          setWinnerTeam('team1');
+        } else if (team2Regular > team1Regular) {
+          setWinnerTeam('team2');
+        } else {
+          // 通常時間が同点の場合、PK戦のスコアがあるかチェック
+          const pkPeriods = extendedData.active_periods.filter(p => {
+            const periodName = getPeriodName(p);
+            return periodName.includes('PK');
+          });
+          
+          if (pkPeriods.length > 0) {
+            // PK戦のスコアを取得
+            let team1PkTotal = 0;
+            let team2PkTotal = 0;
+            
+            pkPeriods.forEach(p => {
+              const scoreIndex = p - 1;
+              team1PkTotal += Number(newScores.team1[scoreIndex]) || 0;
+              team2PkTotal += Number(newScores.team2[scoreIndex]) || 0;
+            });
+            
+            if (team1PkTotal > team2PkTotal) {
+              setWinnerTeam('team1');
+            } else if (team2PkTotal > team1PkTotal) {
+              setWinnerTeam('team2');
+            } else {
+              setWinnerTeam(null); // PK戦でも同点
+            }
+          } else {
+            setWinnerTeam(null); // 通常時間同点、PK戦なし
+          }
+        }
       } else {
-        setWinnerTeam(null);
+        // PK戦モードの場合は通常スコアを更新
+        setRegularScores({ team1: team1Regular, team2: team2Regular });
+        // 勝者はPK戦スコアで決定（changePkScore関数内で処理）
       }
       
       return newScores;
@@ -256,13 +330,20 @@ export default function SoccerRefereeInterface({
       const newScore = Math.max(0, currentScore + delta);
       const newScores = { ...prev, [team]: newScore };
       
-      // PKスコアに基づいて勝者を自動決定
-      if (newScores.team1 > newScores.team2) {
+      // 勝者を決定（通常時間 → PK戦の順で判定）
+      if (regularScores.team1 > regularScores.team2) {
         setWinnerTeam('team1');
-      } else if (newScores.team2 > newScores.team1) {
+      } else if (regularScores.team2 > regularScores.team1) {
         setWinnerTeam('team2');
-      } else if (regularScores.team1 === regularScores.team2) {
-        setWinnerTeam(null); // 通常ゴール・PKともに同点
+      } else {
+        // 通常時間が同点の場合、PKスコアで判定
+        if (newScores.team1 > newScores.team2) {
+          setWinnerTeam('team1');
+        } else if (newScores.team2 > newScores.team1) {
+          setWinnerTeam('team2');
+        } else {
+          setWinnerTeam(null); // 通常時間・PKともに同点
+        }
       }
       
       return newScores;
@@ -278,9 +359,21 @@ export default function SoccerRefereeInterface({
       team2_score: scores.team2[periodNumber - 1] || 0
     }));
 
-    // スコアと勝者選択の矛盾をチェック
-    const team1Total = getTotalScore(scores.team1);
-    const team2Total = getTotalScore(scores.team2);
+    // スコアと勝者選択の矛盾をチェック（PK戦モードの場合は通常ゴールのみを考慮）
+    let team1Total, team2Total;
+    if (pkMode) {
+      team1Total = regularScores.team1;
+      team2Total = regularScores.team2;
+    } else {
+      // 通常モードでもPK戦ピリオドを除外
+      const regularPeriods = extendedData.active_periods.filter(p => {
+        const periodName = getPeriodName(p);
+        return !periodName.includes('PK');
+      });
+      team1Total = regularPeriods.reduce((sum, p) => sum + (Number(scores.team1[p - 1]) || 0), 0);
+      team2Total = regularPeriods.reduce((sum, p) => sum + (Number(scores.team2[p - 1]) || 0), 0);
+    }
+    
     let scoreWinner = null;
     if (team1Total > team2Total) scoreWinner = 'team1';
     else if (team2Total > team1Total) scoreWinner = 'team2';
@@ -549,18 +642,24 @@ export default function SoccerRefereeInterface({
               </div>
               
               {!pkMode ? (
-                // 通常モード表示
+                // 通常モード表示（PK戦ピリオドを除く）
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
                     <div className="text-xs text-muted-foreground">{match.team1_name}</div>
                     <div className="text-3xl font-bold text-blue-600">
-                      {getTotalScore(scores.team1)}
+                      {extendedData.active_periods.filter(p => {
+                        const periodName = getPeriodName(p);
+                        return !periodName.includes('PK');
+                      }).reduce((sum, p) => sum + (Number(scores.team1[p - 1]) || 0), 0)}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">{match.team2_name}</div>
                     <div className="text-3xl font-bold text-red-600">
-                      {getTotalScore(scores.team2)}
+                      {extendedData.active_periods.filter(p => {
+                        const periodName = getPeriodName(p);
+                        return !periodName.includes('PK');
+                      }).reduce((sum, p) => sum + (Number(scores.team2[p - 1]) || 0), 0)}
                     </div>
                   </div>
                 </div>
@@ -682,7 +781,27 @@ export default function SoccerRefereeInterface({
                         value={pkScores.team1}
                         onChange={(e) => {
                           const value = Math.max(0, parseInt(e.target.value) || 0);
-                          setPkScores(prev => ({ ...prev, team1: value }));
+                          setPkScores(prev => {
+                            const newScores = { ...prev, team1: value };
+                            
+                            // 勝者を決定（通常時間 → PK戦の順で判定）
+                            if (regularScores.team1 > regularScores.team2) {
+                              setWinnerTeam('team1');
+                            } else if (regularScores.team2 > regularScores.team1) {
+                              setWinnerTeam('team2');
+                            } else {
+                              // 通常時間が同点の場合、PKスコアで判定
+                              if (newScores.team1 > newScores.team2) {
+                                setWinnerTeam('team1');
+                              } else if (newScores.team2 > newScores.team1) {
+                                setWinnerTeam('team2');
+                              } else {
+                                setWinnerTeam(null); // 通常時間・PKともに同点
+                              }
+                            }
+                            
+                            return newScores;
+                          });
                         }}
                         disabled={match.match_status !== 'ongoing' || isConfirmed}
                         className="w-20 h-10 text-center text-lg mx-auto border-orange-300"
@@ -722,7 +841,27 @@ export default function SoccerRefereeInterface({
                         value={pkScores.team2}
                         onChange={(e) => {
                           const value = Math.max(0, parseInt(e.target.value) || 0);
-                          setPkScores(prev => ({ ...prev, team2: value }));
+                          setPkScores(prev => {
+                            const newScores = { ...prev, team2: value };
+                            
+                            // 勝者を決定（通常時間 → PK戦の順で判定）
+                            if (regularScores.team1 > regularScores.team2) {
+                              setWinnerTeam('team1');
+                            } else if (regularScores.team2 > regularScores.team1) {
+                              setWinnerTeam('team2');
+                            } else {
+                              // 通常時間が同点の場合、PKスコアで判定
+                              if (newScores.team1 > newScores.team2) {
+                                setWinnerTeam('team1');
+                              } else if (newScores.team2 > newScores.team1) {
+                                setWinnerTeam('team2');
+                              } else {
+                                setWinnerTeam(null); // 通常時間・PKともに同点
+                              }
+                            }
+                            
+                            return newScores;
+                          });
                         }}
                         disabled={match.match_status !== 'ongoing' || isConfirmed}
                         className="w-20 h-10 text-center text-lg mx-auto border-orange-300"

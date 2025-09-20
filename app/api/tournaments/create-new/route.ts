@@ -27,11 +27,6 @@ export async function POST(request: NextRequest) {
       match_duration_minutes,
       break_duration_minutes,
       start_time,
-      win_points = 3,
-      draw_points = 1,
-      loss_points = 0,
-      walkover_winner_goals = 3,
-      walkover_loser_goals = 0,
       is_public,
       public_start_date,
       recruitment_start_date,
@@ -63,11 +58,6 @@ export async function POST(request: NextRequest) {
         tournament_dates,
         match_duration_minutes,
         break_duration_minutes,
-        win_points,
-        draw_points,
-        loss_points,
-        walkover_winner_goals,
-        walkover_loser_goals,
         status,
         visibility,
         public_start_date,
@@ -77,7 +67,7 @@ export async function POST(request: NextRequest) {
         archive_ui_version,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       tournament_name,
       sport_type_id,
@@ -88,12 +78,8 @@ export async function POST(request: NextRequest) {
       tournament_dates,
       match_duration_minutes,
       break_duration_minutes,
-      win_points,
-      draw_points,
-      loss_points,
-      walkover_winner_goals,
-      walkover_loser_goals,
-      is_public ? 'open' : 'preparing',
+      'planning',  // status
+      is_public ? 'open' : 'preparing',  // visibility
       public_start_date,
       recruitment_start_date,
       recruitment_end_date,
@@ -349,13 +335,20 @@ export async function POST(request: NextRequest) {
         tournamentRules = generateDefaultRules(Number(tournamentId), sport_type_id);
       }
       
+      // デフォルト勝点システム設定
+      const defaultPointSystem = JSON.stringify({
+        win: 3,
+        draw: 1,
+        loss: 0
+      });
+      
       for (const rule of tournamentRules) {
         await db.execute(`
           INSERT INTO t_tournament_rules (
             tournament_id, phase, use_extra_time, use_penalty, 
-            active_periods, win_condition, notes, 
+            active_periods, win_condition, notes, point_system,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [
           rule.tournament_id,
           rule.phase,
@@ -363,7 +356,8 @@ export async function POST(request: NextRequest) {
           rule.use_penalty ? 1 : 0,
           rule.active_periods,
           rule.win_condition,
-          rule.notes || null
+          rule.notes || null,
+          defaultPointSystem
         ]);
       }
       

@@ -10,6 +10,8 @@ export interface TournamentRule {
   active_periods: string; // JSON文字列: ["1", "2", "3", "4", "5"] など
   win_condition: 'score' | 'time' | 'points';
   notes?: string;
+  point_system?: string; // JSON文字列: {"win": 3, "draw": 1, "loss": 0}
+  walkover_settings?: string; // JSON文字列: {"winner_goals": 3, "loser_goals": 0}
   created_at?: string;
   updated_at?: string;
 }
@@ -239,4 +241,62 @@ export function getLegacyDefaultRules(tournamentId: number): TournamentRule[] {
       win_condition: 'score'
     }
   ];
+}
+
+// 不戦勝設定の型定義
+export interface WalkoverSettings {
+  winner_goals: number;
+  loser_goals: number;
+}
+
+// 不戦勝設定の解析
+export function parseWalkoverSettings(walkoverSettingsJson?: string): WalkoverSettings {
+  if (!walkoverSettingsJson) {
+    return { winner_goals: 3, loser_goals: 0 }; // デフォルト値
+  }
+  
+  try {
+    const settings = JSON.parse(walkoverSettingsJson);
+    return {
+      winner_goals: Number(settings.winner_goals) || 3,
+      loser_goals: Number(settings.loser_goals) || 0
+    };
+  } catch {
+    return { winner_goals: 3, loser_goals: 0 }; // パースエラー時のデフォルト値
+  }
+}
+
+// 不戦勝設定のJSON化
+export function stringifyWalkoverSettings(settings: WalkoverSettings): string {
+  return JSON.stringify({
+    winner_goals: settings.winner_goals,
+    loser_goals: settings.loser_goals
+  });
+}
+
+// 大会の不戦勝設定を取得
+export async function getTournamentWalkoverSettings(tournamentId: number): Promise<WalkoverSettings> {
+  try {
+    const { db } = await import('./db');
+    
+    const result = await db.execute(`
+      SELECT walkover_settings 
+      FROM t_tournament_rules 
+      WHERE tournament_id = ? AND phase = 'preliminary'
+      LIMIT 1
+    `, [tournamentId]);
+    
+    if (result.rows.length > 0) {
+      const walkoverSettingsJson = result.rows[0].walkover_settings as string;
+      return parseWalkoverSettings(walkoverSettingsJson);
+    }
+    
+    // ルール設定がない場合はデフォルト値を返す
+    return { winner_goals: 3, loser_goals: 0 };
+    
+  } catch (error) {
+    console.error('不戦勝設定の取得に失敗:', error);
+    // エラー時もデフォルト値を返す
+    return { winner_goals: 3, loser_goals: 0 };
+  }
 }

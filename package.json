@@ -25,6 +25,9 @@
     "db:create-admin": "node scripts/create-admin.js",
     "db:add-court-time-columns": "node scripts/add-court-time-columns.js",
     "db:update-template-court-time": "node scripts/update-template-court-time.js",
+    "db:remove-point-fields": "node scripts/migrate-remove-point-fields.js",
+    "db:rollback-point-fields": "node scripts/rollback-point-fields.js",
+    "db:validate-point-migration": "node scripts/validate-point-system-migration.js",
     "reset-test-tournaments": "node scripts/reset-test-tournaments.js",
     "type-check": "tsc --noEmit"
   },

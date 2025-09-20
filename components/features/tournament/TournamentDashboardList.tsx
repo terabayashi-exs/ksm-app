@@ -31,6 +31,7 @@ export default function TournamentDashboardList() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [archiving, setArchiving] = useState<number | null>(null);
+  const [notificationCounts, setNotificationCounts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -51,7 +52,21 @@ export default function TournamentDashboardList() {
       }
     };
 
+    const fetchNotificationCounts = async () => {
+      try {
+        const response = await fetch('/api/admin/notifications/counts');
+        const result = await response.json();
+        
+        if (result.success) {
+          setNotificationCounts(result.data);
+        }
+      } catch (err) {
+        console.error('通知件数取得エラー:', err);
+      }
+    };
+
     fetchTournaments();
+    fetchNotificationCounts();
   }, []);
 
   const handleDeleteTournament = async (tournament: Tournament) => {
@@ -143,8 +158,22 @@ export default function TournamentDashboardList() {
           console.error('大会リスト更新エラー:', err);
         }
       };
+
+      const fetchNotificationCounts = async () => {
+        try {
+          const response = await fetch('/api/admin/notifications/counts');
+          const result = await response.json();
+          
+          if (result.success) {
+            setNotificationCounts(result.data);
+          }
+        } catch (err) {
+          console.error('通知件数取得エラー:', err);
+        }
+      };
       
       fetchTournaments();
+      fetchNotificationCounts();
     } catch (err) {
       console.error('アーカイブ・削除エラー:', err);
       alert('アーカイブ・削除処理中にエラーが発生しました');
@@ -184,6 +213,16 @@ export default function TournamentDashboardList() {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  // 通知件数を取得する関数
+  const getNotificationCount = (tournamentId: number): number => {
+    return notificationCounts[tournamentId] || 0;
+  };
+
+  // 通知があるかどうかをチェックする関数
+  const hasNotifications = (tournamentId: number): boolean => {
+    return getNotificationCount(tournamentId) > 0;
   };
 
   const TournamentCard = ({ tournament, type }: { tournament: Tournament; type: 'recruiting' | 'ongoing' | 'completed' }) => (
@@ -280,9 +319,22 @@ export default function TournamentDashboardList() {
                 組合せ作成・編集
               </Link>
             </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+            <Button 
+              asChild 
+              size="sm" 
+              variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+              className={hasNotifications(tournament.tournament_id)
+                ? "bg-red-600 hover:bg-red-700"
+                : "hover:border-blue-300 hover:bg-blue-50"
+              }
+            >
               <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                 試合管理
+                {hasNotifications(tournament.tournament_id) && (
+                  <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                    {getNotificationCount(tournament.tournament_id)}
+                  </span>
+                )}
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
@@ -313,9 +365,22 @@ export default function TournamentDashboardList() {
         )}
         {type === 'completed' && !tournament.is_archived && (
           <>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+            <Button 
+              asChild 
+              size="sm" 
+              variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+              className={hasNotifications(tournament.tournament_id)
+                ? "bg-red-600 hover:bg-red-700"
+                : "hover:border-blue-300 hover:bg-blue-50"
+              }
+            >
               <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                 試合管理
+                {hasNotifications(tournament.tournament_id) && (
+                  <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                    {getNotificationCount(tournament.tournament_id)}
+                  </span>
+                )}
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
@@ -348,9 +413,22 @@ export default function TournamentDashboardList() {
         )}
         {type === 'ongoing' && (
           <>
-            <Button asChild size="sm" variant="default" className="bg-red-600 hover:bg-red-700">
+            <Button 
+              asChild 
+              size="sm" 
+              variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+              className={hasNotifications(tournament.tournament_id) 
+                ? 'bg-red-600 hover:bg-red-700' 
+                : 'hover:border-blue-300 hover:bg-blue-50'
+              }
+            >
               <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                 試合管理
+                {hasNotifications(tournament.tournament_id) && (
+                  <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                    {getNotificationCount(tournament.tournament_id)}
+                  </span>
+                )}
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">

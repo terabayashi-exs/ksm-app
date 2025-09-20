@@ -128,11 +128,11 @@ async function manualRankingFix() {
       };
     });
     
-    // 5. ソート（既存ロジックと同じ）
+    // 5. ソート（正しい順序：勝点 → 得失点差 → 総得点）
     teamStandings.sort((a, b) => {
       if (a.points !== b.points) return b.points - a.points;
-      if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
       if (a.goal_difference !== b.goal_difference) return b.goal_difference - a.goal_difference;
+      if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
       return a.team_name.localeCompare(b.team_name, 'ja');
     });
     

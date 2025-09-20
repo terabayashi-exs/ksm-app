@@ -231,23 +231,54 @@ export async function autoResolveManualRankingNotifications(tournamentId: number
 }
 
 /**
- * 管理者ダッシュボード用：全大会の未解決通知を取得
+ * 手動順位設定後に同着問題解決通知を即座に削除
  */
-export async function getAllUnresolvedNotifications(): Promise<(TournamentNotification & { tournament_name: string })[]> {
+export async function resolveManualRankingNotificationsImmediately(tournamentId: number): Promise<void> {
+  try {
+    console.log(`[NOTIFICATIONS] 大会${tournamentId}: 手動順位設定により通知を即座に解決`);
+    
+    await db.execute({
+      sql: `
+        UPDATE t_tournament_notifications 
+        SET is_resolved = 1, updated_at = datetime('now', '+9 hours')
+        WHERE tournament_id = ? 
+        AND notification_type = 'manual_ranking_needed' 
+        AND is_resolved = 0
+      `,
+      args: [tournamentId]
+    });
+    
+    console.log(`[NOTIFICATIONS] 大会${tournamentId}: 手動順位設定通知の即座解決完了`);
+  } catch (error) {
+    console.error('[NOTIFICATIONS] 即座解決エラー:', error);
+  }
+}
+
+/**
+ * 管理者ダッシュボード用：全大会の未解決通知を取得（大会IDで絞り込み可能）
+ */
+export async function getAllUnresolvedNotifications(tournamentId?: number): Promise<(TournamentNotification & { tournament_name: string })[]> {
   try {
     // まず手動順位設定通知の自動解決を実行
-    const tournamentIds = await db.execute(`
-      SELECT DISTINCT tournament_id 
-      FROM t_tournament_notifications 
-      WHERE notification_type = 'manual_ranking_needed' AND is_resolved = 0
-    `);
-    
-    for (const row of tournamentIds.rows) {
-      const tournamentId = row.tournament_id as number;
+    if (tournamentId) {
+      // 特定の大会のみ
       await autoResolveManualRankingNotifications(tournamentId);
+    } else {
+      // 全大会
+      const tournamentIds = await db.execute(`
+        SELECT DISTINCT tournament_id 
+        FROM t_tournament_notifications 
+        WHERE notification_type = 'manual_ranking_needed' AND is_resolved = 0
+      `);
+      
+      for (const row of tournamentIds.rows) {
+        const tournamentIdToProcess = row.tournament_id as number;
+        await autoResolveManualRankingNotifications(tournamentIdToProcess);
+      }
     }
     
-    const result = await db.execute(`
+    // 通知を取得（大会IDで絞り込み）
+    const sql = `
       SELECT 
         tn.notification_id,
         tn.tournament_id,
@@ -263,8 +294,14 @@ export async function getAllUnresolvedNotifications(): Promise<(TournamentNotifi
       FROM t_tournament_notifications tn
       JOIN t_tournaments t ON tn.tournament_id = t.tournament_id
       WHERE tn.is_resolved = 0
+      ${tournamentId ? 'AND tn.tournament_id = ?' : ''}
       ORDER BY tn.created_at DESC
-    `);
+    `;
+    
+    const result = await db.execute({
+      sql,
+      args: tournamentId ? [tournamentId] : []
+    });
     
     return result.rows.map(row => ({
       notification_id: row.notification_id as number,

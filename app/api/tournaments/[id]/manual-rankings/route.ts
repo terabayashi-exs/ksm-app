@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
-import { autoResolveManualRankingNotifications } from '@/lib/notifications';
+import { autoResolveManualRankingNotifications, resolveManualRankingNotificationsImmediately } from '@/lib/notifications';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -191,6 +191,15 @@ export async function PUT(
     } catch (promotionError) {
       console.error('[MANUAL_RANKINGS] 進出処理エラー:', promotionError);
       // 進出処理エラーでも順位更新は成功とする
+    }
+
+    // 手動順位設定完了後、同着問題解決通知を即座に削除
+    try {
+      await resolveManualRankingNotificationsImmediately(tournamentId);
+      console.log('[MANUAL_RANKINGS] 手動順位設定通知の即座解決完了');
+    } catch (notificationError) {
+      console.error('[MANUAL_RANKINGS] 通知即座解決エラー:', notificationError);
+      // 通知解決エラーでも順位更新は成功とする
     }
 
     return NextResponse.json({

@@ -1,10 +1,10 @@
 // app/api/admin/notifications/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getAllUnresolvedNotifications } from '@/lib/notifications';
 
-// 全未解決通知を取得
-export async function GET() {
+// 全未解決通知を取得（大会IDで絞り込み可能）
+export async function GET(request: NextRequest) {
   try {
     // 認証チェック
     const session = await auth();
@@ -15,7 +15,13 @@ export async function GET() {
       );
     }
 
-    const notifications = await getAllUnresolvedNotifications();
+    // クエリパラメータから大会IDを取得
+    const { searchParams } = new URL(request.url);
+    const tournamentId = searchParams.get('tournament_id');
+
+    const notifications = await getAllUnresolvedNotifications(
+      tournamentId ? parseInt(tournamentId) : undefined
+    );
 
     return NextResponse.json({
       success: true,

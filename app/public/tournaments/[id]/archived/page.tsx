@@ -7,7 +7,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { ArrowLeft, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink, Archive, Calendar as CalendarIcon } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateOnly } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
 import { getArchivedTournamentJson } from '@/lib/tournament-json-archiver';
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
@@ -734,7 +734,7 @@ function ArchivedTournamentOverview({
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">第{dayNumber}日</p>
-                    <p className="font-medium">{formatDate(date as string)}</p>
+                    <p className="font-medium">{formatDateOnly(date as string)}</p>
                   </div>
                 </div>
               ))}
@@ -752,7 +752,7 @@ function ArchivedTournamentOverview({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-2xl font-bold text-blue-600">{tournament.match_duration_minutes}</p>
               <p className="text-sm text-gray-600">試合時間（分）</p>
@@ -760,14 +760,6 @@ function ArchivedTournamentOverview({
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
               <p className="text-sm text-gray-600">休憩時間（分）</p>
-            </div>
-            <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <p className="text-2xl font-bold text-yellow-600">{tournament.win_points}</p>
-              <p className="text-sm text-gray-600">勝利時獲得ポイント</p>
-            </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-gray-600">{tournament.draw_points}</p>
-              <p className="text-sm text-gray-600">引分時獲得ポイント</p>
             </div>
           </div>
         </CardContent>

@@ -71,7 +71,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/tournaments/${tournamentId}/standings-enhanced`, {
+        const response = await fetch(`/api/tournaments/${tournamentId}/standings`, {
           cache: 'no-store'
         });
 

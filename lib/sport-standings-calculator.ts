@@ -26,6 +26,13 @@ export const SPORT_SCORE_CONFIGS: Record<string, SportScoreConfig> = {
     difference_label: '得失点差',
     supports_pk: false
   },
+  'pk': {
+    sport_code: 'pk',
+    score_label: '得点',
+    score_against_label: '失点',
+    difference_label: '得失点差',
+    supports_pk: false  // PK競技では単純なスコア表示
+  },
   'soccer': {
     sport_code: 'soccer',
     score_label: '得点',

@@ -1,6 +1,6 @@
 // lib/match-result-handler.ts
 import { db } from '@/lib/db';
-import { updateFinalTournamentRankings, updateBlockRankingsMultiSport } from '@/lib/standings-calculator';
+import { updateFinalTournamentRankings, updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
 
@@ -146,7 +146,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       }
       
       // 順位表を更新（多競技対応版）
-      await updateBlockRankingsMultiSport(matchBlockId, tournamentId);
+      await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
       
       // 決勝トーナメントの場合は決勝順位も更新
       const blockPhaseResult = await db.execute({
@@ -295,7 +295,7 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
         const phase = blockResult.rows[0].phase as string;
         
         affectedTournaments.add(tournamentId);
-        await updateBlockRankingsMultiSport(matchBlockId, tournamentId);
+        await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
         
         // 決勝トーナメントの場合はテンプレートベース順位設定と決勝順位更新対象に追加
         if (phase === 'final') {

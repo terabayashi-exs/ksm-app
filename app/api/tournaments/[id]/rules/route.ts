@@ -31,7 +31,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         t.tournament_name,
         t.sport_type_id,
         st.sport_name,
-        st.sport_code
+        st.sport_code,
+        st.supports_point_system,
+        st.supports_draws,
+        st.ranking_method
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       WHERE t.tournament_id = ?
@@ -45,7 +48,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     
     // 既存のルール設定を取得
     const rulesResult = await db.execute(`
-      SELECT * FROM t_tournament_rules 
+      SELECT 
+        tournament_rule_id, tournament_id, phase, use_extra_time, use_penalty, 
+        active_periods, win_condition, notes, point_system, walkover_settings, created_at, updated_at
+      FROM t_tournament_rules 
       WHERE tournament_id = ? 
       ORDER BY phase
     `, [tournamentId]);
@@ -79,6 +85,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         active_periods: String(row.active_periods),
         win_condition: row.win_condition as 'score' | 'time' | 'points',
         notes: row.notes ? String(row.notes) : undefined,
+        point_system: row.point_system ? String(row.point_system) : undefined,
+        walkover_settings: row.walkover_settings ? String(row.walkover_settings) : undefined,
         created_at: String(row.created_at),
         updated_at: String(row.updated_at)
       }));
@@ -96,7 +104,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         tournament_name: String(tournament.tournament_name),
         sport_type_id: Number(tournament.sport_type_id),
         sport_name: String(tournament.sport_name),
-        sport_code: String(tournament.sport_code)
+        sport_code: String(tournament.sport_code),
+        supports_point_system: Boolean(tournament.supports_point_system),
+        supports_draws: Boolean(tournament.supports_draws),
+        ranking_method: String(tournament.ranking_method)
       },
       rules,
       sport_config: sportConfig
@@ -120,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const tournamentId = parseInt(resolvedParams.id);
     const body = await request.json();
-    const { rules } = body;
+    const { rules, point_system, walkover_settings } = body;
 
     if (!Array.isArray(rules)) {
       return NextResponse.json({ error: "ルール設定が不正です" }, { status: 400 });
@@ -132,13 +143,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     `, [tournamentId]);
 
     // 新しいルールを挿入
+    const pointSystemJson = point_system ? JSON.stringify(point_system) : null;
+    const walkoverSettingsJson = walkover_settings ? JSON.stringify(walkover_settings) : null;
+    
     for (const rule of rules) {
       await db.execute(`
         INSERT INTO t_tournament_rules (
           tournament_id, phase, use_extra_time, use_penalty, 
-          active_periods, win_condition, notes, 
+          active_periods, win_condition, notes, point_system, walkover_settings,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         tournamentId,
         rule.phase,
@@ -146,7 +160,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         rule.use_penalty ? 1 : 0,
         rule.active_periods,
         rule.win_condition,
-        rule.notes || null
+        rule.notes || null,
+        pointSystemJson,
+        walkoverSettingsJson
       ]);
     }
 
@@ -192,13 +208,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // デフォルトルールを生成・保存
     const defaultRules = generateDefaultRules(tournamentId, sportTypeId);
     
+    // デフォルト勝点システム（勝点対応競技の場合）
+    const defaultPointSystem = JSON.stringify({
+      win: 3,
+      draw: 1,
+      loss: 0
+    });
+    
+    // デフォルト不戦勝設定
+    const defaultWalkoverSettings = JSON.stringify({
+      winner_goals: 3,
+      loser_goals: 0
+    });
+    
     for (const rule of defaultRules) {
       await db.execute(`
         INSERT INTO t_tournament_rules (
           tournament_id, phase, use_extra_time, use_penalty, 
-          active_periods, win_condition, notes, 
+          active_periods, win_condition, notes, point_system, walkover_settings,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         rule.tournament_id,
         rule.phase,
@@ -206,7 +235,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         rule.use_penalty ? 1 : 0,
         rule.active_periods,
         rule.win_condition,
-        rule.notes || null
+        rule.notes || null,
+        defaultPointSystem,
+        defaultWalkoverSettings
       ]);
     }
 

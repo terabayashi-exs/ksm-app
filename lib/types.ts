@@ -9,11 +9,6 @@ export interface Tournament {
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
   match_duration_minutes: number;
   break_duration_minutes: number;
-  win_points: number;
-  draw_points: number;
-  loss_points: number;
-  walkover_winner_goals: number;
-  walkover_loser_goals: number;
   status: 'planning' | 'ongoing' | 'completed';
   visibility: number; // 公開フラグ (0: 非公開, 1: 公開)
   public_start_date?: string; // 公開開始日

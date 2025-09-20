@@ -109,7 +109,7 @@ export default function TournamentsPage() {
   // 初回読み込み
   useEffect(() => {
     fetchTournaments();
-  }, []);
+  }, [fetchTournaments]);
 
   // 検索実行
   const handleSearch = () => {

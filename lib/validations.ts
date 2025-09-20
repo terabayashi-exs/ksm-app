@@ -49,28 +49,6 @@ export const tournamentCreateSchema = z.object({
     .min(0, '休憩時間は0分以上で入力してください')
     .max(60, '休憩時間は60分以下で入力してください'),
 
-  // 得点設定
-  win_points: z.number()
-    .min(0, '勝利時勝ち点は0以上で入力してください')
-    .max(10, '勝利時勝ち点は10以下で入力してください'),
-  
-  draw_points: z.number()
-    .min(0, '引分時勝ち点は0以上で入力してください')
-    .max(10, '引分時勝ち点は10以下で入力してください'),
-  
-  loss_points: z.number()
-    .min(0, '敗北時勝ち点は0以上で入力してください')
-    .max(10, '敗北時勝ち点は10以下で入力してください'),
-
-  // 不戦勝設定
-  walkover_winner_goals: z.number()
-    .min(0, '不戦勝時勝者得点は0以上で入力してください')
-    .max(20, '不戦勝時勝者得点は20以下で入力してください'),
-  
-  walkover_loser_goals: z.number()
-    .min(0, '不戦勝時敗者得点は0以上で入力してください')
-    .max(20, '不戦勝時敗者得点は20以下で入力してください'),
-
   // 開催日程（複数日対応）
   tournament_dates: z.array(tournamentDateSchema)
     .min(1, '最低1つの開催日を指定してください')
@@ -118,18 +96,6 @@ export const tournamentCreateSchema = z.object({
 }, {
   message: 'コート番号に重複があるか、使用コート数より指定されたコート番号が少ないです',
   path: ['available_courts']
-}).refine((data) => {
-  // 引分時勝ち点 <= 勝利時勝ち点のチェック
-  return data.draw_points <= data.win_points;
-}, {
-  message: '引分時勝ち点は勝利時勝ち点以下で設定してください',
-  path: ['draw_points']
-}).refine((data) => {
-  // 敗北時勝ち点 <= 引分時勝ち点のチェック
-  return data.loss_points <= data.draw_points;
-}, {
-  message: '敗北時勝ち点は引分時勝ち点以下で設定してください',
-  path: ['loss_points']
 }).refine((data) => {
   // 募集開始日 >= 公開開始日のチェック
   return new Date(data.recruitment_start_date) >= new Date(data.public_start_date);
@@ -228,11 +194,6 @@ export const tournamentCreateDefaults: Partial<TournamentCreateForm> = {
   court_count: 4,
   match_duration_minutes: 15,
   break_duration_minutes: 5,
-  win_points: 3,
-  draw_points: 1,
-  loss_points: 0,
-  walkover_winner_goals: 3,
-  walkover_loser_goals: 0,
   is_public: false,
   public_start_date: new Date().toISOString().split('T')[0], // 今日
   recruitment_start_date: new Date().toISOString().split('T')[0], // 今日
