@@ -25,6 +25,8 @@ interface MatchData {
   block_order: number;
   team1_goals: number | null;
   team2_goals: number | null;
+  team1_pk_goals?: number | null; // PK戦スコア（追加）
+  team2_pk_goals?: number | null; // PK戦スコア（追加）
   winner_team_id: string | null;
   is_draw: boolean;
   is_walkover: boolean;
@@ -155,12 +157,24 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       };
     }
 
+    // PK戦を考慮したスコア表示の生成
+    const getScoreDisplay = () => {
+      const hasPkGoals = (match.team1_pk_goals !== null && match.team1_pk_goals !== undefined) || 
+                        (match.team2_pk_goals !== null && match.team2_pk_goals !== undefined);
+      
+      if (hasPkGoals && (match.team1_pk_goals || 0) > 0 || (match.team2_pk_goals || 0) > 0) {
+        return `${match.team1_goals} - ${match.team2_goals} (PK ${match.team1_pk_goals || 0}-${match.team2_pk_goals || 0})`;
+      }
+      
+      return `${match.team1_goals} - ${match.team2_goals}`;
+    };
+
     if (match.is_draw) {
       return {
         status: 'draw',
         display: (
           <span className="text-blue-600 text-sm font-medium">
-            {match.team1_goals} - {match.team2_goals} (引分)
+            {getScoreDisplay()} (引分)
           </span>
         ),
         icon: <Users className="h-4 w-4 text-blue-500" />
@@ -173,7 +187,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       status: 'completed',
       display: (
         <span className="text-green-600 text-sm font-medium">
-          {match.team1_goals} - {match.team2_goals}
+          {getScoreDisplay()}
         </span>
       ),
       icon: <CheckCircle className="h-4 w-4 text-green-500" />,

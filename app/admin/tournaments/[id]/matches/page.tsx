@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
 import { SPORT_RULE_CONFIGS, SportRuleConfig } from '@/lib/tournament-rules';
+import NotificationBanner from '@/components/features/tournament/NotificationBanner';
 
 interface Tournament {
   tournament_id: number;
@@ -649,15 +650,30 @@ export default function AdminMatchesPage() {
           }
         }
 
-        // サッカーでPK戦がある場合の特別処理
-        if (sportConfig?.supports_pk && team1Scores.length >= 5) {
-          const regularTeam1 = team1Scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
-          const regularTeam2 = team2Scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
-          const pkTeam1 = team1Scores.slice(4).reduce((sum, score) => sum + score, 0);
-          const pkTeam2 = team2Scores.slice(4).reduce((sum, score) => sum + score, 0);
+        // サッカーでPK戦がある場合の特別処理（ルール設定に基づく識別）
+        if (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods) {
+          let regularTotal1 = 0;
+          let regularTotal2 = 0;
+          let pkTotal1 = 0;
+          let pkTotal2 = 0;
           
-          if (pkTeam1 > 0 || pkTeam2 > 0) {
-            return `${regularTeam1} - ${regularTeam2} (PK ${pkTeam1}-${pkTeam2})`;
+          // 各ピリオドをチェックしてPK戦かどうか判定
+          team1Scores.forEach((score, index) => {
+            const periodNumber = index + 1;
+            const period = sportConfig.ruleConfig?.default_periods?.find(p => p.period_number === periodNumber);
+            
+            if (period && period.period_name.includes('PK')) {
+              pkTotal1 += Number(score) || 0;
+              pkTotal2 += Number(team2Scores[index]) || 0;
+            } else {
+              regularTotal1 += Number(score) || 0;
+              regularTotal2 += Number(team2Scores[index]) || 0;
+            }
+          });
+          
+          // PK戦のスコアがある場合は分離表示
+          if (pkTotal1 > 0 || pkTotal2 > 0) {
+            return `${regularTotal1} - ${regularTotal2} (PK ${pkTotal1}-${pkTotal2})`;
           }
         }
 
@@ -667,6 +683,51 @@ export default function AdminMatchesPage() {
         return `${team1Total} - ${team2Total}`;
       } else if (match.team1_scores !== undefined && match.team2_scores !== undefined) {
         // 未確定スコアの処理（カンマ区切りスコアの合計を計算）
+        
+        // サッカーでPK戦がある場合の特別処理（未確定スコア）
+        if (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods) {
+          let team1Scores: number[] = [];
+          let team2Scores: number[] = [];
+          
+          // スコアを配列に変換
+          if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
+            team1Scores = match.team1_scores.split(',').map(s => parseInt(s) || 0);
+          } else {
+            team1Scores = [typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) || 0 : match.team1_scores || 0];
+          }
+          
+          if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
+            team2Scores = match.team2_scores.split(',').map(s => parseInt(s) || 0);
+          } else {
+            team2Scores = [typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) || 0 : match.team2_scores || 0];
+          }
+          
+          let regularTotal1 = 0;
+          let regularTotal2 = 0;
+          let pkTotal1 = 0;
+          let pkTotal2 = 0;
+          
+          // 各ピリオドをチェックしてPK戦かどうか判定
+          team1Scores.forEach((score, index) => {
+            const periodNumber = index + 1;
+            const period = sportConfig.ruleConfig?.default_periods?.find(p => p.period_number === periodNumber);
+            
+            if (period && period.period_name.includes('PK')) {
+              pkTotal1 += Number(score) || 0;
+              pkTotal2 += Number(team2Scores[index]) || 0;
+            } else {
+              regularTotal1 += Number(score) || 0;
+              regularTotal2 += Number(team2Scores[index]) || 0;
+            }
+          });
+          
+          // PK戦のスコアがある場合は分離表示
+          if (pkTotal1 > 0 || pkTotal2 > 0) {
+            return `${regularTotal1} - ${regularTotal2} (PK ${pkTotal1}-${pkTotal2})`;
+          }
+        }
+        
+        // 通常の処理（PK戦がない場合またはサッカー以外）
         let team1Total = 0;
         let team2Total = 0;
         
@@ -839,6 +900,9 @@ export default function AdminMatchesPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 通知バナー - この大会に関連する要対応事項のみ表示 */}
+        <NotificationBanner tournamentId={parseInt(tournamentId)} />
+        
         {/* フィルター */}
         <Card className="mb-6">
           <CardContent className="p-4 space-y-4">

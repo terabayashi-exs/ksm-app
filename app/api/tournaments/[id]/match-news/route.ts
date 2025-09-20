@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -21,6 +22,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
     const thirtyMinutesAgoJST = new Date(thirtyMinutesAgo.getTime() + 9 * 60 * 60 * 1000)
       .toISOString().replace('T', ' ').substring(0, 19);
+
+    // 競技設定を取得（修正）
+    const sportCode = await getTournamentSportCode(tournamentId);
+    const sportConfig = getSportScoreConfig(sportCode);
     
     // 速報対象の試合を取得
     const matchesResult = await db.execute(`
@@ -70,29 +75,75 @@ export async function GET(request: NextRequest, context: RouteContext) {
         LIMIT 6
     `, [tournamentId, thirtyMinutesAgoJST]);
 
-    // データ整形（実際の結果データを使用）
+    // データ整形（PK戦を考慮したスコア計算）
     const formattedMatches = matchesResult.rows.map(row => {
-      // 確定済み結果があればそちらを使用、なければライブデータを使用
-      // カンマ区切りスコアの合計を計算
-      const team1Goals = row.final_team1_scores !== null ? 
-        (typeof row.final_team1_scores === 'string' ? 
-          row.final_team1_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
-          Number(row.final_team1_scores)) :
-        (row.team1_scores !== null ? 
-          (typeof row.team1_scores === 'string' ? 
-            row.team1_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
-            Number(row.team1_scores)) : 
-          null);
-      
-      const team2Goals = row.final_team2_scores !== null ? 
-        (typeof row.final_team2_scores === 'string' ? 
-          row.final_team2_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
-          Number(row.final_team2_scores)) :
-        (row.team2_scores !== null ? 
-          (typeof row.team2_scores === 'string' ? 
-            row.team2_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
-            Number(row.team2_scores)) : 
-          null);
+      // スコアデータを取得（確定済み結果があればそちらを優先）
+      const scoreData = row.final_team1_scores !== null ? 
+        { team1_scores: row.final_team1_scores, team2_scores: row.final_team2_scores } :
+        { team1_scores: row.team1_scores, team2_scores: row.team2_scores };
+
+      // PK戦を考慮したスコア計算関数
+      const calculateDisplayScore = (team1ScoreData: string | null, team2ScoreData: string | null) => {
+        if (team1ScoreData === null || team2ScoreData === null) {
+          return { team1Goals: null, team2Goals: null, scoreDisplay: null };
+        }
+
+        // スコアを配列に変換
+        let team1Scores: number[] = [];
+        let team2Scores: number[] = [];
+
+        if (typeof team1ScoreData === 'string' && team1ScoreData.includes(',')) {
+          team1Scores = team1ScoreData.split(',').map((s: string) => Number(s) || 0);
+        } else {
+          team1Scores = [Number(team1ScoreData) || 0];
+        }
+
+        if (typeof team2ScoreData === 'string' && team2ScoreData.includes(',')) {
+          team2Scores = team2ScoreData.split(',').map((s: string) => Number(s) || 0);
+        } else {
+          team2Scores = [Number(team2ScoreData) || 0];
+        }
+
+        // PK戦がある場合の特別処理（5つ以上のスコア要素がある場合）
+        if (sportConfig?.supports_pk && team1Scores.length >= 5 && team2Scores.length >= 5) {
+          // 通常時間（最初の4要素）とPK戦（5番目以降）を分離
+          const regularTotal1 = team1Scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+          const regularTotal2 = team2Scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+          const pkTotal1 = team1Scores.slice(4).reduce((sum, score) => sum + score, 0);
+          const pkTotal2 = team2Scores.slice(4).reduce((sum, score) => sum + score, 0);
+
+          // PK戦のスコアがある場合は分離表示
+          if (pkTotal1 > 0 || pkTotal2 > 0) {
+            return {
+              team1Goals: regularTotal1,
+              team2Goals: regularTotal2,
+              scoreDisplay: `${regularTotal1} - ${regularTotal2} (PK ${pkTotal1}-${pkTotal2})`
+            };
+          }
+
+          // PK戦がない場合は通常時間のスコアのみ
+          return {
+            team1Goals: regularTotal1,
+            team2Goals: regularTotal2,
+            scoreDisplay: `${regularTotal1} - ${regularTotal2}`
+          };
+        }
+
+        // 通常の処理（PK戦がない場合またはサッカー以外）
+        const team1Total = team1Scores.reduce((sum, score) => sum + score, 0);
+        const team2Total = team2Scores.reduce((sum, score) => sum + score, 0);
+        
+        return {
+          team1Goals: team1Total,
+          team2Goals: team2Total,
+          scoreDisplay: `${team1Total} - ${team2Total}`
+        };
+      };
+
+      const { team1Goals, team2Goals, scoreDisplay } = calculateDisplayScore(
+        scoreData.team1_scores ? String(scoreData.team1_scores) : null, 
+        scoreData.team2_scores ? String(scoreData.team2_scores) : null
+      );
 
       return {
         match_id: Number(row.match_id),
@@ -101,6 +152,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         team2_display_name: String(row.team2_display_name),
         team1_goals: team1Goals,
         team2_goals: team2Goals,
+        score_display: scoreDisplay, // PK戦を考慮したスコア表示
         winner_team_id: row.final_winner_team_id ? String(row.final_winner_team_id) : null,
         team1_id: row.team1_id ? String(row.team1_id) : null,
         team2_id: row.team2_id ? String(row.team2_id) : null,
