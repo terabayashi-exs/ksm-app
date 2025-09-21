@@ -35,7 +35,7 @@ export async function GET(
         -- 多競技対応の拡張データ
         ml.team1_scores as live_team1_scores,
         ml.team2_scores as live_team2_scores,
-        tr.active_periods,
+        ml.period_count as live_period_count,
         mf.winner_team_id,
         COALESCE(mf.is_draw, 0) as is_draw,
         COALESCE(mf.is_walkover, 0) as is_walkover,
@@ -55,16 +55,7 @@ export async function GET(
       ORDER BY ml.match_number, ml.match_code
     `;
 
-    // execution_groupを取得するための別クエリ
-    const executionGroupQuery = `
-      SELECT 
-        mt.match_code,
-        mt.execution_group
-      FROM m_match_templates mt
-      INNER JOIN t_tournaments t ON t.format_id = mt.format_id
-      WHERE t.tournament_id = ?
-        AND mt.phase = 'final'
-    `;
+    // execution_groupは現在のスキーマでは利用不可
 
     const matches = await db.execute(query, [tournamentId]);
 
@@ -76,17 +67,8 @@ export async function GET(
       );
     }
 
-    // execution_groupを取得
+    // execution_groupは現在のスキーマでは利用不可のため、nullに設定
     const executionGroupMap = new Map<string, number>();
-    try {
-      const executionGroupResult = await db.execute(executionGroupQuery, [tournamentId]);
-      executionGroupResult.rows.forEach(row => {
-        executionGroupMap.set(row.match_code as string, row.execution_group as number);
-      });
-    } catch (error) {
-      console.warn('execution_group取得に失敗しました:', error);
-      // execution_groupが取得できなくても続行（フォールバック処理がある）
-    }
 
     // データを整形（多競技対応）
     const bracketData = matches.rows.map(row => {
@@ -114,12 +96,28 @@ export async function GET(
       try {
         const liveTeam1ScoresStr = row.live_team1_scores as string | null;
         const liveTeam2ScoresStr = row.live_team2_scores as string | null;
-        const activePeriodsStr = row.active_periods as string | null;
+        const livePeriodCount = row.live_period_count as number | null;
 
-        if (liveTeam1ScoresStr && liveTeam2ScoresStr && activePeriodsStr) {
-          const team1Scores = JSON.parse(liveTeam1ScoresStr);
-          const team2Scores = JSON.parse(liveTeam2ScoresStr);
-          const activePeriods = JSON.parse(activePeriodsStr);
+        if (liveTeam1ScoresStr && liveTeam2ScoresStr) {
+          // カンマ区切り文字列を配列に変換（JSONではない場合の対応）
+          let team1Scores: number[];
+          let team2Scores: number[];
+          
+          try {
+            // まずJSONとしてパースを試行
+            team1Scores = JSON.parse(liveTeam1ScoresStr);
+            team2Scores = JSON.parse(liveTeam2ScoresStr);
+          } catch {
+            // JSON形式でない場合はカンマ区切り文字列として処理
+            team1Scores = liveTeam1ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
+            team2Scores = liveTeam2ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
+          }
+
+          // period_countからactive_periodsを生成
+          let activePeriods: number[] = [];
+          if (livePeriodCount && livePeriodCount > 0) {
+            activePeriods = Array.from({ length: livePeriodCount }, (_, i) => i + 1);
+          }
 
           Object.assign(baseData, {
             team1_scores: team1Scores,

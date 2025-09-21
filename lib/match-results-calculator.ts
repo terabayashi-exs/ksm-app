@@ -265,23 +265,37 @@ async function getBlockResults(
       try {
         const team1ScoresStr = row.team1_scores as string | null;
         const team2ScoresStr = row.team2_scores as string | null;
-        const activePeriodsStr = row.active_periods as string | null;
+        const periodCount = row.period_count as number | null;
 
-        if (team1ScoresStr && team2ScoresStr && activePeriodsStr) {
-          const team1Scores = JSON.parse(team1ScoresStr);
-          const team2Scores = JSON.parse(team2ScoresStr);
-          const activePeriods = JSON.parse(activePeriodsStr);
+        if (team1ScoresStr && team2ScoresStr) {
+          // カンマ区切り文字列を配列に変換（JSONではない場合の対応）
+          let team1Scores: number[];
+          let team2Scores: number[];
+          
+          try {
+            // まずJSONとしてパースを試行
+            team1Scores = JSON.parse(team1ScoresStr);
+            team2Scores = JSON.parse(team2ScoresStr);
+          } catch {
+            // JSON形式でない場合はカンマ区切り文字列として処理
+            team1Scores = team1ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
+            team2Scores = team2ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
+          }
 
           baseMatch.team1_scores = team1Scores;
           baseMatch.team2_scores = team2Scores;
-          baseMatch.active_periods = activePeriods;
+          
+          // period_countからactive_periodsを生成
+          if (periodCount && periodCount > 0) {
+            baseMatch.active_periods = Array.from({ length: periodCount }, (_, i) => i + 1);
+          }
 
           // サッカーの場合はPKデータを抽出
-          if (sportCode === 'soccer' && baseMatch.is_confirmed) {
+          if (sportCode === 'soccer' && baseMatch.is_confirmed && baseMatch.active_periods) {
             const team1SoccerData = extractSoccerScoreData(
               team1Scores, team2Scores, baseMatch.team1_id, 
               baseMatch.team1_id, baseMatch.team2_id, 
-              baseMatch.winner_team_id, activePeriods
+              baseMatch.winner_team_id, baseMatch.active_periods
             );
             
             baseMatch.soccer_data = team1SoccerData;
