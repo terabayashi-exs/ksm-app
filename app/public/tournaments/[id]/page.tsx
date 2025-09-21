@@ -8,11 +8,12 @@ import TournamentSchedule from '@/components/features/tournament/TournamentSched
 import TournamentStandings from '@/components/features/tournament/TournamentStandings';
 import TournamentResults from '@/components/features/tournament/TournamentResults';
 import TournamentTeams from '@/components/features/tournament/TournamentTeams';
+import TournamentBracket from '@/components/features/tournament/TournamentBracket';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink, GitBranch } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
 import { getTournamentById } from '@/lib/tournament-detail';
@@ -291,6 +292,11 @@ function Teams({ tournament }: { tournament: Tournament }) {
   return <TournamentTeams tournamentId={tournament.tournament_id} />;
 }
 
+// トーナメント表タブ
+function Bracket({ tournament }: { tournament: Tournament }) {
+  return <TournamentBracket tournamentId={tournament.tournament_id} />;
+}
+
 // ローディングコンポーネント
 function TournamentDetailLoading() {
   return (
@@ -344,7 +350,7 @@ async function TournamentDetailContent({ params }: PageProps) {
 
           {/* タブナビゲーション */}
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-5 sm:grid-rows-1">
+            <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-6 sm:grid-rows-1">
               <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden xs:inline sm:inline">大会</span>概要
@@ -352,6 +358,10 @@ async function TournamentDetailContent({ params }: PageProps) {
               <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden xs:inline sm:inline">日程・</span>結果
+              </TabsTrigger>
+              <TabsTrigger value="bracket" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline sm:inline">ト</span>ーナメント表
               </TabsTrigger>
               <TabsTrigger value="results" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -377,6 +387,10 @@ async function TournamentDetailContent({ params }: PageProps) {
 
             <TabsContent value="schedule">
               <ScheduleResults tournament={tournament} />
+            </TabsContent>
+
+            <TabsContent value="bracket">
+              <Bracket tournament={tournament} />
             </TabsContent>
 
             <TabsContent value="results">
