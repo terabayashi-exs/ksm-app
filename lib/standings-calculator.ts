@@ -1024,6 +1024,230 @@ function determineTournamentPosition(teamId: string, finalMatches: Array<{
  */
 async function calculateFinalTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
   try {
+    // テンプレートベース順位計算を実行
+    return await calculateTemplateBasedTournamentStandings(tournamentId);
+  } catch (error) {
+    console.error('テンプレートベース順位計算に失敗、フォールバック実行:', error);
+    return await calculateLegacyTournamentStandings(tournamentId);
+  }
+}
+
+/**
+ * テンプレートベースの決勝トーナメント順位計算
+ */
+async function calculateTemplateBasedTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+  try {
+    // 大会のフォーマットIDを取得
+    const tournamentResult = await db.execute({
+      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
+      args: [tournamentId]
+    });
+    
+    if (!tournamentResult.rows.length) {
+      throw new Error('大会が見つかりません');
+    }
+    
+    const formatId = tournamentResult.rows[0].format_id as number;
+
+    // 決勝トーナメントの試合情報とテンプレート情報を取得
+    const finalMatchesResult = await db.execute({
+      sql: `
+        SELECT 
+          ml.match_id,
+          ml.match_code,
+          ml.team1_id,
+          ml.team2_id,
+          COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
+          COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
+          COALESCE(t1.team_omission, '') as team1_omission,
+          COALESCE(t2.team_omission, '') as team2_omission,
+          mf.team1_scores,
+          mf.team2_scores,
+          mf.winner_team_id,
+          mf.is_draw,
+          mf.is_walkover,
+          CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
+          -- テンプレート情報
+          mt.winner_position,
+          mt.loser_position_start,
+          mt.loser_position_end,
+          mt.position_note
+        FROM t_matches_live ml
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
+        LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = 'final'
+        WHERE mb.tournament_id = ? 
+          AND mb.phase = 'final'
+        ORDER BY ml.match_number, ml.match_code
+      `,
+      args: [formatId, tournamentId]
+    });
+
+    const finalMatches = finalMatchesResult.rows.map(row => ({
+      match_id: row.match_id as number,
+      match_code: row.match_code as string,
+      team1_id: row.team1_id as string | null,
+      team2_id: row.team2_id as string | null,
+      team1_display_name: row.team1_display_name as string,
+      team2_display_name: row.team2_display_name as string,
+      team1_omission: row.team1_omission as string,
+      team2_omission: row.team2_omission as string,
+      team1_scores: row.team1_scores as number | null,
+      team2_scores: row.team2_scores as number | null,
+      winner_team_id: row.winner_team_id as string | null,
+      is_draw: Boolean(row.is_draw),
+      is_walkover: Boolean(row.is_walkover),
+      is_confirmed: Boolean(row.is_confirmed),
+      winner_position: row.winner_position as number | null,
+      loser_position_start: row.loser_position_start as number | null,
+      loser_position_end: row.loser_position_end as number | null,
+      position_note: row.position_note as string | null
+    }));
+
+    // 全参加チームの情報を取得（修正版クエリ）
+    const allTeamsResult = await db.execute({
+      sql: `
+        SELECT DISTINCT team_id, team_name, team_omission
+        FROM (
+          SELECT 
+            ml.team1_id as team_id,
+            COALESCE(t1.team_name, ml.team1_display_name) as team_name,
+            COALESCE(t1.team_omission, '') as team_omission
+          FROM t_matches_live ml
+          LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
+          WHERE mb.tournament_id = ? AND mb.phase = 'final'
+            AND ml.team1_id IS NOT NULL
+            
+          UNION
+          
+          SELECT 
+            ml.team2_id as team_id,
+            COALESCE(t2.team_name, ml.team2_display_name) as team_name,
+            COALESCE(t2.team_omission, '') as team_omission
+          FROM t_matches_live ml
+          LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+          WHERE mb.tournament_id = ? AND mb.phase = 'final'
+            AND ml.team2_id IS NOT NULL
+        ) all_teams
+        WHERE team_id IS NOT NULL
+        ORDER BY team_name
+      `,
+      args: [tournamentId, tournamentId]
+    });
+
+    const allTeams = new Map<string, { team_name: string; team_omission: string }>();
+    allTeamsResult.rows.forEach(row => {
+      if (row.team_id) {
+        allTeams.set(row.team_id as string, {
+          team_name: row.team_name as string,
+          team_omission: row.team_omission as string
+        });
+      }
+    });
+
+    const rankings: (TeamStanding & { position_note?: string })[] = [];
+    const rankedTeamIds = new Set<string>();
+
+    // 確定済み試合から順位を決定
+    for (const match of finalMatches) {
+      if (!match.is_confirmed || !match.team1_id || !match.team2_id) {
+        continue;
+      }
+
+      const winnerId = match.winner_team_id;
+      const loserId = match.team1_id === winnerId ? match.team2_id : match.team1_id;
+      
+      // 勝者の順位設定
+      if (winnerId && match.winner_position && !rankedTeamIds.has(winnerId)) {
+        const teamInfo = allTeams.get(winnerId);
+        if (teamInfo) {
+          rankings.push({
+            team_id: winnerId,
+            team_name: teamInfo.team_name,
+            team_omission: teamInfo.team_omission || undefined,
+            position: match.winner_position,
+            points: 0,
+            matches_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            goal_difference: 0,
+            position_note: match.position_note || undefined
+          });
+          rankedTeamIds.add(winnerId);
+        }
+      }
+
+      // 敗者の順位設定
+      if (loserId && match.loser_position_start && !rankedTeamIds.has(loserId)) {
+        const teamInfo = allTeams.get(loserId);
+        if (teamInfo) {
+          // loser_position_startとloser_position_endが同じ場合は固定順位
+          // 異なる場合は範囲の最初の順位を使用
+          const position = match.loser_position_start;
+          
+          rankings.push({
+            team_id: loserId,
+            team_name: teamInfo.team_name,
+            team_omission: teamInfo.team_omission || undefined,
+            position: position,
+            points: 0,
+            matches_played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            goal_difference: 0,
+            position_note: match.position_note || undefined
+          });
+          rankedTeamIds.add(loserId);
+        }
+      }
+    }
+
+    // 未順位のチームがある場合のデフォルト処理
+    for (const [teamId, teamInfo] of allTeams) {
+      if (!rankedTeamIds.has(teamId)) {
+        rankings.push({
+          team_id: teamId,
+          team_name: teamInfo.team_name,
+          team_omission: teamInfo.team_omission || undefined,
+          position: 0, // 未確定順位（最上位に表示）
+          points: 0,
+          matches_played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          goals_for: 0,
+          goals_against: 0,
+          goal_difference: 0
+        });
+      }
+    }
+
+    // 順位でソート
+    rankings.sort((a, b) => a.position - b.position);
+    
+    return rankings;
+
+  } catch (error) {
+    console.error('テンプレートベース順位計算エラー:', error);
+    throw error;
+  }
+}
+
+/**
+ * レガシーの決勝トーナメント順位計算（フォールバック用）
+ */
+async function calculateLegacyTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+  try {
     // 決勝トーナメントの試合情報を取得
     const finalMatchesResult = await db.execute({
       sql: `
@@ -1067,8 +1291,8 @@ async function calculateFinalTournamentStandings(tournamentId: number): Promise<
       is_confirmed: Boolean(row.is_confirmed)
     }));
 
-    // 各カテゴリの試合を分類
-    const finalMatch = finalMatches.find(m => m.match_code === 'T8');
+    // 新旧両形式の試合コードに対応
+    const finalMatch = finalMatches.find(m => m.match_code === 'T8' || m.match_code === 'M8');
 
     // 全参加チームIDを取得
     const teamSet = new Set<string>();

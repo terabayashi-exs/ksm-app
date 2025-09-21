@@ -42,6 +42,7 @@ interface TeamStanding {
   goals_for: number;
   goals_against: number;
   goal_difference: number;
+  position_note?: string; // テンプレートベース順位説明
 }
 
 interface BlockStanding {
@@ -348,14 +349,20 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                   {block.teams.map((team) => (
                     <tr 
                       key={team.team_id} 
-                      className={`border-b transition-colors ${team.position > 0 ? getPositionBgColor(team.position) : 'hover:bg-gray-50'}`}
+                      className={`border-b transition-colors ${
+                        team.position === 0 
+                          ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                          : team.position > 0 
+                            ? getPositionBgColor(team.position) 
+                            : 'hover:bg-gray-50'
+                      }`}
                     >
                       <td className="py-2 md:py-3 px-2 md:px-3">
                         <div className="flex items-center">
                           <span className="hidden md:inline-block mr-2">
-                            {team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
+                            {team.position > 0 ? getPositionIcon(team.position) : team.position === 0 ? <span className="text-gray-400">-</span> : <Hash className="h-4 w-4 text-gray-400" />}
                           </span>
-                          <span className="font-bold text-base md:text-lg">{team.position}</span>
+                          <span className="font-bold text-base md:text-lg">{team.position === 0 ? '-' : team.position}</span>
                         </div>
                       </td>
                       <td className="py-2 md:py-3 px-2 md:px-3">
@@ -459,34 +466,41 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                       {isFinalPhase(block.phase) && (
                         <td className="py-2 md:py-3 px-2 md:px-3 text-center">
                           <span className="text-xs md:text-sm text-gray-600">
-                            {team.position === 1 && '優勝'}
-                            {team.position === 2 && '準優勝'}
-                            {team.position === 3 && '3位'}
-                            {team.position === 4 && '4位'}
-                            {team.position === 5 && (
-                              <>
-                                <span className="md:hidden">準々敗退</span>
-                                <span className="hidden md:inline">準々決勝敗退</span>
-                              </>
-                            )}
-                            {team.position === 9 && (
-                              <>
-                                <span className="md:hidden">ベスト16</span>
-                                <span className="hidden md:inline">ベスト16</span>
-                              </>
-                            )}
-                            {team.position === 17 && (
-                              <>
-                                <span className="md:hidden">ベスト32</span>
-                                <span className="hidden md:inline">ベスト32</span>
-                              </>
-                            )}
-                            {team.position === 25 && (
-                              <>
-                                <span className="md:hidden">1回戦敗退</span>
-                                <span className="hidden md:inline">1回戦敗退</span>
-                              </>
-                            )}
+                            {team.position_note || (() => {
+                              // フォールバック: テンプレートベース順位説明がない場合のレガシー表示
+                              switch (team.position) {
+                                case 1: return '優勝';
+                                case 2: return '準優勝';
+                                case 3: return '3位';
+                                case 4: return '4位';
+                                case 5: return (
+                                  <>
+                                    <span className="md:hidden">準々敗退</span>
+                                    <span className="hidden md:inline">準々決勝敗退</span>
+                                  </>
+                                );
+                                case 9: return (
+                                  <>
+                                    <span className="md:hidden">ベスト16</span>
+                                    <span className="hidden md:inline">ベスト16</span>
+                                  </>
+                                );
+                                case 17: return (
+                                  <>
+                                    <span className="md:hidden">ベスト32</span>
+                                    <span className="hidden md:inline">ベスト32</span>
+                                  </>
+                                );
+                                case 25: return (
+                                  <>
+                                    <span className="md:hidden">1回戦敗退</span>
+                                    <span className="hidden md:inline">1回戦敗退</span>
+                                  </>
+                                );
+                                case 0: return '順位未確定';
+                                default: return `${team.position}位`;
+                              }
+                            })()}
                           </span>
                         </td>
                       )}
