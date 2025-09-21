@@ -13,7 +13,7 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink } from 'lucide-react';
-import { formatDate, formatDateOnly } from '@/lib/utils';
+import { formatDateOnly } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
 import { getTournamentById } from '@/lib/tournament-detail';
 import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
@@ -253,14 +253,14 @@ function TournamentOverview({
             <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
               <div>
                 <p className="text-sm text-orange-700 dark:text-orange-300">開始</p>
-                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDate(tournament.recruitment_start_date)}</p>
+                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDateOnly(tournament.recruitment_start_date)}</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-0.5 bg-orange-300 dark:bg-orange-600"></div>
               </div>
               <div>
                 <p className="text-sm text-orange-700 dark:text-orange-300">終了</p>
-                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDate(tournament.recruitment_end_date)}</p>
+                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDateOnly(tournament.recruitment_end_date)}</p>
               </div>
             </div>
           </CardContent>

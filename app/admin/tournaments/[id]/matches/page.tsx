@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,23 +100,26 @@ export default function AdminMatchesPage() {
     ruleConfig?: SportRuleConfig;
   } | null>(null);
 
-  // 大会情報と試合一覧取得
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // セッション状態をログ出力
-        console.log('Session status:', status, 'Session data:', session);
-        
-        if (status === 'loading') {
-          console.log('Session is still loading, skipping API call');
-          return;
-        }
-        
-        if (!session || session.user.role !== 'admin') {
-          console.log('Not authenticated or not admin, redirecting');
-          router.push('/auth/login');
-          return;
-        }
+  // データ取得関数を外部に抽出（useCallbackで最適化）
+  const fetchData = useCallback(async (showLoader = false) => {
+    try {
+      // セッション状態をログ出力
+      console.log('Session status:', status, 'Session data:', session);
+      
+      if (status === 'loading') {
+        console.log('Session is still loading, skipping API call');
+        return;
+      }
+      
+      if (!session || session.user.role !== 'admin') {
+        console.log('Not authenticated or not admin, redirecting');
+        router.push('/auth/login');
+        return;
+      }
+
+      if (showLoader) {
+        setLoading(true);
+      }
         // 大会情報取得
         const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`);
         const tournamentResult = await tournamentResponse.json();
@@ -224,15 +227,19 @@ export default function AdminMatchesPage() {
           console.error('Failed to fetch matches:', matchesResult.error);
         }
 
-      } catch (error) {
-        console.error('Data fetch error:', error);
-      } finally {
+    } catch (error) {
+      console.error('Data fetch error:', error);
+    } finally {
+      if (showLoader) {
         setLoading(false);
       }
-    };
-
-    fetchData();
+    }
   }, [tournamentId, session, status, router]);
+
+  // 大会情報と試合一覧取得
+  useEffect(() => {
+    fetchData(true); // 初回読み込み時はローダーを表示
+  }, [fetchData]);
 
   // リアルタイム更新
   useEffect(() => {
@@ -263,6 +270,39 @@ export default function AdminMatchesPage() {
       eventSource.close();
     };
   }, [tournamentId]);
+
+  // ページフォーカス時の自動リフレッシュ
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Page focused, refreshing data...');
+      fetchData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('Page visible, refreshing data...');
+        fetchData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchData]);
+
+  // 定期的なポーリング（5秒間隔）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('Polling data refresh...');
+      fetchData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // QRコード生成
   const generateQR = (matchId: number) => {
@@ -570,27 +610,141 @@ export default function AdminMatchesPage() {
     }
   };
 
-  // 勝者チーム名を取得
+  // 勝者チーム名を取得（PK戦を考慮した改良版）
   const getWinnerName = (match: MatchData) => {
+    console.log(`[WINNER_DEBUG] ${match.match_code} - Calculating winner for match:`, {
+      final_team1_scores: match.final_team1_scores,
+      final_team2_scores: match.final_team2_scores,
+      team1_scores: match.team1_scores,
+      team2_scores: match.team2_scores,
+      is_confirmed: match.is_confirmed,
+      team1_name: match.team1_name,
+      team2_name: match.team2_name,
+      sport_code: sportConfig?.sport_code
+    });
+    
     // スコアがない場合は勝者なし
     if (!match.final_team1_scores && !match.final_team2_scores && !match.team1_scores && !match.team2_scores) {
+      console.log(`[WINNER_DEBUG] ${match.match_code} - No scores found`);
       return null;
     }
     
-    const team1Score = match.final_team1_scores 
-      ? match.final_team1_scores.split(',').reduce((sum, score) => sum + parseInt(score || '0'), 0)
-      : (match.team1_scores ? (typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) : match.team1_scores) : 0);
-    const team2Score = match.final_team2_scores 
-      ? match.final_team2_scores.split(',').reduce((sum, score) => sum + parseInt(score || '0'), 0)
-      : (match.team2_scores ? (typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) : match.team2_scores) : 0);
+    // 確定済みスコアがある場合はそちらを優先
+    let team1Scores: number[] = [];
+    let team2Scores: number[] = [];
     
-    if (team1Score > team2Score) return match.team1_name;
-    if (team2Score > team1Score) return match.team2_name;
+    if (match.final_team1_scores && match.final_team2_scores) {
+      // 確定済みスコアを使用
+      try {
+        // PKスポーツ特有の形式に対応: "0,3" = 通常0点 + PK3点
+        if (match.final_team1_scores.includes(',')) {
+          team1Scores = match.final_team1_scores.split(',').map(s => parseInt(s || '0'));
+        } else {
+          team1Scores = [parseInt(match.final_team1_scores || '0')];
+        }
+        
+        if (match.final_team2_scores.includes(',')) {
+          team2Scores = match.final_team2_scores.split(',').map(s => parseInt(s || '0'));
+        } else {
+          team2Scores = [parseInt(match.final_team2_scores || '0')];
+        }
+        console.log(`[WINNER_DEBUG] ${match.match_code} - Final scores parsed:`, { team1Scores, team2Scores });
+      } catch (error) {
+        console.error(`[WINNER_DEBUG] ${match.match_code} - Score parsing error:`, error);
+        team1Scores = [parseInt(match.final_team1_scores || '0')];
+        team2Scores = [parseInt(match.final_team2_scores || '0')];
+      }
+    } else if (match.team1_scores !== undefined && match.team2_scores !== undefined) {
+      // 未確定スコアを使用
+      if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
+        team1Scores = match.team1_scores.split(',').map(s => parseInt(s || '0'));
+      } else {
+        team1Scores = [typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) : match.team1_scores || 0];
+      }
+      
+      if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
+        team2Scores = match.team2_scores.split(',').map(s => parseInt(s || '0'));
+      } else {
+        team2Scores = [typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) : match.team2_scores || 0];
+      }
+      console.log(`[WINNER_DEBUG] ${match.match_code} - Live scores parsed:`, { team1Scores, team2Scores });
+    } else {
+      console.log(`[WINNER_DEBUG] ${match.match_code} - No valid scores found`);
+      return null;
+    }
+
+    // PKスポーツ（PK選手権）専用の勝者判定ロジック
+    if (sportConfig?.sport_code === 'pk_championship') {
+      console.log(`[WINNER_DEBUG] ${match.match_code} - Using PK Championship logic`);
+      
+      const regular1 = team1Scores[0] || 0;
+      const regular2 = team2Scores[0] || 0;
+      const pk1 = team1Scores[1] || 0;
+      const pk2 = team2Scores[1] || 0;
+      
+      console.log(`[WINNER_DEBUG] ${match.match_code} - PK Championship scores:`, { 
+        regular1, regular2, pk1, pk2 
+      });
+      
+      // PK戦がある場合はPK戦の結果で勝者を決定
+      if (pk1 > 0 || pk2 > 0) {
+        console.log(`[WINNER_DEBUG] ${match.match_code} - PK battle detected`);
+        if (pk1 > pk2) {
+          console.log(`[WINNER_DEBUG] ${match.match_code} - Team1 wins by PK: ${match.team1_name}`);
+          return match.team1_name;
+        }
+        if (pk2 > pk1) {
+          console.log(`[WINNER_DEBUG] ${match.match_code} - Team2 wins by PK: ${match.team2_name}`);
+          return match.team2_name;
+        }
+        console.log(`[WINNER_DEBUG] ${match.match_code} - PK draw`);
+        return '引き分け';
+      }
+      
+      // 通常時間の結果で勝者を決定
+      console.log(`[WINNER_DEBUG] ${match.match_code} - No PK, using regular time`);
+      if (regular1 > regular2) {
+        console.log(`[WINNER_DEBUG] ${match.match_code} - Team1 wins regular: ${match.team1_name}`);
+        return match.team1_name;
+      }
+      if (regular2 > regular1) {
+        console.log(`[WINNER_DEBUG] ${match.match_code} - Team2 wins regular: ${match.team2_name}`);
+        return match.team2_name;
+      }
+      console.log(`[WINNER_DEBUG] ${match.match_code} - Regular time draw`);
+      return '引き分け';
+    }
+    
+    // 通常の処理（PK戦がない場合またはサッカー以外）
+    console.log(`[WINNER_DEBUG] ${match.match_code} - Using standard logic`);
+    const team1Total = team1Scores.reduce((sum, score) => sum + score, 0);
+    const team2Total = team2Scores.reduce((sum, score) => sum + score, 0);
+    
+    console.log(`[WINNER_DEBUG] ${match.match_code} - Standard totals:`, { team1Total, team2Total });
+    
+    if (team1Total > team2Total) {
+      console.log(`[WINNER_DEBUG] ${match.match_code} - Team1 wins: ${match.team1_name}`);
+      return match.team1_name;
+    }
+    if (team2Total > team1Total) {
+      console.log(`[WINNER_DEBUG] ${match.match_code} - Team2 wins: ${match.team2_name}`);
+      return match.team2_name;
+    }
+    console.log(`[WINNER_DEBUG] ${match.match_code} - Draw`);
     return '引き分け';
   };
 
   // スコアを取得（多競技対応）
   const getScoreDisplay = (match: MatchData) => {
+    console.log(`[SCORE_DEBUG] ${match.match_code} - Getting score display:`, {
+      is_confirmed: match.is_confirmed,
+      final_team1_scores: match.final_team1_scores,
+      final_team2_scores: match.final_team2_scores,
+      team1_scores: match.team1_scores,
+      team2_scores: match.team2_scores,
+      sport_code: sportConfig?.sport_code
+    });
+    
     try {
       if (match.is_confirmed && match.final_team1_scores && match.final_team2_scores) {
         // 確定済みスコアの処理（JSONまたはCSV形式に対応）
@@ -650,8 +804,8 @@ export default function AdminMatchesPage() {
           }
         }
 
-        // サッカーでPK戦がある場合の特別処理（ルール設定に基づく識別）
-        if (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods) {
+        // PKスポーツまたはサッカーでPK戦がある場合の特別処理
+        if ((sportConfig?.sport_code === 'pk_championship') || (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods)) {
           let regularTotal1 = 0;
           let regularTotal2 = 0;
           let pkTotal1 = 0;
@@ -677,6 +831,19 @@ export default function AdminMatchesPage() {
           }
         }
 
+        // PKスポーツ専用のスコア表示
+        if (sportConfig?.sport_code === 'pk_championship') {
+          const regular1 = team1Scores[0] || 0;
+          const regular2 = team2Scores[0] || 0;
+          const pk1 = team1Scores[1] || 0;
+          const pk2 = team2Scores[1] || 0;
+          
+          if (pk1 > 0 || pk2 > 0) {
+            return `${regular1} - ${regular2} (PK ${pk1}-${pk2})`;
+          }
+          return `${regular1} - ${regular2}`;
+        }
+
         // 通常のスコア合計
         const team1Total = team1Scores.reduce((sum, score) => sum + score, 0);
         const team2Total = team2Scores.reduce((sum, score) => sum + score, 0);
@@ -684,8 +851,8 @@ export default function AdminMatchesPage() {
       } else if (match.team1_scores !== undefined && match.team2_scores !== undefined) {
         // 未確定スコアの処理（カンマ区切りスコアの合計を計算）
         
-        // サッカーでPK戦がある場合の特別処理（未確定スコア）
-        if (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods) {
+        // PKスポーツまたはサッカーでPK戦がある場合の特別処理（未確定スコア）
+        if ((sportConfig?.sport_code === 'pk_championship') || (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods)) {
           let team1Scores: number[] = [];
           let team2Scores: number[] = [];
           
@@ -727,6 +894,35 @@ export default function AdminMatchesPage() {
           }
         }
         
+        // PKスポーツ専用の未確定スコア表示
+        if (sportConfig?.sport_code === 'pk_championship') {
+          let team1Scores: number[] = [];
+          let team2Scores: number[] = [];
+          
+          // スコアを配列に変換
+          if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
+            team1Scores = match.team1_scores.split(',').map(s => parseInt(s) || 0);
+          } else {
+            team1Scores = [typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) || 0 : match.team1_scores || 0];
+          }
+          
+          if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
+            team2Scores = match.team2_scores.split(',').map(s => parseInt(s) || 0);
+          } else {
+            team2Scores = [typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) || 0 : match.team2_scores || 0];
+          }
+          
+          const regular1 = team1Scores[0] || 0;
+          const regular2 = team2Scores[0] || 0;
+          const pk1 = team1Scores[1] || 0;
+          const pk2 = team2Scores[1] || 0;
+          
+          if (pk1 > 0 || pk2 > 0) {
+            return `${regular1} - ${regular2} (PK ${pk1}-${pk2})`;
+          }
+          return `${regular1} - ${regular2}`;
+        }
+
         // 通常の処理（PK戦がない場合またはサッカー以外）
         let team1Total = 0;
         let team2Total = 0;
@@ -874,6 +1070,19 @@ export default function AdminMatchesPage() {
             
             {/* 順位表更新ボタン */}
             <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log('Manual refresh triggered');
+                  fetchData(true); // 手動リフレッシュ時はローダーを表示
+                }}
+                disabled={loading}
+                className="flex items-center"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? '更新中...' : '最新情報に更新'}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
