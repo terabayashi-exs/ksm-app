@@ -120,10 +120,18 @@ function MatchCard({
 
   // 試合コードからブロック色を取得
   const getMatchCodeColor = (matchCode: string): string => {
+    // 新形式（M1-M8）に対応
+    if (['M1', 'M2', 'M3', 'M4'].includes(matchCode)) return 'bg-blue-100 text-blue-800'; // 準々決勝
+    if (['M5', 'M6'].includes(matchCode)) return 'bg-purple-100 text-purple-800'; // 準決勝
+    if (matchCode === 'M7') return 'bg-yellow-100 text-yellow-800'; // 3位決定戦
+    if (matchCode === 'M8') return 'bg-red-100 text-red-800'; // 決勝
+    
+    // 旧形式（T1-T8）にも対応（後方互換性）
     if (['T1', 'T2', 'T3', 'T4'].includes(matchCode)) return 'bg-blue-100 text-blue-800'; // 準々決勝
     if (['T5', 'T6'].includes(matchCode)) return 'bg-purple-100 text-purple-800'; // 準決勝
     if (matchCode === 'T7') return 'bg-yellow-100 text-yellow-800'; // 3位決定戦
     if (matchCode === 'T8') return 'bg-red-100 text-red-800'; // 決勝
+    
     return 'bg-muted text-muted-foreground';
   };
 
@@ -276,10 +284,16 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     if (!hasExecutionGroup) {
       // フォールバック: 従来の試合コードベースのグループ化
       const groups: BracketGroup[] = [];
-      const quarterFinals = matches.filter(m => ['T1', 'T2', 'T3', 'T4'].includes(m.match_code));
-      const semiFinals = matches.filter(m => ['T5', 'T6'].includes(m.match_code));
-      const thirdPlace = matches.find(m => m.match_code === 'T7');
-      const final = matches.find(m => m.match_code === 'T8');
+      
+      // 新形式（M1-M8）に対応
+      const quarterFinals = matches.filter(m => 
+        ['T1', 'T2', 'T3', 'T4', 'M1', 'M2', 'M3', 'M4'].includes(m.match_code)
+      );
+      const semiFinals = matches.filter(m => 
+        ['T5', 'T6', 'M5', 'M6'].includes(m.match_code)
+      );
+      const thirdPlace = matches.find(m => m.match_code === 'T7' || m.match_code === 'M7');
+      const final = matches.find(m => m.match_code === 'T8' || m.match_code === 'M8');
       
       if (quarterFinals.length > 0) {
         groups.push({
@@ -329,17 +343,17 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
 
     // グループ名を決定
     const getGroupName = (groupId: number, matchCount: number, matches: BracketMatch[]): string => {
-      // 試合コードから判定
-      if (matches.some(m => ['T1', 'T2', 'T3', 'T4'].includes(m.match_code))) return '準々決勝';
-      if (matches.some(m => ['T5', 'T6'].includes(m.match_code))) return '準決勝';
-      if (matches.some(m => m.match_code === 'T7')) return '3位決定戦';
-      if (matches.some(m => m.match_code === 'T8')) return '決勝';
+      // 試合コードから判定（新形式・旧形式両対応）
+      if (matches.some(m => ['T1', 'T2', 'T3', 'T4', 'M1', 'M2', 'M3', 'M4'].includes(m.match_code))) return '準々決勝';
+      if (matches.some(m => ['T5', 'T6', 'M5', 'M6'].includes(m.match_code))) return '準決勝';
+      if (matches.some(m => m.match_code === 'T7' || m.match_code === 'M7')) return '3位決定戦';
+      if (matches.some(m => m.match_code === 'T8' || m.match_code === 'M8')) return '決勝';
       
       // フォールバック: 試合数から推測
       if (matchCount >= 4) return '準々決勝';
       if (matchCount === 2) return '準決勝';
       if (matchCount === 1) {
-        const hasThirdPlace = matches.some(m => m.match_code === 'T7');
+        const hasThirdPlace = matches.some(m => m.match_code === 'T7' || m.match_code === 'M7');
         return hasThirdPlace ? '3位決定戦' : '決勝';
       }
       return `グループ${groupId}`;
@@ -434,8 +448,9 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
       let d: string;
       
       if (avoidThirdPlace) {
-        // 3位決定戦を迂回するルート
-        const thirdPlaceCard = bracketElement.querySelector(`[data-match="T"]`) as HTMLElement;
+        // 3位決定戦を迂回するルート（新形式・旧形式両対応）
+        const thirdPlaceCard = bracketElement.querySelector(`[data-match="T7"]`) || 
+                               bracketElement.querySelector(`[data-match="M7"]`) as HTMLElement;
         
         if (thirdPlaceCard) {
           const thirdPlaceRect = thirdPlaceCard.getBoundingClientRect();
