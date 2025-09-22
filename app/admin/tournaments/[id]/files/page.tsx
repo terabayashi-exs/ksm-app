@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import FileManagementContainer from '@/components/features/admin/FileManagementContainer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, FileText, HardDrive, Upload } from 'lucide-react';

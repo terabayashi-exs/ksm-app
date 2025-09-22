@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Download, Calendar, ExternalLink, RefreshCw } from 'lucide-react';
@@ -61,7 +61,7 @@ export default function PublicFilesList({
   const [error, setError] = useState<string | null>(null);
 
   // ファイル一覧を取得
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -93,12 +93,12 @@ export default function PublicFilesList({
     } finally {
       setLoading(false);
     }
-  };
+  }, [tournamentId, maxFiles]);
 
   // 初回読み込み
   useEffect(() => {
     fetchFiles();
-  }, [tournamentId]);
+  }, [fetchFiles]);
 
   // ローディング表示
   if (loading) {

@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -95,7 +95,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
   });
 
   // ファイル一覧を取得
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/tournaments/${tournamentId}/files`);
@@ -111,12 +111,12 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
     } finally {
       setLoading(false);
     }
-  };
+  }, [tournamentId]);
 
   // 初回読み込み & refreshTrigger変更時の更新
   useEffect(() => {
     fetchFiles();
-  }, [tournamentId, refreshTrigger]);
+  }, [tournamentId, refreshTrigger, fetchFiles]);
 
   // 編集ダイアログを開く
   const openEditDialog = (file: TournamentFile) => {
