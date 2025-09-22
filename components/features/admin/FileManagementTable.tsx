@@ -26,17 +26,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { 
   Download, 
   Edit, 
@@ -60,6 +49,11 @@ interface EditState {
   title: string;
   description: string;
   isPublic: boolean;
+}
+
+interface DeleteState {
+  isOpen: boolean;
+  file: TournamentFile | null;
 }
 
 // ファイルサイズを人間が読みやすい形式に変換
@@ -92,6 +86,11 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
     title: '',
     description: '',
     isPublic: true
+  });
+  
+  const [deleteState, setDeleteState] = useState<DeleteState>({
+    isOpen: false,
+    file: null
   });
 
   // ファイル一覧を取得
@@ -140,6 +139,22 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
     });
   };
 
+  // 削除ダイアログを開く
+  const openDeleteDialog = (file: TournamentFile) => {
+    setDeleteState({
+      isOpen: true,
+      file
+    });
+  };
+
+  // 削除ダイアログを閉じる
+  const closeDeleteDialog = () => {
+    setDeleteState({
+      isOpen: false,
+      file: null
+    });
+  };
+
   // ファイル情報を更新
   const handleUpdateFile = async () => {
     if (!editState.file) return;
@@ -174,9 +189,11 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
   };
 
   // ファイルを削除
-  const handleDeleteFile = async (fileId: number) => {
+  const handleDeleteFile = async () => {
+    if (!deleteState.file) return;
+
     try {
-      const response = await fetch(`/api/admin/tournaments/${tournamentId}/files/${fileId}`, {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/files/${deleteState.file.file_id}`, {
         method: 'DELETE'
       });
 
@@ -184,6 +201,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
 
       if (result.success) {
         await fetchFiles(); // ファイル一覧を更新
+        closeDeleteDialog(); // ダイアログを閉じる
       } else {
         alert('削除に失敗しました: ' + result.error);
       }
@@ -408,30 +426,36 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
                     </Dialog>
 
                     {/* 削除ボタン */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                    <Dialog open={deleteState.isOpen && deleteState.file?.file_id === file.file_id}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteDialog(file)}
+                        >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>ファイルを削除しますか？</AlertDialogTitle>
-                          <AlertDialogDescription>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>ファイルを削除しますか？</DialogTitle>
+                          <DialogDescription>
                             「{file.file_title}」を削除します。この操作は取り消せません。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteFile(file.file_id)}
-                            className="bg-red-600 hover:bg-red-700"
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={closeDeleteDialog}>
+                            キャンセル
+                          </Button>
+                          <Button 
+                            onClick={handleDeleteFile}
+                            className="bg-red-600 hover:bg-red-700 text-white"
                           >
                             削除
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </TableCell>
               </TableRow>
