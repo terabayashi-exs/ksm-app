@@ -342,6 +342,11 @@ export default function TournamentDashboardList() {
                 順位設定
               </Link>
             </Button>
+            <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                ファイル管理
+              </Link>
+            </Button>
             <Button 
               size="sm" 
               variant="outline" 
@@ -386,6 +391,11 @@ export default function TournamentDashboardList() {
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                 順位設定
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                ファイル管理
               </Link>
             </Button>
             {!tournament.is_archived && (
@@ -434,6 +444,11 @@ export default function TournamentDashboardList() {
             <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
               <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                 順位設定
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+              <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                ファイル管理
               </Link>
             </Button>
           </>

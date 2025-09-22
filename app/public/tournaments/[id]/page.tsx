@@ -9,6 +9,7 @@ import TournamentStandings from '@/components/features/tournament/TournamentStan
 import TournamentResults from '@/components/features/tournament/TournamentResults';
 import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import TournamentBracket from '@/components/features/tournament/TournamentBracket';
+import PublicFilesList from '@/components/features/tournament/PublicFilesList';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
@@ -191,6 +192,13 @@ function TournamentOverview({
           )}
         </div>
       )}
+
+      {/* 大会資料 */}
+      <PublicFilesList 
+        tournamentId={tournament.tournament_id}
+        showTitle={true}
+        layout="card"
+      />
 
       {/* 開催日程 */}
       {dateEntries.length > 0 && (
