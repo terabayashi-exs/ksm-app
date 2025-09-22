@@ -5,13 +5,27 @@
  * 環境に応じた Blob Storage トークンを取得
  */
 export function getBlobToken(): string | undefined {
+  const nodeEnv = process.env.NODE_ENV;
+  const vercelEnv = process.env.VERCEL_ENV;
+  
+  console.log('🌍 環境情報:', { nodeEnv, vercelEnv });
+  console.log('🔑 利用可能なトークン:', {
+    DEV_BLOB: !!process.env.DEV_BLOB_READ_WRITE_TOKEN,
+    PROD_BLOB: !!process.env.PROD_BLOB_READ_WRITE_TOKEN,
+    LEGACY_BLOB: !!process.env.BLOB_READ_WRITE_TOKEN
+  });
+  
   // 本番環境
-  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
-    return process.env.PROD_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+  if (nodeEnv === 'production' || vercelEnv === 'production') {
+    const token = process.env.PROD_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+    console.log('🏭 本番環境トークン選択:', token ? '設定済み' : '未設定');
+    return token;
   }
   
   // 開発環境・プレビュー環境
-  return process.env.DEV_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+  const token = process.env.DEV_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+  console.log('🧪 開発環境トークン選択:', token ? '設定済み' : '未設定');
+  return token;
 }
 
 /**

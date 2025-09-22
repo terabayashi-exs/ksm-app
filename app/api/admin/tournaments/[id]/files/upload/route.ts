@@ -25,23 +25,46 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// CORS対応のOPTIONSハンドラー
+export async function OPTIONS(_request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<FileUploadResponse>> {
+  console.log('🚀 ファイルアップロードAPI開始');
+  
   try {
     // 認証チェック
+    console.log('🔐 認証チェック開始');
     const session = await auth();
+    console.log('👤 セッション情報:', session?.user?.id, session?.user?.role);
+    
     if (!session || session.user.role !== 'admin') {
+      console.log('❌ 認証失敗: 管理者権限なし');
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
       );
     }
+    
+    console.log('✅ 認証成功');
 
     const { id } = await params;
     const tournamentId = parseInt(id);
+    console.log('🏆 大会ID:', tournamentId);
+    
     if (isNaN(tournamentId)) {
+      console.log('❌ 無効な大会ID:', id);
       return NextResponse.json(
         { success: false, error: '無効な大会IDです' },
         { status: 400 }
@@ -62,11 +85,20 @@ export async function POST(
     }
 
     // FormDataから情報を取得
+    console.log('📋 FormData解析開始');
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const title = formData.get('title') as string;
     const description = formData.get('description') as string | null;
     const uploadOrder = parseInt(formData.get('upload_order') as string) || 0;
+    
+    console.log('📂 ファイル情報:', {
+      filename: file?.name,
+      size: file?.size,
+      type: file?.type,
+      title,
+      description: description ? '設定あり' : 'なし'
+    });
 
     // バリデーション
     if (!file) {
@@ -230,8 +262,19 @@ export async function POST(
 
   } catch (error) {
     console.error('❌ ファイルアップロードエラー:', error);
+    console.error('❌ エラースタック:', error instanceof Error ? error.stack : 'スタックなし');
+    console.error('❌ エラー詳細:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      cause: error instanceof Error ? error.cause : undefined
+    });
+    
     return NextResponse.json(
-      { success: false, error: 'ファイルアップロードに失敗しました' },
+      { 
+        success: false, 
+        error: 'ファイルアップロードに失敗しました',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
