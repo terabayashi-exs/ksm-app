@@ -3,6 +3,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -22,26 +23,15 @@ export default function Header() {
           {/* ロゴ・タイトル */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-2 rounded-lg shadow-md">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* トーナメント構造を表現 */}
-                  <path 
-                    d="M4 6h4v2H4V6zM4 16h4v2H4v-2zM16 6h4v2h-4V6zM16 16h4v2h-4v-2z" 
-                    fill="currentColor" 
-                    opacity="0.8"
-                  />
-                  {/* 中央の接続線 */}
-                  <path 
-                    d="M8 7h4v1H8V7zM8 17h4v-1H8v1zM12 8v8h1V8h-1z" 
-                    fill="currentColor"
-                  />
-                  {/* 勝者の表現（星） */}
-                  <path 
-                    d="M12 2l1.09 3.26L16 5l-2.91 1.74L14 10l-2-1.2L10 10l.91-3.26L8 5l2.91.26L12 2z" 
-                    fill="#FFD700" 
-                    opacity="0.9"
-                  />
-                </svg>
+              <div className="relative">
+                <Image
+                  src="/images/system_logo.png"
+                  alt="Rakusyo GO"
+                  width={32}
+                  height={32}
+                  className="rounded-lg"
+                  style={{ objectFit: 'contain' }}
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">

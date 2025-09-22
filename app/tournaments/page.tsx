@@ -1,8 +1,9 @@
 // app/tournaments/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,18 +45,21 @@ interface SearchParams {
   status: TournamentStatus | '';
 }
 
-export default function TournamentsPage() {
+function TournamentsContent() {
   const { data: session } = useSession();
+  const urlSearchParams = useSearchParams();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // URLクエリパラメータから初期値を設定
   const [searchParams, setSearchParams] = useState<SearchParams>({
-    year: '',
-    month: '',
-    day: '',
-    tournament_name: '',
-    status: ''
+    year: urlSearchParams?.get('year') || '',
+    month: urlSearchParams?.get('month') || '',
+    day: urlSearchParams?.get('day') || '',
+    tournament_name: urlSearchParams?.get('tournament_name') || '',
+    status: (urlSearchParams?.get('status') as TournamentStatus) || ''
   });
   
   // Selectの表示用値（空文字列の場合は'all'を表示）
@@ -406,5 +410,24 @@ export default function TournamentsPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function TournamentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    }>
+      <TournamentsContent />
+    </Suspense>
   );
 }

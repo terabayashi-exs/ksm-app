@@ -117,6 +117,8 @@ export async function getTournamentStats() {
     let completedCount = 0;
 
     // 各大会のステータスを動的に計算（試合進行状況を含む）
+    let scheduledCount = 0; // 開催予定の大会数
+
     for (const tournament of tournaments) {
       const calculatedStatus = await calculateTournamentStatus({
         status: (tournament.status as string) || 'planning',
@@ -129,11 +131,14 @@ export async function getTournamentStats() {
         ongoingCount++;
       } else if (calculatedStatus === 'completed') {
         completedCount++;
+      } else {
+        // before_recruitment, recruiting, before_event のステータスは開催予定とカウント
+        scheduledCount++;
       }
     }
 
     return {
-      total: tournaments.length,
+      total: scheduledCount, // 開催予定の大会数に変更
       ongoing: ongoingCount,
       completed: completedCount
     };

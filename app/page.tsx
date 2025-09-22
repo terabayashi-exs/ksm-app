@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import Image from "next/image";
 import { Calendar, MapPin, Users, Trophy, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -23,86 +24,122 @@ export default async function Home() {
       <Header />
       
       {/* ヒーローセクション */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <section className="relative py-16 overflow-hidden">
+        {/* シンプルな背景 */}
+        <div className="absolute inset-0">
+          {/* ロゴに合わせた明るい芝生風のグラデーション背景 */}
+          <div className="absolute inset-0 bg-gradient-to-b from-lime-100/60 via-green-100/40 to-emerald-50/20 dark:from-green-800/30 dark:via-green-900/20 dark:to-transparent"></div>
+        </div>
+        
+        {/* コンテンツ */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Rakusyo GO
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100">
-              Sports Tournament Management System
-            </p>
-            <p className="text-lg mb-10 text-blue-100 max-w-3xl mx-auto">
+            {/* 大きなロゴ画像 */}
+            <div className="mb-8 relative w-full max-w-6xl mx-auto">
+              <Image
+                src="/images/system_logo.png"
+                alt="Rakusyo GO"
+                width={1000}
+                height={1000}
+                className="mx-auto w-full h-auto max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl relative z-10"
+                style={{ objectFit: 'contain' }}
+                priority
+              />
+            </div>
+            <p className="text-lg md:text-xl mb-6 text-muted-foreground max-w-3xl mx-auto relative z-10">
               あらゆるスポーツ大会の運営から結果公開まで、すべてを一元管理
               <br />
               簡単・楽勝で大会運営ができる総合管理システムです
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {session?.user ? (
-                <>
-                  {session.user.role === "admin" ? (
-                    <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-muted dark:bg-card dark:hover:bg-muted">
-                      <Link href="/admin">管理者ダッシュボード</Link>
-                    </Button>
-                  ) : (
-                    <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-muted dark:bg-card dark:hover:bg-muted">
-                      <Link href="/team">チームダッシュボード</Link>
-                    </Button>
-                  )}
-                  <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
-                    <Link href="/public/tournaments">大会一覧を見る</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* アクションボタンセクション */}
+      <section className="py-8 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {session?.user ? (
+              <>
+                {session.user.role === "admin" ? (
+                  <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                    <Link href="/admin">管理者ダッシュボード</Link>
                   </Button>
-                </>
-              ) : (
-                <>
-                  <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-muted dark:bg-card dark:hover:bg-muted">
-                    <Link href="/auth/login">ログイン</Link>
+                ) : (
+                  <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                    <Link href="/team">チームダッシュボード</Link>
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
-                    <Link href="/auth/register">チーム登録</Link>
-                  </Button>
-                </>
-              )}
-            </div>
+                )}
+                <Button asChild size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  <Link href="/public/tournaments">大会一覧を見る</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                  <Link href="/auth/login">ログイン</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  <Link href="/auth/register">チーム登録</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       {/* 統計セクション */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-16 overflow-hidden">
+        {/* シンプルな背景 */}
+        <div className="absolute inset-0">
+          {/* 薄い芝生風グラデーション */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-lime-50/15 to-transparent dark:from-transparent dark:via-green-900/8 dark:to-transparent"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-foreground mb-2">{stats.total}</h3>
-                <p className="text-muted-foreground">開催された大会数</p>
-              </CardContent>
-            </Card>
+            <Link href="/tournaments?status=recruiting" className="block">
+              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="pt-6">
+                  <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{stats.total}</h3>
+                  <p className="text-muted-foreground">開催予定の大会数</p>
+                </CardContent>
+              </Card>
+            </Link>
             
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <Clock className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-foreground mb-2">{stats.ongoing}</h3>
-                <p className="text-muted-foreground">進行中の大会数</p>
-              </CardContent>
-            </Card>
+            <Link href="/tournaments?status=ongoing" className="block">
+              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="pt-6">
+                  <Clock className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{stats.ongoing}</h3>
+                  <p className="text-muted-foreground">進行中の大会数</p>
+                </CardContent>
+              </Card>
+            </Link>
             
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <TrendingUp className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-foreground mb-2">{stats.completed}</h3>
-                <p className="text-muted-foreground">完了した大会数</p>
-              </CardContent>
-            </Card>
+            <Link href="/tournaments?status=completed" className="block">
+              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="pt-6">
+                  <TrendingUp className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{stats.completed}</h3>
+                  <p className="text-muted-foreground">完了した大会数</p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
       </section>
 
       {/* 最新大会セクション */}
-      <section className="py-16 bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-16 bg-card/50 overflow-hidden">
+        {/* シンプルな背景 */}
+        <div className="absolute inset-0">
+          {/* 芝生風の背景 */}
+          <div className="absolute inset-0 bg-gradient-to-b from-lime-50/25 via-green-50/15 to-transparent dark:from-green-900/15 dark:via-green-900/8 dark:to-transparent"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">最新の大会情報</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -113,7 +150,7 @@ export default async function Home() {
           {tournaments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {tournaments.slice(0, 6).map((tournament) => (
-                <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow">
+                <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader>
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -167,12 +204,14 @@ export default async function Home() {
                         </Button>
                       )}
                       
-                      {/* 未参加かつ募集期間中の場合に参加ボタンを表示 */}
+                      {/* 未参加かつ募集期間中かつ進行中・完了済みではない場合に参加ボタンを表示 */}
                       {!tournament.is_joined &&
                        tournament.recruitment_start_date && 
                        tournament.recruitment_end_date && 
                        new Date(tournament.recruitment_start_date) <= new Date() && 
-                       new Date() <= new Date(tournament.recruitment_end_date) && (
+                       new Date() <= new Date(tournament.recruitment_end_date) &&
+                       tournament.status !== 'ongoing' &&
+                       tournament.status !== 'completed' && (
                         <Button asChild variant="outline" className="w-full">
                           <Link href={
                             session?.user?.role === 'team' 
@@ -222,8 +261,14 @@ export default async function Home() {
       </section>
 
       {/* 機能紹介セクション */}
-      <section className="py-16 bg-muted/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-16 bg-muted/30 overflow-hidden">
+        {/* シンプルな背景 */}
+        <div className="absolute inset-0">
+          {/* 芝生風の薄い背景 */}
+          <div className="absolute inset-0 bg-gradient-to-t from-lime-50/18 via-transparent to-transparent dark:from-green-900/10 dark:via-transparent dark:to-transparent"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">システムの特徴</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -232,7 +277,7 @@ export default async function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card>
+            <Card className="bg-card/90 backdrop-blur-sm border-border/50">
               <CardHeader>
                 <Trophy className="h-8 w-8 text-blue-600 mb-2" />
                 <CardTitle>大会管理</CardTitle>
@@ -244,7 +289,7 @@ export default async function Home() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-card/90 backdrop-blur-sm border-border/50">
               <CardHeader>
                 <Users className="h-8 w-8 text-green-600 mb-2" />
                 <CardTitle>チーム管理</CardTitle>
@@ -256,7 +301,7 @@ export default async function Home() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-card/90 backdrop-blur-sm border-border/50">
               <CardHeader>
                 <Calendar className="h-8 w-8 text-purple-600 mb-2" />
                 <CardTitle>スケジュール管理</CardTitle>
