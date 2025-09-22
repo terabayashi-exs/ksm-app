@@ -15,16 +15,16 @@ export function getBlobToken(): string | undefined {
     LEGACY_BLOB: !!process.env.BLOB_READ_WRITE_TOKEN
   });
   
-  // 本番環境
-  if (nodeEnv === 'production' || vercelEnv === 'production') {
+  // 本番環境のみ（VERCEL_ENVで判定）
+  if (vercelEnv === 'production') {
     const token = process.env.PROD_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
     console.log('🏭 本番環境トークン選択:', token ? '設定済み' : '未設定');
     return token;
   }
   
-  // 開発環境・プレビュー環境
+  // 開発・プレビュー環境（VERCEL_ENVがpreview、developmentまたは未設定）
   const token = process.env.DEV_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
-  console.log('🧪 開発環境トークン選択:', token ? '設定済み' : '未設定');
+  console.log('🧪 開発・プレビュー環境トークン選択:', token ? '設定済み' : '未設定');
   return token;
 }
 
