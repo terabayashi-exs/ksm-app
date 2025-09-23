@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive } from 'lucide-react';
 
 interface TournamentDashboardData {
@@ -226,233 +227,253 @@ export default function TournamentDashboardList() {
   };
 
   const TournamentCard = ({ tournament, type }: { tournament: Tournament; type: 'recruiting' | 'ongoing' | 'completed' }) => (
-    <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h4 className="font-semibold text-lg text-gray-900">{tournament.tournament_name}</h4>
-          <div className="flex items-center text-sm text-gray-600 mt-1">
-            <Trophy className="w-4 h-4 mr-1" />
-            <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
+      {/* 管理者ロゴ背景 */}
+      {tournament.logo_blob_url && (
+        <div className="absolute top-0 right-0 w-20 h-20 opacity-10 overflow-hidden">
+          <Image
+            src={tournament.logo_blob_url}
+            alt={tournament.organization_name || '管理者ロゴ'}
+            fill
+            className="object-contain"
+            sizes="80px"
+          />
+        </div>
+      )}
+      
+      <div className="p-4 relative">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h4 className="font-semibold text-lg text-gray-900">{tournament.tournament_name}</h4>
+            <div className="flex items-center text-sm text-gray-600 mt-1">
+              <Trophy className="w-4 h-4 mr-1" />
+              <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+            </div>
+            {tournament.organization_name && (
+              <div className="flex items-center text-xs text-gray-500 mt-1">
+                <span>主催: {tournament.organization_name}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              type === 'ongoing' 
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
+                : type === 'recruiting'
+                ? tournament.visibility === 1
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+            }`}>
+              {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (tournament.visibility === 1 ? '募集中' : '準備中') : '完了'}
+            </div>
+            {tournament.is_archived && (
+              <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
+                アーカイブ済み
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex gap-2">
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-            type === 'ongoing' 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
-              : type === 'recruiting'
-              ? tournament.visibility === 1
-                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-          }`}>
-            {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (tournament.visibility === 1 ? '募集中' : '準備中') : '完了'}
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center text-sm text-gray-600">
+            <CalendarDays className="w-4 h-4 mr-2" />
+            <span>
+              {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
+              {tournament.event_end_date && tournament.event_end_date !== tournament.event_start_date && 
+                ` - ${formatDate(tournament.event_end_date)}`
+              }
+            </span>
           </div>
-          {tournament.is_archived && (
-            <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
-              アーカイブ済み
+          {tournament.start_time && tournament.end_time && (
+            <div className="flex items-center text-sm text-gray-600">
+              <Clock className="w-4 h-4 mr-2" />
+              <span>{tournament.start_time} - {tournament.end_time}</span>
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center text-sm text-gray-600">
-          <CalendarDays className="w-4 h-4 mr-2" />
-          <span>
-            {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
-            {tournament.event_end_date && tournament.event_end_date !== tournament.event_start_date && 
-              ` - ${formatDate(tournament.event_end_date)}`
-            }
-          </span>
-        </div>
-        {tournament.start_time && tournament.end_time && (
+          {(!tournament.start_time || !tournament.end_time) && tournament.status === 'planning' && (
+            <div className="flex items-center text-sm text-gray-500">
+              <Clock className="w-4 h-4 mr-2" />
+              <span>試合時刻未設定</span>
+            </div>
+          )}
           <div className="flex items-center text-sm text-gray-600">
-            <Clock className="w-4 h-4 mr-2" />
-            <span>{tournament.start_time} - {tournament.end_time}</span>
+            <MapPin className="w-4 h-4 mr-2" />
+            <span>{tournament.venue_name || `会場ID: ${tournament.venue_id}`}</span>
           </div>
-        )}
-        {(!tournament.start_time || !tournament.end_time) && tournament.status === 'planning' && (
-          <div className="flex items-center text-sm text-gray-500">
-            <Clock className="w-4 h-4 mr-2" />
-            <span>試合時刻未設定</span>
+          <div className="flex items-center text-sm text-gray-600">
+            <Users className="w-4 h-4 mr-2" />
+            <span>{tournament.team_count}チーム参加</span>
           </div>
-        )}
-        <div className="flex items-center text-sm text-gray-600">
-          <MapPin className="w-4 h-4 mr-2" />
-          <span>{tournament.venue_name || `会場ID: ${tournament.venue_id}`}</span>
         </div>
-        <div className="flex items-center text-sm text-gray-600">
-          <Users className="w-4 h-4 mr-2" />
-          <span>{tournament.team_count}チーム参加</span>
-        </div>
-      </div>
 
-      <div className="flex gap-2 flex-wrap">
-        <Button asChild size="sm" variant="outline" className="flex-1 hover:border-blue-300 hover:bg-blue-50">
-          <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
-            詳細
-          </Link>
-        </Button>
-        {!tournament.is_archived && (
-          <>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                大会編集
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
-                ルール設定
-              </Link>
-            </Button>
-          </>
-        )}
-        {type === 'recruiting' && (
-          <>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
-                チーム登録
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
-                組合せ作成・編集
-              </Link>
-            </Button>
-            <Button 
-              asChild 
-              size="sm" 
-              variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-              className={hasNotifications(tournament.tournament_id)
-                ? "bg-red-600 hover:bg-red-700"
-                : "hover:border-blue-300 hover:bg-blue-50"
-              }
-            >
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                試合管理
-                {hasNotifications(tournament.tournament_id) && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
-                    {getNotificationCount(tournament.tournament_id)}
-                  </span>
-                )}
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                順位設定
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                ファイル管理
-              </Link>
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => handleDeleteTournament(tournament)}
-              disabled={deleting === tournament.tournament_id}
-              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-            >
-              {deleting === tournament.tournament_id ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                  削除中...
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  削除
-                </div>
-              )}
-            </Button>
-          </>
-        )}
-        {type === 'completed' && !tournament.is_archived && (
-          <>
-            <Button 
-              asChild 
-              size="sm" 
-              variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-              className={hasNotifications(tournament.tournament_id)
-                ? "bg-red-600 hover:bg-red-700"
-                : "hover:border-blue-300 hover:bg-blue-50"
-              }
-            >
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                試合管理
-                {hasNotifications(tournament.tournament_id) && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
-                    {getNotificationCount(tournament.tournament_id)}
-                  </span>
-                )}
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                順位設定
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                ファイル管理
-              </Link>
-            </Button>
-            {!tournament.is_archived && (
+        <div className="flex gap-2 flex-wrap">
+          <Button asChild size="sm" variant="outline" className="flex-1 hover:border-blue-300 hover:bg-blue-50">
+            <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
+              詳細
+            </Link>
+          </Button>
+          {!tournament.is_archived && (
+            <>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                  大会編集
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                  ルール設定
+                </Link>
+              </Button>
+            </>
+          )}
+          {type === 'recruiting' && (
+            <>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
+                  チーム登録
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
+                  組合せ作成・編集
+                </Link>
+              </Button>
+              <Button 
+                asChild 
+                size="sm" 
+                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                className={hasNotifications(tournament.tournament_id)
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "hover:border-blue-300 hover:bg-blue-50"
+                }
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  試合管理
+                  {hasNotifications(tournament.tournament_id) && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                      {getNotificationCount(tournament.tournament_id)}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  順位設定
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  ファイル管理
+                </Link>
+              </Button>
               <Button 
                 size="sm" 
                 variant="outline" 
-                onClick={() => handleArchiveTournament(tournament)}
-                disabled={archiving === tournament.tournament_id}
-                className="border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                onClick={() => handleDeleteTournament(tournament)}
+                disabled={deleting === tournament.tournament_id}
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
               >
-                {archiving === tournament.tournament_id ? (
+                {deleting === tournament.tournament_id ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-1"></div>
-                    アーカイブ中...
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    削除中...
                   </div>
                 ) : (
                   <div className="flex items-center">
-                    <Archive className="w-3 h-3 mr-1" />
-                    アーカイブ
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    削除
                   </div>
                 )}
               </Button>
-            )}
-          </>
-        )}
-        {type === 'ongoing' && (
-          <>
-            <Button 
-              asChild 
-              size="sm" 
-              variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-              className={hasNotifications(tournament.tournament_id) 
-                ? 'bg-red-600 hover:bg-red-700' 
-                : 'hover:border-blue-300 hover:bg-blue-50'
-              }
-            >
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                試合管理
-                {hasNotifications(tournament.tournament_id) && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
-                    {getNotificationCount(tournament.tournament_id)}
-                  </span>
-                )}
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                順位設定
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-              <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                ファイル管理
-              </Link>
-            </Button>
-          </>
-        )}
+            </>
+          )}
+          {type === 'completed' && !tournament.is_archived && (
+            <>
+              <Button 
+                asChild 
+                size="sm" 
+                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                className={hasNotifications(tournament.tournament_id)
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "hover:border-blue-300 hover:bg-blue-50"
+                }
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  試合管理
+                  {hasNotifications(tournament.tournament_id) && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                      {getNotificationCount(tournament.tournament_id)}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  順位設定
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  ファイル管理
+                </Link>
+              </Button>
+              {!tournament.is_archived && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleArchiveTournament(tournament)}
+                  disabled={archiving === tournament.tournament_id}
+                  className="border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                >
+                  {archiving === tournament.tournament_id ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-1"></div>
+                      アーカイブ中...
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Archive className="w-3 h-3 mr-1" />
+                      アーカイブ
+                    </div>
+                  )}
+                </Button>
+              )}
+            </>
+          )}
+          {type === 'ongoing' && (
+            <>
+              <Button 
+                asChild 
+                size="sm" 
+                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                className={hasNotifications(tournament.tournament_id) 
+                  ? 'bg-red-600 hover:bg-red-700' 
+                  : 'hover:border-blue-300 hover:bg-blue-50'
+                }
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  試合管理
+                  {hasNotifications(tournament.tournament_id) && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                      {getNotificationCount(tournament.tournament_id)}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  順位設定
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  ファイル管理
+                </Link>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

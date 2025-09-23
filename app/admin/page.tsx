@@ -151,6 +151,23 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
 
+          {/* プロフィール設定 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>プロフィール設定</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                管理者情報の確認と組織ロゴの設定・管理を行います
+              </p>
+              <div className="space-y-2">
+                <Button asChild variant="outline" className="w-full border-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:border-purple-800 dark:hover:border-purple-700 dark:hover:bg-purple-950/20">
+                  <Link href="/admin/profile">プロフィール・ロゴ設定</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>

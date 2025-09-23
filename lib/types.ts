@@ -15,6 +15,7 @@ export interface Tournament {
   recruitment_start_date?: string; // 募集開始日
   recruitment_end_date?: string; // 募集終了日
   sport_type_id?: number; // 競技種別ID
+  created_by?: string; // 作成者ID
   created_at: string;
   updated_at: string;
   // Optional joined fields
@@ -31,6 +32,9 @@ export interface Tournament {
   // アーカイブ関連
   is_archived?: boolean;
   archive_ui_version?: string;
+  // 管理者ロゴ情報
+  logo_blob_url?: string | null;
+  organization_name?: string | null;
 }
 
 // 大会開催日程の型

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CheckCircle } from 'lucide-react';
 import { 
   getStatusLabel, 
@@ -34,6 +35,9 @@ interface Tournament {
   event_end_date: string;
   tournament_period: string;
   created_at: string;
+  created_by: string;
+  logo_blob_url: string | null;
+  organization_name: string | null;
   is_joined: boolean;
 }
 
@@ -313,6 +317,18 @@ function TournamentsContent() {
                         <tr key={tournament.tournament_id} className="border-b hover:bg-muted/50">
                           <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
+                              {/* 管理者ロゴ */}
+                              {tournament.logo_blob_url && (
+                                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  <Image
+                                    src={tournament.logo_blob_url}
+                                    alt={tournament.organization_name || '主催者ロゴ'}
+                                    width={32}
+                                    height={32}
+                                    className="object-contain"
+                                  />
+                                </div>
+                              )}
                               <div>
                                 <p className="font-medium text-foreground">{tournament.tournament_name}</p>
                                 <p className="text-sm text-muted-foreground">{tournament.format_name}</p>

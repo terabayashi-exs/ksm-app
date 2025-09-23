@@ -150,8 +150,20 @@ export default async function Home() {
           {tournaments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {tournaments.slice(0, 6).map((tournament) => (
-                <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow bg-card/80 backdrop-blur-sm border-border/50">
-                  <CardHeader>
+                <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow bg-card/80 backdrop-blur-sm border-border/50 relative overflow-hidden">
+                  {/* 管理者ロゴ背景 */}
+                  {tournament.logo_blob_url && (
+                    <div className="absolute inset-0 opacity-10">
+                      <Image
+                        src={tournament.logo_blob_url}
+                        alt={tournament.organization_name || '主催者ロゴ'}
+                        fill
+                        className="object-contain object-center"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                  )}
+                  <CardHeader className="relative z-10">
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         tournament.status === 'ongoing' 
@@ -171,9 +183,16 @@ export default async function Home() {
                       )}
                     </div>
                     <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
-                    <CardDescription>{tournament.format_name}</CardDescription>
+                    <CardDescription className="flex items-center justify-between">
+                      <span>{tournament.format_name}</span>
+                      {tournament.organization_name && (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          {tournament.organization_name}
+                        </span>
+                      )}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="relative z-10">
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2" />

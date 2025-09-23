@@ -23,12 +23,16 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         t.recruitment_end_date,
         t.created_at,
         t.updated_at,
+        t.created_by,
         v.venue_name,
         f.format_name,
+        a.logo_blob_url,
+        a.organization_name,
         ${teamId ? 'CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       ${teamId ? 'LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?' : ''}
       WHERE t.visibility = 'open' 
         AND t.public_start_date <= date('now')
@@ -81,8 +85,12 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         recruitment_end_date: row.recruitment_end_date as string,
         created_at: String(row.created_at),
         updated_at: String(row.updated_at),
+        created_by: row.created_by as string,
         venue_name: row.venue_name as string,
         format_name: row.format_name as string,
+        // 管理者ロゴ情報
+        logo_blob_url: row.logo_blob_url as string | null,
+        organization_name: row.organization_name as string | null,
         // 互換性のため
         event_start_date: eventStartDate,
         event_end_date: eventEndDate,

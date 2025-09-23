@@ -44,13 +44,18 @@ export async function GET() {
         t.recruitment_end_date,
         t.is_archived,
         t.archive_ui_version,
+        t.created_by,
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        f.format_name,
+        a.logo_blob_url,
+        a.logo_filename,
+        a.organization_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       WHERE t.status IN ('planning', 'ongoing')
         AND (t.created_by = ? OR ? = 1)
       ORDER BY 
@@ -81,13 +86,18 @@ export async function GET() {
         t.recruitment_end_date,
         t.is_archived,
         t.archive_ui_version,
+        t.created_by,
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        f.format_name,
+        a.logo_blob_url,
+        a.logo_filename,
+        a.organization_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       WHERE t.status = 'completed'
         AND (t.created_by = ? OR ? = 1)
       ORDER BY t.created_at DESC
@@ -188,6 +198,7 @@ export async function GET() {
         public_start_date: row.public_start_date as string,
         recruitment_start_date: row.recruitment_start_date as string,
         recruitment_end_date: row.recruitment_end_date as string,
+        created_by: row.created_by as string,
         created_at: String(row.created_at),
         updated_at: String(row.updated_at),
         venue_name: row.venue_name as string,
@@ -198,7 +209,9 @@ export async function GET() {
         start_time: startTime,
         end_time: endTime,
         is_archived: Boolean(row.is_archived),
-        archive_ui_version: row.archive_ui_version as string
+        archive_ui_version: row.archive_ui_version as string,
+        logo_blob_url: row.logo_blob_url as string | null,
+        organization_name: row.organization_name as string | null
       } as Tournament;
     }));
 
