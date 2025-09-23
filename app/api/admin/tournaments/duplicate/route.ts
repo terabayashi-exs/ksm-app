@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 
 /**
  * 複製レベルに応じて適切なステータスを決定
@@ -67,6 +68,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // アーカイブ済み大会の複製制限チェック
+    const sourceData = sourceTournament.rows[0] as any;
+    if (sourceData.is_archived === 1) {
+      return NextResponse.json(
+        { success: false, error: 'アーカイブ済みの大会は複製できません。アーカイブ前の大会データから複製してください。' },
+        { status: 400 }
+      );
+    }
+
     // 大会名の重複チェック
     const nameCheck = await db.execute(`
       SELECT tournament_id FROM t_tournaments WHERE tournament_name = ?
@@ -82,7 +92,7 @@ export async function POST(request: NextRequest) {
     console.log(`[DUPLICATE] 開始: 大会${source_tournament_id} -> レベル${duplicate_level}`);
 
     // 複製実行
-    const result = await duplicateTournament(source_tournament_id, new_tournament_name.trim(), duplicate_level);
+    const result = await duplicateTournament(source_tournament_id, new_tournament_name.trim(), duplicate_level, session.user.id);
 
     console.log(`[DUPLICATE] 完了: 新しい大会ID ${result.new_tournament_id}`);
 
@@ -118,10 +128,11 @@ export async function POST(request: NextRequest) {
 async function duplicateTournament(
   sourceTournamentId: number, 
   newTournamentName: string, 
-  level: 'level1' | 'level2' | 'level3' | 'level4'
+  level: 'level1' | 'level2' | 'level3' | 'level4',
+  createdBy: string
 ) {
   // 1. 大会基本情報の複製
-  const newTournamentId = await duplicateTournamentBasic(sourceTournamentId, newTournamentName, level);
+  const newTournamentId = await duplicateTournamentBasic(sourceTournamentId, newTournamentName, level, createdBy);
   
   // 2. ルール情報の複製
   await duplicateTournamentRules(sourceTournamentId, newTournamentId);
@@ -162,7 +173,7 @@ async function duplicateTournament(
 /**
  * 大会基本情報の複製
  */
-async function duplicateTournamentBasic(sourceTournamentId: number, newTournamentName: string, level: string): Promise<number> {
+async function duplicateTournamentBasic(sourceTournamentId: number, newTournamentName: string, level: string, createdBy: string): Promise<number> {
   // 複製元の大会情報を取得
   const sourceResult = await db.execute(`
     SELECT * FROM t_tournaments WHERE tournament_id = ?
@@ -182,13 +193,17 @@ async function duplicateTournamentBasic(sourceTournamentId: number, newTournamen
     venue_id: sourceData.venue_id
   });
 
+  // 現在のアーカイブバージョンを取得（複製元ではなく現在の最新バージョンを使用）
+  const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
+  console.log(`[DUPLICATE] 新しい大会には現在のUIバージョンを適用: ${currentArchiveVersion}`);
+  
   const insertResult = await db.execute(`
     INSERT INTO t_tournaments (
       tournament_name, format_id, venue_id, team_count,
       recruitment_start_date, recruitment_end_date, tournament_dates,
       status, visibility, public_start_date, court_count, match_duration_minutes, break_duration_minutes,
-      sport_type_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      sport_type_id, created_by, archive_ui_version, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
   `, [
     newTournamentName,
     sourceData.format_id || 1, // デフォルト値を提供
@@ -203,7 +218,9 @@ async function duplicateTournamentBasic(sourceTournamentId: number, newTournamen
     sourceData.court_count || 4,
     sourceData.match_duration_minutes || 15,
     sourceData.break_duration_minutes || 5,
-    sourceData.sport_type_id || 1 // 競技種別を複製（重要！）
+    sourceData.sport_type_id || 1, // 競技種別を複製（重要！）
+    createdBy, // 複製実行者のIDを設定
+    currentArchiveVersion // 複製元ではなく現在のUIバージョンを設定（新しい大会用）
   ]);
 
   return Number(insertResult.lastInsertRowid);

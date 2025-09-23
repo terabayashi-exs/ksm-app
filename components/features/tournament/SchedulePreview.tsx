@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MatchTemplate } from '@/lib/types';
-import { calculateTournamentSchedule, TournamentSchedule, ScheduleSettings, ScheduleMatch, TimeConflict } from '@/lib/schedule-calculator';
+import { calculateTournamentSchedule, TournamentSchedule, ScheduleSettings, ScheduleMatch } from '@/lib/schedule-calculator';
 import { Calendar, Clock, MapPin, AlertTriangle, CheckCircle, RefreshCw, Edit3 } from 'lucide-react';
 
 interface SchedulePreviewProps {
@@ -34,7 +34,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   const [blockCourtAssignments, setBlockCourtAssignments] = useState<Record<string, number>>({}); // ブロック→コート割り当て
   const [editingMatchCourt, setEditingMatchCourt] = useState<string | null>(null); // 個別試合コート編集中の試合キー
   const [matchCourtAssignments, setMatchCourtAssignments] = useState<Record<number, number>>({}); // 試合番号→コート割り当て
-  const [courtConflicts, setCourtConflicts] = useState<Array<{court: number; conflicts: Array<{match1: ScheduleMatch; match2: ScheduleMatch; description: string}>}>>([]);
   const [initialSchedule, setInitialSchedule] = useState<TournamentSchedule | null>(null); // 初期スケジュール保存用（リセット用）
   
   // コンポーネントマウント/アンマウント時のログ
@@ -59,7 +58,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setPreviousSettings(null);
       setBlockCourtAssignments({});
       setMatchCourtAssignments({});
-      setCourtConflicts([]);
     }
   }, [tournamentId]); // editModeを依存配列から除去
 
@@ -450,28 +448,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     const totalDurationMinutes = overallEndTime - overallStartTime;
     newSchedule.totalDuration = totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00';
     
-    // 時間重複をチェックして警告を更新
-    const timeConflicts = checkTimeConflictsForSchedule(newSchedule.days);
-    const courtConflicts = checkCourtConflictsForSchedule(newSchedule.days);
-    
-    newSchedule.timeConflicts = timeConflicts;
-    newSchedule.feasible = timeConflicts.length === 0 && courtConflicts.length === 0 && newSchedule.feasible;
-    setCourtConflicts(courtConflicts);
-    
-    // 警告メッセージを更新
-    newSchedule.warnings = newSchedule.warnings.filter(w => 
-      !w.includes('試合時間が重複') && !w.includes('コート重複')
-    );
-    if (timeConflicts.length > 0) {
-      timeConflicts.forEach(conflict => {
-        newSchedule.warnings.push(`チーム「${conflict.team}」の試合時間が重複しています`);
-      });
-    }
-    if (courtConflicts.length > 0) {
-      courtConflicts.forEach(conflict => {
-        newSchedule.warnings.push(`コート${conflict.court}で試合時間が重複しています`);
-      });
-    }
+    // 時間重複チェックは削除（登録時のみ実施）
+    // リアルタイムチェックを無効化してユーザビリティを向上
     
     setCustomSchedule(newSchedule);
     setEditingMatch(null);
@@ -629,41 +607,10 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     setEditingMatchCourt(null);
     setBlockCourtAssignments({});
     setMatchCourtAssignments({});
-    setCourtConflicts([]);
 
     // カスタムスケジュールを初期状態にリセット（深いコピー）
     const resetSchedule = JSON.parse(JSON.stringify(initialSchedule));
-    
-    // 時間重複とコート重複をチェック
-    const timeConflicts = checkTimeConflictsForSchedule(resetSchedule.days);
-    const courtConflicts = checkCourtConflictsForSchedule(resetSchedule.days);
-    
-    // リセット後のスケジュールに最新の状態を反映
-    const finalResetSchedule = {
-      ...resetSchedule,
-      timeConflicts,
-      feasible: timeConflicts.length === 0 && courtConflicts.length === 0,
-      warnings: resetSchedule.warnings.filter((w: string) => 
-        !w.includes('試合時間が重複') && !w.includes('コート重複')
-      )
-    };
-
-    // 時間重複警告を追加
-    if (timeConflicts.length > 0) {
-      timeConflicts.forEach(conflict => {
-        finalResetSchedule.warnings.push(`チーム「${conflict.team}」の試合時間が重複しています`);
-      });
-    }
-
-    // コート重複警告を追加
-    if (courtConflicts.length > 0) {
-      courtConflicts.forEach(conflict => {
-        finalResetSchedule.warnings.push(`コート${conflict.court}で試合時間が重複しています`);
-      });
-    }
-
-    setCustomSchedule(finalResetSchedule);
-    setCourtConflicts(courtConflicts);
+    setCustomSchedule(resetSchedule);
 
     // 親コンポーネントにリセット済みスケジュールを通知
     if (onScheduleChange) {
@@ -726,122 +673,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     return 'bg-muted text-muted-foreground';
   };
 
-  // 時間重複チェック関数（SchedulePreview用）
-  const checkTimeConflictsForSchedule = (days: { matches: ScheduleMatch[] }[]): TimeConflict[] => {
-    const teamConflicts: Record<string, TimeConflict> = {};
-    
-    for (const day of days) {
-      const matches = day.matches;
-      const teamMatches: Record<string, ScheduleMatch[]> = {};
-      
-      for (const match of matches) {
-        const team1 = match.template.team1_display_name;
-        const team2 = match.template.team2_display_name;
-        
-        if (!teamMatches[team1]) teamMatches[team1] = [];
-        if (!teamMatches[team2]) teamMatches[team2] = [];
-        
-        teamMatches[team1].push(match);
-        teamMatches[team2].push(match);
-      }
-      
-      for (const [teamName, teamMatchList] of Object.entries(teamMatches)) {
-        const sortedMatches = teamMatchList.sort((a, b) => 
-          timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-        );
-        
-        for (let i = 0; i < sortedMatches.length - 1; i++) {
-          const match1 = sortedMatches[i];
-          const match2 = sortedMatches[i + 1];
-          
-          const match1End = timeToMinutes(match1.endTime);
-          const match2Start = timeToMinutes(match2.startTime);
-          
-          if (match1End > match2Start) {
-            if (!teamConflicts[teamName]) {
-              teamConflicts[teamName] = {
-                team: teamName,
-                conflicts: []
-              };
-            }
-            
-            teamConflicts[teamName].conflicts.push({
-              match1,
-              match2,
-              description: `${match1.startTime}-${match1.endTime}と${match2.startTime}-${match2.endTime}が重複`
-            });
-          }
-        }
-      }
-    }
-    
-    return Object.values(teamConflicts);
-  };
-
-  // コート重複チェック関数
-  const checkCourtConflictsForSchedule = (days: { matches: ScheduleMatch[] }[]): Array<{
-    court: number;
-    conflicts: Array<{
-      match1: ScheduleMatch;
-      match2: ScheduleMatch;
-      description: string;
-    }>;
-  }> => {
-    const courtConflicts: Record<number, {
-      court: number;
-      conflicts: Array<{
-        match1: ScheduleMatch;
-        match2: ScheduleMatch;
-        description: string;
-      }>;
-    }> = {};
-    
-    for (const day of days) {
-      const matches = day.matches;
-      const courtMatches: Record<number, ScheduleMatch[]> = {};
-      
-      // コート別に試合をグループ化
-      for (const match of matches) {
-        if (!courtMatches[match.courtNumber]) {
-          courtMatches[match.courtNumber] = [];
-        }
-        courtMatches[match.courtNumber].push(match);
-      }
-      
-      // 各コートで時間重複をチェック
-      for (const [courtNumber, courtMatchList] of Object.entries(courtMatches)) {
-        const court = parseInt(courtNumber);
-        const sortedMatches = courtMatchList.sort((a, b) => 
-          timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-        );
-        
-        for (let i = 0; i < sortedMatches.length - 1; i++) {
-          const match1 = sortedMatches[i];
-          const match2 = sortedMatches[i + 1];
-          
-          const match1End = timeToMinutes(match1.endTime);
-          const match2Start = timeToMinutes(match2.startTime);
-          
-          if (match1End > match2Start) {
-            if (!courtConflicts[court]) {
-              courtConflicts[court] = {
-                court,
-                conflicts: []
-              };
-            }
-            
-            courtConflicts[court].conflicts.push({
-              match1,
-              match2,
-              description: `${match1.startTime}-${match1.endTime}と${match2.startTime}-${match2.endTime}が重複`
-            });
-          }
-        }
-      }
-    }
-    
-    return Object.values(courtConflicts);
-  };
 
   if (!formatId) {
     return (
@@ -945,74 +776,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                 <Edit3 className="w-4 h-4 mr-1" />
                 時刻をカスタマイズ中 - 時刻をクリックして編集できます
               </p>
-            </div>
-          )}
-
-
-          {/* 警告メッセージ */}
-          {displaySchedule.warnings.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h4 className="font-medium text-red-800 mb-2 flex items-center">
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                調整が必要な項目
-              </h4>
-              <ul className="space-y-1">
-                {displaySchedule.warnings.map((warning, index) => (
-                  <li key={index} className="text-sm text-red-700">• {warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* 時間重複詳細 */}
-          {displaySchedule.timeConflicts && displaySchedule.timeConflicts.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h4 className="font-medium text-red-800 mb-2 flex items-center">
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                試合時間重複エラー
-              </h4>
-              {displaySchedule.timeConflicts.map((conflict, index) => (
-                <div key={index} className="mb-3 last:mb-0">
-                  <div className="font-medium text-red-800 mb-1">チーム: {conflict.team}</div>
-                  <ul className="space-y-1 ml-4">
-                    {conflict.conflicts.map((detail, detailIndex) => (
-                      <li key={detailIndex} className="text-sm text-red-700">
-                        • {detail.description}
-                        <div className="text-xs text-red-600 ml-2">
-                          試合1: {detail.match1.template.match_code} | 
-                          試合2: {detail.match2.template.match_code}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* コート重複詳細 */}
-          {courtConflicts.length > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <h4 className="font-medium text-orange-800 mb-2 flex items-center">
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                コート重複エラー
-              </h4>
-              {courtConflicts.map((conflict, index) => (
-                <div key={index} className="mb-3 last:mb-0">
-                  <div className="font-medium text-orange-800 mb-1">コート{conflict.court}</div>
-                  <ul className="space-y-1 ml-4">
-                    {conflict.conflicts.map((detail, detailIndex) => (
-                      <li key={detailIndex} className="text-sm text-orange-700">
-                        • {detail.description}
-                        <div className="text-xs text-orange-600 ml-2">
-                          試合1: {detail.match1.template.match_code} | 
-                          試合2: {detail.match2.template.match_code}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
             </div>
           )}
         </CardContent>
@@ -1188,7 +951,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                         </thead>
                         <tbody>
                           {blockMatches
-                            .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
                             .map((match) => {
                               const originalMatchIndex = day.matches.findIndex(m => m === match);
                               const editKey = `${dayIndex}-${originalMatchIndex}`;
@@ -1223,12 +985,19 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                                       <div className="flex items-center space-x-1">
                                         <Input
                                           type="time"
-                                          value={displaySchedule?.days?.[dayIndex]?.matches?.[originalMatchIndex]?.startTime || match.startTime}
-                                          onChange={(e) => handleTimeChange(dayIndex, originalMatchIndex, e.target.value)}
+                                          defaultValue={displaySchedule?.days?.[dayIndex]?.matches?.[originalMatchIndex]?.startTime || match.startTime}
                                           className="w-20 h-7 text-xs"
-                                          onBlur={() => setEditingMatch(null)}
+                                          onBlur={(e) => {
+                                            // フォーカスが外れた時に親に通知
+                                            handleTimeChange(dayIndex, originalMatchIndex, e.target.value);
+                                            setEditingMatch(null);
+                                          }}
                                           onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === 'Escape') {
+                                            if (e.key === 'Enter') {
+                                              const target = e.target as HTMLInputElement;
+                                              handleTimeChange(dayIndex, originalMatchIndex, target.value);
+                                              setEditingMatch(null);
+                                            } else if (e.key === 'Escape') {
                                               setEditingMatch(null);
                                             }
                                           }}
@@ -1298,25 +1067,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         );
       })}
 
-      {/* 調整のヒント */}
-      {(!displaySchedule.feasible || courtConflicts.length > 0) && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="text-blue-800">💡 スケジュール調整のヒント</CardTitle>
-          </CardHeader>
-          <CardContent className="text-blue-700">
-            <ul className="space-y-2 text-sm">
-              <li>• <strong>コート数を増やす</strong> - 同時進行できる試合数が増えます</li>
-              <li>• <strong>使用コート番号を変更する</strong> - 運営設定で異なるコート番号を指定できます</li>
-              <li>• <strong>個別試合コート変更</strong> - 各試合のコート番号を個別に指定できます（青色ボタン）</li>
-              <li>• <strong>ブロック一括コート設定</strong> - 予選ブロック全試合を同じコートに一括設定できます（オレンジ色ボタン）</li>
-              <li>• <strong>試合時間を短縮する</strong> - 全体のスケジュールが短縮されます</li>
-              <li>• <strong>休憩時間を調整する</strong> - 試合間の空き時間を最適化できます</li>
-              <li>• <strong>開催日を追加する</strong> - 1日あたりの試合数を減らせます</li>
-            </ul>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
