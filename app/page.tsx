@@ -183,13 +183,8 @@ export default async function Home() {
                       )}
                     </div>
                     <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
-                    <CardDescription className="flex items-center justify-between">
+                    <CardDescription>
                       <span>{tournament.format_name}</span>
-                      {tournament.organization_name && (
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                          {tournament.organization_name}
-                        </span>
-                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="relative z-10">

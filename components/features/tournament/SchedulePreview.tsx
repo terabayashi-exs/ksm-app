@@ -59,7 +59,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setBlockCourtAssignments({});
       setMatchCourtAssignments({});
     }
-  }, [tournamentId]); // editModeを依存配列から除去
+  }, [tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // settings変更検出とcustomScheduleリセット（新規作成モードのみ）
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     }
 
     setPreviousSettings(settings);
-  }, [settings, templates.length, editMode, hasManualEdits]);
+  }, [settings, templates.length, editMode, hasManualEdits]); // eslint-disable-line react-hooks/exhaustive-deps
   const [actualMatches, setActualMatches] = useState<Array<{
     match_id: number;
     tournament_date: string;
@@ -152,7 +152,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     };
 
     fetchActualMatches();
-  }, [editMode, tournamentId]); // fetchingMatchesを依存配列から除去
+  }, [editMode, tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 試合テンプレートの取得
   useEffect(() => {
@@ -219,7 +219,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setError('スケジュール計算エラー');
       console.error('スケジュール計算エラー:', err);
     }
-  }, [templates, settings, editMode]); // customScheduleとactualMatchesを依存配列から除去
+  }, [templates, settings, editMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 編集モードでの実際の試合データからスケジュール表示を生成
   useEffect(() => {
@@ -348,7 +348,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setError('試合データの処理エラー');
       console.error('試合データ処理エラー:', err);
     }
-  }, [actualMatches, editMode, formatId]); // settingsを依存配列から除去
+  }, [actualMatches, editMode, formatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 初期データ通知用のuseEffect（無限ループ対策）
   useEffect(() => {
@@ -379,7 +379,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       );
       onScheduleChange(initialMatches);
     }
-  }, [editMode, actualMatches.length, schedule?.days?.length]); // fetchingMatchesを依存配列から除去
+  }, [editMode, actualMatches.length, schedule?.days?.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // フォーマット変更時の状態リセット
   useEffect(() => {

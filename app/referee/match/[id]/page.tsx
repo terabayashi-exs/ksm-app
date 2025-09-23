@@ -228,7 +228,7 @@ export default function RefereeMatchPage() {
     if (match && !loading) {
       loadCurrentMatchStatus();
     }
-  }, [matchId, loading]); // matchを依存配列から削除して無限ループを防ぐ
+  }, [matchId, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 試合状態更新
   const updateMatchStatus = async (action: string, additionalData?: Record<string, unknown>) => {
@@ -388,7 +388,7 @@ export default function RefereeMatchPage() {
         }
       }
     }
-  }, [scores, extendedData]);
+  }, [scores, extendedData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 直接スコア入力
   const setDirectScore = (team: 'team1' | 'team2', period: number, value: string) => {

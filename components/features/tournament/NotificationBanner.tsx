@@ -71,7 +71,7 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
     // 定期更新
     const interval = setInterval(fetchNotifications, refreshInterval);
     return () => clearInterval(interval);
-  }, [refreshInterval, tournamentId]);
+  }, [refreshInterval, tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 通知アイコン
   const getNotificationIcon = (severity: string) => {

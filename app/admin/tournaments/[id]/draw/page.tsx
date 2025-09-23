@@ -152,7 +152,7 @@ export default function TournamentDrawPage() {
     if (tournamentId) {
       fetchData();
     }
-  }, [tournamentId]); // initializeBlocksは削除（useCallback内でtournamentIdを使用しているため）
+  }, [tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ブロック構造の初期化
   const initializeBlocks = useCallback(async (teams: Team[], matches: Match[]) => {
