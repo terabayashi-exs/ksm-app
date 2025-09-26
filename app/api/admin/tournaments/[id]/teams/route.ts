@@ -102,58 +102,104 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const tournament = tournamentResult.rows[0];
-
-    // 参加チーム一覧を取得
+    // 大会の参加チーム一覧を取得（選手情報含む）
     const teamsResult = await db.execute(`
       SELECT 
         tt.tournament_team_id,
-        tt.tournament_id,
         tt.team_id,
+        tt.tournament_id,
         tt.team_name,
         tt.team_omission,
-        tt.created_at,
-        m.team_name as master_team_name,
+        tt.withdrawal_status,
+        tt.created_at as joined_at,
         m.contact_person,
         m.contact_email,
         m.contact_phone,
         m.registration_type,
-        (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id AND tp.player_status = 'active') as player_count
+        COUNT(tp.tournament_player_id) as player_count
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
+      LEFT JOIN t_tournament_players tp ON (tt.tournament_id = tp.tournament_id AND tt.team_id = tp.team_id)
       WHERE tt.tournament_id = ?
-      ORDER BY tt.created_at DESC
+      GROUP BY 
+        tt.tournament_team_id,
+        tt.team_id,
+        tt.tournament_id,
+        tt.team_name,
+        tt.team_omission,
+        tt.withdrawal_status,
+        tt.created_at,
+        m.contact_person,
+        m.contact_email,
+        m.contact_phone,
+        m.registration_type
+      ORDER BY tt.created_at ASC
     `, [tournamentId]);
 
-    const teams = teamsResult.rows.map(row => ({
-      tournament_team_id: Number(row.tournament_team_id),
-      tournament_id: Number(row.tournament_id),
-      team_id: String(row.team_id),
-      team_name: String(row.team_name),
-      team_omission: String(row.team_omission),
-      master_team_name: String(row.master_team_name),
-      contact_person: String(row.contact_person),
-      contact_email: String(row.contact_email),
-      contact_phone: row.contact_phone ? String(row.contact_phone) : null,
-      registration_type: String(row.registration_type),
-      player_count: Number(row.player_count),
-      created_at: String(row.created_at)
-    }));
+    // 各チームの選手詳細情報を取得
+    const teams = await Promise.all(
+      teamsResult.rows.map(async (teamRow) => {
+        const team = teamRow as unknown as {
+          tournament_team_id: number;
+          team_id: string;
+          tournament_id: number;
+          team_name: string;
+          team_omission: string;
+          withdrawal_status: string;
+          joined_at: string;
+          contact_person: string;
+          contact_email: string;
+          contact_phone: string | null;
+          registration_type: string;
+          player_count: number;
+        };
+        const playersResult = await db.execute(`
+          SELECT 
+            tp.tournament_player_id,
+            mp.player_id,
+            mp.player_name,
+            tp.jersey_number
+          FROM t_tournament_players tp
+          INNER JOIN m_players mp ON tp.player_id = mp.player_id
+          WHERE tp.tournament_id = ? AND tp.team_id = ?
+          ORDER BY tp.jersey_number ASC, mp.player_name ASC
+        `, [team.tournament_id, team.team_id]);
+
+        return {
+          tournament_team_id: team.tournament_team_id,
+          team_id: team.team_id,
+          team_name: team.team_name,
+          team_omission: team.team_omission,
+          contact_person: team.contact_person,
+          contact_email: team.contact_email,
+          contact_phone: team.contact_phone,
+          registration_type: team.registration_type || 'self_registered',
+          withdrawal_status: team.withdrawal_status || 'active',
+          joined_at: team.joined_at,
+          player_count: team.player_count || 0,
+          players: playersResult.rows.map((playerRow) => {
+            const player = playerRow as unknown as {
+              tournament_player_id: number;
+              player_id: string;
+              player_name: string;
+              jersey_number: number | null;
+            };
+            return {
+              tournament_player_id: player.tournament_player_id,
+              player_id: player.player_id,
+              player_name: player.player_name,
+              jersey_number: player.jersey_number,
+              position: null // positionカラムは存在しないためnull
+            };
+          })
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,
-      data: {
-        tournament: {
-          tournament_id: Number(tournament.tournament_id),
-          tournament_name: String(tournament.tournament_name),
-          recruitment_start_date: tournament.recruitment_start_date ? String(tournament.recruitment_start_date) : null,
-          recruitment_end_date: tournament.recruitment_end_date ? String(tournament.recruitment_end_date) : null,
-          status: String(tournament.status),
-          format_name: tournament.format_name ? String(tournament.format_name) : null,
-          venue_name: tournament.venue_name ? String(tournament.venue_name) : null
-        },
-        teams: teams
-      }
+      data: teams,
+      count: teams.length
     });
 
   } catch (error) {
@@ -402,11 +448,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
             team_id,
             player_id,
             jersey_number,
-            player_status,
-            registration_date,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [
           tournamentId,
           teamId,

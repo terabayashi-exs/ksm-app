@@ -26,7 +26,7 @@ export default function Header() {
               <div className="relative">
                 <Image
                   src="/images/system_logo.png"
-                  alt="Rakusyo GO"
+                  alt="楽勝 GO"
                   width={32}
                   height={32}
                   className="rounded-lg"
@@ -35,7 +35,7 @@ export default function Header() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">
-                  Rakusyo GO
+                  楽勝 GO
                 </h1>
                 <p className="text-xs text-muted-foreground">
                   Sports Tournament Management

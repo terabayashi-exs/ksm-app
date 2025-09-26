@@ -71,14 +71,11 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                参加チームの登録、管理を行います
+                大会ごとのチーム情報の管理を行います
               </p>
               <div className="space-y-2">
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
                   <Link href="/admin/teams">チーム一覧</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full hover:border-blue-300 hover:bg-blue-50 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                  <Link href="/admin/teams/register">チーム登録</Link>
                 </Button>
               </div>
             </CardContent>

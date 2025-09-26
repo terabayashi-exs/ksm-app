@@ -38,7 +38,7 @@ export default async function Home() {
             <div className="mb-8 relative w-full max-w-6xl mx-auto">
               <Image
                 src="/images/system_logo.png"
-                alt="Rakusyo GO"
+                alt="楽勝 GO"
                 width={1000}
                 height={1000}
                 className="mx-auto w-full h-auto max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl relative z-10"
@@ -286,7 +286,7 @@ export default async function Home() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">システムの特徴</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Rakusyo GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
+              楽勝 GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
             </p>
           </div>
 

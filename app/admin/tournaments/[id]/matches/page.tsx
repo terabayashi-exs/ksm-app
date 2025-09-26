@@ -19,8 +19,7 @@ import {
   Eye,
   RefreshCw,
   RotateCcw,
-  Undo2,
-  Trophy
+  Undo2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -87,7 +86,6 @@ export default function AdminMatchesPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchData | null>(null);
   const [cancellationType, setCancellationType] = useState<'no_show_both' | 'no_show_team1' | 'no_show_team2' | 'no_count'>('no_show_both');
-  const [updatingRankings, setUpdatingRankings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('scheduled');
   const [blockFilter, setBlockFilter] = useState<string>('all');
@@ -311,65 +309,6 @@ export default function AdminMatchesPage() {
     window.open(qrUrl, '_blank', 'width=600,height=800');
   };
 
-  // 順位表更新（再計算）
-  const updateRankings = async () => {
-    if (!window.confirm('全ブロックの順位表を再計算しますか？\n\n【⚠️ 警告】\n・手動で設定した順位はリセットされます\n・確定済みの試合結果をもとに順位が自動計算されます\n・進出処理は実行されません（別ボタンで実行してください）')) {
-      return;
-    }
-
-    setUpdatingRankings(true);
-    
-    try {
-      const response = await fetch(`/api/tournaments/${tournamentId}/update-rankings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'recalculate_only' })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('順位表を再計算しました！\n\n手動順位設定が必要な場合は「手動順位設定」画面で調整してください。');
-      } else {
-        alert(`順位表の更新に失敗しました: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Rankings update error:', error);
-      alert('順位表更新中にエラーが発生しました');
-    } finally {
-      setUpdatingRankings(false);
-    }
-  };
-
-  // 決勝トーナメント進出処理
-  const promoteToFinalTournament = async () => {
-    if (!window.confirm('決勝トーナメントへの進出処理を実行しますか？\n\n・現在の順位表（手動設定含む）に基づいてチームを進出させます\n・決勝トーナメントのプレースホルダー（「A1位」等）が実際のチーム名に更新されます')) {
-      return;
-    }
-
-    setUpdatingRankings(true);
-    
-    try {
-      const response = await fetch(`/api/tournaments/${tournamentId}/update-rankings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'promote_only' })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('決勝トーナメント進出処理を実行しました！\n\n決勝トーナメントのチーム名が更新されました。');
-      } else {
-        alert(`進出処理に失敗しました: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Promotion error:', error);
-      alert('進出処理中にエラーが発生しました');
-    } finally {
-      setUpdatingRankings(false);
-    }
-  };
 
   // 試合結果確定
   const confirmMatch = async (matchId: number, matchCode: string) => {
@@ -1068,7 +1007,7 @@ export default function AdminMatchesPage() {
               </div>
             </div>
             
-            {/* 順位表更新ボタン */}
+            {/* リフレッシュボタンのみ表示 */}
             <div className="flex items-center space-x-3">
               <Button
                 variant="outline"
@@ -1082,26 +1021,6 @@ export default function AdminMatchesPage() {
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? '更新中...' : '最新情報に更新'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={updateRankings}
-                disabled={updatingRankings}
-                className="flex items-center"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${updatingRankings ? 'animate-spin' : ''}`} />
-                {updatingRankings ? '更新中...' : '順位表再計算'}
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={promoteToFinalTournament}
-                disabled={updatingRankings}
-                className="flex items-center bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                {updatingRankings ? '処理中...' : '決勝進出処理'}
               </Button>
             </div>
           </div>
