@@ -218,6 +218,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         `, [matchId]);
         break;
 
+      case 'reset':
+        // 試合開始前の状態に戻す（日本時間で記録）
+        await db.execute(`
+          UPDATE t_match_status 
+          SET match_status = 'scheduled', actual_start_time = NULL, actual_end_time = NULL, current_period = 1, updated_by = ?, updated_at = datetime('now', '+9 hours')
+          WHERE match_id = ?
+        `, [updated_by, matchId]);
+
+        await db.execute(`
+          UPDATE t_matches_live 
+          SET match_status = 'scheduled'
+          WHERE match_id = ?
+        `, [matchId]);
+        break;
+
       default:
         return NextResponse.json(
           { success: false, error: '無効なアクションです' },

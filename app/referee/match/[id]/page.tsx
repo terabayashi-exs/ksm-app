@@ -660,6 +660,16 @@ export default function RefereeMatchPage() {
 
               {match.match_status === 'ongoing' && (
                 <div className="space-y-3">
+                  {/* 確定前のメッセージ */}
+                  {!isConfirmed && (
+                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-800 dark:text-blue-200">
+                        結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {match.current_period < match.period_count && (
                     <Button
                       className="w-full bg-blue-600 hover:bg-blue-700"
@@ -687,24 +697,56 @@ export default function RefereeMatchPage() {
                     <Square className="w-5 h-5 mr-2" />
                     試合終了
                   </Button>
+
+                  {/* 試合開始前に戻すボタン（確定前のみ表示） */}
+                  {!isConfirmed && (
+                    <Button
+                      className="w-full bg-gray-400 hover:bg-gray-500 text-white"
+                      variant="secondary"
+                      onClick={() => {
+                        if (window.confirm('試合を開始前の状態に戻しますか？\n\n現在のスコアやピリオド情報は保持されますが、試合状態は「開始前」に戻ります。')) {
+                          updateMatchStatus('reset');
+                        }
+                      }}
+                      disabled={updating}
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2" />
+                      試合開始前に戻す
+                    </Button>
+                  )}
                 </div>
               )}
 
               {match.match_status === 'completed' && !isConfirmed && (
                 <div className="space-y-3">
-                  <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-                      試合が完了しましたが、結果は確定前です。必要に応じて修正できます。
+                  <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200">
+                      結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
                     </AlertDescription>
                   </Alert>
+
                   <Button
-                    className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
                     onClick={() => updateMatchStatus('start')}
                     disabled={updating}
                   >
                     <Play className="w-5 h-5 mr-2" />
                     試合再開（結果修正）
+                  </Button>
+
+                  <Button
+                    className="w-full bg-gray-400 hover:bg-gray-500 text-white"
+                    variant="secondary"
+                    onClick={() => {
+                      if (window.confirm('試合を開始前の状態に戻しますか？\n\n現在のスコアやピリオド情報は保持されますが、試合状態は「開始前」に戻ります。')) {
+                        updateMatchStatus('reset');
+                      }
+                    }}
+                    disabled={updating}
+                  >
+                    <ArrowLeft className="w-5 h-5 mr-2" />
+                    試合開始前に戻す
                   </Button>
                 </div>
               )}
@@ -720,6 +762,56 @@ export default function RefereeMatchPage() {
                   </p>
                 </div>
               )}
+
+              {/* 試合状態インジケーター */}
+              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                <h4 className="text-sm font-medium mb-3">試合状態</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'scheduled' 
+                      ? 'border-gray-500 bg-gray-100 dark:bg-gray-800 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <Clock className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'scheduled' ? 'text-gray-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">試合前</span>
+                  </div>
+
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'ongoing' 
+                      ? 'border-green-500 bg-green-100 dark:bg-green-900/30 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <Play className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'ongoing' ? 'text-green-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">進行中</span>
+                  </div>
+
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'completed' && !isConfirmed 
+                      ? 'border-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <AlertCircle className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'completed' && !isConfirmed ? 'text-yellow-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">確定待ち</span>
+                  </div>
+
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'completed' && isConfirmed 
+                      ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/30 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <CheckCircle className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'completed' && isConfirmed ? 'text-blue-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">完了</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
