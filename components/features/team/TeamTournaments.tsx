@@ -354,7 +354,7 @@ export default function TeamTournaments() {
                 現在募集中の大会がないか、既にすべての大会に参加済みです。
               </p>
               <Button asChild variant="outline">
-                <Link href="/public/tournaments">大会一覧を確認する</Link>
+                <Link href="/tournaments">大会一覧を確認する</Link>
               </Button>
             </CardContent>
           </Card>
