@@ -196,9 +196,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
     );
 
+    // 大会情報をオブジェクトとして作成
+    const tournament = tournamentResult.rows[0] as unknown as {
+      tournament_id: number;
+      tournament_name: string;
+      recruitment_start_date: string | null;
+      recruitment_end_date: string | null;
+      status: string;
+      format_name: string | null;
+      venue_name: string | null;
+    };
+
     return NextResponse.json({
       success: true,
-      data: teams,
+      data: {
+        tournament: {
+          tournament_id: tournament.tournament_id,
+          tournament_name: tournament.tournament_name,
+          format_name: tournament.format_name || '',
+          venue_name: tournament.venue_name || '',
+          team_count: teams.length
+        },
+        teams: teams
+      },
       count: teams.length
     });
 
