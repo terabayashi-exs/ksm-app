@@ -35,6 +35,28 @@ export interface Tournament {
   // 管理者ロゴ情報
   logo_blob_url?: string | null;
   organization_name?: string | null;
+  // グループ関連
+  group_id?: number | null;
+  group_order?: number;
+  category_name?: string | null;
+  group_name?: string | null;
+  group_description?: string | null;
+  group_color?: string | null;
+}
+
+// 大会グループの型
+export interface TournamentGroup {
+  group_id: number;
+  group_name: string;
+  group_description?: string;
+  group_color: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  // Optional joined fields
+  tournament_count?: number;
+  ongoing_count?: number;
+  completed_count?: number;
 }
 
 // 大会開催日程の型

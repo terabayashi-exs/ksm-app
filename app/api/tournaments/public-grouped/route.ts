@@ -1,10 +1,14 @@
-// lib/api/tournaments.ts
-import { db } from "@/lib/db";
-import type { Tournament } from "@/lib/types";
-import { calculateTournamentStatus } from "@/lib/tournament-status";
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { auth } from '@/lib/auth';
+import { calculateTournamentStatus } from '@/lib/tournament-status';
 
-export async function getPublicTournaments(teamId?: string): Promise<Tournament[]> {
+// GET /api/tournaments/public-grouped - グループ化された公開大会を取得
+export async function GET(_request: NextRequest) {
   try {
+    const session = await auth();
+    const teamId = session?.user?.role === 'team' ? session.user.teamId : undefined;
+
     const query = `
       SELECT 
         t.tournament_id,
@@ -45,12 +49,11 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
       WHERE t.visibility = 'open' 
         AND t.public_start_date <= date('now')
       ORDER BY g.display_order NULLS LAST, t.group_order, t.created_at DESC
-      LIMIT 10
     `;
 
     const result = await db.execute(query, teamId ? [teamId] : []);
 
-    // 非同期でステータス計算を実行
+    // ステータス計算
     const tournaments = await Promise.all(result.rows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
@@ -68,13 +71,12 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         }
       }
 
-      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
       const calculatedStatus = await calculateTournamentStatus({
         status: (row.status as string) || 'planning',
         recruitment_start_date: row.recruitment_start_date as string | null,
         recruitment_end_date: row.recruitment_end_date as string | null,
         tournament_dates: (row.tournament_dates as string) || '{}'
-      }, Number(row.tournament_id)); // tournamentIdを渡して試合進行状況もチェック
+      }, Number(row.tournament_id));
 
       return {
         tournament_id: Number(row.tournament_id),
@@ -96,10 +98,8 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         created_by: row.created_by as string,
         venue_name: row.venue_name as string,
         format_name: row.format_name as string,
-        // 管理者ロゴ情報
         logo_blob_url: row.logo_blob_url as string | null,
         organization_name: row.organization_name as string | null,
-        // グループ情報
         group_id: row.group_id ? Number(row.group_id) : null,
         group_order: Number(row.group_order) || 0,
         category_name: row.category_name as string | null,
@@ -107,67 +107,54 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         group_description: row.group_description as string | null,
         group_color: row.group_color as string | null,
         group_display_order: Number(row.display_order) || 0,
-        // 互換性のため
         event_start_date: eventStartDate,
         event_end_date: eventEndDate,
-        // 参加状況
         is_joined: Boolean(row.is_joined)
       };
     }));
 
-    return tournaments;
-  } catch (error) {
-    console.error("Failed to fetch public tournaments:", error);
-    return [];
-  }
-}
+    // グループ化処理
+    const groupedData: Record<string, { group: any; tournaments: any[] }> = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const ungroupedTournaments: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-export async function getTournamentStats() {
-  try {
-    // 全ての公開大会を取得してステータスを計算する（統計精度を向上）
-    const tournamentsResult = await db.execute(`
-      SELECT 
-        tournament_id,
-        status,
-        recruitment_start_date,
-        recruitment_end_date,
-        tournament_dates
-      FROM t_tournaments 
-      WHERE visibility = 'open' AND public_start_date <= date('now')
-    `);
-
-    const tournaments = tournamentsResult.rows;
-    let ongoingCount = 0;
-    let completedCount = 0;
-
-    // 各大会のステータスを動的に計算（試合進行状況を含む）
-    let scheduledCount = 0; // 開催予定の大会数
-
-    for (const tournament of tournaments) {
-      const calculatedStatus = await calculateTournamentStatus({
-        status: (tournament.status as string) || 'planning',
-        recruitment_start_date: tournament.recruitment_start_date as string | null,
-        recruitment_end_date: tournament.recruitment_end_date as string | null,
-        tournament_dates: (tournament.tournament_dates as string) || '{}'
-      }, Number(tournament.tournament_id));
-
-      if (calculatedStatus === 'ongoing') {
-        ongoingCount++;
-      } else if (calculatedStatus === 'completed') {
-        completedCount++;
+    tournaments.forEach(tournament => {
+      if (tournament.group_id) {
+        const groupKey = tournament.group_id.toString();
+        if (!groupedData[groupKey]) {
+          groupedData[groupKey] = {
+            group: {
+              group_id: tournament.group_id,
+              group_name: tournament.group_name || '',
+              group_description: tournament.group_description || '',
+              group_color: tournament.group_color || '#3B82F6',
+              display_order: tournament.group_display_order
+            },
+            tournaments: []
+          };
+        }
+        groupedData[groupKey].tournaments.push(tournament);
       } else {
-        // before_recruitment, recruiting, before_event のステータスは開催予定とカウント
-        scheduledCount++;
+        ungroupedTournaments.push(tournament);
       }
-    }
+    });
 
-    return {
-      total: scheduledCount, // 開催予定の大会数に変更
-      ongoing: ongoingCount,
-      completed: completedCount
-    };
+    // グループ内の大会を順序でソート
+    Object.values(groupedData).forEach(group => {
+      group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        grouped: Object.values(groupedData),
+        ungrouped: ungroupedTournaments
+      }
+    });
+
   } catch (error) {
-    console.error("Failed to fetch tournament stats:", error);
-    return { total: 0, ongoing: 0, completed: 0 };
+    console.error('グループ化公開大会取得エラー:', error);
+    return NextResponse.json({
+      error: 'グループ化公開大会の取得に失敗しました'
+    }, { status: 500 });
   }
 }

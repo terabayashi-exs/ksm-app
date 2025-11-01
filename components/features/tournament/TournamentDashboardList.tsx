@@ -439,6 +439,25 @@ export default function TournamentDashboardList() {
                   )}
                 </Button>
               )}
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleDeleteTournament(tournament)}
+                disabled={deleting === tournament.tournament_id}
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              >
+                {deleting === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    削除中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    削除
+                  </div>
+                )}
+              </Button>
             </>
           )}
           {type === 'ongoing' && (
@@ -470,6 +489,25 @@ export default function TournamentDashboardList() {
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                   ファイル管理
                 </Link>
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleDeleteTournament(tournament)}
+                disabled={deleting === tournament.tournament_id}
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              >
+                {deleting === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    削除中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    削除
+                  </div>
+                )}
               </Button>
             </>
           )}

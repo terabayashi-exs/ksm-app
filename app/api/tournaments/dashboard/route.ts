@@ -47,15 +47,22 @@ export async function GET() {
         t.created_by,
         t.created_at,
         t.updated_at,
+        t.group_id,
+        t.group_order,
+        t.category_name,
         v.venue_name,
         f.format_name,
         a.logo_blob_url,
         a.logo_filename,
-        a.organization_name
+        a.organization_name,
+        g.group_name,
+        g.group_description,
+        g.group_color
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN m_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status IN ('planning', 'ongoing')
         AND (t.created_by = ? OR ? = 1)
       ORDER BY 
@@ -64,6 +71,8 @@ export async function GET() {
           WHEN 'planning' THEN 2 
           ELSE 3 
         END,
+        g.display_order NULLS LAST,
+        t.group_order,
         t.created_at DESC
     `, [userId, isAdmin ? 1 : 0]);
 
@@ -89,18 +98,25 @@ export async function GET() {
         t.created_by,
         t.created_at,
         t.updated_at,
+        t.group_id,
+        t.group_order,
+        t.category_name,
         v.venue_name,
         f.format_name,
         a.logo_blob_url,
         a.logo_filename,
-        a.organization_name
+        a.organization_name,
+        g.group_name,
+        g.group_description,
+        g.group_color
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN m_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status = 'completed'
         AND (t.created_by = ? OR ? = 1)
-      ORDER BY t.created_at DESC
+      ORDER BY g.display_order NULLS LAST, t.group_order, t.created_at DESC
     `, [userId, isAdmin ? 1 : 0]);
 
     // 完了した大会から開催日から1年経過したものを除外
@@ -211,7 +227,13 @@ export async function GET() {
         is_archived: Boolean(row.is_archived),
         archive_ui_version: row.archive_ui_version as string,
         logo_blob_url: row.logo_blob_url as string | null,
-        organization_name: row.organization_name as string | null
+        organization_name: row.organization_name as string | null,
+        group_id: row.group_id ? Number(row.group_id) : null,
+        group_order: Number(row.group_order) || 0,
+        category_name: row.category_name as string | null,
+        group_name: row.group_name as string | null,
+        group_description: row.group_description as string | null,
+        group_color: row.group_color as string | null
       } as Tournament;
     }));
 
@@ -220,13 +242,57 @@ export async function GET() {
     const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
     const completed = tournamentsWithTimes.filter(t => t.status === 'completed');
 
+    // グループ化された大会情報を生成
+    const groupedTournaments = (tournaments: Tournament[]) => {
+      const grouped: Record<string, { group: { group_id: number; group_name: string | null; group_description: string | null; group_color: string | null; display_order: number }, tournaments: Tournament[] }> = {};
+      const ungrouped: Tournament[] = [];
+
+      tournaments.forEach(tournament => {
+        if (tournament.group_id) {
+          const groupKey = tournament.group_id.toString();
+          if (!grouped[groupKey]) {
+            grouped[groupKey] = {
+              group: {
+                group_id: tournament.group_id!,
+                group_name: tournament.group_name || '',
+                group_description: tournament.group_description || '',
+                group_color: tournament.group_color || '#3B82F6',
+                display_order: 0
+              },
+              tournaments: []
+            };
+          }
+          grouped[groupKey].tournaments.push(tournament);
+        } else {
+          ungrouped.push(tournament);
+        }
+      });
+
+      // グループ内の大会を順序でソート
+      Object.values(grouped).forEach(group => {
+        group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+      });
+
+      return { grouped, ungrouped };
+    };
+
+    const recruitingGrouped = groupedTournaments(recruiting);
+    const ongoingGrouped = groupedTournaments(ongoing);
+    const completedGrouped = groupedTournaments(completed);
+
     return NextResponse.json({
       success: true,
       data: {
         recruiting,
         ongoing,
         completed,
-        total: tournamentsWithTimes.length
+        total: tournamentsWithTimes.length,
+        // グループ化された情報も含める
+        grouped: {
+          recruiting: recruitingGrouped,
+          ongoing: ongoingGrouped,
+          completed: completedGrouped
+        }
       }
     });
 
