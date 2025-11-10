@@ -6,17 +6,15 @@ import BackButton from '@/components/ui/back-button';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink, Archive, Calendar as CalendarIcon } from 'lucide-react';
-import { formatDate, formatDateOnly } from '@/lib/utils';
-import { Tournament } from '@/lib/types';
-import { getArchivedTournamentJson } from '@/lib/tournament-json-archiver';
+import { ArrowLeft, Trophy, Users, Award, Archive, BarChart3 } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
+import { ArchiveLoadingState } from '@/components/features/archived/ArchiveLoadingState';
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
-
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// アーカイブデータから大会詳細を取得する関数
+// アーカイブデータから大会詳細を取得する関数（API経由でBlob対応）
 async function getArchivedTournamentDetail(id: string) {
   const tournamentId = parseInt(id);
   
@@ -24,13 +22,34 @@ async function getArchivedTournamentDetail(id: string) {
     throw new Error('有効な大会IDを指定してください');
   }
 
-  const archived = await getArchivedTournamentJson(tournamentId);
-  
-  if (!archived) {
-    throw new Error('アーカイブデータが見つかりません');
-  }
+  try {
+    // APIを通じてアーカイブデータを取得（Blob対応）
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/tournaments/${tournamentId}/archived-view`, {
+      cache: 'no-store' // 常に最新データを取得
+    });
 
-  return archived;
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('アーカイブデータが見つかりません');
+      }
+      throw new Error(`アーカイブデータの取得に失敗しました: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'アーカイブデータの取得に失敗しました');
+    }
+
+    // データソース（blob/database）をログに記録
+    console.log(`📦 アーカイブデータ取得: ${result.source || 'unknown'} (大会ID: ${tournamentId})`);
+
+    return result.data;
+  } catch (error) {
+    console.error('アーカイブデータ取得エラー:', error);
+    throw error;
+  }
 }
 
 // データ型定義
@@ -560,257 +579,10 @@ function ArchivedTournamentTeams({ teams }: { teams: TeamData[] }) {
   );
 }
 
-interface PdfInfo {
-  bracketPdfExists?: boolean;
-  resultsPdfExists?: boolean;
-}
+// PdfInfo interface removed as unused
 
-// 大会概要タブのコンテンツ（アーカイブ版）
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function ArchivedTournamentOverview({ 
-  tournament, 
-  pdfInfo,
-  archivedAt 
-}: { 
-  tournament: Tournament;
-  pdfInfo: PdfInfo;
-  archivedAt: string;
-}) {
-  const getStatusBadge = () => {
-    return <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">アーカイブ済み</span>;
-  };
 
-  // 開催日程をパース
-  const tournamentDates = tournament.tournament_dates ? JSON.parse(tournament.tournament_dates) : {};
-  const dateEntries = Object.entries(tournamentDates).sort(([a], [b]) => Number(a) - Number(b));
-
-  return (
-    <div className="space-y-6">
-      {/* アーカイブ通知 */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <Archive className="h-5 w-5 text-orange-600 mr-2" />
-          <div className="flex-1">
-            <p className="font-medium text-orange-800">アーカイブされた大会データ</p>
-            <p className="text-sm text-orange-700 mt-1">
-              この大会は {formatDate(archivedAt)} にアーカイブされました。表示されているデータはアーカイブ時点のものです。
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 基本情報 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Trophy className="h-5 w-5 mr-2 text-blue-600" />
-            大会基本情報
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">大会名</h4>
-              <p className="text-lg font-semibold">{tournament.tournament_name}</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">ステータス</h4>
-              {getStatusBadge()}
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">フォーマット</h4>
-              <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2 flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                会場
-              </h4>
-              <p className="text-gray-900">{tournament.venue_name || '未設定'}</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2 flex items-center">
-                <Users className="h-4 w-4 mr-1" />
-                参加チーム数
-              </h4>
-              <p className="text-gray-900">{tournament.team_count}チーム</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">コート数</h4>
-              <p className="text-gray-900">{tournament.court_count}コート</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* PDF ダウンロードエリア - 存在するPDFのみ表示 */}
-      {(pdfInfo?.bracketPdfExists || pdfInfo?.resultsPdfExists) && (
-        <div className={`grid grid-cols-1 ${pdfInfo.bracketPdfExists && pdfInfo.resultsPdfExists ? 'lg:grid-cols-2' : ''} gap-6`}>
-          {/* PDF トーナメント表リンク */}
-          {pdfInfo.bracketPdfExists && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-green-600" />
-                  トーナメント表（PDF版）
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-green-800 mb-1">PDFでトーナメント表を表示</h4>
-                    <p className="text-sm text-green-700">
-                      アーカイブ時点でのトーナメント表をPDF形式でご覧いただけます。
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <Button asChild className="bg-green-600 hover:bg-green-700">
-                      <Link 
-                        href={`/public/tournaments/${tournament.tournament_id}/bracket-pdf`}
-                        className="flex items-center gap-2"
-                      >
-                        <FileText className="h-4 w-4" />
-                        PDF表示
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* PDF 結果表リンク */}
-          {pdfInfo.resultsPdfExists && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-                  結果表（PDF版）
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-blue-800 mb-1">PDFで結果表を表示</h4>
-                    <p className="text-sm text-blue-700">
-                      アーカイブ時点での結果表をPDF形式でご覧いただけます。
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <Button asChild className="bg-blue-600 hover:bg-blue-700">
-                      <Link 
-                        href={`/public/tournaments/${tournament.tournament_id}/results-pdf`}
-                        className="flex items-center gap-2"
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                        PDF表示
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* 開催日程 */}
-      {dateEntries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <CalendarIcon className="h-5 w-5 mr-2 text-green-600" />
-              開催日程
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {dateEntries.map(([dayNumber, date]) => (
-                <div key={dayNumber} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
-                    {dayNumber}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">第{dayNumber}日</p>
-                    <p className="font-medium">{formatDateOnly(date as string)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 試合設定 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="h-5 w-5 mr-2 text-purple-600" />
-            試合設定
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">{tournament.match_duration_minutes}</p>
-              <p className="text-sm text-gray-600">試合時間（分）</p>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
-              <p className="text-sm text-gray-600">休憩時間（分）</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 募集期間 */}
-      {tournament.recruitment_start_date && tournament.recruitment_end_date && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Target className="h-5 w-5 mr-2 text-orange-600" />
-              募集期間
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-              <div>
-                <p className="text-sm text-gray-600">開始</p>
-                <p className="font-medium">{formatDate(tournament.recruitment_start_date)}</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-0.5 bg-orange-300"></div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">終了</p>
-                <p className="font-medium">{formatDate(tournament.recruitment_end_date)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// ローディングコンポーネント
-function ArchivedTournamentLoading() {
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/3 mb-6"></div>
-          <div className="h-64 bg-muted rounded mb-6"></div>
-          <div className="h-96 bg-muted rounded"></div>
-        </div>
-      </div>
-      <Footer />
-    </div>
-  );
-}
+// ArchivedTournamentOverview function removed due to unused status
 
 // メインコンテンツコンポーネント
 async function ArchivedTournamentContent({ params }: PageProps) {
@@ -839,17 +611,33 @@ async function ArchivedTournamentContent({ params }: PageProps) {
   const tournamentId = parseInt(resolvedParams.id);
   const uiVersion = await ArchiveVersionManager.getArchiveUIVersion(tournamentId);
   const versionInfo = ArchiveVersionManager.getVersionInfo(uiVersion);
+  
+  // デバッグ用ログ
+  console.log(`🔍 Archive UI Version Debug (Tournament ID: ${tournamentId}):`, {
+    uiVersion,
+    versionInfo: versionInfo ? {
+      version: versionInfo.version,
+      features: versionInfo.features,
+      component_path: versionInfo.component_path
+    } : 'undefined'
+  });
 
   // バージョンに応じたコンポーネントの動的読み込み
   let VersionedComponent;
   
   try {
     if (uiVersion === '1.0') {
+      console.log('📦 Loading ArchivedLayout_v1 component...');
       const { ArchivedLayout_v1 } = await import('@/components/features/archived/v1.0/ArchivedLayout_v1');
       VersionedComponent = ArchivedLayout_v1;
+    } else if (uiVersion === '2.0') {
+      // v2.0コンポーネント（トーナメント表対応）を読み込み
+      console.log('📦 Loading ArchivedLayout_v2 component...');
+      const { ArchivedLayout_v2 } = await import('@/components/features/archived/v2.0/ArchivedLayout_v2');
+      VersionedComponent = ArchivedLayout_v2;
     } else {
       // 新しいバージョンが追加されたときはここで分岐
-      console.warn(`未対応のUIバージョン: ${uiVersion}, デフォルトバージョンを使用します`);
+      console.warn(`未対応のUIバージョン: ${uiVersion}, デフォルトバージョン(v1.0)を使用します`);
       const { ArchivedLayout_v1 } = await import('@/components/features/archived/v1.0/ArchivedLayout_v1');
       VersionedComponent = ArchivedLayout_v1;
     }
@@ -870,7 +658,7 @@ async function ArchivedTournamentContent({ params }: PageProps) {
 }
 
 // フォールバック用のインラインレンダリング関数
-function renderInlineComponent(archived: ReturnType<typeof getArchivedTournamentJson> extends Promise<infer T> ? NonNullable<T> : never) {
+function renderInlineComponent(archived: ReturnType<typeof getArchivedTournamentDetail> extends Promise<infer T> ? NonNullable<T> : never) {
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -918,7 +706,7 @@ function renderInlineComponent(archived: ReturnType<typeof getArchivedTournament
 
 export default function ArchivedTournamentPage({ params }: PageProps) {
   return (
-    <Suspense fallback={<ArchivedTournamentLoading />}>
+    <Suspense fallback={<ArchiveLoadingState />}>
       <ArchivedTournamentContent params={params} />
     </Suspense>
   );

@@ -28,6 +28,11 @@
     "db:remove-point-fields": "node scripts/migrate-remove-point-fields.js",
     "db:rollback-point-fields": "node scripts/rollback-point-fields.js",
     "db:validate-point-migration": "node scripts/validate-point-system-migration.js",
+    "blob:migrate": "node scripts/blob-migration.js",
+    "blob:migrate:status": "node scripts/blob-migration.js -- --status",
+    "blob:migrate:dry-run": "node scripts/blob-migration.js -- --dry-run",
+    "blob:migrate:verify": "node scripts/blob-migration.js -- --verify",
+    "blob:test": "curl -X PUT http://localhost:3000/api/test/blob",
     "reset-test-tournaments": "node scripts/reset-test-tournaments.js",
     "type-check": "tsc --noEmit"
   },

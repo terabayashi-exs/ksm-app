@@ -228,15 +228,10 @@ export async function PUT(
         await applyCustomSchedule(tournamentId, typedCustomMatches);
         // Custom schedule applied successfully
       } else {
-        // カスタムスケジュールがない場合は従来通りスケジュール再計算
-        await updateTournamentSchedule(tournamentId, data.format_id, data.tournament_dates, {
-          courtCount: data.court_count,
-          matchDurationMinutes: data.match_duration_minutes,
-          breakDurationMinutes: data.break_duration_minutes,
-          startTime: '09:00',
-          tournamentDates: data.tournament_dates
-        });
-        // Schedule update completed
+        // カスタムスケジュールがない場合でも既存の試合時間を保持する
+        console.log('[TOURNAMENT_EDIT] カスタムスケジュールなし - 既存の試合時間を保持');
+        // スケジュール再計算をスキップして既存データを維持
+        // 必要に応じて、コート数や時間設定のみを更新
       }
     } catch (scheduleError) {
       console.error('スケジュール更新エラー（大会更新は継続）:', scheduleError);
@@ -514,7 +509,8 @@ async function applyCustomSchedule(
   }
 }
 
-// 大会のスケジュールを更新する関数
+// 大会のスケジュールを更新する関数（現在は未使用）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function updateTournamentSchedule(
   tournamentId: number,
   formatId: number,

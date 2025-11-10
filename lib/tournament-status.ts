@@ -70,7 +70,36 @@ export async function calculateTournamentStatus(
     console.warn('tournament_datesのJSON解析に失敗:', tournament.tournament_dates, error);
   }
 
-  // DBのstatusが'completed'の場合は終了とする
+  // 試合進行状況をチェック（tournamentIdが提供されている場合のみ）
+  let allMatchesCompleted = false;
+  let hasOngoingMatches = false;
+  
+  console.log(`📊 Tournament ${tournamentId || 'N/A'} status calculation:`, {
+    dbStatus: tournament.status,
+    hasTournamentId: !!tournamentId
+  });
+  
+  if (tournamentId) {
+    try {
+      allMatchesCompleted = await checkAllMatchesCompleted(tournamentId);
+      hasOngoingMatches = await checkTournamentHasOngoingMatches(tournamentId);
+      
+      console.log(`📊 Tournament ${tournamentId} match status:`, {
+        allMatchesCompleted,
+        hasOngoingMatches
+      });
+    } catch (error) {
+      console.warn('試合状況チェックエラー:', error);
+    }
+  }
+  
+  // DBのstatusが'completed'でも、未確定の試合がある場合は'ongoing'にする
+  if (tournament.status === 'completed' && tournamentId && !allMatchesCompleted) {
+    console.log(`🔄 Tournament ${tournamentId}: Status overridden from 'completed' to 'ongoing' (${allMatchesCompleted ? 'all matches confirmed' : 'matches pending'})`);
+    return 'ongoing';
+  }
+  
+  // DBのstatusが'completed'で全試合確定済みの場合は終了とする
   if (tournament.status === 'completed') {
     return 'completed';
   }
@@ -223,6 +252,49 @@ async function checkTournamentHasOngoingMatches(tournamentId: number): Promise<b
     return ongoingCount > 0;
   } catch (error) {
     console.warn('進行中試合チェックエラー:', error);
+    return false;
+  }
+}
+
+/**
+ * 大会の全試合が確定済みかチェック
+ */
+async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> {
+  try {
+    const { db } = await import('@/lib/db');
+    
+    // 全試合数を取得
+    const totalResult = await db.execute(`
+      SELECT COUNT(*) as total_matches
+      FROM t_matches_live ml
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND ml.team1_id IS NOT NULL 
+        AND ml.team2_id IS NOT NULL
+    `, [tournamentId]);
+
+    const totalMatches = totalResult.rows[0]?.total_matches as number || 0;
+    
+    if (totalMatches === 0) {
+      return false; // 試合がまだ設定されていない
+    }
+
+    // 確定済み試合数を取得
+    const confirmedResult = await db.execute(`
+      SELECT COUNT(*) as confirmed_matches
+      FROM t_matches_final mf
+      INNER JOIN t_matches_live ml ON mf.match_id = ml.match_id
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+    `, [tournamentId]);
+
+    const confirmedMatches = confirmedResult.rows[0]?.confirmed_matches as number || 0;
+    
+    console.log(`Tournament ${tournamentId}: ${confirmedMatches}/${totalMatches} matches confirmed`);
+    
+    return confirmedMatches === totalMatches;
+  } catch (error) {
+    console.warn('全試合確定チェックエラー:', error);
     return false;
   }
 }

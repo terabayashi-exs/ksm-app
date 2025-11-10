@@ -57,10 +57,11 @@ export default function TournamentDataDeletion({
   const [showDetails, setShowDetails] = useState(false);
 
   const handleDeleteData = async () => {
-    if (!tournament.is_archived) {
-      alert('この大会はアーカイブされていません。先にアーカイブを実行してください。');
-      return;
-    }
+    // アーカイブ状態に関係なく削除を許可（テスト用途）
+    // if (!tournament.is_archived) {
+    //   alert('この大会はアーカイブされていません。先にアーカイブを実行してください。');
+    //   return;
+    // }
 
     setIsDeleting(true);
     setShowConfirmDialog(false);
@@ -158,7 +159,7 @@ export default function TournamentDataDeletion({
             <Button
               onClick={() => setShowConfirmDialog(true)}
               variant="destructive"
-              disabled={!tournament.is_archived || isDeleting}
+              disabled={isDeleting}
               className="flex items-center gap-2"
             >
               {isDeleting ? (

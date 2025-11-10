@@ -245,10 +245,10 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
           const sortedMatches = matches.sort((a, b) => a.match_number - b.match_number);
           
           const scheduleMatches = sortedMatches.map(match => {
-            const startTime = match.scheduled_time || '09:00';
+            const startTime = match.scheduled_time || '--:--';
             const endTime = match.scheduled_time ? 
               minutesToTime(timeToMinutes(match.scheduled_time) + settings.matchDurationMinutes) : 
-              '09:15';
+              '--:--';
             
             // Processing match schedule data
             
@@ -360,11 +360,18 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
     if (editMode && actualMatches.length > 0) {
       // 既存大会の編集モード: 初回のみ実際のマッチデータを送信
-      const initialMatches = actualMatches.map(match => ({
-        match_id: match.match_id,
-        start_time: match.start_time || '09:00',
-        court_number: match.court_number || 1
-      }));
+      const initialMatches = actualMatches
+        .map(match => ({
+          match_id: match.match_id,
+          start_time: match.scheduled_time || match.start_time || null,
+          court_number: match.court_number || 1
+        }))
+        .filter(match => match.start_time !== null)
+        .map(match => ({
+          match_id: match.match_id,
+          start_time: match.start_time as string, // null除外済みなのでstring型にキャスト
+          court_number: match.court_number
+        }));
       // Sending initial matches to parent component
       // Initial match times loaded for edit mode
       onScheduleChange(initialMatches);

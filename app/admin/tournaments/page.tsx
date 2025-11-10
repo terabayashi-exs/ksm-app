@@ -124,6 +124,37 @@ export default function AdminTournamentsList() {
     fetchTournaments(searchParams, newOffset);
   };
 
+  // 大会アーカイブ処理
+  const handleArchiveTournament = async (tournamentId: number) => {
+    if (!confirm('この大会をアーカイブしますか？\nアーカイブ後は編集ができなくなります。')) {
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/archive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`アーカイブが完了しました。\n保存先: ${data.storage_type}\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB`);
+        // 大会一覧を再読み込み
+        fetchTournaments();
+      } else {
+        alert(`アーカイブに失敗しました: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('アーカイブエラー:', error);
+      alert('アーカイブ中にエラーが発生しました');
+    } finally {
+      setSearching(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -345,7 +376,25 @@ export default function AdminTournamentsList() {
                                       手動順位設定
                                     </Link>
                                   </Button>
+                                  {tournament.calculated_status === 'completed' && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="hover:border-purple-300 hover:bg-purple-50"
+                                      onClick={() => handleArchiveTournament(tournament.tournament_id)}
+                                      disabled={searching}
+                                    >
+                                      アーカイブ
+                                    </Button>
+                                  )}
                                 </>
+                              )}
+                              {tournament.is_archived && (
+                                <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                                  <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                                    アーカイブ表示
+                                  </Link>
+                                </Button>
                               )}
                             </div>
                           </td>

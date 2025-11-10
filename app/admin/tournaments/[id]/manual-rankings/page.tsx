@@ -128,6 +128,33 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     court_number: row.court_number as number | null
   }));
 
+  // 決勝トーナメントの順位データを取得
+  const finalBlockResult = await db.execute({
+    sql: `
+      SELECT 
+        match_block_id,
+        team_rankings,
+        remarks
+      FROM t_match_blocks 
+      WHERE tournament_id = ? 
+      AND phase = 'final'
+      LIMIT 1
+    `,
+    args: [tournamentId]
+  });
+
+  let finalRankings = null;
+  if (finalBlockResult.rows.length > 0) {
+    const finalBlock = finalBlockResult.rows[0];
+    finalRankings = {
+      match_block_id: finalBlock.match_block_id as number,
+      team_rankings: finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [],
+      remarks: finalBlock.remarks as string | null
+    };
+    
+    console.log(`[MANUAL_RANKINGS_PAGE] 決勝トーナメント順位取得: ${finalRankings.team_rankings.length}チーム`);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-card shadow-sm border-b">
@@ -151,6 +178,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
           tournamentId={tournamentId}
           blocks={blocks}
           finalMatches={finalMatches}
+          finalRankings={finalRankings}
         />
       </div>
     </div>

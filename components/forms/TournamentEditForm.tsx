@@ -167,6 +167,44 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     setCustomMatches(customMatches);
   }, []);
 
+  // 現在の試合時間を保持するためのstate
+  const [currentMatches, setCurrentMatches] = useState<Array<{
+    match_id: number;
+    start_time: string;
+    court_number: number;
+  }>>([]);
+  const [earliestMatchTime, setEarliestMatchTime] = useState<string>('09:00');
+
+  // 既存試合データから現在の時間設定を取得
+  const fetchCurrentMatchSchedule = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.tournament_id}/matches`);
+      const result = await response.json();
+      
+      if (result.success && result.data.length > 0) {
+        const currentSchedule = result.data
+          .filter((match: { scheduled_time: string | null }) => match.scheduled_time !== null)
+          .map((match: { match_id: number; scheduled_time: string; court_number: number | null }) => ({
+            match_id: match.match_id,
+            start_time: match.scheduled_time,
+            court_number: match.court_number || 1
+          }));
+        setCurrentMatches(currentSchedule);
+        
+        // 最も早い試合時刻を検出
+        if (currentSchedule.length > 0) {
+          const earliestTime = currentSchedule.reduce((earliest: string, match: { match_id: number; start_time: string; court_number: number; }) => {
+            return match.start_time < earliest ? match.start_time : earliest;
+          }, currentSchedule[0].start_time);
+          setEarliestMatchTime(earliestTime);
+          console.log('[TOURNAMENT_EDIT] 既存の最早試合時刻:', earliestTime);
+        }
+      }
+    } catch (error) {
+      console.error('現在の試合スケジュール取得エラー:', error);
+    }
+  }, [tournament.tournament_id]);
+
   // 会場データの取得
   useEffect(() => {
     const fetchVenues = async () => {
@@ -183,10 +221,11 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     fetchVenues();
   }, []);
 
-  // 使用コート番号の初期化
+  // 使用コート番号と現在の試合スケジュールの初期化
   useEffect(() => {
     fetchUsedCourts();
-  }, [fetchUsedCourts]);
+    fetchCurrentMatchSchedule();
+  }, [fetchUsedCourts, fetchCurrentMatchSchedule]);
 
   // 日程の追加
   const addTournamentDate = () => {
@@ -241,15 +280,20 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     }
 
     try {
+      // カスタムスケジュールが設定されていない場合は既存の試合時間を保持
+      const finalCustomMatches = customMatches.length > 0 ? customMatches : currentMatches;
+      
       const requestData = {
         ...data,
-        customMatches: customMatches.length > 0 ? customMatches : undefined
+        customMatches: finalCustomMatches.length > 0 ? finalCustomMatches : undefined
       };
       
       // Sending tournament update with custom schedule
-      if (customMatches.length > 0) {
-        // Custom schedule data being submitted
-      }
+      console.log('[TOURNAMENT_EDIT] 送信データ:', {
+        hasCustomMatches: !!requestData.customMatches,
+        customMatchesCount: requestData.customMatches?.length || 0,
+        preservingExistingTimes: customMatches.length === 0 && currentMatches.length > 0
+      });
       
       const response = await fetch(`/api/tournaments/${tournament.tournament_id}`, {
         method: 'PUT',
@@ -546,7 +590,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   : undefined,
                 matchDurationMinutes: form.watch('match_duration_minutes') ?? 15,
                 breakDurationMinutes: form.watch('break_duration_minutes') ?? 5,
-                startTime: '09:00',
+                startTime: earliestMatchTime, // 既存の最早試合時刻を使用
                 tournamentDates: form.watch('tournament_dates') || []
               }}
               tournamentId={tournament.tournament_id}

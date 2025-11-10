@@ -83,6 +83,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         query: 'SELECT COUNT(*) as count FROM t_tournament_notifications WHERE tournament_id = ?'
       },
       {
+        name: 't_tournament_rules',
+        query: 'SELECT COUNT(*) as count FROM t_tournament_rules WHERE tournament_id = ?'
+      },
+      {
         name: 't_tournament_teams',
         query: 'SELECT COUNT(*) as count FROM t_tournament_teams WHERE tournament_id = ?'
       },
@@ -151,11 +155,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         params: [tournamentId],
         description: '大会通知データの削除'
       },
+      {
+        phase: 'Phase 1',
+        step: 3,
+        table: 't_tournament_rules',
+        query: 'DELETE FROM t_tournament_rules WHERE tournament_id = ?',
+        params: [tournamentId],
+        description: '大会ルール設定の削除'
+      },
 
       // Phase 2: 試合関連テーブル（相互依存があるため慎重に順序化）
       {
         phase: 'Phase 2',
-        step: 3,
+        step: 4,
         table: 't_match_status',
         query: `DELETE FROM t_match_status WHERE match_id IN (
           SELECT ml.match_id FROM t_matches_live ml 
@@ -167,7 +179,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
       {
         phase: 'Phase 2',
-        step: 4,
+        step: 5,
         table: 't_matches_final',
         query: `DELETE FROM t_matches_final WHERE match_id IN (
           SELECT ml.match_id FROM t_matches_live ml 
@@ -179,7 +191,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
       {
         phase: 'Phase 2',
-        step: 5,
+        step: 6,
         table: 't_matches_live',
         query: `DELETE FROM t_matches_live WHERE match_block_id IN (
           SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
@@ -191,7 +203,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       // Phase 3: 中間レイヤー（他テーブルから参照されているテーブル）
       {
         phase: 'Phase 3',
-        step: 6,
+        step: 7,
         table: 't_tournament_teams',
         query: 'DELETE FROM t_tournament_teams WHERE tournament_id = ?',
         params: [tournamentId],
@@ -201,11 +213,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       // Phase 4: 最上位レイヤー（最後に削除）
       {
         phase: 'Phase 4',
-        step: 7,
+        step: 8,
         table: 't_match_blocks',
         query: 'DELETE FROM t_match_blocks WHERE tournament_id = ?',
         params: [tournamentId],
         description: '試合ブロックデータの削除（最終段階）'
+      },
+
+      // Phase 5: アーカイブデータの削除
+      {
+        phase: 'Phase 5',
+        step: 9,
+        table: 't_archived_tournament_json',
+        query: 'DELETE FROM t_archived_tournament_json WHERE tournament_id = ?',
+        params: [tournamentId],
+        description: 'JSONアーカイブデータの削除'
       }
     ];
 
@@ -224,7 +246,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         currentPhase = step.phase;
         console.log(`\n📋 ${step.phase}: ${step.phase === 'Phase 1' ? '最下位レイヤー削除' : 
                    step.phase === 'Phase 2' ? '試合関連データ削除' :
-                   step.phase === 'Phase 3' ? '中間レイヤー削除' : '最上位レイヤー削除'}`);
+                   step.phase === 'Phase 3' ? '中間レイヤー削除' : 
+                   step.phase === 'Phase 4' ? '最上位レイヤー削除' : 'アーカイブデータ削除'}`);
       }
 
       try {
@@ -307,21 +330,53 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 6. 大会メインテーブルのis_archivedフラグを更新（削除はしない）
+    // 6. Blobアーカイブデータの削除
     try {
-      await db.execute(`
-        UPDATE t_tournaments 
-        SET updated_at = datetime('now', '+9 hours')
+      console.log(`\n🗂️  Blobアーカイブデータの削除を試行中...`);
+      const { TournamentBlobArchiver } = await import('@/lib/tournament-blob-archiver');
+      const blobDeleted = await TournamentBlobArchiver.deleteArchive(tournamentId);
+      
+      if (blobDeleted) {
+        console.log(`✅ Blobアーカイブデータを削除しました`);
+      } else {
+        console.log(`ℹ️  Blobアーカイブデータは存在しませんでした`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`⚠️  Blobアーカイブデータ削除でエラー: ${errorMessage}`);
+    }
+
+    // 7. 大会メインテーブルの削除（完全削除モード）
+    let tournamentMainDeleted = false;
+    try {
+      const deleteResult = await db.execute(`
+        DELETE FROM t_tournaments 
         WHERE tournament_id = ?
       `, [tournamentId]);
       
-      console.log(`✅ t_tournaments テーブルの更新日時を更新しました`);
+      console.log(`✅ t_tournaments テーブルから大会レコードを削除しました (影響行数: ${deleteResult.rowsAffected || 0})`);
+      tournamentMainDeleted = true;
+      
+      // 削除確認
+      const confirmResult = await db.execute(`
+        SELECT COUNT(*) as count FROM t_tournaments WHERE tournament_id = ?
+      `, [tournamentId]);
+      
+      const remainingCount = Number(confirmResult.rows[0]?.count || 0);
+      if (remainingCount > 0) {
+        console.error(`❌ 大会メインレコードの削除に失敗しました (残存: ${remainingCount}件)`);
+        tournamentMainDeleted = false;
+      } else {
+        console.log(`✅ 大会メインレコードの削除を確認しました`);
+      }
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.warn(`⚠️  t_tournaments テーブル更新でエラー: ${errorMessage}`);
+      console.error(`❌ t_tournaments テーブル削除でエラー: ${errorMessage}`);
+      tournamentMainDeleted = false;
     }
 
-    // 7. 結果サマリーの生成
+    // 8. 結果サマリーの生成
     const successfulSteps = deletionResults.filter(r => r.success);
     const failedSteps = deletionResults.filter(r => !r.success);
     const totalExecutionTime = deletionResults.reduce((sum, r) => sum + r.executionTime, 0);
@@ -332,11 +387,32 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     console.log(`   - 成功ステップ: ${successfulSteps.length}/${deletionResults.length}`);
     console.log(`   - 削除レコード数: ${totalDeletedRecords}`);
     console.log(`   - 残存レコード数: ${remainingRecords}`);
+    console.log(`   - 大会メインレコード削除: ${tournamentMainDeleted ? '成功' : '失敗'}`);
     console.log(`   - 総実行時間: ${totalExecutionTime}ms`);
+
+    // メインレコード削除失敗時はエラーレスポンス
+    if (!tournamentMainDeleted) {
+      return NextResponse.json({
+        success: false,
+        error: '大会メインレコードの削除に失敗しました',
+        message: `大会ID ${tournamentId} の関連データは削除されましたが、メインレコードが残存しています`,
+        tournamentName: tournament.tournament_name,
+        deletionSummary: {
+          totalSteps: deletionResults.length,
+          successfulSteps: successfulSteps.length,
+          failedSteps: failedSteps.length,
+          totalDeletedRecords: totalDeletedRecords,
+          remainingRecords: remainingRecords,
+          totalExecutionTime: totalExecutionTime,
+          tournamentMainDeleted: false
+        },
+        recommendation: '大会メインレコードが残存しています。手動で削除するか、システム管理者に連絡してください。'
+      }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `大会ID ${tournamentId} の関連データを削除しました`,
+      message: `大会ID ${tournamentId} の全データを完全削除しました`,
       tournamentName: tournament.tournament_name,
       deletionSummary: {
         totalSteps: deletionResults.length,
@@ -344,14 +420,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         failedSteps: failedSteps.length,
         totalDeletedRecords: totalDeletedRecords,
         remainingRecords: remainingRecords,
-        totalExecutionTime: totalExecutionTime
+        totalExecutionTime: totalExecutionTime,
+        tournamentMainDeleted: true
       },
       preCheckResults: preCheckResults,
       postCheckResults: postCheckResults,
       deletionResults: deletionResults,
-      recommendation: remainingRecords > 0 
-        ? '一部データが残存しています。バックアップからの復元をご検討ください。'
-        : 'アーカイブページでの表示確認後、問題なければバックアップテーブルを削除してください。'
+      recommendation: '大会の完全削除が正常に完了しました。'
     });
 
   } catch (error) {

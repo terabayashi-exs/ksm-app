@@ -109,13 +109,9 @@ async function getMatchTemplate(matchId: number): Promise<MatchTemplate | null> 
       mt.position_note
     FROM t_matches_live ml
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+    JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
     JOIN m_match_templates mt ON (
-      mb.tournament_id IN (
-        SELECT DISTINCT tournament_id 
-        FROM t_match_blocks mb2 
-        JOIN m_match_templates mt2 ON mb2.format_id = mt2.format_id
-        WHERE mt2.match_code = mt.match_code
-      )
+      mt.format_id = t.format_id
       AND mt.match_code = ml.match_code
       AND mt.phase = 'final'
     )

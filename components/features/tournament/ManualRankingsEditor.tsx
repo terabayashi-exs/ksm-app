@@ -76,9 +76,14 @@ interface ManualRankingsEditorProps {
   tournamentId: number;
   blocks: Block[];
   finalMatches?: FinalMatch[];
+  finalRankings?: {
+    match_block_id: number;
+    team_rankings: FinalRanking[];
+    remarks: string | null;
+  } | null;
 }
 
-export default function ManualRankingsEditor({ tournamentId, blocks, finalMatches = [] }: ManualRankingsEditorProps) {
+export default function ManualRankingsEditor({ tournamentId, blocks, finalMatches = [], finalRankings = null }: ManualRankingsEditorProps) {
   const [editedBlocks, setEditedBlocks] = useState<Block[]>(
     blocks.map(block => ({
       ...block,
@@ -251,10 +256,23 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     return rankings.sort((a, b) => a.position - b.position);
   };
 
-  const [finalTournamentBlock, setFinalTournamentBlock] = useState<FinalTournamentBlock>({
-    block_name: '決勝トーナメント',
-    team_rankings: calculateFinalRankings(),
-    remarks: ''
+  const [finalTournamentBlock, setFinalTournamentBlock] = useState<FinalTournamentBlock>(() => {
+    // データベースから取得したfinalRankingsがあればそれを使用、なければ自動計算
+    if (finalRankings && finalRankings.team_rankings.length > 0) {
+      console.log(`[MANUAL_RANKINGS_EDITOR] データベースから決勝順位を読み込み: ${finalRankings.team_rankings.length}チーム`);
+      return {
+        block_name: '決勝トーナメント',
+        team_rankings: finalRankings.team_rankings,
+        remarks: finalRankings.remarks || ''
+      };
+    } else {
+      console.log('[MANUAL_RANKINGS_EDITOR] 自動計算で決勝順位を初期化');
+      return {
+        block_name: '決勝トーナメント',
+        team_rankings: calculateFinalRankings(),
+        remarks: ''
+      };
+    }
   });
 
   const [saving, setSaving] = useState(false);
@@ -333,11 +351,20 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
 
   // 決勝トーナメントをリセット
   const resetFinalTournament = () => {
-    setFinalTournamentBlock({
-      block_name: '決勝トーナメント',
-      team_rankings: calculateFinalRankings(),
-      remarks: ''
-    });
+    // データベースから取得した初期状態があればそれに戻す、なければ自動計算
+    if (finalRankings && finalRankings.team_rankings.length > 0) {
+      setFinalTournamentBlock({
+        block_name: '決勝トーナメント',
+        team_rankings: finalRankings.team_rankings,
+        remarks: finalRankings.remarks || ''
+      });
+    } else {
+      setFinalTournamentBlock({
+        block_name: '決勝トーナメント',
+        team_rankings: calculateFinalRankings(),
+        remarks: ''
+      });
+    }
     setMessage({ type: 'success', text: '決勝トーナメント順位をリセットしました' });
   };
 
@@ -348,11 +375,21 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
       team_rankings: [...block.team_rankings],
       remarks: block.remarks || '' // 備考もリセット（nullを空文字に変換）
     })));
-    setFinalTournamentBlock({
-      block_name: '決勝トーナメント',
-      team_rankings: calculateFinalRankings(),
-      remarks: ''
-    });
+    
+    // 決勝トーナメントもリセット
+    if (finalRankings && finalRankings.team_rankings.length > 0) {
+      setFinalTournamentBlock({
+        block_name: '決勝トーナメント',
+        team_rankings: finalRankings.team_rankings,
+        remarks: finalRankings.remarks || ''
+      });
+    } else {
+      setFinalTournamentBlock({
+        block_name: '決勝トーナメント',
+        team_rankings: calculateFinalRankings(),
+        remarks: ''
+      });
+    }
     setMessage({ type: 'success', text: '全ての変更をリセットしました' });
   };
 

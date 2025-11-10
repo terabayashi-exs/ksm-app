@@ -7,13 +7,18 @@ import { Tournament } from '@/lib/types';
  */
 async function getArchivedTournamentById(tournamentId: number): Promise<Tournament> {
   try {
+    console.log(`🔍 アーカイブされた大会データを検索: tournament_id=${tournamentId}`);
+    
     const result = await db.execute(`
       SELECT tournament_data
       FROM t_archived_tournament_json
       WHERE tournament_id = ?
     `, [tournamentId]);
 
+    console.log(`📊 検索結果: ${result.rows ? result.rows.length : 0} 件`);
+
     if (!result.rows || result.rows.length === 0) {
+      console.error(`❌ アーカイブデータが見つからない: tournament_id=${tournamentId}`);
       throw new Error('アーカイブされた大会が見つかりません');
     }
 
@@ -55,6 +60,70 @@ async function getArchivedTournamentById(tournamentId: number): Promise<Tourname
   } catch (error) {
     console.error('getArchivedTournamentById error:', error);
     throw error;
+  }
+}
+
+/**
+ * アーカイブフラグに関係なく大会の生データを取得する（アーカイブ処理用）
+ */
+export async function getRawTournamentById(tournamentId: number): Promise<Tournament | null> {
+  try {
+    // アーカイブフラグに関係なく通常のテーブルから大会情報を取得
+    const result = await db.execute(`
+      SELECT 
+        t.*,
+        v.venue_name,
+        v.address,
+        tf.format_name,
+        tf.format_description
+      FROM t_tournaments t
+      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
+      WHERE t.tournament_id = ?
+    `, [tournamentId]);
+
+    if (!result.rows || result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    
+    // アーカイブフラグに関係なく常に生データを返す
+    const tournament: Tournament = {
+      tournament_id: row.tournament_id as number,
+      tournament_name: row.tournament_name as string,
+      format_id: row.format_id as number,
+      venue_id: row.venue_id as number,
+      team_count: row.team_count as number,
+      status: row.status as "planning" | "ongoing" | "completed",
+      court_count: row.court_count as number,
+      tournament_dates: row.tournament_dates as string | undefined,
+      match_duration_minutes: row.match_duration_minutes as number,
+      break_duration_minutes: row.break_duration_minutes as number,
+      visibility: row.visibility as number,
+      public_start_date: row.public_start_date ? String(row.public_start_date) : undefined,
+      recruitment_start_date: row.recruitment_start_date ? String(row.recruitment_start_date) : undefined,
+      recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : undefined,
+      created_at: row.created_at as string,
+      updated_at: row.updated_at as string,
+      
+      // Optional joined fields
+      venue_name: row.venue_name as string | undefined,
+      format_name: row.format_name as string | undefined,
+      
+      // 後方互換性のため
+      is_public: Boolean(row.is_public || row.visibility),
+      start_time: row.start_time as string | undefined,
+      
+      // アーカイブ関連
+      is_archived: Boolean(row.is_archived),
+      archive_ui_version: row.archive_ui_version as string | undefined
+    };
+
+    return tournament;
+  } catch (error) {
+    console.error('getRawTournamentById error:', error);
+    return null;
   }
 }
 

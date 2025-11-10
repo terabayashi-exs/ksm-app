@@ -71,7 +71,18 @@ export default function TournamentDashboardList() {
   }, []);
 
   const handleDeleteTournament = async (tournament: Tournament) => {
-    const confirmMessage = `大会「${tournament.tournament_name}」を削除してもよろしいですか？\n\n⚠️ この操作は取り消せません。関連する以下のデータも全て削除されます：\n・参加チーム情報\n・選手情報\n・試合データ\n・結果データ`;
+    let confirmMessage;
+    let deleteUrl;
+    
+    if (tournament.is_archived) {
+      // アーカイブ済み大会の場合
+      confirmMessage = `アーカイブ済み大会「${tournament.tournament_name}」を削除してもよろしいですか？\n\n⚠️ この操作は取り消せません。以下のデータが削除されます：\n・アーカイブ済みのデータベースデータ\n・JSONアーカイブデータ\n・Blobアーカイブデータ\n・大会メインレコード`;
+      deleteUrl = `/api/admin/tournaments/${tournament.tournament_id}/delete-data`;
+    } else {
+      // 通常の大会の場合
+      confirmMessage = `大会「${tournament.tournament_name}」を削除してもよろしいですか？\n\n⚠️ この操作は取り消せません。関連する以下のデータも全て削除されます：\n・参加チーム情報\n・選手情報\n・試合データ\n・結果データ`;
+      deleteUrl = `/api/tournaments/${tournament.tournament_id}`;
+    }
     
     if (!confirm(confirmMessage)) {
       return;
@@ -80,7 +91,7 @@ export default function TournamentDashboardList() {
     setDeleting(tournament.tournament_id);
 
     try {
-      const response = await fetch(`/api/tournaments/${tournament.tournament_id}`, {
+      const response = await fetch(deleteUrl, {
         method: 'DELETE',
       });
 
@@ -94,7 +105,17 @@ export default function TournamentDashboardList() {
           completed: prev.completed.filter(t => t.tournament_id !== tournament.tournament_id),
           total: prev.total - 1
         }));
-        alert(result.message || '大会を削除しました');
+        
+        if (tournament.is_archived) {
+          const mainDeleted = result.deletionSummary?.tournamentMainDeleted !== false;
+          if (mainDeleted) {
+            alert(`✅ アーカイブ済み大会を完全削除しました。\n\n【削除情報】\n• 削除されたレコード数: ${result.deletionSummary?.totalDeletedRecords || 'N/A'}\n• 削除ステップ: ${result.deletionSummary?.successfulSteps || 'N/A'}/${result.deletionSummary?.totalSteps || 'N/A'}\n• メインレコード削除: 成功\n• 実行時間: ${result.deletionSummary?.totalExecutionTime ? (result.deletionSummary.totalExecutionTime / 1000).toFixed(1) : 'N/A'}秒`);
+          } else {
+            alert(`⚠️ 部分削除完了\n\n関連データは削除されましたが、大会メインレコードが残存しています。\nもう一度削除ボタンを押すか、システム管理者にお問い合わせください。\n\n【削除情報】\n• 削除されたレコード数: ${result.deletionSummary?.totalDeletedRecords || 'N/A'}\n• メインレコード削除: 失敗`);
+          }
+        } else {
+          alert(result.message || '大会を削除しました');
+        }
       } else {
         alert(`削除エラー: ${result.error}`);
       }
@@ -131,19 +152,19 @@ export default function TournamentDashboardList() {
 
       console.log('Step 1: アーカイブ作成完了');
 
-      // Step 2: データ削除実行
-      console.log('Step 2: データ削除開始...');
-      const deleteResponse = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/delete-data`, {
+      // Step 2: アーカイブ後クリーンアップ実行（大会メインレコードは保持）
+      console.log('Step 2: アーカイブ後クリーンアップ開始...');
+      const deleteResponse = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/archive-cleanup`, {
         method: 'DELETE',
       });
 
       const deleteResult = await deleteResponse.json();
 
       if (deleteResult.success) {
-        alert(`アーカイブとデータ削除が完了しました。\n\n【アーカイブ情報】\n• 大会名: ${tournament.tournament_name}\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【削除情報】\n• 削除されたレコード数: ${deleteResult.deletionSummary.totalDeletedRecords}\n• 削除ステップ: ${deleteResult.deletionSummary.successfulSteps}/${deleteResult.deletionSummary.totalSteps}\n• 実行時間: ${(deleteResult.deletionSummary.totalExecutionTime / 1000).toFixed(1)}秒\n\nアーカイブページ: /public/tournaments/${tournament.tournament_id}/archived`);
+        alert(`✅ アーカイブとクリーンアップが完了しました。\n\n【アーカイブ情報】\n• 大会名: ${tournament.tournament_name}\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【クリーンアップ情報】\n• 削除されたレコード数: ${deleteResult.deletionSummary.totalDeletedRecords}\n• 削除ステップ: ${deleteResult.deletionSummary.successfulSteps}/${deleteResult.deletionSummary.totalSteps}\n• 実行時間: ${(deleteResult.deletionSummary.totalExecutionTime / 1000).toFixed(1)}秒\n• 大会メインレコード: 保持\n\n📄 アーカイブページ: /public/tournaments/${tournament.tournament_id}/archived`);
       } else {
         // アーカイブは成功したが削除に失敗
-        alert(`アーカイブは完了しましたが、データ削除でエラーが発生しました。\n\n【アーカイブ完了】\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【削除エラー】\n${deleteResult.error}\n\n管理者ダッシュボードで「結果削除」ボタンから後でデータ削除を実行してください。`);
+        alert(`⚠️ アーカイブは完了しましたが、クリーンアップでエラーが発生しました。\n\n【アーカイブ完了】\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【クリーンアップエラー】\n${deleteResult.error}\n\n大会はアーカイブ状態になっていますが、関連データが残存している可能性があります。\n管理者ダッシュボードで「削除」ボタンから後で関連データを削除してください。`);
       }
       
       // いずれの場合もリストを更新
@@ -313,7 +334,7 @@ export default function TournamentDashboardList() {
               詳細
             </Link>
           </Button>
-          {!tournament.is_archived && (
+          {!tournament.is_archived ? (
             <>
               <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
@@ -326,6 +347,27 @@ export default function TournamentDashboardList() {
                 </Link>
               </Button>
             </>
+          ) : (
+            // アーカイブ済み大会の場合は削除ボタンのみ表示
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => handleDeleteTournament(tournament)}
+              disabled={deleting === tournament.tournament_id}
+              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              {deleting === tournament.tournament_id ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                  削除中...
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  削除
+                </div>
+              )}
+            </Button>
           )}
           {type === 'recruiting' && (
             <>

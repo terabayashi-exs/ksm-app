@@ -113,8 +113,6 @@ export async function getTournamentResults(tournamentId: number): Promise<BlockR
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
     
-    console.log(`[MATCH_RESULTS] Tournament ${tournamentId} - Sport: ${sportCode}`);
-
     // ブロック情報を取得
     const blocks = await db.execute({
       sql: `
@@ -301,8 +299,7 @@ async function getBlockResults(
             baseMatch.soccer_data = team1SoccerData;
           }
         }
-      } catch (error) {
-        console.warn(`[MATCH_RESULTS] Failed to parse match data for match ${baseMatch.match_id}:`, error);
+      } catch {
         // エラーの場合は基本データのみ使用
       }
 
@@ -359,7 +356,6 @@ function createMatchMatrix(
     
     // チームIDが存在するかチェック
     if (!matrix[team1Id] || !matrix[team2Id]) {
-      console.warn(`Invalid team IDs in match ${match.match_code}: ${team1Id} vs ${team2Id}`);
       return;
     }
     

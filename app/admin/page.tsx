@@ -168,6 +168,25 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
 
+          {/* Blobストレージ管理 */}
+          <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
+            <CardHeader>
+              <CardTitle className="text-orange-800 dark:text-orange-200 flex items-center">
+                📦 Blobストレージ管理
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-orange-700 dark:text-orange-300 mb-4">
+                大会アーカイブデータのBlobストレージへの移行・管理を行います
+              </p>
+              <div className="space-y-2">
+                <Button asChild variant="outline" className="w-full border-2 border-orange-300 hover:border-orange-400 hover:bg-orange-100 dark:border-orange-700 dark:hover:border-orange-600 dark:hover:bg-orange-950/30">
+                  <Link href="/admin/blob-migration">Blob移行ダッシュボード</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>

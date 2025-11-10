@@ -9,8 +9,6 @@ import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
  */
 async function checkAndCompleteTournament(tournamentId: number): Promise<void> {
   try {
-    console.log(`[TOURNAMENT_COMPLETION] Checking if tournament ${tournamentId} is complete...`);
-    
     // 大会の全試合数を取得
     const totalMatchesResult = await db.execute({
       sql: `
@@ -37,12 +35,8 @@ async function checkAndCompleteTournament(tournamentId: number): Promise<void> {
     
     const confirmedMatches = confirmedMatchesResult.rows[0]?.confirmed_matches as number || 0;
     
-    console.log(`[TOURNAMENT_COMPLETION] Tournament ${tournamentId}: ${confirmedMatches}/${totalMatches} matches confirmed`);
-    
     // 全試合が確定されている場合
     if (totalMatches > 0 && confirmedMatches >= totalMatches) {
-      console.log(`[TOURNAMENT_COMPLETION] All matches confirmed for tournament ${tournamentId}. Setting status to completed.`);
-      
       await db.execute({
         sql: `
           UPDATE t_tournaments 
@@ -51,8 +45,6 @@ async function checkAndCompleteTournament(tournamentId: number): Promise<void> {
         `,
         args: [tournamentId]
       });
-      
-      console.log(`[TOURNAMENT_COMPLETION] ✅ Tournament ${tournamentId} status updated to completed`);
     }
   } catch (completionError) {
     console.error(`[TOURNAMENT_COMPLETION] ❌ Failed to check tournament completion for tournament ID ${tournamentId}:`, completionError);
@@ -139,7 +131,6 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         const isDraw = Boolean(match.is_draw);
         
         await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
-        console.log(`トーナメント進出処理完了: ${matchCode}`);
       } catch (progressionError) {
         console.error('トーナメント進出処理エラー:', progressionError);
         // トーナメント進出処理エラーでも処理を継続
@@ -155,15 +146,12 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       });
       
       if (blockPhaseResult.rows.length > 0 && blockPhaseResult.rows[0].phase === 'final') {
-        console.log(`[MATCH_CONFIRM] 決勝トーナメント試合確定: ${match.match_code}`);
-        
         // テンプレートベースの順位設定を実行
         try {
           const winnerId = match.winner_team_id as string | null;
           const loserId = match.team1_id === winnerId ? match.team2_id as string : match.team1_id as string;
           
           if (winnerId && loserId) {
-            console.log(`[MATCH_CONFIRM] テンプレートベース順位設定: 勝者=${winnerId}, 敗者=${loserId}`);
             await handleTemplateBasedPositions(matchId, winnerId, loserId, tournamentId);
           }
         } catch (templateError) {
@@ -181,8 +169,6 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
 
     // トランザクション確定
     await db.execute({ sql: 'COMMIT' });
-
-    console.log(`試合 ${matchId} の結果を確定し、順位表を更新しました`);
 
   } catch (error) {
     // トランザクション回復

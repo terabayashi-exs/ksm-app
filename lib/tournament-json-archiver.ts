@@ -1,7 +1,7 @@
 // lib/tournament-json-archiver.ts
 import { db } from '@/lib/db';
 // import { Tournament } from '@/lib/types';
-import { getTournamentById } from '@/lib/tournament-detail';
+import { getRawTournamentById } from '@/lib/tournament-detail';
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 
 /**
@@ -28,8 +28,8 @@ export async function archiveTournamentAsJson(
   try {
     console.log(`🎯 大会ID ${tournamentId} のJSONアーカイブを開始...`);
 
-    // 1. 大会基本情報を取得
-    const tournament = await getTournamentById(tournamentId);
+    // 1. 大会基本情報を取得（アーカイブフラグに関係なく生データを取得）
+    const tournament = await getRawTournamentById(tournamentId);
     
     if (!tournament) {
       return {
@@ -76,26 +76,8 @@ export async function archiveTournamentAsJson(
         mb.block_name,
         mb.match_type,
         mb.block_order,
-        COALESCE(
-          CASE 
-            WHEN mf.team1_scores IS NOT NULL AND mf.team1_scores != '' 
-            THEN (
-              SELECT SUM(CAST(value AS INTEGER)) 
-              FROM json_each(mf.team1_scores)
-            )
-            ELSE 0 
-          END, 0
-        ) as team1_goals,
-        COALESCE(
-          CASE 
-            WHEN mf.team2_scores IS NOT NULL AND mf.team2_scores != '' 
-            THEN (
-              SELECT SUM(CAST(value AS INTEGER)) 
-              FROM json_each(mf.team2_scores)
-            )
-            ELSE 0 
-          END, 0
-        ) as team2_goals,
+        mf.team1_scores,
+        mf.team2_scores,
         mf.winner_team_id,
         COALESCE(mf.is_draw, 0) as is_draw,
         COALESCE(mf.is_walkover, 0) as is_walkover,
@@ -135,26 +117,8 @@ export async function archiveTournamentAsJson(
         ml.team2_id,
         COALESCE(t1.team_name, ml.team1_display_name) as team1_name,
         COALESCE(t2.team_name, ml.team2_display_name) as team2_name,
-        COALESCE(
-          CASE 
-            WHEN mf.team1_scores IS NOT NULL AND mf.team1_scores != '' 
-            THEN (
-              SELECT SUM(CAST(value AS INTEGER)) 
-              FROM json_each(mf.team1_scores)
-            )
-            ELSE 0 
-          END, 0
-        ) as team1_goals,
-        COALESCE(
-          CASE 
-            WHEN mf.team2_scores IS NOT NULL AND mf.team2_scores != '' 
-            THEN (
-              SELECT SUM(CAST(value AS INTEGER)) 
-              FROM json_each(mf.team2_scores)
-            )
-            ELSE 0 
-          END, 0
-        ) as team2_goals,
+        mf.team1_scores,
+        mf.team2_scores,
         mf.winner_team_id,
         mf.is_draw,
         mf.is_walkover,
@@ -173,10 +137,25 @@ export async function archiveTournamentAsJson(
     const bracketPdfExists = await checkTournamentBracketPdfExists(tournamentId);
     const resultsPdfExists = await checkTournamentResultsPdfExists(tournamentId);
 
-    // 7. データをJSON形式で保存
+    // 7. スコアの計算処理を追加
+    const processedMatches = matchesResult.rows.map(match => {
+      const calculateGoals = (scores: string | null): number => {
+        if (!scores) return 0;
+        return scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+      };
+
+      return {
+        ...match,
+        team1_goals: calculateGoals(match.team1_scores as string | null),
+        team2_goals: calculateGoals(match.team2_scores as string | null),
+        has_result: true  // t_matches_finalから取得したデータはすべて確定済み
+      };
+    });
+
+    // 8. データをJSON形式で保存
     const tournamentData = JSON.stringify(tournament);
     const teamsData = JSON.stringify(teamsResult.rows);
-    const matchesData = JSON.stringify(matchesResult.rows);
+    const matchesData = JSON.stringify(processedMatches);
     const standingsData = JSON.stringify(standingsResult.rows);
     const resultsData = JSON.stringify(resultsResult.rows);
     const pdfInfoData = JSON.stringify({
@@ -186,53 +165,157 @@ export async function archiveTournamentAsJson(
 
     const currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
     const currentVersion = ArchiveVersionManager.getCurrentVersion();
+    // 大会ルール情報を取得（テーブル存在チェック込み）
+    let rules = {
+      supports_pk: false,
+      period_count: 2,
+      has_extra_time: false
+    };
+
+    try {
+      const tournamentRules = await db.execute(`
+        SELECT 
+          use_penalty,
+          use_extra_time,
+          active_periods
+        FROM t_tournament_rules 
+        WHERE tournament_id = ? 
+        ORDER BY phase
+        LIMIT 1
+      `, [tournamentId]);
+
+      if (tournamentRules.rows && tournamentRules.rows.length > 0) {
+        const rule = tournamentRules.rows[0];
+        
+        // active_periodsからピリオド数を計算
+        let periodCount = 2; // デフォルト
+        try {
+          const periods = JSON.parse(rule.active_periods as string);
+          periodCount = Array.isArray(periods) ? periods.filter(p => p !== '5').length : 2; // '5'はPK戦なので除外
+        } catch (parseError) {
+          console.warn('active_periods解析エラー:', parseError);
+        }
+
+        rules = {
+          supports_pk: Boolean(rule.use_penalty),
+          period_count: periodCount,
+          has_extra_time: Boolean(rule.use_extra_time)
+        };
+        
+        console.log(`✅ 大会ルール取得成功: supports_pk=${rules.supports_pk}, has_extra_time=${rules.has_extra_time}, period_count=${rules.period_count}`);
+      }
+    } catch (error) {
+      console.warn(`Warning: Could not fetch tournament rules for tournament ${tournamentId}:`, error);
+      // デフォルト値を使用（すでに設定済み）
+    }
+
+    // 実際の試合データから推測してルール情報を補完
+    if (matchesResult.rows.length > 0) {
+      const sampleMatch = matchesResult.rows.find(m => 
+        m.team1_scores && 
+        typeof m.team1_scores === 'string' && 
+        m.team1_scores.includes(',')
+      );
+      if (sampleMatch && typeof sampleMatch.team1_scores === 'string') {
+        const scoreArray = sampleMatch.team1_scores.split(',');
+        if (scoreArray.length >= 5) {
+          rules.has_extra_time = true;
+          rules.period_count = 4; // 前半・後半・延長前半・延長後半
+          rules.supports_pk = true;
+        } else if (scoreArray.length >= 3) {
+          rules.has_extra_time = false;
+          rules.period_count = 2; // 前半・後半のみ
+          rules.supports_pk = true;
+        }
+      }
+    }
+
     const metadata = JSON.stringify({
       total_teams: teamsResult.rows.length,
-      total_matches: matchesResult.rows.length,
+      total_matches: processedMatches.length,
       completed_matches: matchesResult.rows.filter(m => m.has_result === 1).length,
       blocks_count: new Set(standingsResult.rows.map(s => s.block_name)).size,
-      archive_ui_version: currentVersion
+      archive_ui_version: currentVersion,
+      // 大会ルール情報を追加
+      tournament_rules: {
+        has_extra_time: Boolean(rules.has_extra_time),
+        period_count: Number(rules.period_count || 2),
+        supports_pk: Boolean(rules.supports_pk),
+        score_format: rules.has_extra_time ? "regular_extra_pk" : "regular_pk"
+      }
     });
 
-    // 8. データベースに保存
-    await db.execute(`
-      INSERT OR REPLACE INTO t_archived_tournament_json (
-        tournament_id,
-        tournament_name,
-        tournament_data,
-        teams_data,
-        matches_data,
-        standings_data,
-        results_data,
-        pdf_info_data,
-        archive_version,
-        archived_at,
-        archived_by,
+    // 9. データベースに保存
+    try {
+      await db.execute(`
+        INSERT OR REPLACE INTO t_archived_tournament_json (
+          tournament_id,
+          tournament_name,
+          tournament_data,
+          teams_data,
+          matches_data,
+          standings_data,
+          results_data,
+          pdf_info_data,
+          archive_version,
+          archived_at,
+          archived_by,
+          metadata
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), ?, ?)
+      `, [
+        tournamentId,
+        tournament.tournament_name,
+        tournamentData,
+        teamsData,
+        matchesData,
+        standingsData,
+        resultsData,
+        pdfInfoData,
+        currentVersion,
+        archivedBy,
         metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), ?, ?)
-    `, [
-      tournamentId,
-      tournament.tournament_name,
-      tournamentData,
-      teamsData,
-      matchesData,
-      standingsData,
-      resultsData,
-      pdfInfoData,
-      currentVersion,
-      archivedBy,
-      metadata
-    ]);
+      ]);
+      
+      console.log(`✅ アーカイブデータベース保存完了: tournament_id=${tournamentId}`);
+    } catch (dbError) {
+      console.error('🔥 アーカイブデータベース保存エラー:', dbError);
+      
+      // データベース保存に失敗した場合、アーカイブフラグもfalseに戻す
+      try {
+        await db.execute(`
+          UPDATE t_tournaments 
+          SET is_archived = 0 
+          WHERE tournament_id = ?
+        `, [tournamentId]);
+        console.log(`🔄 アーカイブフラグをリセットしました: tournament_id=${tournamentId}`);
+      } catch (rollbackError) {
+        console.error('🔥 アーカイブフラグリセット失敗:', rollbackError);
+      }
+      
+      throw new Error(`アーカイブの保存に失敗しました: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+    }
 
-    // 9. アーカイブバージョン情報を記録
-    await ArchiveVersionManager.recordArchiveVersion(tournamentId, archivedBy);
+    // 10. アーカイブバージョン情報を記録
+    try {
+      await ArchiveVersionManager.recordArchiveVersion(tournamentId, archivedBy);
+    } catch (versionError) {
+      console.error('🔥 アーカイブバージョン記録エラー:', versionError);
+      // バージョン記録エラーは致命的ではないので処理継続
+    }
 
-    // 10. 大会にアーカイブフラグを設定
-    await db.execute(`
-      UPDATE t_tournaments 
-      SET is_archived = 1 
-      WHERE tournament_id = ?
-    `, [tournamentId]);
+    // 11. 大会にアーカイブフラグを設定（データ保存成功後）
+    try {
+      await db.execute(`
+        UPDATE t_tournaments 
+        SET is_archived = 1, archived_at = datetime('now', '+9 hours'), archived_by = ?
+        WHERE tournament_id = ?
+      `, [archivedBy, tournamentId]);
+      
+      console.log(`✅ アーカイブフラグ設定完了: tournament_id=${tournamentId}`);
+    } catch (flagError) {
+      console.error('🔥 アーカイブフラグ設定エラー:', flagError);
+      throw new Error(`アーカイブフラグの設定に失敗しました: ${flagError instanceof Error ? flagError.message : String(flagError)}`);
+    }
 
     const totalSize = Buffer.byteLength(
       tournamentData + teamsData + matchesData + standingsData + resultsData + pdfInfoData,
@@ -266,12 +349,17 @@ export async function archiveTournamentAsJson(
  */
 export async function getArchivedTournamentJson(tournamentId: number) {
   try {
+    console.log(`🗃️ getArchivedTournamentJson開始: tournament_id=${tournamentId}`);
+    
     const result = await db.execute(`
       SELECT * FROM t_archived_tournament_json 
       WHERE tournament_id = ?
     `, [tournamentId]);
 
+    console.log(`🗃️ SQLクエリ結果: ${result.rows.length} 件`);
+
     if (result.rows.length === 0) {
+      console.warn(`🗃️ アーカイブなし: tournament_id=${tournamentId}`);
       return null;
     }
 
@@ -283,7 +371,9 @@ export async function getArchivedTournamentJson(tournamentId: number) {
     `, [tournamentId]);
 
     const archive = result.rows[0];
-    return {
+    console.log(`🗃️ アーカイブデータ構築: ${archive.tournament_name}`);
+    
+    const returnData = {
       tournament_id: archive.tournament_id,
       tournament_name: archive.tournament_name,
       tournament: JSON.parse(archive.tournament_data as string),
@@ -296,8 +386,11 @@ export async function getArchivedTournamentJson(tournamentId: number) {
       archived_by: archive.archived_by,
       metadata: archive.metadata ? JSON.parse(archive.metadata as string) : null
     };
+    
+    console.log(`🗃️ 正常に返却: tournament_id=${returnData.tournament_id}`);
+    return returnData;
   } catch (error) {
-    console.error('アーカイブデータ取得エラー:', error);
+    console.error('🗃️ アーカイブデータ取得エラー:', error);
     return null;
   }
 }

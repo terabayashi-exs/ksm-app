@@ -16,6 +16,10 @@ import {
   getDefaultTieBreakingRules,
   validateTieBreakingRules
 } from "@/lib/tie-breaking-rules";
+import { 
+  validateSoccerPeriodSettings, 
+  generatePeriodDisplayLabel 
+} from "@/lib/tournament-rule-validator";
 
 interface TournamentInfo {
   tournament_id: number;
@@ -85,6 +89,16 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // バリデーション関連の状態
+  const [validationErrors, setValidationErrors] = useState<{
+    preliminary?: string;
+    final?: string;
+  }>({});
+  const [validationWarnings, setValidationWarnings] = useState<{
+    preliminary?: string;
+    final?: string;
+  }>({});
 
   // 競技種別別の表示制御ロジック
   const sportCode = tournament?.sport_code || 'pk_championship';
@@ -215,6 +229,38 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
     return rule?.description || '';
   };
 
+  // ピリオド設定のバリデーション（サッカー競技用）
+  const validatePeriodSettings = (activePeriods: number[], phase: 'preliminary' | 'final') => {
+    // サッカー競技系のみバリデーション
+    if (!['soccer', 'pk_championship', 'futsal'].includes(sportCode)) {
+      return;
+    }
+
+    const periodStrings = activePeriods.map(p => p.toString());
+    const validation = validateSoccerPeriodSettings(periodStrings);
+
+    // エラー・警告の設定
+    setValidationErrors(prev => ({
+      ...prev,
+      [phase]: validation.valid ? undefined : validation.error
+    }));
+
+    setValidationWarnings(prev => ({
+      ...prev,
+      [phase]: validation.warning
+    }));
+
+    // デバッグログ（開発時のみ）
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 ${phase} フェーズバリデーション:`, {
+        activePeriods,
+        periodStrings,
+        validation,
+        displayLabel: generatePeriodDisplayLabel(periodStrings)
+      });
+    }
+  };
+
   // ピリオドの切り替え
   const togglePeriod = (phase: 'preliminary' | 'final', periodNumber: number) => {
     setRules(prev => {
@@ -222,6 +268,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
       const newPeriods = currentPeriods.includes(periodNumber)
         ? currentPeriods.filter(p => p !== periodNumber)
         : [...currentPeriods, periodNumber].sort((a, b) => a - b);
+      
+      // バリデーション実行
+      setTimeout(() => validatePeriodSettings(newPeriods, phase), 0);
       
       return {
         ...prev,
@@ -263,6 +312,27 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
     setSaving(true);
     
     try {
+      // バリデーションチェック（サッカー競技系のみ）
+      if (['soccer', 'pk_championship', 'futsal'].includes(sportCode)) {
+        const preliminaryValidation = validateSoccerPeriodSettings(
+          rules.preliminary.active_periods.map(p => p.toString())
+        );
+        const finalValidation = validateSoccerPeriodSettings(
+          rules.final.active_periods.map(p => p.toString())
+        );
+        
+        if (!preliminaryValidation.valid) {
+          alert(`予選ルールに問題があります:\n${preliminaryValidation.error}`);
+          setSaving(false);
+          return;
+        }
+        
+        if (!finalValidation.valid) {
+          alert(`決勝ルールに問題があります:\n${finalValidation.error}`);
+          setSaving(false);
+          return;
+        }
+      }
       // 通常のルール保存
       const rulesData = [
         {
@@ -423,6 +493,31 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             <p className="text-sm text-gray-600">
               ※ 緑色のピリオドは必須項目です。クリックで使用するピリオドを選択できます。
             </p>
+            
+            {/* バリデーションメッセージ表示 */}
+            {validationErrors[phase] && (
+              <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-red-700">
+                  <strong>設定エラー:</strong> {validationErrors[phase]}
+                </div>
+              </div>
+            )}
+            
+            {validationWarnings[phase] && !validationErrors[phase] && (
+              <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-yellow-700">
+                  <strong>注意:</strong> {validationWarnings[phase]}
+                </div>
+              </div>
+            )}
+            
+            {!validationErrors[phase] && !validationWarnings[phase] && sportCode === 'pk_championship' && (
+              <div className="text-sm text-green-600">
+                ✅ 設定: {generatePeriodDisplayLabel(phaseRule.active_periods.map(p => p.toString()))}
+              </div>
+            )}
           </div>
 
 
