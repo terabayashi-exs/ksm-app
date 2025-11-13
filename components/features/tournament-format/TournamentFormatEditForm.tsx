@@ -31,6 +31,8 @@ interface TournamentFormatEditFormProps {
     sport_type_id: number;
     target_team_count: number;
     format_description?: string;
+    preliminary_format_type?: string | null;
+    final_format_type?: string | null;
   };
   templates: Array<{
     match_number: number;
@@ -96,6 +98,8 @@ interface TournamentFormatFormData {
   sport_type_id: number;
   target_team_count: number;
   format_description: string;
+  preliminary_format_type: string | null;
+  final_format_type: string | null;
   templates: MatchTemplate[];
 }
 
@@ -149,6 +153,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       sport_type_id: format.sport_type_id || 1,
       target_team_count: Number(format.target_team_count) || 8,
       format_description: format.format_description || "",
+      preliminary_format_type: format.preliminary_format_type || null,
+      final_format_type: format.final_format_type || null,
       templates: templates.map(t => ({
         match_number: Number(t.match_number) || 1,
         match_code: t.match_code || "",
@@ -179,6 +185,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
   });
 
   const selectedSportTypeId = watch("sport_type_id");
+  const preliminaryFormatType = watch("preliminary_format_type");
+  const finalFormatType = watch("final_format_type");
 
   // 競技種別データの取得
   useEffect(() => {
@@ -385,6 +393,88 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 placeholder="このフォーマットの詳細や特徴を記載してください"
                 rows={3}
               />
+            </div>
+
+            {/* 試合形式選択 */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700">試合形式設定</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 予選試合形式 */}
+                <div className="space-y-2">
+                  <Label htmlFor="preliminary_format_type">
+                    予選試合形式
+                    <span className="text-xs text-gray-500 ml-2">
+                      (予選がない場合は「なし」を選択)
+                    </span>
+                  </Label>
+                  <Select
+                    value={preliminaryFormatType || "none"}
+                    onValueChange={(value) => setValue("preliminary_format_type", value === "none" ? null : value, { shouldDirty: true })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="予選形式を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">なし（予選なし）</SelectItem>
+                      <SelectItem value="league">リーグ戦</SelectItem>
+                      <SelectItem value="tournament">トーナメント戦</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {preliminaryFormatType === "league" && (
+                    <p className="text-xs text-gray-600">
+                      💡 複数ブロック（A, B, C...）でのリーグ戦形式
+                    </p>
+                  )}
+                  {preliminaryFormatType === "tournament" && (
+                    <p className="text-xs text-gray-600">
+                      💡 単一トーナメントブロックでの勝ち抜き形式
+                    </p>
+                  )}
+                  {preliminaryFormatType === null && (
+                    <p className="text-xs text-gray-600">
+                      💡 予選なし、いきなり決勝からスタート
+                    </p>
+                  )}
+                </div>
+
+                {/* 決勝試合形式 */}
+                <div className="space-y-2">
+                  <Label htmlFor="final_format_type">
+                    決勝試合形式
+                    <span className="text-xs text-gray-500 ml-2">
+                      (決勝がない場合は「なし」を選択)
+                    </span>
+                  </Label>
+                  <Select
+                    value={finalFormatType || "none"}
+                    onValueChange={(value) => setValue("final_format_type", value === "none" ? null : value, { shouldDirty: true })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="決勝形式を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">なし（決勝なし）</SelectItem>
+                      <SelectItem value="league">リーグ戦</SelectItem>
+                      <SelectItem value="tournament">トーナメント戦</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {finalFormatType === "league" && (
+                    <p className="text-xs text-gray-600">
+                      💡 複数ブロック（1位リーグ、2位リーグ...）でのリーグ戦形式
+                    </p>
+                  )}
+                  {finalFormatType === "tournament" && (
+                    <p className="text-xs text-gray-600">
+                      💡 決勝トーナメントブロックでの勝ち抜き形式
+                    </p>
+                  )}
+                  {finalFormatType === null && (
+                    <p className="text-xs text-gray-600">
+                      💡 決勝なし、予選のみで大会終了
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

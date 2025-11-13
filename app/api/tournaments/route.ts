@@ -372,9 +372,19 @@ async function generateMatchesFromTemplate(
       blockIdMapping.set(`preliminary_${blockName}`, blockId);
     }
 
-    // 決勝トーナメントブロックを作成（決勝の試合がある場合）
-    const hasFinal = templates.some(t => t.phase === 'final');
-    if (hasFinal) {
+    // 決勝ブロックを抽出・作成（round_nameまたはblock_nameでグループ化）
+    const finalBlocks = new Map<string, string>(); // key: ユニークキー, value: 表示名
+    templates.forEach(template => {
+      if (template.phase === 'final') {
+        // round_nameを優先、なければblock_name、どちらもなければデフォルト
+        const displayName = template.round_name || template.block_name || '決勝トーナメント';
+        const blockKey = template.block_name || displayName;
+        finalBlocks.set(blockKey, displayName);
+      }
+    });
+
+    // 決勝ブロック毎にt_match_blocksに登録
+    for (const [blockKey, displayName] of Array.from(finalBlocks.entries()).sort()) {
       const finalBlockResult = await db.execute(`
         INSERT INTO t_match_blocks (
           tournament_id,
@@ -387,14 +397,14 @@ async function generateMatchesFromTemplate(
       `, [
         tournamentId,
         'final',
-        '決勝トーナメント',
-        '',
+        displayName,
+        blockKey,
         '通常',
         blockOrder++
       ]);
 
       const finalBlockId = Number(finalBlockResult.lastInsertRowid);
-      blockIdMapping.set('final_', finalBlockId);
+      blockIdMapping.set(`final_${blockKey}`, finalBlockId);
     }
 
     // スケジュール情報の準備
@@ -453,13 +463,15 @@ async function generateMatchesFromTemplate(
     for (const template of templates) {
       // 新しいブロック構造に合わせてブロックIDを取得
       let blockId: number | undefined;
-      
+
       if (template.phase === 'preliminary') {
         blockId = blockIdMapping.get(`preliminary_${template.block_name}`);
       } else if (template.phase === 'final') {
-        blockId = blockIdMapping.get('final_');
+        // block_nameを使ってブロックIDを取得（round_nameまたはblock_nameでグループ化されたブロック）
+        const blockKey = template.block_name || (template.round_name || '決勝トーナメント');
+        blockId = blockIdMapping.get(`final_${blockKey}`);
       }
-      
+
       if (!blockId) {
         console.error(`ブロックID が見つかりません: ${template.phase}_${template.block_name}`);
         continue;

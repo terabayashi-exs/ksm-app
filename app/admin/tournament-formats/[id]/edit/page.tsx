@@ -66,13 +66,15 @@ export default async function EditTournamentFormatPage({ params }: Props) {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <TournamentFormatEditForm 
+        <TournamentFormatEditForm
           format={{
             format_id: Number(format.format_id),
             format_name: String(format.format_name),
             sport_type_id: Number(format.sport_type_id || 1),
             target_team_count: Number(format.target_team_count),
-            format_description: String(format.format_description || "")
+            format_description: String(format.format_description || ""),
+            preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
+            final_format_type: format.final_format_type ? String(format.final_format_type) : null
           }}
           templates={templatesResult.rows.map(t => ({
             match_number: Number(t.match_number),

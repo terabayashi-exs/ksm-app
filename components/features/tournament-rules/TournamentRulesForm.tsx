@@ -593,8 +593,8 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
 
       {/* ルール設定フォーム */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderPhaseRules('preliminary', '予選リーグ')}
-        {renderPhaseRules('final', '決勝トーナメント')}
+        {renderPhaseRules('preliminary', '予選')}
+        {renderPhaseRules('final', '決勝')}
       </div>
 
       {/* 順位決定ルール設定 */}

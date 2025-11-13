@@ -71,13 +71,13 @@ export const SPORT_RULE_CONFIGS: Record<string, SportRuleConfig> = {
         period_number: 1,
         period_name: '前半',
         is_default: true,
-        is_required: true
+        is_required: false  // 1本制対応のため必須解除（バリデーションで制御）
       },
       {
         period_number: 2,
         period_name: '後半',
         is_default: true,
-        is_required: true
+        is_required: false  // 1本制対応のため必須解除（バリデーションで制御）
       },
       {
         period_number: 3,

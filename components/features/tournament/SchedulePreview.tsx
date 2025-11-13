@@ -660,6 +660,15 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       }
       return '予選リーグ';
     } else if (template.phase === 'final') {
+      // round_nameを優先的に使用（1位リーグ、2位リーグなど）
+      if (template.round_name) {
+        return template.round_name;
+      }
+      // フォールバック: block_nameを使用
+      if (template.block_name) {
+        return template.block_name;
+      }
+      // 最終フォールバック
       return '決勝トーナメント';
     } else {
       return template.phase || 'その他';
@@ -671,11 +680,21 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   };
 
   const getBlockColor = (blockKey: string): string => {
+    // 予選ブロックの色分け
     if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
     if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
     if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
     if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
+    if (blockKey.includes('予選E')) return 'bg-pink-100 text-pink-800';
+    if (blockKey.includes('予選F')) return 'bg-indigo-100 text-indigo-800';
     if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
+
+    // 決勝リーグの色分け
+    if (blockKey.includes('1位リーグ') || blockKey.includes('1位ブロック')) return 'bg-amber-100 text-amber-800';
+    if (blockKey.includes('2位リーグ') || blockKey.includes('2位ブロック')) return 'bg-cyan-100 text-cyan-800';
+    if (blockKey.includes('3位リーグ') || blockKey.includes('3位ブロック')) return 'bg-lime-100 text-lime-800';
+
+    // 決勝トーナメントのデフォルト
     if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
     return 'bg-muted text-muted-foreground';
   };
@@ -863,14 +882,14 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                   
                   // 同じフェーズ内でblock_nameの昇順でソート
                   // 予選の場合: "予選Aブロック" → "A"を抽出してソート
-                  // 決勝の場合: "決勝トーナメント" → そのまま比較
+                  // 決勝の場合: "1位リーグ", "2位リーグ", "決勝トーナメント" などを比較
                   if (blockKeyA.includes('予選') && blockKeyB.includes('予選')) {
                     const blockA = blockKeyA.replace('予選', '').replace('ブロック', '');
                     const blockB = blockKeyB.replace('予選', '').replace('ブロック', '');
                     return blockA.localeCompare(blockB);
                   }
-                  
-                  // 決勝同士の場合はそのまま比較
+
+                  // 決勝同士の場合はそのまま比較（round_name順）
                   return blockKeyA.localeCompare(blockKeyB);
                 })
                 .map(([blockKey, blockMatches]) => (
