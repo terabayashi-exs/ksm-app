@@ -376,6 +376,7 @@ export default function TournamentFormatCreateForm() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム2表示名</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム1ソース</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム2ソース</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">日付番号</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">実行優先度</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">コート番号</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合開始時間</th>
@@ -437,7 +438,7 @@ export default function TournamentFormatCreateForm() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="preliminary">予選</SelectItem>
-                          <SelectItem value="final">決勝T</SelectItem>
+                          <SelectItem value="final">決勝</SelectItem>
                         </SelectContent>
                       </Select>
                     </td>
@@ -481,6 +482,15 @@ export default function TournamentFormatCreateForm() {
                         {...register(`templates.${index}.team2_source`)}
                         className="w-28"
                         placeholder="T2_winner"
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        type="number"
+                        {...register(`templates.${index}.day_number`, { valueAsNumber: true })}
+                        className="w-16"
+                        min={1}
+                        placeholder="1"
                       />
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap border-r">

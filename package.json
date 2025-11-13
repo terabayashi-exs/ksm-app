@@ -28,6 +28,7 @@
     "db:remove-point-fields": "node scripts/migrate-remove-point-fields.js",
     "db:rollback-point-fields": "node scripts/rollback-point-fields.js",
     "db:validate-point-migration": "node scripts/validate-point-system-migration.js",
+    "db:migrate-day-numbers": "node scripts/migrate-day-number-defaults.js",
     "blob:migrate": "node scripts/blob-migration.js",
     "blob:migrate:status": "node scripts/blob-migration.js -- --status",
     "blob:migrate:dry-run": "node scripts/blob-migration.js -- --dry-run",

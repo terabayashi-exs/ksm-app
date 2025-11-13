@@ -715,7 +715,7 @@ export default function TournamentDrawPage() {
                           <td className="px-4 py-3 font-medium">{match.match_code}</td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="text-xs">
-                              {match.phase === 'preliminary' ? '予選' : '決勝T'}
+                              {match.phase === 'preliminary' ? '予選' : '決勝'}
                             </Badge>
                           </td>
                           <td className="px-4 py-3">
@@ -753,7 +753,7 @@ export default function TournamentDrawPage() {
                     予選: {matches.filter(m => m.phase === 'preliminary').length}試合
                   </span>
                   <span className="ml-4">
-                    決勝T: {matches.filter(m => m.phase === 'final').length}試合
+                    決勝: {matches.filter(m => m.phase === 'final').length}試合
                   </span>
                 </div>
               </div>
