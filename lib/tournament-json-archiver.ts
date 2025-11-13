@@ -38,7 +38,93 @@ export async function archiveTournamentAsJson(
       };
     }
 
-    // 2. 参加チーム情報を取得
+    // 2. 大会フォーマット詳細情報を取得（現在のスキーマに対応）
+    let formatDetails = null;
+    try {
+      const formatResult = await db.execute(`
+        SELECT 
+          tf.format_id,
+          tf.format_name,
+          tf.target_team_count,
+          tf.format_description,
+          tf.created_at as format_created_at
+        FROM m_tournament_formats tf
+        JOIN t_tournaments t ON t.format_id = tf.format_id
+        WHERE t.tournament_id = ?
+      `, [tournamentId]);
+
+      if (formatResult.rows && formatResult.rows.length > 0) {
+        const format = formatResult.rows[0];
+        
+        // 関連する試合テンプレート情報も取得
+        const templatesResult = await db.execute(`
+          SELECT 
+            template_id,
+            match_code,
+            phase,
+            round_name,
+            block_name,
+            match_type,
+            execution_priority,
+            team1_source,
+            team2_source
+          FROM m_match_templates
+          WHERE format_id = ?
+          ORDER BY execution_priority, match_code
+        `, [format.format_id]);
+
+        // 実際のブロック情報から予選・決勝情報を推測
+        const blocksInfo = await db.execute(`
+          SELECT DISTINCT phase, COUNT(*) as block_count
+          FROM t_match_blocks 
+          WHERE tournament_id = ?
+          GROUP BY phase
+        `, [tournamentId]);
+
+        const preliminaryBlocks = Number(blocksInfo.rows.find(b => b.phase === 'preliminary')?.block_count) || 0;
+        const finalBlocks = Number(blocksInfo.rows.find(b => b.phase === 'final')?.block_count) || 0;
+
+        formatDetails = {
+          format_info: {
+            format_id: format.format_id,
+            format_name: format.format_name,
+            target_team_count: format.target_team_count,
+            format_description: format.format_description,
+            // 推測された情報
+            preliminary_format: preliminaryBlocks > 0 ? 'league' : 'none',
+            final_format: finalBlocks > 0 ? 'tournament' : 'none',
+            preliminary_advance_count: 2, // デフォルト値
+            has_third_place_match: templatesResult.rows.some(t => t.match_code === 'T7'),
+            format_created_at: format.format_created_at
+          },
+          match_templates: templatesResult.rows.map(template => ({
+            template_id: template.template_id,
+            match_code: template.match_code,
+            phase: template.phase,
+            round_name: template.round_name,
+            block_name: template.block_name,
+            match_type: template.match_type,
+            execution_priority: template.execution_priority,
+            team1_source: template.team1_source,
+            team2_source: template.team2_source
+          }))
+        };
+        
+        console.log(`✅ 大会フォーマット詳細取得成功: ${format.format_name} (テンプレート数: ${templatesResult.rows.length})`);
+      }
+    } catch (error) {
+      console.warn(`Warning: Could not fetch tournament format details for tournament ${tournamentId}:`, error);
+      formatDetails = {
+        format_info: {
+          format_name: 'Unknown Format',
+          target_team_count: 0,
+          format_description: 'フォーマット情報が取得できませんでした'
+        },
+        match_templates: []
+      };
+    }
+
+    // 3. 参加チーム情報を取得
     const teamsResult = await db.execute(`
       SELECT 
         tt.team_id,
@@ -137,18 +223,17 @@ export async function archiveTournamentAsJson(
     const bracketPdfExists = await checkTournamentBracketPdfExists(tournamentId);
     const resultsPdfExists = await checkTournamentResultsPdfExists(tournamentId);
 
-    // 7. スコアの計算処理を追加
+    // 7. スコアの計算処理を追加（現在のスキーマに対応）
     const processedMatches = matchesResult.rows.map(match => {
-      const calculateGoals = (scores: string | null): number => {
-        if (!scores) return 0;
-        return scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-      };
+      // 実際のスキーマに合わせてteam1_scores/team2_scoresを使用
+      const team1Scores = match.team1_scores as number || 0;
+      const team2Scores = match.team2_scores as number || 0;
 
       return {
         ...match,
-        team1_goals: calculateGoals(match.team1_scores as string | null),
-        team2_goals: calculateGoals(match.team2_scores as string | null),
-        has_result: true  // t_matches_finalから取得したデータはすべて確定済み
+        team1_goals: team1Scores, // 表示用にgoalsプロパティも設定
+        team2_goals: team2Scores,
+        has_result: Boolean(match.has_result)
       };
     });
 
@@ -165,69 +250,219 @@ export async function archiveTournamentAsJson(
 
     const currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
     const currentVersion = ArchiveVersionManager.getCurrentVersion();
-    // 大会ルール情報を取得（テーブル存在チェック込み）
-    let rules = {
+    // 詳細な競技設定情報を取得（テーブル存在チェック込み）
+    let sportSettings = {
       supports_pk: false,
       period_count: 2,
-      has_extra_time: false
+      has_extra_time: false,
+      sport_code: 'soccer', // デフォルト値
+      tie_breaking_rules: [] as string[],
+      score_format_rules: {},
+      competition_format: 'knockout_preliminary'
     };
 
+    // デフォルトのサッカー競技設定を適用（DB依存処理を回避）
     try {
-      const tournamentRules = await db.execute(`
-        SELECT 
-          use_penalty,
-          use_extra_time,
-          active_periods
-        FROM t_tournament_rules 
-        WHERE tournament_id = ? 
-        ORDER BY phase
-        LIMIT 1
-      `, [tournamentId]);
-
-      if (tournamentRules.rows && tournamentRules.rows.length > 0) {
-        const rule = tournamentRules.rows[0];
-        
-        // active_periodsからピリオド数を計算
-        let periodCount = 2; // デフォルト
-        try {
-          const periods = JSON.parse(rule.active_periods as string);
-          periodCount = Array.isArray(periods) ? periods.filter(p => p !== '5').length : 2; // '5'はPK戦なので除外
-        } catch (parseError) {
-          console.warn('active_periods解析エラー:', parseError);
-        }
-
-        rules = {
-          supports_pk: Boolean(rule.use_penalty),
-          period_count: periodCount,
-          has_extra_time: Boolean(rule.use_extra_time)
-        };
-        
-        console.log(`✅ 大会ルール取得成功: supports_pk=${rules.supports_pk}, has_extra_time=${rules.has_extra_time}, period_count=${rules.period_count}`);
-      }
+      // 基本的なサッカー競技設定を適用
+      sportSettings = {
+        supports_pk: true, // サッカーではPK戦をサポート
+        period_count: 2, // 前半・後半
+        has_extra_time: false, // 基本は延長戦なし
+        sport_code: 'soccer', // デフォルトはサッカー
+        tie_breaking_rules: ['points', 'goal_difference', 'goals_for'],
+        score_format_rules: {
+          regular_time: true,
+          extra_time: false,
+          penalty_shootout: true,
+          periods_structure: [1, 2]
+        },
+        competition_format: 'standard_tournament'
+      };
+      
+      console.log(`✅ デフォルトサッカー競技設定を適用: tournament_id=${tournamentId}`);
     } catch (error) {
-      console.warn(`Warning: Could not fetch tournament rules for tournament ${tournamentId}:`, error);
+      console.warn(`Warning: Could not set sport settings for tournament ${tournamentId}:`, error);
       // デフォルト値を使用（すでに設定済み）
     }
 
-    // 実際の試合データから推測してルール情報を補完
+    // 実際の試合データから競技設定を推測・補完（現在のスキーマに対応）
     if (matchesResult.rows.length > 0) {
-      const sampleMatch = matchesResult.rows.find(m => 
-        m.team1_scores && 
-        typeof m.team1_scores === 'string' && 
-        m.team1_scores.includes(',')
-      );
-      if (sampleMatch && typeof sampleMatch.team1_scores === 'string') {
-        const scoreArray = sampleMatch.team1_scores.split(',');
-        if (scoreArray.length >= 5) {
-          rules.has_extra_time = true;
-          rules.period_count = 4; // 前半・後半・延長前半・延長後半
-          rules.supports_pk = true;
-        } else if (scoreArray.length >= 3) {
-          rules.has_extra_time = false;
-          rules.period_count = 2; // 前半・後半のみ
-          rules.supports_pk = true;
-        }
+      // 現在のスキーマでは単純な数値形式なので、デフォルト値を維持
+      const hasConfirmedMatches = matchesResult.rows.some(m => m.has_result);
+      if (hasConfirmedMatches) {
+        // 確定済み試合があれば基本的なサッカー設定を適用
+        sportSettings.supports_pk = true;
+        sportSettings.period_count = 2;
+        sportSettings.has_extra_time = false;
+        sportSettings.score_format_rules = {
+          regular_time: true,
+          extra_time: false,
+          penalty_shootout: true,
+          periods_structure: [1, 2]
+        };
+        
+        console.log(`📊 試合データから競技設定を補完: サッカー基本設定適用 (確定試合数: ${matchesResult.rows.filter(m => m.has_result).length})`);
       }
+    }
+
+    // ブロック構成詳細情報を取得
+    let blockStructure = null;
+    try {
+      // ブロック情報を詳細に取得
+      const blocksResult = await db.execute(`
+        SELECT DISTINCT
+          mb.match_block_id,
+          mb.phase,
+          mb.block_name,
+          mb.display_round_name,
+          mb.block_order,
+          mb.match_type,
+          COUNT(DISTINCT tt.team_id) as teams_in_block,
+          COUNT(DISTINCT ml.match_id) as matches_in_block
+        FROM t_match_blocks mb
+        LEFT JOIN t_tournament_teams tt ON tt.assigned_block = mb.block_name AND tt.tournament_id = mb.tournament_id
+        LEFT JOIN t_matches_live ml ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+        GROUP BY mb.match_block_id, mb.phase, mb.block_name, mb.display_round_name, mb.block_order, mb.match_type
+        ORDER BY mb.phase, mb.block_order
+      `, [tournamentId]);
+
+      // ブロック別チーム配置詳細を取得
+      const blockTeamsResult = await db.execute(`
+        SELECT 
+          tt.assigned_block,
+          tt.block_position,
+          tt.team_id,
+          tt.team_name,
+          tt.team_omission,
+          COUNT(tp.player_id) as player_count
+        FROM t_tournament_teams tt
+        LEFT JOIN t_tournament_players tp ON tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id
+        WHERE tt.tournament_id = ? AND tt.assigned_block IS NOT NULL
+        GROUP BY tt.assigned_block, tt.block_position, tt.team_id, tt.team_name, tt.team_omission
+        ORDER BY tt.assigned_block, tt.block_position
+      `, [tournamentId]);
+
+      blockStructure = {
+        blocks_info: blocksResult.rows.map(block => ({
+          match_block_id: block.match_block_id,
+          phase: block.phase,
+          block_name: block.block_name,
+          display_round_name: block.display_round_name,
+          block_order: block.block_order,
+          match_type: block.match_type,
+          teams_count: block.teams_in_block,
+          matches_count: block.matches_in_block
+        })),
+        block_assignments: blockTeamsResult.rows.reduce((acc, team) => {
+          const blockName = String(team.assigned_block);
+          if (!acc[blockName]) {
+            acc[blockName] = [];
+          }
+          acc[blockName].push({
+            team_id: team.team_id,
+            team_name: team.team_name,
+            team_omission: team.team_omission,
+            block_position: team.block_position,
+            player_count: team.player_count
+          });
+          return acc;
+        }, {} as Record<string, unknown[]>),
+        preliminary_blocks: blocksResult.rows.filter(b => b.phase === 'preliminary').map(b => b.block_name),
+        final_blocks: blocksResult.rows.filter(b => b.phase === 'final').map(b => b.block_name),
+        total_blocks_count: blocksResult.rows.length,
+        preliminary_blocks_count: blocksResult.rows.filter(b => b.phase === 'preliminary').length,
+        final_blocks_count: blocksResult.rows.filter(b => b.phase === 'final').length
+      };
+
+      console.log(`✅ ブロック構成情報取得成功: ${blockStructure.total_blocks_count}ブロック (予選:${blockStructure.preliminary_blocks_count}, 決勝:${blockStructure.final_blocks_count})`);
+    } catch (error) {
+      console.warn(`Warning: Could not fetch block structure for tournament ${tournamentId}:`, error);
+      blockStructure = {
+        blocks_info: [],
+        block_assignments: {},
+        preliminary_blocks: [],
+        final_blocks: [],
+        total_blocks_count: 0,
+        preliminary_blocks_count: 0,
+        final_blocks_count: 0
+      };
+    }
+
+    // その他の拡張メタデータを収集
+    let extendedMetadata = null;
+    try {
+      // 会場情報を取得
+      const venueResult = await db.execute(`
+        SELECT 
+          v.venue_id,
+          v.venue_name,
+          v.address,
+          v.available_courts
+        FROM m_venues v
+        JOIN t_tournaments t ON t.venue_id = v.venue_id
+        WHERE t.tournament_id = ?
+      `, [tournamentId]);
+
+      // UI表示に影響する設定情報を収集
+      const displaySettings = {
+        team_display_preference: 'omission_priority', // 略称優先
+        score_display_format: 'goals_with_pk_separate', // ゴール数+PK別表示
+        bracket_layout_style: 'vertical_flow', // 縦流しレイアウト
+        standings_sort_criteria: sportSettings.tie_breaking_rules || ['points', 'goal_difference', 'goals_for'],
+        color_scheme: {
+          preliminary_blocks: ['blue', 'green', 'yellow', 'purple'], // A,B,C,Dブロックの色分け
+          final_tournament: 'red',
+          completed_match: 'white',
+          ongoing_match: 'green',
+          scheduled_match: 'gray'
+        }
+      };
+
+      // 時点情報を記録（将来の変更検出用）
+      const snapshotInfo = {
+        archived_timestamp: new Date().toISOString(),
+        system_version: '2.0', // アーカイブシステムのバージョン
+        data_structure_version: '1.0', // データ構造のバージョン
+        ui_compatibility_version: currentVersion, // UI互換性バージョン
+        database_schema_checksum: `tournament_${tournamentId}_${new Date().getTime()}`,
+        total_data_size: 0 // 後で計算
+      };
+
+      extendedMetadata = {
+        venue_info: venueResult.rows.length > 0 ? {
+          venue_id: venueResult.rows[0].venue_id,
+          venue_name: venueResult.rows[0].venue_name,
+          address: venueResult.rows[0].address,
+          available_courts: venueResult.rows[0].available_courts
+        } : null,
+        display_settings: displaySettings,
+        snapshot_info: snapshotInfo,
+        archive_completeness_check: {
+          has_tournament_data: !!tournament,
+          has_teams_data: teamsResult.rows.length > 0,
+          has_matches_data: matchesResult.rows.length > 0,
+          has_standings_data: standingsResult.rows.length > 0,
+          has_sport_settings: !!sportSettings,
+          has_format_details: !!formatDetails,
+          has_block_structure: !!blockStructure
+        }
+      };
+
+      console.log(`✅ 拡張メタデータ収集完了: 会場情報=${extendedMetadata.venue_info ? 'あり' : 'なし'}`);
+    } catch (error) {
+      console.warn(`Warning: Could not collect extended metadata for tournament ${tournamentId}:`, error);
+      extendedMetadata = {
+        venue_info: null,
+        display_settings: {},
+        snapshot_info: {
+          archived_timestamp: new Date().toISOString(),
+          system_version: '2.0',
+          data_structure_version: '1.0',
+          ui_compatibility_version: currentVersion
+        },
+        archive_completeness_check: {}
+      };
     }
 
     const metadata = JSON.stringify({
@@ -236,12 +471,30 @@ export async function archiveTournamentAsJson(
       completed_matches: matchesResult.rows.filter(m => m.has_result === 1).length,
       blocks_count: new Set(standingsResult.rows.map(s => s.block_name)).size,
       archive_ui_version: currentVersion,
-      // 大会ルール情報を追加
+      // 拡張された競技設定情報
+      sport_settings: {
+        sport_code: sportSettings.sport_code,
+        supports_pk: Boolean(sportSettings.supports_pk),
+        has_extra_time: Boolean(sportSettings.has_extra_time),
+        period_count: Number(sportSettings.period_count || 2),
+        tie_breaking_rules: sportSettings.tie_breaking_rules,
+        score_format_rules: sportSettings.score_format_rules,
+        competition_format: sportSettings.competition_format,
+        // 後方互換性のために従来のフィールドも保持
+        score_format: sportSettings.has_extra_time ? "regular_extra_pk" : "regular_pk"
+      },
+      // 大会フォーマット詳細情報
+      format_details: formatDetails,
+      // ブロック構成詳細情報
+      block_structure: blockStructure,
+      // 拡張メタデータ（UI表示設定・会場情報など）
+      extended_metadata: extendedMetadata,
+      // レガシー対応（削除予定）
       tournament_rules: {
-        has_extra_time: Boolean(rules.has_extra_time),
-        period_count: Number(rules.period_count || 2),
-        supports_pk: Boolean(rules.supports_pk),
-        score_format: rules.has_extra_time ? "regular_extra_pk" : "regular_pk"
+        has_extra_time: Boolean(sportSettings.has_extra_time),
+        period_count: Number(sportSettings.period_count || 2),
+        supports_pk: Boolean(sportSettings.supports_pk),
+        score_format: sportSettings.has_extra_time ? "regular_extra_pk" : "regular_pk"
       }
     });
 

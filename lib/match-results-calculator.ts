@@ -208,7 +208,7 @@ async function getBlockResults(
       display_name: (row.team_omission as string) || (row.team_name as string)
     }));
 
-    // 確定済みの試合と未確定試合のコード情報を取得（多競技対応）
+    // 確定済みの試合と未確定試合のコード情報を取得（現在のスキーマに対応）
     const matchesResult = await db.execute({
       sql: `
         SELECT 
@@ -217,22 +217,18 @@ async function getBlockResults(
           ml.team1_id,
           ml.team2_id,
           ml.match_code,
-          mf.team1_scores as team1_goals,
-          mf.team2_scores as team2_goals,
+          mf.team1_scores,
+          mf.team2_scores,
           mf.winner_team_id,
           mf.is_draw,
           mf.is_walkover,
-          ms.match_status,
-          -- 多競技対応の拡張情報
-          ml.team1_scores,
-          ml.team2_scores,
-          tr.active_periods,
+          ml.match_status,
+          -- 多競技対応の拡張情報（現在のスキーマに対応）
+          ml.period_count,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_rules tr ON mb.tournament_id = tr.tournament_id AND tr.phase = mb.phase
         WHERE ml.match_block_id = ?
         AND ml.team1_id IS NOT NULL 
         AND ml.team2_id IS NOT NULL
@@ -249,8 +245,8 @@ async function getBlockResults(
         team1_id: row.team1_id as string,
         team2_id: row.team2_id as string,
         // スコアの処理（カンマ区切り対応）
-        team1_goals: parseScore(row.team1_goals),
-        team2_goals: parseScore(row.team2_goals),
+        team1_goals: parseScore(row.team1_scores),
+        team2_goals: parseScore(row.team2_scores),
         winner_team_id: row.winner_team_id as string | null,
         is_draw: Boolean(row.is_draw),
         is_walkover: Boolean(row.is_walkover),

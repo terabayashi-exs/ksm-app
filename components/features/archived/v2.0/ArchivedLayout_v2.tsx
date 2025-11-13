@@ -18,46 +18,66 @@ import Footer from '@/components/layout/Footer';
 import BackButton from '@/components/ui/back-button';
 
 // 汎用的ブロック色分け関数（全コンポーネントで共通使用）
-const getDynamicBlockColor = (blockKey: string, _allBlockKeys?: string[]): string => {
-  // 決勝トーナメントの場合
+const getUniversalBlockColor = (blockKey: string, blockStructure?: BlockStructure | null): string => {
+  // メタデータベースの動的色分けを優先
+  if (blockStructure) {
+    const blockInfo = blockStructure.blocks_info?.find((b) => 
+      b.block_name === blockKey || 
+      b.display_round_name === blockKey ||
+      blockKey.includes(b.block_name)
+    );
+    
+    if (blockInfo) {
+      const phase = blockInfo.phase;
+      const blockOrder = blockInfo.block_order || 0;
+      
+      if (phase === 'preliminary') {
+        // 予選ブロック用の色分け
+        const colors = [
+          'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
+        ];
+        return colors[blockOrder % colors.length];
+      } else if (phase === 'final') {
+        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+      }
+    }
+  }
+  
+  // フォールバック：従来のパターンマッチング
   if (blockKey.includes('決勝') || blockKey.toLowerCase().includes('final')) {
     return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
   }
   
-  // 予選・リーグ戦の場合は色配列を循環的に適用
+  // 予選・リーグ戦の場合
   if (blockKey.includes('予選') || blockKey.toLowerCase().includes('preliminary') || 
       blockKey.includes('グループ') || blockKey.includes('ブロック') || 
       blockKey.includes('リーグ') || /^[A-Z0-9]+$/.test(blockKey)) {
     
-    // 利用可能な色パターン（12色対応）
     const colors = [
-      'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',      // 0
-      'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',    // 1
-      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300', // 2
-      'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300', // 3
-      'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300',       // 4
-      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300', // 5
-      'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',       // 6
-      'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300', // 7
-      'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300', // 8
-      'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300',   // 9
-      'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-300',         // 10
-      'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-300'      // 11
+      'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+      'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+      'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+      'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300',
+      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
+      'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
+      'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300'
     ];
     
-    // ハッシュベースのインデックス計算（安定した色分け）
+    // ハッシュベースの安定した色分け
     let hash = 0;
     for (let i = 0; i < blockKey.length; i++) {
       const char = blockKey.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // 32bit整数に変換
+      hash = hash & hash;
     }
     const colorIndex = Math.abs(hash) % colors.length;
-    
     return colors[colorIndex];
   }
   
-  // その他の場合はデフォルト色
   return 'bg-muted text-muted-foreground';
 };
 
@@ -66,6 +86,81 @@ interface PlayerData {
   player_name: string;
   jersey_number?: number;
   position?: string;
+}
+
+// メタデータ型定義
+interface SportSettings {
+  sport_code: string;
+  supports_pk: boolean;
+  has_extra_time: boolean;
+  period_count: number;
+  tie_breaking_rules: string[];
+  score_format_rules: Record<string, unknown>;
+  competition_format: string;
+}
+
+interface FormatDetails {
+  format_info: {
+    format_id: number;
+    format_name: string;
+    target_team_count: number;
+    format_description: string;
+    preliminary_format: string;
+    final_format: string;
+    preliminary_advance_count: number;
+    has_third_place_match: boolean;
+  };
+  match_templates: Array<{
+    template_id: number;
+    match_code: string;
+    phase: string;
+    round_name: string;
+    block_name: string;
+    match_type: string;
+    execution_priority: number;
+    team1_source: string;
+    team2_source: string;
+  }>;
+}
+
+interface BlockStructure {
+  blocks_info: Array<{
+    match_block_id: number;
+    phase: string;
+    block_name: string;
+    display_round_name: string;
+    block_order: number;
+    match_type: string;
+    teams_count: number;
+    matches_count: number;
+  }>;
+  block_assignments: Record<string, Array<{
+    team_id: string;
+    team_name: string;
+    team_omission?: string;
+    block_position: number;
+    player_count: number;
+  }>>;
+  total_blocks_count: number;
+  preliminary_blocks_count: number;
+  final_blocks_count: number;
+}
+
+interface ExtendedMetadata {
+  venue_info?: {
+    venue_id: number;
+    venue_name: string;
+    address: string;
+    available_courts: number;
+  };
+  display_settings: Record<string, unknown>;
+  snapshot_info: {
+    archived_timestamp: string;
+    system_version: string;
+    data_structure_version: string;
+    ui_compatibility_version: string;
+  };
+  archive_completeness_check: Record<string, boolean>;
 }
 
 interface TeamData {
@@ -190,13 +285,317 @@ interface ArchivedData {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+// 拡張メタデータを活用するヘルパー関数群
+const getExtendedMetadata = (metadata: unknown): ExtendedMetadata | null => {
+  try {
+    if (typeof metadata === 'string') {
+      const parsedMetadata = JSON.parse(metadata);
+      return parsedMetadata.extended_metadata as ExtendedMetadata || null;
+    }
+    return (metadata as Record<string, unknown>)?.extended_metadata as ExtendedMetadata || null;
+  } catch {
+    return null;
+  }
+};
+
+const getSportSettings = (metadata: unknown): SportSettings | null => {
+  try {
+    if (typeof metadata === 'string') {
+      const parsedMetadata = JSON.parse(metadata);
+      return parsedMetadata.sport_settings as SportSettings || null;
+    }
+    return (metadata as Record<string, unknown>)?.sport_settings as SportSettings || null;
+  } catch {
+    return null;
+  }
+};
+
+const getFormatDetails = (metadata: unknown): FormatDetails | null => {
+  try {
+    if (typeof metadata === 'string') {
+      const parsedMetadata = JSON.parse(metadata);
+      return parsedMetadata.format_details as FormatDetails || null;
+    }
+    return (metadata as Record<string, unknown>)?.format_details as FormatDetails || null;
+  } catch {
+    return null;
+  }
+};
+
+const getBlockStructure = (metadata: unknown): BlockStructure | null => {
+  try {
+    if (typeof metadata === 'string') {
+      const parsedMetadata = JSON.parse(metadata);
+      return parsedMetadata.block_structure as BlockStructure || null;
+    }
+    return (metadata as Record<string, unknown>)?.block_structure as BlockStructure || null;
+  } catch {
+    return null;
+  }
+};
+
+
+// 競技設定表示コンポーネント
+const SportSettingsCard = ({ tournament, extendedMetadata }: { tournament: Tournament; extendedMetadata?: ExtendedMetadata | null }) => {
+  const sportSettings = getSportSettings(extendedMetadata);
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Clock className="h-5 w-5 mr-2 text-purple-600" />
+          競技設定・試合ルール
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+            <p className="text-2xl font-bold text-blue-600">{tournament.match_duration_minutes}</p>
+            <p className="text-sm text-muted-foreground">試合時間（分）</p>
+          </div>
+          <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+            <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
+            <p className="text-sm text-muted-foreground">休憩時間（分）</p>
+          </div>
+          {sportSettings && (
+            <>
+              <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                <p className="text-lg font-bold text-purple-600">{sportSettings.sport_code?.toUpperCase() || 'SOCCER'}</p>
+                <p className="text-sm text-muted-foreground">競技種目</p>
+              </div>
+              <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                <p className="text-lg font-bold text-orange-600">{sportSettings.period_count || 2}ピリオド</p>
+                <p className="text-sm text-muted-foreground">試合構成</p>
+              </div>
+              <div className="text-center p-4 bg-cyan-50 dark:bg-cyan-950/20 rounded-lg">
+                <p className="text-lg font-bold text-cyan-600">{sportSettings.has_extra_time ? 'あり' : 'なし'}</p>
+                <p className="text-sm text-muted-foreground">延長戦</p>
+              </div>
+              <div className="text-center p-4 bg-rose-50 dark:bg-rose-950/20 rounded-lg">
+                <p className="text-lg font-bold text-rose-600">{sportSettings.supports_pk ? 'あり' : 'なし'}</p>
+                <p className="text-sm text-muted-foreground">PK戦</p>
+              </div>
+            </>
+          )}
+        </div>
+        
+        {sportSettings?.tie_breaking_rules && (
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+            <h4 className="font-medium text-muted-foreground mb-2">順位決定ルール</h4>
+            <div className="flex flex-wrap gap-2">
+              {sportSettings.tie_breaking_rules.map((rule: string, index: number) => (
+                <span key={index} className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs">
+                  {index + 1}. {rule}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// 大会フォーマット詳細表示コンポーネント
+const FormatDetailsCard = ({ formatDetails }: { formatDetails: FormatDetails | null }) => {
+  const formatInfo = formatDetails?.format_info;
+  const templates = formatDetails?.match_templates || [];
+  
+  if (!formatInfo) return null;
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <GitBranch className="h-5 w-5 mr-2 text-indigo-600" />
+          大会フォーマット詳細
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* フォーマット基本情報 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">フォーマット名</h4>
+              <p className="text-foreground font-medium">{formatInfo.format_name}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">対象チーム数</h4>
+              <p className="text-foreground">{formatInfo.target_team_count}チーム</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">進出チーム数</h4>
+              <p className="text-foreground">{formatInfo.preliminary_advance_count || 0}チーム</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">予選形式</h4>
+              <p className="text-foreground">{formatInfo.preliminary_format}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">決勝形式</h4>
+              <p className="text-foreground">{formatInfo.final_format}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">3位決定戦</h4>
+              <p className="text-foreground">{formatInfo.has_third_place_match ? 'あり' : 'なし'}</p>
+            </div>
+          </div>
+          
+          {/* フォーマット説明 */}
+          {formatInfo.format_description && (
+            <div className="p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-medium text-muted-foreground mb-2">フォーマット説明</h4>
+              <p className="text-foreground text-sm">{formatInfo.format_description}</p>
+            </div>
+          )}
+          
+          {/* 試合テンプレート統計 */}
+          {templates.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <p className="text-lg font-bold text-blue-600">{templates.length}</p>
+                <p className="text-xs text-muted-foreground">総試合数</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                <p className="text-lg font-bold text-green-600">
+                  {templates.filter((t) => t.phase === 'preliminary').length}
+                </p>
+                <p className="text-xs text-muted-foreground">予選試合</p>
+              </div>
+              <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                <p className="text-lg font-bold text-red-600">
+                  {templates.filter((t) => t.phase === 'final').length}
+                </p>
+                <p className="text-xs text-muted-foreground">決勝試合</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ブロック構成表示コンポーネント
+const BlockStructureCard = ({ extendedMetadata }: { extendedMetadata?: ExtendedMetadata | null }) => {
+  const blockStructure = getBlockStructure(extendedMetadata);
+  
+  if (!blockStructure || !blockStructure.blocks_info || blockStructure.blocks_info.length === 0) {
+    return null;
+  }
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <BarChart3 className="h-5 w-5 mr-2 text-emerald-600" />
+          ブロック構成情報
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* ブロック統計 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
+              <p className="text-lg font-bold text-emerald-600">{blockStructure.total_blocks_count}</p>
+              <p className="text-xs text-muted-foreground">総ブロック数</p>
+            </div>
+            <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <p className="text-lg font-bold text-blue-600">{blockStructure.preliminary_blocks_count}</p>
+              <p className="text-xs text-muted-foreground">予選ブロック</p>
+            </div>
+            <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+              <p className="text-lg font-bold text-red-600">{blockStructure.final_blocks_count}</p>
+              <p className="text-xs text-muted-foreground">決勝ブロック</p>
+            </div>
+            <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+              <p className="text-lg font-bold text-purple-600">
+                {Object.values(blockStructure.block_assignments).reduce((total: number, teams) => total + teams.length, 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">参加チーム</p>
+            </div>
+          </div>
+          
+          {/* ブロック詳細情報 */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-muted-foreground">ブロック詳細</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {blockStructure.blocks_info.map((block, index: number) => (
+                <div key={index} className="p-3 border rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getUniversalBlockColor(block.block_name, blockStructure)}`}>
+                      {block.display_round_name || block.block_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {block.phase === 'preliminary' ? '予選' : '決勝'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">チーム：</span>
+                      <span className="font-medium">{block.teams_count}チーム</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">試合：</span>
+                      <span className="font-medium">{block.matches_count}試合</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {block.match_type}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* チーム配置詳細 */}
+          {Object.keys(blockStructure.block_assignments).length > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-muted-foreground">ブロック別チーム配置</h4>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {Object.entries(blockStructure.block_assignments).map(([blockName, teams]) => (
+                  <div key={blockName} className="p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getUniversalBlockColor(blockName, blockStructure)}`}>
+                        {blockName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{teams.length}チーム</span>
+                    </div>
+                    <div className="space-y-1">
+                      {teams.slice(0, 4).map((team, index: number) => (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <span className="font-medium">{team.team_omission || team.team_name}</span>
+                          <span className="text-muted-foreground">{team.player_count}名</span>
+                        </div>
+                      ))}
+                      {teams.length > 4 && (
+                        <div className="text-xs text-muted-foreground text-center">
+                          他 {teams.length - 4}チーム...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // 大会概要タブ
 function ArchivedTournamentOverview({ 
   tournament, 
-  archivedAt 
+  archivedAt,
+  extendedMetadata,
+  formatDetails
 }: { 
   tournament: Tournament;
   archivedAt: string;
+  extendedMetadata?: ExtendedMetadata | null;
+  formatDetails?: FormatDetails | null;
 }) {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -300,27 +699,14 @@ function ArchivedTournamentOverview({
         </Card>
       )}
 
-      {/* 試合設定 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="h-5 w-5 mr-2 text-purple-600" />
-            試合設定
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">{tournament.match_duration_minutes}</p>
-              <p className="text-sm text-muted-foreground">試合時間（分）</p>
-            </div>
-            <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
-              <p className="text-sm text-muted-foreground">休憩時間（分）</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 試合設定と競技詳細（拡張版） */}
+      <SportSettingsCard tournament={tournament} extendedMetadata={extendedMetadata} />
+
+      {/* 大会フォーマット詳細情報 */}
+      {formatDetails && <FormatDetailsCard formatDetails={formatDetails} />}
+
+      {/* ブロック構成情報 */}
+      <BlockStructureCard extendedMetadata={extendedMetadata} />
 
       {/* 募集期間 */}
       {tournament.recruitment_start_date && tournament.recruitment_end_date && (
@@ -353,7 +739,7 @@ function ArchivedTournamentOverview({
 }
 
 // 日程・結果表示コンポーネント（TournamentSchedule.tsxと完全同一実装）
-const ArchivedTournamentSchedule = ({ matches, teams }: { matches: MatchData[], teams: TeamData[] }) => {
+const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matches: MatchData[], teams: TeamData[], blockStructure?: BlockStructure | null }) => {
   // デバッグ情報をコンソールに出力（開発環境のみ）
   if (process.env.NODE_ENV === 'development') {
     console.log('ArchivedTournamentSchedule - matches:', matches);
@@ -381,7 +767,7 @@ const ArchivedTournamentSchedule = ({ matches, teams }: { matches: MatchData[], 
   };
 
   // 共通の動的色分け関数を使用
-  const getBlockColor = getDynamicBlockColor;
+  const getBlockColor = (blockKey: string) => getUniversalBlockColor(blockKey, blockStructure);
 
   // 試合結果の表示（TournamentSchedule.tsxと同じ）
   const getMatchResult = (match: MatchData) => {
@@ -1791,10 +2177,11 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
 };
 
 // ArchivedTournamentResults Component - Exact implementation of TournamentResults.tsx
-const ArchivedTournamentResults = ({ _results, teams, standings }: { 
+const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure }: { 
   _results: ResultData[], 
   teams: TeamData[],
-  standings: BlockStanding[]
+  standings: BlockStanding[],
+  blockStructure?: BlockStructure | null
 }) => {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   
@@ -1840,7 +2227,7 @@ const ArchivedTournamentResults = ({ _results, teams, standings }: {
 
   // Block color function (same as TournamentResults.tsx)
   // 共通の動的色分け関数を使用
-  const getBlockColor = getDynamicBlockColor;
+  const getBlockColor = (blockKey: string) => getUniversalBlockColor(blockKey, blockStructure);
 
   // Preliminary phase detection
   const isPreliminaryPhase = (phase: string): boolean => {
@@ -2538,7 +2925,7 @@ const ArchivedTournamentResults = ({ _results, teams, standings }: {
 };
 
 // 順位表コンポーネント（TournamentStandings.tsxと同じ実装）
-const ArchivedTournamentStandings = ({ standings, matches }: { standings: BlockStanding[], matches?: MatchData[] }) => {
+const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sportSettings: _sportSettings }: { standings: BlockStanding[], matches?: MatchData[], blockStructure?: BlockStructure | null, sportSettings?: SportSettings | null }) => {
   // デバッグ情報をコンソールに出力
   console.log('ArchivedTournamentStandings - standings data:', standings);
   
@@ -2729,7 +3116,7 @@ const ArchivedTournamentStandings = ({ standings, matches }: { standings: BlockS
 
   // ブロック色の取得（TournamentStandings.tsxと同じ）
   // 共通の動的色分け関数を使用
-  const getBlockColor = getDynamicBlockColor;
+  const getBlockColor = (blockKey: string) => getUniversalBlockColor(blockKey, blockStructure);
 
   // フェーズ判定（TournamentStandings.tsxと同じ）
   const isPreliminaryPhase = (phase: string): boolean => {
@@ -3144,7 +3531,7 @@ const ArchivedTournamentStandings = ({ standings, matches }: { standings: BlockS
 };
 
 // 参加チームコンポーネント（TournamentTeams.tsxと同じ実装）
-const ArchivedTournamentTeams = ({ teams }: { teams: TeamData[] }) => {
+const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _extendedMetadata }: { teams: TeamData[], blockStructure?: BlockStructure | null, extendedMetadata?: ExtendedMetadata | null }) => {
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
   const toggleTeamExpansion = (teamId: string) => {
@@ -3182,7 +3569,7 @@ const ArchivedTournamentTeams = ({ teams }: { teams: TeamData[] }) => {
 
   // ブロック色の取得
   // 共通の動的色分け関数を使用
-  const getBlockColor = getDynamicBlockColor;
+  const getBlockColor = (blockKey: string) => getUniversalBlockColor(blockKey, blockStructure);
 
   const getTeamStatus = (team: TeamData) => {
     const playerCount = team.player_count || 0;
@@ -3398,10 +3785,20 @@ const ArchivedTournamentTeams = ({ teams }: { teams: TeamData[] }) => {
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 function ArchivedLayout_v2({ archived, uiVersion, versionInfo }: { archived: ArchivedData, uiVersion?: any, versionInfo?: any }) {
 /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+  // 拡張メタデータを取得
+  const extendedMetadata = getExtendedMetadata(archived.metadata);
+  const sportSettings = getSportSettings(archived.metadata);
+  const formatDetails = getFormatDetails(archived.metadata);
+  const blockStructure = getBlockStructure(archived.metadata);
+  
   // デバッグ情報をコンソールに出力
   // アーカイブデータ構造のデバッグログ（開発環境のみ）
   if (process.env.NODE_ENV === 'development') {
     console.log('ArchivedLayout_v2 - archived data structure:', archived);
+    console.log('ArchivedLayout_v2 - extended metadata:', extendedMetadata);
+    console.log('ArchivedLayout_v2 - sport settings:', sportSettings);
+    console.log('ArchivedLayout_v2 - format details:', formatDetails);
+    console.log('ArchivedLayout_v2 - block structure:', blockStructure);
     if (archived.teams && archived.teams[0]) {
       console.log('ArchivedLayout_v2 - first team structure:', archived.teams[0]);
     }
@@ -3464,27 +3861,51 @@ function ArchivedLayout_v2({ archived, uiVersion, versionInfo }: { archived: Arc
             <ArchivedTournamentOverview 
               tournament={archived.tournament} 
               archivedAt={archived.archived_at}
+              extendedMetadata={extendedMetadata || undefined}
+              formatDetails={formatDetails || undefined}
             />
           </TabsContent>
 
           <TabsContent value="schedule">
-            <ArchivedTournamentSchedule matches={archived.matches} teams={archived.teams} />
+            <ArchivedTournamentSchedule 
+              matches={archived.matches} 
+              teams={archived.teams} 
+              blockStructure={blockStructure}
+            />
           </TabsContent>
 
           <TabsContent value="bracket">
-            <ArchivedTournamentBracket matches={archived.matches} teams={archived.teams} archived={archived} />
+            <ArchivedTournamentBracket 
+              matches={archived.matches} 
+              teams={archived.teams} 
+              archived={archived}
+            />
           </TabsContent>
 
           <TabsContent value="results">
-            <ArchivedTournamentResults _results={archived.results} teams={archived.teams} standings={archived.standings} />
+            <ArchivedTournamentResults 
+              _results={archived.results} 
+              teams={archived.teams} 
+              standings={archived.standings} 
+              blockStructure={blockStructure}
+            />
           </TabsContent>
 
           <TabsContent value="standings">
-            <ArchivedTournamentStandings standings={archived.standings} matches={archived.matches} />
+            <ArchivedTournamentStandings 
+              standings={archived.standings} 
+              matches={archived.matches} 
+              blockStructure={blockStructure}
+              sportSettings={sportSettings}
+            />
           </TabsContent>
 
           <TabsContent value="teams">
-            <ArchivedTournamentTeams teams={archived.teams} />
+            <ArchivedTournamentTeams 
+              teams={archived.teams} 
+              blockStructure={blockStructure}
+              extendedMetadata={extendedMetadata}
+            />
           </TabsContent>
         </Tabs>
       </div>
