@@ -35,6 +35,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   const [editingMatchCourt, setEditingMatchCourt] = useState<string | null>(null); // 個別試合コート編集中の試合キー
   const [matchCourtAssignments, setMatchCourtAssignments] = useState<Record<number, number>>({}); // 試合番号→コート割り当て
   const [initialSchedule, setInitialSchedule] = useState<TournamentSchedule | null>(null); // 初期スケジュール保存用（リセット用）
+  const [dayStartTimeInputs, setDayStartTimeInputs] = useState<Record<number, string>>({}); // 開催日ごとの一括調整用時刻入力
   
   // コンポーネントマウント/アンマウント時のログ
   useEffect(() => {
@@ -634,6 +635,119 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     }
   };
 
+  // 開催日単位の一括時間調整ハンドラー
+  const handleDayTimeAdjustment = (dayIndex: number) => {
+    const newStartTime = dayStartTimeInputs[dayIndex];
+    if (!newStartTime || !newStartTime.match(/^\d{1,2}:\d{2}$/)) {
+      alert('有効な時刻を入力してください（例: 9:00）');
+      return;
+    }
+
+    const currentSchedule = customSchedule || schedule;
+    if (!currentSchedule) {
+      return;
+    }
+
+    const targetDay = currentSchedule.days[dayIndex];
+    if (!targetDay || targetDay.matches.length === 0) {
+      alert('この日には試合がありません');
+      return;
+    }
+
+    // その日の最初の試合の開始時刻を取得
+    const firstMatch = targetDay.matches.reduce((earliest, match) => {
+      return timeToMinutes(match.startTime) < timeToMinutes(earliest.startTime) ? match : earliest;
+    }, targetDay.matches[0]);
+
+    const currentFirstStartTime = firstMatch.startTime;
+    const currentMinutes = timeToMinutes(currentFirstStartTime);
+    const newMinutes = timeToMinutes(newStartTime);
+    const timeDiffMinutes = newMinutes - currentMinutes;
+
+    if (timeDiffMinutes === 0) {
+      alert('時刻に変更がありません');
+      return;
+    }
+
+    // スケジュールのコピーを作成
+    const newSchedule = { ...currentSchedule };
+    const updatedDay = newSchedule.days[dayIndex];
+
+    // その日の全試合の開始時刻と終了時刻に差分を適用
+    updatedDay.matches = updatedDay.matches.map(match => {
+      const matchStartMinutes = timeToMinutes(match.startTime);
+      const matchEndMinutes = timeToMinutes(match.endTime);
+
+      return {
+        ...match,
+        startTime: minutesToTime(matchStartMinutes + timeDiffMinutes),
+        endTime: minutesToTime(matchEndMinutes + timeDiffMinutes)
+      };
+    });
+
+    // その日の総所要時間を再計算
+    const dayEndTime = updatedDay.matches.length > 0
+      ? Math.max(...updatedDay.matches.map(m => timeToMinutes(m.endTime)))
+      : timeToMinutes(newStartTime);
+    const dayStartTime = Math.min(...updatedDay.matches.map(m => timeToMinutes(m.startTime)));
+    updatedDay.totalDuration = minutesToTime(dayEndTime - dayStartTime);
+
+    // 全体の総所要時間を再計算
+    let overallStartTime = Infinity;
+    let overallEndTime = 0;
+
+    for (const day of newSchedule.days) {
+      if (day.matches.length > 0) {
+        const dayStart = Math.min(...day.matches.map(m => timeToMinutes(m.startTime)));
+        const dayEnd = Math.max(...day.matches.map(m => timeToMinutes(m.endTime)));
+        overallStartTime = Math.min(overallStartTime, dayStart);
+        overallEndTime = Math.max(overallEndTime, dayEnd);
+      }
+    }
+
+    const totalDurationMinutes = overallEndTime - overallStartTime;
+    newSchedule.totalDuration = totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00';
+
+    setCustomSchedule(newSchedule);
+    setHasManualEdits(true);
+
+    // 入力欄をクリア
+    setDayStartTimeInputs(prev => ({
+      ...prev,
+      [dayIndex]: ''
+    }));
+
+    // 親コンポーネントに変更を通知（保存ボタン押下時に反映されるようにする）
+    if (onScheduleChange) {
+      if (editMode && actualMatches.length > 0) {
+        // 既存大会の編集モード: match_idを使用
+        const customMatches = newSchedule.days.flatMap(day =>
+          day.matches.map(match => {
+            const actualMatch = actualMatches.find(am => am.match_number === match.template.match_number);
+            return actualMatch ? {
+              match_id: actualMatch.match_id,
+              start_time: match.startTime,
+              court_number: match.courtNumber
+            } : null;
+          }).filter(Boolean)
+        ) as Array<{ match_id: number; start_time: string; court_number: number; }>;
+
+        onScheduleChange(customMatches);
+      } else {
+        // 新規作成モード: match_numberを使用
+        const customMatches = newSchedule.days.flatMap(day =>
+          day.matches.map(match => ({
+            match_id: match.template.match_number,
+            start_time: match.startTime,
+            court_number: match.courtNumber
+          }))
+        );
+
+        onScheduleChange(customMatches);
+      }
+    }
+  };
+
   // ユーティリティ関数
   const timeToMinutes = (timeStr: string): number => {
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -859,6 +973,51 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                     <div className="text-muted-foreground">ブロック数</div>
                   </div>
                 </div>
+
+                {/* 一括時間調整コントロール */}
+                {day.matches.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                        開始時刻を一括変更:
+                      </span>
+                      <Input
+                        type="time"
+                        value={dayStartTimeInputs[dayIndex] || ''}
+                        onChange={(e) => setDayStartTimeInputs(prev => ({
+                          ...prev,
+                          [dayIndex]: e.target.value
+                        }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleDayTimeAdjustment(dayIndex);
+                          }
+                        }}
+                        placeholder={(() => {
+                          const firstMatch = day.matches.reduce((earliest, match) => {
+                            return timeToMinutes(match.startTime) < timeToMinutes(earliest.startTime) ? match : earliest;
+                          }, day.matches[0]);
+                          return `現在: ${firstMatch.startTime}`;
+                        })()}
+                        className="w-32 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => handleDayTimeAdjustment(dayIndex)}
+                        variant="outline"
+                        size="sm"
+                        className="whitespace-nowrap"
+                      >
+                        <Clock className="w-4 h-4 mr-1" />
+                        適用
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        （この日の全試合の開始時刻が調整されます）
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

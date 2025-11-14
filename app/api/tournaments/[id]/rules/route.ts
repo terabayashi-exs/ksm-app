@@ -92,9 +92,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }));
     }
     
-    // 競技種別の設定情報も取得（インライン化でWebpackエラー回避）
-    const sportConfig = Object.values(SPORT_RULE_CONFIGS).find(config => 
-      config.sport_type_id === Number(tournament.sport_type_id)
+    // 競技種別の設定情報も取得（配列形式でWebpackエラー回避）
+    const sportConfigs = [
+      SPORT_RULE_CONFIGS.pk,
+      SPORT_RULE_CONFIGS.soccer,
+      SPORT_RULE_CONFIGS.futsal,
+      SPORT_RULE_CONFIGS.basketball,
+      SPORT_RULE_CONFIGS.handball,
+      SPORT_RULE_CONFIGS.rugby
+    ];
+    const sportConfig = sportConfigs.find(config =>
+      config && config.sport_type_id === Number(tournament.sport_type_id)
     ) || null;
     
     return NextResponse.json({
