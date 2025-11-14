@@ -1,59 +1,86 @@
+// scripts/create-tournament-groups-table.js
+// t_tournament_groups テーブルを作成するスクリプト
+
 const { createClient } = require('@libsql/client');
 require('dotenv').config({ path: '.env.local' });
 
-async function createGroupsTable() {
-  console.log('🚀 m_tournament_groupsテーブルの作成を開始します...');
+const db = createClient({
+  url: process.env.DATABASE_URL,
+  authToken: process.env.DATABASE_AUTH_TOKEN
+});
 
-  const db = createClient({
-    url: process.env.DATABASE_URL,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
-  });
-
+async function createTournamentGroupsTable() {
   try {
+    console.log('🚀 t_tournament_groups テーブルを作成します...\n');
+
+    // テーブルの存在確認
+    const checkTableResult = await db.execute(`
+      SELECT name FROM sqlite_master
+      WHERE type='table' AND name='t_tournament_groups'
+    `);
+
+    if (checkTableResult.rows.length > 0) {
+      console.log('ℹ️  テーブルは既に存在します。');
+      return;
+    }
+
     // テーブル作成
-    console.log('\n📊 m_tournament_groupsテーブルを作成中...');
     await db.execute(`
-      CREATE TABLE m_tournament_groups (
+      CREATE TABLE t_tournament_groups (
         group_id INTEGER PRIMARY KEY AUTOINCREMENT,
         group_name TEXT NOT NULL,
-        group_description TEXT,
-        group_color TEXT DEFAULT '#3B82F6',
-        display_order INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-        updated_at DATETIME DEFAULT (datetime('now', '+9 hours'))
+        organizer TEXT,
+        venue_id INTEGER,
+        event_start_date TEXT,
+        event_end_date TEXT,
+        recruitment_start_date TEXT,
+        recruitment_end_date TEXT,
+        visibility TEXT DEFAULT 'open',
+        event_description TEXT,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL,
+        FOREIGN KEY (venue_id) REFERENCES m_venues(venue_id)
       )
     `);
-    console.log('✅ m_tournament_groupsテーブルが作成されました');
+
+    console.log('✅ t_tournament_groups テーブルを作成しました');
 
     // インデックス作成
-    console.log('\n📊 インデックスを作成中...');
-    await db.execute(`CREATE INDEX idx_tournaments_group_id ON t_tournaments(group_id)`);
-    console.log('✅ idx_tournaments_group_id インデックスが作成されました');
-    
-    await db.execute(`CREATE INDEX idx_tournament_groups_display_order ON m_tournament_groups(display_order)`);
-    console.log('✅ idx_tournament_groups_display_order インデックスが作成されました');
+    await db.execute(`
+      CREATE INDEX idx_tournament_groups_venue ON t_tournament_groups(venue_id)
+    `);
 
-    // テーブル構造の確認
-    console.log('\n📊 作成されたテーブル構造の確認...');
-    const columns = await db.execute(`PRAGMA table_info(m_tournament_groups)`);
-    console.log('m_tournament_groups カラム一覧:');
-    columns.rows.forEach(col => {
-      console.log(`  - ${col.name} (${col.type})`);
-    });
+    console.log('✅ インデックスを作成しました');
 
-    // t_tournamentsの確認
-    console.log('\n📊 t_tournamentsテーブルの拡張確認...');
-    const tournamentColumns = await db.execute(`PRAGMA table_info(t_tournaments)`);
-    const groupColumns = tournamentColumns.rows.filter(col => 
-      ['group_id', 'group_order', 'category_name'].includes(col.name)
-    );
-    
-    console.log('グループ関連カラム:');
-    groupColumns.forEach(col => {
-      console.log(`  - ${col.name} (${col.type})`);
-    });
+    // t_tournaments テーブルに group_id カラムが存在するか確認
+    const columnsResult = await db.execute(`
+      PRAGMA table_info(t_tournaments)
+    `);
 
-    console.log('\n✨ テーブル作成が完了しました！');
+    const hasGroupId = columnsResult.rows.some(row => row.name === 'group_id');
+
+    if (!hasGroupId) {
+      console.log('\nℹ️  t_tournaments テーブルに group_id カラムを追加します...');
+
+      await db.execute(`
+        ALTER TABLE t_tournaments ADD COLUMN group_id INTEGER REFERENCES t_tournament_groups(group_id)
+      `);
+
+      console.log('✅ group_id カラムを追加しました');
+
+      // インデックス作成
+      await db.execute(`
+        CREATE INDEX idx_tournaments_group ON t_tournaments(group_id)
+      `);
+
+      console.log('✅ インデックスを作成しました');
+    } else {
+      console.log('\nℹ️  group_id カラムは既に存在します');
+    }
+
+    console.log('\n✅ 全ての作業が完了しました！');
+    console.log('\n📝 次のステップ:');
+    console.log('   node scripts/analyze-tournament-groups.js');
 
   } catch (error) {
     console.error('❌ エラーが発生しました:', error);
@@ -61,5 +88,4 @@ async function createGroupsTable() {
   }
 }
 
-// 実行
-createGroupsTable();
+createTournamentGroupsTable();

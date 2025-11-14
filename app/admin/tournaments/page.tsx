@@ -173,9 +173,9 @@ export default function AdminTournamentsList() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">大会一覧</h1>
+              <h1 className="text-3xl font-bold text-foreground">部門一覧</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                大会の検索・管理を行います
+                部門の検索・管理を行います（各大会に属する部門を管理）
               </p>
             </div>
             <div className="flex space-x-3">
@@ -186,7 +186,7 @@ export default function AdminTournamentsList() {
                 ダッシュボードに戻る
               </Button>
               <Button asChild>
-                <Link href="/admin/tournaments/create-new">大会作成</Link>
+                <Link href="/admin/tournaments/create-new">部門作成</Link>
               </Button>
             </div>
           </div>
@@ -253,10 +253,10 @@ export default function AdminTournamentsList() {
               </div>
             </div>
             <div className="mb-4">
-              <Label htmlFor="tournament_name">大会名</Label>
+              <Label htmlFor="tournament_name">部門名</Label>
               <Input
                 id="tournament_name"
-                placeholder="大会名で検索..."
+                placeholder="部門名で検索..."
                 value={searchParams.tournament_name}
                 onChange={(e) => setSearchParams({ ...searchParams, tournament_name: e.target.value })}
               />

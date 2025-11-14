@@ -67,7 +67,7 @@ interface CustomScheduleMatch {
 
 // フォームスキーマ定義
 const tournamentCreateSchema = z.object({
-  tournament_name: z.string().min(1, "大会名は必須です").max(100, "大会名は100文字以内で入力してください"),
+  tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
   sport_type_id: z.number().min(1, "競技種別を選択してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
   venue_id: z.number().min(1, "会場を選択してください"),
@@ -290,7 +290,7 @@ export default function TournamentCreateNewForm() {
         alert(`エラー: ${result.error}`);
       }
     } catch (error) {
-      alert("大会作成中にエラーが発生しました");
+      alert("部門作成中にエラーが発生しました");
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -594,9 +594,9 @@ export default function TournamentCreateNewForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 大会名 */}
+            {/* 部門名 */}
             <div className="space-y-2">
-              <Label htmlFor="tournament_name">大会名 *</Label>
+              <Label htmlFor="tournament_name">部門名 *</Label>
               <Input
                 id="tournament_name"
                 {...register("tournament_name")}
@@ -970,7 +970,7 @@ export default function TournamentCreateNewForm() {
           フォーマット選択に戻る
         </Button>
         <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
-          {isSubmitting ? "作成中..." : "🏆 大会を作成"}
+          {isSubmitting ? "作成中..." : "🏆 部門を作成"}
         </Button>
       </div>
     </form>

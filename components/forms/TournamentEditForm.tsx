@@ -21,7 +21,7 @@ interface TournamentEditFormProps {
 
 // 編集用のバリデーションスキーマ
 const editTournamentSchema = z.object({
-  tournament_name: z.string().min(1, '大会名は必須です').max(100, '大会名は100文字以内で入力してください'),
+  tournament_name: z.string().min(1, '部門名は必須です').max(100, '部門名は100文字以内で入力してください'),
   format_id: z.number().min(1, 'フォーマットIDが必要です'),
   venue_id: z.number().min(1, '会場IDが必要です'),
   team_count: z.number().min(2, 'チーム数は2以上で入力してください').max(128, 'チーム数は128以下で入力してください'),
@@ -254,7 +254,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
 
     // 基本的なバリデーション
     if (!data.tournament_name.trim()) {
-      setError('大会名を入力してください');
+      setError('部門名を入力してください');
       setLoading(false);
       return;
     }
@@ -306,7 +306,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       const result = await response.json();
 
       if (result.success) {
-        setSuccess('大会情報が正常に更新されました');
+        setSuccess('部門情報が正常に更新されました');
         // 少し待ってから管理画面に戻る
         setTimeout(() => {
           router.push('/admin');
@@ -362,9 +362,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* 大会名 */}
+            {/* 部門名 */}
             <div className="space-y-2">
-              <Label htmlFor="tournament_name">大会名 *</Label>
+              <Label htmlFor="tournament_name">部門名 *</Label>
               <Input
                 id="tournament_name"
                 {...form.register('tournament_name')}
@@ -699,7 +699,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                大会を更新
+                部門を更新
               </>
             )}
           </Button>

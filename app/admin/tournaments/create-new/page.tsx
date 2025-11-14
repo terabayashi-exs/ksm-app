@@ -26,9 +26,9 @@ export default async function CreateNewTournamentPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">大会作成</h1>
+                <h1 className="text-3xl font-bold text-foreground">部門作成</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  新しいテンプレートシステムを使用した大会作成
+                  大会に属する部門（カテゴリー）を作成します
                 </p>
               </div>
             </div>
@@ -41,10 +41,10 @@ export default async function CreateNewTournamentPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <span>🏆</span>
-              <span>新規大会作成</span>
+              <span>新規部門作成</span>
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              コート番号・時間指定機能付きのテンプレートシステムで大会を作成します
+              大会に属する部門をテンプレートシステムで作成します
             </p>
           </CardHeader>
           <CardContent>

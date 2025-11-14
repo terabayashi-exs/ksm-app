@@ -104,9 +104,9 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
                 </Link>
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">大会編集</h1>
+                <h1 className="text-3xl font-bold text-foreground">部門編集</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  「{tournament.tournament_name}」の設定を編集します
+                  部門「{tournament.tournament_name}」の設定を編集します
                 </p>
               </div>
             </div>

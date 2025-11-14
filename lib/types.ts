@@ -1,4 +1,17 @@
 // lib/types.ts
+/**
+ * 用語マッピング:
+ * - 大会 (Tournament Event) = t_tournament_groups テーブル
+ * - 部門/コース (Division/Category) = t_tournaments テーブル
+ *
+ * 従来の「大会グループ」を「大会」、「大会」を「部門」として扱います
+ */
+
+/**
+ * 部門（旧：大会）
+ * 大会の中の1つのカテゴリーを表す
+ * データベース: t_tournaments
+ */
 export interface Tournament {
   tournament_id: number;
   tournament_name: string;
@@ -44,20 +57,36 @@ export interface Tournament {
   group_color?: string | null;
 }
 
-// 大会グループの型
+/**
+ * 大会（旧：大会グループ）
+ * 複数の部門を持つ大会全体を表す
+ * データベース: t_tournament_groups
+ */
 export interface TournamentGroup {
   group_id: number;
   group_name: string;
-  group_description?: string;
-  group_color: string;
-  display_order: number;
+  organizer?: string;
+  venue_id?: number;
+  event_start_date?: string;
+  event_end_date?: string;
+  recruitment_start_date?: string;
+  recruitment_end_date?: string;
+  visibility?: string;
+  event_description?: string;
   created_at: string;
   updated_at: string;
   // Optional joined fields
-  tournament_count?: number;
+  venue_name?: string;
+  division_count?: number; // 所属部門数
   ongoing_count?: number;
   completed_count?: number;
 }
+
+/**
+ * 型エイリアス（新しい用語での参照用）
+ */
+export type TournamentEvent = TournamentGroup;  // 大会
+export type Division = Tournament;               // 部門
 
 // 大会開催日程の型
 export interface TournamentDate {

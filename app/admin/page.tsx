@@ -36,6 +36,9 @@ export default async function AdminDashboard() {
         {/* 大会一覧セクション */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-foreground mb-6">大会状況</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            各大会の部門別状況を確認できます
+          </p>
           <TournamentDashboardList />
         </div>
 
@@ -44,24 +47,21 @@ export default async function AdminDashboard() {
           <h2 className="text-2xl font-bold text-foreground mb-6">管理メニュー</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* 大会管理 */}
+          {/* 大会・部門管理 */}
           <Card>
             <CardHeader>
-              <CardTitle>大会管理</CardTitle>
+              <CardTitle>大会・部門管理</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                大会の作成、編集、管理を行います
+                大会と部門の作成、編集、管理を行います
               </p>
               <div className="space-y-2">
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                  <Link href="/admin/tournaments">大会一覧</Link>
+                  <Link href="/admin/tournaments">部門一覧</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                  <Link href="/admin/tournaments/create-new">大会作成</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full border-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:border-purple-800 dark:hover:border-purple-700 dark:hover:bg-purple-950/20">
-                  <Link href="/admin/tournament-groups">グループ管理</Link>
+                  <Link href="/admin/tournaments/create-new">部門作成</Link>
                 </Button>
               </div>
             </CardContent>
@@ -74,7 +74,7 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                大会ごとのチーム情報の管理を行います
+                部門ごとのチーム情報の管理を行います
               </p>
               <div className="space-y-2">
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
