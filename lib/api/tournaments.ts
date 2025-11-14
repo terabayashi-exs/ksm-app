@@ -40,7 +40,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
-      LEFT JOIN m_tournament_groups g ON t.group_id = g.group_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       ${teamId ? 'LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?' : ''}
       WHERE t.visibility = 'open' 
         AND t.public_start_date <= date('now')

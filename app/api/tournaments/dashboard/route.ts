@@ -62,7 +62,7 @@ export async function GET() {
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
-      LEFT JOIN m_tournament_groups g ON t.group_id = g.group_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status IN ('planning', 'ongoing')
         AND (t.created_by = ? OR ? = 1)
       ORDER BY 
@@ -113,7 +113,7 @@ export async function GET() {
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
-      LEFT JOIN m_tournament_groups g ON t.group_id = g.group_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status = 'completed'
         AND (t.created_by = ? OR ? = 1)
       ORDER BY g.display_order NULLS LAST, t.group_order, t.created_at DESC
