@@ -27,7 +27,7 @@ export async function GET(
     }
 
     const result = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.format_id,
@@ -46,7 +46,9 @@ export async function GET(
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        f.format_name,
+        f.preliminary_format_type,
+        f.final_format_type
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -80,7 +82,9 @@ export async function GET(
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
-      format_name: row.format_name as string
+      format_name: row.format_name as string,
+      preliminary_format_type: row.preliminary_format_type as string | undefined,
+      final_format_type: row.final_format_type as string | undefined
     };
 
     return NextResponse.json({

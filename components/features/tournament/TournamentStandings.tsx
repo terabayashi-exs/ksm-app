@@ -63,6 +63,8 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
   const [totalMatches, setTotalMatches] = useState<number>(0);
   const [totalTeams, setTotalTeams] = useState<number>(0);
   const [sportConfig, setSportConfig] = useState<SportConfig | null>(null);
+  const [preliminaryFormatType, setPreliminaryFormatType] = useState<string | null>(null);
+  const [finalFormatType, setFinalFormatType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +74,24 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
       setLoading(true);
       setError(null);
       try {
+        // 大会情報を取得してフォーマットタイプを取得
+        const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`, {
+          cache: 'no-store'
+        });
+
+        if (!tournamentResponse.ok) {
+          throw new Error('大会情報の取得に失敗しました');
+        }
+
+        const tournamentData = await tournamentResponse.json();
+
+        if (tournamentData.success && tournamentData.data) {
+          const tournament = tournamentData.data;
+          setPreliminaryFormatType(tournament.preliminary_format_type || null);
+          setFinalFormatType(tournament.final_format_type || null);
+        }
+
+        // 順位表データを取得
         const response = await fetch(`/api/tournaments/${tournamentId}/standings`, {
           cache: 'no-store'
         });
@@ -86,7 +106,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
           setStandings(result.data);
           setTotalMatches(result.total_matches || 0);
           setTotalTeams(result.total_teams || 0);
-          
+
           // 拡張APIから競技種別設定を直接取得
           if (result.sport_config) {
             setSportConfig(result.sport_config);
@@ -116,7 +136,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
   }, [tournamentId]);
 
   // ブロック分類関数（日程・結果ページと同じロジック）
-  const getBlockKey = (phase: string, blockName: string, matchCode?: string): string => {
+  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
     if (phase === 'preliminary') {
       if (blockName) {
         return `予選${blockName}ブロック`;
@@ -130,6 +150,15 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
       }
       return '予選リーグ';
     } else if (phase === 'final') {
+      // block_nameを優先的に使用（1位リーグ、2位リーグなどが入っている）
+      if (blockName && blockName !== 'final' && blockName !== 'default') {
+        return blockName;
+      }
+      // フォールバック1: display_round_name
+      if (displayRoundName && displayRoundName !== 'final') {
+        return displayRoundName;
+      }
+      // 最終フォールバック
       return '決勝トーナメント';
     } else {
       return phase || 'その他';
@@ -143,18 +172,36 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
     if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+    if (blockKey.includes('1位リーグ')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    if (blockKey.includes('2位リーグ')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    if (blockKey.includes('3位リーグ')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    if (blockKey.includes('リーグ')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
     return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   };
 
-  // フェーズ判定（予選リーグかトーナメントか）
-  const isPreliminaryPhase = (phase: string): boolean => {
-    return phase === 'preliminary' || phase.includes('予選') || phase.includes('リーグ');
+  // フォーマットタイプに基づいた表示判定（リーグ戦形式かどうか）
+  const isLeagueFormat = (phase: string): boolean => {
+    if (phase === 'preliminary') {
+      return preliminaryFormatType === 'league';
+    } else if (phase === 'final') {
+      return finalFormatType === 'league';
+    }
+    // phaseが 'preliminary' でも 'final' でもない場合はfalseを返す
+    console.warn(`[TournamentStandings] Unexpected phase value: "${phase}"`);
+    return false;
   };
 
-  // 決勝トーナメントかどうかの判定
-  const isFinalPhase = (phase: string): boolean => {
-    return phase === 'final' || phase.includes('決勝') || phase.includes('トーナメント');
+  // トーナメント形式かどうかの判定
+  const isTournamentFormat = (phase: string): boolean => {
+    if (phase === 'preliminary') {
+      return preliminaryFormatType === 'tournament';
+    } else if (phase === 'final') {
+      return finalFormatType === 'tournament';
+    }
+    // phaseが 'preliminary' でも 'final' でもない場合はfalseを返す
+    console.warn(`[TournamentStandings] Unexpected phase value: "${phase}"`);
+    return false;
   };
 
   // 順位アイコンの取得
@@ -280,11 +327,11 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
               <div className="flex items-center">
                 {(() => {
                   // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
-                  const isJapaneseDisplayName = block.display_round_name && 
+                  const isJapaneseDisplayName = block.display_round_name &&
                     (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
-                  const blockKey = isJapaneseDisplayName 
-                    ? block.display_round_name 
-                    : getBlockKey(block.phase, block.block_name);
+                  const blockKey = isJapaneseDisplayName
+                    ? block.display_round_name
+                    : getBlockKey(block.phase, block.block_name, block.display_round_name);
                   return (
                     <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                       {blockKey}
@@ -299,8 +346,8 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* 決勝トーナメントでチームがない場合の表示 */}
-            {isFinalPhase(block.phase) && block.teams.length === 0 ? (
+            {/* トーナメント形式でチームがない場合の表示 */}
+            {isTournamentFormat(block.phase) && block.teams.length === 0 ? (
               <div className="text-center py-8 text-gray-600">
                 <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-lg font-medium mb-2">順位未確定</p>
@@ -313,7 +360,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                   <tr className="border-b bg-gray-50 dark:bg-gray-800">
                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
-                    {isPreliminaryPhase(block.phase) && (
+                    {isLeagueFormat(block.phase) && (
                       <>
                         <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">点</span>
@@ -340,7 +387,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                         </th>
                       </>
                     )}
-                    {isFinalPhase(block.phase) && (
+                    {isTournamentFormat(block.phase) && (
                       <th className="text-center py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[80px] md:min-w-[100px]">備考</th>
                     )}
                   </tr>
@@ -381,7 +428,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                           )}
                         </div>
                       </td>
-                      {isPreliminaryPhase(block.phase) && (
+                      {isLeagueFormat(block.phase) && (
                         <>
                           <td className="py-2 md:py-3 px-1 md:px-3 text-center">
                             <span className="font-bold text-sm md:text-lg text-blue-600">{team.points || 0}</span>
@@ -463,7 +510,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                           </td>
                         </>
                       )}
-                      {isFinalPhase(block.phase) && (
+                      {isTournamentFormat(block.phase) && (
                         <td className="py-2 md:py-3 px-2 md:px-3 text-center">
                           <span className="text-xs md:text-sm text-gray-600">
                             {team.position_note || (() => {

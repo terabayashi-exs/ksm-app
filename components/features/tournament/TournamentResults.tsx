@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, Users, Calendar, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
+import { Trophy, Users, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
 import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
 import { SportScoreConfig } from '@/lib/sport-standings-calculator';
 
@@ -32,9 +32,10 @@ interface BlockStanding {
 
 interface TournamentResultsProps {
   tournamentId: number;
+  phase?: 'preliminary' | 'final'; // オプショナル: デフォルトは予選
 }
 
-export default function TournamentResults({ tournamentId }: TournamentResultsProps) {
+export default function TournamentResults({ tournamentId, phase = 'preliminary' }: TournamentResultsProps) {
   const [results, setResults] = useState<BlockResults[]>([]);
   const [standings, setStandings] = useState<BlockStanding[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('');
@@ -44,7 +45,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // ブロック分類関数（TournamentSchedule.tsxと同じロジック）
-  const getBlockKey = (phase: string, blockName: string, matchCode?: string): string => {
+  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
     if (phase === 'preliminary') {
       if (blockName) {
         return `予選${blockName}ブロック`;
@@ -58,6 +59,15 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
       }
       return '予選リーグ';
     } else if (phase === 'final') {
+      // block_nameを優先的に使用（1位リーグ、2位リーグなどが入っている）
+      if (blockName && blockName !== 'final' && blockName !== 'default') {
+        return blockName;
+      }
+      // フォールバック1: display_round_name
+      if (displayRoundName && displayRoundName !== 'final') {
+        return displayRoundName;
+      }
+      // 最終フォールバック
       return '決勝トーナメント';
     } else {
       return phase || 'その他';
@@ -71,6 +81,10 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
     if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
     if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
+    if (blockKey.includes('1位リーグ')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    if (blockKey.includes('2位リーグ')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    if (blockKey.includes('3位リーグ')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    if (blockKey.includes('リーグ')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
     return 'bg-muted text-muted-foreground';
   };
@@ -169,7 +183,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
       
       // 予選リーグのみをフィルタリング
       const preliminaryBlocks = results.filter(block => 
-        isPreliminaryPhase(block.phase)
+        isTargetPhase(block.phase)
       );
 
       // 動的ページ分割ロジック
@@ -432,12 +446,8 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
     // チーム数に基づく列幅調整
     const cellSizes = getTableCellSizes(teamCount);
     
-    // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
-    const isJapaneseDisplayName = block.display_round_name && 
-      (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
-    const blockDisplayName = isJapaneseDisplayName 
-      ? block.display_round_name 
-      : getBlockKey(block.phase, block.block_name);
+    // getBlockKey関数で適切なブロック名を取得（block_name優先）
+    const blockDisplayName = getBlockKey(block.phase, block.block_name, block.display_round_name);
     
     return `
       <div style="margin-bottom: 40px;">
@@ -558,9 +568,14 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
   };
 
 
-  // 予選リーグかどうかの判定
-  const isPreliminaryPhase = (phase: string): boolean => {
-    return phase === 'preliminary' || phase.includes('予選') || phase.includes('リーグ');
+  // 指定されたフェーズかどうかの判定
+  const isTargetPhase = (matchPhase: string): boolean => {
+    if (phase === 'preliminary') {
+      return matchPhase === 'preliminary' || matchPhase.includes('予選') || matchPhase.includes('リーグ');
+    } else if (phase === 'final') {
+      return matchPhase === 'final' || matchPhase.includes('決勝');
+    }
+    return false;
   };
 
   // 特定ブロックの順位表データを取得
@@ -675,19 +690,15 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
 
       {/* ブロック別戦績表 */}
       {results
-        .filter(block => isPreliminaryPhase(block.phase)) // 予選リーグのみ表示
+        .filter(block => isTargetPhase(block.phase)) // 予選リーグのみ表示
         .sort((a, b) => {
           // ブロック名でソート（A → B → C → D の順）
           return (a.block_name || '').localeCompare(b.block_name || '', undefined, { numeric: true });
         })
         .map((block) => {
-          // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
-          const isJapaneseDisplayName = block.display_round_name && 
-            (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
-          const blockKey = isJapaneseDisplayName 
-            ? block.display_round_name 
-            : getBlockKey(block.phase, block.block_name);
-          
+          // getBlockKey関数で適切なブロック名を取得（block_name優先）
+          const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name);
+
           return (
             <Card key={block.match_block_id}>
               <CardHeader>
@@ -743,7 +754,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                         </th>
                       ))}
                       {/* 予選リーグの場合は順位表の列を追加 */}
-                      {isPreliminaryPhase(block.phase) && (
+                      {isTargetPhase(block.phase) && (
                         <>
                           <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[40px] md:min-w-[55px]">
                             <span className="md:hidden">順</span>
@@ -830,7 +841,7 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
                           ))}
                           
                           {/* 予選リーグの場合は順位表の情報を表示 */}
-                          {isPreliminaryPhase(block.phase) && (
+                          {isTargetPhase(block.phase) && (
                             <>
                               {/* 順位 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
@@ -985,21 +996,6 @@ export default function TournamentResults({ tournamentId }: TournamentResultsPro
         </Card>
           );
         })}
-
-      {/* トーナメント戦の場合の注意書き */}
-      {results.some(block => !isPreliminaryPhase(block.phase)) && (
-        <Card className="border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center text-blue-800">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span className="text-sm">
-                決勝トーナメントの戦績表は、リーグ戦形式ではないため表示されません。
-                日程・結果タブで試合結果をご確認ください。
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

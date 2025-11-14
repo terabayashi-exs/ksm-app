@@ -40,6 +40,7 @@ interface BracketMatch {
 
 interface BracketProps {
   tournamentId: number;
+  phase?: 'preliminary' | 'final'; // オプショナル: デフォルトは決勝
 }
 
 // 多競技対応のスポーツ設定インターフェース
@@ -267,7 +268,7 @@ function MatchCard({
 }
 
 // メインコンポーネント
-export default function TournamentBracket({ tournamentId }: BracketProps) {
+export default function TournamentBracket({ tournamentId, phase: _phase = 'final' }: BracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>([]);
   const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -677,7 +678,6 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
               PDF出力（印刷）
             </Button>
           </div>
-          <p className="text-muted-foreground">各ブロック上位2チームによるトーナメント表</p>
         </div>
 
         {/* トーナメントブラケット */}

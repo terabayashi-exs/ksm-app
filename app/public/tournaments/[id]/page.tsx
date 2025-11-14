@@ -10,6 +10,7 @@ import TournamentStandings from '@/components/features/tournament/TournamentStan
 import TournamentResults from '@/components/features/tournament/TournamentResults';
 import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import TournamentBracket from '@/components/features/tournament/TournamentBracket';
+import TournamentPhaseView from '@/components/features/tournament/TournamentPhaseView';
 import PublicFilesList from '@/components/features/tournament/PublicFilesList';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -306,7 +307,8 @@ function ScheduleResults({ tournament }: { tournament: Tournament }) {
 }
 
 
-// 戦績表タブ
+// 戦績表タブ（既存実装を保持）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function Results({ tournament }: { tournament: Tournament }) {
   return <TournamentResults tournamentId={tournament.tournament_id} />;
 }
@@ -321,7 +323,8 @@ function Teams({ tournament }: { tournament: Tournament }) {
   return <TournamentTeams tournamentId={tournament.tournament_id} />;
 }
 
-// トーナメント表タブ
+// トーナメント表タブ（既存実装を保持）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function Bracket({ tournament }: { tournament: Tournament }) {
   return <TournamentBracket tournamentId={tournament.tournament_id} />;
 }
@@ -430,13 +433,13 @@ async function TournamentDetailContent({ params }: PageProps) {
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden xs:inline sm:inline">日程・</span>結果
               </TabsTrigger>
-              <TabsTrigger value="bracket" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <TabsTrigger value="preliminary" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline sm:inline">ト</span>ーナメント表
+                予選
               </TabsTrigger>
-              <TabsTrigger value="results" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+              <TabsTrigger value="final" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                戦績表
+                決勝
               </TabsTrigger>
               <TabsTrigger value="standings" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -460,6 +463,23 @@ async function TournamentDetailContent({ params }: PageProps) {
               <ScheduleResults tournament={tournament} />
             </TabsContent>
 
+            <TabsContent value="preliminary">
+              <TournamentPhaseView
+                tournamentId={tournament.tournament_id}
+                phase="preliminary"
+                phaseName="予選"
+              />
+            </TabsContent>
+
+            <TabsContent value="final">
+              <TournamentPhaseView
+                tournamentId={tournament.tournament_id}
+                phase="final"
+                phaseName="決勝"
+              />
+            </TabsContent>
+
+            {/* 既存の実装（非表示だが保持）
             <TabsContent value="bracket">
               <Bracket tournament={tournament} />
             </TabsContent>
@@ -467,6 +487,7 @@ async function TournamentDetailContent({ params }: PageProps) {
             <TabsContent value="results">
               <Results tournament={tournament} />
             </TabsContent>
+            */}
 
             <TabsContent value="standings">
               <Standings tournament={tournament} />

@@ -2905,21 +2905,6 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
         </Card>
           );
         })}
-
-      {/* トーナメント戦の場合の注意書き */}
-      {blockResults.some(block => !isPreliminaryPhase(block.phase)) && (
-        <Card className="border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center text-blue-800">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span className="text-sm">
-                決勝トーナメントの戦績表は、リーグ戦形式ではないため表示されません。
-                日程・結果タブで試合結果をご確認ください。
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
