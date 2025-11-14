@@ -93,6 +93,15 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       }
       return '予選リーグ';
     } else if (match.phase === 'final') {
+      // display_round_nameを優先的に使用（1位リーグ、2位リーグなど）
+      if (match.display_round_name) {
+        return match.display_round_name;
+      }
+      // フォールバック: block_nameを使用
+      if (match.block_name) {
+        return match.block_name;
+      }
+      // 最終フォールバック
       return '決勝トーナメント';
     } else {
       return match.phase || 'その他';
@@ -100,12 +109,24 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
   };
 
   const getBlockColor = (blockKey: string): string => {
+    // 予選ブロックの色分け
     if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
     if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
     if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
     if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
+    if (blockKey.includes('予選E')) return 'bg-pink-100 text-pink-800';
+    if (blockKey.includes('予選F')) return 'bg-indigo-100 text-indigo-800';
     if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
+
+    // 決勝リーグの色分け
+    if (blockKey.includes('1位リーグ') || blockKey.includes('1位ブロック')) return 'bg-amber-100 text-amber-800';
+    if (blockKey.includes('2位リーグ') || blockKey.includes('2位ブロック')) return 'bg-cyan-100 text-cyan-800';
+    if (blockKey.includes('3位リーグ') || blockKey.includes('3位ブロック')) return 'bg-lime-100 text-lime-800';
+    if (blockKey.includes('4位リーグ') || blockKey.includes('4位ブロック')) return 'bg-teal-100 text-teal-800';
+
+    // 決勝トーナメント
     if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
+
     return 'bg-muted text-muted-foreground';
   };
 
@@ -255,8 +276,16 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     if (blockKey.includes('予選B')) return 'B';
     if (blockKey.includes('予選C')) return 'C';
     if (blockKey.includes('予選D')) return 'D';
+    if (blockKey.includes('予選E')) return 'E';
+    if (blockKey.includes('予選F')) return 'F';
+    if (blockKey.includes('1位リーグ') || blockKey.includes('1位ブロック')) return '1位';
+    if (blockKey.includes('2位リーグ') || blockKey.includes('2位ブロック')) return '2位';
+    if (blockKey.includes('3位リーグ') || blockKey.includes('3位ブロック')) return '3位';
+    if (blockKey.includes('4位リーグ') || blockKey.includes('4位ブロック')) return '4位';
     if (blockKey.includes('決勝')) return '決勝';
-    return 'その他';
+    // round_nameをそのまま使用（20文字まで）
+    if (blockKey.length <= 20) return blockKey;
+    return blockKey.substring(0, 18) + '..';
   };
 
   const availableBlocks = getAvailableBlocks();
