@@ -3,21 +3,14 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import TournamentJoinForm from '@/components/features/tournament/TournamentJoinForm';
+import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
+import Link from 'next/link';
+import { Home, ChevronRight, Calendar } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ mode?: string; team?: string }>;
-}
-
-interface TournamentDetails {
-  tournament_id: number;
-  tournament_name: string;
-  recruitment_start_date: string | null;
-  recruitment_end_date: string | null;
-  status: string;
-  visibility: string;
-  format_name: string | null;
-  venue_name: string | null;
 }
 
 interface TeamPlayer {
@@ -27,38 +20,7 @@ interface TeamPlayer {
   is_active: number;
 }
 
-async function getTournamentDetails(tournamentId: number): Promise<TournamentDetails | null> {
-  const result = await db.execute(`
-    SELECT 
-      t.tournament_id,
-      t.tournament_name,
-      t.recruitment_start_date,
-      t.recruitment_end_date,
-      t.status,
-      t.visibility,
-      f.format_name,
-      v.venue_name
-    FROM t_tournaments t
-    LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-    LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-    WHERE t.tournament_id = ? AND t.visibility = 'open'
-  `, [tournamentId]);
-
-  const row = result.rows[0];
-  if (!row) return null;
-
-  // データベースの行オブジェクトをプレーンオブジェクトに変換
-  return {
-    tournament_id: Number(row.tournament_id),
-    tournament_name: String(row.tournament_name),
-    recruitment_start_date: row.recruitment_start_date ? String(row.recruitment_start_date) : null,
-    recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : null,
-    status: String(row.status),
-    visibility: String(row.visibility),
-    format_name: row.format_name ? String(row.format_name) : null,
-    venue_name: row.venue_name ? String(row.venue_name) : null,
-  };
-}
+// getTournamentDetails関数はgetTournamentWithGroupInfoに置き換えられました
 
 async function getTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
   const result = await db.execute(`
@@ -192,11 +154,13 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
     redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/join`)}`);
   }
 
-  // 大会情報取得
-  const tournament = await getTournamentDetails(tournamentId);
-  if (!tournament) {
+  // 大会情報取得（グループ情報含む）
+  const tournamentData = await getTournamentWithGroupInfo(tournamentId);
+  if (!tournamentData) {
     redirect('/public/tournaments');
   }
+
+  const { tournament, group } = tournamentData;
 
   // 募集期間チェック
   const now = new Date().toISOString().split('T')[0];
@@ -244,22 +208,64 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* パンくずリスト */}
+        <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
+          <Link href="/" className="hover:text-foreground transition-colors">
+            <Home className="h-4 w-4" />
+          </Link>
+          <ChevronRight className="h-4 w-4" />
+          <Link href="/public/tournaments" className="hover:text-foreground transition-colors">
+            大会一覧
+          </Link>
+          {group && (
+            <>
+              <ChevronRight className="h-4 w-4" />
+              <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-foreground transition-colors">
+                {group.group_name}
+              </Link>
+            </>
+          )}
+          <ChevronRight className="h-4 w-4" />
+          <Link href={`/public/tournaments/${tournament.tournament_id}`} className="hover:text-foreground transition-colors">
+            {group ? tournament.category_name || tournament.tournament_name : tournament.tournament_name}
+          </Link>
+          <ChevronRight className="h-4 w-4" />
+          <span className="text-foreground font-medium">参加申し込み</span>
+        </nav>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            {actualEditMode 
+            {actualEditMode
               ? (specificTeamId ? `「${existingTournamentTeamInfo?.team_name || 'チーム'}」の参加選手変更` : '参加選手の変更')
               : (isNewTeamMode ? '参加チームを追加' : '大会参加申し込み')
             }
           </h1>
           <p className="text-muted-foreground">
-            {actualEditMode 
-              ? specificTeamId
-                ? `${tournament.tournament_name} の「${existingTournamentTeamInfo?.team_name}」チームの参加選手を変更してください`
-                : `${tournament.tournament_name} への参加選手を変更してください`
-              : isNewTeamMode
-              ? `${tournament.tournament_name} に追加のチームで参加申し込みをしてください`
-              : `${tournament.tournament_name} への参加選手を選択してください`
-            }
+            {group && (
+              <>
+                {group.group_name} - {tournament.category_name || tournament.tournament_name}
+                {actualEditMode
+                  ? specificTeamId
+                    ? ` の「${existingTournamentTeamInfo?.team_name}」チームの参加選手を変更してください`
+                    : ' への参加選手を変更してください'
+                  : isNewTeamMode
+                  ? ' に追加のチームで参加申し込みをしてください'
+                  : ' への参加選手を選択してください'
+                }
+              </>
+            )}
+            {!group && (
+              <>
+                {actualEditMode
+                  ? specificTeamId
+                    ? `${tournament.tournament_name} の「${existingTournamentTeamInfo?.team_name}」チームの参加選手を変更してください`
+                    : `${tournament.tournament_name} への参加選手を変更してください`
+                  : isNewTeamMode
+                  ? `${tournament.tournament_name} に追加のチームで参加申し込みをしてください`
+                  : `${tournament.tournament_name} への参加選手を選択してください`
+                }
+              </>
+            )}
           </p>
           {actualEditMode && !specificTeamId && (
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -284,31 +290,73 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
           )}
         </div>
 
-        <div className="bg-card rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4">大会情報</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium text-muted-foreground">大会名:</span>
-              <span className="ml-2">{tournament.tournament_name}</span>
-            </div>
-            <div>
-              <span className="font-medium text-muted-foreground">形式:</span>
-              <span className="ml-2">{tournament.format_name}</span>
-            </div>
-            {tournament.venue_name && (
-              <div>
-                <span className="font-medium text-muted-foreground">会場:</span>
-                <span className="ml-2">{tournament.venue_name}</span>
+        {/* 大会グループ情報カード（グループが存在する場合） */}
+        {group && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">大会情報</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-muted-foreground">大会名:</span>
+                  <span className="ml-2">{group.group_name}</span>
+                </div>
+                {group.organizer && (
+                  <div>
+                    <span className="font-medium text-muted-foreground">主催:</span>
+                    <span className="ml-2">{group.organizer}</span>
+                  </div>
+                )}
+                {(group.event_start_date || group.event_end_date) && (
+                  <div className="md:col-span-2">
+                    <span className="font-medium text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      開催期間:
+                    </span>
+                    <span className="ml-2">
+                      {group.event_start_date && group.event_end_date && group.event_start_date === group.event_end_date
+                        ? new Date(group.event_start_date).toLocaleDateString('ja-JP')
+                        : `${group.event_start_date ? new Date(group.event_start_date).toLocaleDateString('ja-JP') : ''} 〜 ${group.event_end_date ? new Date(group.event_end_date).toLocaleDateString('ja-JP') : ''}`
+                      }
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-            <div>
-              <span className="font-medium text-muted-foreground">募集期間:</span>
-              <span className="ml-2">
-                {tournament.recruitment_start_date} 〜 {tournament.recruitment_end_date}
-              </span>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 部門情報カード */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">{group ? '部門情報' : '大会情報'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-muted-foreground">{group ? '部門名:' : '大会名:'}</span>
+                <span className="ml-2">{group ? (tournament.category_name || tournament.tournament_name) : tournament.tournament_name}</span>
+              </div>
+              <div>
+                <span className="font-medium text-muted-foreground">形式:</span>
+                <span className="ml-2">{tournament.format_name}</span>
+              </div>
+              {!group && tournament.venue_name && (
+                <div>
+                  <span className="font-medium text-muted-foreground">会場:</span>
+                  <span className="ml-2">{tournament.venue_name}</span>
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-muted-foreground">募集期間:</span>
+                <span className="ml-2">
+                  {tournament.recruitment_start_date} 〜 {tournament.recruitment_end_date}
+                </span>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <TournamentJoinForm
           tournamentId={tournamentId}

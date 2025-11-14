@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher';
 import BackButton from '@/components/ui/back-button';
 import TournamentSchedule from '@/components/features/tournament/TournamentSchedule';
 import TournamentStandings from '@/components/features/tournament/TournamentStandings';
@@ -14,32 +15,52 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink, GitBranch } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink, GitBranch, ChevronRight, Home } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
-import { getTournamentById } from '@/lib/tournament-detail';
+import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+interface TournamentGroup {
+  group_id: number;
+  group_name: string;
+  organizer: string | null;
+  venue_id: number | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
+}
+
+interface SiblingDivision {
+  tournament_id: number;
+  tournament_name: string;
+}
+
+interface TournamentDetailData {
+  tournament: Tournament;
+  group: TournamentGroup | null;
+  sibling_divisions: SiblingDivision[];
+}
+
 // 大会詳細データを取得する関数
-async function getTournamentDetail(id: string): Promise<Tournament> {
+async function getTournamentDetail(id: string): Promise<TournamentDetailData> {
   const tournamentId = parseInt(id);
-  
+
   if (isNaN(tournamentId)) {
     throw new Error('有効な大会IDを指定してください');
   }
 
-  const tournament = await getTournamentById(tournamentId);
-  
+  const data = await getTournamentWithGroupInfo(tournamentId);
+
   // アーカイブされた大会の場合は専用ページにリダイレクト
-  if (tournament.is_archived) {
+  if (data.tournament.is_archived) {
     throw new Error('ARCHIVED_TOURNAMENT');
   }
 
-  return tournament;
+  return data;
 }
 
 // 大会概要タブのコンテンツ
@@ -325,35 +346,77 @@ function TournamentDetailLoading() {
 // メインコンポーネント
 async function TournamentDetailContent({ params }: PageProps) {
   const resolvedParams = await params;
-  
+
   try {
-    const tournament = await getTournamentDetail(resolvedParams.id);
-    
+    const data = await getTournamentDetail(resolvedParams.id);
+    const { tournament, group, sibling_divisions } = data;
+
     // PDFファイルの存在チェック
     const { bracketPdfExists, resultsPdfExists } = await checkTournamentPdfFiles(tournament.tournament_id);
 
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* ナビゲーション */}
-          <div className="mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <BackButton />
+          {/* パンくずリスト */}
+          <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
+            <Link href="/" className="hover:text-foreground flex items-center">
+              <Home className="h-4 w-4" />
+            </Link>
+            <ChevronRight className="h-4 w-4" />
+            <Link href="/tournaments" className="hover:text-foreground">
+              大会一覧
+            </Link>
+            {group && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-foreground">
+                  {group.group_name}
+                </Link>
+              </>
+            )}
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-foreground font-medium">{tournament.tournament_name}</span>
+          </nav>
+
+          {/* ナビゲーションボタン */}
+          <div className="flex items-center gap-3 mb-6">
+            <BackButton />
+            {group && (
+              <Button variant="outline" asChild>
+                <Link href={`/public/tournaments/groups/${group.group_id}`} className="flex items-center">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  大会トップに戻る
+                </Link>
+              </Button>
+            )}
+            {!group && (
               <Button variant="ghost" asChild>
                 <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   TOPページに戻る
                 </Link>
               </Button>
-            </div>
+            )}
           </div>
 
           {/* ページヘッダー */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">{tournament.tournament_name}</h1>
-            <p className="text-muted-foreground">大会の詳細情報をご覧いただけます</p>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-foreground mb-2">{tournament.tournament_name}</h1>
+                <p className="text-muted-foreground">部門の詳細情報をご覧いただけます</p>
+              </div>
+              {/* 部門切り替え */}
+              <div className="ml-4">
+                <DivisionSwitcher
+                  currentDivisionId={tournament.tournament_id}
+                  currentDivisionName={tournament.tournament_name}
+                  siblingDivisions={sibling_divisions}
+                />
+              </div>
+            </div>
           </div>
 
           {/* タブナビゲーション */}

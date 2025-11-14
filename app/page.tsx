@@ -17,7 +17,17 @@ async function getGroupedPublicTournaments(_teamId?: string) {
       cache: 'no-store'
     });
     const result = await response.json();
-    return result.success ? result.data : { grouped: [], ungrouped: [] };
+
+    // Phase 4.1で変更された新しいデータ構造に対応
+    // result.dataは大会グループの配列 [{ group: {...}, divisions: [...] }]
+    if (result.success && result.data) {
+      return {
+        grouped: result.data,
+        ungrouped: []
+      };
+    }
+
+    return { grouped: [], ungrouped: [] };
   } catch (error) {
     console.error('Failed to fetch grouped tournaments:', error);
     return { grouped: [], ungrouped: [] };
@@ -168,7 +178,7 @@ export default async function Home() {
                 <TournamentGroupCard
                   key={groupData.group.group_id}
                   group={groupData.group}
-                  tournaments={groupData.tournaments}
+                  tournaments={groupData.divisions}
                   userRole={session?.user?.role}
                 />
               ))}

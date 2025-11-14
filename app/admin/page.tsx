@@ -57,12 +57,28 @@ export default async function AdminDashboard() {
                 大会と部門の作成、編集、管理を行います
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                  <Link href="/admin/tournaments">部門一覧</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                  <Link href="/admin/tournaments/create-new">部門作成</Link>
-                </Button>
+                <div className="pb-2 mb-2 border-b">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">大会管理</p>
+                  <div className="space-y-2">
+                    <Button asChild variant="outline" className="w-full border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:border-green-800 dark:hover:border-green-700 dark:hover:bg-green-950/20">
+                      <Link href="/admin/tournament-groups">大会一覧</Link>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:border-green-800 dark:hover:border-green-700 dark:hover:bg-green-950/20">
+                      <Link href="/admin/tournament-groups/create">大会作成</Link>
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">部門管理</p>
+                  <div className="space-y-2">
+                    <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
+                      <Link href="/admin/tournaments">部門一覧</Link>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
+                      <Link href="/admin/tournaments/create-new">部門作成</Link>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

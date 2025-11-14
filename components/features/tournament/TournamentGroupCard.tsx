@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp, CheckCircle, Building2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 interface Tournament {
@@ -30,6 +30,10 @@ interface TournamentGroup {
   group_description?: string;
   group_color: string;
   display_order: number;
+  organizer?: string | null;
+  venue_name?: string | null;
+  event_start_date?: string | null;
+  event_end_date?: string | null;
 }
 
 interface TournamentGroupCardProps {
@@ -40,6 +44,16 @@ interface TournamentGroupCardProps {
 
 export default function TournamentGroupCard({ group, tournaments, userRole }: TournamentGroupCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const formatDateRange = (startDate: string | null | undefined, endDate: string | null | undefined) => {
+    if (!startDate && !endDate) return '';
+    if (!endDate || startDate === endDate) {
+      return startDate ? formatDate(startDate) : '';
+    }
+    // startDateとendDateがnullでないことを保証
+    if (!startDate || !endDate) return '';
+    return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -88,29 +102,52 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
       <CardHeader className="relative z-10">
         {/* グループヘッダー */}
         <div className="flex items-center justify-between mb-2">
-          <div 
+          <div
             className="px-3 py-1 rounded-full text-sm font-medium text-white"
             style={{ backgroundColor: group.group_color }}
           >
             グループ大会
           </div>
           <div className="text-sm text-muted-foreground">
-            {tournaments.length}個の大会
+            {tournaments.length}部門
           </div>
         </div>
-        
+
         <CardTitle className="text-xl font-bold">{group.group_name}</CardTitle>
         {group.group_description && (
           <CardDescription className="text-base">
             {group.group_description}
           </CardDescription>
         )}
+
+        {/* 大会情報 */}
+        <div className="flex flex-wrap gap-3 mt-3 text-sm text-muted-foreground">
+          {group.organizer && (
+            <span className="flex items-center gap-1">
+              <Building2 className="h-4 w-4" />
+              {group.organizer}
+            </span>
+          )}
+          {group.venue_name && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              {group.venue_name}
+            </span>
+          )}
+          {(group.event_start_date || group.event_end_date) && (
+            <span className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              {formatDateRange(group.event_start_date, group.event_end_date)}
+            </span>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="relative z-10">
         {/* 大会リスト */}
-        <div className="space-y-3">
-          {tournaments.slice(0, isExpanded ? tournaments.length : 3).map((tournament) => (
+        {isExpanded && (
+          <div className="space-y-3">
+            {tournaments.map((tournament) => (
             <div
               key={tournament.tournament_id}
               className="border rounded-lg p-4 bg-white/50 hover:bg-white/70 transition-colors"
@@ -197,11 +234,12 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* 展開/折りたたみボタン */}
-        {tournaments.length > 3 && (
+        {tournaments.length > 0 && (
           <div className="mt-4 text-center">
             <Button
               variant="ghost"
@@ -217,7 +255,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
               ) : (
                 <>
                   <ChevronDown className="h-4 w-4 mr-1" />
-                  残り{tournaments.length - 3}個の大会を表示
+                  部門を表示
                 </>
               )}
             </Button>

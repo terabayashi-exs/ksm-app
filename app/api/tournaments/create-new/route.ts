@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     const {
+      group_id,
       tournament_name,
       sport_type_id,
       format_id,
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     } = data;
 
     // 入力値の基本バリデーション
-    if (!tournament_name || !sport_type_id || !format_id || !venue_id || !team_count || !court_count) {
+    if (!group_id || !tournament_name || !sport_type_id || !format_id || !venue_id || !team_count || !court_count) {
       return NextResponse.json(
         { success: false, error: "必須項目が不足しています" },
         { status: 400 }
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
     // 大会を作成 - 既存APIと同じフィールド構造を使用
     const tournamentResult = await db.execute(`
       INSERT INTO t_tournaments (
+        group_id,
         tournament_name,
         sport_type_id,
         format_id,
@@ -67,8 +69,9 @@ export async function POST(request: NextRequest) {
         archive_ui_version,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
+      group_id,
       tournament_name,
       sport_type_id,
       format_id,
