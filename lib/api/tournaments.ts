@@ -32,9 +32,9 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         a.logo_blob_url,
         a.organization_name,
         g.group_name,
-        g.group_description,
-        g.group_color,
-        g.display_order,
+        g.event_description as group_description,
+        NULL as group_color,
+        0 as display_order,
         ${teamId ? 'CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
@@ -42,9 +42,9 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       ${teamId ? 'LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?' : ''}
-      WHERE t.visibility = 'open' 
+      WHERE t.visibility = 'open'
         AND t.public_start_date <= date('now')
-      ORDER BY g.display_order NULLS LAST, t.group_order, t.created_at DESC
+      ORDER BY t.group_order, t.created_at DESC
       LIMIT 10
     `;
 

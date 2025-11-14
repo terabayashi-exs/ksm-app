@@ -56,8 +56,8 @@ export async function GET() {
         a.logo_filename,
         a.organization_name,
         g.group_name,
-        g.group_description,
-        g.group_color
+        g.event_description as group_description,
+        NULL as group_color
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -65,13 +65,12 @@ export async function GET() {
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status IN ('planning', 'ongoing')
         AND (t.created_by = ? OR ? = 1)
-      ORDER BY 
-        CASE t.status 
-          WHEN 'ongoing' THEN 1 
-          WHEN 'planning' THEN 2 
-          ELSE 3 
+      ORDER BY
+        CASE t.status
+          WHEN 'ongoing' THEN 1
+          WHEN 'planning' THEN 2
+          ELSE 3
         END,
-        g.display_order NULLS LAST,
         t.group_order,
         t.created_at DESC
     `, [userId, isAdmin ? 1 : 0]);
@@ -107,8 +106,8 @@ export async function GET() {
         a.logo_filename,
         a.organization_name,
         g.group_name,
-        g.group_description,
-        g.group_color
+        g.event_description as group_description,
+        NULL as group_color
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -116,7 +115,7 @@ export async function GET() {
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status = 'completed'
         AND (t.created_by = ? OR ? = 1)
-      ORDER BY g.display_order NULLS LAST, t.group_order, t.created_at DESC
+      ORDER BY t.group_order, t.created_at DESC
     `, [userId, isAdmin ? 1 : 0]);
 
     // 完了した大会から開催日から1年経過したものを除外
