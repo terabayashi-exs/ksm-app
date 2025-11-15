@@ -568,11 +568,11 @@ export default function TournamentDrawPage() {
               <Card key={block.block_name}>
                 <CardHeader>
                   <CardTitle className="text-lg">
-                    {block.block_name}ブロック ({block.teams.length}チーム)
+                    {block.block_name}ブロック ({block.teams.filter(team => team && team.team_id).length}チーム)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {block.teams.length === 0 ? (
+                  {block.teams.filter(team => team && team.team_id).length === 0 ? (
                     <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
                       <p className="text-muted-foreground">チームが振り分けられていません</p>
                     </div>

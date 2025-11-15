@@ -371,9 +371,10 @@ async function handleTournamentJoin(
           team_id,
           team_name,
           team_omission,
+          registration_method,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, 'self_registered', datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [tournamentId, teamId, data.tournament_team_name, data.tournament_team_omission]);
 
       tournamentTeamId = Number(joinResult.lastInsertRowid);

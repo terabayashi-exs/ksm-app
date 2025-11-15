@@ -30,43 +30,52 @@ export async function GET() {
 
     // 参加可能な大会を取得（公開済み、募集期間中、未参加）
     const availableTournamentsResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
         t.visibility,
+        t.group_id,
+        t.group_order,
         f.format_name,
         v.venue_name,
-        t.tournament_dates
+        t.tournament_dates,
+        g.group_name,
+        g.event_description as group_description
       FROM t_tournaments t
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.visibility = 'open'
         AND (t.public_start_date IS NULL OR t.public_start_date <= date('now'))
         AND (t.recruitment_start_date IS NULL OR t.recruitment_start_date <= date('now'))
         AND (t.recruitment_end_date IS NULL OR t.recruitment_end_date >= date('now'))
         AND t.tournament_id NOT IN (
-          SELECT tournament_id 
-          FROM t_tournament_teams 
+          SELECT tournament_id
+          FROM t_tournament_teams
           WHERE team_id = ?
         )
-      ORDER BY t.recruitment_end_date ASC
+      ORDER BY t.group_order, t.recruitment_end_date ASC
     `, [teamId]);
 
     // 申し込み済の大会を取得（複数チーム参加対応）
     const joinedTournamentsResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
         t.visibility,
+        t.group_id,
+        t.group_order,
         f.format_name,
         v.venue_name,
         t.tournament_dates,
+        g.group_name,
+        g.event_description as group_description,
         tt.tournament_team_id,
         tt.team_name as tournament_team_name,
         tt.team_omission as tournament_team_omission,
@@ -81,9 +90,10 @@ export async function GET() {
       FROM t_tournaments t
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       INNER JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       WHERE tt.team_id = ?
-      ORDER BY t.tournament_id DESC, tt.created_at DESC
+      ORDER BY t.group_order, t.tournament_id DESC, tt.created_at DESC
     `, [teamId]);
 
     // データベースの行オブジェクトをプレーンオブジェクトに変換
@@ -94,6 +104,10 @@ export async function GET() {
       recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : null,
       status: String(row.status),
       visibility: String(row.visibility),
+      group_id: row.group_id ? Number(row.group_id) : null,
+      group_order: row.group_order ? Number(row.group_order) : null,
+      group_name: row.group_name ? String(row.group_name) : null,
+      group_description: row.group_description ? String(row.group_description) : null,
       format_name: row.format_name ? String(row.format_name) : null,
       venue_name: row.venue_name ? String(row.venue_name) : null,
       tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
@@ -108,6 +122,10 @@ export async function GET() {
       recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : null,
       status: String(row.status),
       visibility: String(row.visibility),
+      group_id: row.group_id ? Number(row.group_id) : null,
+      group_order: row.group_order ? Number(row.group_order) : null,
+      group_name: row.group_name ? String(row.group_name) : null,
+      group_description: row.group_description ? String(row.group_description) : null,
       format_name: row.format_name ? String(row.format_name) : null,
       venue_name: row.venue_name ? String(row.venue_name) : null,
       tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
@@ -137,6 +155,10 @@ export async function GET() {
           recruitment_end_date: team.recruitment_end_date,
           status: team.status,
           visibility: team.visibility,
+          group_id: team.group_id,
+          group_order: team.group_order,
+          group_name: team.group_name,
+          group_description: team.group_description,
           format_name: team.format_name,
           venue_name: team.venue_name,
           tournament_dates: team.tournament_dates,

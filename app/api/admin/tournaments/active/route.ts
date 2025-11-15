@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest) {
       }
       
       tournamentsResult = await db.execute(`
-        SELECT 
+        SELECT
           t.tournament_id,
           t.tournament_name,
           t.status,
@@ -45,13 +45,18 @@ export async function GET(_request: NextRequest) {
           t.visibility,
           t.is_archived,
           t.created_by,
+          t.group_id,
+          t.group_order,
           v.venue_name,
-          f.format_name
+          f.format_name,
+          g.group_name,
+          g.event_description as group_description
         FROM t_tournaments t
         LEFT JOIN m_venues v ON t.venue_id = v.venue_id
         LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+        LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
         WHERE ${whereConditions.join(' AND ')}
-        ORDER BY t.created_at DESC
+        ORDER BY t.group_order, t.created_at DESC
         LIMIT 50
       `, queryParams);
       console.log('[ACTIVE_TOURNAMENTS] Query completed. Rows:', tournamentsResult.rows.length);
@@ -74,8 +79,12 @@ export async function GET(_request: NextRequest) {
           visibility: string; // 'open' | 'closed'
           is_archived: number | null;
           created_by: string;
+          group_id: number | null;
+          group_order: number | null;
           venue_name: string | null;
           format_name: string | null;
+          group_name: string | null;
+          group_description: string | null;
         };
 
         // チーム数を取得
@@ -131,7 +140,11 @@ export async function GET(_request: NextRequest) {
         event_start_date: tournament.event_start_date,
         created_at: tournament.created_at,
         is_archived: tournament.is_archived || 0,
-        visibility: tournament.visibility === 'open' ? 1 : 0
+        visibility: tournament.visibility === 'open' ? 1 : 0,
+        group_id: tournament.group_id,
+        group_order: tournament.group_order || 0,
+        group_name: tournament.group_name,
+        group_description: tournament.group_description
       };
     });
 

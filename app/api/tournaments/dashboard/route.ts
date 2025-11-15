@@ -236,10 +236,58 @@ export async function GET() {
       } as Tournament;
     }));
 
-    // 募集中、開催中、完了に分類
-    const recruiting = tournamentsWithTimes.filter(t => t.status === 'planning');
-    const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
-    const completed = tournamentsWithTimes.filter(t => t.status === 'completed');
+    // グループごとのステータスを判定
+    const groupStatuses: Record<number, 'recruiting' | 'ongoing' | 'completed'> = {};
+
+    // 各グループのステータスを決定
+    tournamentsWithTimes.forEach(tournament => {
+      if (tournament.group_id && !groupStatuses[tournament.group_id]) {
+        const groupId = tournament.group_id;
+        const groupTournaments = tournamentsWithTimes.filter(t => t.group_id === groupId);
+
+        // ongoing判定: 1つでもongoingがあれば開催中
+        if (groupTournaments.some(t => t.status === 'ongoing')) {
+          groupStatuses[groupId] = 'ongoing';
+        }
+        // recruiting判定: 全てplanningの場合は募集中
+        else if (groupTournaments.every(t => t.status === 'planning')) {
+          groupStatuses[groupId] = 'recruiting';
+        }
+        // completed判定: 全てcompletedの場合は完了
+        else if (groupTournaments.every(t => t.status === 'completed')) {
+          groupStatuses[groupId] = 'completed';
+        }
+        // 混在状態（planningとcompletedなど）は開催中として扱う
+        else {
+          groupStatuses[groupId] = 'ongoing';
+        }
+      }
+    });
+
+    // グループステータスまたは個別ステータスに基づいて分類
+    const recruiting = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'recruiting';
+      } else {
+        return t.status === 'planning';
+      }
+    });
+
+    const ongoing = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'ongoing';
+      } else {
+        return t.status === 'ongoing';
+      }
+    });
+
+    const completed = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'completed';
+      } else {
+        return t.status === 'completed';
+      }
+    });
 
     // グループ化された大会情報を生成
     const groupedTournaments = (tournaments: Tournament[]) => {

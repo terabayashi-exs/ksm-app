@@ -80,33 +80,41 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     // トランザクション開始（削除の順序が重要）
     console.log('Starting team deletion transaction...');
 
-    // 1. 大会参加選手を削除
+    // 1. このチームが参加している試合を確認して削除（外部キー制約対応）
+    // 1-1. t_matches_liveから削除（team1_id, team2_id, winner_team_idを参照）
     await db.execute(`
-      DELETE FROM t_tournament_players 
+      DELETE FROM t_matches_live
+      WHERE match_block_id IN (
+        SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+      ) AND (team1_id = ? OR team2_id = ? OR winner_team_id = ?)
+    `, [tournamentId, teamId, teamId, teamId]);
+    console.log('Deleted live matches');
+
+    // 1-2. t_matches_finalから削除（team1_id, team2_id, winner_team_idを参照）
+    await db.execute(`
+      DELETE FROM t_matches_final
+      WHERE match_block_id IN (
+        SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+      ) AND (team1_id = ? OR team2_id = ? OR winner_team_id = ?)
+    `, [tournamentId, teamId, teamId, teamId]);
+    console.log('Deleted final matches');
+
+    // 2. 大会参加選手を削除
+    await db.execute(`
+      DELETE FROM t_tournament_players
       WHERE tournament_id = ? AND team_id = ?
     `, [tournamentId, teamId]);
     console.log('Deleted tournament players');
 
-    // 2. 大会参加チームを削除
+    // 3. 大会参加チームを削除
     await db.execute(`
-      DELETE FROM t_tournament_teams 
+      DELETE FROM t_tournament_teams
       WHERE tournament_id = ? AND team_id = ?
     `, [tournamentId, teamId]);
     console.log('Deleted tournament team');
 
-    // 3. マスター選手を削除（このチームに所属する選手）
-    await db.execute(`
-      DELETE FROM m_players 
-      WHERE current_team_id = ?
-    `, [teamId]);
-    console.log('Deleted master players');
-
-    // 4. マスターチームを削除
-    await db.execute(`
-      DELETE FROM m_teams 
-      WHERE team_id = ?
-    `, [teamId]);
-    console.log('Deleted master team');
+    // 注: マスターデータ（m_teams、m_players）は削除しない
+    // チーム代表者がチーム代表者ダッシュボードから削除可能
 
     return NextResponse.json({
       success: true,

@@ -446,15 +446,10 @@ export default function TeamRegistrationPage() {
       // 結果の集計
       const successCount = results.filter(r => r.success).length;
       const failureCount = results.length - successCount;
-      
-      if (successCount > 0) {
-        // 画面をリフレッシュして最新データを取得
-        window.location.reload();
-      }
 
-      // 結果レポート表示
+      // 結果レポート表示（リロード前に表示）
       let message = `CSV一括登録完了\n\n成功: ${successCount}チーム\n失敗: ${failureCount}チーム`;
-      
+
       if (failureCount > 0) {
         message += '\n\n【失敗したチーム】\n';
         results
@@ -463,7 +458,7 @@ export default function TeamRegistrationPage() {
             message += `- ${r.teamName}: ${r.error}\n`;
           });
       }
-      
+
       if (successCount > 0) {
         message += '\n\n【重要】以下の情報をチーム代表者にお伝えください:\n';
         results
@@ -474,8 +469,14 @@ export default function TeamRegistrationPage() {
             message += `仮パスワード: ${r.tempPassword}\n`;
           });
       }
-      
+
+      // alertを先に表示（ユーザーがOKを押すまで待機）
       alert(message);
+
+      // ユーザーがOKを押した後にページリロード
+      if (successCount > 0) {
+        window.location.reload();
+      }
       
       // 成功時はフォームリセット
       if (successCount > 0) {

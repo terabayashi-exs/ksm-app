@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSimpleTournamentTeams } from '@/lib/tournament-teams-simple';
 
+// APIルートは動的に実行する（静的最適化を無効化）
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -6,17 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  ArrowLeft, 
-  Users, 
-  Calendar, 
-  Trophy, 
-  MapPin, 
+import {
+  ArrowLeft,
+  Users,
+  Calendar,
+  Trophy,
+  MapPin,
   Search,
   UserCheck,
   Mail,
   Phone,
-  Crown
+  Crown,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface Tournament {
@@ -30,6 +32,17 @@ interface Tournament {
   venue_name?: string;
   format_name?: string;
   visibility?: number;
+  group_id?: number | null;
+  group_order?: number;
+  group_name?: string | null;
+  group_description?: string | null;
+}
+
+interface TournamentGroup {
+  group_id: number;
+  group_name: string | null;
+  group_description: string | null;
+  tournaments: Tournament[];
 }
 
 interface TeamData {
@@ -58,12 +71,15 @@ interface PlayerData {
 export default function AdminTeamsPage() {
   const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
+  const [ungroupedTournaments, setUngroupedTournaments] = useState<Tournament[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [teams, setTeams] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [tournamentSearchTerm, setTournamentSearchTerm] = useState('');
+  const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchTournaments();
@@ -85,8 +101,38 @@ export default function AdminTeamsPage() {
       console.log('[ADMIN_TEAMS] Response data:', data);
       
       if (data.success) {
-        setTournaments(data.data || []);
-        console.log('[ADMIN_TEAMS] Tournaments loaded successfully:', data.data?.length || 0);
+        const tournamentsData = data.data || [];
+        setTournaments(tournamentsData);
+
+        // グループ化処理
+        const grouped: Record<number, TournamentGroup> = {};
+        const ungrouped: Tournament[] = [];
+
+        tournamentsData.forEach((tournament: Tournament) => {
+          if (tournament.group_id) {
+            if (!grouped[tournament.group_id]) {
+              grouped[tournament.group_id] = {
+                group_id: tournament.group_id,
+                group_name: tournament.group_name || '',
+                group_description: tournament.group_description || '',
+                tournaments: []
+              };
+            }
+            grouped[tournament.group_id].tournaments.push(tournament);
+          } else {
+            ungrouped.push(tournament);
+          }
+        });
+
+        // グループ内の部門を順序でソート
+        Object.values(grouped).forEach(group => {
+          group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+        });
+
+        setTournamentGroups(Object.values(grouped));
+        setUngroupedTournaments(ungrouped);
+        console.log('[ADMIN_TEAMS] Tournaments loaded successfully:', tournamentsData.length);
+        console.log('[ADMIN_TEAMS] Groups:', Object.keys(grouped).length, 'Ungrouped:', ungrouped.length);
       } else {
         console.error('[ADMIN_TEAMS] API error:', data.error);
         if (data.details) {
@@ -108,9 +154,10 @@ export default function AdminTeamsPage() {
     try {
       const response = await fetch(`/api/admin/tournaments/${tournamentId}/teams`);
       const data = await response.json();
-      
+
       if (data.success) {
-        setTeams(data.data || []);
+        // data.data.teams を設定（APIは { success, data: { tournament, teams } } という構造を返す）
+        setTeams(data.data?.teams || []);
       } else {
         console.error('チーム一覧取得エラー:', data.error);
         if (data.details) {
@@ -189,6 +236,18 @@ export default function AdminTeamsPage() {
     }
   };
 
+  const toggleTeamExpansion = (teamId: number) => {
+    setExpandedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teamId)) {
+        newSet.delete(teamId);
+      } else {
+        newSet.add(teamId);
+      }
+      return newSet;
+    });
+  };
+
   // チーム検索フィルタリング
   const filteredTeams = teams.filter(team => 
     team.team_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -197,10 +256,27 @@ export default function AdminTeamsPage() {
   );
 
   // 大会検索フィルタリング
+  // フィルタリング: 検索条件に合致する大会のみ表示
   const filteredTournaments = tournaments.filter(tournament =>
     tournament.tournament_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()) ||
     (tournament.venue_name && tournament.venue_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())) ||
-    (tournament.format_name && tournament.format_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()))
+    (tournament.format_name && tournament.format_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())) ||
+    (tournament.group_name && tournament.group_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()))
+  );
+
+  // グループ化されたデータをフィルタリング
+  const filteredGroups = tournamentGroups
+    .map(group => ({
+      ...group,
+      tournaments: group.tournaments.filter(t => filteredTournaments.some(ft => ft.tournament_id === t.tournament_id))
+    }))
+    .filter(group =>
+      group.tournaments.length > 0 ||
+      (group.group_name && group.group_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()))
+    );
+
+  const filteredUngrouped = ungroupedTournaments.filter(t =>
+    filteredTournaments.some(ft => ft.tournament_id === t.tournament_id)
   );
 
   if (loading) {
@@ -248,9 +324,9 @@ export default function AdminTeamsPage() {
                 <CardTitle className="flex items-center">
                   <Trophy className="w-5 h-5 mr-2" />
                   大会選択
-                  {filteredTournaments.length !== tournaments.length && (
+                  {(filteredGroups.length !== tournamentGroups.length || filteredUngrouped.length !== ungroupedTournaments.length) && (
                     <Badge variant="outline" className="ml-2">
-                      {filteredTournaments.length}/{tournaments.length}
+                      {filteredGroups.reduce((sum, g) => sum + g.tournaments.length, 0) + filteredUngrouped.length}/{tournaments.length}
                     </Badge>
                   )}
                 </CardTitle>
@@ -271,7 +347,7 @@ export default function AdminTeamsPage() {
                     <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>大会がありません</p>
                   </div>
-                ) : filteredTournaments.length === 0 ? (
+                ) : filteredGroups.length === 0 && filteredUngrouped.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">検索条件に一致する大会がありません</p>
@@ -285,54 +361,120 @@ export default function AdminTeamsPage() {
                     </Button>
                   </div>
                 ) : (
-                  filteredTournaments.map((tournament) => (
-                    <div
-                      key={`tournament-${tournament.tournament_id}`}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedTournamentId === tournament.tournament_id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => handleTournamentSelect(tournament.tournament_id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-medium text-foreground">
-                              {tournament.tournament_name}
-                            </p>
-                            {getStatusBadge(tournament)}
+                  <>
+                    {/* グループ化された大会 */}
+                    {filteredGroups.map((group) => (
+                      <div key={`group-${group.group_id}`} className="border-2 border-blue-200 rounded-lg p-3 bg-blue-50/30">
+                        <div className="mb-3">
+                          <div className="flex items-center mb-1">
+                            <Trophy className="w-4 h-4 mr-2 text-blue-600" />
+                            <h3 className="font-bold text-sm text-blue-900">
+                              {group.group_name || `グループ ${group.group_id}`}
+                            </h3>
                           </div>
-                          <div className="space-y-1">
-                            {tournament.format_name && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Trophy className="w-4 h-4 mr-1" />
-                                <span>{tournament.format_name}</span>
+                          {group.group_description && (
+                            <p className="text-xs text-blue-700 ml-6">{group.group_description}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2 ml-2">
+                          {group.tournaments.map((tournament) => (
+                            <div
+                              key={`tournament-${tournament.tournament_id}`}
+                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedTournamentId === tournament.tournament_id
+                                  ? 'border-blue-500 bg-blue-100'
+                                  : 'border-gray-200 bg-white hover:border-gray-300'
+                              }`}
+                              onClick={() => handleTournamentSelect(tournament.tournament_id)}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-medium text-sm text-foreground">
+                                  {tournament.tournament_name}
+                                </p>
+                                {getStatusBadge(tournament)}
                               </div>
-                            )}
-                            <div className="flex space-x-4 text-xs text-muted-foreground">
-                              <div className="flex items-center">
-                                <Users className="w-3 h-3 mr-1" />
-                                {tournament.team_count}チーム
+                              <div className="space-y-1">
+                                {tournament.format_name && (
+                                  <div className="flex items-center text-xs text-gray-600">
+                                    <Trophy className="w-3 h-3 mr-1" />
+                                    <span>{tournament.format_name}</span>
+                                  </div>
+                                )}
+                                <div className="flex space-x-4 text-xs text-muted-foreground">
+                                  <div className="flex items-center">
+                                    <Users className="w-3 h-3 mr-1" />
+                                    {tournament.team_count}チーム
+                                  </div>
+                                  {tournament.event_start_date && (
+                                    <div className="flex items-center">
+                                      <Calendar className="w-3 h-3 mr-1" />
+                                      {new Date(tournament.event_start_date).toLocaleDateString('ja-JP')}
+                                    </div>
+                                  )}
+                                  {tournament.venue_name && (
+                                    <div className="flex items-center">
+                                      <MapPin className="w-3 h-3 mr-1" />
+                                      {tournament.venue_name}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              {tournament.event_start_date && (
-                                <div className="flex items-center">
-                                  <Calendar className="w-3 h-3 mr-1" />
-                                  {new Date(tournament.event_start_date).toLocaleDateString('ja-JP')}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* グループ化されていない大会 */}
+                    {filteredUngrouped.map((tournament) => (
+                      <div
+                        key={`tournament-${tournament.tournament_id}`}
+                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                          selectedTournamentId === tournament.tournament_id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => handleTournamentSelect(tournament.tournament_id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-medium text-foreground">
+                                {tournament.tournament_name}
+                              </p>
+                              {getStatusBadge(tournament)}
+                            </div>
+                            <div className="space-y-1">
+                              {tournament.format_name && (
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Trophy className="w-4 h-4 mr-1" />
+                                  <span>{tournament.format_name}</span>
                                 </div>
                               )}
-                              {tournament.venue_name && (
+                              <div className="flex space-x-4 text-xs text-muted-foreground">
                                 <div className="flex items-center">
-                                  <MapPin className="w-3 h-3 mr-1" />
-                                  {tournament.venue_name}
+                                  <Users className="w-3 h-3 mr-1" />
+                                  {tournament.team_count}チーム
                                 </div>
-                              )}
+                                {tournament.event_start_date && (
+                                  <div className="flex items-center">
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    {new Date(tournament.event_start_date).toLocaleDateString('ja-JP')}
+                                  </div>
+                                )}
+                                {tournament.venue_name && (
+                                  <div className="flex items-center">
+                                    <MapPin className="w-3 h-3 mr-1" />
+                                    {tournament.venue_name}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -442,36 +584,43 @@ export default function AdminTeamsPage() {
 
                         {/* 選手情報 */}
                         <div className="pt-3 border-t">
-                          <div className="flex items-center justify-between mb-2">
+                          <button
+                            onClick={() => toggleTeamExpansion(team.tournament_team_id)}
+                            className="w-full flex items-center justify-between mb-2 hover:bg-gray-50 p-2 rounded transition-colors"
+                          >
                             <h5 className="font-medium text-sm text-foreground flex items-center">
                               <UserCheck className="w-4 h-4 mr-1" />
                               登録選手 ({team.player_count}名)
                             </h5>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(team.joined_at).toLocaleDateString('ja-JP')}参加
-                            </span>
-                          </div>
-                          
-                          {team.players.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-2">
-                              {team.players.slice(0, 5).map((player) => (
-                                <div key={player.tournament_player_id} className="flex items-center text-sm text-muted-foreground">
-                                  <span className="min-w-[2rem]">
-                                    {player.jersey_number ? `#${player.jersey_number}` : ''}
-                                  </span>
-                                  <span className="flex-1">{player.player_name}</span>
-                                </div>
-                              ))}
-                              {team.players.length > 5 && (
-                                <div className="text-xs text-muted-foreground text-center pt-1">
-                                  ...他{team.players.length - 5}名
-                                </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(team.joined_at).toLocaleDateString('ja-JP')}参加
+                              </span>
+                              {expandedTeams.has(team.tournament_team_id) ? (
+                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-500" />
                               )}
                             </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground text-center py-2">
-                              選手が登録されていません
-                            </p>
+                          </button>
+
+                          {expandedTeams.has(team.tournament_team_id) && (
+                            team.players.length > 0 ? (
+                              <div className="grid grid-cols-1 gap-2 mt-2">
+                                {team.players.map((player) => (
+                                  <div key={player.tournament_player_id} className="flex items-center text-sm text-muted-foreground pl-2">
+                                    <span className="min-w-[2.5rem] text-gray-500">
+                                      {player.jersey_number ? `#${player.jersey_number}` : '−'}
+                                    </span>
+                                    <span className="flex-1">{player.player_name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground text-center py-2 pl-2">
+                                選手が登録されていません
+                              </p>
+                            )
                           )}
                         </div>
                       </div>

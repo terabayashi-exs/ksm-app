@@ -8,11 +8,30 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive } from 'lucide-react';
 
+interface GroupedTournamentData {
+  grouped: Record<string, {
+    group: {
+      group_id: number;
+      group_name: string | null;
+      group_description: string | null;
+      group_color: string | null;
+      display_order: number;
+    };
+    tournaments: Tournament[];
+  }>;
+  ungrouped: Tournament[];
+}
+
 interface TournamentDashboardData {
   recruiting: Tournament[];
   ongoing: Tournament[];
   completed: Tournament[];
   total: number;
+  grouped: {
+    recruiting: GroupedTournamentData;
+    ongoing: GroupedTournamentData;
+    completed: GroupedTournamentData;
+  };
 }
 
 interface ApiResponse {
@@ -26,7 +45,12 @@ export default function TournamentDashboardList() {
     recruiting: [],
     ongoing: [],
     completed: [],
-    total: 0
+    total: 0,
+    grouped: {
+      recruiting: { grouped: {}, ungrouped: [] },
+      ongoing: { grouped: {}, ungrouped: [] },
+      completed: { grouped: {}, ungrouped: [] }
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,12 +123,47 @@ export default function TournamentDashboardList() {
 
       if (result.success) {
         // 削除成功時、リストから該当大会を除去
-        setTournaments(prev => ({
-          recruiting: prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id),
-          ongoing: prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id),
-          completed: prev.completed.filter(t => t.tournament_id !== tournament.tournament_id),
-          total: prev.total - 1
-        }));
+        setTournaments(prev => {
+          const updatedRecruiting = prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedOngoing = prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedCompleted = prev.completed.filter(t => t.tournament_id !== tournament.tournament_id);
+
+          // グループ化されたデータも更新
+          const filterGroupedData = (groupedData: GroupedTournamentData): GroupedTournamentData => {
+            const newGrouped: Record<string, {
+              group: {
+                group_id: number;
+                group_name: string | null;
+                group_description: string | null;
+                group_color: string | null;
+                display_order: number;
+              };
+              tournaments: Tournament[];
+            }> = {};
+            Object.entries(groupedData.grouped).forEach(([key, value]) => {
+              const filteredTournaments = value.tournaments.filter(t => t.tournament_id !== tournament.tournament_id);
+              if (filteredTournaments.length > 0) {
+                newGrouped[key] = { ...value, tournaments: filteredTournaments };
+              }
+            });
+            return {
+              grouped: newGrouped,
+              ungrouped: groupedData.ungrouped.filter(t => t.tournament_id !== tournament.tournament_id)
+            };
+          };
+
+          return {
+            recruiting: updatedRecruiting,
+            ongoing: updatedOngoing,
+            completed: updatedCompleted,
+            total: prev.total - 1,
+            grouped: {
+              recruiting: filterGroupedData(prev.grouped.recruiting),
+              ongoing: filterGroupedData(prev.grouped.ongoing),
+              completed: filterGroupedData(prev.grouped.completed)
+            }
+          };
+        });
         
         if (tournament.is_archived) {
           const mainDeleted = result.deletionSummary?.tournamentMainDeleted !== false;
@@ -338,7 +397,7 @@ export default function TournamentDashboardList() {
             <>
               <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                  大会編集
+                  部門編集
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
@@ -558,75 +617,102 @@ export default function TournamentDashboardList() {
     </div>
   );
 
+  const renderGroupedSection = (
+    groupedData: GroupedTournamentData,
+    type: 'recruiting' | 'ongoing' | 'completed'
+  ) => {
+    const groups = Object.values(groupedData.grouped);
+    const ungroupedDivisions = groupedData.ungrouped;
+
+    return (
+      <>
+        {/* グループ化された大会 */}
+        {groups.map(({ group, tournaments: divisions }) => (
+          <Card key={group.group_id} className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-2xl mb-2">{group.group_name}</CardTitle>
+                  {group.group_description && (
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {group.group_description}
+                    </p>
+                  )}
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Users className="h-4 w-4 mr-1" />
+                    {divisions.length}部門
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                <div className="grid gap-4">
+                  {divisions.map((division) => (
+                    <TournamentCard
+                      key={division.tournament_id}
+                      tournament={division}
+                      type={type}
+                    />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* グループに所属していない部門 */}
+        {ungroupedDivisions.map((division) => (
+          <TournamentCard
+            key={division.tournament_id}
+            tournament={division}
+            type={type}
+          />
+        ))}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* 開催中の大会 */}
       {tournaments.ongoing.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-green-700">
-              <Trophy className="w-5 h-5 mr-2" />
-              開催中の大会 ({tournaments.ongoing.length}件)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {tournaments.ongoing.map((tournament) => (
-                <TournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                  type="ongoing"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex items-center text-green-700 mb-4">
+            <Trophy className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              開催中の大会 ({Object.keys(tournaments.grouped.ongoing.grouped).length + tournaments.grouped.ongoing.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.ongoing, 'ongoing')}
+        </>
       )}
 
       {/* 募集中の大会 */}
       {tournaments.recruiting.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-blue-700">
-              <CalendarDays className="w-5 h-5 mr-2" />
-              募集中の大会 ({tournaments.recruiting.length}件)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {tournaments.recruiting.map((tournament) => (
-                <TournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                  type="recruiting"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex items-center text-blue-700 mb-4 mt-8">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              募集中の大会 ({Object.keys(tournaments.grouped.recruiting.grouped).length + tournaments.grouped.recruiting.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.recruiting, 'recruiting')}
+        </>
       )}
 
       {/* 完了した大会 */}
       {tournaments.completed.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-gray-700">
-              <Trophy className="w-5 h-5 mr-2" />
-              完了した大会（過去1年以内） ({tournaments.completed.length}件)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {tournaments.completed.map((tournament) => (
-                <TournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                  type="completed"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex items-center text-gray-700 mb-4 mt-8">
+            <Trophy className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              完了した大会（過去1年以内） ({Object.keys(tournaments.grouped.completed.grouped).length + tournaments.grouped.completed.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.completed, 'completed')}
+        </>
       )}
 
       {/* 大会がない場合 */}

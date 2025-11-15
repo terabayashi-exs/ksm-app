@@ -104,35 +104,37 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 大会の参加チーム一覧を取得（選手情報含む）
     const teamsResult = await db.execute(`
-      SELECT 
+      SELECT
         tt.tournament_team_id,
         tt.team_id,
         tt.tournament_id,
         tt.team_name,
         tt.team_omission,
         tt.withdrawal_status,
+        tt.registration_method,
         tt.created_at as joined_at,
         m.contact_person,
         m.contact_email,
         m.contact_phone,
-        m.registration_type,
+        m.team_name as master_team_name,
         COUNT(tp.tournament_player_id) as player_count
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
       LEFT JOIN t_tournament_players tp ON (tt.tournament_id = tp.tournament_id AND tt.team_id = tp.team_id)
       WHERE tt.tournament_id = ?
-      GROUP BY 
+      GROUP BY
         tt.tournament_team_id,
         tt.team_id,
         tt.tournament_id,
         tt.team_name,
         tt.team_omission,
         tt.withdrawal_status,
+        tt.registration_method,
         tt.created_at,
         m.contact_person,
         m.contact_email,
         m.contact_phone,
-        m.registration_type
+        m.team_name
       ORDER BY tt.created_at ASC
     `, [tournamentId]);
 
@@ -146,11 +148,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
           team_name: string;
           team_omission: string;
           withdrawal_status: string;
+          registration_method: string;
           joined_at: string;
           contact_person: string;
           contact_email: string;
           contact_phone: string | null;
-          registration_type: string;
+          master_team_name: string;
           player_count: number;
         };
         const playersResult = await db.execute(`
@@ -170,10 +173,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
           team_id: team.team_id,
           team_name: team.team_name,
           team_omission: team.team_omission,
+          master_team_name: team.master_team_name,
           contact_person: team.contact_person,
           contact_email: team.contact_email,
           contact_phone: team.contact_phone,
-          registration_type: team.registration_type || 'self_registered',
+          registration_type: team.registration_method || 'self_registered',
           withdrawal_status: team.withdrawal_status || 'active',
           joined_at: team.joined_at,
           player_count: team.player_count || 0,
@@ -289,129 +293,157 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // チーム名・略称の重複チェック（マスター・大会内両方）
-    const teamNameCheck = await db.execute(`
-      SELECT 'master' as source, team_name, team_omission FROM m_teams 
-      WHERE team_name = ? OR team_omission = ?
-      UNION
-      SELECT 'tournament' as source, team_name, team_omission FROM t_tournament_teams 
-      WHERE tournament_id = ? AND (team_name = ? OR team_omission = ?)
-    `, [data.team_name, data.team_omission, tournamentId, data.tournament_team_name, data.tournament_team_omission]);
-
-    if (teamNameCheck.rows.length > 0) {
-      const duplicate = teamNameCheck.rows[0];
-      if (duplicate.team_name === data.team_name || duplicate.team_name === data.tournament_team_name) {
-        return NextResponse.json(
-          { success: false, error: `チーム名が既に使用されています: ${duplicate.team_name}` },
-          { status: 409 }
-        );
-      }
-      if (duplicate.team_omission === data.team_omission || duplicate.team_omission === data.tournament_team_omission) {
-        return NextResponse.json(
-          { success: false, error: `チーム略称が既に使用されています: ${duplicate.team_omission}` },
-          { status: 409 }
-        );
-      }
-    }
-
-    // メールアドレスの重複チェック
-    const emailCheck = await db.execute(`
-      SELECT contact_email FROM m_teams WHERE contact_email = ?
+    // 1. メールアドレスで既存マスターチームをチェック
+    const existingByEmail = await db.execute(`
+      SELECT team_id, team_name, team_omission FROM m_teams
+      WHERE contact_email = ?
     `, [data.contact_email]);
 
-    if (emailCheck.rows.length > 0) {
+    // 2. 異なるメールアドレスで同じチーム名・略称が存在しないかチェック
+    const existingByName = await db.execute(`
+      SELECT team_id, contact_email FROM m_teams
+      WHERE (team_name = ? OR team_omission = ?) AND contact_email != ?
+    `, [data.team_name, data.team_omission, data.contact_email]);
+
+    if (existingByName.rows.length > 0) {
       return NextResponse.json(
-        { success: false, error: 'メールアドレスが既に使用されています' },
+        { success: false, error: `チーム名またはチーム略称が別の組織によって既に使用されています` },
         { status: 409 }
       );
     }
 
-    // 一意なチームIDを生成
-    // より識別しやすいIDを生成するため、複数のソースから抽出
-    let baseTeamId = '';
-    
-    // 1. 略称から英数字を抽出
-    const omissionAlphaNum = data.team_omission.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-    if (omissionAlphaNum && omissionAlphaNum.length >= 2) {
-      baseTeamId = omissionAlphaNum.substring(0, 8);
-    } else {
-      // 2. チーム名から英数字を抽出
-      const teamNameAlphaNum = data.team_name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-      if (teamNameAlphaNum && teamNameAlphaNum.length >= 2) {
-        baseTeamId = teamNameAlphaNum.substring(0, 8);
+    // 3. 既存マスターチームの場合、既にこの大会に参加していないかチェック
+    let teamId = '';
+    let isExistingMasterTeam = false;
+
+    if (existingByEmail.rows.length > 0) {
+      const existingTeam = existingByEmail.rows[0] as unknown as { team_id: string; team_name: string; team_omission: string };
+      teamId = existingTeam.team_id;
+      isExistingMasterTeam = true;
+
+      // 既にこの大会に参加していないかチェック
+      const alreadyJoined = await db.execute(`
+        SELECT tournament_team_id FROM t_tournament_teams
+        WHERE tournament_id = ? AND team_id = ?
+      `, [tournamentId, teamId]);
+
+      if (alreadyJoined.rows.length > 0) {
+        return NextResponse.json(
+          { success: false, error: `このチーム（${existingTeam.team_name}）は既にこの大会に参加しています` },
+          { status: 409 }
+        );
+      }
+
+      console.log('Using existing master team:', {
+        teamId,
+        teamName: existingTeam.team_name,
+        contactEmail: data.contact_email
+      });
+    }
+
+    // 4. 大会参加チーム名の重複チェック（同じ大会内で重複不可）
+    const tournamentTeamNameCheck = await db.execute(`
+      SELECT team_name, team_omission FROM t_tournament_teams
+      WHERE tournament_id = ? AND (team_name = ? OR team_omission = ?)
+    `, [tournamentId, data.tournament_team_name, data.tournament_team_omission]);
+
+    if (tournamentTeamNameCheck.rows.length > 0) {
+      const duplicate = tournamentTeamNameCheck.rows[0] as unknown as { team_name: string; team_omission: string };
+      return NextResponse.json(
+        { success: false, error: `大会参加チーム名「${duplicate.team_name}」または略称「${duplicate.team_omission}」が既にこの大会で使用されています` },
+        { status: 409 }
+      );
+    }
+
+    // 5. 新規マスターチームの場合のみ、チームIDを生成して作成
+    if (!isExistingMasterTeam) {
+      // 一意なチームIDを生成
+      // より識別しやすいIDを生成するため、複数のソースから抽出
+      let baseTeamId = '';
+
+      // 1. 略称から英数字を抽出
+      const omissionAlphaNum = data.team_omission.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+      if (omissionAlphaNum && omissionAlphaNum.length >= 2) {
+        baseTeamId = omissionAlphaNum.substring(0, 8);
       } else {
-        // 3. メールアドレスのユーザー名部分を使用
-        const emailUser = data.contact_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
-        if (emailUser && emailUser.length >= 2) {
-          baseTeamId = emailUser.substring(0, 8);
+        // 2. チーム名から英数字を抽出
+        const teamNameAlphaNum = data.team_name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+        if (teamNameAlphaNum && teamNameAlphaNum.length >= 2) {
+          baseTeamId = teamNameAlphaNum.substring(0, 8);
         } else {
-          // 4. 最終的に"team" + ランダム文字列
-          const randomSuffix = Math.random().toString(36).substring(2, 6);
-          baseTeamId = `team${randomSuffix}`;
+          // 3. メールアドレスのユーザー名部分を使用
+          const emailUser = data.contact_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+          if (emailUser && emailUser.length >= 2) {
+            baseTeamId = emailUser.substring(0, 8);
+          } else {
+            // 4. 最終的に"team" + ランダム文字列
+            const randomSuffix = Math.random().toString(36).substring(2, 6);
+            baseTeamId = `team${randomSuffix}`;
+          }
         }
       }
-    }
-    
-    let teamId = baseTeamId;
-    let counter = 1;
-    
-    while (true) {
-      const existingTeamCheck = await db.execute(`
-        SELECT team_id FROM m_teams WHERE team_id = ?
-      `, [teamId]);
-      
-      if (existingTeamCheck.rows.length === 0) {
-        break;
+
+      teamId = baseTeamId;
+      let counter = 1;
+
+      while (true) {
+        const existingTeamCheck = await db.execute(`
+          SELECT team_id FROM m_teams WHERE team_id = ?
+        `, [teamId]);
+
+        if (existingTeamCheck.rows.length === 0) {
+          break;
+        }
+
+        // カウンターを追加して一意性を確保
+        teamId = `${baseTeamId}${counter}`;
+        counter++;
+
+        // 無限ループを防ぐため、カウンターが999を超えたらランダム文字列を使用
+        if (counter > 999) {
+          const randomSuffix = Math.random().toString(36).substring(2, 6);
+          teamId = `team${randomSuffix}`;
+          break;
+        }
       }
-      
-      // カウンターを追加して一意性を確保
-      teamId = `${baseTeamId}${counter}`;
-      counter++;
-      
-      // 無限ループを防ぐため、カウンターが999を超えたらランダム文字列を使用
-      if (counter > 999) {
-        const randomSuffix = Math.random().toString(36).substring(2, 6);
-        teamId = `team${randomSuffix}`;
-        break;
-      }
+
+      // パスワードハッシュ化
+      const passwordHash = await bcrypt.hash(data.temporary_password, 12);
+
+      console.log('Creating new admin proxy team registration:', {
+        teamId,
+        teamName: data.team_name,
+        contactEmail: data.contact_email,
+        playersCount: data.players.length
+      });
+
+      // マスターチームテーブルに登録
+      await db.execute(`
+        INSERT INTO m_teams (
+          team_id,
+          team_name,
+          team_omission,
+          contact_person,
+          contact_email,
+          contact_phone,
+          password_hash,
+          registration_type,
+          is_active,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'admin_proxy', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      `, [
+        teamId,
+        data.team_name,
+        data.team_omission,
+        data.contact_person,
+        data.contact_email,
+        data.contact_phone || null,
+        passwordHash
+      ]);
+
+      console.log('New master team created successfully');
     }
-
-    // パスワードハッシュ化
-    const passwordHash = await bcrypt.hash(data.temporary_password, 12);
-
-    console.log('Creating admin proxy team registration:', {
-      teamId,
-      teamName: data.team_name,
-      contactEmail: data.contact_email,
-      playersCount: data.players.length
-    });
-
-    // マスターチームテーブルに登録
-    await db.execute(`
-      INSERT INTO m_teams (
-        team_id,
-        team_name,
-        team_omission,
-        contact_person,
-        contact_email,
-        contact_phone,
-        password_hash,
-        registration_type,
-        is_active,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'admin_proxy', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-    `, [
-      teamId,
-      data.team_name,
-      data.team_omission,
-      data.contact_person,
-      data.contact_email,
-      data.contact_phone || null,
-      passwordHash
-    ]);
-
-    console.log('Master team created successfully');
 
     // 選手をマスター選手テーブルに登録（選手がいる場合のみ）
     const playerIds: number[] = [];
@@ -443,9 +475,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         team_id,
         team_name,
         team_omission,
+        registration_method,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, 'admin_proxy', datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       tournamentId,
       teamId,
@@ -486,7 +519,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({
       success: true,
-      message: '管理者代行でのチーム登録が完了しました',
+      message: isExistingMasterTeam
+        ? '既存チームを使用して大会参加登録が完了しました'
+        : '管理者代行でのチーム登録が完了しました',
       data: {
         team_id: teamId,
         team_name: data.team_name,
@@ -494,7 +529,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
         tournament_team_name: data.tournament_team_name,
         players_count: data.players.length,
         temporary_password: data.temporary_password,
-        contact_email: data.contact_email
+        contact_email: data.contact_email,
+        is_existing_team: isExistingMasterTeam
       }
     });
 
