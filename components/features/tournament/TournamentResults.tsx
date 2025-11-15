@@ -569,11 +569,12 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
 
 
   // 指定されたフェーズかどうかの判定
+  // データベースのphaseフィールド（'preliminary' or 'final'）のみで判定
   const isTargetPhase = (matchPhase: string): boolean => {
     if (phase === 'preliminary') {
-      return matchPhase === 'preliminary' || matchPhase.includes('予選') || matchPhase.includes('リーグ');
+      return matchPhase === 'preliminary';
     } else if (phase === 'final') {
-      return matchPhase === 'final' || matchPhase.includes('決勝');
+      return matchPhase === 'final';
     }
     return false;
   };
@@ -663,24 +664,32 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{results.length}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {results.filter(block => isTargetPhase(block.phase)).length}
+              </div>
               <div className="text-sm text-muted-foreground">ブロック数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {results.reduce((sum, block) => sum + block.teams.length, 0)}
+                {results
+                  .filter(block => isTargetPhase(block.phase))
+                  .reduce((sum, block) => sum + block.teams.length, 0)
+                }
               </div>
               <div className="text-sm text-muted-foreground">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {results.reduce((sum, block) => 
-                  sum + block.matches.filter(match => 
-                    match.is_confirmed && 
-                    match.team1_goals !== null && 
-                    match.team2_goals !== null
-                  ).length, 0
-                )}
+                {results
+                  .filter(block => isTargetPhase(block.phase))
+                  .reduce((sum, block) =>
+                    sum + block.matches.filter(match =>
+                      match.is_confirmed &&
+                      match.team1_goals !== null &&
+                      match.team2_goals !== null
+                    ).length, 0
+                  )
+                }
               </div>
               <div className="text-sm text-muted-foreground">実施済み試合数</div>
             </div>

@@ -192,8 +192,8 @@ async function getBlockResults(
         JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ?
         AND tt.assigned_block = (
-          SELECT block_name 
-          FROM t_match_blocks 
+          SELECT block_name
+          FROM t_match_blocks
           WHERE match_block_id = ?
         )
         ORDER BY tt.block_position NULLS LAST, t.team_name
@@ -201,21 +201,52 @@ async function getBlockResults(
       args: [tournamentId, matchBlockId]
     });
 
-    const teams: TeamInfo[] = (teamsResult.rows || []).map(row => ({
+    let teams: TeamInfo[] = (teamsResult.rows || []).map(row => ({
       team_id: row.team_id as string,
       team_name: row.team_name as string,
       team_omission: row.team_omission as string || undefined,
       display_name: (row.team_omission as string) || (row.team_name as string)
     }));
 
+    // チーム登録がない場合、m_match_templatesのプレースホルダーから生成
+    if (teams.length === 0) {
+      const placeholderTeamsResult = await db.execute({
+        sql: `
+          SELECT DISTINCT
+            team1_display_name as display_name
+          FROM t_matches_live
+          WHERE match_block_id = ?
+          AND team1_display_name IS NOT NULL
+          UNION
+          SELECT DISTINCT
+            team2_display_name as display_name
+          FROM t_matches_live
+          WHERE match_block_id = ?
+          AND team2_display_name IS NOT NULL
+          ORDER BY display_name
+        `,
+        args: [matchBlockId, matchBlockId]
+      });
+
+      teams = (placeholderTeamsResult.rows || []).map((row, index) => ({
+        team_id: `placeholder_${matchBlockId}_${index}`,
+        team_name: row.display_name as string,
+        team_omission: undefined,
+        display_name: row.display_name as string
+      }));
+    }
+
     // 確定済みの試合と未確定試合のコード情報を取得（現在のスキーマに対応）
+    // チーム登録がない場合も表示できるよう、team_display_nameを含める
     const matchesResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_block_id,
           ml.team1_id,
           ml.team2_id,
+          ml.team1_display_name,
+          ml.team2_display_name,
           ml.match_code,
           mf.team1_scores,
           mf.team2_scores,
@@ -230,20 +261,31 @@ async function getBlockResults(
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE ml.match_block_id = ?
-        AND ml.team1_id IS NOT NULL 
-        AND ml.team2_id IS NOT NULL
         ORDER BY ml.match_code
       `,
       args: [matchBlockId]
     });
 
     const matches: MatchResult[] = (matchesResult.rows || []).map(row => {
+      // チームIDがnullの場合、プレースホルダーIDを生成
+      const team1Id = row.team1_id as string | null;
+      const team2Id = row.team2_id as string | null;
+      const team1DisplayName = row.team1_display_name as string;
+      const team2DisplayName = row.team2_display_name as string;
+
+      // teamsリストから対応するプレースホルダーIDを検索
+      const getTeamId = (actualId: string | null, displayName: string): string => {
+        if (actualId) return actualId;
+        const placeholderTeam = teams.find(t => t.display_name === displayName);
+        return placeholderTeam?.team_id || `placeholder_${displayName}`;
+      };
+
       // 基本データ
       const baseMatch: MatchResult = {
         match_id: row.match_id as number,
         match_block_id: row.match_block_id as number,
-        team1_id: row.team1_id as string,
-        team2_id: row.team2_id as string,
+        team1_id: getTeamId(team1Id, team1DisplayName),
+        team2_id: getTeamId(team2Id, team2DisplayName),
         // スコアの処理（カンマ区切り対応）
         team1_goals: parseScore(row.team1_scores),
         team2_goals: parseScore(row.team2_scores),
