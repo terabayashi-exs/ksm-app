@@ -2,10 +2,11 @@
 
 以下は、PK選手権大会システムのER図をMermaid記法で表現したものです。
 
-**最終更新**: 2025年9月24日  
-**データベース**: Turso（リモートSQLite）  
-**アーカイブシステム**: v1.0 JSON形式完全実装  
-**実装状況**: 本番運用中（19テーブル構成）  
+**最終更新**: 2025年11月15日
+**データベース**: Turso（リモートSQLite）
+**アーカイブシステム**: v1.0 JSON形式完全実装
+**サブスクリプション機能**: Phase 1完了（データベース構造整備）
+**実装状況**: 本番運用中（23テーブル構成）  
 
 ```mermaid
 erDiagram
@@ -53,6 +54,11 @@ erDiagram
         text logo_blob_url "ロゴ画像URL（Vercel Blob）"
         text logo_filename "ロゴファイル名"
         text organization_name "組織名"
+        integer current_plan_id FK "現在のプランID"
+        text subscription_status "サブスクリプション状態（free/trial/active/suspended/cancelled）"
+        text trial_start_date "トライアル開始日"
+        text trial_end_date "トライアル終了日"
+        text square_customer_id "Square顧客ID"
         datetime created_at "作成日時（JST）"
         datetime updated_at "更新日時（JST）"
     }
@@ -88,6 +94,28 @@ erDiagram
         integer eliminated_position_start "敗退開始順位（将来拡張用）"
         integer eliminated_position_end "敗退終了順位（将来拡張用）"
         integer round_level "ラウンドレベル（将来拡張用）"
+        datetime created_at "作成日時（JST）"
+        datetime updated_at "更新日時（JST）"
+    }
+
+    m_subscription_plans {
+        integer plan_id PK "プランID（自動採番）"
+        text plan_name "プラン名（無料/ベーシック/スタンダード/プロ/プレミアム）"
+        text plan_code "プランコード（free/basic/standard/pro/premium）"
+        text plan_description "プラン説明"
+        integer monthly_price "月額料金（円）"
+        integer yearly_price "年額料金（円）"
+        text currency "通貨（デフォルトJPY）"
+        integer max_tournaments "大会数上限"
+        integer max_divisions_per_tournament "1大会あたりの部門数上限"
+        integer total_max_divisions "全大会通算の部門数上限"
+        integer max_teams_per_tournament "1大会あたりのチーム数上限"
+        integer allow_csv_import "CSV一括登録機能（0=不可, 1=可）"
+        integer allow_advanced_stats "高度な統計機能（0=不可, 1=可）"
+        integer allow_custom_branding "カスタムブランディング（0=不可, 1=可）"
+        integer display_order "表示順序"
+        integer is_active "有効フラグ（1=有効, 0=無効）"
+        integer is_visible "表示フラグ（1=表示, 0=非表示）"
         datetime created_at "作成日時（JST）"
         datetime updated_at "更新日時（JST）"
     }
@@ -306,6 +334,66 @@ erDiagram
         text metadata "メタデータ（JSON）"
     }
 
+    t_administrator_subscriptions {
+        integer subscription_id PK "サブスクリプションID（自動採番）"
+        text administrator_id FK "管理者ID"
+        integer plan_id FK "プランID"
+        text subscription_status "サブスクリプション状態（trial/active/suspended/cancelled/expired）"
+        text start_date "開始日"
+        text end_date "終了日"
+        text trial_end_date "トライアル終了日"
+        text next_billing_date "次回請求日"
+        text billing_cycle "請求サイクル（monthly/yearly）"
+        integer auto_renew "自動更新（0=無効, 1=有効）"
+        text square_subscription_id "Square側のサブスクリプションID"
+        text square_customer_id "Square側の顧客ID"
+        text square_location_id "Square店舗ID"
+        datetime cancelled_at "キャンセル日時（JST）"
+        text cancelled_reason "キャンセル理由"
+        text cancelled_by "キャンセル実行者（user/admin/system）"
+        datetime created_at "作成日時（JST）"
+        datetime updated_at "更新日時（JST）"
+    }
+
+    t_subscription_usage {
+        integer usage_id PK "使用状況ID（自動採番）"
+        text administrator_id FK "管理者ID"
+        integer subscription_id FK "サブスクリプションID"
+        integer current_tournaments_count "現在の大会数"
+        integer current_divisions_count "現在の部門数"
+        integer current_total_teams_count "総チーム数"
+        integer total_tournaments_created "累計作成大会数"
+        integer total_matches_conducted "累計試合実施数"
+        datetime last_calculated_at "最終計算日時（JST）"
+        datetime created_at "作成日時（JST）"
+        datetime updated_at "更新日時（JST）"
+    }
+
+    t_payment_history {
+        integer payment_id PK "支払いID（自動採番）"
+        integer subscription_id FK "サブスクリプションID"
+        text administrator_id FK "管理者ID"
+        integer plan_id FK "プランID"
+        integer amount "支払い金額（円）"
+        integer tax_amount "消費税額（円）"
+        integer total_amount "合計金額（円）"
+        text currency "通貨（デフォルトJPY）"
+        text payment_status "支払い状態（pending/completed/failed/refunded/disputed）"
+        text payment_method "支払い方法"
+        text square_payment_id "Square支払いID"
+        text square_order_id "Square注文ID"
+        text square_receipt_url "Square領収書URL"
+        datetime paid_at "支払い完了日時（JST）"
+        datetime refunded_at "返金日時（JST）"
+        integer refund_amount "返金額（円）"
+        text refund_reason "返金理由"
+        text billing_period_start "請求期間開始日"
+        text billing_period_end "請求期間終了日"
+        text notes "備考"
+        datetime created_at "作成日時（JST）"
+        datetime updated_at "更新日時（JST）"
+    }
+
     %% リレーションシップ
     m_teams ||--o{ m_players : "所属"
     m_players ||--o| m_teams : "代表者"
@@ -340,19 +428,33 @@ erDiagram
     m_teams ||--o{ t_matches_final : "勝者"
 
     t_matches_live ||--|| t_match_status : "状態管理"
+
+    %% サブスクリプション関連のリレーションシップ
+    m_subscription_plans ||--o{ m_administrators : "プラン適用"
+    m_administrators ||--o{ t_administrator_subscriptions : "サブスクリプション登録"
+    m_subscription_plans ||--o{ t_administrator_subscriptions : "プラン詳細"
+    t_administrator_subscriptions ||--o{ t_subscription_usage : "使用状況"
+    t_administrator_subscriptions ||--o{ t_payment_history : "支払い履歴"
+    m_administrators ||--o{ t_subscription_usage : "使用状況管理"
+    m_administrators ||--o{ t_payment_history : "支払い履歴"
+    m_subscription_plans ||--o{ t_payment_history : "プラン別支払い"
 ```
 
 ## 🔥 **重要な機能実装ポイント**
 
-### **📊 システム構成（2025年9月時点）**
-- **総テーブル数**: 19テーブル（マスター7 + トランザクション11 + その他1）
-- **新規追加テーブル**: 7テーブル（初期設計後に追加）
+### **📊 システム構成（2025年11月時点）**
+- **総テーブル数**: 23テーブル（マスター8 + トランザクション14 + その他1）
+- **新規追加テーブル**: 11テーブル（初期設計後に追加）
   - `m_sport_types`: スポーツ種別対応
+  - `m_subscription_plans`: サブスクリプションプラン管理（NEW）
   - `t_archived_tournament_json`: アーカイブシステム
   - `t_match_status`: リアルタイム試合状態管理
   - `t_tournament_files`: PDFファイル管理
   - `t_tournament_notifications`: 通知システム
   - `t_tournament_rules`: 大会ルール管理
+  - `t_administrator_subscriptions`: 管理者サブスクリプション情報（NEW）
+  - `t_subscription_usage`: サブスクリプション使用状況（NEW）
+  - `t_payment_history`: 支払い履歴（NEW）
   - `sample_data`: テストデータ用
 
 ### **🏆 アーカイブシステム（v1.0完全実装済み）**
