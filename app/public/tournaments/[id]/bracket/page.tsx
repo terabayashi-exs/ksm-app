@@ -27,19 +27,19 @@ async function getTournamentDetail(id: string): Promise<Tournament> {
 // ローディングコンポーネント
 function TournamentBracketLoading() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+          <div className="h-8 bg-muted rounded w-1/3 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-64 bg-gray-200 rounded"></div>
+              <div key={i} className="h-64 bg-muted rounded"></div>
             ))}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2].map(i => (
-              <div key={i} className="h-64 bg-gray-200 rounded"></div>
+              <div key={i} className="h-64 bg-muted rounded"></div>
             ))}
           </div>
         </div>
@@ -55,7 +55,7 @@ async function TournamentBracketContent({ params }: PageProps) {
   const tournament = await getTournamentDetail(resolvedParams.id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -64,7 +64,7 @@ async function TournamentBracketContent({ params }: PageProps) {
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
             <Button variant="ghost" asChild>
-              <Link href={`/public/tournaments/${tournament.tournament_id}`} className="flex items-center text-gray-600 hover:text-gray-900">
+              <Link href={`/public/tournaments/${tournament.tournament_id}`} className="flex items-center text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 大会詳細に戻る
               </Link>
@@ -77,11 +77,11 @@ async function TournamentBracketContent({ params }: PageProps) {
           <div className="flex items-center mb-4">
             <Trophy className="h-8 w-8 text-yellow-600 mr-3" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{tournament.tournament_name}</h1>
-              <p className="text-gray-600">トーナメント表</p>
+              <h1 className="text-3xl font-bold text-foreground">{tournament.tournament_name}</h1>
+              <p className="text-muted-foreground">トーナメント表</p>
             </div>
           </div>
-          <div className="flex items-center space-x-6 text-sm text-gray-500">
+          <div className="flex items-center space-x-6 text-sm text-muted-foreground">
             <div className="flex items-center">
               <span className="font-medium">参加チーム:</span>
               <span className="ml-1">{tournament.team_count}チーム</span>

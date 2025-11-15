@@ -6,6 +6,7 @@ declare module "next-auth" {
   interface User {
     role: "admin" | "team";
     teamId?: string;
+    administratorId?: string;
   }
 
   interface Session {
@@ -15,6 +16,7 @@ declare module "next-auth" {
       name: string;
       role: "admin" | "team";
       teamId?: string;
+      administratorId?: string;
     };
   }
 }
@@ -23,5 +25,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     role: "admin" | "team";
     teamId?: string;
+    administratorId?: string;
   }
 }

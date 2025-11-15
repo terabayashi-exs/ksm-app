@@ -14,18 +14,24 @@ export async function GET() {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
-    // フォーマット一覧を取得（テンプレート数も含む）
+    // フォーマット一覧を取得（競技種別・テンプレート数も含む）
     const result = await db.execute(`
-      SELECT 
+      SELECT
         tf.format_id,
         tf.format_name,
+        tf.sport_type_id,
         tf.target_team_count,
         tf.format_description,
+        tf.preliminary_format_type,
+        tf.final_format_type,
         tf.created_at,
+        st.sport_name,
+        st.sport_code,
         COUNT(mt.template_id) as template_count
       FROM m_tournament_formats tf
+      LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
       LEFT JOIN m_match_templates mt ON tf.format_id = mt.format_id
-      GROUP BY tf.format_id, tf.format_name, tf.target_team_count, tf.format_description, tf.created_at
+      GROUP BY tf.format_id, tf.format_name, tf.sport_type_id, tf.target_team_count, tf.format_description, tf.preliminary_format_type, tf.final_format_type, tf.created_at, st.sport_name, st.sport_code
       ORDER BY tf.created_at DESC
     `);
 
@@ -50,10 +56,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { format_name, target_team_count, format_description, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, templates } = body;
 
     // バリデーション
-    if (!format_name || !target_team_count || !Array.isArray(templates)) {
+    if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
       return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
     }
 
@@ -63,9 +69,9 @@ export async function POST(request: NextRequest) {
 
     // フォーマット作成
     const formatResult = await db.execute(`
-      INSERT INTO m_tournament_formats (format_name, target_team_count, format_description, created_at, updated_at)
-      VALUES (?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-    `, [format_name, target_team_count, format_description || ""]);
+      INSERT INTO m_tournament_formats (format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+    `, [format_name, sport_type_id, target_team_count, format_description || "", preliminary_format_type || null, final_format_type || null]);
 
     const formatId = Number(formatResult.lastInsertRowid);
 
@@ -75,9 +81,11 @@ export async function POST(request: NextRequest) {
         INSERT INTO m_match_templates (
           format_id, match_number, match_code, match_type, phase, round_name, 
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
-          day_number, execution_priority, court_number, suggested_start_time, created_at, updated_at
+          day_number, execution_priority, court_number, suggested_start_time, 
+          loser_position_start, loser_position_end, winner_position, position_note,
+          created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         formatId,
         template.match_number || 1,
@@ -93,14 +101,19 @@ export async function POST(request: NextRequest) {
         template.day_number || 1,
         template.execution_priority || 1,
         template.court_number || null,
-        template.suggested_start_time || null
+        template.suggested_start_time || null,
+        // 新しい順位設定フィールド
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.winner_position || null,
+        template.position_note || null
       ]);
     }
 
     return NextResponse.json({
       success: true,
       message: "フォーマットを作成しました",
-      format: { format_id: formatId, format_name, target_team_count, format_description }
+      format: { format_id: formatId, format_name, sport_type_id, target_team_count, format_description }
     });
 
   } catch (error) {

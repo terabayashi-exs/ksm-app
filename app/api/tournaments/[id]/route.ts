@@ -27,7 +27,7 @@ export async function GET(
     }
 
     const result = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.format_id,
@@ -37,20 +37,18 @@ export async function GET(
         t.tournament_dates,
         t.match_duration_minutes,
         t.break_duration_minutes,
-        t.win_points,
-        t.draw_points,
-        t.loss_points,
-        t.walkover_winner_goals,
-        t.walkover_loser_goals,
         t.status,
         t.visibility,
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.sport_type_id,
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        f.format_name,
+        f.preliminary_format_type,
+        f.final_format_type
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -75,20 +73,18 @@ export async function GET(
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      win_points: Number(row.win_points),
-      draw_points: Number(row.draw_points),
-      loss_points: Number(row.loss_points),
-      walkover_winner_goals: Number(row.walkover_winner_goals),
-      walkover_loser_goals: Number(row.walkover_loser_goals),
       status: row.status as 'planning' | 'ongoing' | 'completed',
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
+      sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : undefined,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
-      format_name: row.format_name as string
+      format_name: row.format_name as string,
+      preliminary_format_type: row.preliminary_format_type as string | undefined,
+      final_format_type: row.final_format_type as string | undefined
     };
 
     return NextResponse.json({
@@ -136,14 +132,31 @@ export async function PUT(
 
     // リクエストボディの取得と検証
     const body = await request.json();
+    console.log('[TOURNAMENT_EDIT] 受信データ:', {
+      tournamentId,
+      bodyKeys: Object.keys(body),
+      tournament_name: body.tournament_name,
+      format_id: body.format_id,
+      venue_id: body.venue_id,
+      is_public: body.is_public,
+      tournament_dates: body.tournament_dates
+    });
+    
     const validationResult = tournamentCreateSchema.safeParse(body);
     
     if (!validationResult.success) {
+      console.error('[TOURNAMENT_EDIT] バリデーションエラー:', {
+        tournamentId,
+        errors: validationResult.error.issues,
+        receivedData: body
+      });
+      
       return NextResponse.json(
         { 
           success: false, 
           error: '入力データが不正です',
-          details: validationResult.error.issues
+          details: validationResult.error.issues,
+          message: `バリデーションエラー: ${validationResult.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ')}`
         },
         { status: 400 }
       );
@@ -181,11 +194,6 @@ export async function PUT(
         tournament_dates = ?,
         match_duration_minutes = ?,
         break_duration_minutes = ?,
-        win_points = ?,
-        draw_points = ?,
-        loss_points = ?,
-        walkover_winner_goals = ?,
-        walkover_loser_goals = ?,
         visibility = ?,
         public_start_date = ?,
         recruitment_start_date = ?,
@@ -200,11 +208,6 @@ export async function PUT(
       tournamentDatesJson,
       data.match_duration_minutes,
       data.break_duration_minutes,
-      data.win_points,
-      data.draw_points,
-      data.loss_points,
-      data.walkover_winner_goals,
-      data.walkover_loser_goals,
       data.is_public ? 'open' : 'preparing',
       data.public_start_date,
       data.recruitment_start_date,
@@ -229,15 +232,10 @@ export async function PUT(
         await applyCustomSchedule(tournamentId, typedCustomMatches);
         // Custom schedule applied successfully
       } else {
-        // カスタムスケジュールがない場合は従来通りスケジュール再計算
-        await updateTournamentSchedule(tournamentId, data.format_id, data.tournament_dates, {
-          courtCount: data.court_count,
-          matchDurationMinutes: data.match_duration_minutes,
-          breakDurationMinutes: data.break_duration_minutes,
-          startTime: '09:00',
-          tournamentDates: data.tournament_dates
-        });
-        // Schedule update completed
+        // カスタムスケジュールがない場合でも既存の試合時間を保持する
+        console.log('[TOURNAMENT_EDIT] カスタムスケジュールなし - 既存の試合時間を保持');
+        // スケジュール再計算をスキップして既存データを維持
+        // 必要に応じて、コート数や時間設定のみを更新
       }
     } catch (scheduleError) {
       console.error('スケジュール更新エラー（大会更新は継続）:', scheduleError);
@@ -256,11 +254,6 @@ export async function PUT(
         t.tournament_dates,
         t.match_duration_minutes,
         t.break_duration_minutes,
-        t.win_points,
-        t.draw_points,
-        t.loss_points,
-        t.walkover_winner_goals,
-        t.walkover_loser_goals,
         t.status,
         t.visibility,
         t.public_start_date,
@@ -287,11 +280,6 @@ export async function PUT(
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      win_points: Number(row.win_points),
-      draw_points: Number(row.draw_points),
-      loss_points: Number(row.loss_points),
-      walkover_winner_goals: Number(row.walkover_winner_goals),
-      walkover_loser_goals: Number(row.walkover_loser_goals),
       status: row.status as 'planning' | 'ongoing' | 'completed',
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
@@ -407,23 +395,55 @@ export async function DELETE(
         throw err;
       }
 
+      // t_match_status から削除（match_block_id外部キー制約のため）
+      try {
+        await db.execute(`
+          DELETE FROM t_match_status 
+          WHERE match_block_id IN (
+            SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+          )
+        `, [tournamentId]);
+        console.log('✓ t_match_status削除完了');
+      } catch (err) {
+        console.log('t_match_status削除エラー:', err);
+        // このテーブルは外部キー制約があるため重要
+        throw err;
+      }
+
       // Step 2: 大会直接依存データを削除（tournament_idへの依存）
       console.log('Step 2: 大会関連データ削除中...');
       
       // t_tournament_notifications から削除
-      await db.execute(`
-        DELETE FROM t_tournament_notifications WHERE tournament_id = ?
-      `, [tournamentId]);
+      try {
+        await db.execute(`
+          DELETE FROM t_tournament_notifications WHERE tournament_id = ?
+        `, [tournamentId]);
+        console.log('✓ t_tournament_notifications削除完了');
+      } catch (err) {
+        console.log('t_tournament_notifications削除エラー（テーブルが存在しない可能性）:', err);
+      }
+      
+      // t_tournament_rules から削除
+      try {
+        await db.execute(`
+          DELETE FROM t_tournament_rules WHERE tournament_id = ?
+        `, [tournamentId]);
+        console.log('✓ t_tournament_rules削除完了');
+      } catch (err) {
+        console.log('t_tournament_rules削除エラー（テーブルが存在しない可能性）:', err);
+      }
       
       // t_tournament_players から削除  
       await db.execute(`
         DELETE FROM t_tournament_players WHERE tournament_id = ?
       `, [tournamentId]);
+      console.log('✓ t_tournament_players削除完了');
       
       // t_tournament_teams から削除
       await db.execute(`
         DELETE FROM t_tournament_teams WHERE tournament_id = ?
       `, [tournamentId]);
+      console.log('✓ t_tournament_teams削除完了');
 
       // Step 3: マッチブロックを削除（依存が解消された後）
       console.log('Step 3: マッチブロック削除中...');
@@ -493,7 +513,8 @@ async function applyCustomSchedule(
   }
 }
 
-// 大会のスケジュールを更新する関数
+// 大会のスケジュールを更新する関数（現在は未使用）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function updateTournamentSchedule(
   tournamentId: number,
   formatId: number,

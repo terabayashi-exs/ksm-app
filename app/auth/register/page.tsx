@@ -148,15 +148,15 @@ function TeamRegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* ヘッダー */}
         <div className="text-center">
           <div className="bg-blue-600 text-white p-3 rounded-lg mx-auto w-fit mb-4">
             <UserPlus className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">チーム登録</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-foreground">チーム登録</h1>
+          <p className="mt-2 text-muted-foreground">
             PK選手権大会への参加チーム登録
           </p>
         </div>
@@ -180,9 +180,9 @@ function TeamRegisterForm() {
         )}
 
         {success && (
-          <Alert className="border-green-200 bg-green-50">
+          <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{success}</AlertDescription>
+            <AlertDescription className="text-green-800 dark:text-green-200">{success}</AlertDescription>
           </Alert>
         )}
 
@@ -206,13 +206,13 @@ function TeamRegisterForm() {
                   {...form.register('team_id')}
                   className={form.formState.errors.team_id ? 'border-red-500' : ''}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   ログイン時に使用します。英数字、ハイフン、アンダースコアが使用可能です
                 </p>
                 {form.formState.errors.team_id && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.team_id.message}
                     </p>
                   </div>
@@ -230,9 +230,9 @@ function TeamRegisterForm() {
                   className={form.formState.errors.team_name ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.team_name && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.team_name.message}
                     </p>
                   </div>
@@ -249,13 +249,13 @@ function TeamRegisterForm() {
                   {...form.register('team_omission')}
                   className={form.formState.errors.team_omission ? 'border-red-500' : ''}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   トーナメント表などで表示される短縮名です（任意）
                 </p>
                 {form.formState.errors.team_omission && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.team_omission.message}
                     </p>
                   </div>
@@ -273,9 +273,9 @@ function TeamRegisterForm() {
                   className={form.formState.errors.contact_person ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.contact_person && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.contact_person.message}
                     </p>
                   </div>
@@ -293,9 +293,9 @@ function TeamRegisterForm() {
                   className={form.formState.errors.contact_email ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.contact_email && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.contact_email.message}
                     </p>
                   </div>
@@ -313,9 +313,9 @@ function TeamRegisterForm() {
                   className={form.formState.errors.contact_phone ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.contact_phone && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.contact_phone.message}
                     </p>
                   </div>
@@ -333,9 +333,9 @@ function TeamRegisterForm() {
                   className={form.formState.errors.password ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.password && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.password.message}
                     </p>
                   </div>
@@ -353,9 +353,9 @@ function TeamRegisterForm() {
                   className={form.formState.errors.password_confirmation ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.password_confirmation && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600">
+                    <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.password_confirmation.message}
                     </p>
                   </div>
@@ -408,7 +408,7 @@ function TeamRegisterForm() {
                             className={form.formState.errors.players?.[index]?.player_name ? 'border-red-500' : ''}
                           />
                           {form.formState.errors.players?.[index]?.player_name && (
-                            <p className="text-xs text-red-600">
+                            <p className="text-xs text-red-600 dark:text-red-400">
                               {form.formState.errors.players[index]?.player_name?.message}
                             </p>
                           )}
@@ -435,7 +435,7 @@ function TeamRegisterForm() {
                             className={form.formState.errors.players?.[index]?.player_number ? 'border-red-500' : ''}
                           />
                           {form.formState.errors.players?.[index]?.player_number && (
-                            <p className="text-xs text-red-600">
+                            <p className="text-xs text-red-600 dark:text-red-400">
                               {form.formState.errors.players[index]?.player_number?.message}
                             </p>
                           )}
@@ -446,13 +446,13 @@ function TeamRegisterForm() {
                 </div>
 
                 {form.formState.errors.players?.root && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-red-600 dark:text-red-400">
                     {form.formState.errors.players.root.message}
                   </p>
                 )}
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
                     📝 最低1人の選手登録が必要です。背番号は空白でも登録可能です。背番号を設定する場合は重複しないようにしてください。
                   </p>
                 </div>
@@ -482,7 +482,7 @@ function TeamRegisterForm() {
 
         {/* ログインリンク */}
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             既にアカウントをお持ちの方は{' '}
             <Link href="/auth/login" className="text-blue-600 hover:text-blue-500 font-medium">
               こちらからログイン

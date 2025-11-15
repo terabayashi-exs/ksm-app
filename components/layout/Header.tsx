@@ -3,6 +3,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -16,38 +17,27 @@ export default function Header() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-card shadow-sm border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* ロゴ・タイトル */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-2 rounded-lg shadow-md">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* トーナメント構造を表現 */}
-                  <path 
-                    d="M4 6h4v2H4V6zM4 16h4v2H4v-2zM16 6h4v2h-4V6zM16 16h4v2h-4v-2z" 
-                    fill="currentColor" 
-                    opacity="0.8"
-                  />
-                  {/* 中央の接続線 */}
-                  <path 
-                    d="M8 7h4v1H8V7zM8 17h4v-1H8v1zM12 8v8h1V8h-1z" 
-                    fill="currentColor"
-                  />
-                  {/* 勝者の表現（星） */}
-                  <path 
-                    d="M12 2l1.09 3.26L16 5l-2.91 1.74L14 10l-2-1.2L10 10l.91-3.26L8 5l2.91.26L12 2z" 
-                    fill="#FFD700" 
-                    opacity="0.9"
-                  />
-                </svg>
+              <div className="relative">
+                <Image
+                  src="/images/system_logo.png"
+                  alt="楽勝 GO"
+                  width={32}
+                  height={32}
+                  className="rounded-lg"
+                  style={{ objectFit: 'contain' }}
+                />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  Rakusyo GO
+                <h1 className="text-xl font-bold text-foreground">
+                  楽勝 GO
                 </h1>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Sports Tournament Management
                 </p>
               </div>
@@ -58,7 +48,7 @@ export default function Header() {
           {/* ユーザーメニュー */}
           <div className="flex items-center space-x-4">
             {status === "loading" ? (
-              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="w-8 h-8 bg-muted rounded-full animate-pulse"></div>
             ) : session?.user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -67,15 +57,15 @@ export default function Header() {
                     <span className="hidden sm:inline">
                       {session.user.name}
                     </span>
-                    <span className="text-xs text-gray-500 hidden sm:inline">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
                       ({session.user.role === "admin" ? "管理者" : "チーム"})
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b">
-                    <p className="font-medium">{session.user.name}</p>
-                    <p className="text-sm text-gray-500">{session.user.email}</p>
+                  <div className="px-3 py-2 border-b border-border">
+                    <p className="font-medium text-foreground">{session.user.name}</p>
+                    <p className="text-sm text-muted-foreground">{session.user.email}</p>
                   </div>
                   
                   {session.user.role === "admin" ? (

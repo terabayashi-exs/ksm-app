@@ -21,7 +21,19 @@ export async function GET(
     // 順位表を取得（team_rankingsから）
     const standings = await getTournamentStandings(tournamentId);
 
-    // 総試合数を正確に計算（確定済み試合数）
+    // 戦績表と同じロジックで統計情報を計算
+    // 参加チーム数を計算（全ブロックのチーム数合計）
+    const totalTeamsResult = await db.execute({
+      sql: `
+        SELECT COUNT(DISTINCT tt.team_id) as total_teams
+        FROM t_tournament_teams tt
+        WHERE tt.tournament_id = ?
+        AND tt.withdrawal_status = 'active'
+      `,
+      args: [tournamentId]
+    });
+
+    // 実施済み試合数を計算（確定済み試合数）
     const totalMatchesResult = await db.execute({
       sql: `
         SELECT COUNT(*) as total_matches
@@ -33,12 +45,14 @@ export async function GET(
       args: [tournamentId]
     });
 
+    const totalTeams = totalTeamsResult.rows[0]?.total_teams as number || 0;
     const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
 
     return NextResponse.json({
       success: true,
       data: standings,
-      totalMatches: totalMatches,
+      total_matches: totalMatches,
+      total_teams: totalTeams,
       message: '順位表を正常に取得しました'
     });
 

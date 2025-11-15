@@ -62,27 +62,27 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
             PK選手権大会システム
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             ログインしてシステムにアクセス
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
+            <div className="flex space-x-1 rounded-lg bg-muted p-1">
               <button
                 type="button"
                 onClick={() => setActiveTab("admin")}
                 className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
                   activeTab === "admin"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-900"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 管理者
@@ -92,8 +92,8 @@ function LoginForm() {
                 onClick={() => setActiveTab("team")}
                 className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
                   activeTab === "team"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-900"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 チーム代表者
@@ -156,7 +156,7 @@ function LoginForm() {
               )}
 
               {error && (
-                <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
+                <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -167,7 +167,7 @@ function LoginForm() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 チーム登録がお済みでない場合は{" "}
                 <Link
                   href={`/auth/register${callbackUrl !== '/' ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`}

@@ -1,6 +1,7 @@
 // app/api/tournaments/[id]/live-updates/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getTournamentSportCode, getSportScoreConfig } from '@/lib/sport-standings-calculator';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -27,6 +28,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         // Initial data send
         const sendInitialData = async () => {
           try {
+            // 多競技対応：大会の競技種別設定を取得
+            const sportCode = await getTournamentSportCode(tournamentId);
+            const sportConfig = getSportScoreConfig(sportCode);
+            
             const matches = await db.execute(`
               SELECT 
                 ml.match_id,
@@ -50,6 +55,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
             const data = {
               type: 'initial',
+              // 多競技対応：スポーツ設定を追加
+              sport_config: sportConfig,
               matches: matches.rows.map(row => ({
                 match_id: row.match_id,
                 match_code: row.match_code,

@@ -12,6 +12,7 @@ export interface ExtendedUser extends User {
   email: string;
   role: "admin" | "team";
   teamId?: string;
+  administratorId?: string;
 }
 
 const authConfig: NextAuthOptions = {
@@ -31,7 +32,7 @@ const authConfig: NextAuthOptions = {
         try {
           // 管理者テーブルから認証情報を取得
           const result = await db.execute(
-            "SELECT admin_login_id, password_hash, email FROM m_administrators WHERE admin_login_id = ?",
+            "SELECT administrator_id, admin_login_id, password_hash, email FROM m_administrators WHERE admin_login_id = ?",
             [credentials.loginId as string]
           );
 
@@ -53,7 +54,8 @@ const authConfig: NextAuthOptions = {
             id: admin.admin_login_id as string,
             email: admin.email as string,
             name: admin.admin_login_id as string,
-            role: "admin" as const
+            role: "admin" as const,
+            administratorId: admin.administrator_id as string
           };
         } catch (error) {
           console.error("Admin authentication error:", error);
@@ -115,6 +117,7 @@ const authConfig: NextAuthOptions = {
       if (user) {
         token.role = (user as ExtendedUser).role;
         token.teamId = (user as ExtendedUser).teamId;
+        token.administratorId = (user as ExtendedUser).administratorId;
       }
       return token;
     },
@@ -122,6 +125,7 @@ const authConfig: NextAuthOptions = {
       if (token) {
         (session.user as ExtendedUser).role = token.role as "admin" | "team";
         (session.user as ExtendedUser).teamId = token.teamId as string | undefined;
+        (session.user as ExtendedUser).administratorId = token.administratorId as string | undefined;
         (session.user as ExtendedUser).id = token.sub as string;
       }
       return session;

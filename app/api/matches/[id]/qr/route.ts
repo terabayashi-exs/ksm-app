@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
+import { getSportScoreConfig } from '@/lib/sport-standings-calculator';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // 試合情報を取得（実際のチーム名も含む）
+    // 試合情報を取得（実際のチーム名と競技種別も含む）
     const result = await db.execute(`
       SELECT 
         ml.match_id,
@@ -35,9 +36,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         t1.team_name as team1_real_name,
         t2.team_name as team2_real_name,
         mt1.team_omission as team1_omission,
-        mt2.team_omission as team2_omission
+        mt2.team_omission as team2_omission,
+        -- 多競技対応：競技種別を取得
+        st.sport_code,
+        st.sport_name
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
+      LEFT JOIN m_sport_types st ON tour.sport_type_id = st.sport_type_id
       LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
       LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
@@ -53,6 +59,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const match = result.rows[0];
+
+    // 多競技対応：競技種別設定を取得
+    const sportCode = String(match.sport_code || 'pk_championship');
+    const sportConfig = getSportScoreConfig(sportCode);
 
     // JWTトークン生成（試合開始30分前から終了30分後まで有効）
     const now = new Date();
@@ -122,6 +132,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         token: token,
         valid_from: validFrom.toISOString(),
         valid_until: validUntil.toISOString(),
+        // 多競技対応：スポーツ設定を追加
+        sport_config: sportConfig,
         qr_data: {
           url: qrUrl,
           size: 200,
@@ -229,8 +241,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           period_count: match.period_count,
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
           match_status: match.match_status || 'scheduled',
-          team1_scores: match.is_confirmed ? [Number(match.final_team1_scores) || 0] : [Number(match.team1_scores) || 0],
-          team2_scores: match.is_confirmed ? [Number(match.final_team2_scores) || 0] : [Number(match.team2_scores) || 0],
+          team1_scores: match.is_confirmed 
+            ? (match.final_team1_scores ? String(match.final_team1_scores).split(',').map((score: string) => Number(score) || 0) : [0])
+            : (match.team1_scores ? String(match.team1_scores).split(',').map((score: string) => Number(score) || 0) : [0]),
+          team2_scores: match.is_confirmed 
+            ? (match.final_team2_scores ? String(match.final_team2_scores).split(',').map((score: string) => Number(score) || 0) : [0])
+            : (match.team2_scores ? String(match.team2_scores).split(',').map((score: string) => Number(score) || 0) : [0]),
           winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
           is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,
@@ -324,8 +340,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           period_count: match.period_count,
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
           match_status: match.match_status || 'scheduled',
-          team1_scores: match.is_confirmed ? [Number(match.final_team1_scores) || 0] : [Number(match.team1_scores) || 0],
-          team2_scores: match.is_confirmed ? [Number(match.final_team2_scores) || 0] : [Number(match.team2_scores) || 0],
+          team1_scores: match.is_confirmed 
+            ? (match.final_team1_scores ? String(match.final_team1_scores).split(',').map((score: string) => Number(score) || 0) : [0])
+            : (match.team1_scores ? String(match.team1_scores).split(',').map((score: string) => Number(score) || 0) : [0]),
+          team2_scores: match.is_confirmed 
+            ? (match.final_team2_scores ? String(match.final_team2_scores).split(',').map((score: string) => Number(score) || 0) : [0])
+            : (match.team2_scores ? String(match.team2_scores).split(',').map((score: string) => Number(score) || 0) : [0]),
           winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
           is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,

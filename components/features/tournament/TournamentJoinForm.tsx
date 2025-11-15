@@ -253,7 +253,7 @@ export default function TournamentJoinForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             この大会での参加チーム名と略称を入力してください。既存のチームと重複しない名前を指定する必要があります。
             {isNewTeamMode && <span className="block mt-2 text-green-700 font-medium">複数チーム参加モード: 既存参加チームとは異なる名前・略称を入力してください。</span>}
           </p>
@@ -303,7 +303,7 @@ export default function TournamentJoinForm({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               チームに登録済みの選手から参加者を選択してください
             </p>
             <div className="space-y-3">
@@ -320,7 +320,7 @@ export default function TournamentJoinForm({
                     <div className="flex-1">
                       <p className="font-medium">{player.player_name}</p>
                       {player.jersey_number && (
-                        <p className="text-sm text-gray-500">背番号: {player.jersey_number}</p>
+                        <p className="text-sm text-muted-foreground">背番号: {player.jersey_number}</p>
                       )}
                     </div>
                     {isSelected && fieldIndex !== -1 && (
@@ -376,7 +376,7 @@ export default function TournamentJoinForm({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             新しい選手を手動で追加できます
           </p>
           
@@ -447,7 +447,7 @@ export default function TournamentJoinForm({
               })}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">
+            <p className="text-muted-foreground text-center py-4">
               新規選手を追加するには上の「選手を追加」ボタンをクリックしてください
             </p>
           )}

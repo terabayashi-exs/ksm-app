@@ -14,9 +14,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const formatId = parseInt(resolvedParams.id);
     
-    // フォーマット情報取得
+    // フォーマット情報取得（競技種別も含む）
     const formatResult = await db.execute(`
-      SELECT * FROM m_tournament_formats WHERE format_id = ?
+      SELECT 
+        tf.*,
+        st.sport_name,
+        st.sport_code
+      FROM m_tournament_formats tf
+      LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
+      WHERE tf.format_id = ?
     `, [formatId]);
 
     if (formatResult.rows.length === 0) {
@@ -54,10 +60,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const formatId = parseInt(resolvedParams.id);
     const body = await request.json();
-    const { format_name, target_team_count, format_description, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, templates } = body;
 
     // バリデーション
-    if (!format_name || !target_team_count || !Array.isArray(templates)) {
+    if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
       return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
     }
 
@@ -67,10 +73,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // フォーマット更新
     await db.execute(`
-      UPDATE m_tournament_formats 
-      SET format_name = ?, target_team_count = ?, format_description = ?, updated_at = datetime('now', '+9 hours')
+      UPDATE m_tournament_formats
+      SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, preliminary_format_type = ?, final_format_type = ?, updated_at = datetime('now', '+9 hours')
       WHERE format_id = ?
-    `, [format_name, target_team_count, format_description || "", formatId]);
+    `, [format_name, sport_type_id, target_team_count, format_description || "", preliminary_format_type || null, final_format_type || null, formatId]);
 
     // 既存テンプレートを削除
     await db.execute(`
@@ -83,9 +89,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         INSERT INTO m_match_templates (
           format_id, match_number, match_code, match_type, phase, round_name, 
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
-          day_number, execution_priority, court_number, suggested_start_time, created_at, updated_at
+          day_number, execution_priority, court_number, suggested_start_time, 
+          loser_position_start, loser_position_end, winner_position, position_note,
+          created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         formatId,
         template.match_number || 1,
@@ -101,7 +109,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         template.day_number || 1,
         template.execution_priority || 1,
         template.court_number || null,
-        template.suggested_start_time || null
+        template.suggested_start_time || null,
+        // 新しい順位設定フィールド
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.winner_position || null,
+        template.position_note || null
       ]);
     }
 

@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { tournamentCreateSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
+import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,9 @@ export async function POST(request: NextRequest) {
       }, {} as Record<string, string>)
     );
 
+    // 現在のアーカイブUIバージョンを取得
+    const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
+
     // 大会作成
     const result = await db.execute(`
       INSERT INTO t_tournaments (
@@ -53,17 +57,16 @@ export async function POST(request: NextRequest) {
         tournament_dates,
         match_duration_minutes,
         break_duration_minutes,
-        win_points,
-        draw_points,
-        loss_points,
-        walkover_winner_goals,
-        walkover_loser_goals,
         status,
         visibility,
         public_start_date,
         recruitment_start_date,
-        recruitment_end_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?)
+        recruitment_end_date,
+        created_by,
+        archive_ui_version,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       data.tournament_name,
       data.format_id,
@@ -73,15 +76,12 @@ export async function POST(request: NextRequest) {
       tournamentDatesJson,
       data.match_duration_minutes,
       data.break_duration_minutes,
-      data.win_points,
-      data.draw_points,
-      data.loss_points,
-      data.walkover_winner_goals,
-      data.walkover_loser_goals,
       data.is_public ? 'open' : 'preparing',
       data.public_start_date,
       data.recruitment_start_date,
-      data.recruitment_end_date
+      data.recruitment_end_date,
+      session.user.id,
+      currentArchiveVersion
     ]);
 
     const tournamentId = result.lastInsertRowid;
@@ -121,16 +121,12 @@ export async function POST(request: NextRequest) {
         t.tournament_dates,
         t.match_duration_minutes,
         t.break_duration_minutes,
-        t.win_points,
-        t.draw_points,
-        t.loss_points,
-        t.walkover_winner_goals,
-        t.walkover_loser_goals,
         t.status,
         t.visibility,
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.archive_ui_version,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -152,11 +148,6 @@ export async function POST(request: NextRequest) {
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      win_points: Number(row.win_points),
-      draw_points: Number(row.draw_points),
-      loss_points: Number(row.loss_points),
-      walkover_winner_goals: Number(row.walkover_winner_goals),
-      walkover_loser_goals: Number(row.walkover_loser_goals),
       status: row.status as 'planning' | 'ongoing' | 'completed',
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
@@ -205,16 +196,13 @@ export async function GET(request: NextRequest) {
         t.tournament_dates,
         t.match_duration_minutes,
         t.break_duration_minutes,
-        t.win_points,
-        t.draw_points,
-        t.loss_points,
-        t.walkover_winner_goals,
-        t.walkover_loser_goals,
         t.status,
         t.visibility,
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.archive_ui_version,
+        t.group_id,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -259,12 +247,8 @@ export async function GET(request: NextRequest) {
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      win_points: Number(row.win_points),
-      draw_points: Number(row.draw_points),
-      loss_points: Number(row.loss_points),
-      walkover_winner_goals: Number(row.walkover_winner_goals),
-      walkover_loser_goals: Number(row.walkover_loser_goals),
       status: row.status as 'planning' | 'ongoing' | 'completed',
+      group_id: row.group_id ? Number(row.group_id) : null,
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
@@ -308,7 +292,13 @@ async function generateMatchesFromTemplate(
   try {
     // フォーマットIDに対応するテンプレートを取得
     const templatesResult = await db.execute(`
-      SELECT * FROM m_match_templates 
+      SELECT 
+        template_id, format_id, match_number, match_code, match_type, 
+        phase, round_name, block_name, team1_source, team2_source, 
+        team1_display_name, team2_display_name, day_number, 
+        execution_priority, court_number, suggested_start_time, 
+        period_count, created_at, updated_at
+      FROM m_match_templates 
       WHERE format_id = ? 
       ORDER BY execution_priority ASC
     `, [formatId]);
@@ -328,6 +318,9 @@ async function generateMatchesFromTemplate(
       team2_display_name: String(row.team2_display_name),
       day_number: Number(row.day_number),
       execution_priority: Number(row.execution_priority),
+      court_number: row.court_number ? Number(row.court_number) : undefined,
+      suggested_start_time: row.suggested_start_time as string | undefined,
+      period_count: row.period_count ? Number(row.period_count) : undefined,
       created_at: String(row.created_at)
     }));
     if (templates.length === 0) {
@@ -379,9 +372,19 @@ async function generateMatchesFromTemplate(
       blockIdMapping.set(`preliminary_${blockName}`, blockId);
     }
 
-    // 決勝トーナメントブロックを作成（決勝の試合がある場合）
-    const hasFinal = templates.some(t => t.phase === 'final');
-    if (hasFinal) {
+    // 決勝ブロックを抽出・作成（round_nameまたはblock_nameでグループ化）
+    const finalBlocks = new Map<string, string>(); // key: ユニークキー, value: 表示名
+    templates.forEach(template => {
+      if (template.phase === 'final') {
+        // round_nameを優先、なければblock_name、どちらもなければデフォルト
+        const displayName = template.round_name || template.block_name || '決勝トーナメント';
+        const blockKey = template.block_name || displayName;
+        finalBlocks.set(blockKey, displayName);
+      }
+    });
+
+    // 決勝ブロック毎にt_match_blocksに登録
+    for (const [blockKey, displayName] of Array.from(finalBlocks.entries()).sort()) {
       const finalBlockResult = await db.execute(`
         INSERT INTO t_match_blocks (
           tournament_id,
@@ -394,14 +397,14 @@ async function generateMatchesFromTemplate(
       `, [
         tournamentId,
         'final',
-        '決勝トーナメント',
-        '',
+        displayName,
+        blockKey,
         '通常',
         blockOrder++
       ]);
 
       const finalBlockId = Number(finalBlockResult.lastInsertRowid);
-      blockIdMapping.set('final_', finalBlockId);
+      blockIdMapping.set(`final_${blockKey}`, finalBlockId);
     }
 
     // スケジュール情報の準備
@@ -460,13 +463,15 @@ async function generateMatchesFromTemplate(
     for (const template of templates) {
       // 新しいブロック構造に合わせてブロックIDを取得
       let blockId: number | undefined;
-      
+
       if (template.phase === 'preliminary') {
         blockId = blockIdMapping.get(`preliminary_${template.block_name}`);
       } else if (template.phase === 'final') {
-        blockId = blockIdMapping.get('final_');
+        // block_nameを使ってブロックIDを取得（round_nameまたはblock_nameでグループ化されたブロック）
+        const blockKey = template.block_name || (template.round_name || '決勝トーナメント');
+        blockId = blockIdMapping.get(`final_${blockKey}`);
       }
-      
+
       if (!blockId) {
         console.error(`ブロックID が見つかりません: ${template.phase}_${template.block_name}`);
         continue;
@@ -483,6 +488,11 @@ async function generateMatchesFromTemplate(
       const scheduleInfo = scheduleMap.get(template.match_number);
       const courtNumber = scheduleInfo?.courtNumber || null;
       const startTime = scheduleInfo?.startTime || null;
+
+      // テンプレートのperiod_count設定を取得（未設定の場合は1）
+      const periodCount = template.period_count && Number(template.period_count) > 0 
+        ? Number(template.period_count) 
+        : 1;
 
       await db.execute(`
         INSERT INTO t_matches_live (
@@ -501,7 +511,7 @@ async function generateMatchesFromTemplate(
           period_count,
           winner_team_id,
           remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         blockId,
         tournamentDate,
@@ -515,6 +525,7 @@ async function generateMatchesFromTemplate(
         startTime,   // スケジュール計算結果から設定
         null, // team1_scores は初期状態でnull
         null, // team2_scores は初期状態でnull
+        periodCount, // テンプレートから取得したperiod_count
         null, // winner_team_id は結果確定時に設定
         null  // remarks
       ]);

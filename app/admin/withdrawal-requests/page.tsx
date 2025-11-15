@@ -23,11 +23,11 @@ export default async function WithdrawalRequestsPage() {
         {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <AlertTriangle className="h-8 w-8 text-amber-500" />
               辞退申請管理
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-muted-foreground mt-2">
               チームからの大会辞退申請を確認・承認・却下することができます
             </p>
           </div>
@@ -44,7 +44,7 @@ export default async function WithdrawalRequestsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">辞退申請を読み込み中...</div>
+                <div className="text-muted-foreground">辞退申請を読み込み中...</div>
               </div>
             </CardContent>
           </Card>

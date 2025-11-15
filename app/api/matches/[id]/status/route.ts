@@ -84,8 +84,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         match_status: match.match_status || 'scheduled',
         actual_start_time: match.actual_start_time,
         actual_end_time: match.actual_end_time,
-        team1_scores: [Number(match.team1_scores) || 0],
-        team2_scores: [Number(match.team2_scores) || 0],
+        team1_scores: match.team1_scores ? String(match.team1_scores).split(',').map((score: string) => Number(score) || 0) : [0],
+        team2_scores: match.team2_scores ? String(match.team2_scores).split(',').map((score: string) => Number(score) || 0) : [0],
         winner_team_id: match.winner_team_id,
         remarks: match.remarks,
         updated_by: match.updated_by,
@@ -177,17 +177,19 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       case 'update_scores':
         // スコア・結果更新
         if (team1_scores && team2_scores) {
-          // 配列の場合は合計を計算、数値の場合はそのまま使用（整数に変換）
-          const team1Total = Array.isArray(team1_scores) 
-            ? Math.floor(team1_scores.reduce((sum, score) => sum + score, 0)) 
-            : Math.floor(team1_scores || 0);
-          const team2Total = Array.isArray(team2_scores) 
-            ? Math.floor(team2_scores.reduce((sum, score) => sum + score, 0)) 
-            : Math.floor(team2_scores || 0);
+          // ピリオド別スコアをカンマ区切りで保存
+          const team1ScoresStr = Array.isArray(team1_scores) 
+            ? team1_scores.map(score => Math.floor(score || 0)).join(',')
+            : String(Math.floor(team1_scores || 0));
+          const team2ScoresStr = Array.isArray(team2_scores) 
+            ? team2_scores.map(score => Math.floor(score || 0)).join(',')
+            : String(Math.floor(team2_scores || 0));
 
-          console.log('Updating scores:', {
-            team1Total,
-            team2Total,
+          console.log('Updating scores (period-by-period):', {
+            team1_scores: team1_scores,
+            team2_scores: team2_scores,
+            team1ScoresStr,
+            team2ScoresStr,
             winner_team_id,
             remarks,
             matchId
@@ -197,7 +199,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             UPDATE t_matches_live 
             SET team1_scores = ?, team2_scores = ?, winner_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
-          `, [team1Total, team2Total, winner_team_id, remarks, matchId]);
+          `, [team1ScoresStr, team2ScoresStr, winner_team_id, remarks, matchId]);
         }
         break;
 
@@ -212,6 +214,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         await db.execute(`
           UPDATE t_matches_live 
           SET match_status = 'cancelled'
+          WHERE match_id = ?
+        `, [matchId]);
+        break;
+
+      case 'reset':
+        // 試合開始前の状態に戻す（日本時間で記録）
+        await db.execute(`
+          UPDATE t_match_status 
+          SET match_status = 'scheduled', actual_start_time = NULL, actual_end_time = NULL, current_period = 1, updated_by = ?, updated_at = datetime('now', '+9 hours')
+          WHERE match_id = ?
+        `, [updated_by, matchId]);
+
+        await db.execute(`
+          UPDATE t_matches_live 
+          SET match_status = 'scheduled'
           WHERE match_id = ?
         `, [matchId]);
         break;
@@ -249,8 +266,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         current_period: updatedMatch.current_period || 1,
         actual_start_time: updatedMatch.actual_start_time,
         actual_end_time: updatedMatch.actual_end_time,
-        team1_scores: [Number(updatedMatch.team1_scores) || 0],
-        team2_scores: [Number(updatedMatch.team2_scores) || 0],
+        team1_scores: updatedMatch.team1_scores ? String(updatedMatch.team1_scores).split(',').map((score: string) => Number(score) || 0) : [0],
+        team2_scores: updatedMatch.team2_scores ? String(updatedMatch.team2_scores).split(',').map((score: string) => Number(score) || 0) : [0],
         updated_by: updatedMatch.updated_by,
         updated_at: updatedMatch.status_updated_at
       }

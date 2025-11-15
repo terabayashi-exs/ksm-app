@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,12 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Clock, Users, MapPin, Settings, Sparkles, Target, Plus, Trash2 } from "lucide-react";
+import { Calendar, Clock, Users, MapPin, Settings, Sparkles, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import SchedulePreview from "@/components/features/tournament/SchedulePreview";
 import React from "react";
 
 // 型定義
+interface TournamentGroup {
+  group_id: number;
+  group_name: string;
+  organizer: string | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
+}
+
 interface Venue {
   venue_id: number;
   venue_name: string;
@@ -28,6 +36,20 @@ interface Format {
   format_name: string;
   target_team_count: number;
   format_description?: string;
+  sport_type_id?: number;
+}
+
+interface SportType {
+  sport_type_id: number;
+  sport_name: string;
+  sport_code: string;
+  max_period_count: number;
+  regular_period_count: number;
+  score_type: string;
+  default_match_duration: number;
+  score_unit: string;
+  period_definitions: string;
+  result_format: string;
 }
 
 interface RecommendedFormat extends Format {
@@ -37,6 +59,7 @@ interface RecommendedFormat extends Format {
 
 interface FormatRecommendation {
   teamCount: number;
+  sportTypeId: number;
   recommendedFormats: RecommendedFormat[];
   allFormats: (Format & { isRecommended: boolean })[];
 }
@@ -52,7 +75,9 @@ interface CustomScheduleMatch {
 
 // フォームスキーマ定義
 const tournamentCreateSchema = z.object({
-  tournament_name: z.string().min(1, "大会名は必須です").max(100, "大会名は100文字以内で入力してください"),
+  group_id: z.number().min(1, "所属する大会を選択してください"),
+  tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
+  sport_type_id: z.number().min(1, "競技種別を選択してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
   venue_id: z.number().min(1, "会場を選択してください"),
   team_count: z.number().min(2, "チーム数は2以上で入力してください").max(128, "チーム数は128以下で入力してください"),
@@ -64,11 +89,6 @@ const tournamentCreateSchema = z.object({
   match_duration_minutes: z.number().min(5, "試合時間は5分以上で入力してください").max(60, "試合時間は60分以下で入力してください"),
   break_duration_minutes: z.number().min(0, "休憩時間は0分以上で入力してください").max(30, "休憩時間は30分以下で入力してください"),
   start_time: z.string().min(1, "開始時刻は必須です"),
-  win_points: z.number().min(0).max(10),
-  draw_points: z.number().min(0).max(10),
-  loss_points: z.number().min(0).max(10),
-  walkover_winner_goals: z.number().min(0).max(20),
-  walkover_loser_goals: z.number().min(0).max(20),
   is_public: z.boolean(),
   public_start_date: z.string().min(1, "公開開始日は必須です"),
   recruitment_start_date: z.string().min(1, "募集開始日は必須です"),
@@ -80,13 +100,19 @@ type TournamentCreateForm = z.infer<typeof tournamentCreateSchema>;
 
 export default function TournamentCreateNewForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [step, setStep] = useState<'team-count' | 'format-selection' | 'details'>('team-count');
+  const [sportTypes, setSportTypes] = useState<SportType[]>([]);
+  const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
+  const [loadingTournamentGroups, setLoadingTournamentGroups] = useState(true);
+  const [step, setStep] = useState<'sport-selection' | 'team-count' | 'format-selection' | 'details'>('sport-selection');
+  const [selectedSportType, setSelectedSportType] = useState<SportType | null>(null);
   const [teamCount, setTeamCount] = useState<number>(2);
   const [recommendation, setRecommendation] = useState<FormatRecommendation | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(true);
+  const [loadingSportTypes, setLoadingSportTypes] = useState(true);
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
   const [customSchedule, setCustomSchedule] = useState<CustomScheduleMatch[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -101,6 +127,7 @@ export default function TournamentCreateNewForm() {
   } = useForm<TournamentCreateForm>({
     resolver: zodResolver(tournamentCreateSchema),
     defaultValues: {
+      sport_type_id: 1,
       team_count: 8,
       court_count: 4,
       tournament_dates: [{
@@ -110,11 +137,6 @@ export default function TournamentCreateNewForm() {
       match_duration_minutes: 15,
       break_duration_minutes: 5,
       start_time: "13:00",
-      win_points: 3,
-      draw_points: 1,
-      loss_points: 0,
-      walkover_winner_goals: 3,
-      walkover_loser_goals: 0,
       is_public: true,
       public_start_date: new Date(Date.now()).toISOString().split('T')[0],
       recruitment_start_date: new Date(Date.now()).toISOString().split('T')[0],
@@ -141,7 +163,7 @@ export default function TournamentCreateNewForm() {
     setCustomSchedule(extendedCustomMatches);
   }, []);
 
-  // 会場データの取得
+  // 会場データ、競技種別データ、大会データの取得
   useEffect(() => {
     const loadVenues = async () => {
       try {
@@ -149,6 +171,15 @@ export default function TournamentCreateNewForm() {
         const data = await res.json();
         if (data.success) {
           setVenues(data.data || data.venues);
+
+          // URLパラメータからvenue_idを取得して設定
+          const venueIdParam = searchParams.get('venue_id');
+          if (venueIdParam) {
+            const venueId = parseInt(venueIdParam);
+            if (!isNaN(venueId)) {
+              setValue('venue_id', venueId);
+            }
+          }
         }
       } catch (error) {
         console.error("会場データ取得エラー:", error);
@@ -156,18 +187,68 @@ export default function TournamentCreateNewForm() {
         setLoadingVenues(false);
       }
     };
+
+    const loadSportTypes = async () => {
+      try {
+        const res = await fetch("/api/sport-types");
+        const data = await res.json();
+        if (data.success) {
+          setSportTypes(data.data || []);
+        }
+      } catch (error) {
+        console.error("競技種別データ取得エラー:", error);
+      } finally {
+        setLoadingSportTypes(false);
+      }
+    };
+
+    const loadTournamentGroups = async () => {
+      try {
+        const res = await fetch("/api/tournament-groups?include_inactive=true");
+        const data = await res.json();
+        if (data.success) {
+          setTournamentGroups(data.data || []);
+
+          // URLパラメータからgroup_idを取得して設定
+          const groupIdParam = searchParams.get('group_id');
+          if (groupIdParam) {
+            const groupId = parseInt(groupIdParam);
+            if (!isNaN(groupId)) {
+              setValue('group_id', groupId);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("大会データ取得エラー:", error);
+      } finally {
+        setLoadingTournamentGroups(false);
+      }
+    };
+
     loadVenues();
-  }, []);
+    loadSportTypes();
+    loadTournamentGroups();
+  }, [searchParams, setValue]);
 
   // フォーマット推奨の取得
-  const fetchRecommendation = async (count: number) => {
+  const fetchRecommendation = async (count: number, sportTypeId?: number) => {
     setLoadingRecommendation(true);
     try {
-      const response = await fetch(`/api/tournaments/formats/recommend?teamCount=${count}`);
+      const currentSportTypeId = sportTypeId || selectedSportType?.sport_type_id || watch('sport_type_id');
+      
+      if (!currentSportTypeId) {
+        console.warn('競技種別が選択されていません');
+        setLoadingRecommendation(false);
+        return;
+      }
+      
+      const response = await fetch(`/api/tournaments/formats/recommend?teamCount=${count}&sportTypeId=${currentSportTypeId}`);
       const result = await response.json();
       if (result.success) {
         setRecommendation(result.data);
         setValue('team_count', count);
+      } else {
+        console.error('フォーマット推奨エラー:', result.error);
       }
     } catch (error) {
       console.error('推奨取得エラー:', error);
@@ -176,10 +257,30 @@ export default function TournamentCreateNewForm() {
     }
   };
 
+  // 競技種別選択
+  const handleSportTypeSelect = (sportType: SportType) => {
+    setSelectedSportType(sportType);
+    setValue("sport_type_id", sportType.sport_type_id);
+    
+    // 競技種別に応じてデフォルト値を設定
+    setValue("match_duration_minutes", sportType.default_match_duration);
+    
+    // 競技がサッカーの場合は試合時間を90分、その他は既存のデフォルト
+    if (sportType.sport_code === 'soccer') {
+      setValue("match_duration_minutes", 90);
+      setValue("break_duration_minutes", 10);
+    } else if (sportType.sport_code === 'pk') {
+      setValue("match_duration_minutes", 15);
+      setValue("break_duration_minutes", 5);
+    }
+    
+    setStep('team-count');
+  };
+
   // チーム数確定
   const handleTeamCountSubmit = () => {
     if (teamCount >= 2) {
-      fetchRecommendation(teamCount);
+      fetchRecommendation(teamCount, selectedSportType?.sport_type_id);
       setStep('format-selection');
     }
   };
@@ -205,7 +306,7 @@ export default function TournamentCreateNewForm() {
   // フォーム送信処理
   const onSubmit = async (data: TournamentCreateForm) => {
     setIsSubmitting(true);
-    
+
     try {
       // tournament_datesをJSON形式に変換
       const tournamentDatesJson: Record<string, string> = {};
@@ -220,6 +321,7 @@ export default function TournamentCreateNewForm() {
         },
         body: JSON.stringify({
           ...data,
+          group_id: data.group_id,
           tournament_dates: JSON.stringify(tournamentDatesJson),
           event_start_date: data.tournament_dates[0]?.date,
           custom_schedule: customSchedule,
@@ -229,31 +331,144 @@ export default function TournamentCreateNewForm() {
       const result = await response.json();
 
       if (result.success) {
-        router.push("/admin");
+        // 作成後は大会詳細ページにリダイレクト
+        router.push(`/admin/tournament-groups/${data.group_id}`);
       } else {
         alert(`エラー: ${result.error}`);
       }
     } catch (error) {
-      alert("大会作成中にエラーが発生しました");
+      alert("部門作成中にエラーが発生しました");
       console.error(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // 競技種別選択ステップ
+  if (step === 'sport-selection') {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">競技種別を選択</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            大会で実施する競技を選択してください
+          </p>
+        </div>
+
+        {loadingSportTypes ? (
+          <div className="flex justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-sm text-gray-600">競技種別を読み込み中...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sportTypes.map((sportType) => {
+              const periods = JSON.parse(sportType.period_definitions);
+              const scoreIcon = sportType.score_type === 'time' ? '⏱️' : 
+                               sportType.score_type === 'rank' ? '🏅' : '⚽';
+              
+              return (
+                <Card 
+                  key={sportType.sport_type_id} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-300"
+                  onClick={() => handleSportTypeSelect(sportType)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-3xl">{scoreIcon}</div>
+                        <div>
+                          <h3 className="text-lg font-semibold">{sportType.sport_name}</h3>
+                          <p className="text-sm text-gray-500">コード: {sportType.sport_code}</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {sportType.regular_period_count}ピリオド
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">標準試合時間</span>
+                        <span className="font-medium">{sportType.default_match_duration}分</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">スコア単位</span>
+                        <span className="font-medium">{sportType.score_unit}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">ピリオド構成:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {periods.slice(0, 3).map((period: { period_id: number; period_name: string; type: string }) => (
+                          <Badge 
+                            key={period.period_id}
+                            variant={period.type === 'extra' ? 'secondary' : period.type === 'penalty' ? 'destructive' : 'default'}
+                            className="text-xs"
+                          >
+                            {period.period_name}
+                          </Badge>
+                        ))}
+                        {periods.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{periods.length - 3}個
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button className="w-full mt-4" size="sm">
+                      この競技で大会を作成
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {sportTypes.length === 0 && !loadingSportTypes && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">競技種別が見つかりません</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // チーム数入力ステップ
   if (step === 'team-count') {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-lg">
-            <Users className="h-5 w-5 text-blue-600" />
-            <span>参加チーム数を入力</span>
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            参加予定のチーム数を入力してください。おすすめの大会フォーマットを提案します。
-          </p>
-        </CardHeader>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">参加チーム数を入力</h2>
+            <p className="text-sm text-gray-600">
+              選択した競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span>
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setStep('sport-selection')}
+          >
+            競技種別を変更
+          </Button>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Users className="h-5 w-5 text-blue-600" />
+              <span>参加チーム数を入力</span>
+            </CardTitle>
+            <p className="text-sm text-gray-600">
+              参加予定のチーム数を入力してください。おすすめの大会フォーマットを提案します。
+            </p>
+          </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="team_count_input">参加チーム数</Label>
@@ -282,6 +497,7 @@ export default function TournamentCreateNewForm() {
           </Button>
         </CardContent>
       </Card>
+      </div>
     );
   }
 
@@ -292,15 +508,32 @@ export default function TournamentCreateNewForm() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">{teamCount}チーム向けのおすすめフォーマット</h2>
-            <p className="text-sm text-gray-600">参加チーム数に最適な大会フォーマットを選択してください</p>
+            <p className="text-sm text-gray-600">
+              競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span> | 
+              参加チーム数に最適な大会フォーマットを選択してください
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setStep('team-count')}
-          >
-            チーム数を変更
-          </Button>
+          <div className="space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStep('sport-selection');
+                setRecommendation(null); // 推奨をクリア
+              }}
+            >
+              競技を変更
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setStep('team-count')}
+            >
+              チーム数を変更
+            </Button>
+          </div>
         </div>
 
         {loadingRecommendation ? (
@@ -374,15 +607,29 @@ export default function TournamentCreateNewForm() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold">大会詳細情報の入力</h2>
-          <p className="text-sm text-gray-600">選択されたフォーマット: {selectedFormat?.format_name}</p>
+          <p className="text-sm text-gray-600">
+            競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span> | 
+            フォーマット: <span className="font-medium text-green-600">{selectedFormat?.format_name}</span>
+          </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep('format-selection')}
-        >
-          フォーマットを変更
-        </Button>
+        <div className="space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setStep('sport-selection')}
+          >
+            競技を変更
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setStep('format-selection')}
+          >
+            フォーマットを変更
+          </Button>
+        </div>
       </div>
       {/* 基本情報セクション */}
       <Card>
@@ -393,14 +640,55 @@ export default function TournamentCreateNewForm() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* 所属する大会 */}
+          <div className="space-y-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <Label htmlFor="group_id">所属する大会 *</Label>
+            <Select
+              value={watch('group_id')?.toString()}
+              onValueChange={(value) => {
+                if (value !== "no-groups") {
+                  setValue("group_id", parseInt(value));
+                }
+              }}
+            >
+              <SelectTrigger className={errors.group_id ? "border-red-500" : ""}>
+                <SelectValue placeholder={loadingTournamentGroups ? "読み込み中..." : "大会を選択してください"} />
+              </SelectTrigger>
+              <SelectContent>
+                {tournamentGroups && tournamentGroups.length > 0 ? (
+                  tournamentGroups.map((group) => (
+                    <SelectItem key={group.group_id} value={String(group.group_id)}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{group.group_name}</span>
+                        {group.organizer && (
+                          <span className="text-xs text-muted-foreground">主催: {group.organizer}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-groups" disabled>
+                    {loadingTournamentGroups ? "読み込み中..." : "大会がありません"}
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            {errors.group_id && (
+              <p className="text-sm text-red-600">{errors.group_id.message}</p>
+            )}
+            <p className="text-xs text-blue-600">
+              この部門が所属する大会を選択してください。大会が存在しない場合は、先に大会を作成してください。
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 大会名 */}
+            {/* 部門名 */}
             <div className="space-y-2">
-              <Label htmlFor="tournament_name">大会名 *</Label>
+              <Label htmlFor="tournament_name">部門名 *</Label>
               <Input
                 id="tournament_name"
                 {...register("tournament_name")}
-                placeholder="例: 第1回PK選手権大会"
+                placeholder="例: 小学2年生の部"
                 className={errors.tournament_name ? "border-red-500" : ""}
               />
               {errors.tournament_name && (
@@ -411,25 +699,28 @@ export default function TournamentCreateNewForm() {
             {/* 会場選択 */}
             <div className="space-y-2">
               <Label htmlFor="venue_id">会場 *</Label>
-              <Select onValueChange={(value) => {
-                if (value !== "no-venues") {
-                  const venueId = parseInt(value);
-                  setValue("venue_id", venueId);
-                  
-                  // 選択された会場情報を保存
-                  const venue = venues.find(v => v.venue_id === venueId);
-                  setSelectedVenue(venue || null);
-                  
-                  // 会場のコート数に合わせてコート数を調整
-                  if (venue && venue.available_courts) {
-                    const currentCourtCount = watch('court_count') || 4;
-                    // 現在のコート数が会場のコート数を超えている場合は調整
-                    if (currentCourtCount > venue.available_courts) {
-                      setValue('court_count', venue.available_courts);
+              <Select
+                value={watch('venue_id')?.toString()}
+                onValueChange={(value) => {
+                  if (value !== "no-venues") {
+                    const venueId = parseInt(value);
+                    setValue("venue_id", venueId);
+
+                    // 選択された会場情報を保存
+                    const venue = venues.find(v => v.venue_id === venueId);
+                    setSelectedVenue(venue || null);
+
+                    // 会場のコート数に合わせてコート数を調整
+                    if (venue && venue.available_courts) {
+                      const currentCourtCount = watch('court_count') || 4;
+                      // 現在のコート数が会場のコート数を超えている場合は調整
+                      if (currentCourtCount > venue.available_courts) {
+                        setValue('court_count', venue.available_courts);
+                      }
                     }
                   }
-                }
-              }}>
+                }}
+              >
                 <SelectTrigger className={errors.venue_id ? "border-red-500" : ""}>
                   <SelectValue placeholder={loadingVenues ? "読み込み中..." : "会場を選択"} />
                 </SelectTrigger>
@@ -523,69 +814,6 @@ export default function TournamentCreateNewForm() {
         </CardContent>
       </Card>
 
-      {/* 得点・勝ち点設定 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2 text-lg">
-            <Target className="h-5 w-5 text-yellow-600" />
-            <span>得点・勝ち点設定</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="win_points">勝利時勝ち点</Label>
-              <Input
-                id="win_points"
-                type="number"
-                min="0"
-                max="10"
-                {...register('win_points', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="draw_points">引分時勝ち点</Label>
-              <Input
-                id="draw_points"
-                type="number"
-                min="0"
-                max="10"
-                {...register('draw_points', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="loss_points">敗北時勝ち点</Label>
-              <Input
-                id="loss_points"
-                type="number"
-                min="0"
-                max="10"
-                {...register('loss_points', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="walkover_winner_goals">不戦勝時勝者得点</Label>
-              <Input
-                id="walkover_winner_goals"
-                type="number"
-                min="0"
-                max="20"
-                {...register('walkover_winner_goals', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="walkover_loser_goals">不戦勝時敗者得点</Label>
-              <Input
-                id="walkover_loser_goals"
-                type="number"
-                min="0"
-                max="20"
-                {...register('walkover_loser_goals', { valueAsNumber: true })}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* 開催日程 */}
       <Card>
@@ -833,7 +1061,7 @@ export default function TournamentCreateNewForm() {
           フォーマット選択に戻る
         </Button>
         <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
-          {isSubmitting ? "作成中..." : "🏆 大会を作成"}
+          {isSubmitting ? "作成中..." : "🏆 部門を作成"}
         </Button>
       </div>
     </form>

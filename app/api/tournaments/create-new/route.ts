@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ArchiveVersionManager } from "@/lib/archive-version-manager";
+import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from "@/lib/tournament-rules";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +17,9 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     const {
+      group_id,
       tournament_name,
+      sport_type_id,
       format_id,
       venue_id,
       team_count,
@@ -24,11 +28,6 @@ export async function POST(request: NextRequest) {
       match_duration_minutes,
       break_duration_minutes,
       start_time,
-      win_points = 3,
-      draw_points = 1,
-      loss_points = 0,
-      walkover_winner_goals = 3,
-      walkover_loser_goals = 0,
       is_public,
       public_start_date,
       recruitment_start_date,
@@ -38,17 +37,22 @@ export async function POST(request: NextRequest) {
     } = data;
 
     // 入力値の基本バリデーション
-    if (!tournament_name || !format_id || !venue_id || !team_count || !court_count) {
+    if (!group_id || !tournament_name || !sport_type_id || !format_id || !venue_id || !team_count || !court_count) {
       return NextResponse.json(
         { success: false, error: "必須項目が不足しています" },
         { status: 400 }
       );
     }
 
+    // 現在のアーカイブUIバージョンを取得
+    const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
+
     // 大会を作成 - 既存APIと同じフィールド構造を使用
     const tournamentResult = await db.execute(`
       INSERT INTO t_tournaments (
+        group_id,
         tournament_name,
+        sport_type_id,
         format_id,
         venue_id,
         team_count,
@@ -56,19 +60,20 @@ export async function POST(request: NextRequest) {
         tournament_dates,
         match_duration_minutes,
         break_duration_minutes,
-        win_points,
-        draw_points,
-        loss_points,
-        walkover_winner_goals,
-        walkover_loser_goals,
         status,
         visibility,
         public_start_date,
         recruitment_start_date,
-        recruitment_end_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planning', ?, ?, ?, ?)
+        recruitment_end_date,
+        created_by,
+        archive_ui_version,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
+      group_id,
       tournament_name,
+      sport_type_id,
       format_id,
       venue_id,
       team_count,
@@ -76,15 +81,13 @@ export async function POST(request: NextRequest) {
       tournament_dates,
       match_duration_minutes,
       break_duration_minutes,
-      win_points,
-      draw_points,
-      loss_points,
-      walkover_winner_goals,
-      walkover_loser_goals,
-      is_public ? 'open' : 'preparing',
+      'planning',  // status
+      is_public ? 'open' : 'preparing',  // visibility
       public_start_date,
       recruitment_start_date,
-      recruitment_end_date
+      recruitment_end_date,
+      session.user.id,
+      currentArchiveVersion
     ]);
 
     const tournamentId = tournamentResult.lastInsertRowid;
@@ -265,6 +268,8 @@ export async function POST(request: NextRequest) {
       const dayKey = template.day_number?.toString() || "1";
       const tournamentDate = tournamentDatesObj[dayKey] || event_start_date;
 
+      // period_countはスキーマに存在しないため、デフォルト値1を使用（変数は不要）
+
       await db.execute(`
         INSERT INTO t_matches_live (
           match_block_id,
@@ -279,10 +284,8 @@ export async function POST(request: NextRequest) {
           start_time,
           team1_scores,
           team2_scores,
-          period_count,
-          winner_team_id,
-          remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+          winner_team_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         matchBlockId,
         tournamentDate,
@@ -294,14 +297,16 @@ export async function POST(request: NextRequest) {
         template.team2_display_name,
         assignedCourt,
         assignedStartTime,
-        null, // team1_scores は初期状態でnull
-        null, // team2_scores は初期状態でnull
-        null, // winner_team_id は結果確定時に設定
-        null  // remarks
+        '[0]', // team1_scores をJSON文字列で初期化
+        '[0]', // team2_scores をJSON文字列で初期化
+        null // winner_team_id は結果確定時に設定
       ]);
 
       // コート終了時刻を更新（次の試合のため）
-      const endTime = addMinutesToTime(assignedStartTime, match_duration_minutes + break_duration_minutes);
+      // 全ての競技で設定された試合時間をそのまま使用
+      const actualMatchDuration = match_duration_minutes;
+      
+      const endTime = addMinutesToTime(assignedStartTime, actualMatchDuration + break_duration_minutes);
       
       // テンプレートで固定時間が指定されている場合は、そのコートの時間管理を慎重に行う
       if (template.suggested_start_time) {
@@ -320,6 +325,50 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ ${matchesCreated}個の試合を作成しました`);
+
+    // 大会ルールのデフォルト設定を作成
+    try {
+      let tournamentRules;
+      
+      if (isLegacyTournament(Number(tournamentId), sport_type_id)) {
+        // 既存のPK戦大会との互換性を保持
+        tournamentRules = getLegacyDefaultRules(Number(tournamentId));
+      } else {
+        // 新しい大会の場合は競技種別に応じたデフォルト
+        tournamentRules = generateDefaultRules(Number(tournamentId), sport_type_id);
+      }
+      
+      // デフォルト勝点システム設定
+      const defaultPointSystem = JSON.stringify({
+        win: 3,
+        draw: 1,
+        loss: 0
+      });
+      
+      for (const rule of tournamentRules) {
+        await db.execute(`
+          INSERT INTO t_tournament_rules (
+            tournament_id, phase, use_extra_time, use_penalty, 
+            active_periods, win_condition, notes, point_system,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [
+          rule.tournament_id,
+          rule.phase,
+          rule.use_extra_time ? 1 : 0,
+          rule.use_penalty ? 1 : 0,
+          rule.active_periods,
+          rule.win_condition,
+          rule.notes || null,
+          defaultPointSystem
+        ]);
+      }
+      
+      console.log(`✅ ${tournamentRules.length}個の大会ルールを設定しました`);
+    } catch (ruleError) {
+      console.error("大会ルール設定エラー:", ruleError);
+      // ルール設定失敗は警告のみ（大会作成は継続）
+    }
 
     // 作成された大会情報を取得
     const createdTournament = await db.execute(`
@@ -357,6 +406,8 @@ export async function POST(request: NextRequest) {
 }
 
 // ヘルパー関数
+
+
 function addMinutesToTime(time: string, minutes: number): string {
   const [hours, mins] = time.split(':').map(Number);
   const totalMinutes = hours * 60 + mins + minutes;

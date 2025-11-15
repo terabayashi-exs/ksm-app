@@ -18,9 +18,15 @@ export default async function EditTournamentFormatPage({ params }: Props) {
     redirect("/auth/login");
   }
 
-  // フォーマット情報を取得
+  // フォーマット情報を取得（競技種別も含む）
   const formatResult = await db.execute(`
-    SELECT * FROM m_tournament_formats WHERE format_id = ?
+    SELECT 
+      tf.*,
+      st.sport_name,
+      st.sport_code
+    FROM m_tournament_formats tf
+    LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
+    WHERE tf.format_id = ?
   `, [resolvedParams.id]);
 
   if (formatResult.rows.length === 0) {
@@ -60,12 +66,15 @@ export default async function EditTournamentFormatPage({ params }: Props) {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <TournamentFormatEditForm 
+        <TournamentFormatEditForm
           format={{
             format_id: Number(format.format_id),
             format_name: String(format.format_name),
+            sport_type_id: Number(format.sport_type_id || 1),
             target_team_count: Number(format.target_team_count),
-            format_description: String(format.format_description || "")
+            format_description: String(format.format_description || ""),
+            preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
+            final_format_type: format.final_format_type ? String(format.final_format_type) : null
           }}
           templates={templatesResult.rows.map(t => ({
             match_number: Number(t.match_number),
@@ -81,7 +90,12 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             day_number: Number(t.day_number || 1),
             execution_priority: Number(t.execution_priority || 1),
             court_number: t.court_number ? Number(t.court_number) : undefined,
-            suggested_start_time: String(t.suggested_start_time || "")
+            suggested_start_time: String(t.suggested_start_time || ""),
+            // 新しい順位設定フィールド
+            loser_position_start: t.loser_position_start ? Number(t.loser_position_start) : undefined,
+            loser_position_end: t.loser_position_end ? Number(t.loser_position_end) : undefined,
+            winner_position: t.winner_position ? Number(t.winner_position) : undefined,
+            position_note: String(t.position_note || "")
           }))}
         />
       </div>

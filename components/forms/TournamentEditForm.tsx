@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tournament, Venue, TournamentDate } from '@/lib/types';
-import { Loader2, Save, AlertCircle, Calendar, Plus, Trash2, Eye, Target, Settings } from 'lucide-react';
+import { Loader2, Save, AlertCircle, Calendar, Plus, Trash2, Eye, Settings } from 'lucide-react';
 import SchedulePreview from '@/components/features/tournament/SchedulePreview';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,7 +21,7 @@ interface TournamentEditFormProps {
 
 // 編集用のバリデーションスキーマ
 const editTournamentSchema = z.object({
-  tournament_name: z.string().min(1, '大会名は必須です').max(100, '大会名は100文字以内で入力してください'),
+  tournament_name: z.string().min(1, '部門名は必須です').max(100, '部門名は100文字以内で入力してください'),
   format_id: z.number().min(1, 'フォーマットIDが必要です'),
   venue_id: z.number().min(1, '会場IDが必要です'),
   team_count: z.number().min(2, 'チーム数は2以上で入力してください').max(128, 'チーム数は128以下で入力してください'),
@@ -37,11 +37,6 @@ const editTournamentSchema = z.object({
   })).min(1, '最低1つの開催日を指定してください').max(7, '開催日は最大7日まで指定可能です'),
   match_duration_minutes: z.number().min(5, '試合時間は5分以上で入力してください').max(120, '試合時間は120分以下で入力してください'),
   break_duration_minutes: z.number().min(0, '休憩時間は0分以上で入力してください').max(60, '休憩時間は60分以下で入力してください'),
-  win_points: z.number().min(0).max(10),
-  draw_points: z.number().min(0).max(10),
-  loss_points: z.number().min(0).max(10),
-  walkover_winner_goals: z.number().min(0).max(20),
-  walkover_loser_goals: z.number().min(0).max(20),
   is_public: z.boolean(),
   public_start_date: z.string().min(1, '公開開始日は必須です'),
   recruitment_start_date: z.string().min(1, '募集開始日は必須です'),
@@ -58,17 +53,17 @@ const editTournamentSchema = z.object({
   message: 'コート番号に重複があるか、使用コート数より指定されたコート番号が少ないです',
   path: ['available_courts']
 }).refine((data) => {
-  // 引分時勝ち点 <= 勝利時勝ち点のチェック
-  return data.draw_points <= data.win_points;
+  // 募集開始日 >= 公開開始日のチェック
+  return new Date(data.recruitment_start_date) >= new Date(data.public_start_date);
 }, {
-  message: '引分時勝ち点は勝利時勝ち点以下で設定してください',
-  path: ['draw_points']
+  message: '募集開始日は公開開始日以降で設定してください',
+  path: ['recruitment_start_date']
 }).refine((data) => {
-  // 敗北時勝ち点 <= 引分時勝ち点のチェック
-  return data.loss_points <= data.draw_points;
+  // 募集終了日 >= 募集開始日のチェック
+  return new Date(data.recruitment_end_date) >= new Date(data.recruitment_start_date);
 }, {
-  message: '敗北時勝ち点は引分時勝ち点以下で設定してください',
-  path: ['loss_points']
+  message: '募集終了日は募集開始日以降で設定してください',
+  path: ['recruitment_end_date']
 });
 
 export default function TournamentEditForm({ tournament }: TournamentEditFormProps) {
@@ -108,11 +103,6 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     tournament_dates: TournamentDate[];
     match_duration_minutes: number;
     break_duration_minutes: number;
-    win_points: number;
-    draw_points: number;
-    loss_points: number;
-    walkover_winner_goals: number;
-    walkover_loser_goals: number;
     is_public: boolean;
     public_start_date: string;
     recruitment_start_date: string;
@@ -131,11 +121,6 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       tournament_dates: parseTournamentDates(tournament.tournament_dates),
       match_duration_minutes: tournament.match_duration_minutes,
       break_duration_minutes: tournament.break_duration_minutes,
-      win_points: tournament.win_points,
-      draw_points: tournament.draw_points,
-      loss_points: tournament.loss_points,
-      walkover_winner_goals: tournament.walkover_winner_goals,
-      walkover_loser_goals: tournament.walkover_loser_goals,
       is_public: tournament.visibility === 1,
       public_start_date: tournament.public_start_date || new Date().toISOString().split('T')[0],
       recruitment_start_date: tournament.recruitment_start_date || new Date().toISOString().split('T')[0],
@@ -182,6 +167,44 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     setCustomMatches(customMatches);
   }, []);
 
+  // 現在の試合時間を保持するためのstate
+  const [currentMatches, setCurrentMatches] = useState<Array<{
+    match_id: number;
+    start_time: string;
+    court_number: number;
+  }>>([]);
+  const [earliestMatchTime, setEarliestMatchTime] = useState<string>('09:00');
+
+  // 既存試合データから現在の時間設定を取得
+  const fetchCurrentMatchSchedule = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.tournament_id}/matches`);
+      const result = await response.json();
+      
+      if (result.success && result.data.length > 0) {
+        const currentSchedule = result.data
+          .filter((match: { scheduled_time: string | null }) => match.scheduled_time !== null)
+          .map((match: { match_id: number; scheduled_time: string; court_number: number | null }) => ({
+            match_id: match.match_id,
+            start_time: match.scheduled_time,
+            court_number: match.court_number || 1
+          }));
+        setCurrentMatches(currentSchedule);
+        
+        // 最も早い試合時刻を検出
+        if (currentSchedule.length > 0) {
+          const earliestTime = currentSchedule.reduce((earliest: string, match: { match_id: number; start_time: string; court_number: number; }) => {
+            return match.start_time < earliest ? match.start_time : earliest;
+          }, currentSchedule[0].start_time);
+          setEarliestMatchTime(earliestTime);
+          console.log('[TOURNAMENT_EDIT] 既存の最早試合時刻:', earliestTime);
+        }
+      }
+    } catch (error) {
+      console.error('現在の試合スケジュール取得エラー:', error);
+    }
+  }, [tournament.tournament_id]);
+
   // 会場データの取得
   useEffect(() => {
     const fetchVenues = async () => {
@@ -198,10 +221,11 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     fetchVenues();
   }, []);
 
-  // 使用コート番号の初期化
+  // 使用コート番号と現在の試合スケジュールの初期化
   useEffect(() => {
     fetchUsedCourts();
-  }, [fetchUsedCourts]);
+    fetchCurrentMatchSchedule();
+  }, [fetchUsedCourts, fetchCurrentMatchSchedule]);
 
   // 日程の追加
   const addTournamentDate = () => {
@@ -230,7 +254,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
 
     // 基本的なバリデーション
     if (!data.tournament_name.trim()) {
-      setError('大会名を入力してください');
+      setError('部門名を入力してください');
       setLoading(false);
       return;
     }
@@ -256,15 +280,20 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     }
 
     try {
+      // カスタムスケジュールが設定されていない場合は既存の試合時間を保持
+      const finalCustomMatches = customMatches.length > 0 ? customMatches : currentMatches;
+      
       const requestData = {
         ...data,
-        customMatches: customMatches.length > 0 ? customMatches : undefined
+        customMatches: finalCustomMatches.length > 0 ? finalCustomMatches : undefined
       };
       
       // Sending tournament update with custom schedule
-      if (customMatches.length > 0) {
-        // Custom schedule data being submitted
-      }
+      console.log('[TOURNAMENT_EDIT] 送信データ:', {
+        hasCustomMatches: !!requestData.customMatches,
+        customMatchesCount: requestData.customMatches?.length || 0,
+        preservingExistingTimes: customMatches.length === 0 && currentMatches.length > 0
+      });
       
       const response = await fetch(`/api/tournaments/${tournament.tournament_id}`, {
         method: 'PUT',
@@ -277,13 +306,26 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       const result = await response.json();
 
       if (result.success) {
-        setSuccess('大会情報が正常に更新されました');
+        setSuccess('部門情報が正常に更新されました');
         // 少し待ってから管理画面に戻る
         setTimeout(() => {
           router.push('/admin');
         }, 2000);
       } else {
-        setError(result.error || '更新に失敗しました');
+        // より詳細なエラーメッセージを表示
+        if (result.message) {
+          // バリデーションエラーの詳細メッセージを表示
+          setError(result.message);
+        } else if (result.details && Array.isArray(result.details)) {
+          // Zodバリデーションエラーの場合
+          const detailMessages = result.details.map((detail: { path?: string[]; message: string }) => 
+            `${detail.path?.join('.') || '項目'}: ${detail.message}`
+          ).join('\n');
+          setError(`入力内容を確認してください:\n${detailMessages}`);
+        } else {
+          // デフォルトのエラーメッセージ
+          setError(result.error || '更新に失敗しました');
+        }
       }
     } catch (error) {
       console.error('更新エラー:', error);
@@ -299,7 +341,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -320,9 +362,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* 大会名 */}
+            {/* 部門名 */}
             <div className="space-y-2">
-              <Label htmlFor="tournament_name">大会名 *</Label>
+              <Label htmlFor="tournament_name">部門名 *</Label>
               <Input
                 id="tournament_name"
                 {...form.register('tournament_name')}
@@ -381,83 +423,6 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           </CardContent>
         </Card>
 
-        {/* 得点・勝ち点設定 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Target className="w-5 h-5 mr-2" />
-              得点・勝ち点設定
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="win_points">勝利時勝ち点</Label>
-              <Input
-                id="win_points"
-                type="number"
-                min="0"
-                max="10"
-                {...form.register('win_points', { valueAsNumber: true })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="draw_points">引分時勝ち点</Label>
-              <Input
-                id="draw_points"
-                type="number"
-                min="0"
-                max="10"
-                {...form.register('draw_points', { valueAsNumber: true })}
-                className={form.formState.errors.draw_points ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.draw_points && (
-                <p className="text-sm text-red-600 mt-1">
-                  {form.formState.errors.draw_points.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="loss_points">敗北時勝ち点</Label>
-              <Input
-                id="loss_points"
-                type="number"
-                min="0"
-                max="10"
-                {...form.register('loss_points', { valueAsNumber: true })}
-                className={form.formState.errors.loss_points ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.loss_points && (
-                <p className="text-sm text-red-600 mt-1">
-                  {form.formState.errors.loss_points.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="walkover_winner_goals">不戦勝時勝者得点</Label>
-              <Input
-                id="walkover_winner_goals"
-                type="number"
-                min="0"
-                max="10"
-                {...form.register('walkover_winner_goals', { valueAsNumber: true })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="walkover_loser_goals">不戦勝時敗者得点</Label>
-              <Input
-                id="walkover_loser_goals"
-                type="number"
-                min="0"
-                max="10"
-                {...form.register('walkover_loser_goals', { valueAsNumber: true })}
-              />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* 開催日程 */}
         <Card>
@@ -625,7 +590,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   : undefined,
                 matchDurationMinutes: form.watch('match_duration_minutes') ?? 15,
                 breakDurationMinutes: form.watch('break_duration_minutes') ?? 5,
-                startTime: '09:00',
+                startTime: earliestMatchTime, // 既存の最早試合時刻を使用
                 tournamentDates: form.watch('tournament_dates') || []
               }}
               tournamentId={tournament.tournament_id}
@@ -734,7 +699,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                大会を更新
+                部門を更新
               </>
             )}
           </Button>

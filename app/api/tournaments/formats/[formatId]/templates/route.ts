@@ -11,37 +11,45 @@ export async function GET(
     const resolvedParams = await params;
     const formatId = parseInt(resolvedParams.formatId);
     
+    console.log(`[TEMPLATES] フォーマットIDでテンプレート取得開始: ${formatId}`);
+    
     if (isNaN(formatId)) {
+      console.log(`[TEMPLATES] 無効なフォーマットID: ${resolvedParams.formatId}`);
       return NextResponse.json(
         { success: false, error: '有効なフォーマットIDを指定してください' },
         { status: 400 }
       );
     }
 
-    // 指定されたフォーマットの試合テンプレートを取得
+    // 指定されたフォーマットの試合テンプレートと競技種別情報を取得
     const result = await db.execute(`
       SELECT 
-        template_id,
-        format_id,
-        match_number,
-        match_code,
-        match_type,
-        phase,
-        round_name,
-        block_name,
-        team1_source,
-        team2_source,
-        team1_display_name,
-        team2_display_name,
-        day_number,
-        execution_priority,
-        court_number,
-        suggested_start_time,
-        created_at
-      FROM m_match_templates
-      WHERE format_id = ?
-      ORDER BY day_number ASC, execution_priority ASC, match_number ASC
+        mt.template_id,
+        mt.format_id,
+        mt.match_number,
+        mt.match_code,
+        mt.match_type,
+        mt.phase,
+        mt.round_name,
+        mt.block_name,
+        mt.team1_source,
+        mt.team2_source,
+        mt.team1_display_name,
+        mt.team2_display_name,
+        mt.day_number,
+        mt.execution_priority,
+        mt.court_number,
+        mt.suggested_start_time,
+        mt.created_at,
+        st.sport_code
+      FROM m_match_templates mt
+      LEFT JOIN m_tournament_formats tf ON mt.format_id = tf.format_id
+      LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
+      WHERE mt.format_id = ?
+      ORDER BY mt.day_number ASC, mt.execution_priority ASC, mt.match_number ASC
     `, [formatId]);
+
+    console.log(`[TEMPLATES] クエリ実行完了: ${result.rows.length}件のテンプレートを取得`);
 
     const templates = result.rows.map(row => ({
       template_id: Number(row.template_id),
@@ -60,8 +68,27 @@ export async function GET(
       execution_priority: Number(row.execution_priority),
       court_number: row.court_number ? Number(row.court_number) : undefined,
       suggested_start_time: row.suggested_start_time ? String(row.suggested_start_time) : undefined,
+      period_count: undefined, // スキーマに存在しないため undefined に設定
       created_at: String(row.created_at)
     })) as MatchTemplate[];
+
+    // 競技種別コードを取得（全テンプレートで同じはずなので最初のものを使用）
+    const sportCode = result.rows.length > 0 ? result.rows[0].sport_code : null;
+    
+    console.log(`[TEMPLATES] 処理完了:`, {
+      formatId,
+      templatesCount: templates.length,
+      sportCode,
+      firstTemplate: templates[0] ? templates[0].match_code : null
+    });
+    
+    if (templates.length === 0) {
+      console.log(`[TEMPLATES] 警告: フォーマットID ${formatId} にはテンプレートが存在しません`);
+      return NextResponse.json({
+        success: false,
+        error: `フォーマットID ${formatId} に対応する試合テンプレートが見つかりません`
+      }, { status: 404 });
+    }
 
     // 日程別に分類
     const templatesByDay = templates.reduce((acc, template) => {
@@ -104,6 +131,7 @@ export async function GET(
       success: true,
       data: {
         formatId,
+        sportCode, // 競技種別コードを追加
         templates,
         templatesByDay,
         statistics: {

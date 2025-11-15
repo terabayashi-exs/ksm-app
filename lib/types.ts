@@ -1,4 +1,17 @@
 // lib/types.ts
+/**
+ * 用語マッピング:
+ * - 大会 (Tournament Event) = t_tournament_groups テーブル
+ * - 部門/コース (Division/Category) = t_tournaments テーブル
+ *
+ * 従来の「大会グループ」を「大会」、「大会」を「部門」として扱います
+ */
+
+/**
+ * 部門（旧：大会）
+ * 大会の中の1つのカテゴリーを表す
+ * データベース: t_tournaments
+ */
 export interface Tournament {
   tournament_id: number;
   tournament_name: string;
@@ -9,21 +22,20 @@ export interface Tournament {
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
   match_duration_minutes: number;
   break_duration_minutes: number;
-  win_points: number;
-  draw_points: number;
-  loss_points: number;
-  walkover_winner_goals: number;
-  walkover_loser_goals: number;
   status: 'planning' | 'ongoing' | 'completed';
   visibility: number; // 公開フラグ (0: 非公開, 1: 公開)
   public_start_date?: string; // 公開開始日
   recruitment_start_date?: string; // 募集開始日
   recruitment_end_date?: string; // 募集終了日
+  sport_type_id?: number; // 競技種別ID
+  created_by?: string; // 作成者ID
   created_at: string;
   updated_at: string;
   // Optional joined fields
   venue_name?: string;
   format_name?: string;
+  preliminary_format_type?: string; // 予選の形式 ('league' | 'tournament')
+  final_format_type?: string; // 決勝の形式 ('league' | 'tournament')
   // 後方互換性のため (ダッシュボードで使用)
   is_public?: boolean;
   event_start_date?: string;
@@ -32,7 +44,51 @@ export interface Tournament {
   end_time?: string;
   // 参加状況
   is_joined?: boolean;
+  // アーカイブ関連
+  is_archived?: boolean;
+  archive_ui_version?: string;
+  // 管理者ロゴ情報
+  logo_blob_url?: string | null;
+  organization_name?: string | null;
+  // グループ関連
+  group_id?: number | null;
+  group_order?: number;
+  category_name?: string | null;
+  group_name?: string | null;
+  group_description?: string | null;
+  group_color?: string | null;
 }
+
+/**
+ * 大会（旧：大会グループ）
+ * 複数の部門を持つ大会全体を表す
+ * データベース: t_tournament_groups
+ */
+export interface TournamentGroup {
+  group_id: number;
+  group_name: string;
+  organizer?: string;
+  venue_id?: number;
+  event_start_date?: string;
+  event_end_date?: string;
+  recruitment_start_date?: string;
+  recruitment_end_date?: string;
+  visibility?: string;
+  event_description?: string;
+  created_at: string;
+  updated_at: string;
+  // Optional joined fields
+  venue_name?: string;
+  division_count?: number; // 所属部門数
+  ongoing_count?: number;
+  completed_count?: number;
+}
+
+/**
+ * 型エイリアス（新しい用語での参照用）
+ */
+export type TournamentEvent = TournamentGroup;  // 大会
+export type Division = Tournament;               // 部門
 
 // 大会開催日程の型
 export interface TournamentDate {
@@ -181,6 +237,7 @@ export interface MatchTemplate {
   execution_priority: number;
   court_number?: number;
   suggested_start_time?: string;
+  period_count?: number;
   created_at: string;
 }
 

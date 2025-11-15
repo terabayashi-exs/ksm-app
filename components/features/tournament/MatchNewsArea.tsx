@@ -11,6 +11,7 @@ interface MatchNewsData {
   team2_display_name: string;
   team1_goals: number | null;
   team2_goals: number | null;
+  score_display?: string | null; // PK戦を考慮したスコア表示
   winner_team_id: string | null;
   team1_id: string | null;
   team2_id: string | null;
@@ -104,11 +105,36 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
   // 試合結果の表示
   const getMatchResult = (match: MatchNewsData) => {
     if (match.match_status === 'ongoing') {
-      // 進行中の場合、現在のスコアまたは「進行中」
+      // 進行中の場合、フォーマット済みスコアがあればそれを使用、なければ個別スコア
+      if (match.score_display) {
+        return match.score_display;
+      }
       if (match.team1_goals !== null && match.team2_goals !== null) {
         return `${match.team1_goals} - ${match.team2_goals}`;
       }
       return '進行中';
+    }
+    
+    // 試合終了済みで、スコアが入力されている場合
+    if (match.match_status === 'completed' && (match.score_display || (match.team1_goals !== null && match.team2_goals !== null))) {
+      if (match.is_walkover) {
+        return '不戦勝';
+      }
+      
+      // フォーマット済みスコア表示があればそれを優先（PK戦考慮済み）
+      if (match.score_display) {
+        if (match.is_draw) {
+          return `${match.score_display} (引分)`;
+        }
+        return match.score_display;
+      }
+      
+      // フォールバック: 従来の表示方式
+      if (match.is_draw) {
+        return `${match.team1_goals} - ${match.team2_goals} (引分)`;
+      }
+      
+      return `${match.team1_goals} - ${match.team2_goals}`;
     }
     
     if (!match.has_result) {
@@ -120,10 +146,19 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
     }
 
     // 結果があるがスコアがnullの場合のチェック
-    if (match.team1_goals === null || match.team2_goals === null) {
+    if (!match.score_display && (match.team1_goals === null || match.team2_goals === null)) {
       return '結果確認中';
     }
 
+    // フォーマット済みスコア表示があればそれを使用
+    if (match.score_display) {
+      if (match.is_draw) {
+        return `${match.score_display} (引分)`;
+      }
+      return match.score_display;
+    }
+
+    // フォールバック: 従来の表示方式
     if (match.is_draw) {
       return `${match.team1_goals} - ${match.team2_goals} (引分)`;
     }

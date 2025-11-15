@@ -50,13 +50,17 @@ export async function GET(request: NextRequest) {
         t.updated_at,
         t.team_count,
         t.visibility,
+        t.created_by,
         COALESCE(v.venue_name, '未設定') as venue_name,
         COALESCE(f.format_name, '未設定') as format_name,
+        a.logo_blob_url,
+        a.organization_name,
         0 as registered_teams
         ${teamId ? ', 0 as is_joined' : ', 0 as is_joined'}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
     `;
 
     const params: (string | number)[] = [];
@@ -149,8 +153,8 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // 結果の整形（動的ステータス計算付き）
-    const allTournaments = result.rows.map(row => {
+    // 結果の整形（非同期ステータス計算付き）
+    const allTournaments = await Promise.all(result.rows.map(async (row) => {
       const tournamentData = {
         status: String(row.status),
         tournament_dates: String(row.tournament_dates),
@@ -158,7 +162,8 @@ export async function GET(request: NextRequest) {
         recruitment_end_date: row.recruitment_end_date as string | null
       };
 
-      const calculatedStatus = calculateTournamentStatus(tournamentData);
+      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
+      const calculatedStatus = await calculateTournamentStatus(tournamentData, Number(row.tournament_id));
       const tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates));
 
       // tournament_datesからevent_start_dateとevent_end_dateを計算
@@ -191,9 +196,12 @@ export async function GET(request: NextRequest) {
         event_end_date: eventEndDate,
         tournament_period: tournamentPeriod,
         created_at: String(row.created_at),
+        created_by: row.created_by as string,
+        logo_blob_url: row.logo_blob_url as string | null,
+        organization_name: row.organization_name as string | null,
         is_joined: Boolean(row.is_joined)
       };
-    });
+    }));
 
     // ステータスフィルタリング（動的ステータスベース）
     const tournaments = statusFilter 

@@ -47,3 +47,7 @@ scripts/dump-database.js
 scripts/apply-to-*.js
 scripts/test-*.js
 scripts/fix-*.js
+
+# development server files
+dev-server.log
+dev-server.pid

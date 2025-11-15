@@ -104,7 +104,6 @@ export async function POST(
     // 承認の場合は自動処理を実行
     if (action === 'approve') {
       await processWithdrawalApproval(tournamentTeamId, withdrawal);
-      console.log(`辞退承認: ${withdrawal.team_name} (大会: ${withdrawal.tournament_name})`);
     }
 
     // メール通知を送信（非同期で実行、エラーが発生してもメイン処理は継続）
@@ -128,7 +127,6 @@ export async function POST(
     // 管理者コメントがある場合は別途記録（将来的に管理者コメントテーブルを作成することを想定）
     if (admin_comment) {
       // 現在は単純にログ出力、将来的にはデータベースに保存
-      console.log(`管理者コメント (${tournamentTeamId}): ${admin_comment}`);
     }
 
     // 処理結果の取得

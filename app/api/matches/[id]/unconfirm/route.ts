@@ -57,6 +57,13 @@ export async function POST(
       DELETE FROM t_matches_final WHERE match_id = ?
     `, [matchId]);
 
+    // 試合ステータスを完了状態に戻す（確定解除後は編集可能にするため）
+    await db.execute(`
+      UPDATE t_match_status 
+      SET match_status = 'completed', updated_at = datetime('now', '+9 hours')
+      WHERE match_id = ?
+    `, [matchId]);
+
     console.log(`✓ 試合${match.match_code}の確定を解除しました（ID: ${matchId}）`);
 
     // 順位表の再計算を実行
@@ -68,6 +75,53 @@ export async function POST(
     } catch (error) {
       console.error('順位表再計算エラー:', error);
       // 順位表の再計算に失敗しても、確定解除は成功として扱う
+    }
+
+    // 大会ステータスの更新チェック
+    // 全試合が確定済みでない場合、大会ステータスをongoingに戻す
+    try {
+      // 大会の全試合数を取得
+      const totalMatchesResult = await db.execute(`
+        SELECT COUNT(*) as total_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+      `, [match.tournament_id]);
+      
+      const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+      
+      // 確定済み試合数を取得（この試合の確定解除後の数）
+      const confirmedMatchesResult = await db.execute(`
+        SELECT COUNT(*) as confirmed_matches
+        FROM t_matches_final mf
+        INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+      `, [match.tournament_id]);
+      
+      const confirmedMatches = confirmedMatchesResult.rows[0]?.confirmed_matches as number || 0;
+      
+      console.log(`大会${match.tournament_id}: 確定済み試合数 ${confirmedMatches}/${totalMatches}`);
+      
+      // 全試合が確定されていない場合、大会ステータスをongoingに戻す
+      if (confirmedMatches < totalMatches) {
+        // 現在の大会ステータスを確認
+        const tournamentResult = await db.execute(`
+          SELECT status FROM t_tournaments WHERE tournament_id = ?
+        `, [match.tournament_id]);
+        
+        if (tournamentResult.rows.length > 0 && tournamentResult.rows[0].status === 'completed') {
+          await db.execute(`
+            UPDATE t_tournaments 
+            SET status = 'ongoing', updated_at = datetime('now', '+9 hours')
+            WHERE tournament_id = ?
+          `, [match.tournament_id]);
+          
+          console.log(`✓ 大会${match.tournament_id}のステータスをongoingに戻しました`);
+        }
+      }
+    } catch (statusError) {
+      console.error('大会ステータス更新エラー:', statusError);
+      // ステータス更新エラーでも確定解除は成功として扱う
     }
 
     return NextResponse.json({

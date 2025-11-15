@@ -108,15 +108,15 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">参加チーム管理</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-3xl font-bold text-foreground">参加チーム管理</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 {tournament.tournament_name}
               </p>
             </div>
@@ -151,19 +151,19 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{tournamentTeams.length}</div>
-                <div className="text-sm text-gray-500">参加チーム数</div>
+                <div className="text-sm text-muted-foreground">参加チーム数</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
                   {tournamentTeams.reduce((sum, team) => sum + team.player_count, 0)}
                 </div>
-                <div className="text-sm text-gray-500">総選手数</div>
+                <div className="text-sm text-muted-foreground">総選手数</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
                   {tournamentTeams.filter(team => team.player_count > 0).length}
                 </div>
-                <div className="text-sm text-gray-500">選手登録済み</div>
+                <div className="text-sm text-muted-foreground">選手登録済み</div>
               </div>
             </div>
           </CardContent>
@@ -177,7 +177,7 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
           <CardContent>
             {tournamentTeams.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">参加チームがありません。</p>
+                <p className="text-muted-foreground">参加チームがありません。</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -192,13 +192,13 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                           #{index + 1}
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          <h3 className="text-lg font-semibold text-foreground">
                             {team.team_name}
                           </h3>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             略称: {team.team_omission} | 選手数: {team.player_count}人
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted-foreground/70">
                             登録日: {new Date(team.created_at).toLocaleDateString('ja-JP')}
                           </p>
                         </div>
@@ -241,19 +241,19 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
             )}
             
             {/* 追加参加ボタン */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="mt-6 pt-6 border-t border-border">
               <div className="text-center">
                 <Button 
                   asChild 
                   variant="outline" 
-                  className="border-dashed border-2 border-gray-300 hover:border-blue-300 hover:bg-blue-50"
+                  className="border-dashed border-2 border-muted hover:border-blue-300 hover:bg-muted"
                 >
                   <Link href={`/tournaments/${tournamentId}/join?mode=new`}>
                     <Users className="w-4 h-4 mr-2" />
                     追加のチームで参加する
                   </Link>
                 </Button>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   同じマスターチームから複数のチーム名で参加できます
                 </p>
               </div>

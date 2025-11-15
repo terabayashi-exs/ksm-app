@@ -14,6 +14,10 @@ interface BracketMatch {
   team2_display_name: string;
   team1_goals: number;
   team2_goals: number;
+  // 多競技対応の拡張フィールド
+  team1_scores?: number[];
+  team2_scores?: number[];
+  active_periods?: number[];
   winner_team_id?: string;
   is_draw: boolean;
   is_walkover: boolean;
@@ -23,10 +27,29 @@ interface BracketMatch {
   start_time?: string;
   court_number?: number;
   execution_group?: number;
+  // サッカー専用データ（該当する場合のみ）
+  soccer_data?: {
+    regular_goals_for: number;
+    regular_goals_against: number;
+    pk_goals_for?: number;
+    pk_goals_against?: number;
+    is_pk_game: boolean;
+    pk_winner?: boolean;
+  };
 }
 
 interface BracketProps {
   tournamentId: number;
+  phase?: 'preliminary' | 'final'; // オプショナル: デフォルトは決勝
+}
+
+// 多競技対応のスポーツ設定インターフェース
+interface SportScoreConfig {
+  sport_code: string;
+  score_label: string;
+  score_against_label: string;
+  difference_label: string;
+  supports_pk: boolean;
 }
 
 interface BracketGroup {
@@ -43,10 +66,12 @@ interface BracketStructure {
 // 試合カードコンポーネント
 function MatchCard({ 
   match,
+  sportConfig,
   className = "",
   ...props
 }: { 
   match: BracketMatch;
+  sportConfig?: SportScoreConfig;
   className?: string;
   [key: string]: unknown;
 }) {
@@ -56,6 +81,35 @@ function MatchCard({
     if (match.winner_team_id === match.team1_id) return 0; // team1が勝者
     if (match.winner_team_id === match.team2_id) return 1; // team2が勝者
     return null;
+  };
+
+  // 多競技対応のスコア表示ロジック
+  const getScoreDisplay = (teamIndex: number) => {
+    if (!hasResult || match.is_walkover) return null;
+
+    const teamScores = teamIndex === 0 ? match.team1_scores : match.team2_scores;
+
+    // 多競技スコアデータがある場合
+    if (teamScores && teamScores.length > 0) {
+      // サッカーでPK戦がある場合の特別処理
+      if (sportConfig?.supports_pk && teamScores.length >= 5) {
+        const regularGoals = teamScores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+        const pkGoals = teamScores.slice(4).reduce((sum, score) => sum + score, 0);
+        
+        if (pkGoals > 0) {
+          return { regular: regularGoals, pk: pkGoals, isPkMatch: true };
+        }
+        return { regular: regularGoals, isPkMatch: false };
+      }
+      
+      // 通常のスコア合計
+      const totalScore = teamScores.reduce((sum, score) => sum + score, 0);
+      return { regular: totalScore, isPkMatch: false };
+    }
+
+    // フォールバック: 従来のgoalsを使用
+    const goals = teamIndex === 0 ? match.team1_goals : match.team2_goals;
+    return { regular: goals || 0, isPkMatch: false };
   };
   
   const hasResult = match.is_confirmed && (
@@ -67,70 +121,126 @@ function MatchCard({
 
   // 試合コードからブロック色を取得
   const getMatchCodeColor = (matchCode: string): string => {
+    // 新形式（M1-M8）に対応
+    if (['M1', 'M2', 'M3', 'M4'].includes(matchCode)) return 'bg-blue-100 text-blue-800'; // 準々決勝
+    if (['M5', 'M6'].includes(matchCode)) return 'bg-purple-100 text-purple-800'; // 準決勝
+    if (matchCode === 'M7') return 'bg-yellow-100 text-yellow-800'; // 3位決定戦
+    if (matchCode === 'M8') return 'bg-red-100 text-red-800'; // 決勝
+    
+    // 旧形式（T1-T8）にも対応（後方互換性）
     if (['T1', 'T2', 'T3', 'T4'].includes(matchCode)) return 'bg-blue-100 text-blue-800'; // 準々決勝
     if (['T5', 'T6'].includes(matchCode)) return 'bg-purple-100 text-purple-800'; // 準決勝
     if (matchCode === 'T7') return 'bg-yellow-100 text-yellow-800'; // 3位決定戦
     if (matchCode === 'T8') return 'bg-red-100 text-red-800'; // 決勝
-    return 'bg-gray-100 text-gray-800';
+    
+    return 'bg-muted text-muted-foreground';
   };
 
   const winnerIndex = getWinnerTeam();
 
   return (
-    <div className={`relative bg-white border border-gray-300 rounded-lg p-3 shadow-sm ${className}`} {...props}>
+    <div className={`relative bg-card border border-border rounded-lg p-3 shadow-sm ${className}`} {...props}>
       {/* 試合コード */}
       <div className={`absolute -top-2 left-3 border px-2 py-1 rounded-full text-xs font-medium ${getMatchCodeColor(match.match_code)}`}>
         {match.match_code}
       </div>
       
       {/* チーム1 */}
-      <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-gray-300 rounded cursor-default transition-all ${
+      <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-border rounded cursor-default transition-all ${
         winnerIndex === 0 
           ? 'bg-green-50 text-green-600 border-green-300 font-medium' 
           : hasResult && winnerIndex === 1
           ? 'bg-red-50 text-red-600 border-red-300' 
           : hasResult && match.is_draw
           ? 'bg-blue-50 text-blue-600 border-blue-300'
-          : 'bg-gray-50 text-gray-700'
+          : 'bg-muted text-muted-foreground'
       }`}>
         <span className="text-sm truncate flex-1">
           {winnerIndex === 0 && hasResult ? '👑 ' : ''}{match.team1_display_name || '未確定'}
         </span>
-        {hasResult && !match.is_draw && (
-          <span className="text-sm font-bold ml-2">
-            {match.team1_goals}
-          </span>
-        )}
-        {hasResult && match.is_draw && (
-          <span className="text-sm font-bold ml-2 text-blue-600">
-            {match.team1_goals}
-          </span>
-        )}
+        {hasResult && !match.is_draw && (() => {
+          const scoreData = getScoreDisplay(0);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
+        {hasResult && match.is_draw && (() => {
+          const scoreData = getScoreDisplay(0);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2 text-blue-600">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
       </div>
 
       {/* チーム2 */}
-      <div className={`flex items-center justify-between h-8 px-3 border border-gray-300 rounded cursor-default transition-all ${
+      <div className={`flex items-center justify-between h-8 px-3 border border-border rounded cursor-default transition-all ${
         winnerIndex === 1 
           ? 'bg-green-50 text-green-600 border-green-300 font-medium' 
           : hasResult && winnerIndex === 0
           ? 'bg-red-50 text-red-600 border-red-300' 
           : hasResult && match.is_draw
           ? 'bg-blue-50 text-blue-600 border-blue-300'
-          : 'bg-gray-50 text-gray-700'
+          : 'bg-muted text-muted-foreground'
       }`}>
         <span className="text-sm truncate flex-1">
           {winnerIndex === 1 && hasResult ? '👑 ' : ''}{match.team2_display_name || '未確定'}
         </span>
-        {hasResult && !match.is_draw && (
-          <span className="text-sm font-bold ml-2">
-            {match.team2_goals}
-          </span>
-        )}
-        {hasResult && match.is_draw && (
-          <span className="text-sm font-bold ml-2 text-blue-600">
-            {match.team2_goals}
-          </span>
-        )}
+        {hasResult && !match.is_draw && (() => {
+          const scoreData = getScoreDisplay(1);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
+        {hasResult && match.is_draw && (() => {
+          const scoreData = getScoreDisplay(1);
+          if (!scoreData) return null;
+          
+          return (
+            <span className="text-sm font-bold ml-2 text-blue-600">
+              {scoreData.isPkMatch ? (
+                <span className="flex flex-col items-end text-xs">
+                  <span>{scoreData.regular}</span>
+                  <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                </span>
+              ) : (
+                scoreData.regular
+              )}
+            </span>
+          );
+        })()}
       </div>
 
       {/* 状態表示 */}
@@ -148,7 +258,7 @@ function MatchCard({
             試合完了
           </span>
         ) : (
-          <span className="text-xs bg-gray-100 text-gray-500 border border-gray-300 px-2 py-1 rounded-full">
+          <span className="text-xs bg-muted text-muted-foreground border border-border px-2 py-1 rounded-full">
             未実施
           </span>
         )}
@@ -158,8 +268,9 @@ function MatchCard({
 }
 
 // メインコンポーネント
-export default function TournamentBracket({ tournamentId }: BracketProps) {
+export default function TournamentBracket({ tournamentId, phase: _phase = 'final' }: BracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>([]);
+  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const bracketRef = useRef<HTMLDivElement>(null);
@@ -174,10 +285,16 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     if (!hasExecutionGroup) {
       // フォールバック: 従来の試合コードベースのグループ化
       const groups: BracketGroup[] = [];
-      const quarterFinals = matches.filter(m => ['T1', 'T2', 'T3', 'T4'].includes(m.match_code));
-      const semiFinals = matches.filter(m => ['T5', 'T6'].includes(m.match_code));
-      const thirdPlace = matches.find(m => m.match_code === 'T7');
-      const final = matches.find(m => m.match_code === 'T8');
+      
+      // 新形式（M1-M8）に対応
+      const quarterFinals = matches.filter(m => 
+        ['T1', 'T2', 'T3', 'T4', 'M1', 'M2', 'M3', 'M4'].includes(m.match_code)
+      );
+      const semiFinals = matches.filter(m => 
+        ['T5', 'T6', 'M5', 'M6'].includes(m.match_code)
+      );
+      const thirdPlace = matches.find(m => m.match_code === 'T7' || m.match_code === 'M7');
+      const final = matches.find(m => m.match_code === 'T8' || m.match_code === 'M8');
       
       if (quarterFinals.length > 0) {
         groups.push({
@@ -227,17 +344,17 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
 
     // グループ名を決定
     const getGroupName = (groupId: number, matchCount: number, matches: BracketMatch[]): string => {
-      // 試合コードから判定
-      if (matches.some(m => ['T1', 'T2', 'T3', 'T4'].includes(m.match_code))) return '準々決勝';
-      if (matches.some(m => ['T5', 'T6'].includes(m.match_code))) return '準決勝';
-      if (matches.some(m => m.match_code === 'T7')) return '3位決定戦';
-      if (matches.some(m => m.match_code === 'T8')) return '決勝';
+      // 試合コードから判定（新形式・旧形式両対応）
+      if (matches.some(m => ['T1', 'T2', 'T3', 'T4', 'M1', 'M2', 'M3', 'M4'].includes(m.match_code))) return '準々決勝';
+      if (matches.some(m => ['T5', 'T6', 'M5', 'M6'].includes(m.match_code))) return '準決勝';
+      if (matches.some(m => m.match_code === 'T7' || m.match_code === 'M7')) return '3位決定戦';
+      if (matches.some(m => m.match_code === 'T8' || m.match_code === 'M8')) return '決勝';
       
       // フォールバック: 試合数から推測
       if (matchCount >= 4) return '準々決勝';
       if (matchCount === 2) return '準決勝';
       if (matchCount === 1) {
-        const hasThirdPlace = matches.some(m => m.match_code === 'T7');
+        const hasThirdPlace = matches.some(m => m.match_code === 'T7' || m.match_code === 'M7');
         return hasThirdPlace ? '3位決定戦' : '決勝';
       }
       return `グループ${groupId}`;
@@ -278,6 +395,10 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
         const result = await response.json();
         if (result.success) {
           setMatches(result.data);
+          // 多競技対応：スポーツ設定も取得
+          if (result.sport_config) {
+            setSportConfig(result.sport_config);
+          }
         } else {
           throw new Error(result.error || 'データの取得に失敗しました');
         }
@@ -328,8 +449,9 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
       let d: string;
       
       if (avoidThirdPlace) {
-        // 3位決定戦を迂回するルート
-        const thirdPlaceCard = bracketElement.querySelector(`[data-match="T"]`) as HTMLElement;
+        // 3位決定戦を迂回するルート（新形式・旧形式両対応）
+        const thirdPlaceCard = bracketElement.querySelector(`[data-match="T7"]`) || 
+                               bracketElement.querySelector(`[data-match="M7"]`) as HTMLElement;
         
         if (thirdPlaceCard) {
           const thirdPlaceRect = thirdPlaceCard.getBoundingClientRect();
@@ -369,7 +491,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
       
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', d);
-      path.setAttribute('stroke', '#9ca3af'); // gray-400
+      path.setAttribute('stroke', 'hsl(var(--muted-foreground))'); // dynamic color
       path.setAttribute('stroke-width', '2');
       path.setAttribute('fill', 'transparent');
       
@@ -438,7 +560,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600">トーナメント表を読み込み中...</span>
+        <span className="ml-3 text-muted-foreground">トーナメント表を読み込み中...</span>
       </div>
     );
   }
@@ -446,9 +568,9 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
   if (error) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 text-lg mb-2">{error}</p>
-        <p className="text-gray-500 text-sm">この大会は予選リーグ戦のみで構成されています。</p>
+        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg mb-2">{error}</p>
+        <p className="text-muted-foreground text-sm">この大会は予選リーグ戦のみで構成されています。</p>
       </div>
     );
   }
@@ -545,7 +667,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
         <div className="text-center no-print">
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-            <h2 className="text-2xl font-bold text-gray-900">決勝トーナメント</h2>
+            <h2 className="text-2xl font-bold text-foreground">決勝トーナメント</h2>
             <Button
               onClick={handlePrint}
               variant="outline"
@@ -556,11 +678,10 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
               PDF出力（印刷）
             </Button>
           </div>
-          <p className="text-gray-600">各ブロック上位2チームによるトーナメント表</p>
         </div>
 
         {/* トーナメントブラケット */}
-        <div className="print-container relative bg-white border border-gray-300 rounded-lg p-6 shadow-sm overflow-x-auto">
+        <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
         <div 
           ref={bracketRef}
           className="relative grid gap-10 min-w-fit"
@@ -595,7 +716,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
               if (groupName.includes('準決勝')) return 'bg-purple-100 text-purple-800';
               if (groupName.includes('3位決定戦')) return 'bg-yellow-100 text-yellow-800';
               if (groupName.includes('決勝')) return 'bg-red-100 text-red-800';
-              return 'bg-gray-100 text-gray-800';
+              return 'bg-muted text-muted-foreground';
             };
 
             return (
@@ -611,6 +732,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
                       <MatchCard 
                         key={match.match_id} 
                         match={match}
+                        sportConfig={sportConfig || undefined}
                         className="h-fit"
                         data-match={`G${group.groupId}M${matchIndex + 1}`}
                       />
@@ -703,6 +825,7 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
                         >
                           <MatchCard 
                             match={match}
+                            sportConfig={sportConfig || undefined}
                             className="h-fit"
                             data-match={`G${group.groupId}M${matchIndex + 1}`}
                           />
@@ -749,9 +872,12 @@ export default function TournamentBracket({ tournamentId }: BracketProps) {
                 <p className="font-medium mb-1">トーナメント表の見方</p>
                 <ul className="list-disc list-inside space-y-1 text-blue-600">
                   <li>実線は勝利チームの勝ち上がり、点線は敗者の進出先（3位決定戦）</li>
-                  <li>太字は勝利チーム、数字は得点を表示</li>
+                  <li>太字は勝利チーム、数字は{sportConfig?.score_label || '得点'}を表示</li>
                   <li>［T1］などは試合コードを表示</li>
                   <li>各ブロック上位2チームが決勝トーナメントに進出</li>
+                  {sportConfig?.supports_pk && (
+                    <li>サッカーの場合、通常時間とPK戦の{sportConfig.score_label}を分けて表示</li>
+                  )}
                 </ul>
               </div>
             </div>

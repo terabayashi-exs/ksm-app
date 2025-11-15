@@ -52,7 +52,7 @@ export default function TeamProfile() {
       <Card>
         <CardContent className="text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">チーム情報を読み込み中...</p>
+          <p className="text-muted-foreground">チーム情報を読み込み中...</p>
         </CardContent>
       </Card>
     );
@@ -90,26 +90,26 @@ export default function TeamProfile() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm font-medium text-gray-700">チーム名</Label>
+              <Label className="text-sm font-medium text-muted-foreground">チーム名</Label>
               <p className="text-lg font-semibold">{profileData.team.team_name}</p>
             </div>
             {profileData.team.team_omission && (
               <div>
-                <Label className="text-sm font-medium text-gray-700">チーム略称</Label>
+                <Label className="text-sm font-medium text-muted-foreground">チーム略称</Label>
                 <p className="text-lg">{profileData.team.team_omission}</p>
               </div>
             )}
             <div>
-              <Label className="text-sm font-medium text-gray-700">代表者名</Label>
+              <Label className="text-sm font-medium text-muted-foreground">代表者名</Label>
               <p className="text-lg">{profileData.team.contact_person}</p>
             </div>
             <div>
-              <Label className="text-sm font-medium text-gray-700">連絡先メール</Label>
+              <Label className="text-sm font-medium text-muted-foreground">連絡先メール</Label>
               <p className="text-lg">{profileData.team.contact_email}</p>
             </div>
             {profileData.team.contact_phone && (
               <div>
-                <Label className="text-sm font-medium text-gray-700">電話番号</Label>
+                <Label className="text-sm font-medium text-muted-foreground">電話番号</Label>
                 <p className="text-lg">{profileData.team.contact_phone}</p>
               </div>
             )}

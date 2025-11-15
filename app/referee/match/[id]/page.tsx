@@ -21,7 +21,6 @@ import {
   Timer,
   ArrowLeft
 } from 'lucide-react';
-
 interface MatchData {
   match_id: number;
   match_code: string;
@@ -54,6 +53,15 @@ export default function RefereeMatchPage() {
   const token = searchParams.get('token');
 
   const [match, setMatch] = useState<MatchData | null>(null);
+  const [extendedData, setExtendedData] = useState<{
+    sport_config?: {
+      default_periods: Array<{
+        period_number: number;
+        period_name: string;
+      }>;
+    };
+    active_periods?: number[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +70,8 @@ export default function RefereeMatchPage() {
   const [matchRemarks, setMatchRemarks] = useState<string>('');
   const [tournamentId, setTournamentId] = useState<number | null>(null);
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false); // 結果が保存されているかどうか
+  // const [sportConfig, setSportConfig] = useState<SportRuleConfig | null>(null); // 将来の多競技対応用
 
   // トークン検証とマッチデータ取得
   useEffect(() => {
@@ -87,6 +97,12 @@ export default function RefereeMatchPage() {
           // トーナメントIDを取得
           if (result.data.tournament_id) {
             setTournamentId(result.data.tournament_id);
+          }
+          
+          // 多競技対応：スポーツ設定を取得
+          if (result.data.sport_config) {
+            // 将来の多競技対応用（現在は使用しない）
+            // setSportConfig(result.data.sport_config);
           }
           
           // 確定状態を設定
@@ -135,6 +151,24 @@ export default function RefereeMatchPage() {
           }
           
           setScores(currentScores);
+          
+          // 拡張データの取得（ピリオド名表示用）
+          try {
+            const extendedResponse = await fetch(`/api/matches/${matchId}/extended-info`);
+            const extendedResult = await extendedResponse.json();
+            
+            if (extendedResult.success) {
+              setExtendedData(extendedResult.data);
+              console.log('Extended match data loaded:', extendedResult.data);
+            } else {
+              console.warn('Extended data load failed:', extendedResult.error);
+              // 拡張データ取得失敗は警告のみ（既存機能は維持）
+            }
+          } catch (extendedErr) {
+            console.warn('Extended data fetch error:', extendedErr);
+            // 拡張データ取得エラーは警告のみ
+          }
+          
         } else {
           console.error('Token verification failed:', result);
           const errorMsg = result.error || 'アクセス権限の確認に失敗しました';
@@ -194,7 +228,7 @@ export default function RefereeMatchPage() {
     if (match && !loading) {
       loadCurrentMatchStatus();
     }
-  }, [matchId, loading]); // matchを依存配列から削除して無限ループを防ぐ
+  }, [matchId, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 試合状態更新
   const updateMatchStatus = async (action: string, additionalData?: Record<string, unknown>) => {
@@ -219,6 +253,8 @@ export default function RefereeMatchPage() {
         
         if (action === 'start') {
           alert('試合を開始しました！');
+          // 試合開始時は初期スコア（0-0）が既に保存されているとみなす
+          setIsSaved(true);
         } else if (action === 'end') {
           alert('試合を終了しました。お疲れ様でした！');
         }
@@ -273,11 +309,17 @@ export default function RefereeMatchPage() {
       winner_team_id: winner_team_id,
       remarks: matchRemarks.trim() || null
     });
+    
+    // 結果が正常に保存されたらisSavedをtrueに設定
+    setIsSaved(true);
   };
 
   // ピリオドスコア変更（スコア変更時に勝者を自動決定）
   const changeScore = useCallback((team: 'team1' | 'team2', period: number, delta: number) => {
     console.log('changeScore called:', { team, period, delta });
+    
+    // スコア変更時に保存状態をリセット
+    setIsSaved(false);
     
     setScores(prev => {
       // 現在のスコアを確実に数値として取得
@@ -289,9 +331,16 @@ export default function RefereeMatchPage() {
       newScores[team] = [...newScores[team]];
       newScores[team][period] = newScore;
       
-      // スコア変更後に勝者を自動決定
-      const team1Total = newScores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      const team2Total = newScores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
+      return newScores;
+    });
+  }, []);
+
+  // スコア変更後の勝者自動決定（PK戦考慮）
+  useEffect(() => {
+    if (!extendedData?.active_periods) {
+      // 拡張データがない場合は従来の計算
+      const team1Total = scores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
+      const team2Total = scores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
       
       if (team1Total > team2Total) {
         setWinnerTeam('team1');
@@ -300,39 +349,121 @@ export default function RefereeMatchPage() {
       } else {
         setWinnerTeam(null); // 同点の場合
       }
+    } else {
+      // 通常時間での勝者判定
+      const team1RegularTotal = getTotalScore(scores.team1);
+      const team2RegularTotal = getTotalScore(scores.team2);
       
-      return newScores;
-    });
-  }, []);
+      if (team1RegularTotal > team2RegularTotal) {
+        setWinnerTeam('team1');
+      } else if (team2RegularTotal > team1RegularTotal) {
+        setWinnerTeam('team2');
+      } else {
+        // 通常時間が同点の場合、PK戦の結果をチェック
+        const pkPeriods = extendedData.active_periods.filter(p => {
+          const periodName = getPeriodName(p);
+          return periodName.includes('PK');
+        });
+        
+        if (pkPeriods.length > 0) {
+          // PK戦のスコアを取得
+          let team1PkTotal = 0;
+          let team2PkTotal = 0;
+          
+          pkPeriods.forEach(p => {
+            const scoreIndex = p - 1;
+            team1PkTotal += Number(scores.team1[scoreIndex]) || 0;
+            team2PkTotal += Number(scores.team2[scoreIndex]) || 0;
+          });
+          
+          if (team1PkTotal > team2PkTotal) {
+            setWinnerTeam('team1');
+          } else if (team2PkTotal > team1PkTotal) {
+            setWinnerTeam('team2');
+          } else {
+            setWinnerTeam(null); // PK戦でも同点
+          }
+        } else {
+          setWinnerTeam(null); // 通常時間同点、PK戦なし
+        }
+      }
+    }
+  }, [scores, extendedData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 直接スコア入力（スコア変更時に勝者を自動決定）
+  // 直接スコア入力
   const setDirectScore = (team: 'team1' | 'team2', period: number, value: string) => {
     const numValue = Math.max(0, parseInt(value) || 0);
+    
+    // スコア変更時に保存状態をリセット
+    setIsSaved(false);
     
     setScores(prev => {
       const newScores = { ...prev };
       newScores[team] = [...newScores[team]]; // 配列を新しく作成
       newScores[team][period] = numValue;
       
-      // スコア変更後に勝者を自動決定
-      const team1Total = newScores.team1.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      const team2Total = newScores.team2.reduce((sum, score) => sum + (Number(score) || 0), 0);
-      
-      if (team1Total > team2Total) {
-        setWinnerTeam('team1');
-      } else if (team2Total > team1Total) {
-        setWinnerTeam('team2');
-      } else {
-        setWinnerTeam(null); // 同点の場合
-      }
-      
       return newScores;
     });
   };
 
-  // 総得点計算
+  // 総得点計算（PK戦ピリオドを除外）
   const getTotalScore = (teamScores: number[]) => {
-    return teamScores.reduce((sum, score) => sum + (Number(score) || 0), 0);
+    if (!extendedData?.active_periods) {
+      // 拡張データがない場合は従来の計算
+      return teamScores.reduce((sum, score) => sum + (Number(score) || 0), 0);
+    }
+    
+    // PK戦ピリオドを除外して計算
+    const regularPeriods = extendedData.active_periods.filter(p => {
+      const periodName = getPeriodName(p);
+      return !periodName.includes('PK');
+    });
+    
+    return regularPeriods.reduce((sum, p) => {
+      const scoreIndex = p - 1; // 0ベースのインデックス
+      return sum + (Number(teamScores[scoreIndex]) || 0);
+    }, 0);
+  };
+
+  // ピリオド名を取得する関数（ルール設定に基づく）
+  const getPeriodName = (periodNumber: number): string => {
+    if (extendedData?.sport_config?.default_periods) {
+      const period = extendedData.sport_config.default_periods.find(
+        p => p.period_number === periodNumber
+      );
+      if (period) {
+        return period.period_name;
+      }
+    }
+    // フォールバック：従来の「第Nピリオド」表記
+    return `第${periodNumber}ピリオド`;
+  };
+
+  // PK戦結果を取得する関数
+  const getPenaltyKickResult = () => {
+    if (!extendedData?.active_periods) return null;
+    
+    const pkPeriods = extendedData.active_periods.filter(p => {
+      const periodName = getPeriodName(p);
+      return periodName.includes('PK');
+    });
+    
+    if (pkPeriods.length === 0) return null;
+    
+    let team1PkTotal = 0;
+    let team2PkTotal = 0;
+    
+    pkPeriods.forEach(p => {
+      const scoreIndex = p - 1;
+      team1PkTotal += Number(scores.team1[scoreIndex]) || 0;
+      team2PkTotal += Number(scores.team2[scoreIndex]) || 0;
+    });
+    
+    return {
+      team1PkScore: team1PkTotal,
+      team2PkScore: team2PkTotal,
+      hasPkScore: team1PkTotal > 0 || team2PkTotal > 0
+    };
   };
 
 
@@ -347,10 +478,10 @@ export default function RefereeMatchPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">認証中...</p>
+          <p className="mt-4 text-muted-foreground">認証中...</p>
         </div>
       </div>
     );
@@ -358,12 +489,12 @@ export default function RefereeMatchPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
-            <Alert className="border-red-200 bg-red-50">
+            <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
               <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
+              <AlertDescription className="text-red-800 dark:text-red-200">
                 {error}
               </AlertDescription>
             </Alert>
@@ -381,15 +512,15 @@ export default function RefereeMatchPage() {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">試合データが見つかりません</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">試合データが見つかりません</p>
       </div>
     );
   }
 
   const getStatusIcon = () => {
     switch (match.match_status) {
-      case 'scheduled': return <Clock className="w-5 h-5 text-gray-600" />;
+      case 'scheduled': return <Clock className="w-5 h-5 text-muted-foreground" />;
       case 'ongoing': return <Play className="w-5 h-5 text-green-600" />;
       case 'completed': return <CheckCircle className="w-5 h-5 text-blue-600" />;
       default: return <AlertCircle className="w-5 h-5 text-red-600" />;
@@ -408,7 +539,7 @@ export default function RefereeMatchPage() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* ヘッダー */}
         <Card className="border-l-4 border-l-blue-500">
@@ -437,7 +568,7 @@ export default function RefereeMatchPage() {
                 {getStatusIcon()}
                 <span className={`font-medium ${
                   match.match_status === 'ongoing' ? 'text-green-600' : 
-                  match.match_status === 'completed' ? 'text-blue-600' : 'text-gray-600'
+                  match.match_status === 'completed' ? 'text-blue-600' : 'text-muted-foreground'
                 }`}>
                   {getStatusLabel()}
                 </span>
@@ -446,10 +577,10 @@ export default function RefereeMatchPage() {
           </CardHeader>
           <CardContent>
             <div className="text-center mb-4">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {match.team1_name} vs {match.team2_name}
               </h1>
-              <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center justify-center space-x-6 text-sm text-muted-foreground">
                 <div className="flex items-center">
                   <MapPin className="w-4 h-4 mr-1" />
                   コート{match.court_number}
@@ -469,10 +600,10 @@ export default function RefereeMatchPage() {
 
             {/* 確定済み試合の警告 */}
             {isConfirmed && (
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4 rounded-r-lg">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-400 dark:border-amber-600 p-4 mb-4 rounded-r-lg">
                 <div className="flex items-center">
                   <AlertCircle className="w-5 h-5 text-amber-500 mr-2" />
-                  <p className="text-amber-800 font-medium">
+                  <p className="text-amber-800 dark:text-amber-200 font-medium">
                     この試合は既に確定済みです。結果の編集はできません。
                   </p>
                 </div>
@@ -480,18 +611,34 @@ export default function RefereeMatchPage() {
             )}
 
             {/* 現在のスコア表示 */}
-            <div className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-6">
+            <div className="bg-card p-6 rounded-lg border-2 border-border mb-6">
               <div className="text-center">
-                <div className="text-4xl font-bold text-gray-800 mb-2">
+                <div className="text-4xl font-bold text-foreground mb-2">
                   {getTotalScore(scores.team1)} - {getTotalScore(scores.team2)}
                 </div>
-                <div className="text-sm text-gray-500">現在のスコア</div>
+                <div className="text-sm text-muted-foreground">現在のスコア</div>
+                
+                {/* PK戦結果表示 */}
+                {(() => {
+                  const pkResult = getPenaltyKickResult();
+                  if (pkResult && pkResult.hasPkScore) {
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <div className="text-lg font-semibold text-orange-600">
+                          PK戦 {pkResult.team1PkScore} - {pkResult.team2PkScore}
+                        </div>
+                        <div className="text-xs text-muted-foreground">ペナルティキック</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* 操作パネル */}
+        {/* シンプルな試合管理インターフェース */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 試合制御 */}
           <Card>
@@ -513,6 +660,16 @@ export default function RefereeMatchPage() {
 
               {match.match_status === 'ongoing' && (
                 <div className="space-y-3">
+                  {/* 確定前のメッセージ */}
+                  {!isConfirmed && (
+                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-800 dark:text-blue-200">
+                        結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {match.current_period < match.period_count && (
                     <Button
                       className="w-full bg-blue-600 hover:bg-blue-700"
@@ -526,30 +683,70 @@ export default function RefereeMatchPage() {
 
                   <Button
                     className="w-full bg-red-600 hover:bg-red-700"
-                    onClick={() => updateMatchStatus('end')}
+                    onClick={() => {
+                      // 結果が保存されていない場合は警告を表示
+                      if (!isSaved) {
+                        if (!window.confirm('スコア・結果が保存されていません。\n\n試合を終了する前に「スコア・結果を保存」ボタンを押して結果を保存してください。\n\nこのまま試合を終了しますか？')) {
+                          return;
+                        }
+                      }
+                      updateMatchStatus('end');
+                    }}
                     disabled={updating || isConfirmed}
                   >
                     <Square className="w-5 h-5 mr-2" />
                     試合終了
                   </Button>
+
+                  {/* 試合開始前に戻すボタン（確定前のみ表示） */}
+                  {!isConfirmed && (
+                    <Button
+                      className="w-full bg-gray-400 hover:bg-gray-500 text-white"
+                      variant="secondary"
+                      onClick={() => {
+                        if (window.confirm('試合を開始前の状態に戻しますか？\n\n現在のスコアやピリオド情報は保持されますが、試合状態は「開始前」に戻ります。')) {
+                          updateMatchStatus('reset');
+                        }
+                      }}
+                      disabled={updating}
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2" />
+                      試合開始前に戻す
+                    </Button>
+                  )}
                 </div>
               )}
 
               {match.match_status === 'completed' && !isConfirmed && (
                 <div className="space-y-3">
-                  <Alert className="border-yellow-200 bg-yellow-50">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <AlertDescription className="text-yellow-800">
-                      試合が完了しましたが、結果は確定前です。必要に応じて修正できます。
+                  <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200">
+                      結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
                     </AlertDescription>
                   </Alert>
+
                   <Button
-                    className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
                     onClick={() => updateMatchStatus('start')}
                     disabled={updating}
                   >
                     <Play className="w-5 h-5 mr-2" />
                     試合再開（結果修正）
+                  </Button>
+
+                  <Button
+                    className="w-full bg-gray-400 hover:bg-gray-500 text-white"
+                    variant="secondary"
+                    onClick={() => {
+                      if (window.confirm('試合を開始前の状態に戻しますか？\n\n現在のスコアやピリオド情報は保持されますが、試合状態は「開始前」に戻ります。')) {
+                        updateMatchStatus('reset');
+                      }
+                    }}
+                    disabled={updating}
+                  >
+                    <ArrowLeft className="w-5 h-5 mr-2" />
+                    試合開始前に戻す
                   </Button>
                 </div>
               )}
@@ -560,11 +757,61 @@ export default function RefereeMatchPage() {
                     <CheckCircle className="w-5 h-5 mr-2" />
                     <span className="font-medium">試合結果確定済み</span>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     この試合の結果は既に確定されており、編集できません。
                   </p>
                 </div>
               )}
+
+              {/* 試合状態インジケーター */}
+              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                <h4 className="text-sm font-medium mb-3">試合状態</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'scheduled' 
+                      ? 'border-gray-500 bg-gray-100 dark:bg-gray-800 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <Clock className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'scheduled' ? 'text-gray-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">試合前</span>
+                  </div>
+
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'ongoing' 
+                      ? 'border-green-500 bg-green-100 dark:bg-green-900/30 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <Play className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'ongoing' ? 'text-green-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">進行中</span>
+                  </div>
+
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'completed' && !isConfirmed 
+                      ? 'border-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <AlertCircle className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'completed' && !isConfirmed ? 'text-yellow-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">確定待ち</span>
+                  </div>
+
+                  <div className={`p-3 rounded-md border-2 text-center transition-all ${
+                    match.match_status === 'completed' && isConfirmed 
+                      ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/30 font-medium' 
+                      : 'border-gray-200 dark:border-gray-700 text-muted-foreground'
+                  }`}>
+                    <CheckCircle className={`w-4 h-4 mx-auto mb-1 ${
+                      match.match_status === 'completed' && isConfirmed ? 'text-blue-600' : 'text-muted-foreground'
+                    }`} />
+                    <span className="text-xs">完了</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -575,17 +822,19 @@ export default function RefereeMatchPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {Array.from({ length: match.period_count }, (_, periodIndex) => (
-                  <div key={periodIndex} className="border rounded-lg p-4">
+                {(extendedData?.active_periods || Array.from({ length: match.period_count }, (_, i) => i + 1)).map((periodNumber: number) => {
+                  const periodIndex = periodNumber - 1; // スコア配列のインデックス（0ベース）
+                  return (
+                    <div key={periodNumber} className="border rounded-lg p-4">
                     <Label className="block text-sm font-medium mb-3">
-                      第{periodIndex + 1}ピリオド
-                      {periodIndex + 1 === match.current_period && match.match_status === 'ongoing' && !isConfirmed && (
+                      {getPeriodName(periodNumber)}
+                      {periodNumber === match.current_period && match.match_status === 'ongoing' && !isConfirmed && (
                         <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                           進行中
                         </span>
                       )}
-                      {periodIndex + 1 === match.current_period && match.match_status === 'completed' && (
-                        <span className="ml-2 text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                      {periodNumber === match.current_period && match.match_status === 'completed' && (
+                        <span className="ml-2 text-xs bg-muted text-foreground px-2 py-1 rounded">
                           終了
                         </span>
                       )}
@@ -594,7 +843,7 @@ export default function RefereeMatchPage() {
                     <div className="grid grid-cols-2 gap-4">
                       {/* チーム1 */}
                       <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-2">{match.team1_name}</div>
+                        <div className="text-xs text-muted-foreground mb-2">{match.team1_name}</div>
                         <div className="flex items-center justify-center space-x-2 mb-2">
                           <Button
                             variant="outline"
@@ -617,20 +866,23 @@ export default function RefereeMatchPage() {
                           </Button>
                         </div>
                         {/* 直接入力フィールド */}
-                        <Input
-                          type="number"
-                          min="0"
-                          value={scores.team1[periodIndex] || 0}
-                          onChange={(e) => setDirectScore('team1', periodIndex, e.target.value)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
-                          className="w-16 h-8 text-center text-sm mx-auto"
-                          placeholder="0"
-                        />
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground mb-1">直接入力</div>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={scores.team1[periodIndex] || 0}
+                            onChange={(e) => setDirectScore('team1', periodIndex, e.target.value)}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
+                            className="w-16 h-8 text-center text-sm mx-auto"
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
 
                       {/* チーム2 */}
                       <div className="text-center">
-                        <div className="text-xs text-gray-500 mb-2">{match.team2_name}</div>
+                        <div className="text-xs text-muted-foreground mb-2">{match.team2_name}</div>
                         <div className="flex items-center justify-center space-x-2 mb-2">
                           <Button
                             variant="outline"
@@ -653,38 +905,66 @@ export default function RefereeMatchPage() {
                           </Button>
                         </div>
                         {/* 直接入力フィールド */}
-                        <Input
-                          type="number"
-                          min="0"
-                          value={scores.team2[periodIndex] || 0}
-                          onChange={(e) => setDirectScore('team2', periodIndex, e.target.value)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
-                          className="w-16 h-8 text-center text-sm mx-auto"
-                          placeholder="0"
-                        />
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground mb-1">直接入力</div>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={scores.team2[periodIndex] || 0}
+                            onChange={(e) => setDirectScore('team2', periodIndex, e.target.value)}
+                            disabled={match.match_status !== 'ongoing' || isConfirmed}
+                            className="w-16 h-8 text-center text-sm mx-auto"
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {/* 合計スコア表示 */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">合計スコア</h4>
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="text-sm font-medium text-foreground mb-3">合計スコア</h4>
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                      <div className="text-xs text-gray-500">{match.team1_name}</div>
+                      <div className="text-xs text-muted-foreground">{match.team1_name}</div>
                       <div className="text-3xl font-bold text-blue-600">
                         {getTotalScore(scores.team1)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">{match.team2_name}</div>
+                      <div className="text-xs text-muted-foreground">{match.team2_name}</div>
                       <div className="text-3xl font-bold text-red-600">
                         {getTotalScore(scores.team2)}
                       </div>
                     </div>
                   </div>
                   
+                  {/* PK戦結果表示（合計スコア内） */}
+                  {(() => {
+                    const pkResult = getPenaltyKickResult();
+                    if (pkResult && pkResult.hasPkScore) {
+                      return (
+                        <div className="mt-4 pt-3 border-t border-border">
+                          <h5 className="text-xs font-medium text-muted-foreground mb-2">PK戦結果</h5>
+                          <div className="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                              <div className="text-lg font-semibold text-orange-600">
+                                {pkResult.team1PkScore}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-semibold text-orange-600">
+                                {pkResult.team2PkScore}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {/* 勝者選択 */}
@@ -707,7 +987,7 @@ export default function RefereeMatchPage() {
                           size="sm"
                           onClick={() => setWinnerTeam(null)}
                           disabled={isConfirmed}
-                          className={winnerTeam === null ? 'bg-gray-600 text-white hover:bg-gray-700 border-gray-600' : 'hover:bg-gray-50 border-gray-300'}
+                          className={winnerTeam === null ? 'bg-secondary text-white hover:bg-secondary/80 border-secondary' : 'hover:bg-muted border-border'}
                         >
                           引分
                         </Button>
@@ -733,7 +1013,7 @@ export default function RefereeMatchPage() {
                         value={matchRemarks}
                         onChange={(e) => setMatchRemarks(e.target.value)}
                         disabled={match.match_status !== 'ongoing' || isConfirmed}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                        className="mt-1 w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-muted disabled:text-muted-foreground"
                         rows={2}
                         placeholder="抽選で勝敗決定、その他特記事項など..."
                       />
@@ -755,7 +1035,7 @@ export default function RefereeMatchPage() {
         </div>
 
         {/* フッター */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-muted-foreground">
           <p>審判専用画面 - 試合ID: {match.match_id}</p>
           <p>問題がある場合は大会運営スタッフにお知らせください</p>
         </div>

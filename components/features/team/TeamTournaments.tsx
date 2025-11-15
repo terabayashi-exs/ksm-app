@@ -79,7 +79,7 @@ export default function TeamTournaments() {
       case 'ongoing':
         return <Badge className="bg-green-100 text-green-800">進行中</Badge>;
       case 'completed':
-        return <Badge className="bg-gray-100 text-gray-800">完了</Badge>;
+        return <Badge className="bg-muted text-muted-foreground">完了</Badge>;
       case 'planning':
         return <Badge className="bg-blue-100 text-blue-800">開催予定</Badge>;
       default:
@@ -140,11 +140,11 @@ export default function TeamTournaments() {
           </div>
           <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
           {tournament.format_name && (
-            <p className="text-sm text-gray-600">{tournament.format_name}</p>
+            <p className="text-sm text-muted-foreground">{tournament.format_name}</p>
           )}
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm text-gray-600 mb-4">
+          <div className="space-y-2 text-sm text-muted-foreground mb-4">
             {tournament.venue_name && (
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />
@@ -160,21 +160,21 @@ export default function TeamTournaments() {
             
             {/* 複数チーム参加情報の表示 */}
             {isJoined && tournament.teams && tournament.teams.length > 0 && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
                   <Users className="h-4 w-4 mr-2" />
                   参加チーム一覧
                 </h4>
                 <div className="space-y-2">
                   {tournament.teams.map((team) => (
-                    <div key={team.tournament_team_id} className="p-3 border border-gray-200 rounded-md bg-white">
+                    <div key={team.tournament_team_id} className="p-3 border border-border rounded-md bg-card">
                       {/* チーム情報 */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2 flex-1">
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-foreground">
                             {team.tournament_team_name}
                           </span>
-                          <span className="text-gray-500">
+                          <span className="text-muted-foreground">
                             ({team.tournament_team_omission})
                           </span>
                           {team.assigned_block && (
@@ -184,7 +184,7 @@ export default function TeamTournaments() {
                           )}
                           {getWithdrawalStatusBadge(team.withdrawal_status)}
                         </div>
-                        <div className="flex items-center text-xs text-gray-500">
+                        <div className="flex items-center text-xs text-muted-foreground">
                           <span>{team.player_count}人</span>
                         </div>
                       </div>
@@ -192,7 +192,7 @@ export default function TeamTournaments() {
                       {/* アクションボタン */}
                       <div className="flex items-center space-x-2">
                         {team.withdrawal_status === 'withdrawal_approved' ? (
-                          <span className="text-xs text-gray-500 px-3 py-1 bg-gray-100 rounded">
+                          <span className="text-xs text-muted-foreground px-3 py-1 bg-muted rounded">
                             辞退済み
                           </span>
                         ) : (
@@ -235,7 +235,7 @@ export default function TeamTournaments() {
           )}
           {isJoined && (
             <>
-              <div className="text-sm text-gray-600 p-2 bg-blue-50 rounded-md">
+              <div className="text-sm text-muted-foreground p-2 bg-blue-50 rounded-md">
                 <p className="font-medium">📝 選手変更は各チーム別に行います</p>
                 <p className="text-xs mt-1">上記のチーム一覧から個別に編集してください</p>
               </div>
@@ -251,7 +251,7 @@ export default function TeamTournaments() {
               
               {/* 全チーム辞退済みの場合の表示 */}
               {tournament.teams && tournament.teams.every(team => team.withdrawal_status === 'withdrawal_approved') && (
-                <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-md border border-gray-200">
+                <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md border border-border">
                   <p className="font-medium text-red-600">⚠️ 全チーム辞退済み</p>
                   <p className="text-xs mt-1">この大会から全ての参加チームが辞退済みです</p>
                 </div>
@@ -269,7 +269,7 @@ export default function TeamTournaments() {
       <div className="space-y-6">
         <div className="text-center py-12">
           <Clock className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">大会情報を読み込み中...</p>
+          <p className="text-muted-foreground">大会情報を読み込み中...</p>
         </div>
       </div>
     );
@@ -292,7 +292,7 @@ export default function TeamTournaments() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-gray-600">大会情報が見つかりません</p>
+          <p className="text-muted-foreground">大会情報が見つかりません</p>
         </CardContent>
       </Card>
     );
@@ -302,7 +302,7 @@ export default function TeamTournaments() {
     <div className="space-y-8">
       {/* 申し込み済の大会 */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+        <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center">
           <CheckCircle className="h-6 w-6 mr-2 text-green-600" />
           申し込み済の大会
         </h2>
@@ -316,11 +316,11 @@ export default function TeamTournaments() {
         ) : (
           <Card>
             <CardContent className="p-6 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 参加申し込みした大会はありません
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 まだ大会に参加申し込みをしていません。下記の参加可能な大会から申し込みできます。
               </p>
             </CardContent>
@@ -331,7 +331,7 @@ export default function TeamTournaments() {
       {/* 参加可能な大会 */}
       <div>
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+          <h2 className="text-2xl font-bold text-foreground flex items-center">
             <Trophy className="h-6 w-6 mr-2 text-blue-600" />
             参加可能な大会
           </h2>
@@ -346,15 +346,15 @@ export default function TeamTournaments() {
         ) : (
           <Card>
             <CardContent className="p-6 text-center">
-              <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 参加可能な大会はありません
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 現在募集中の大会がないか、既にすべての大会に参加済みです。
               </p>
               <Button asChild variant="outline">
-                <Link href="/public/tournaments">大会一覧を確認する</Link>
+                <Link href="/tournaments">大会一覧を確認する</Link>
               </Button>
             </CardContent>
           </Card>

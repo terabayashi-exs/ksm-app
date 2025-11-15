@@ -128,18 +128,45 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     court_number: row.court_number as number | null
   }));
 
+  // 決勝トーナメントの順位データを取得
+  const finalBlockResult = await db.execute({
+    sql: `
+      SELECT 
+        match_block_id,
+        team_rankings,
+        remarks
+      FROM t_match_blocks 
+      WHERE tournament_id = ? 
+      AND phase = 'final'
+      LIMIT 1
+    `,
+    args: [tournamentId]
+  });
+
+  let finalRankings = null;
+  if (finalBlockResult.rows.length > 0) {
+    const finalBlock = finalBlockResult.rows[0];
+    finalRankings = {
+      match_block_id: finalBlock.match_block_id as number,
+      team_rankings: finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [],
+      remarks: finalBlock.remarks as string | null
+    };
+    
+    console.log(`[MANUAL_RANKINGS_PAGE] 決勝トーナメント順位取得: ${finalRankings.team_rankings.length}チーム`);
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">手動順位設定</h1>
-              <span className="text-sm text-gray-500">
+              <h1 className="text-2xl font-bold text-foreground">手動順位設定</h1>
+              <span className="text-sm text-muted-foreground">
                 {tournament.tournament_name}
               </span>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               各ブロックの順位を手動で調整できます。同着順位も設定可能です。
             </p>
           </div>
@@ -151,6 +178,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
           tournamentId={tournamentId}
           blocks={blocks}
           finalMatches={finalMatches}
+          finalRankings={finalRankings}
         />
       </div>
     </div>

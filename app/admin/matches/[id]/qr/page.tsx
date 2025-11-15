@@ -18,6 +18,14 @@ interface QRData {
   token: string;
   valid_from: string;
   valid_until: string;
+  // 多競技対応のスポーツ設定
+  sport_config?: {
+    sport_code: string;
+    score_label: string;
+    score_against_label: string;
+    difference_label: string;
+    supports_pk: boolean;
+  };
 }
 
 export default function MatchQRCodePage() {
@@ -73,10 +81,10 @@ export default function MatchQRCodePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">QRコード生成中...</p>
+          <p className="mt-4 text-muted-foreground">QRコード生成中...</p>
         </div>
       </div>
     );
@@ -84,7 +92,7 @@ export default function MatchQRCodePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <p className="text-red-600 mb-4">{error}</p>
@@ -97,10 +105,10 @@ export default function MatchQRCodePage() {
 
   if (!qrData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
-            <p className="text-gray-600">QRコードデータが見つかりません</p>
+            <p className="text-muted-foreground">QRコードデータが見つかりません</p>
           </CardContent>
         </Card>
       </div>
@@ -111,7 +119,7 @@ export default function MatchQRCodePage() {
   const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData.qr_url)}`;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
         {/* ヘッダー */}
         <Card className="mb-6">
@@ -123,10 +131,10 @@ export default function MatchQRCodePage() {
           </CardHeader>
           <CardContent>
             <div className="text-center mb-4">
-              <div className="text-xl font-bold text-gray-800 mb-2">
+              <div className="text-xl font-bold text-foreground mb-2">
                 {qrData.team1_name} vs {qrData.team2_name}
               </div>
-              <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+              <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center">
                   <Users className="w-4 h-4 mr-1" />
                   コート{qrData.court_number}
@@ -159,7 +167,7 @@ export default function MatchQRCodePage() {
                   }}
                 />
                 <div 
-                  className="w-72 h-72 mx-auto bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 hidden"
+                  className="w-72 h-72 mx-auto bg-muted rounded-lg flex items-center justify-center text-muted-foreground hidden"
                 >
                   <div className="text-center">
                     <QrCode className="w-16 h-16 mx-auto mb-2" />
@@ -167,8 +175,8 @@ export default function MatchQRCodePage() {
                   </div>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-gray-600">
-                審判の方はこのQRコードをスキャンして結果入力画面にアクセスしてください
+              <p className="mt-4 text-sm text-muted-foreground">
+                審判の方はこのQRコードをスキャンして{qrData.sport_config?.score_label || '得点'}結果入力画面にアクセスしてください
               </p>
             </div>
           </CardContent>
@@ -202,13 +210,13 @@ export default function MatchQRCodePage() {
         {/* 有効期限情報 */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-medium text-gray-700 mb-2">アクセス情報</h3>
-            <div className="text-sm text-gray-600 space-y-1">
+            <h3 className="font-medium text-muted-foreground mb-2">アクセス情報</h3>
+            <div className="text-sm text-muted-foreground space-y-1">
               <p>• 有効期間: {new Date(qrData.valid_from).toLocaleString('ja-JP')} ～ {new Date(qrData.valid_until).toLocaleString('ja-JP')}</p>
               <p>• 試合開始30分前から終了90分後まで有効</p>
-              <p>• QRコードまたはURLから審判用結果入力画面にアクセスできます</p>
+              <p>• QRコードまたはURLから審判用{qrData.sport_config?.score_label || '得点'}結果入力画面にアクセスできます</p>
               {process.env.NODE_ENV === 'development' && (
-                <div className="mt-4 p-2 bg-gray-100 rounded text-xs break-all">
+                <div className="mt-4 p-2 bg-muted rounded text-xs break-all">
                   <strong>Debug URL:</strong> {qrData.qr_url}
                 </div>
               )}

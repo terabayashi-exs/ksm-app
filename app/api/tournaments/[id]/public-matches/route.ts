@@ -1,6 +1,7 @@
 // app/api/tournaments/[id]/public-matches/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
 
 // キャッシュを無効化
 export const dynamic = 'force-dynamic';
@@ -138,6 +139,22 @@ export async function GET(
       throw simpleError;
     }
     
+    // 組み合わせ作成状況を判定
+    console.log('Checking team assignment status...');
+    const teamAssignmentResult = await db.execute(`
+      SELECT COUNT(*) as total_matches,
+             COUNT(CASE WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 1 END) as assigned_matches
+      FROM t_matches_live ml
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+    `, [tournamentId]);
+    
+    const teamAssignment = teamAssignmentResult.rows[0] as unknown as { total_matches: number; assigned_matches: number };
+    const isTeamAssignmentComplete = teamAssignment.assigned_matches > 0;
+    
+    console.log(`Team assignment status: ${teamAssignment.assigned_matches}/${teamAssignment.total_matches} matches assigned`);
+    console.log(`Is assignment complete: ${isTeamAssignmentComplete}`);
+
     // 成功した場合、より詳細なクエリを実行
     try {
       console.log('Executing full query...');
@@ -196,6 +213,8 @@ export async function GET(
             console.log('Missing columns in t_matches_final:', missingColumns);
             console.log('Using t_matches_live data only due to missing columns');
             // 必要な列が存在しない場合は、t_matches_liveのデータのみを使用
+            // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
+            const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
               SELECT 
                 ml.match_id,
@@ -228,11 +247,14 @@ export async function GET(
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
+              ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
             `, [tournamentId]);
           } else {
             // すべての必要な列が存在する場合はJOINクエリを実行
             console.log('All required columns exist, using JOIN query');
+            // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
+            const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
               SELECT 
                 ml.match_id,
@@ -266,6 +288,7 @@ export async function GET(
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
+              ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
             `, [tournamentId]);
           }
@@ -319,6 +342,78 @@ export async function GET(
 
     console.log('Processing match data, total rows:', matchesResult.rows.length);
     
+    // 競技設定を取得（PK戦考慮のため）
+    let sportConfig = null;
+    try {
+      const sportCode = await getTournamentSportCode(tournamentId);
+      sportConfig = getSportScoreConfig(sportCode);
+    } catch (sportError) {
+      console.warn('Failed to get sport config:', sportError);
+    }
+    
+    // PK戦を考慮したスコア計算関数
+    const calculateDisplayScore = (scoreData: string | number | bigint | ArrayBuffer | null | undefined) => {
+      if (scoreData === null || scoreData === undefined) {
+        return { goals: null, scoreDisplay: null };
+      }
+
+      // スコアを配列に変換
+      let scores: number[] = [];
+      
+      // ArrayBufferの場合
+      if (scoreData instanceof ArrayBuffer) {
+        const decoder = new TextDecoder();
+        const stringValue = decoder.decode(scoreData);
+        if (stringValue.includes(',')) {
+          scores = stringValue.split(',').map((s: string) => Number(s) || 0);
+        } else {
+          scores = [Number(stringValue) || 0];
+        }
+      }
+      // bigintの場合
+      else if (typeof scoreData === 'bigint') {
+        scores = [Number(scoreData)];
+      }
+      // 文字列の場合
+      else if (typeof scoreData === 'string' && scoreData.includes(',')) {
+        scores = scoreData.split(',').map((s: string) => Number(s) || 0);
+      } 
+      // その他の場合
+      else {
+        scores = [Number(scoreData) || 0];
+      }
+
+      // サッカーでPK戦がある場合の特別処理
+      if (sportConfig?.supports_pk && scores.length >= 5) {
+        const regularTotal = scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
+        const pkTotal = scores.slice(4).reduce((sum, score) => sum + score, 0);
+
+        // PK戦のスコアがある場合は分離表示用データを返す
+        if (pkTotal > 0) {
+          return {
+            goals: regularTotal,
+            pkGoals: pkTotal,
+            scoreDisplay: null // フロントエンドで合成
+          };
+        }
+
+        // PK戦がない場合は通常時間のスコアのみ
+        return {
+          goals: regularTotal,
+          pkGoals: null,
+          scoreDisplay: null
+        };
+      }
+
+      // 通常の処理（PK戦がない場合またはサッカー以外）
+      const total = scores.reduce((sum, score) => sum + score, 0);
+      return {
+        goals: total,
+        pkGoals: null,
+        scoreDisplay: null
+      };
+    };
+    
     const matches = [];
     
     for (let i = 0; i < matchesResult.rows.length; i++) {
@@ -341,16 +436,25 @@ export async function GET(
           team1_display_name: String(row.team1_display_name || 'チーム1'),
           team2_display_name: String(row.team2_display_name || 'チーム2'),
           court_number: row.court_number ? Number(row.court_number) : 1,
-          start_time: row.start_time ? String(row.start_time) : '09:00',
+          start_time: row.start_time ? String(row.start_time) : null,
           // ブロック情報
           phase: String(row.phase || 'preliminary'),
           display_round_name: String(row.display_round_name || '予選'),
           block_name: row.block_name ? String(row.block_name) : 'A',
           match_type: String(row.match_type || '通常'),
           block_order: Number(row.block_order || 1),
-          // 結果情報
-          team1_goals: row.team1_goals !== null && row.team1_goals !== undefined ? Number(row.team1_goals) : null,
-          team2_goals: row.team2_goals !== null && row.team2_goals !== undefined ? Number(row.team2_goals) : null,
+          // 結果情報（PK戦を考慮したスコア計算）
+          ...(function() {
+            const team1Score = calculateDisplayScore(row.team1_goals);
+            const team2Score = calculateDisplayScore(row.team2_goals);
+            
+            return {
+              team1_goals: team1Score.goals,
+              team2_goals: team2Score.goals,
+              team1_pk_goals: team1Score.pkGoals,
+              team2_pk_goals: team2Score.pkGoals
+            };
+          })(),
           winner_team_id: row.winner_team_id ? String(row.winner_team_id) : null,
           is_draw: Boolean(row.is_draw),
           is_walkover: Boolean(row.is_walkover),

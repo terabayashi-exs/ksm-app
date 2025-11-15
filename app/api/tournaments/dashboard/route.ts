@@ -1,14 +1,33 @@
 // app/api/tournaments/dashboard/route.ts
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
-import { calculateTournamentStatus } from '@/lib/tournament-status';
 
 export async function GET() {
   try {
-    // 全ての大会を取得して動的にステータス判定を行う
-    const result = await db.execute(`
-      SELECT 
+    // 認証チェック
+    const session = await auth();
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: '管理者権限が必要です' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    const isAdmin = userId === 'admin';
+
+    // 現在日時（JST）
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(jstNow);
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+
+    // 募集中（planning）と開催中（ongoing）の大会を取得
+    const activeResult = await db.execute(`
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.format_id,
@@ -18,32 +37,113 @@ export async function GET() {
         t.tournament_dates,
         t.match_duration_minutes,
         t.break_duration_minutes,
-        t.win_points,
-        t.draw_points,
-        t.loss_points,
-        t.walkover_winner_goals,
-        t.walkover_loser_goals,
         t.status,
         t.visibility,
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.is_archived,
+        t.archive_ui_version,
+        t.created_by,
         t.created_at,
         t.updated_at,
+        t.group_id,
+        t.group_order,
+        t.category_name,
         v.venue_name,
-        f.format_name
+        f.format_name,
+        a.logo_blob_url,
+        a.logo_filename,
+        a.organization_name,
+        g.group_name,
+        g.event_description as group_description,
+        NULL as group_color
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-      ORDER BY t.created_at DESC
-    `);
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
+      WHERE t.status IN ('planning', 'ongoing')
+        AND (t.created_by = ? OR ? = 1)
+      ORDER BY
+        CASE t.status
+          WHEN 'ongoing' THEN 1
+          WHEN 'planning' THEN 2
+          ELSE 3
+        END,
+        t.group_order,
+        t.created_at DESC
+    `, [userId, isAdmin ? 1 : 0]);
+
+    // 完了した大会を取得（開催日から1年以内）
+    const completedResult = await db.execute(`
+      SELECT
+        t.tournament_id,
+        t.tournament_name,
+        t.format_id,
+        t.venue_id,
+        t.team_count,
+        t.court_count,
+        t.tournament_dates,
+        t.match_duration_minutes,
+        t.break_duration_minutes,
+        t.status,
+        t.visibility,
+        t.public_start_date,
+        t.recruitment_start_date,
+        t.recruitment_end_date,
+        t.is_archived,
+        t.archive_ui_version,
+        t.created_by,
+        t.created_at,
+        t.updated_at,
+        t.group_id,
+        t.group_order,
+        t.category_name,
+        v.venue_name,
+        f.format_name,
+        a.logo_blob_url,
+        a.logo_filename,
+        a.organization_name,
+        g.group_name,
+        g.event_description as group_description,
+        NULL as group_color
+      FROM t_tournaments t
+      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
+      WHERE t.status = 'completed'
+        AND (t.created_by = ? OR ? = 1)
+      ORDER BY t.group_order, t.created_at DESC
+    `, [userId, isAdmin ? 1 : 0]);
+
+    // 完了した大会から開催日から1年経過したものを除外
+    const filteredCompletedRows = completedResult.rows.filter(row => {
+      if (row.tournament_dates) {
+        try {
+          const dates = JSON.parse(row.tournament_dates as string);
+          const dateValues = Object.values(dates) as string[];
+          const latestDate = dateValues.sort().pop();
+          if (latestDate && latestDate >= oneYearAgoStr) {
+            return true;
+          }
+        } catch (error) {
+          console.error('Error parsing tournament_dates:', error);
+        }
+      }
+      return false;
+    });
+
+    // アクティブな大会と1年以内の完了大会を結合
+    const allRows = [...activeResult.rows, ...filteredCompletedRows];
 
     // 各大会の試合時刻データを取得
-    const tournamentsWithTimes = await Promise.all(result.rows.map(async (row) => {
+    const tournamentsWithTimes = await Promise.all(allRows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
-      
+
       if (row.tournament_dates) {
         try {
           const dates = JSON.parse(row.tournament_dates as string);
@@ -59,10 +159,10 @@ export async function GET() {
       // 大会の実際の試合時刻を取得
       let startTime = '';
       let endTime = '';
-      
+
       try {
         const matchTimesResult = await db.execute(`
-          SELECT 
+          SELECT
             MIN(start_time) as earliest_start,
             MAX(start_time) as latest_start,
             match_duration_minutes,
@@ -78,16 +178,16 @@ export async function GET() {
         if (matchTimesResult.rows.length > 0 && matchTimesResult.rows[0].earliest_start) {
           const matchData = matchTimesResult.rows[0];
           startTime = matchData.earliest_start as string;
-          
+
           // 最後の試合開始時刻 + 試合時間で終了時刻を計算
           if (matchData.latest_start) {
             const latestStartTime = matchData.latest_start as string;
             const matchDuration = Number(matchData.match_duration_minutes) || Number(row.match_duration_minutes) || 15;
-            
+
             // 時刻を分に変換
             const [hours, minutes] = latestStartTime.split(':').map(Number);
             const totalMinutes = hours * 60 + minutes + matchDuration;
-            
+
             // 分を時刻に変換
             const endHours = Math.floor(totalMinutes / 60);
             const endMinutes = totalMinutes % 60;
@@ -97,7 +197,7 @@ export async function GET() {
       } catch (error) {
         console.error('Error fetching match times for tournament:', row.tournament_id, error);
       }
-      
+
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
@@ -108,16 +208,12 @@ export async function GET() {
         tournament_dates: row.tournament_dates as string,
         match_duration_minutes: Number(row.match_duration_minutes),
         break_duration_minutes: Number(row.break_duration_minutes),
-        win_points: Number(row.win_points),
-        draw_points: Number(row.draw_points),
-        loss_points: Number(row.loss_points),
-        walkover_winner_goals: Number(row.walkover_winner_goals),
-        walkover_loser_goals: Number(row.walkover_loser_goals),
         status: row.status as 'planning' | 'ongoing' | 'completed',
         visibility: Number(row.visibility === 'open' ? 1 : 0),
         public_start_date: row.public_start_date as string,
         recruitment_start_date: row.recruitment_start_date as string,
         recruitment_end_date: row.recruitment_end_date as string,
+        created_by: row.created_by as string,
         created_at: String(row.created_at),
         updated_at: String(row.updated_at),
         venue_name: row.venue_name as string,
@@ -126,51 +222,84 @@ export async function GET() {
         event_start_date: eventStartDate,
         event_end_date: eventEndDate,
         start_time: startTime,
-        end_time: endTime
+        end_time: endTime,
+        is_archived: Boolean(row.is_archived),
+        archive_ui_version: row.archive_ui_version as string,
+        logo_blob_url: row.logo_blob_url as string | null,
+        organization_name: row.organization_name as string | null,
+        group_id: row.group_id ? Number(row.group_id) : null,
+        group_order: Number(row.group_order) || 0,
+        category_name: row.category_name as string | null,
+        group_name: row.group_name as string | null,
+        group_description: row.group_description as string | null,
+        group_color: row.group_color as string | null
       } as Tournament;
     }));
 
-    // 動的ステータス判定を実行して募集中と開催中の大会を分類
-    const recruiting = [];
-    const ongoing = [];
+    // 募集中、開催中、完了に分類
+    const recruiting = tournamentsWithTimes.filter(t => t.status === 'planning');
+    const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
+    const completed = tournamentsWithTimes.filter(t => t.status === 'completed');
 
-    for (const tournament of tournamentsWithTimes) {
-      const calculatedStatus = calculateTournamentStatus({
-        status: tournament.status,
-        tournament_dates: tournament.tournament_dates || '',
-        recruitment_start_date: tournament.recruitment_start_date || null,
-        recruitment_end_date: tournament.recruitment_end_date || null
+    // グループ化された大会情報を生成
+    const groupedTournaments = (tournaments: Tournament[]) => {
+      const grouped: Record<string, { group: { group_id: number; group_name: string | null; group_description: string | null; group_color: string | null; display_order: number }, tournaments: Tournament[] }> = {};
+      const ungrouped: Tournament[] = [];
+
+      tournaments.forEach(tournament => {
+        if (tournament.group_id) {
+          const groupKey = tournament.group_id.toString();
+          if (!grouped[groupKey]) {
+            grouped[groupKey] = {
+              group: {
+                group_id: tournament.group_id!,
+                group_name: tournament.group_name || '',
+                group_description: tournament.group_description || '',
+                group_color: tournament.group_color || '#3B82F6',
+                display_order: 0
+              },
+              tournaments: []
+            };
+          }
+          grouped[groupKey].tournaments.push(tournament);
+        } else {
+          ungrouped.push(tournament);
+        }
       });
 
-      // 募集中または開催前の場合は「募集中」として表示
-      if (calculatedStatus === 'recruiting' || calculatedStatus === 'before_event') {
-        recruiting.push(tournament);
-      }
-      // 開催中の場合は「開催中」として表示
-      else if (calculatedStatus === 'ongoing') {
-        ongoing.push(tournament);
-      }
-      // completed, before_recruitmentは表示しない
-    }
+      // グループ内の大会を順序でソート
+      Object.values(grouped).forEach(group => {
+        group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+      });
 
-    // 優先度順にソート（開催中 > 募集中）
-    ongoing.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    recruiting.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      return { grouped, ungrouped };
+    };
+
+    const recruitingGrouped = groupedTournaments(recruiting);
+    const ongoingGrouped = groupedTournaments(ongoing);
+    const completedGrouped = groupedTournaments(completed);
 
     return NextResponse.json({
       success: true,
       data: {
         recruiting,
         ongoing,
-        total: recruiting.length + ongoing.length
+        completed,
+        total: tournamentsWithTimes.length,
+        // グループ化された情報も含める
+        grouped: {
+          recruiting: recruitingGrouped,
+          ongoing: ongoingGrouped,
+          completed: completedGrouped
+        }
       }
     });
 
   } catch (error) {
     console.error('大会取得エラー:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '大会データの取得に失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

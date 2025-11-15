@@ -124,27 +124,58 @@ export default function AdminTournamentsList() {
     fetchTournaments(searchParams, newOffset);
   };
 
+  // 大会アーカイブ処理
+  const handleArchiveTournament = async (tournamentId: number) => {
+    if (!confirm('この大会をアーカイブしますか？\nアーカイブ後は編集ができなくなります。')) {
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/archive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`アーカイブが完了しました。\n保存先: ${data.storage_type}\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB`);
+        // 大会一覧を再読み込み
+        fetchTournaments();
+      } else {
+        alert(`アーカイブに失敗しました: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('アーカイブエラー:', error);
+      alert('アーカイブ中にエラーが発生しました');
+    } finally {
+      setSearching(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">読み込み中...</p>
+          <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">大会一覧</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                大会の検索・管理を行います
+              <h1 className="text-3xl font-bold text-foreground">部門一覧</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                部門の検索・管理を行います（各大会に属する部門を管理）
               </p>
             </div>
             <div className="flex space-x-3">
@@ -155,7 +186,7 @@ export default function AdminTournamentsList() {
                 ダッシュボードに戻る
               </Button>
               <Button asChild>
-                <Link href="/admin/tournaments/create">新規大会作成</Link>
+                <Link href="/admin/tournaments/create-new">部門作成</Link>
               </Button>
             </div>
           </div>
@@ -222,10 +253,10 @@ export default function AdminTournamentsList() {
               </div>
             </div>
             <div className="mb-4">
-              <Label htmlFor="tournament_name">大会名</Label>
+              <Label htmlFor="tournament_name">部門名</Label>
               <Input
                 id="tournament_name"
-                placeholder="大会名で検索..."
+                placeholder="部門名で検索..."
                 value={searchParams.tournament_name}
                 onChange={(e) => setSearchParams({ ...searchParams, tournament_name: e.target.value })}
               />
@@ -258,7 +289,7 @@ export default function AdminTournamentsList() {
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>検索結果</span>
-              <span className="text-sm font-normal text-gray-500">
+              <span className="text-sm font-normal text-muted-foreground">
                 {pagination.total}件中 {pagination.offset + 1}-{Math.min(pagination.offset + tournaments.length, pagination.total)}件
               </span>
             </CardTitle>
@@ -266,7 +297,7 @@ export default function AdminTournamentsList() {
           <CardContent>
             {tournaments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">該当する大会が見つかりませんでした。</p>
+                <p className="text-muted-foreground">該当する大会が見つかりませんでした。</p>
               </div>
             ) : (
               <>
@@ -285,11 +316,18 @@ export default function AdminTournamentsList() {
                     </thead>
                     <tbody>
                       {tournaments.map((tournament) => (
-                        <tr key={tournament.tournament_id} className="border-b hover:bg-gray-50">
+                        <tr key={tournament.tournament_id} className="border-b hover:bg-muted">
                           <td className="px-4 py-3">
                             <div>
-                              <p className="font-medium text-gray-900">{tournament.tournament_name}</p>
-                              <p className="text-sm text-gray-500">{tournament.format_name}</p>
+                              <div className="flex items-center">
+                                <span className="font-medium text-foreground">{tournament.tournament_name}</span>
+                                {tournament.is_archived && (
+                                  <Badge className="ml-2 bg-purple-100 !text-black border border-purple-400">
+                                    アーカイブ済み
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{tournament.format_name}</p>
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -297,16 +335,16 @@ export default function AdminTournamentsList() {
                               {getStatusLabel(tournament.calculated_status)}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
                             {tournament.tournament_period}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
                             {tournament.venue_name}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
                             {tournament.registered_teams}チーム
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
                             {new Date(tournament.created_at).toLocaleDateString('ja-JP')}
                           </td>
                           <td className="px-4 py-3">
@@ -316,21 +354,48 @@ export default function AdminTournamentsList() {
                                   詳細
                                 </Link>
                               </Button>
-                              <Button asChild size="sm" variant="outline">
-                                <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                                  編集
-                                </Link>
-                              </Button>
-                              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                                  試合管理
-                                </Link>
-                              </Button>
-                              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                                  手動順位設定
-                                </Link>
-                              </Button>
+                              {!tournament.is_archived && (
+                                <>
+                                  <Button asChild size="sm" variant="outline">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                                      編集
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                                      ルール設定
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                                      試合管理
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                                      手動順位設定
+                                    </Link>
+                                  </Button>
+                                  {tournament.calculated_status === 'completed' && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="hover:border-purple-300 hover:bg-purple-50"
+                                      onClick={() => handleArchiveTournament(tournament.tournament_id)}
+                                      disabled={searching}
+                                    >
+                                      アーカイブ
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                              {tournament.is_archived && (
+                                <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                                  <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                                    アーカイブ表示
+                                  </Link>
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -349,7 +414,7 @@ export default function AdminTournamentsList() {
                     >
                       前のページ
                     </Button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       ページ {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
                     </span>
                     <Button

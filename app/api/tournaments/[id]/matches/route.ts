@@ -55,8 +55,26 @@ export async function GET(
       );
     }
 
+    // 組み合わせ作成状況を判定
+    console.log('Checking team assignment status...');
+    const teamAssignmentResult = await db.execute(`
+      SELECT COUNT(*) as total_matches,
+             COUNT(CASE WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 1 END) as assigned_matches
+      FROM t_matches_live ml
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+    `, [tournamentId]);
+    
+    const teamAssignment = teamAssignmentResult.rows[0] as unknown as { total_matches: number; assigned_matches: number };
+    const isTeamAssignmentComplete = teamAssignment.assigned_matches > 0;
+    
+    console.log(`[ADMIN] Team assignment status: ${teamAssignment.assigned_matches}/${teamAssignment.total_matches} matches assigned`);
+    console.log(`[ADMIN] Is assignment complete: ${isTeamAssignmentComplete}`);
+
     // 試合データを取得（試合状態と確定結果も含む）
     console.log(`Fetching matches for tournament ${tournamentId}...`);
+    // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
+    const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
     const matchesResult = await db.execute(`
       SELECT 
         ml.match_id,
@@ -106,6 +124,7 @@ export async function GET(
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
+      ${teamFilter}
       ORDER BY ml.match_code ASC
     `, [tournamentId]);
 
@@ -123,9 +142,8 @@ export async function GET(
       const actualEndTime = row.status_actual_end_time;
       
       // 確定済みかどうかの判定
-      // 1. t_matches_finalにデータがある場合（通常の確定 or 順位に影響する中止）
-      // 2. match_statusが'cancelled'の場合（中止済みは常に確定扱い）
-      const isConfirmed = !!row.final_team1_scores || !!row.confirmed_at || matchStatus === 'cancelled';
+      // t_matches_finalにレコードが存在する場合のみ確定扱い
+      const isConfirmed = !!row.confirmed_at;
       
       // スコア情報（確定済みなら最終結果、そうでなければライブスコア）
       const team1ScoresStr = isConfirmed ? row.final_team1_scores : row.team1_scores;

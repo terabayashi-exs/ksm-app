@@ -1,15 +1,19 @@
 -- PK選手権大会システム DDL
 -- Generated from ksm-dev database
--- Date: 2025-08-25
+-- Date: 2025-09-24
 
 -- m_administrators
 CREATE TABLE "m_administrators" (
-  admin_login_id TEXT PRIMARY KEY,
-  password_hash TEXT NOT NULL,
-  email TEXT NOT NULL,
-  created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-  updated_at DATETIME DEFAULT (datetime('now', '+9 hours'))
-);
+        administrator_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_login_id TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+        updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+        logo_blob_url TEXT,
+        logo_filename TEXT,
+        organization_name TEXT
+      );
 
 -- m_match_templates
 CREATE TABLE "m_match_templates" (
@@ -25,11 +29,18 @@ CREATE TABLE "m_match_templates" (
         team2_source TEXT,
         team1_display_name TEXT NOT NULL,
         team2_display_name TEXT NOT NULL,
-        day_number INTEGER NOT NULL DEFAULT 1,
-        execution_priority INTEGER NOT NULL DEFAULT 0,
+        day_number INTEGER NOT NULL,
+        execution_priority INTEGER NOT NULL,
         created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
         updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-        FOREIGN KEY (format_id) REFERENCES m_tournament_formats(format_id)
+        court_number INTEGER,
+        suggested_start_time TEXT,
+        start_time TEXT,
+        loser_position_start INTEGER,
+        loser_position_end INTEGER,
+        position_note TEXT,
+        winner_position INTEGER,
+        FOREIGN KEY (format_id) REFERENCES m_tournament_formats (format_id)
       );
 
 -- m_players
@@ -43,6 +54,22 @@ CREATE TABLE "m_players" (
     updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
     FOREIGN KEY (current_team_id) REFERENCES m_teams(team_id)
 );
+
+-- m_sport_types
+CREATE TABLE m_sport_types (
+        sport_type_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sport_name TEXT NOT NULL,
+        sport_code TEXT UNIQUE NOT NULL,
+        max_period_count INTEGER NOT NULL,
+        regular_period_count INTEGER NOT NULL,
+        score_type TEXT NOT NULL DEFAULT 'numeric',
+        default_match_duration INTEGER,
+        score_unit TEXT DEFAULT 'ゴール',
+        period_definitions TEXT NOT NULL,
+        result_format TEXT DEFAULT 'score',
+        created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+        updated_at DATETIME DEFAULT (datetime('now', '+9 hours'))
+      , supports_point_system INTEGER DEFAULT 1, supports_draws INTEGER DEFAULT 1, ranking_method TEXT DEFAULT 'points');
 
 -- m_teams
 CREATE TABLE "m_teams" (
@@ -68,7 +95,7 @@ CREATE TABLE "m_tournament_formats" (
     format_description TEXT,
     created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
     updated_at DATETIME DEFAULT (datetime('now', '+9 hours'))
-);
+, sport_type_id INTEGER DEFAULT 1);
 
 -- m_venues
 CREATE TABLE "m_venues" (
@@ -86,6 +113,23 @@ CREATE TABLE sample_data (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   value TEXT
 );
+
+-- t_archived_tournament_json
+CREATE TABLE t_archived_tournament_json (
+        tournament_id INTEGER PRIMARY KEY,
+        tournament_name TEXT NOT NULL,
+        tournament_data TEXT NOT NULL,
+        teams_data TEXT NOT NULL,
+        matches_data TEXT NOT NULL,
+        standings_data TEXT NOT NULL,
+        results_data TEXT,
+        pdf_info_data TEXT,
+        archive_version TEXT DEFAULT 'v1_json',
+        archived_at DATETIME NOT NULL,
+        archived_by TEXT NOT NULL,
+        last_accessed DATETIME,
+        metadata TEXT
+      );
 
 -- t_match_blocks
 CREATE TABLE "t_match_blocks" (
@@ -140,7 +184,7 @@ CREATE TABLE "t_matches_final" (
         result_status TEXT NOT NULL DEFAULT 'confirmed',
         remarks TEXT,
         created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-        updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+        updated_at DATETIME DEFAULT (datetime('now', '+9 hours')), cancellation_type TEXT,
         FOREIGN KEY (match_block_id) REFERENCES t_match_blocks(match_block_id),
         FOREIGN KEY (team1_id) REFERENCES m_teams(team_id),
         FOREIGN KEY (team2_id) REFERENCES m_teams(team_id),
@@ -172,7 +216,26 @@ CREATE TABLE "t_matches_live" (
         confirmed_by TEXT,
         created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
         updated_at DATETIME DEFAULT (datetime('now', '+9 hours'))
-      );
+      , cancellation_type TEXT);
+
+-- t_tournament_files
+CREATE TABLE t_tournament_files (
+  file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournament_id INTEGER NOT NULL,
+  file_title TEXT NOT NULL,                    -- ユーザー指定タイトル（例：「駐車場案内」）
+  file_description TEXT,                       -- ファイル説明（オプション）
+  original_filename TEXT NOT NULL,             -- 元のファイル名
+  blob_url TEXT NOT NULL,                      -- Vercel Blob Storage URL
+  file_size INTEGER NOT NULL,                  -- ファイルサイズ（バイト）
+  mime_type TEXT NOT NULL DEFAULT 'application/pdf', -- MIME型
+  upload_order INTEGER DEFAULT 0,              -- 表示順序
+  is_public BOOLEAN DEFAULT 1,                 -- 公開フラグ
+  uploaded_by TEXT NOT NULL,                   -- アップロード者（管理者ID）
+  uploaded_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+  updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+  
+  FOREIGN KEY (tournament_id) REFERENCES t_tournaments(tournament_id) ON DELETE CASCADE
+);
 
 -- t_tournament_notifications
 CREATE TABLE t_tournament_notifications (
@@ -208,6 +271,22 @@ CREATE TABLE "t_tournament_players" (
         UNIQUE(tournament_id, team_id, player_id)
       );
 
+-- t_tournament_rules
+CREATE TABLE t_tournament_rules (
+        tournament_rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tournament_id INTEGER NOT NULL,
+        phase TEXT NOT NULL,
+        use_extra_time BOOLEAN DEFAULT 0,
+        use_penalty BOOLEAN DEFAULT 0,
+        active_periods TEXT NOT NULL,
+        win_condition TEXT DEFAULT 'score',
+        notes TEXT,
+        created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+        updated_at DATETIME DEFAULT (datetime('now', '+9 hours')), tie_breaking_rules TEXT, tie_breaking_enabled INTEGER DEFAULT 1, point_system TEXT, walkover_settings TEXT,
+        FOREIGN KEY (tournament_id) REFERENCES t_tournaments (tournament_id),
+        UNIQUE (tournament_id, phase)
+      );
+
 -- t_tournament_teams
 CREATE TABLE "t_tournament_teams" (
     tournament_team_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -228,27 +307,35 @@ CREATE TABLE "t_tournaments" (
         tournament_name TEXT NOT NULL,
         format_id INTEGER NOT NULL,
         venue_id INTEGER NOT NULL,
-        team_count INTEGER NOT NULL DEFAULT 0,
-        court_count INTEGER NOT NULL DEFAULT 4,
+        team_count INTEGER NOT NULL,
+        court_count INTEGER NOT NULL,
         tournament_dates TEXT,
-        match_duration_minutes INTEGER NOT NULL DEFAULT 15,
-        break_duration_minutes INTEGER NOT NULL DEFAULT 5,
-        win_points INTEGER NOT NULL DEFAULT 3,
-        draw_points INTEGER NOT NULL DEFAULT 1,
-        loss_points INTEGER NOT NULL DEFAULT 0,
-        walkover_winner_goals INTEGER NOT NULL DEFAULT 3,
-        walkover_loser_goals INTEGER NOT NULL DEFAULT 0,
-        status TEXT NOT NULL DEFAULT 'planning',
-        visibility TEXT NOT NULL DEFAULT 'preparing',
-        public_start_date DATE,
-        recruitment_start_date DATE,
-        recruitment_end_date DATE,
+        match_duration_minutes INTEGER NOT NULL,
+        break_duration_minutes INTEGER NOT NULL,
+        status TEXT DEFAULT 'planning',
+        visibility TEXT DEFAULT 'preparing',
+        public_start_date TEXT,
+        recruitment_start_date TEXT,
+        recruitment_end_date TEXT,
+        sport_type_id INTEGER,
+        created_by TEXT,
+        archive_ui_version TEXT,
+        is_archived INTEGER DEFAULT 0,
+        archived_at DATETIME,
+        archived_by TEXT,
         created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-        updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-        cancelled_match_points INTEGER NOT NULL DEFAULT 1,
-        cancelled_team1_goals INTEGER NOT NULL DEFAULT 0,
-        cancelled_team2_goals INTEGER NOT NULL DEFAULT 0
-      );
+        updated_at DATETIME DEFAULT (datetime('now', '+9 hours'))
+      , files_count INTEGER DEFAULT 0);
 
 -- Indexes
-CREATE INDEX idx_tournaments_status ON t_tournaments(status);
+CREATE INDEX idx_archived_json_date 
+      ON t_archived_tournament_json(archived_at)
+    ;
+CREATE INDEX idx_archived_json_version 
+      ON t_archived_tournament_json(archive_version)
+    ;
+CREATE INDEX idx_tournament_files_order ON t_tournament_files(tournament_id, upload_order);
+CREATE INDEX idx_tournament_files_public ON t_tournament_files(tournament_id, is_public);
+CREATE INDEX idx_tournament_files_tournament_id ON t_tournament_files(tournament_id);
+CREATE INDEX idx_tournament_rules_point_system ON t_tournament_rules(tournament_id, point_system);
+CREATE INDEX idx_tournament_rules_tournament_phase ON t_tournament_rules(tournament_id, phase);

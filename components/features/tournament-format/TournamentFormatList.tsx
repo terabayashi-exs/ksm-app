@@ -9,9 +9,12 @@ import { Edit, Trash2, Copy, Users, Calendar } from "lucide-react";
 interface TournamentFormat {
   format_id: number;
   format_name: string;
+  sport_type_id: number;
   target_team_count: number;
   format_description: string;
   created_at: string;
+  sport_name: string;
+  sport_code: string;
   template_count?: number;
 }
 
@@ -124,6 +127,9 @@ export default function TournamentFormatList() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   {format.format_name}
                 </h3>
+                <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                  {format.sport_name}
+                </Badge>
                 <Badge variant="secondary" className="flex items-center space-x-1">
                   <Users className="h-3 w-3" />
                   <span>{format.target_team_count}チーム</span>
