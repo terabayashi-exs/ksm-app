@@ -93,13 +93,13 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       }
       return '予選リーグ';
     } else if (match.phase === 'final') {
-      // display_round_nameを優先的に使用（1位リーグ、2位リーグなど）
-      if (match.display_round_name) {
-        return match.display_round_name;
-      }
-      // フォールバック: block_nameを使用
-      if (match.block_name) {
+      // block_nameを優先的に使用（1位リーグ、2位リーグなどが入っている）
+      if (match.block_name && match.block_name !== 'final' && match.block_name !== 'default') {
         return match.block_name;
+      }
+      // フォールバック1: display_round_name
+      if (match.display_round_name && match.display_round_name !== 'final') {
+        return match.display_round_name;
       }
       // 最終フォールバック
       return '決勝トーナメント';
@@ -256,11 +256,24 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       blocks.add(getBlockKey(match));
     });
     return Array.from(blocks).sort((a, b) => {
-      // 予選ブロックを先に、決勝トーナメントを最後に
-      const aIsFinal = a.includes('決勝');
-      const bIsFinal = b.includes('決勝');
-      if (aIsFinal && !bIsFinal) return 1;
-      if (!aIsFinal && bIsFinal) return -1;
+      // フェーズ別の優先順位を設定（予選 → 決勝）
+      const phaseOrderA = a.includes('予選') ? 0 : 1;
+      const phaseOrderB = b.includes('予選') ? 0 : 1;
+
+      if (phaseOrderA !== phaseOrderB) {
+        return phaseOrderA - phaseOrderB;
+      }
+
+      // 同じフェーズ内でblock_nameの昇順でソート
+      // 予選の場合: "予選Aブロック" → "A"を抽出してソート
+      // 決勝の場合: "1位リーグ", "2位リーグ", "決勝トーナメント" などを比較
+      if (a.includes('予選') && b.includes('予選')) {
+        const blockA = a.replace('予選', '').replace('ブロック', '');
+        const blockB = b.replace('予選', '').replace('ブロック', '');
+        return blockA.localeCompare(blockB);
+      }
+
+      // 決勝同士の場合はそのまま比較（round_name順）
       return a.localeCompare(b);
     });
   };
@@ -378,7 +391,29 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
               </Card>
 
               {/* ブロック別試合表示 */}
-              {Object.entries(matchesByBlock).map(([blockKey, blockMatches]) => (
+              {Object.entries(matchesByBlock)
+                .sort(([blockKeyA], [blockKeyB]) => {
+                  // フェーズ別の優先順位を設定（予選 → 決勝）
+                  const phaseOrderA = blockKeyA.includes('予選') ? 0 : 1;
+                  const phaseOrderB = blockKeyB.includes('予選') ? 0 : 1;
+
+                  if (phaseOrderA !== phaseOrderB) {
+                    return phaseOrderA - phaseOrderB;
+                  }
+
+                  // 同じフェーズ内でblock_nameの昇順でソート
+                  // 予選の場合: "予選Aブロック" → "A"を抽出してソート
+                  // 決勝の場合: "1位リーグ", "2位リーグ", "決勝トーナメント" などを比較
+                  if (blockKeyA.includes('予選') && blockKeyB.includes('予選')) {
+                    const blockA = blockKeyA.replace('予選', '').replace('ブロック', '');
+                    const blockB = blockKeyB.replace('予選', '').replace('ブロック', '');
+                    return blockA.localeCompare(blockB);
+                  }
+
+                  // 決勝同士の場合はそのまま比較（round_name順）
+                  return blockKeyA.localeCompare(blockKeyB);
+                })
+                .map(([blockKey, blockMatches]) => (
                 <Card key={blockKey}>
                   <CardHeader>
                     <CardTitle className="flex items-center">
