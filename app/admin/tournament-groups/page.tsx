@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Plus, Calendar, Users, MapPin } from 'lucide-react';
+import { Plus, Calendar, Users, MapPin, Trash2 } from 'lucide-react';
 
 interface TournamentGroup {
   group_id: number;
@@ -27,6 +27,7 @@ export default function TournamentGroupsList() {
   const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingGroupId, setDeletingGroupId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchTournamentGroups = async () => {
@@ -62,6 +63,42 @@ export default function TournamentGroupsList() {
     const start = formatDate(startDate);
     const end = formatDate(endDate);
     return `${start} 〜 ${end}`;
+  };
+
+  const handleDeleteGroup = async (group: TournamentGroup, e: React.MouseEvent) => {
+    e.stopPropagation(); // カードのクリックイベントを防止
+
+    const confirmMessage = `大会「${group.group_name}」を削除しますか？\n\n⚠️ この操作は取り消せません。以下が削除されます：\n・所属する${group.division_count}件の部門\n・各部門の試合データ\n・チーム・選手情報\n・その他関連データ`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeletingGroupId(group.group_id);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/tournament-groups/${group.group_id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // リストから削除されたグループを除去
+        setTournamentGroups(prev => prev.filter(g => g.group_id !== group.group_id));
+
+        // 成功メッセージを表示
+        alert(data.message || '大会を削除しました');
+      } else {
+        setError(data.error || '大会の削除に失敗しました');
+      }
+    } catch (err) {
+      console.error('削除エラー:', err);
+      setError('大会の削除中にエラーが発生しました');
+    } finally {
+      setDeletingGroupId(null);
+    }
   };
 
   if (loading) {
@@ -145,9 +182,24 @@ export default function TournamentGroupsList() {
                           <h3 className="text-lg font-bold text-foreground">
                             {group.group_name}
                           </h3>
-                          <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
-                            {group.visibility === 'open' ? '公開' : '非公開'}
-                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
+                              {group.visibility === 'open' ? '公開' : '非公開'}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleDeleteGroup(group, e)}
+                              disabled={deletingGroupId === group.group_id}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              {deletingGroupId === group.group_id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
 
                         {group.organizer && (

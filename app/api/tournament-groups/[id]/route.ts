@@ -210,7 +210,7 @@ export async function PUT(
   }
 }
 
-// 大会削除
+// 大会削除（所属する全部門も含めて削除）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -220,7 +220,7 @@ export async function DELETE(
 
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
-        { error: '管理者権限が必要です' },
+        { success: false, error: '管理者権限が必要です' },
         { status: 401 }
       );
     }
@@ -228,31 +228,159 @@ export async function DELETE(
     const resolvedParams = await params;
     const groupId = parseInt(resolvedParams.id);
 
-    // 所属部門確認
-    const divisionsResult = await db.execute(`
-      SELECT COUNT(*) as count FROM t_tournaments WHERE group_id = ?
-    `, [groupId]);
-
-    if (Number(divisionsResult.rows[0].count) > 0) {
+    if (isNaN(groupId)) {
       return NextResponse.json(
-        { error: '所属部門が存在するため削除できません。先に部門を削除してください。' },
+        { success: false, error: '無効な大会IDです' },
         { status: 400 }
       );
     }
 
-    // 大会削除
-    await db.execute(`
-      DELETE FROM t_tournament_groups WHERE group_id = ?
-    `, [groupId]);
+    // 大会グループの存在確認
+    const groupCheck = await db.execute(
+      'SELECT group_id, group_name FROM t_tournament_groups WHERE group_id = ?',
+      [groupId]
+    );
 
-    return NextResponse.json({
-      success: true,
-      message: '大会を削除しました'
-    });
+    if (groupCheck.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: '指定された大会が見つかりません' },
+        { status: 404 }
+      );
+    }
+
+    const groupName = groupCheck.rows[0].group_name;
+
+    // 所属する部門の数を確認
+    const divisionCount = await db.execute(
+      'SELECT COUNT(*) as count FROM t_tournaments WHERE group_id = ?',
+      [groupId]
+    );
+
+    const totalDivisions = Number(divisionCount.rows[0].count);
+
+    console.log(`大会グループ「${groupName}」(ID: ${groupId}) の削除を開始...`);
+    console.log(`所属部門数: ${totalDivisions}件`);
+
+    // 外部キー制約を一時的に無効化（スキーマの問題を回避）
+    await db.execute('PRAGMA foreign_keys = OFF');
+
+    try {
+      // Step 1: 各部門とその関連データを削除
+    if (totalDivisions > 0) {
+      // 部門のtournament_idリストを取得
+      const tournamentsResult = await db.execute(
+        'SELECT tournament_id FROM t_tournaments WHERE group_id = ?',
+        [groupId]
+      );
+
+      const tournamentIds = tournamentsResult.rows.map(row => Number(row.tournament_id));
+      console.log(`削除対象部門ID: ${tournamentIds.join(', ')}`);
+
+      // 各部門について、部門削除と同じ手順で削除
+      for (const tournamentId of tournamentIds) {
+        console.log(`  部門 ${tournamentId} の削除開始...`);
+
+        // 1-1. 試合関連データを削除（サブクエリ使用）
+        try {
+          await db.execute(`
+            DELETE FROM t_match_status
+            WHERE match_block_id IN (
+              SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+            )
+          `, [tournamentId]);
+        } catch {
+          console.log('  t_match_status削除スキップ（テーブル不存在またはデータなし）');
+        }
+
+        try {
+          await db.execute(`
+            DELETE FROM t_matches_final
+            WHERE match_block_id IN (
+              SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+            )
+          `, [tournamentId]);
+        } catch {
+          console.log('  t_matches_final削除スキップ（テーブル不存在またはデータなし）');
+        }
+
+        await db.execute(`
+          DELETE FROM t_matches_live
+          WHERE match_block_id IN (
+            SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+          )
+        `, [tournamentId]);
+
+        // 1-2. 大会関連データを削除
+        try {
+          await db.execute(`
+            DELETE FROM t_tournament_notifications WHERE tournament_id = ?
+          `, [tournamentId]);
+        } catch {
+          console.log('  t_tournament_notifications削除スキップ');
+        }
+
+        try {
+          await db.execute(`
+            DELETE FROM t_tournament_rules WHERE tournament_id = ?
+          `, [tournamentId]);
+        } catch {
+          console.log('  t_tournament_rules削除スキップ');
+        }
+
+        await db.execute(`
+          DELETE FROM t_tournament_players WHERE tournament_id = ?
+        `, [tournamentId]);
+
+        await db.execute(`
+          DELETE FROM t_tournament_teams WHERE tournament_id = ?
+        `, [tournamentId]);
+
+        // 1-3. マッチブロックを削除
+        await db.execute(`
+          DELETE FROM t_match_blocks WHERE tournament_id = ?
+        `, [tournamentId]);
+
+        // 1-4. 部門本体を削除
+        await db.execute(`
+          DELETE FROM t_tournaments WHERE tournament_id = ?
+        `, [tournamentId]);
+
+        console.log(`  ✓ 部門 ${tournamentId} 削除完了`);
+      }
+
+      console.log(`✓ ${totalDivisions}件の部門と関連データを削除しました`);
+    }
+
+      // Step 2: 大会グループ（t_tournament_groups）を削除
+      await db.execute(
+        'DELETE FROM t_tournament_groups WHERE group_id = ?',
+        [groupId]
+      );
+
+      console.log(`✓ 大会グループ「${groupName}」を削除しました`);
+
+      return NextResponse.json({
+        success: true,
+        message: `大会「${groupName}」と所属する${totalDivisions}件の部門を削除しました`,
+        deletedDivisions: totalDivisions
+      });
+
+    } finally {
+      // 外部キー制約を再度有効化
+      await db.execute('PRAGMA foreign_keys = ON');
+      console.log('外部キー制約を再度有効化しました');
+    }
+
   } catch (error) {
-    console.error('大会削除エラー:', error);
+    console.error('大会グループ削除エラー:', error);
+    // エラー時も外部キー制約を再度有効化
+    try {
+      await db.execute('PRAGMA foreign_keys = ON');
+    } catch (fkError) {
+      console.error('外部キー制約の再有効化に失敗しました:', fkError);
+    }
     return NextResponse.json(
-      { error: '大会の削除に失敗しました' },
+      { success: false, error: '大会グループの削除中にエラーが発生しました' },
       { status: 500 }
     );
   }
