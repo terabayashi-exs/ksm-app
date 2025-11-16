@@ -72,21 +72,18 @@ export async function calculateTournamentStatus(
 
   // 試合進行状況をチェック（tournamentIdが提供されている場合のみ）
   let allMatchesCompleted = false;
-  let hasOngoingMatches = false;
-  
+
   console.log(`📊 Tournament ${tournamentId || 'N/A'} status calculation:`, {
     dbStatus: tournament.status,
     hasTournamentId: !!tournamentId
   });
-  
+
   if (tournamentId) {
     try {
       allMatchesCompleted = await checkAllMatchesCompleted(tournamentId);
-      hasOngoingMatches = await checkTournamentHasOngoingMatches(tournamentId);
-      
+
       console.log(`📊 Tournament ${tournamentId} match status:`, {
-        allMatchesCompleted,
-        hasOngoingMatches
+        allMatchesCompleted
       });
     } catch (error) {
       console.warn('試合状況チェックエラー:', error);
@@ -109,33 +106,36 @@ export async function calculateTournamentStatus(
     return 'ongoing';
   }
 
+  // 実際に試合が開始されている場合は、日付に関わらず開催中とする
+  let matchBasedOngoing = false;
+  if (tournamentId) {
+    matchBasedOngoing = await checkTournamentHasOngoingMatches(tournamentId);
+    if (matchBasedOngoing) {
+      console.log(`🏁 Tournament ${tournamentId}: Status set to 'ongoing' because matches have started`);
+      return 'ongoing';
+    }
+  }
+
   // 1. 募集前：募集開始日が未来の場合
   if (recruitmentStart && today < recruitmentStart) {
     return 'before_recruitment';
   }
 
   // 2. 募集中：募集開始日 <= 現在 <= 募集終了日
-  if (recruitmentStart && recruitmentEnd && 
+  if (recruitmentStart && recruitmentEnd &&
       today >= recruitmentStart && today <= recruitmentEnd) {
     return 'recruiting';
   }
 
   // 3. 開催前：募集終了日 < 現在 < 大会開始日
-  if (recruitmentEnd && tournamentStartDate && 
+  if (recruitmentEnd && tournamentStartDate &&
       today > recruitmentEnd && today < tournamentStartDate) {
     return 'before_event';
   }
 
-  // 4. 開催中：大会開始日になった OR 実際に試合が開始されている
-  const dateBasedOngoing = tournamentStartDate && tournamentEndDate && 
-      today >= tournamentStartDate && today <= tournamentEndDate;
-  
-  let matchBasedOngoing = false;
-  if (tournamentId) {
-    matchBasedOngoing = await checkTournamentHasOngoingMatches(tournamentId);
-  }
-
-  if (dateBasedOngoing || matchBasedOngoing) {
+  // 4. 開催中：大会期間中
+  if (tournamentStartDate && tournamentEndDate &&
+      today >= tournamentStartDate && today <= tournamentEndDate) {
     return 'ongoing';
   }
 
@@ -232,24 +232,30 @@ export function calculateTournamentStatusSync(
 }
 
 /**
- * 大会に進行中の試合があるかチェック
+ * 大会に進行中または開始済みの試合があるかチェック
+ * scheduled（試合前）以外の試合が1つでもあればtrueを返す
  */
 async function checkTournamentHasOngoingMatches(tournamentId: number): Promise<boolean> {
   try {
     const { db } = await import('@/lib/db');
-    
+
+    // t_match_statusテーブルから scheduled 以外の試合をカウント
     const result = await db.execute(`
-      SELECT COUNT(*) as ongoing_count
+      SELECT COUNT(*) as started_count
       FROM t_match_status ms
       INNER JOIN t_matches_live ml ON ms.match_id = ml.match_id
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
-        AND ms.match_status = 'ongoing'
-        AND ms.actual_start_time IS NOT NULL
+        AND ms.match_status != 'scheduled'
+        AND ml.team1_id IS NOT NULL
+        AND ml.team2_id IS NOT NULL
     `, [tournamentId]);
 
-    const ongoingCount = result.rows[0]?.ongoing_count as number || 0;
-    return ongoingCount > 0;
+    const startedCount = result.rows[0]?.started_count as number || 0;
+
+    console.log(`Tournament ${tournamentId}: ${startedCount} matches have started (not scheduled)`);
+
+    return startedCount > 0;
   } catch (error) {
     console.warn('進行中試合チェックエラー:', error);
     return false;

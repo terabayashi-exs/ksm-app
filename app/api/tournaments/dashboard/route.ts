@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
+import { calculateTournamentStatus } from '@/lib/tournament-status';
 
 export async function GET() {
   try {
@@ -138,12 +139,12 @@ export async function GET() {
     // アクティブな大会と1年以内の完了大会を結合
     const allRows = [...activeResult.rows, ...filteredCompletedRows];
 
-    // 各大会の試合時刻データを取得
+    // 各大会の試合時刻データを取得し、動的ステータスを計算
     const tournamentsWithTimes = await Promise.all(allRows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
-      
+
       if (row.tournament_dates) {
         try {
           const dates = JSON.parse(row.tournament_dates as string);
@@ -159,10 +160,10 @@ export async function GET() {
       // 大会の実際の試合時刻を取得
       let startTime = '';
       let endTime = '';
-      
+
       try {
         const matchTimesResult = await db.execute(`
-          SELECT 
+          SELECT
             MIN(start_time) as earliest_start,
             MAX(start_time) as latest_start,
             match_duration_minutes,
@@ -178,16 +179,16 @@ export async function GET() {
         if (matchTimesResult.rows.length > 0 && matchTimesResult.rows[0].earliest_start) {
           const matchData = matchTimesResult.rows[0];
           startTime = matchData.earliest_start as string;
-          
+
           // 最後の試合開始時刻 + 試合時間で終了時刻を計算
           if (matchData.latest_start) {
             const latestStartTime = matchData.latest_start as string;
             const matchDuration = Number(matchData.match_duration_minutes) || Number(row.match_duration_minutes) || 15;
-            
+
             // 時刻を分に変換
             const [hours, minutes] = latestStartTime.split(':').map(Number);
             const totalMinutes = hours * 60 + minutes + matchDuration;
-            
+
             // 分を時刻に変換
             const endHours = Math.floor(totalMinutes / 60);
             const endMinutes = totalMinutes % 60;
@@ -197,7 +198,23 @@ export async function GET() {
       } catch (error) {
         console.error('Error fetching match times for tournament:', row.tournament_id, error);
       }
-      
+
+      // 動的ステータスを計算（試合進行状況を考慮）
+      const calculatedStatus = await calculateTournamentStatus({
+        status: (row.status as string) || 'planning',
+        recruitment_start_date: row.recruitment_start_date as string | null,
+        recruitment_end_date: row.recruitment_end_date as string | null,
+        tournament_dates: (row.tournament_dates as string) || '{}'
+      }, Number(row.tournament_id));
+
+      // TournamentStatus を Tournament の status にマッピング
+      const mappedStatus =
+        calculatedStatus === 'before_recruitment' ? 'planning' :
+        calculatedStatus === 'recruiting' ? 'planning' :
+        calculatedStatus === 'before_event' ? 'planning' :
+        calculatedStatus === 'ongoing' ? 'ongoing' :
+        'completed';
+
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
@@ -208,7 +225,7 @@ export async function GET() {
         tournament_dates: row.tournament_dates as string,
         match_duration_minutes: Number(row.match_duration_minutes),
         break_duration_minutes: Number(row.break_duration_minutes),
-        status: row.status as 'planning' | 'ongoing' | 'completed',
+        status: mappedStatus,
         visibility: Number(row.visibility === 'open' ? 1 : 0),
         public_start_date: row.public_start_date as string,
         recruitment_start_date: row.recruitment_start_date as string,
@@ -236,7 +253,7 @@ export async function GET() {
       } as Tournament;
     }));
 
-    // グループごとのステータスを判定
+    // グループごとのステータスを判定（部門の中で最も優先度の高いステータス）
     const groupStatuses: Record<number, 'recruiting' | 'ongoing' | 'completed'> = {};
 
     // 各グループのステータスを決定
@@ -264,27 +281,33 @@ export async function GET() {
       }
     });
 
-    // グループステータスまたは個別ステータスに基づいて分類
+    // 大会グループ単位で分類（グループ内の全部門を含める）
     const recruiting = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
+        // グループに所属する場合は、グループステータスで判定
         return groupStatuses[t.group_id] === 'recruiting';
       } else {
+        // グループに所属しない場合は、部門自身のステータスで判定
         return t.status === 'planning';
       }
     });
 
     const ongoing = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
+        // グループに所属する場合は、グループステータスで判定
         return groupStatuses[t.group_id] === 'ongoing';
       } else {
+        // グループに所属しない場合は、部門自身のステータスで判定
         return t.status === 'ongoing';
       }
     });
 
     const completed = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
+        // グループに所属する場合は、グループステータスで判定
         return groupStatuses[t.group_id] === 'completed';
       } else {
+        // グループに所属しない場合は、部門自身のステータスで判定
         return t.status === 'completed';
       }
     });

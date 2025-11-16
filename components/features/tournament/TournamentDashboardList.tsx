@@ -306,7 +306,7 @@ export default function TournamentDashboardList() {
     return getNotificationCount(tournamentId) > 0;
   };
 
-  const TournamentCard = ({ tournament, type }: { tournament: Tournament; type: 'recruiting' | 'ongoing' | 'completed' }) => (
+  const TournamentCard = ({ tournament }: { tournament: Tournament }) => (
     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
       {/* 管理者ロゴ背景 */}
       {tournament.logo_blob_url && (
@@ -337,15 +337,15 @@ export default function TournamentDashboardList() {
           </div>
           <div className="flex gap-2">
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-              type === 'ongoing' 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
-                : type === 'recruiting'
+              tournament.status === 'ongoing'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                : tournament.status === 'planning'
                 ? tournament.visibility === 1
                   ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
                   : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
                 : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
             }`}>
-              {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (tournament.visibility === 1 ? '募集中' : '準備中') : '完了'}
+              {tournament.status === 'ongoing' ? '開催中' : tournament.status === 'planning' ? (tournament.visibility === 1 ? '募集中' : '準備中') : '完了'}
             </div>
             {tournament.is_archived && (
               <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
@@ -428,7 +428,7 @@ export default function TournamentDashboardList() {
               )}
             </Button>
           )}
-          {type === 'recruiting' && (
+          {tournament.status === 'planning' && !tournament.is_archived && (
             <>
               <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
@@ -489,11 +489,62 @@ export default function TournamentDashboardList() {
               </Button>
             </>
           )}
-          {type === 'completed' && !tournament.is_archived && (
+          {tournament.status === 'ongoing' && !tournament.is_archived && (
             <>
-              <Button 
-                asChild 
-                size="sm" 
+              <Button
+                asChild
+                size="sm"
+                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                className={hasNotifications(tournament.tournament_id)
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'hover:border-blue-300 hover:bg-blue-50'
+                }
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  試合管理
+                  {hasNotifications(tournament.tournament_id) && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                      {getNotificationCount(tournament.tournament_id)}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  順位設定
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  ファイル管理
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDeleteTournament(tournament)}
+                disabled={deleting === tournament.tournament_id}
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              >
+                {deleting === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    削除中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    削除
+                  </div>
+                )}
+              </Button>
+            </>
+          )}
+          {tournament.status === 'completed' && !tournament.is_archived && (
+            <>
+              <Button
+                asChild
+                size="sm"
                 variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
                 className={hasNotifications(tournament.tournament_id)
                   ? "bg-red-600 hover:bg-red-700"
@@ -561,65 +612,13 @@ export default function TournamentDashboardList() {
               </Button>
             </>
           )}
-          {type === 'ongoing' && (
-            <>
-              <Button 
-                asChild 
-                size="sm" 
-                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                className={hasNotifications(tournament.tournament_id) 
-                  ? 'bg-red-600 hover:bg-red-700' 
-                  : 'hover:border-blue-300 hover:bg-blue-50'
-                }
-              >
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                  試合管理
-                  {hasNotifications(tournament.tournament_id) && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
-                      {getNotificationCount(tournament.tournament_id)}
-                    </span>
-                  )}
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                  順位設定
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                  ファイル管理
-                </Link>
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => handleDeleteTournament(tournament)}
-                disabled={deleting === tournament.tournament_id}
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-              >
-                {deleting === tournament.tournament_id ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                    削除中...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    削除
-                  </div>
-                )}
-              </Button>
-            </>
-          )}
         </div>
       </div>
     </div>
   );
 
   const renderGroupedSection = (
-    groupedData: GroupedTournamentData,
-    type: 'recruiting' | 'ongoing' | 'completed'
+    groupedData: GroupedTournamentData
   ) => {
     const groups = Object.values(groupedData.grouped);
     const ungroupedDivisions = groupedData.ungrouped;
@@ -665,7 +664,6 @@ export default function TournamentDashboardList() {
                     <TournamentCard
                       key={division.tournament_id}
                       tournament={division}
-                      type={type}
                     />
                   ))}
                 </div>
@@ -679,7 +677,6 @@ export default function TournamentDashboardList() {
           <TournamentCard
             key={division.tournament_id}
             tournament={division}
-            type={type}
           />
         ))}
       </>
@@ -697,7 +694,7 @@ export default function TournamentDashboardList() {
               開催中の大会 ({Object.keys(tournaments.grouped.ongoing.grouped).length + tournaments.grouped.ongoing.ungrouped.length}件)
             </h3>
           </div>
-          {renderGroupedSection(tournaments.grouped.ongoing, 'ongoing')}
+          {renderGroupedSection(tournaments.grouped.ongoing)}
         </>
       )}
 
@@ -710,7 +707,7 @@ export default function TournamentDashboardList() {
               募集中の大会 ({Object.keys(tournaments.grouped.recruiting.grouped).length + tournaments.grouped.recruiting.ungrouped.length}件)
             </h3>
           </div>
-          {renderGroupedSection(tournaments.grouped.recruiting, 'recruiting')}
+          {renderGroupedSection(tournaments.grouped.recruiting)}
         </>
       )}
 
@@ -723,7 +720,7 @@ export default function TournamentDashboardList() {
               完了した大会（過去1年以内） ({Object.keys(tournaments.grouped.completed.grouped).length + tournaments.grouped.completed.ungrouped.length}件)
             </h3>
           </div>
-          {renderGroupedSection(tournaments.grouped.completed, 'completed')}
+          {renderGroupedSection(tournaments.grouped.completed)}
         </>
       )}
 

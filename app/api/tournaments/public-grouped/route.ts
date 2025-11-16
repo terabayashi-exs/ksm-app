@@ -106,6 +106,14 @@ export async function GET(_request: NextRequest) {
           tournament_dates: (divRow.tournament_dates as string) || '{}'
         }, Number(divRow.tournament_id));
 
+        // TournamentStatus を適切な status にマッピング
+        const mappedStatus =
+          calculatedStatus === 'before_recruitment' ? 'planning' :
+          calculatedStatus === 'recruiting' ? 'planning' :
+          calculatedStatus === 'before_event' ? 'planning' :
+          calculatedStatus === 'ongoing' ? 'ongoing' :
+          'completed';
+
         return {
           tournament_id: Number(divRow.tournament_id),
           tournament_name: String(divRow.tournament_name),
@@ -115,7 +123,7 @@ export async function GET(_request: NextRequest) {
           venue_name: divRow.venue_name as string,
           team_count: Number(divRow.team_count),
           registered_teams: Number(divRow.registered_teams),
-          status: calculatedStatus,
+          status: mappedStatus,
           recruitment_start_date: divRow.recruitment_start_date as string,
           recruitment_end_date: divRow.recruitment_end_date as string,
           event_start_date: eventStartDate,
@@ -158,12 +166,12 @@ export async function GET(_request: NextRequest) {
     filteredGroupedData.forEach(group => {
       // グループ内の部門のステータスを確認
       const hasOngoing = group.divisions.some(div => div.status === 'ongoing');
-      const hasRecruiting = group.divisions.some(div => div.status === 'recruiting');
+      const hasPlanning = group.divisions.some(div => div.status === 'planning');
 
-      // 優先順位: ongoing > recruiting > completed
+      // 優先順位: ongoing > recruiting(planning) > completed
       if (hasOngoing) {
         categorizedData.ongoing.push(group);
-      } else if (hasRecruiting) {
+      } else if (hasPlanning) {
         categorizedData.recruiting.push(group);
       } else {
         categorizedData.completed.push(group);

@@ -55,21 +55,43 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
     return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, tournament?: Tournament) => {
     switch (status) {
       case 'ongoing':
         return 'bg-green-100 text-green-800';
       case 'completed':
         return 'bg-muted text-foreground';
+      case 'planning':
+        // 募集中かどうかを判定
+        if (tournament && tournament.recruitment_start_date && tournament.recruitment_end_date) {
+          const now = new Date();
+          const recruitStart = new Date(tournament.recruitment_start_date);
+          const recruitEnd = new Date(tournament.recruitment_end_date);
+          if (now >= recruitStart && now <= recruitEnd) {
+            return 'bg-blue-100 text-blue-800'; // 募集中
+          }
+        }
+        return 'bg-yellow-100 text-yellow-800'; // 開催予定
       default:
         return 'bg-blue-100 text-blue-800';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string, tournament?: Tournament) => {
     switch (status) {
       case 'ongoing': return '進行中';
       case 'completed': return '完了';
+      case 'planning':
+        // 募集中かどうかを判定
+        if (tournament && tournament.recruitment_start_date && tournament.recruitment_end_date) {
+          const now = new Date();
+          const recruitStart = new Date(tournament.recruitment_start_date);
+          const recruitEnd = new Date(tournament.recruitment_end_date);
+          if (now >= recruitStart && now <= recruitEnd) {
+            return '募集中';
+          }
+        }
+        return '開催予定';
       default: return '開催予定';
     }
   };
@@ -150,8 +172,8 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                     <h4 className="font-semibold text-base">
                       {tournament.category_name || tournament.tournament_name}
                     </h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(tournament.status)}`}>
-                      {getStatusText(tournament.status)}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(tournament.status, tournament)}`}>
+                      {getStatusText(tournament.status, tournament)}
                     </span>
                     {tournament.is_joined && (
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
