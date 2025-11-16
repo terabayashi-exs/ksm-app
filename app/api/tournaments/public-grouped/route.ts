@@ -145,9 +145,34 @@ export async function GET(_request: NextRequest) {
       };
     }));
 
+    // 部門が1つ以上ある大会グループのみを返す
+    const filteredGroupedData = groupedData.filter(group => group.divisions.length > 0);
+
+    // ステータス別にグループ化
+    const categorizedData = {
+      ongoing: [] as typeof filteredGroupedData,
+      recruiting: [] as typeof filteredGroupedData,
+      completed: [] as typeof filteredGroupedData
+    };
+
+    filteredGroupedData.forEach(group => {
+      // グループ内の部門のステータスを確認
+      const hasOngoing = group.divisions.some(div => div.status === 'ongoing');
+      const hasRecruiting = group.divisions.some(div => div.status === 'recruiting');
+
+      // 優先順位: ongoing > recruiting > completed
+      if (hasOngoing) {
+        categorizedData.ongoing.push(group);
+      } else if (hasRecruiting) {
+        categorizedData.recruiting.push(group);
+      } else {
+        categorizedData.completed.push(group);
+      }
+    });
+
     return NextResponse.json({
       success: true,
-      data: groupedData
+      data: categorizedData
     });
 
   } catch (error) {
