@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus } from 'lucide-react';
 
 interface GroupedTournamentData {
   grouped: Record<string, {
@@ -642,6 +642,18 @@ export default function TournamentDashboardList() {
                     <Users className="h-4 w-4 mr-1" />
                     {divisions.length}部門
                   </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                  >
+                    <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      部門作成
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </CardHeader>

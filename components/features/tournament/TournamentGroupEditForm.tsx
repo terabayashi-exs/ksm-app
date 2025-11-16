@@ -287,7 +287,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push(`/admin/tournament-groups/${initialData.group_id}`)}
+          onClick={() => router.back()}
           disabled={isSubmitting}
         >
           キャンセル

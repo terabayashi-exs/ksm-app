@@ -686,23 +686,20 @@ export default function TournamentDrawPage() {
                         console.log('Team names from API:', { team1_name: match.team1_name, team2_name: match.team2_name });
                       }
                       
-                      // フェーズの境界線を表示するかチェック
-                      const showPhaseHeader = index === 0 || matches[index - 1].phase !== match.phase;
-                      
+                      // ラウンド名の境界線を表示するかチェック
+                      const showRoundHeader = index === 0 || matches[index - 1].round_name !== match.round_name;
+
                       const rows = [];
-                      
-                      // フェーズヘッダー行を追加
-                      if (showPhaseHeader) {
+
+                      // ラウンド名ヘッダー行を追加
+                      if (showRoundHeader) {
                         rows.push(
-                          <tr key={`phase-header-${match.phase}-${index}`}>
+                          <tr key={`round-header-${match.round_name}-${index}`}>
                             <td colSpan={5} className="px-4 py-2 bg-blue-50 border-b">
                               <div className="flex items-center">
                                 <Badge variant="secondary" className="mr-2">
-                                  {match.phase === 'preliminary' ? '予選リーグ' : '決勝トーナメント'}
+                                  {match.round_name || match.block_name || (match.phase === 'preliminary' ? '予選リーグ' : '決勝トーナメント')}
                                 </Badge>
-                                <span className="text-sm text-gray-600">
-                                  {match.round_name || match.block_name}
-                                </span>
                               </div>
                             </td>
                           </tr>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
+import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import SignOutButton from "@/components/features/auth/SignOutButton";
 
 export default async function AdminDashboard() {
@@ -42,6 +43,45 @@ export default async function AdminDashboard() {
           <TournamentDashboardList />
         </div>
 
+        {/* 大会作成セクション */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-foreground mb-6">大会作成</h2>
+
+          {/* 新規大会作成 */}
+          <Card className="border-2 border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 dark:border-green-700 shadow-lg mb-6">
+            <CardHeader>
+              <CardTitle className="text-green-800 dark:text-green-200 flex items-center text-xl">
+                🏆 新しい大会を作成
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-700 dark:text-green-300 mb-6">
+                新しい大会を作成して、部門の設定やチーム募集を開始できます
+              </p>
+              <Button asChild size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600 shadow-md">
+                <Link href="/admin/tournament-groups/create">
+                  <span className="text-lg">➕ 大会作成を開始</span>
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* 作成中の大会（部門がまだない大会） */}
+          <Card className="border-2 border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/10">
+            <CardHeader>
+              <CardTitle className="text-amber-800 dark:text-amber-200 flex items-center">
+                ⚠️ 作成中の大会
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-amber-700 dark:text-amber-300 mb-4 text-sm">
+                大会は作成されましたが、まだ部門が設定されていません。部門を作成して大会を完成させましょう。
+              </p>
+              <IncompleteTournamentGroups />
+            </CardContent>
+          </Card>
+        </div>
+
         {/* 管理メニューセクション */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-foreground mb-6">管理メニュー</h2>
@@ -54,31 +94,15 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                大会と部門の作成、編集、管理を行います
+                既存の大会と部門の編集、管理を行います
               </p>
               <div className="space-y-2">
-                <div className="pb-2 mb-2 border-b">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">大会管理</p>
-                  <div className="space-y-2">
-                    <Button asChild variant="outline" className="w-full border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:border-green-800 dark:hover:border-green-700 dark:hover:bg-green-950/20">
-                      <Link href="/admin/tournament-groups">大会一覧</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:border-green-800 dark:hover:border-green-700 dark:hover:bg-green-950/20">
-                      <Link href="/admin/tournament-groups/create">大会作成</Link>
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">部門管理</p>
-                  <div className="space-y-2">
-                    <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                      <Link href="/admin/tournaments">部門一覧</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                      <Link href="/admin/tournaments/create-new">部門作成</Link>
-                    </Button>
-                  </div>
-                </div>
+                <Button asChild variant="outline" className="w-full border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:border-green-800 dark:hover:border-green-700 dark:hover:bg-green-950/20">
+                  <Link href="/admin/tournament-groups">大会一覧</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
+                  <Link href="/admin/tournaments">部門一覧</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
