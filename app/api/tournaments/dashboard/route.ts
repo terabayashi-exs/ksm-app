@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
+import { calculateTournamentStatus } from '@/lib/tournament-status';
 
 export async function GET() {
   try {
@@ -138,7 +139,7 @@ export async function GET() {
     // アクティブな大会と1年以内の完了大会を結合
     const allRows = [...activeResult.rows, ...filteredCompletedRows];
 
-    // 各大会の試合時刻データを取得
+    // 各大会の試合時刻データを取得し、動的ステータスを計算
     const tournamentsWithTimes = await Promise.all(allRows.map(async (row) => {
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
@@ -198,6 +199,17 @@ export async function GET() {
         console.error('Error fetching match times for tournament:', row.tournament_id, error);
       }
 
+      // 動的ステータスを計算（試合進行状況を考慮）
+      const calculatedStatus = await calculateTournamentStatus({
+        status: (row.status as string) || 'planning',
+        recruitment_start_date: row.recruitment_start_date as string | null,
+        recruitment_end_date: row.recruitment_end_date as string | null,
+        tournament_dates: (row.tournament_dates as string) || '{}',
+        public_start_date: row.public_start_date as string | null
+      }, Number(row.tournament_id));
+
+      // TournamentStatus をそのまま使用（管理者は全てのステータスを確認可能）
+      const mappedStatus = calculatedStatus;
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
@@ -208,7 +220,7 @@ export async function GET() {
         tournament_dates: row.tournament_dates as string,
         match_duration_minutes: Number(row.match_duration_minutes),
         break_duration_minutes: Number(row.break_duration_minutes),
-        status: row.status as 'planning' | 'ongoing' | 'completed',
+        status: mappedStatus,
         visibility: Number(row.visibility === 'open' ? 1 : 0),
         public_start_date: row.public_start_date as string,
         recruitment_start_date: row.recruitment_start_date as string,
@@ -236,10 +248,77 @@ export async function GET() {
       } as Tournament;
     }));
 
-    // 募集中、開催中、完了に分類
-    const recruiting = tournamentsWithTimes.filter(t => t.status === 'planning');
-    const ongoing = tournamentsWithTimes.filter(t => t.status === 'ongoing');
-    const completed = tournamentsWithTimes.filter(t => t.status === 'completed');
+    // グループごとのステータスを判定（部門の中で最も優先度の高いステータス）
+    const groupStatuses: Record<number, 'before_recruitment' | 'recruiting' | 'before_event' | 'ongoing' | 'completed'> = {};
+
+    // 各グループのステータスを決定
+    tournamentsWithTimes.forEach(tournament => {
+      if (tournament.group_id && !groupStatuses[tournament.group_id]) {
+        const groupId = tournament.group_id;
+        const groupTournaments = tournamentsWithTimes.filter(t => t.group_id === groupId);
+
+        // 優先順位: ongoing > before_event > recruiting > before_recruitment > completed
+        if (groupTournaments.some(t => t.status === 'ongoing')) {
+          groupStatuses[groupId] = 'ongoing';
+        }
+        else if (groupTournaments.some(t => t.status === 'before_event')) {
+          groupStatuses[groupId] = 'before_event';
+        }
+        else if (groupTournaments.some(t => t.status === 'recruiting')) {
+          groupStatuses[groupId] = 'recruiting';
+        }
+        else if (groupTournaments.some(t => t.status === 'before_recruitment')) {
+          groupStatuses[groupId] = 'before_recruitment';
+        }
+        else if (groupTournaments.every(t => t.status === 'completed')) {
+          groupStatuses[groupId] = 'completed';
+        }
+        else {
+          groupStatuses[groupId] = 'before_recruitment';
+        }
+      }
+    });
+
+    // 大会グループ単位で分類（グループ内の全部門を含める）
+    const before_recruitment = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'before_recruitment';
+      } else {
+        return t.status === 'before_recruitment';
+      }
+    });
+
+    const recruiting = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'recruiting';
+      } else {
+        return t.status === 'recruiting';
+      }
+    });
+
+    const before_event = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'before_event';
+      } else {
+        return t.status === 'before_event';
+      }
+    });
+
+    const ongoing = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'ongoing';
+      } else {
+        return t.status === 'ongoing';
+      }
+    });
+
+    const completed = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'completed';
+      } else {
+        return t.status === 'completed';
+      }
+    });
 
     // グループ化された大会情報を生成
     const groupedTournaments = (tournaments: Tournament[]) => {
@@ -275,20 +354,26 @@ export async function GET() {
       return { grouped, ungrouped };
     };
 
+    const beforeRecruitmentGrouped = groupedTournaments(before_recruitment);
     const recruitingGrouped = groupedTournaments(recruiting);
+    const beforeEventGrouped = groupedTournaments(before_event);
     const ongoingGrouped = groupedTournaments(ongoing);
     const completedGrouped = groupedTournaments(completed);
 
     return NextResponse.json({
       success: true,
       data: {
+        before_recruitment,
         recruiting,
+        before_event,
         ongoing,
         completed,
         total: tournamentsWithTimes.length,
         // グループ化された情報も含める
         grouped: {
+          before_recruitment: beforeRecruitmentGrouped,
           recruiting: recruitingGrouped,
+          before_event: beforeEventGrouped,
           ongoing: ongoingGrouped,
           completed: completedGrouped
         }

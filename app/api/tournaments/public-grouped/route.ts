@@ -103,8 +103,12 @@ export async function GET(_request: NextRequest) {
           status: (divRow.status as string) || 'planning',
           recruitment_start_date: divRow.recruitment_start_date as string | null,
           recruitment_end_date: divRow.recruitment_end_date as string | null,
-          tournament_dates: (divRow.tournament_dates as string) || '{}'
+          tournament_dates: (divRow.tournament_dates as string) || '{}',
+          public_start_date: divRow.public_start_date as string | null
         }, Number(divRow.tournament_id));
+
+        // TournamentStatus をそのまま使用（before_recruitmentは後でフィルタリング）
+        const mappedStatus = calculatedStatus;
 
         return {
           tournament_id: Number(divRow.tournament_id),
@@ -115,7 +119,7 @@ export async function GET(_request: NextRequest) {
           venue_name: divRow.venue_name as string,
           team_count: Number(divRow.team_count),
           registered_teams: Number(divRow.registered_teams),
-          status: calculatedStatus,
+          status: mappedStatus,
           recruitment_start_date: divRow.recruitment_start_date as string,
           recruitment_end_date: divRow.recruitment_end_date as string,
           event_start_date: eventStartDate,
@@ -145,9 +149,41 @@ export async function GET(_request: NextRequest) {
       };
     }));
 
+    // before_recruitmentの部門を除外してから処理
+    const publicGroupedData = groupedData.map(group => ({
+      ...group,
+      divisions: group.divisions.filter(div => div.status !== 'before_recruitment')
+    })).filter(group => group.divisions.length > 0); // 部門が1つ以上ある大会グループのみ
+
+    // ステータス別にグループ化
+    const categorizedData = {
+      recruiting: [] as typeof publicGroupedData,
+      before_event: [] as typeof publicGroupedData,
+      ongoing: [] as typeof publicGroupedData,
+      completed: [] as typeof publicGroupedData
+    };
+
+    publicGroupedData.forEach(group => {
+      // グループ内の部門のステータスを確認
+      const hasOngoing = group.divisions.some(div => div.status === 'ongoing');
+      const hasRecruiting = group.divisions.some(div => div.status === 'recruiting');
+      const hasBeforeEvent = group.divisions.some(div => div.status === 'before_event');
+
+      // 優先順位: ongoing > before_event > recruiting > completed
+      if (hasOngoing) {
+        categorizedData.ongoing.push(group);
+      } else if (hasBeforeEvent) {
+        categorizedData.before_event.push(group);
+      } else if (hasRecruiting) {
+        categorizedData.recruiting.push(group);
+      } else {
+        categorizedData.completed.push(group);
+      }
+    });
+
     return NextResponse.json({
       success: true,
-      data: groupedData
+      data: categorizedData
     });
 
   } catch (error) {

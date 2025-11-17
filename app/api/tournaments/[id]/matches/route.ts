@@ -43,9 +43,9 @@ export async function GET(
       );
     }
 
-    // 大会の存在確認
+    // 大会の存在確認とformat_id取得
     const tournamentResult = await db.execute(`
-      SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id, format_id FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -54,6 +54,8 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    const formatId = tournamentResult.rows[0].format_id;
 
     // 組み合わせ作成状況を判定
     console.log('Checking team assignment status...');
@@ -76,7 +78,7 @@ export async function GET(
     // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
     const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
     const matchesResult = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_block_id,
         ml.tournament_date,
@@ -100,6 +102,8 @@ export async function GET(
         mb.block_name,
         mb.match_type,
         mb.block_order,
+        -- m_match_templatesからround_nameを取得
+        mt.round_name,
         -- 実際のチーム名を取得
         t1.team_name as team1_real_name,
         t2.team_name as team2_real_name,
@@ -119,14 +123,18 @@ export async function GET(
         mf.updated_at as confirmed_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
       LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
       ${teamFilter}
-      ORDER BY ml.match_code ASC
-    `, [tournamentId]);
+      ORDER BY
+        CASE WHEN mb.phase = 'preliminary' THEN 1 WHEN mb.phase = 'final' THEN 2 ELSE 3 END,
+        mt.round_name ASC,
+        ml.match_number ASC
+    `, [formatId, tournamentId]);
 
     console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);
 
@@ -181,7 +189,8 @@ export async function GET(
         remarks: row.remarks ? String(row.remarks) : null,
         // ブロック情報
         phase: String(row.phase),
-        display_round_name: String(row.display_round_name),
+        display_round_name: String(row.round_name || row.display_round_name),
+        round_name: row.round_name ? String(row.round_name) : null,
         block_name: row.block_name ? String(row.block_name) : null,
         match_type: String(row.match_type),
         block_order: Number(row.block_order)

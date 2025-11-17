@@ -1,7 +1,7 @@
 // lib/api/tournaments.ts
 import { db } from "@/lib/db";
 import type { Tournament } from "@/lib/types";
-import { calculateTournamentStatus } from "@/lib/tournament-status";
+import { calculateTournamentStatus, type TournamentStatus } from "@/lib/tournament-status";
 
 export async function getPublicTournaments(teamId?: string): Promise<Tournament[]> {
   try {
@@ -86,7 +86,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         tournament_dates: row.tournament_dates as string,
         match_duration_minutes: Number(row.match_duration_minutes),
         break_duration_minutes: Number(row.break_duration_minutes),
-        status: calculatedStatus as 'planning' | 'ongoing' | 'completed',
+        status: calculatedStatus as TournamentStatus,
         visibility: row.visibility === 'open' ? 1 : 0,
         public_start_date: row.public_start_date as string,
         recruitment_start_date: row.recruitment_start_date as string,

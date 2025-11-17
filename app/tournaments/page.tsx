@@ -2,13 +2,23 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
-import { Calendar, MapPin, Users, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, Users, ChevronRight, Search, X } from 'lucide-react';
 import {
   getStatusLabel,
   getStatusColor,
@@ -49,9 +59,20 @@ interface TournamentGroup {
 }
 
 function TournamentsContent() {
+  const searchParams = useSearchParams();
+  const statusFilter = searchParams.get('status'); // 'ongoing', 'recruiting', 'completed' or null
+
+  // 全大会データ（フィルタリング前）
+  const [allTournamentGroups, setAllTournamentGroups] = useState<TournamentGroup[]>([]);
+  // 表示用の大会データ（フィルタリング後）
   const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 検索条件
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchStatus, setSearchStatus] = useState<string>('all');
+  const [searchVenue, setSearchVenue] = useState('all');
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -64,7 +85,38 @@ function TournamentsContent() {
         }
 
         if (data.success) {
-          setTournamentGroups(data.data);
+          // 新しいAPI構造: data.data = { ongoing: [...], recruiting: [...], completed: [...] }
+          const categorizedData = data.data;
+
+          // statusFilterに基づいてデータをフィルタリング
+          let filteredGroups: TournamentGroup[] = [];
+
+          if (statusFilter === 'ongoing') {
+            filteredGroups = categorizedData.ongoing || [];
+            setSearchStatus('ongoing');
+          } else if (statusFilter === 'recruiting') {
+            filteredGroups = categorizedData.recruiting || [];
+            setSearchStatus('recruiting');
+          } else if (statusFilter === 'before_event') {
+            filteredGroups = categorizedData.before_event || [];
+            setSearchStatus('before_event');
+          } else if (statusFilter === 'completed') {
+            filteredGroups = categorizedData.completed || [];
+            setSearchStatus('completed');
+          } else {
+            // フィルターがない場合は全ての大会を表示（ongoing → before_event → recruiting → completed の順）
+            filteredGroups = [
+              ...(categorizedData.ongoing || []),
+              ...(categorizedData.recruiting || []),
+              ...(categorizedData.before_event || []),
+              ...(categorizedData.completed || [])
+            ];
+            setSearchStatus('all');
+          }
+
+          // 全データと表示データの両方を設定
+          setAllTournamentGroups(filteredGroups);
+          setTournamentGroups(filteredGroups);
         } else {
           throw new Error(data.error || '大会データの取得に失敗しました');
         }
@@ -77,7 +129,7 @@ function TournamentsContent() {
     };
 
     fetchTournaments();
-  }, []);
+  }, [statusFilter]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -88,6 +140,57 @@ function TournamentsContent() {
     if (!startDate && !endDate) return '-';
     if (!endDate || startDate === endDate) return formatDate(startDate);
     return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
+  };
+
+  // 会場名リストを取得（ユニークな会場名のみ）
+  const getVenueList = () => {
+    const venues = new Set<string>();
+    allTournamentGroups.forEach(group => {
+      if (group.group.venue_name) {
+        venues.add(group.group.venue_name);
+      }
+    });
+    return Array.from(venues).sort();
+  };
+
+  // 検索実行
+  const handleSearch = () => {
+    let filtered = [...allTournamentGroups];
+
+    // キーワードでフィルタリング（大会名、主催者、会場名で検索）
+    if (searchKeyword.trim()) {
+      const keyword = searchKeyword.toLowerCase();
+      filtered = filtered.filter(group =>
+        group.group.group_name.toLowerCase().includes(keyword) ||
+        (group.group.organizer && group.group.organizer.toLowerCase().includes(keyword)) ||
+        (group.group.venue_name && group.group.venue_name.toLowerCase().includes(keyword)) ||
+        group.divisions.some(div => div.tournament_name.toLowerCase().includes(keyword))
+      );
+    }
+
+    // ステータスでフィルタリング
+    if (searchStatus !== 'all') {
+      filtered = filtered.filter(group =>
+        group.divisions.some(div => div.status === searchStatus)
+      );
+    }
+
+    // 会場でフィルタリング
+    if (searchVenue !== 'all') {
+      filtered = filtered.filter(group =>
+        group.group.venue_name === searchVenue
+      );
+    }
+
+    setTournamentGroups(filtered);
+  };
+
+  // 検索条件クリア
+  const handleClearSearch = () => {
+    setSearchKeyword('');
+    setSearchStatus('all');
+    setSearchVenue('all');
+    setTournamentGroups(allTournamentGroups);
   };
 
   if (loading) {
@@ -105,6 +208,37 @@ function TournamentsContent() {
     );
   }
 
+  // ステータスに応じたタイトルを取得
+  const getPageTitle = () => {
+    switch (statusFilter) {
+      case 'ongoing':
+        return '開催中の大会';
+      case 'recruiting':
+        return '募集中の大会';
+      case 'before_event':
+        return '開催前の大会';
+      case 'completed':
+        return '完了した大会';
+      default:
+        return '大会一覧';
+    }
+  };
+
+  const getPageDescription = () => {
+    switch (statusFilter) {
+      case 'ongoing':
+        return '現在開催中の大会を確認できます';
+      case 'recruiting':
+        return '参加チームを募集中の大会を確認できます';
+      case 'before_event':
+        return '募集は終了し、開催を待っている大会を確認できます';
+      case 'completed':
+        return '終了した大会の結果を確認できます';
+      default:
+        return '参加可能な大会や開催中の大会を探してみましょう';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -113,9 +247,9 @@ function TournamentsContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">開催中の大会</h1>
+              <h1 className="text-3xl font-bold text-foreground">{getPageTitle()}</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                参加可能な大会や開催中の大会を探してみましょう
+                {getPageDescription()}
               </p>
             </div>
             <div className="flex space-x-3">
@@ -138,12 +272,104 @@ function TournamentsContent() {
           </div>
         )}
 
+        {/* 検索フォーム */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Search className="h-5 w-5 mr-2" />
+              大会を検索
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* キーワード検索 */}
+              <div className="space-y-2">
+                <Label htmlFor="keyword">キーワード</Label>
+                <Input
+                  id="keyword"
+                  placeholder="大会名、主催者、会場名で検索"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
+                />
+              </div>
+
+              {/* ステータス */}
+              <div className="space-y-2">
+                <Label htmlFor="status">ステータス</Label>
+                <Select value={searchStatus} onValueChange={setSearchStatus}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="ステータスを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべて</SelectItem>
+                    <SelectItem value="ongoing">開催中</SelectItem>
+                    <SelectItem value="recruiting">募集中</SelectItem>
+                    <SelectItem value="before_event">開催前</SelectItem>
+                    <SelectItem value="completed">完了</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 会場名 */}
+              <div className="space-y-2">
+                <Label htmlFor="venue">会場名</Label>
+                <Select value={searchVenue} onValueChange={setSearchVenue}>
+                  <SelectTrigger id="venue">
+                    <SelectValue placeholder="会場を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべて</SelectItem>
+                    {getVenueList().map((venue) => (
+                      <SelectItem key={venue} value={venue}>
+                        {venue}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* ボタンエリア */}
+            <div className="flex gap-3">
+              <Button onClick={handleSearch} className="flex items-center">
+                <Search className="h-4 w-4 mr-2" />
+                検索
+              </Button>
+              <Button onClick={handleClearSearch} variant="outline" className="flex items-center">
+                <X className="h-4 w-4 mr-2" />
+                クリア
+              </Button>
+            </div>
+
+            {/* 検索結果件数 */}
+            {tournamentGroups.length !== allTournamentGroups.length && (
+              <div className="mt-4 text-sm text-muted-foreground">
+                {tournamentGroups.length}件の大会が見つかりました（全{allTournamentGroups.length}件中）
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* 大会一覧 */}
         {tournamentGroups.length === 0 ? (
           <Card>
             <CardContent className="py-12">
               <div className="text-center">
-                <p className="text-muted-foreground">現在公開中の大会はありません。</p>
+                <p className="text-muted-foreground">
+                  {allTournamentGroups.length === 0
+                    ? '現在公開中の大会はありません。'
+                    : '検索条件に一致する大会が見つかりませんでした。'}
+                </p>
+                {allTournamentGroups.length > 0 && (
+                  <Button onClick={handleClearSearch} variant="outline" className="mt-4">
+                    検索条件をクリア
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

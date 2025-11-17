@@ -23,15 +23,18 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     redirect("/admin/tournaments");
   }
 
-  // 大会情報を取得
+  // 大会情報を取得（フォーマット種別を含む）
   const tournamentResult = await db.execute({
     sql: `
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
+        t.format_id,
         t.status,
         v.venue_name,
-        tf.format_name
+        tf.format_name,
+        tf.preliminary_format_type,
+        tf.final_format_type
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
@@ -47,33 +50,41 @@ export default async function ManualRankingsPage({ params }: PageProps) {
   const tournament = {
     tournament_id: tournamentResult.rows[0].tournament_id as number,
     tournament_name: tournamentResult.rows[0].tournament_name as string,
+    format_id: tournamentResult.rows[0].format_id as number,
     status: tournamentResult.rows[0].status as string,
     venue_name: tournamentResult.rows[0].venue_name as string,
-    format_name: tournamentResult.rows[0].format_name as string
+    format_name: tournamentResult.rows[0].format_name as string,
+    preliminary_format_type: tournamentResult.rows[0].preliminary_format_type as string,
+    final_format_type: tournamentResult.rows[0].final_format_type as string
   };
 
-  // ブロック情報と順位表を取得
+  // ブロック情報と順位表を取得（予選・決勝両方、round_nameも取得）
   const blocksResult = await db.execute({
     sql: `
-      SELECT 
-        match_block_id,
-        phase,
-        display_round_name,
-        block_name,
-        team_rankings,
-        remarks
-      FROM t_match_blocks 
-      WHERE tournament_id = ? 
-      AND phase = 'preliminary'
-      ORDER BY block_order, match_block_id
+      SELECT DISTINCT
+        mb.match_block_id,
+        mb.phase,
+        mb.display_round_name,
+        mb.block_name,
+        mb.team_rankings,
+        mb.remarks,
+        COALESCE(mt.round_name, mb.display_round_name, mb.block_name) as actual_round_name
+      FROM t_match_blocks mb
+      LEFT JOIN t_matches_live ml ON mb.match_block_id = ml.match_block_id
+      LEFT JOIN m_match_templates mt ON ml.match_number = mt.match_number AND mt.format_id = ?
+      WHERE mb.tournament_id = ?
+      ORDER BY
+        CASE mb.phase WHEN 'preliminary' THEN 1 WHEN 'final' THEN 2 ELSE 3 END,
+        mb.block_order,
+        mb.match_block_id
     `,
-    args: [tournamentId]
+    args: [tournament.format_id, tournamentId]
   });
 
   const blocks = blocksResult.rows.map(row => ({
     match_block_id: row.match_block_id as number,
     phase: row.phase as string,
-    display_round_name: row.display_round_name as string,
+    display_round_name: row.actual_round_name as string,
     block_name: row.block_name as string,
     team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : [],
     remarks: row.remarks as string | null
@@ -174,9 +185,10 @@ export default async function ManualRankingsPage({ params }: PageProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ManualRankingsEditor 
+        <ManualRankingsEditor
           tournamentId={tournamentId}
           blocks={blocks}
+          finalFormatType={tournament.final_format_type}
           finalMatches={finalMatches}
           finalRankings={finalRankings}
         />

@@ -30,6 +30,10 @@ interface Tournament {
   recruitment_end_date: string | null;
   status: string;
   visibility: string;
+  group_id?: number | null;
+  group_order?: number;
+  group_name?: string | null;
+  group_description?: string | null;
   format_name: string | null;
   venue_name: string | null;
   tournament_dates: string | null;
@@ -41,6 +45,13 @@ interface Tournament {
   joined_at?: string | null;
 }
 
+interface TournamentGroup {
+  group_id: number;
+  group_name: string | null;
+  group_description: string | null;
+  tournaments: Tournament[];
+}
+
 interface TournamentsData {
   available: Tournament[];
   joined: Tournament[];
@@ -48,6 +59,10 @@ interface TournamentsData {
 
 export default function TeamTournaments() {
   const [tournaments, setTournaments] = useState<TournamentsData | null>(null);
+  const [availableGroups, setAvailableGroups] = useState<TournamentGroup[]>([]);
+  const [availableUngrouped, setAvailableUngrouped] = useState<Tournament[]>([]);
+  const [joinedGroups, setJoinedGroups] = useState<TournamentGroup[]>([]);
+  const [joinedUngrouped, setJoinedUngrouped] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
@@ -59,6 +74,62 @@ export default function TeamTournaments() {
 
       if (result.success) {
         setTournaments(result.data);
+
+        // 参加可能な大会のグループ化
+        const availGrouped: Record<number, TournamentGroup> = {};
+        const availUngrouped: Tournament[] = [];
+
+        result.data.available.forEach((tournament: Tournament) => {
+          if (tournament.group_id) {
+            if (!availGrouped[tournament.group_id]) {
+              availGrouped[tournament.group_id] = {
+                group_id: tournament.group_id,
+                group_name: tournament.group_name || '',
+                group_description: tournament.group_description || '',
+                tournaments: []
+              };
+            }
+            availGrouped[tournament.group_id].tournaments.push(tournament);
+          } else {
+            availUngrouped.push(tournament);
+          }
+        });
+
+        // グループ内の部門を順序でソート
+        Object.values(availGrouped).forEach(group => {
+          group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+        });
+
+        setAvailableGroups(Object.values(availGrouped));
+        setAvailableUngrouped(availUngrouped);
+
+        // 申し込み済の大会のグループ化
+        const joinedGrouped: Record<number, TournamentGroup> = {};
+        const joinedUngroup: Tournament[] = [];
+
+        result.data.joined.forEach((tournament: Tournament) => {
+          if (tournament.group_id) {
+            if (!joinedGrouped[tournament.group_id]) {
+              joinedGrouped[tournament.group_id] = {
+                group_id: tournament.group_id,
+                group_name: tournament.group_name || '',
+                group_description: tournament.group_description || '',
+                tournaments: []
+              };
+            }
+            joinedGrouped[tournament.group_id].tournaments.push(tournament);
+          } else {
+            joinedUngroup.push(tournament);
+          }
+        });
+
+        // グループ内の部門を順序でソート
+        Object.values(joinedGrouped).forEach(group => {
+          group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+        });
+
+        setJoinedGroups(Object.values(joinedGrouped));
+        setJoinedUngrouped(joinedUngroup);
       } else {
         setError(result.error || '大会情報の取得に失敗しました');
       }
@@ -77,7 +148,7 @@ export default function TeamTournaments() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ongoing':
-        return <Badge className="bg-green-100 text-green-800">進行中</Badge>;
+        return <Badge className="bg-green-100 text-green-800">開催中</Badge>;
       case 'completed':
         return <Badge className="bg-muted text-muted-foreground">完了</Badge>;
       case 'planning':
@@ -306,12 +377,39 @@ export default function TeamTournaments() {
           <CheckCircle className="h-6 w-6 mr-2 text-green-600" />
           申し込み済の大会
         </h2>
-        
-        {tournaments.joined.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tournaments.joined.map((tournament) => (
-              <TournamentCard key={tournament.tournament_id} tournament={tournament} isJoined={true} />
+
+        {(joinedGroups.length > 0 || joinedUngrouped.length > 0) ? (
+          <div className="space-y-6">
+            {/* グループ化された大会 */}
+            {joinedGroups.map((group) => (
+              <div key={`joined-group-${group.group_id}`} className="border-2 border-green-200 rounded-lg p-4 bg-green-50/30">
+                <div className="mb-4">
+                  <div className="flex items-center mb-1">
+                    <Trophy className="w-5 h-5 mr-2 text-green-600" />
+                    <h3 className="font-bold text-lg text-green-900">
+                      {group.group_name || `グループ ${group.group_id}`}
+                    </h3>
+                  </div>
+                  {group.group_description && (
+                    <p className="text-sm text-green-700 ml-7">{group.group_description}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-2">
+                  {group.tournaments.map((tournament) => (
+                    <TournamentCard key={tournament.tournament_id} tournament={tournament} isJoined={true} />
+                  ))}
+                </div>
+              </div>
             ))}
+
+            {/* グループ化されていない大会 */}
+            {joinedUngrouped.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {joinedUngrouped.map((tournament) => (
+                  <TournamentCard key={tournament.tournament_id} tournament={tournament} isJoined={true} />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <Card>
@@ -336,12 +434,39 @@ export default function TeamTournaments() {
             参加可能な大会
           </h2>
         </div>
-        
-        {tournaments.available.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tournaments.available.map((tournament) => (
-              <TournamentCard key={tournament.tournament_id} tournament={tournament} />
+
+        {(availableGroups.length > 0 || availableUngrouped.length > 0) ? (
+          <div className="space-y-6">
+            {/* グループ化された大会 */}
+            {availableGroups.map((group) => (
+              <div key={`available-group-${group.group_id}`} className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
+                <div className="mb-4">
+                  <div className="flex items-center mb-1">
+                    <Trophy className="w-5 h-5 mr-2 text-blue-600" />
+                    <h3 className="font-bold text-lg text-blue-900">
+                      {group.group_name || `グループ ${group.group_id}`}
+                    </h3>
+                  </div>
+                  {group.group_description && (
+                    <p className="text-sm text-blue-700 ml-7">{group.group_description}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-2">
+                  {group.tournaments.map((tournament) => (
+                    <TournamentCard key={tournament.tournament_id} tournament={tournament} />
+                  ))}
+                </div>
+              </div>
             ))}
+
+            {/* グループ化されていない大会 */}
+            {availableUngrouped.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {availableUngrouped.map((tournament) => (
+                  <TournamentCard key={tournament.tournament_id} tournament={tournament} />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <Card>

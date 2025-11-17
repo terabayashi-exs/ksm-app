@@ -1,15 +1,13 @@
 // app/page.tsx
 import { auth } from "@/lib/auth";
-import { getTournamentStats } from "@/lib/api/tournaments";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import TournamentGroupCard from "@/components/features/tournament/TournamentGroupCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
-import { Calendar, MapPin, Users, Trophy, TrendingUp, Clock, CheckCircle } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { Trophy, TrendingUp, Clock, Users, Calendar } from "lucide-react";
 
 async function getGroupedPublicTournaments(_teamId?: string) {
   try {
@@ -18,30 +16,29 @@ async function getGroupedPublicTournaments(_teamId?: string) {
     });
     const result = await response.json();
 
-    // Phase 4.1で変更された新しいデータ構造に対応
-    // result.dataは大会グループの配列 [{ group: {...}, divisions: [...] }]
+    // ステータス別にグループ化されたデータ構造に対応
+    // result.data = { recruiting: [...], before_event: [...], ongoing: [...], completed: [...] }
     if (result.success && result.data) {
       return {
-        grouped: result.data,
-        ungrouped: []
+        ongoing: result.data.ongoing || [],
+        recruiting: result.data.recruiting || [],
+        before_event: result.data.before_event || [],
+        completed: result.data.completed || []
       };
     }
 
-    return { grouped: [], ungrouped: [] };
+    return { ongoing: [], recruiting: [], before_event: [], completed: [] };
   } catch (error) {
     console.error('Failed to fetch grouped tournaments:', error);
-    return { grouped: [], ungrouped: [] };
+    return { ongoing: [], recruiting: [], before_event: [], completed: [] };
   }
 }
 
 export default async function Home() {
   const session = await auth();
   const teamId = session?.user?.role === 'team' ? session.user.teamId : undefined;
-  
-  const [groupedData, stats] = await Promise.all([
-    getGroupedPublicTournaments(teamId),
-    getTournamentStats()
-  ]);
+
+  const groupedData = await getGroupedPublicTournaments(teamId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -119,34 +116,44 @@ export default async function Home() {
           {/* 薄い芝生風グラデーション */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-lime-50/15 to-transparent dark:from-transparent dark:via-green-900/8 dark:to-transparent"></div>
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Link href="/tournaments?status=recruiting" className="block">
-              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="pt-6">
-                  <Trophy className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{stats.total}</h3>
-                  <p className="text-muted-foreground">開催予定の大会数</p>
-                </CardContent>
-              </Card>
-            </Link>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <Link href="/tournaments?status=ongoing" className="block">
               <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <CardContent className="pt-6">
-                  <Clock className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{stats.ongoing}</h3>
-                  <p className="text-muted-foreground">進行中の大会数</p>
+                  <TrendingUp className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.ongoing.length}</h3>
+                  <p className="text-muted-foreground">開催中の大会数</p>
                 </CardContent>
               </Card>
             </Link>
-            
+
+            <Link href="/tournaments?status=recruiting" className="block">
+              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="pt-6">
+                  <Clock className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.recruiting.length}</h3>
+                  <p className="text-muted-foreground">募集中の大会数</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/tournaments?status=before_event" className="block">
+              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="pt-6">
+                  <Calendar className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.before_event.length}</h3>
+                  <p className="text-muted-foreground">開催前の大会数</p>
+                </CardContent>
+              </Card>
+            </Link>
+
             <Link href="/tournaments?status=completed" className="block">
               <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <CardContent className="pt-6">
-                  <TrendingUp className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{stats.completed}</h3>
+                  <Trophy className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.completed.length}</h3>
                   <p className="text-muted-foreground">完了した大会数</p>
                 </CardContent>
               </Card>
@@ -171,112 +178,105 @@ export default async function Home() {
             </p>
           </div>
 
-          {(groupedData.grouped.length > 0 || groupedData.ungrouped.length > 0) ? (
-            <div className="space-y-6 mb-8">
-              {/* グループ化された大会 */}
-              {groupedData.grouped.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
-                <TournamentGroupCard
-                  key={groupData.group.group_id}
-                  group={groupData.group}
-                  tournaments={groupData.divisions}
-                  userRole={session?.user?.role}
-                />
-              ))}
-              
-              {/* グループ化されていない個別大会 */}
-              {groupedData.ungrouped.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {groupedData.ungrouped.slice(0, 6).map((tournament: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
-                    <Card key={tournament.tournament_id} className="hover:shadow-lg transition-shadow bg-card/80 backdrop-blur-sm border-border/50 relative overflow-hidden">
-                      {/* 管理者ロゴ背景 */}
-                      {tournament.logo_blob_url && (
-                        <div className="absolute inset-0 opacity-10">
-                          <Image
-                            src={tournament.logo_blob_url}
-                            alt={tournament.organization_name || '主催者ロゴ'}
-                            fill
-                            className="object-contain object-center"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                        </div>
-                      )}
-                      <CardHeader className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            tournament.status === 'ongoing' 
-                              ? 'bg-green-100 text-green-800'
-                              : tournament.status === 'completed'
-                              ? 'bg-muted text-foreground'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {tournament.status === 'ongoing' ? '進行中' : 
-                             tournament.status === 'completed' ? '完了' : '開催予定'}
-                          </span>
-                          {tournament.is_joined && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              参加済み
-                            </span>
-                          )}
-                        </div>
-                        <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
-                        <CardDescription>
-                          <span>{tournament.format_name}</span>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="relative z-10">
-                        <div className="space-y-2 text-sm text-muted-foreground">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            {tournament.venue_name || '会場未定'}
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 mr-2" />
-                            {tournament.team_count}チーム参加
-                          </div>
-                        </div>
-                        <div className="mt-4 space-y-2">
-                          <Button asChild variant="outline" className="w-full">
-                            <Link href={`/public/tournaments/${tournament.tournament_id}`}>
-                              詳細を見る
-                            </Link>
-                          </Button>
-                          
-                          {/* 参加済みの場合は参加選手変更ボタンを表示 */}
-                          {tournament.is_joined && session?.user?.role === 'team' && (
-                            <Button asChild variant="outline" className="w-full">
-                              <Link href={`/tournaments/${tournament.tournament_id}/teams`}>
-                                参加選手の変更
-                              </Link>
-                            </Button>
-                          )}
-                          
-                          {/* 未参加かつ募集期間中かつ進行中・完了済みではない場合に参加ボタンを表示 */}
-                          {!tournament.is_joined &&
-                           tournament.recruitment_start_date && 
-                           tournament.recruitment_end_date && 
-                           new Date(tournament.recruitment_start_date) <= new Date() && 
-                           new Date() <= new Date(tournament.recruitment_end_date) &&
-                           tournament.status !== 'ongoing' &&
-                           tournament.status !== 'completed' && (
-                            <Button asChild variant="outline" className="w-full">
-                              <Link href={
-                                session?.user?.role === 'team' 
-                                  ? `/tournaments/${tournament.tournament_id}/join`
-                                  : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/join`)}`
-                              }>
-                                大会に参加する
-                              </Link>
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+          {(groupedData.ongoing.length > 0 || groupedData.recruiting.length > 0 || groupedData.before_event.length > 0 || groupedData.completed.length > 0) ? (
+            <div className="space-y-12 mb-8">
+              {/* 開催中の大会 */}
+              {groupedData.ongoing.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-6">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg border-2 border-green-300 dark:border-green-700">
+                      <TrendingUp className="h-5 w-5 text-green-700 dark:text-green-300" />
+                      <h3 className="text-xl font-bold text-green-800 dark:text-green-200">開催中の大会</h3>
+                      <span className="ml-2 px-2 py-1 bg-green-600 text-white rounded-full text-sm font-medium">
+                        {groupedData.ongoing.length}件
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {groupedData.ongoing.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                      <TournamentGroupCard
+                        key={groupData.group.group_id}
+                        group={groupData.group}
+                        tournaments={groupData.divisions}
+                        userRole={session?.user?.role}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 募集中の大会 */}
+              {groupedData.recruiting.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-6">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                      <Clock className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+                      <h3 className="text-xl font-bold text-blue-800 dark:text-blue-200">募集中の大会</h3>
+                      <span className="ml-2 px-2 py-1 bg-blue-600 text-white rounded-full text-sm font-medium">
+                        {groupedData.recruiting.length}件
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {groupedData.recruiting.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                      <TournamentGroupCard
+                        key={groupData.group.group_id}
+                        group={groupData.group}
+                        tournaments={groupData.divisions}
+                        userRole={session?.user?.role}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 開催前の大会 */}
+              {groupedData.before_event.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-6">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-lg border-2 border-orange-300 dark:border-orange-700">
+                      <Calendar className="h-5 w-5 text-orange-700 dark:text-orange-300" />
+                      <h3 className="text-xl font-bold text-orange-800 dark:text-orange-200">開催前の大会</h3>
+                      <span className="ml-2 px-2 py-1 bg-orange-600 text-white rounded-full text-sm font-medium">
+                        {groupedData.before_event.length}件
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {groupedData.before_event.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                      <TournamentGroupCard
+                        key={groupData.group.group_id}
+                        group={groupData.group}
+                        tournaments={groupData.divisions}
+                        userRole={session?.user?.role}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 完了した大会 */}
+              {groupedData.completed.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-6">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-900/30 dark:to-slate-900/30 rounded-lg border-2 border-gray-300 dark:border-gray-700">
+                      <Trophy className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">完了した大会</h3>
+                      <span className="ml-2 px-2 py-1 bg-gray-600 text-white rounded-full text-sm font-medium">
+                        {groupedData.completed.length}件
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {groupedData.completed.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                      <TournamentGroupCard
+                        key={groupData.group.group_id}
+                        group={groupData.group}
+                        tournaments={groupData.divisions}
+                        userRole={session?.user?.role}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

@@ -368,7 +368,7 @@ export default function AdminTournamentsList() {
                                   </Button>
                                   <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                                      試合管理
+                                      試合結果入力
                                     </Link>
                                   </Button>
                                   <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">

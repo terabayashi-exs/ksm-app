@@ -208,31 +208,48 @@ async function getBlockResults(
       display_name: (row.team_omission as string) || (row.team_name as string)
     }));
 
-    // チーム登録がない場合、m_match_templatesのプレースホルダーから生成
+    // チーム登録がない場合、試合から実際のチーム情報を取得（略称含む、未確定チームも含む）
     if (teams.length === 0) {
       const placeholderTeamsResult = await db.execute({
         sql: `
-          SELECT DISTINCT
-            team1_display_name as display_name
-          FROM t_matches_live
-          WHERE match_block_id = ?
-          AND team1_display_name IS NOT NULL
-          UNION
-          SELECT DISTINCT
-            team2_display_name as display_name
-          FROM t_matches_live
-          WHERE match_block_id = ?
-          AND team2_display_name IS NOT NULL
-          ORDER BY display_name
+          WITH team_positions AS (
+            SELECT DISTINCT
+              ml.team1_display_name as template_display_name,
+              ml.team1_id as team_id,
+              t.team_name,
+              t.team_omission
+            FROM t_matches_live ml
+            LEFT JOIN m_teams t ON ml.team1_id = t.team_id
+            WHERE ml.match_block_id = ?
+            AND ml.team1_display_name IS NOT NULL
+            UNION
+            SELECT DISTINCT
+              ml.team2_display_name as template_display_name,
+              ml.team2_id as team_id,
+              t.team_name,
+              t.team_omission
+            FROM t_matches_live ml
+            LEFT JOIN m_teams t ON ml.team2_id = t.team_id
+            WHERE ml.match_block_id = ?
+            AND ml.team2_display_name IS NOT NULL
+          )
+          SELECT
+            template_display_name,
+            MAX(team_id) as team_id,
+            MAX(team_name) as team_name,
+            MAX(team_omission) as team_omission
+          FROM team_positions
+          GROUP BY template_display_name
+          ORDER BY template_display_name
         `,
         args: [matchBlockId, matchBlockId]
       });
 
       teams = (placeholderTeamsResult.rows || []).map((row, index) => ({
-        team_id: `placeholder_${matchBlockId}_${index}`,
-        team_name: row.display_name as string,
-        team_omission: undefined,
-        display_name: row.display_name as string
+        team_id: row.team_id as string || `placeholder_${matchBlockId}_${index}`,
+        team_name: row.team_name as string || row.template_display_name as string,
+        team_omission: row.team_omission as string || undefined,
+        display_name: (row.team_omission as string) || (row.team_name as string) || (row.template_display_name as string)
       }));
     }
 

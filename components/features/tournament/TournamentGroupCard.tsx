@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp, CheckCircle, Building2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { getStatusLabel, type TournamentStatus } from '@/lib/tournament-status';
 
 interface Tournament {
   tournament_id: number;
@@ -14,7 +15,7 @@ interface Tournament {
   format_name: string;
   venue_name: string;
   team_count: number;
-  status: 'planning' | 'ongoing' | 'completed';
+  status: TournamentStatus;
   event_start_date: string;
   category_name?: string | null;
   logo_blob_url?: string | null;
@@ -55,23 +56,25 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
     return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: TournamentStatus) => {
     switch (status) {
+      case 'before_recruitment':
+        return 'bg-gray-100 text-gray-800';
+      case 'recruiting':
+        return 'bg-blue-100 text-blue-800';
+      case 'before_event':
+        return 'bg-yellow-100 text-yellow-800';
       case 'ongoing':
         return 'bg-green-100 text-green-800';
       case 'completed':
         return 'bg-muted text-foreground';
       default:
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'ongoing': return '進行中';
-      case 'completed': return '完了';
-      default: return '開催予定';
-    }
+  const getStatusText = (status: TournamentStatus) => {
+    return getStatusLabel(status);
   };
 
   // 代表的なロゴを取得（最初の大会のロゴ）
@@ -79,10 +82,10 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
   const representativeOrganization = tournaments.find(t => t.organization_name)?.organization_name;
 
   return (
-    <Card className="hover:shadow-lg transition-shadow bg-card/80 backdrop-blur-sm border-border/50 relative overflow-hidden">
+    <Card className="hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-200 dark:border-blue-800 relative overflow-hidden">
       {/* グループカラーの左ボーダー */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-1" 
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1"
         style={{ backgroundColor: group.group_color }}
       />
       
@@ -100,20 +103,12 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
       )}
 
       <CardHeader className="relative z-10">
-        {/* グループヘッダー */}
         <div className="flex items-center justify-between mb-2">
-          <div
-            className="px-3 py-1 rounded-full text-sm font-medium text-white"
-            style={{ backgroundColor: group.group_color }}
-          >
-            グループ大会
-          </div>
+          <CardTitle className="text-xl font-bold">{group.group_name}</CardTitle>
           <div className="text-sm text-muted-foreground">
             {tournaments.length}部門
           </div>
         </div>
-
-        <CardTitle className="text-xl font-bold">{group.group_name}</CardTitle>
         {group.group_description && (
           <CardDescription className="text-base">
             {group.group_description}
@@ -150,7 +145,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
             {tournaments.map((tournament) => (
             <div
               key={tournament.tournament_id}
-              className="border rounded-lg p-4 bg-white/50 hover:bg-white/70 transition-colors"
+              className="border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-gradient-to-r from-white to-blue-50 dark:from-blue-950/20 dark:to-indigo-950/20 hover:shadow-md transition-all"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">

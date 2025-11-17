@@ -218,7 +218,13 @@ export default function AdminMatchesPage() {
           });
           
           const blocks = Array.from(blocksMap.values())
-            .sort((a, b) => a.block_order - b.block_order);
+            .sort((a, b) => {
+              // 予選を先に、決勝を後に配置
+              if (a.phase === 'preliminary' && b.phase === 'final') return -1;
+              if (a.phase === 'final' && b.phase === 'preliminary') return 1;
+              // 同じフェーズ内ではblock_orderでソート
+              return a.block_order - b.block_order;
+            });
           
           setMatchBlocks(blocks);
         } else {
@@ -949,10 +955,10 @@ export default function AdminMatchesPage() {
     }
   };
 
-  // 利用可能なブロック一覧を取得
+  // 利用可能なブロック一覧を取得（matchBlocksの順序を使用）
   const getAvailableBlocks = () => {
-    const blocks = [...new Set(matches.map(match => match.block_name))].sort();
-    return blocks;
+    // matchBlocksが既にphaseとblock_orderでソート済みなので、その順序を使用
+    return matchBlocks.map(block => block.block_name);
   };
 
   // ブロック色を取得
@@ -1000,7 +1006,7 @@ export default function AdminMatchesPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">試合管理</h1>
+                <h1 className="text-3xl font-bold text-foreground">試合結果入力</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                   「{tournament.tournament_name}」の試合進行状況管理
                 </p>

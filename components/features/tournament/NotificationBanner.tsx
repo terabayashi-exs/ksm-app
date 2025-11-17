@@ -155,9 +155,11 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                     return null;
                   })()}
                   <div className="flex items-center space-x-4 mt-3">
-                    <span className="text-xs text-muted-foreground">
-                      {notification.tournament_name}
-                    </span>
+                    {!tournamentId && (
+                      <span className="text-xs text-muted-foreground">
+                        {notification.tournament_name}
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {new Date(notification.created_at).toLocaleString('ja-JP')}
                     </span>

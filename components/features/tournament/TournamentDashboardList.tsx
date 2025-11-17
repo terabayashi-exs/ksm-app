@@ -6,13 +6,37 @@ import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus } from 'lucide-react';
+import { getStatusLabel } from '@/lib/tournament-status';
+
+interface GroupedTournamentData {
+  grouped: Record<string, {
+    group: {
+      group_id: number;
+      group_name: string | null;
+      group_description: string | null;
+      group_color: string | null;
+      display_order: number;
+    };
+    tournaments: Tournament[];
+  }>;
+  ungrouped: Tournament[];
+}
 
 interface TournamentDashboardData {
+  before_recruitment: Tournament[];
   recruiting: Tournament[];
+  before_event: Tournament[];
   ongoing: Tournament[];
   completed: Tournament[];
   total: number;
+  grouped: {
+    before_recruitment: GroupedTournamentData;
+    recruiting: GroupedTournamentData;
+    before_event: GroupedTournamentData;
+    ongoing: GroupedTournamentData;
+    completed: GroupedTournamentData;
+  };
 }
 
 interface ApiResponse {
@@ -23,10 +47,19 @@ interface ApiResponse {
 
 export default function TournamentDashboardList() {
   const [tournaments, setTournaments] = useState<TournamentDashboardData>({
+    before_recruitment: [],
     recruiting: [],
+    before_event: [],
     ongoing: [],
     completed: [],
-    total: 0
+    total: 0,
+    grouped: {
+      before_recruitment: { grouped: {}, ungrouped: [] },
+      recruiting: { grouped: {}, ungrouped: [] },
+      before_event: { grouped: {}, ungrouped: [] },
+      ongoing: { grouped: {}, ungrouped: [] },
+      completed: { grouped: {}, ungrouped: [] }
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,12 +132,53 @@ export default function TournamentDashboardList() {
 
       if (result.success) {
         // 削除成功時、リストから該当大会を除去
-        setTournaments(prev => ({
-          recruiting: prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id),
-          ongoing: prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id),
-          completed: prev.completed.filter(t => t.tournament_id !== tournament.tournament_id),
-          total: prev.total - 1
-        }));
+        setTournaments(prev => {
+          const updatedBeforeRecruitment = prev.before_recruitment.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedRecruiting = prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedBeforeEvent = prev.before_event.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedOngoing = prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedCompleted = prev.completed.filter(t => t.tournament_id !== tournament.tournament_id);
+
+          // グループ化されたデータも更新
+          const filterGroupedData = (groupedData: GroupedTournamentData): GroupedTournamentData => {
+            const newGrouped: Record<string, {
+              group: {
+                group_id: number;
+                group_name: string | null;
+                group_description: string | null;
+                group_color: string | null;
+                display_order: number;
+              };
+              tournaments: Tournament[];
+            }> = {};
+            Object.entries(groupedData.grouped).forEach(([key, value]) => {
+              const filteredTournaments = value.tournaments.filter(t => t.tournament_id !== tournament.tournament_id);
+              if (filteredTournaments.length > 0) {
+                newGrouped[key] = { ...value, tournaments: filteredTournaments };
+              }
+            });
+            return {
+              grouped: newGrouped,
+              ungrouped: groupedData.ungrouped.filter(t => t.tournament_id !== tournament.tournament_id)
+            };
+          };
+
+          return {
+            before_recruitment: updatedBeforeRecruitment,
+            recruiting: updatedRecruiting,
+            before_event: updatedBeforeEvent,
+            ongoing: updatedOngoing,
+            completed: updatedCompleted,
+            total: prev.total - 1,
+            grouped: {
+              before_recruitment: filterGroupedData(prev.grouped.before_recruitment),
+              recruiting: filterGroupedData(prev.grouped.recruiting),
+              before_event: filterGroupedData(prev.grouped.before_event),
+              ongoing: filterGroupedData(prev.grouped.ongoing),
+              completed: filterGroupedData(prev.grouped.completed)
+            }
+          };
+        });
         
         if (tournament.is_archived) {
           const mainDeleted = result.deletionSummary?.tournamentMainDeleted !== false;
@@ -114,7 +188,7 @@ export default function TournamentDashboardList() {
             alert(`⚠️ 部分削除完了\n\n関連データは削除されましたが、大会メインレコードが残存しています。\nもう一度削除ボタンを押すか、システム管理者にお問い合わせください。\n\n【削除情報】\n• 削除されたレコード数: ${result.deletionSummary?.totalDeletedRecords || 'N/A'}\n• メインレコード削除: 失敗`);
           }
         } else {
-          alert(result.message || '大会を削除しました');
+          alert(result.message || '部門を削除しました');
         }
       } else {
         alert(`削除エラー: ${result.error}`);
@@ -247,7 +321,7 @@ export default function TournamentDashboardList() {
     return getNotificationCount(tournamentId) > 0;
   };
 
-  const TournamentCard = ({ tournament, type }: { tournament: Tournament; type: 'recruiting' | 'ongoing' | 'completed' }) => (
+  const TournamentCard = ({ tournament }: { tournament: Tournament }) => (
     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
       {/* 管理者ロゴ背景 */}
       {tournament.logo_blob_url && (
@@ -278,15 +352,17 @@ export default function TournamentDashboardList() {
           </div>
           <div className="flex gap-2">
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-              type === 'ongoing' 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
-                : type === 'recruiting'
-                ? tournament.visibility === 1
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+              tournament.status === 'before_recruitment'
+                ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                : tournament.status === 'recruiting'
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                : tournament.status === 'before_event'
+                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                : tournament.status === 'ongoing'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
                 : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
             }`}>
-              {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (tournament.visibility === 1 ? '募集中' : '準備中') : '完了'}
+              {getStatusLabel(tournament.status)}
             </div>
             {tournament.is_archived && (
               <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
@@ -312,7 +388,7 @@ export default function TournamentDashboardList() {
               <span>{tournament.start_time} - {tournament.end_time}</span>
             </div>
           )}
-          {(!tournament.start_time || !tournament.end_time) && tournament.status === 'planning' && (
+          {(!tournament.start_time || !tournament.end_time) && (tournament.status === 'before_recruitment' || tournament.status === 'recruiting' || tournament.status === 'before_event') && (
             <div className="flex items-center text-sm text-gray-500">
               <Clock className="w-4 h-4 mr-2" />
               <span>試合時刻未設定</span>
@@ -338,7 +414,7 @@ export default function TournamentDashboardList() {
             <>
               <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                  大会編集
+                  部門編集
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
@@ -369,7 +445,7 @@ export default function TournamentDashboardList() {
               )}
             </Button>
           )}
-          {type === 'recruiting' && (
+          {(tournament.status === 'before_recruitment' || tournament.status === 'recruiting' || tournament.status === 'before_event') && !tournament.is_archived && (
             <>
               <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
@@ -381,9 +457,9 @@ export default function TournamentDashboardList() {
                   組合せ作成・編集
                 </Link>
               </Button>
-              <Button 
-                asChild 
-                size="sm" 
+              <Button
+                asChild
+                size="sm"
                 variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
                 className={hasNotifications(tournament.tournament_id)
                   ? "bg-red-600 hover:bg-red-700"
@@ -391,7 +467,7 @@ export default function TournamentDashboardList() {
                 }
               >
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                  試合管理
+                  試合結果入力
                   {hasNotifications(tournament.tournament_id) && (
                     <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
                       {getNotificationCount(tournament.tournament_id)}
@@ -430,11 +506,62 @@ export default function TournamentDashboardList() {
               </Button>
             </>
           )}
-          {type === 'completed' && !tournament.is_archived && (
+          {tournament.status === 'ongoing' && !tournament.is_archived && (
             <>
-              <Button 
-                asChild 
-                size="sm" 
+              <Button
+                asChild
+                size="sm"
+                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                className={hasNotifications(tournament.tournament_id)
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'hover:border-blue-300 hover:bg-blue-50'
+                }
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  試合結果入力
+                  {hasNotifications(tournament.tournament_id) && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                      {getNotificationCount(tournament.tournament_id)}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  順位設定
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  ファイル管理
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDeleteTournament(tournament)}
+                disabled={deleting === tournament.tournament_id}
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              >
+                {deleting === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    削除中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    削除
+                  </div>
+                )}
+              </Button>
+            </>
+          )}
+          {tournament.status === 'completed' && !tournament.is_archived && (
+            <>
+              <Button
+                asChild
+                size="sm"
                 variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
                 className={hasNotifications(tournament.tournament_id)
                   ? "bg-red-600 hover:bg-red-700"
@@ -442,7 +569,7 @@ export default function TournamentDashboardList() {
                 }
               >
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                  試合管理
+                  試合結果入力
                   {hasNotifications(tournament.tournament_id) && (
                     <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
                       {getNotificationCount(tournament.tournament_id)}
@@ -502,131 +629,142 @@ export default function TournamentDashboardList() {
               </Button>
             </>
           )}
-          {type === 'ongoing' && (
-            <>
-              <Button 
-                asChild 
-                size="sm" 
-                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                className={hasNotifications(tournament.tournament_id) 
-                  ? 'bg-red-600 hover:bg-red-700' 
-                  : 'hover:border-blue-300 hover:bg-blue-50'
-                }
-              >
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                  試合管理
-                  {hasNotifications(tournament.tournament_id) && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
-                      {getNotificationCount(tournament.tournament_id)}
-                    </span>
-                  )}
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                  順位設定
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                  ファイル管理
-                </Link>
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => handleDeleteTournament(tournament)}
-                disabled={deleting === tournament.tournament_id}
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-              >
-                {deleting === tournament.tournament_id ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                    削除中...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    削除
-                  </div>
-                )}
-              </Button>
-            </>
-          )}
         </div>
       </div>
     </div>
   );
 
+  const renderGroupedSection = (
+    groupedData: GroupedTournamentData
+  ) => {
+    const groups = Object.values(groupedData.grouped);
+    const ungroupedDivisions = groupedData.ungrouped;
+
+    return (
+      <>
+        {/* グループ化された大会 */}
+        {groups.map(({ group, tournaments: divisions }) => (
+          <Card key={group.group_id} className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-2xl mb-2">{group.group_name}</CardTitle>
+                  {group.group_description && (
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {group.group_description}
+                    </p>
+                  )}
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Users className="h-4 w-4 mr-1" />
+                    {divisions.length}部門
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                  >
+                    <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      部門作成
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                <div className="grid gap-4">
+                  {divisions.map((division) => (
+                    <TournamentCard
+                      key={division.tournament_id}
+                      tournament={division}
+                    />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* グループに所属していない部門 */}
+        {ungroupedDivisions.map((division) => (
+          <TournamentCard
+            key={division.tournament_id}
+            tournament={division}
+          />
+        ))}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* 募集前の大会 */}
+      {tournaments.before_recruitment.length > 0 && (
+        <>
+          <div className="flex items-center text-gray-500 mb-4">
+            <Clock className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              募集前の大会 ({Object.keys(tournaments.grouped.before_recruitment.grouped).length + tournaments.grouped.before_recruitment.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.before_recruitment)}
+        </>
+      )}
+
       {/* 開催中の大会 */}
       {tournaments.ongoing.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-green-700">
-              <Trophy className="w-5 h-5 mr-2" />
-              開催中の大会 ({tournaments.ongoing.length}件)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {tournaments.ongoing.map((tournament) => (
-                <TournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                  type="ongoing"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex items-center text-green-700 mb-4">
+            <Trophy className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              開催中の大会 ({Object.keys(tournaments.grouped.ongoing.grouped).length + tournaments.grouped.ongoing.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.ongoing)}
+        </>
       )}
 
       {/* 募集中の大会 */}
       {tournaments.recruiting.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-blue-700">
-              <CalendarDays className="w-5 h-5 mr-2" />
-              募集中の大会 ({tournaments.recruiting.length}件)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {tournaments.recruiting.map((tournament) => (
-                <TournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                  type="recruiting"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex items-center text-blue-700 mb-4 mt-8">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              募集中の大会 ({Object.keys(tournaments.grouped.recruiting.grouped).length + tournaments.grouped.recruiting.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.recruiting)}
+        </>
+      )}
+
+      {/* 開催前の大会 */}
+      {tournaments.before_event.length > 0 && (
+        <>
+          <div className="flex items-center text-orange-700 mb-4 mt-8">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              開催前の大会 ({Object.keys(tournaments.grouped.before_event.grouped).length + tournaments.grouped.before_event.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.before_event)}
+        </>
       )}
 
       {/* 完了した大会 */}
       {tournaments.completed.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-gray-700">
-              <Trophy className="w-5 h-5 mr-2" />
-              完了した大会（過去1年以内） ({tournaments.completed.length}件)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {tournaments.completed.map((tournament) => (
-                <TournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                  type="completed"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex items-center text-gray-700 mb-4 mt-8">
+            <Trophy className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">
+              完了した大会（過去1年以内） ({Object.keys(tournaments.grouped.completed.grouped).length + tournaments.grouped.completed.ungrouped.length}件)
+            </h3>
+          </div>
+          {renderGroupedSection(tournaments.grouped.completed)}
+        </>
       )}
 
       {/* 大会がない場合 */}

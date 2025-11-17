@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Trophy, Save, RotateCcw, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 
 interface TeamRanking {
@@ -75,6 +76,7 @@ interface FinalTournamentBlock {
 interface ManualRankingsEditorProps {
   tournamentId: number;
   blocks: Block[];
+  finalFormatType?: string; // 'league' or 'tournament'
   finalMatches?: FinalMatch[];
   finalRankings?: {
     match_block_id: number;
@@ -83,7 +85,10 @@ interface ManualRankingsEditorProps {
   } | null;
 }
 
-export default function ManualRankingsEditor({ tournamentId, blocks, finalMatches = [], finalRankings = null }: ManualRankingsEditorProps) {
+export default function ManualRankingsEditor({ tournamentId, blocks, finalFormatType = 'tournament', finalMatches = [], finalRankings = null }: ManualRankingsEditorProps) {
+  // タブの状態管理（予選/決勝）
+  const [activeTab, setActiveTab] = useState<'preliminary' | 'final'>('preliminary');
+
   const [editedBlocks, setEditedBlocks] = useState<Block[]>(
     blocks.map(block => ({
       ...block,
@@ -289,6 +294,17 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     }
   };
 
+  // 手動調整が必要なブロックかチェック（同順位が存在するか）
+  const hasManualAdjustmentNeeded = (teamRankings: TeamRanking[]): boolean => {
+    if (teamRankings.length === 0) return false;
+
+    const positions = teamRankings.map(team => team.position);
+    const uniquePositions = new Set(positions);
+
+    // 同じ順位が複数存在する場合、手動調整が必要
+    return positions.length !== uniquePositions.size;
+  };
+
 
   // 順位の変更（予選ブロック）
   const updateTeamPosition = (blockIndex: number, teamIndex: number, newPosition: number) => {
@@ -393,31 +409,40 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     setMessage({ type: 'success', text: '全ての変更をリセットしました' });
   };
 
-  // 変更を保存
+  // 変更を保存（アクティブなタブのブロックのみ）
   const saveChanges = async () => {
     setSaving(true);
     setMessage(null);
-    
+
+    // アクティブなタブのブロックのみを抽出
+    const blocksToSave = editedBlocks.filter(block => {
+      if (activeTab === 'preliminary') {
+        return block.phase === 'preliminary';
+      } else {
+        return block.phase === 'final';
+      }
+    });
+
     // デバッグ用：送信データの詳細ログ
     const requestData = {
-      blocks: editedBlocks.map(block => ({
+      blocks: blocksToSave.map(block => ({
         match_block_id: block.match_block_id,
         team_rankings: block.team_rankings,
         remarks: block.remarks || ''
       })),
-      finalTournament: finalMatches.length > 0 ? {
+      finalTournament: (activeTab === 'final' && finalFormatType === 'tournament' && finalMatches.length > 0) ? {
         team_rankings: finalTournamentBlock.team_rankings,
         remarks: finalTournamentBlock.remarks || ''
       } : null
     };
-    
-    console.log('[MANUAL_RANKINGS_FRONTEND] 送信データ:', JSON.stringify(requestData, null, 2));
-    
+
+    console.log(`[MANUAL_RANKINGS_FRONTEND] ${activeTab === 'preliminary' ? '予選' : '決勝'}タブの送信データ:`, JSON.stringify(requestData, null, 2));
+
     // デバッグ用：変更内容の詳細ログ
-    editedBlocks.forEach((block, blockIndex) => {
-      const originalBlock = blocks[blockIndex];
+    blocksToSave.forEach((block) => {
+      const originalBlock = blocks.find(b => b.match_block_id === block.match_block_id);
       console.log(`[MANUAL_RANKINGS_FRONTEND] ${block.block_name}ブロック変更状況:`);
-      
+
       // 順位変更のチェック
       block.team_rankings.forEach((editedTeam) => {
         const originalTeam = originalBlock?.team_rankings.find(t => t.team_id === editedTeam.team_id);
@@ -425,7 +450,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
           console.log(`  順位変更: ${editedTeam.team_name} ${originalTeam.position}位 → ${editedTeam.position}位`);
         }
       });
-      
+
       // 備考変更のチェック
       if (block.remarks !== (originalBlock?.remarks || '')) {
         console.log(`  備考変更: "${originalBlock?.remarks || ''}" → "${block.remarks}"`);
@@ -460,49 +485,76 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
     }
   };
 
-  // 変更があるかチェック（チームIDベースの正確な比較）
-  const hasChanges = editedBlocks.some((block, blockIndex) => {
-    const originalBlock = blocks[blockIndex];
-    
-    // 順位変更のチェック（チームIDで正確に比較）
-    const hasPositionChanges = block.team_rankings.some((editedTeam) => {
-      const originalTeam = originalBlock?.team_rankings.find(t => t.team_id === editedTeam.team_id);
-      return originalTeam && editedTeam.position !== originalTeam.position;
-    });
-    
-    // 備考変更のチェック
-    const hasRemarksChanges = block.remarks !== (originalBlock?.remarks || '');
-    
-    return hasPositionChanges || hasRemarksChanges;
-  }) || (
-    // 決勝トーナメントの変更もチェック（初期状態との比較）
-    finalTournamentBlock.remarks !== '' ||
-    finalTournamentBlock.team_rankings.some((team, index) => {
-      // 初期計算結果と比較（重い計算を避けるため、remarksか順位に変更があればtrueと判定）
-      return team.position !== (index + 1); // 簡略化：連番以外なら変更とみなす
-    })
-  );
+  // 変更があるかチェック（チームIDベースの正確な比較、アクティブタブのみ）
+  const hasChanges = (() => {
+    if (activeTab === 'preliminary') {
+      // 予選タブ：予選ブロックの変更をチェック
+      return editedBlocks
+        .filter(block => block.phase === 'preliminary')
+        .some((block) => {
+          const originalBlock = blocks.find(b => b.match_block_id === block.match_block_id);
+
+          // 順位変更のチェック（チームIDで正確に比較）
+          const hasPositionChanges = block.team_rankings.some((editedTeam) => {
+            const originalTeam = originalBlock?.team_rankings.find(t => t.team_id === editedTeam.team_id);
+            return originalTeam && editedTeam.position !== originalTeam.position;
+          });
+
+          // 備考変更のチェック
+          const hasRemarksChanges = block.remarks !== (originalBlock?.remarks || '');
+
+          return hasPositionChanges || hasRemarksChanges;
+        });
+    } else {
+      // 決勝タブ：フォーマットタイプに応じて変更をチェック
+      if (finalFormatType === 'league') {
+        // リーグ戦形式：決勝ブロックの変更をチェック
+        return editedBlocks
+          .filter(block => block.phase === 'final')
+          .some((block) => {
+            const originalBlock = blocks.find(b => b.match_block_id === block.match_block_id);
+
+            const hasPositionChanges = block.team_rankings.some((editedTeam) => {
+              const originalTeam = originalBlock?.team_rankings.find(t => t.team_id === editedTeam.team_id);
+              return originalTeam && editedTeam.position !== originalTeam.position;
+            });
+
+            const hasRemarksChanges = block.remarks !== (originalBlock?.remarks || '');
+
+            return hasPositionChanges || hasRemarksChanges;
+          });
+      } else {
+        // トーナメント形式：決勝トーナメントの変更をチェック
+        return finalMatches.length > 0 && (
+          finalTournamentBlock.remarks !== '' ||
+          finalTournamentBlock.team_rankings.some((team, index) => {
+            return team.position !== (index + 1);
+          })
+        );
+      }
+    }
+  })();
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">予選ブロック順位調整</h2>
+          <h2 className="text-xl font-semibold text-gray-900">手動順位設定</h2>
           <p className="text-sm text-gray-600">
             同着順位を設定する場合は、同じ順位番号を入力してください（例：1位、2位、2位、4位）
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={resetAll}
             disabled={saving || !hasChanges}
           >
             <RotateCcw className="w-4 h-4 mr-1" />
             全てリセット
           </Button>
-          <Button 
+          <Button
             onClick={saveChanges}
             disabled={saving || !hasChanges}
             className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white"
@@ -519,8 +571,8 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
       {/* メッセージ */}
       {message && (
         <div className={`p-4 rounded-md ${
-          message.type === 'success' 
-            ? 'bg-green-50 border border-green-200 text-green-800' 
+          message.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800'
             : 'bg-red-50 border border-red-200 text-red-800'
         }`}>
           <div className="flex items-center">
@@ -530,17 +582,36 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
         </div>
       )}
 
-      {/* ブロック一覧 */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {editedBlocks.map((block, blockIndex) => (
-          <Card key={block.match_block_id} className="h-fit">
-            <CardHeader>
+      {/* タブ：予選/決勝の切り替え */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'preliminary' | 'final')}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="preliminary">予選</TabsTrigger>
+          <TabsTrigger value="final">決勝</TabsTrigger>
+        </TabsList>
+
+        {/* 予選タブ */}
+        <TabsContent value="preliminary" className="space-y-6 mt-6">
+          {/* 予選ブロック一覧 */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {editedBlocks
+              .filter(block => block.phase === 'preliminary')
+              .map((block) => {
+                const blockIndex = editedBlocks.findIndex(b => b.match_block_id === block.match_block_id);
+                const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings);
+                return (
+          <Card key={block.match_block_id} className={`h-fit ${needsAdjustment ? 'border-2 border-yellow-400 shadow-lg' : ''}`}>
+            <CardHeader className={needsAdjustment ? 'bg-yellow-50' : ''}>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
                     {block.phase === 'preliminary' ? `予選${block.block_name}ブロック` : block.display_round_name}
                   </div>
                   <Trophy className="w-4 h-4" />
+                  {needsAdjustment && (
+                    <span className="ml-2 px-2 py-1 text-xs font-medium bg-yellow-500 text-white rounded-full animate-pulse">
+                      要調整
+                    </span>
+                  )}
                 </div>
                 <Button
                   size="sm"
@@ -616,11 +687,117 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+                );
+              })}
+          </div>
+        </TabsContent>
 
-      {/* 決勝トーナメント順位調整 */}
-      {finalMatches.length > 0 && (
+        {/* 決勝タブ */}
+        <TabsContent value="final" className="space-y-6 mt-6">
+          {/* 決勝ブロック一覧（リーグ戦形式の決勝の場合） */}
+          {finalFormatType === 'league' && editedBlocks.filter(block => block.phase === 'final').length > 0 && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {editedBlocks
+                .filter(block => block.phase === 'final')
+                .map((block) => {
+                  const blockIndex = editedBlocks.findIndex(b => b.match_block_id === block.match_block_id);
+                  const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings);
+                  return (
+                    <Card key={block.match_block_id} className={`h-fit ${needsAdjustment ? 'border-2 border-yellow-400 shadow-lg' : ''}`}>
+                      <CardHeader className={needsAdjustment ? 'bg-yellow-50' : ''}>
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
+                              {block.display_round_name || block.block_name}
+                            </div>
+                            <Trophy className="w-4 h-4" />
+                            {needsAdjustment && (
+                              <span className="ml-2 px-2 py-1 text-xs font-medium bg-yellow-500 text-white rounded-full animate-pulse">
+                                要調整
+                              </span>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => resetBlock(blockIndex)}
+                            disabled={saving}
+                            className="text-xs"
+                          >
+                            リセット
+                          </Button>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {block.team_rankings.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <Trophy className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p>まだ順位が決まっていません</p>
+                            <p className="text-xs">試合結果を確定してください</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {block.team_rankings
+                              .sort((a, b) => a.position - b.position)
+                              .map((team, teamIndex) => (
+                                <div key={team.team_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <Label htmlFor={`position-${block.match_block_id}-${team.team_id}`} className="text-sm font-medium">
+                                      順位:
+                                    </Label>
+                                    <Input
+                                      id={`position-${block.match_block_id}-${team.team_id}`}
+                                      type="number"
+                                      min="1"
+                                      max={block.team_rankings.length}
+                                      value={team.position}
+                                      onChange={(e) => updateTeamPosition(blockIndex, teamIndex, parseInt(e.target.value) || 1)}
+                                      className="w-16 h-8 text-center"
+                                      disabled={saving}
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-medium text-sm">{team.team_name}</div>
+                                    <div className="text-xs text-gray-600">
+                                      {team.points}pt ({team.wins}W {team.draws}D {team.losses}L)
+                                      得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+
+                        {/* 備考欄 */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <Label htmlFor={`remarks-${block.match_block_id}`} className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            順位設定の備考
+                          </Label>
+                          <Textarea
+                            id={`remarks-${block.match_block_id}`}
+                            placeholder="順位決定の理由や特記事項を入力してください（例：同着1位のため抽選で決定、3位決定戦なしのため同着3位など）"
+                            value={block.remarks || ''}
+                            onChange={(e) => updateBlockRemarks(blockIndex, e.target.value)}
+                            disabled={saving}
+                            rows={3}
+                            className="text-sm"
+                          />
+                          {block.remarks && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {block.remarks.length} / 500文字
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          )}
+
+          {/* 決勝トーナメント順位調整（トーナメント形式の決勝の場合） */}
+          {finalFormatType === 'tournament' && finalMatches.length > 0 && (
         <div className="space-y-4">
           <div className="border-t border-gray-200 pt-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">決勝トーナメント順位調整</h2>
@@ -714,7 +891,9 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalMatche
             </CardContent>
           </Card>
         </div>
-      )}
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* 注意事項 */}
       <Card className="border-yellow-200 bg-yellow-50">

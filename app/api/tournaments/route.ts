@@ -6,6 +6,7 @@ import { tournamentCreateSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
+import type { TournamentStatus } from '@/lib/tournament-status';
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      status: row.status as 'planning' | 'ongoing' | 'completed',
+      status: row.status as TournamentStatus,
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
@@ -247,7 +248,7 @@ export async function GET(request: NextRequest) {
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      status: row.status as 'planning' | 'ongoing' | 'completed',
+      status: row.status as TournamentStatus,
       group_id: row.group_id ? Number(row.group_id) : null,
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,

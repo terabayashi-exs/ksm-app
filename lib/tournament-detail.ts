@@ -1,6 +1,7 @@
 // lib/tournament-detail.ts
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
+import type { TournamentStatus } from '@/lib/tournament-status';
 
 /**
  * アーカイブされた大会の詳細情報を取得する
@@ -95,7 +96,7 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       format_id: row.format_id as number,
       venue_id: row.venue_id as number,
       team_count: row.team_count as number,
-      status: row.status as "planning" | "ongoing" | "completed",
+      status: row.status as TournamentStatus,
       court_count: row.court_count as number,
       tournament_dates: row.tournament_dates as string | undefined,
       match_duration_minutes: row.match_duration_minutes as number,
@@ -165,7 +166,7 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
       format_id: row.format_id as number,
       venue_id: row.venue_id as number,
       team_count: row.team_count as number,
-      status: row.status as "planning" | "ongoing" | "completed",
+      status: row.status as TournamentStatus,
       court_count: row.court_count as number,
       tournament_dates: row.tournament_dates as string | undefined,
       match_duration_minutes: row.match_duration_minutes as number,

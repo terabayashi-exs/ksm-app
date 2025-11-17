@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { tournamentCreateSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
+import type { TournamentStatus } from '@/lib/tournament-status';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -73,7 +74,7 @@ export async function GET(
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      status: row.status as 'planning' | 'ongoing' | 'completed',
+      status: row.status as TournamentStatus,
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
@@ -280,7 +281,7 @@ export async function PUT(
       tournament_dates: row.tournament_dates as string,
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
-      status: row.status as 'planning' | 'ongoing' | 'completed',
+      status: row.status as TournamentStatus,
       visibility: row.visibility === 'open' ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,

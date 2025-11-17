@@ -66,15 +66,14 @@ export async function POST(
 
     console.log(`✓ 試合${match.match_code}の確定を解除しました（ID: ${matchId}）`);
 
-    // 順位表の再計算を実行
+    // ブロックが未完了になった場合、順位情報をクリア
     try {
-      // 対象ブロックの順位表を再計算
-      const { recalculateAllTournamentRankings } = await import('@/lib/standings-calculator');
-      await recalculateAllTournamentRankings(match.tournament_id);
-      console.log(`✓ 大会${match.tournament_id}の順位表を再計算しました`);
+      const { clearBlockRankingsIfIncomplete } = await import('@/lib/standings-calculator');
+      await clearBlockRankingsIfIncomplete(match.match_block_id);
+      console.log(`✓ ブロック${match.match_block_id}の順位情報をチェックしました`);
     } catch (error) {
-      console.error('順位表再計算エラー:', error);
-      // 順位表の再計算に失敗しても、確定解除は成功として扱う
+      console.error('順位情報クリアエラー:', error);
+      // 順位情報のクリアに失敗しても、確定解除は成功として扱う
     }
 
     // 大会ステータスの更新チェック

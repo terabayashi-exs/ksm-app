@@ -7,6 +7,8 @@
  * 従来の「大会グループ」を「大会」、「大会」を「部門」として扱います
  */
 
+import type { TournamentStatus } from './tournament-status';
+
 /**
  * 部門（旧：大会）
  * 大会の中の1つのカテゴリーを表す
@@ -22,7 +24,7 @@ export interface Tournament {
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
   match_duration_minutes: number;
   break_duration_minutes: number;
-  status: 'planning' | 'ongoing' | 'completed';
+  status: TournamentStatus;
   visibility: number; // 公開フラグ (0: 非公開, 1: 公開)
   public_start_date?: string; // 公開開始日
   recruitment_start_date?: string; // 募集開始日
