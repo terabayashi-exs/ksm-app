@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import type { TournamentStatus } from '@/lib/tournament-status';
 
 export async function GET() {
   try {
@@ -103,7 +104,7 @@ export async function GET() {
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
-        status: row.status as 'planning' | 'ongoing' | 'completed',
+        status: row.status as TournamentStatus,
         assigned_block: row.assigned_block as string,
         block_position: row.block_position ? Number(row.block_position) : null,
         venue_name: row.venue_name as string,

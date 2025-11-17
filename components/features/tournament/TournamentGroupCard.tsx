@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp, CheckCircle, Building2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { getStatusLabel, type TournamentStatus } from '@/lib/tournament-status';
 
 interface Tournament {
   tournament_id: number;
@@ -14,7 +15,7 @@ interface Tournament {
   format_name: string;
   venue_name: string;
   team_count: number;
-  status: 'planning' | 'ongoing' | 'completed';
+  status: TournamentStatus;
   event_start_date: string;
   category_name?: string | null;
   logo_blob_url?: string | null;
@@ -55,45 +56,25 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
     return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
   };
 
-  const getStatusBadge = (status: string, tournament?: Tournament) => {
+  const getStatusBadge = (status: TournamentStatus) => {
     switch (status) {
+      case 'before_recruitment':
+        return 'bg-gray-100 text-gray-800';
+      case 'recruiting':
+        return 'bg-blue-100 text-blue-800';
+      case 'before_event':
+        return 'bg-yellow-100 text-yellow-800';
       case 'ongoing':
         return 'bg-green-100 text-green-800';
       case 'completed':
         return 'bg-muted text-foreground';
-      case 'planning':
-        // 募集中かどうかを判定
-        if (tournament && tournament.recruitment_start_date && tournament.recruitment_end_date) {
-          const now = new Date();
-          const recruitStart = new Date(tournament.recruitment_start_date);
-          const recruitEnd = new Date(tournament.recruitment_end_date);
-          if (now >= recruitStart && now <= recruitEnd) {
-            return 'bg-blue-100 text-blue-800'; // 募集中
-          }
-        }
-        return 'bg-yellow-100 text-yellow-800'; // 開催予定
       default:
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusText = (status: string, tournament?: Tournament) => {
-    switch (status) {
-      case 'ongoing': return '進行中';
-      case 'completed': return '完了';
-      case 'planning':
-        // 募集中かどうかを判定
-        if (tournament && tournament.recruitment_start_date && tournament.recruitment_end_date) {
-          const now = new Date();
-          const recruitStart = new Date(tournament.recruitment_start_date);
-          const recruitEnd = new Date(tournament.recruitment_end_date);
-          if (now >= recruitStart && now <= recruitEnd) {
-            return '募集中';
-          }
-        }
-        return '開催予定';
-      default: return '開催予定';
-    }
+  const getStatusText = (status: TournamentStatus) => {
+    return getStatusLabel(status);
   };
 
   // 代表的なロゴを取得（最初の大会のロゴ）
@@ -172,8 +153,8 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                     <h4 className="font-semibold text-base">
                       {tournament.category_name || tournament.tournament_name}
                     </h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(tournament.status, tournament)}`}>
-                      {getStatusText(tournament.status, tournament)}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(tournament.status)}`}>
+                      {getStatusText(tournament.status)}
                     </span>
                     {tournament.is_joined && (
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">

@@ -204,16 +204,12 @@ export async function GET() {
         status: (row.status as string) || 'planning',
         recruitment_start_date: row.recruitment_start_date as string | null,
         recruitment_end_date: row.recruitment_end_date as string | null,
-        tournament_dates: (row.tournament_dates as string) || '{}'
+        tournament_dates: (row.tournament_dates as string) || '{}',
+        public_start_date: row.public_start_date as string | null
       }, Number(row.tournament_id));
 
-      // TournamentStatus を Tournament の status にマッピング
-      const mappedStatus =
-        calculatedStatus === 'before_recruitment' ? 'planning' :
-        calculatedStatus === 'recruiting' ? 'planning' :
-        calculatedStatus === 'before_event' ? 'planning' :
-        calculatedStatus === 'ongoing' ? 'ongoing' :
-        'completed';
+      // TournamentStatus をそのまま使用（管理者は全てのステータスを確認可能）
+      const mappedStatus = calculatedStatus;
 
       return {
         tournament_id: Number(row.tournament_id),
@@ -254,7 +250,7 @@ export async function GET() {
     }));
 
     // グループごとのステータスを判定（部門の中で最も優先度の高いステータス）
-    const groupStatuses: Record<number, 'recruiting' | 'ongoing' | 'completed'> = {};
+    const groupStatuses: Record<number, 'before_recruitment' | 'recruiting' | 'before_event' | 'ongoing' | 'completed'> = {};
 
     // 各グループのステータスを決定
     tournamentsWithTimes.forEach(tournament => {
@@ -262,52 +258,65 @@ export async function GET() {
         const groupId = tournament.group_id;
         const groupTournaments = tournamentsWithTimes.filter(t => t.group_id === groupId);
 
-        // ongoing判定: 1つでもongoingがあれば開催中
+        // 優先順位: ongoing > before_event > recruiting > before_recruitment > completed
         if (groupTournaments.some(t => t.status === 'ongoing')) {
           groupStatuses[groupId] = 'ongoing';
         }
-        // recruiting判定: 全てplanningの場合は募集中
-        else if (groupTournaments.every(t => t.status === 'planning')) {
+        else if (groupTournaments.some(t => t.status === 'before_event')) {
+          groupStatuses[groupId] = 'before_event';
+        }
+        else if (groupTournaments.some(t => t.status === 'recruiting')) {
           groupStatuses[groupId] = 'recruiting';
         }
-        // completed判定: 全てcompletedの場合は完了
+        else if (groupTournaments.some(t => t.status === 'before_recruitment')) {
+          groupStatuses[groupId] = 'before_recruitment';
+        }
         else if (groupTournaments.every(t => t.status === 'completed')) {
           groupStatuses[groupId] = 'completed';
         }
-        // 混在状態（planningとcompletedなど）は開催中として扱う
         else {
-          groupStatuses[groupId] = 'ongoing';
+          groupStatuses[groupId] = 'before_recruitment';
         }
       }
     });
 
     // 大会グループ単位で分類（グループ内の全部門を含める）
+    const before_recruitment = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'before_recruitment';
+      } else {
+        return t.status === 'before_recruitment';
+      }
+    });
+
     const recruiting = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
-        // グループに所属する場合は、グループステータスで判定
         return groupStatuses[t.group_id] === 'recruiting';
       } else {
-        // グループに所属しない場合は、部門自身のステータスで判定
-        return t.status === 'planning';
+        return t.status === 'recruiting';
+      }
+    });
+
+    const before_event = tournamentsWithTimes.filter(t => {
+      if (t.group_id) {
+        return groupStatuses[t.group_id] === 'before_event';
+      } else {
+        return t.status === 'before_event';
       }
     });
 
     const ongoing = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
-        // グループに所属する場合は、グループステータスで判定
         return groupStatuses[t.group_id] === 'ongoing';
       } else {
-        // グループに所属しない場合は、部門自身のステータスで判定
         return t.status === 'ongoing';
       }
     });
 
     const completed = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
-        // グループに所属する場合は、グループステータスで判定
         return groupStatuses[t.group_id] === 'completed';
       } else {
-        // グループに所属しない場合は、部門自身のステータスで判定
         return t.status === 'completed';
       }
     });
@@ -346,20 +355,26 @@ export async function GET() {
       return { grouped, ungrouped };
     };
 
+    const beforeRecruitmentGrouped = groupedTournaments(before_recruitment);
     const recruitingGrouped = groupedTournaments(recruiting);
+    const beforeEventGrouped = groupedTournaments(before_event);
     const ongoingGrouped = groupedTournaments(ongoing);
     const completedGrouped = groupedTournaments(completed);
 
     return NextResponse.json({
       success: true,
       data: {
+        before_recruitment,
         recruiting,
+        before_event,
         ongoing,
         completed,
         total: tournamentsWithTimes.length,
         // グループ化された情報も含める
         grouped: {
+          before_recruitment: beforeRecruitmentGrouped,
           recruiting: recruitingGrouped,
+          before_event: beforeEventGrouped,
           ongoing: ongoingGrouped,
           completed: completedGrouped
         }

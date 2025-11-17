@@ -148,7 +148,7 @@ export default function TeamTournaments() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ongoing':
-        return <Badge className="bg-green-100 text-green-800">進行中</Badge>;
+        return <Badge className="bg-green-100 text-green-800">開催中</Badge>;
       case 'completed':
         return <Badge className="bg-muted text-muted-foreground">完了</Badge>;
       case 'planning':

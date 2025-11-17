@@ -97,14 +97,18 @@ function TournamentsContent() {
           } else if (statusFilter === 'recruiting') {
             filteredGroups = categorizedData.recruiting || [];
             setSearchStatus('recruiting');
+          } else if (statusFilter === 'before_event') {
+            filteredGroups = categorizedData.before_event || [];
+            setSearchStatus('before_event');
           } else if (statusFilter === 'completed') {
             filteredGroups = categorizedData.completed || [];
             setSearchStatus('completed');
           } else {
-            // フィルターがない場合は全ての大会を表示（ongoing → recruiting → completed の順）
+            // フィルターがない場合は全ての大会を表示（ongoing → before_event → recruiting → completed の順）
             filteredGroups = [
               ...(categorizedData.ongoing || []),
               ...(categorizedData.recruiting || []),
+              ...(categorizedData.before_event || []),
               ...(categorizedData.completed || [])
             ];
             setSearchStatus('all');
@@ -211,6 +215,8 @@ function TournamentsContent() {
         return '開催中の大会';
       case 'recruiting':
         return '募集中の大会';
+      case 'before_event':
+        return '開催前の大会';
       case 'completed':
         return '完了した大会';
       default:
@@ -224,6 +230,8 @@ function TournamentsContent() {
         return '現在開催中の大会を確認できます';
       case 'recruiting':
         return '参加チームを募集中の大会を確認できます';
+      case 'before_event':
+        return '募集は終了し、開催を待っている大会を確認できます';
       case 'completed':
         return '終了した大会の結果を確認できます';
       default:
@@ -301,6 +309,7 @@ function TournamentsContent() {
                     <SelectItem value="all">すべて</SelectItem>
                     <SelectItem value="ongoing">開催中</SelectItem>
                     <SelectItem value="recruiting">募集中</SelectItem>
+                    <SelectItem value="before_event">開催前</SelectItem>
                     <SelectItem value="completed">完了</SelectItem>
                   </SelectContent>
                 </Select>

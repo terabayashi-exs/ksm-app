@@ -1,12 +1,29 @@
 // lib/tournament-status.ts
 // 大会ステータス判定ユーティリティ
 
-export type TournamentStatus = 
+export type TournamentStatus =
   | 'before_recruitment'  // 募集前
   | 'recruiting'          // 募集中
   | 'before_event'        // 開催前
   | 'ongoing'             // 開催中
   | 'completed';          // 終了
+
+/**
+ * 日付を正規化（時刻を00:00:00にセット）
+ */
+function normalizeDate(date: Date | string | null | undefined): Date | null {
+  if (!date) return null;
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/**
+ * 現在日時を日付のみに正規化（null安全版）
+ */
+function getNormalizedToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
 
 export interface TournamentWithStatus {
   tournament_id: number;
@@ -37,19 +54,15 @@ export async function calculateTournamentStatus(
     tournament_dates: string;
     recruitment_start_date: string | null;
     recruitment_end_date: string | null;
+    public_start_date?: string | null;
   },
   tournamentId?: number
 ): Promise<TournamentStatus> {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = getNormalizedToday();
 
-  // 募集日程の確認
-  const recruitmentStart = tournament.recruitment_start_date 
-    ? new Date(tournament.recruitment_start_date) 
-    : null;
-  const recruitmentEnd = tournament.recruitment_end_date 
-    ? new Date(tournament.recruitment_end_date) 
-    : null;
+  // 募集日程の確認（日付のみに正規化）
+  const recruitmentStart = normalizeDate(tournament.recruitment_start_date);
+  const recruitmentEnd = normalizeDate(tournament.recruitment_end_date);
 
   // 大会日程の確認
   let tournamentStartDate: Date | null = null;
@@ -59,9 +72,10 @@ export async function calculateTournamentStatus(
     const tournamentDates = JSON.parse(tournament.tournament_dates);
     const dates = Object.values(tournamentDates)
       .filter(date => date)
-      .map(date => new Date(date as string))
+      .map(date => normalizeDate(date as string))
+      .filter((date): date is Date => date !== null)
       .sort((a, b) => a.getTime() - b.getTime());
-    
+
     if (dates.length > 0) {
       tournamentStartDate = dates[0];
       tournamentEndDate = dates[dates.length - 1];
@@ -116,15 +130,15 @@ export async function calculateTournamentStatus(
     }
   }
 
-  // 1. 募集前：募集開始日が未来の場合
-  if (recruitmentStart && today < recruitmentStart) {
-    return 'before_recruitment';
-  }
-
-  // 2. 募集中：募集開始日 <= 現在 <= 募集終了日
+  // 1. 募集中：募集開始日 <= 現在 <= 募集終了日（最優先）
   if (recruitmentStart && recruitmentEnd &&
       today >= recruitmentStart && today <= recruitmentEnd) {
     return 'recruiting';
+  }
+
+  // 2. 募集前：募集開始日が未来の場合
+  if (recruitmentStart && today < recruitmentStart) {
+    return 'before_recruitment';
   }
 
   // 3. 開催前：募集終了日 < 現在 < 大会開始日
@@ -157,18 +171,14 @@ export function calculateTournamentStatusSync(
     tournament_dates: string;
     recruitment_start_date: string | null;
     recruitment_end_date: string | null;
+    public_start_date?: string | null;
   }
 ): TournamentStatus {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = getNormalizedToday();
 
-  // 募集日程の確認
-  const recruitmentStart = tournament.recruitment_start_date 
-    ? new Date(tournament.recruitment_start_date) 
-    : null;
-  const recruitmentEnd = tournament.recruitment_end_date 
-    ? new Date(tournament.recruitment_end_date) 
-    : null;
+  // 募集日程の確認（日付のみに正規化）
+  const recruitmentStart = normalizeDate(tournament.recruitment_start_date);
+  const recruitmentEnd = normalizeDate(tournament.recruitment_end_date);
 
   // 大会日程の確認
   let tournamentStartDate: Date | null = null;
@@ -178,9 +188,10 @@ export function calculateTournamentStatusSync(
     const tournamentDates = JSON.parse(tournament.tournament_dates);
     const dates = Object.values(tournamentDates)
       .filter(date => date)
-      .map(date => new Date(date as string))
+      .map(date => normalizeDate(date as string))
+      .filter((date): date is Date => date !== null)
       .sort((a, b) => a.getTime() - b.getTime());
-    
+
     if (dates.length > 0) {
       tournamentStartDate = dates[0];
       tournamentEndDate = dates[dates.length - 1];
@@ -199,15 +210,15 @@ export function calculateTournamentStatusSync(
     return 'ongoing';
   }
 
-  // 1. 募集前：募集開始日が未来の場合
-  if (recruitmentStart && today < recruitmentStart) {
-    return 'before_recruitment';
-  }
-
-  // 2. 募集中：募集開始日 <= 現在 <= 募集終了日
-  if (recruitmentStart && recruitmentEnd && 
+  // 1. 募集中：募集開始日 <= 現在 <= 募集終了日（最優先）
+  if (recruitmentStart && recruitmentEnd &&
       today >= recruitmentStart && today <= recruitmentEnd) {
     return 'recruiting';
+  }
+
+  // 2. 募集前：募集開始日が未来の場合
+  if (recruitmentStart && today < recruitmentStart) {
+    return 'before_recruitment';
   }
 
   // 3. 開催前：募集終了日 < 現在 < 大会開始日

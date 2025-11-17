@@ -21,54 +21,47 @@ import { getTournamentPointSystem, PointSystem } from '@/lib/point-system-loader
 
 /**
  * スコア文字列を数値に変換（カンマ区切り対応）
+ * 注: この関数は非サッカー競技用です。サッカーの場合はcalculateMultiSportBlockStandingsのanalyzeScore関数が使用されます。
+ * 非サッカー競技（pk_championshipなど）では全ピリオドを合計します。
  */
 function parseScore(score: string | number | bigint | ArrayBuffer | null | undefined): number {
   if (score === null || score === undefined) {
     return 0;
   }
-  
+
   if (typeof score === 'number') {
     return isNaN(score) ? 0 : score;
   }
-  
+
   if (typeof score === 'bigint') {
     return Number(score);
   }
-  
+
   if (score instanceof ArrayBuffer) {
     const decoder = new TextDecoder();
     const stringValue = decoder.decode(score);
     return parseScore(stringValue);
   }
-  
+
   if (typeof score === 'string') {
     // 空文字列の場合
     if (score.trim() === '') {
       return 0;
     }
-    
-    // カンマ区切りの場合は合計を計算（PK戦考慮）
+
+    // カンマ区切りの場合は全ピリオドを合計
+    // 非サッカー競技（pk_championshipなど）では全ピリオドを合計
     if (score.includes(',')) {
       const scores = score.split(',').map(s => parseInt(s.trim()) || 0);
-      
-      // PK戦を除外した通常時間のスコアのみを計算
-      // サッカーの場合、最初の4ピリオドが通常時間、5ピリオド目以降がPK戦
-      if (scores.length >= 5) {
-        // PK戦がある場合は最初の4ピリオドのみを合計
-        const total = scores.slice(0, 4).reduce((sum, score) => sum + score, 0);
-        return isNaN(total) ? 0 : total;
-      } else {
-        // PK戦がない場合は全ピリオドを合計
-        const total = scores.reduce((sum, score) => sum + score, 0);
-        return isNaN(total) ? 0 : total;
-      }
+      const total = scores.reduce((sum, score) => sum + score, 0);
+      return isNaN(total) ? 0 : total;
     }
-    
+
     // 単一値の場合
     const parsed = parseInt(score.trim());
     return isNaN(parsed) ? 0 : parsed;
   }
-  
+
   return 0;
 }
 
@@ -145,6 +138,20 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
 
     const standings: BlockStanding[] = [];
 
+    // フォーマットタイプを取得
+    const formatResult = await db.execute({
+      sql: `
+        SELECT f.preliminary_format_type, f.final_format_type
+        FROM t_tournaments t
+        JOIN m_tournament_formats f ON t.format_id = f.format_id
+        WHERE t.tournament_id = ?
+      `,
+      args: [tournamentId]
+    });
+
+    const preliminaryFormatType = formatResult.rows[0]?.preliminary_format_type as string;
+    const finalFormatType = formatResult.rows[0]?.final_format_type as string;
+
     // 各ブロックの順位表を取得
     for (const block of blocks.rows) {
       const teamRankings = block.team_rankings as string;
@@ -159,17 +166,24 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
         }
       }
 
-      // 決勝トーナメントの場合は専用の計算ロジック
-      if (block.phase === 'final' && teams.length === 0) {
-        teams = await calculateFinalTournamentStandings(tournamentId);
-      }
-      // 予選の場合で空の場合は参加チーム一覧を取得
-      else if (teams.length === 0) {
-        const participatingTeams = await getParticipatingTeamsForBlock(
-          block.match_block_id as number, 
-          tournamentId
-        );
-        teams = participatingTeams;
+      // team_rankingsが空の場合の処理
+      if (teams.length === 0) {
+        const phase = block.phase as string;
+        const currentFormatType = phase === 'final' ? finalFormatType : preliminaryFormatType;
+
+        // トーナメント形式の場合のみ専用計算ロジックを使用
+        if (currentFormatType === 'tournament') {
+          console.log(`[getTournamentStandings] ${phase}トーナメントの順位を計算`);
+          teams = await calculateFinalTournamentStandings(tournamentId);
+        } else {
+          // リーグ形式の場合は参加チーム一覧を取得
+          console.log(`[getTournamentStandings] ${phase}リーグの参加チーム一覧を取得`);
+          const participatingTeams = await getParticipatingTeamsForBlock(
+            block.match_block_id as number,
+            tournamentId
+          );
+          teams = participatingTeams;
+        }
       }
 
       standings.push({
@@ -190,86 +204,68 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
 }
 
 /**
- * 決勝トーナメントの順位を計算してteam_rankingsに保存する
+ * トーナメント形式の順位を計算してteam_rankingsに保存する
+ * @param tournamentId 大会ID
+ * @param phase フェーズ（'preliminary' または 'final'）。省略時は 'final'
  */
-export async function updateFinalTournamentRankings(tournamentId: number): Promise<void> {
+export async function updateFinalTournamentRankings(tournamentId: number, phase: string = 'final'): Promise<void> {
   try {
-    console.log(`[FINAL_RANKINGS] 決勝トーナメント順位更新開始: Tournament ${tournamentId}`);
-    
-    // 決勝トーナメントブロックを取得
-    const finalBlockResult = await db.execute({
+    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    console.log(`[TOURNAMENT_RANKINGS] ${phaseLabel}トーナメント順位更新開始: Tournament ${tournamentId}, Phase ${phase}`);
+
+    // トーナメントブロックを取得
+    const tournamentBlockResult = await db.execute({
       sql: `
         SELECT match_block_id, team_rankings
-        FROM t_match_blocks 
-        WHERE tournament_id = ? AND phase = 'final'
+        FROM t_match_blocks
+        WHERE tournament_id = ? AND phase = ?
       `,
-      args: [tournamentId]
+      args: [tournamentId, phase]
     });
 
-    if (finalBlockResult.rows.length === 0) {
-      console.log(`[FINAL_RANKINGS] 決勝トーナメントブロックが見つかりません`);
+    if (tournamentBlockResult.rows.length === 0) {
+      console.log(`[TOURNAMENT_RANKINGS] ${phaseLabel}トーナメントブロックが見つかりません`);
       return;
     }
 
-    const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
-    const currentRankings = finalBlockResult.rows[0].team_rankings as string | null;
-    
-    // 順位データの存在チェック
-    let hasValidRankings = false;
-    if (currentRankings && currentRankings !== '' && currentRankings !== 'null') {
-      try {
-        const parsedRankings = JSON.parse(currentRankings);
-        // 空配列でない、かつ有効な順位が設定されているかチェック
-        if (Array.isArray(parsedRankings) && parsedRankings.length > 0) {
-          // position > 0 のデータが存在する場合のみ有効とする（手動設定の証拠）
-          hasValidRankings = parsedRankings.some((r: { position: number }) => r.position > 0);
-        }
-      } catch (e) {
-        console.log(`[FINAL_RANKINGS] 順位データのパースエラー:`, e);
-      }
-    }
-    
-    if (hasValidRankings) {
-      console.log(`[FINAL_RANKINGS] 手動順位設定が存在するため、自動順位計算をスキップします`);
-      return;
-    }
-    
-    console.log(`[FINAL_RANKINGS] 有効な順位データがないため、自動計算を実行します`);
+    const tournamentBlockId = tournamentBlockResult.rows[0].match_block_id as number;
+
+    console.log(`[TOURNAMENT_RANKINGS] 試合確定により順位を自動計算します`);
     
     // テンプレートベースの順位計算も利用可能か確認
-    const templateRankings = await calculateTemplateBasedRankings(tournamentId);
-    let finalRankings: TeamStanding[] = [];
-    
+    const templateRankings = await calculateTemplateBasedRankings(tournamentId, phase);
+    let tournamentRankings: TeamStanding[] = [];
+
     if (templateRankings.length > 0) {
-      console.log(`[FINAL_RANKINGS] テンプレートベース順位計算を使用`);
-      finalRankings = templateRankings;
+      console.log(`[TOURNAMENT_RANKINGS] テンプレートベース順位計算を使用`);
+      tournamentRankings = templateRankings;
     } else {
-      console.log(`[FINAL_RANKINGS] 従来の詳細順位計算を使用`);
+      console.log(`[TOURNAMENT_RANKINGS] 従来の詳細順位計算を使用`);
       // 従来の計算方法を使用
-      finalRankings = await calculateDetailedFinalTournamentStandings(tournamentId);
+      tournamentRankings = await calculateDetailedFinalTournamentStandings(tournamentId, phase);
     }
-    
-    if (finalRankings.length > 0) {
+
+    if (tournamentRankings.length > 0) {
       // team_rankingsに保存
       await db.execute({
         sql: `
-          UPDATE t_match_blocks 
+          UPDATE t_match_blocks
           SET team_rankings = ?, updated_at = datetime('now', '+9 hours')
           WHERE match_block_id = ?
         `,
-        args: [JSON.stringify(finalRankings), finalBlockId]
+        args: [JSON.stringify(tournamentRankings), tournamentBlockId]
       });
-      
-      console.log(`[FINAL_RANKINGS] 決勝トーナメント順位更新完了: ${finalRankings.length}チーム`);
-      finalRankings.forEach(team => {
-        console.log(`[FINAL_RANKINGS]   ${team.position}位: ${team.team_name} (${team.team_id})`);
+
+      console.log(`[TOURNAMENT_RANKINGS] ${phaseLabel}トーナメント順位更新完了: ${tournamentRankings.length}チーム`);
+      tournamentRankings.forEach(team => {
+        console.log(`[TOURNAMENT_RANKINGS]   ${team.position}位: ${team.team_name} (${team.team_id})`);
       });
     } else {
-      console.log(`[FINAL_RANKINGS] 計算できる順位がありません`);
+      console.log(`[TOURNAMENT_RANKINGS] 計算できる順位がありません`);
     }
-    
+
   } catch (error) {
-    console.error(`[FINAL_RANKINGS] 決勝トーナメント順位更新エラー:`, error);
+    console.error(`[TOURNAMENT_RANKINGS] トーナメント順位更新エラー:`, error);
     // エラーでも処理は継続
   }
 }
@@ -280,28 +276,49 @@ export async function updateFinalTournamentRankings(tournamentId: number): Promi
 export async function updateBlockRankingsOnMatchConfirm(matchBlockId: number, tournamentId: number): Promise<void> {
   try {
     console.log(`[STANDINGS] 順位表更新開始: Block ${matchBlockId}, Tournament ${tournamentId}`);
-    
+
     // ブロック情報を取得してphaseを確認
     const blockInfoResult = await db.execute({
       sql: `SELECT phase FROM t_match_blocks WHERE match_block_id = ?`,
       args: [matchBlockId]
     });
-    
+
     if (!blockInfoResult.rows || blockInfoResult.rows.length === 0) {
       throw new Error('ブロック情報が見つかりません');
     }
-    
+
     const phase = blockInfoResult.rows[0].phase as string;
     console.log(`[STANDINGS] ブロックフェーズ: ${phase}`);
-    
-    // 決勝トーナメントの場合は専用の更新処理を実行
-    if (phase === 'final') {
-      console.log(`[STANDINGS] 決勝トーナメントの順位表更新を実行`);
-      await updateFinalTournamentRankings(tournamentId);
+
+    // フォーマットタイプを取得して、リーグ戦かトーナメント戦かを判定
+    const formatResult = await db.execute({
+      sql: `
+        SELECT f.preliminary_format_type, f.final_format_type
+        FROM t_tournaments t
+        JOIN m_tournament_formats f ON t.format_id = f.format_id
+        WHERE t.tournament_id = ?
+      `,
+      args: [tournamentId]
+    });
+
+    const preliminaryFormatType = formatResult.rows[0]?.preliminary_format_type as string;
+    const finalFormatType = formatResult.rows[0]?.final_format_type as string;
+
+    // 現在のフェーズに応じたフォーマットタイプを取得
+    const currentFormatType = phase === 'final' ? finalFormatType : preliminaryFormatType;
+    console.log(`[STANDINGS] フェーズ: ${phase}, フォーマットタイプ: ${currentFormatType}`);
+
+    // トーナメント形式の場合は専用処理を実行
+    if (currentFormatType === 'tournament') {
+      const phaseLabel = phase === 'final' ? '決勝' : '予選';
+      console.log(`[STANDINGS] ${phaseLabel}トーナメントの順位表更新を実行`);
+      await updateFinalTournamentRankings(tournamentId, phase);
       return;
     }
-    
-    // 予選リーグの場合は従来の処理を継続
+
+    // リーグ形式の場合は以下のリーグ戦処理を継続
+    console.log(`[STANDINGS] リーグ戦の順位表更新を実行`);
+
     // 競技種別を取得して適切な計算関数を選択
     const sportCode = await getTournamentSportCode(tournamentId);
     console.log(`[STANDINGS] 競技種別: ${sportCode}`);
@@ -479,29 +496,68 @@ async function getParticipatingTeamsForBlock(
  * 特定ブロックの順位表を計算する
  */
 async function calculateBlockStandings(
-  matchBlockId: number, 
+  matchBlockId: number,
   tournamentId: number
 ): Promise<TeamStanding[]> {
   try {
-    // ブロック内のチーム一覧を取得（t_tournament_teamsから）
-    const teamsResult = await db.execute({
-      sql: `
-        SELECT DISTINCT
-          tt.team_id,
-          t.team_name,
-          t.team_omission
-        FROM t_tournament_teams tt
-        JOIN m_teams t ON tt.team_id = t.team_id
-        WHERE tt.tournament_id = ?
-        AND tt.assigned_block = (
-          SELECT block_name 
-          FROM t_match_blocks 
-          WHERE match_block_id = ?
-        )
-        ORDER BY t.team_name
-      `,
-      args: [tournamentId, matchBlockId]
+    // ブロック情報を取得してphaseを確認
+    const blockInfoQuery = await db.execute({
+      sql: `SELECT phase, block_name FROM t_match_blocks WHERE match_block_id = ?`,
+      args: [matchBlockId]
     });
+
+    if (!blockInfoQuery.rows || blockInfoQuery.rows.length === 0) {
+      throw new Error('ブロック情報が見つかりません');
+    }
+
+    const blockPhase = blockInfoQuery.rows[0].phase as string;
+    const blockName = blockInfoQuery.rows[0].block_name as string;
+
+    // ブロック内のチーム一覧を取得
+    let teamsResult;
+
+    if (blockPhase === 'final') {
+      // 決勝フェーズの場合は試合データから直接チーム情報を取得
+      console.log(`[STANDINGS] 決勝フェーズのブロックのため、試合データからチーム情報を取得`);
+      teamsResult = await db.execute({
+        sql: `
+          SELECT DISTINCT
+            ml.team1_id as team_id,
+            COALESCE(t.team_name, ml.team1_display_name) as team_name,
+            t.team_omission
+          FROM t_matches_live ml
+          LEFT JOIN m_teams t ON ml.team1_id = t.team_id
+          WHERE ml.match_block_id = ? AND ml.team1_id IS NOT NULL
+          UNION
+          SELECT DISTINCT
+            ml.team2_id as team_id,
+            COALESCE(t.team_name, ml.team2_display_name) as team_name,
+            t.team_omission
+          FROM t_matches_live ml
+          LEFT JOIN m_teams t ON ml.team2_id = t.team_id
+          WHERE ml.match_block_id = ? AND ml.team2_id IS NOT NULL
+          ORDER BY team_name
+        `,
+        args: [matchBlockId, matchBlockId]
+      });
+    } else {
+      // 予選フェーズの場合は従来通り assigned_block を使用
+      console.log(`[STANDINGS] 予選フェーズのブロックのため、assigned_block から取得`);
+      teamsResult = await db.execute({
+        sql: `
+          SELECT DISTINCT
+            tt.team_id,
+            t.team_name,
+            t.team_omission
+          FROM t_tournament_teams tt
+          JOIN m_teams t ON tt.team_id = t.team_id
+          WHERE tt.tournament_id = ?
+          AND tt.assigned_block = ?
+          ORDER BY t.team_name
+        `,
+        args: [tournamentId, blockName]
+      });
+    }
 
     if (!teamsResult.rows || teamsResult.rows.length === 0) {
       return [];
@@ -510,13 +566,13 @@ async function calculateBlockStandings(
     // 確定試合結果を取得（t_matches_finalから）
     const matchesResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           match_id,
           match_block_id,
           team1_id,
           team2_id,
-          team1_scores as team1_goals,
-          team2_scores as team2_goals,
+          team1_scores,
+          team2_scores,
           winner_team_id,
           is_draw,
           is_walkover
@@ -817,7 +873,8 @@ export async function checkBlockCompletionAndPromote(
     // 5. ブロック完了かつ確定したチームについてのみ進出処理を実行
     if (isBlockCompleted && (promotionStatus.canPromoteFirst || promotionStatus.canPromoteSecond)) {
       console.log(`[PROMOTION] ${blockName}ブロック: 全試合完了のため進出処理実行`);
-      await promoteTeamsToFinalTournament(tournamentId);
+      // 確定したブロックのみをチェックするように最適化
+      await promoteTeamsToFinalTournament(tournamentId, completedBlockId);
     } else if (!isBlockCompleted) {
       console.log(`[PROMOTION] ${blockName}ブロック: 未完了のため進出処理をスキップ`);
     } else {
@@ -826,6 +883,37 @@ export async function checkBlockCompletionAndPromote(
     
   } catch (error) {
     console.error(`[PROMOTION] ブロック完了チェックエラー:`, error);
+    throw error;
+  }
+}
+
+/**
+ * ブロックが未完了の場合、順位情報をクリアする
+ */
+export async function clearBlockRankingsIfIncomplete(matchBlockId: number): Promise<void> {
+  try {
+    console.log(`[STANDINGS] ブロック順位クリアチェック開始: Block ${matchBlockId}`);
+
+    // ブロックが完了しているかチェック
+    const isCompleted = await checkIfBlockAllMatchesCompleted(matchBlockId);
+
+    if (!isCompleted) {
+      // 未完了の場合、順位情報をクリア
+      await db.execute({
+        sql: `
+          UPDATE t_match_blocks
+          SET team_rankings = NULL, updated_at = datetime('now', '+9 hours')
+          WHERE match_block_id = ?
+        `,
+        args: [matchBlockId]
+      });
+
+      console.log(`[STANDINGS] ブロック ${matchBlockId} の順位情報をクリアしました（未完了のため）`);
+    } else {
+      console.log(`[STANDINGS] ブロック ${matchBlockId} は完了済みのため、順位情報を保持`);
+    }
+  } catch (error) {
+    console.error(`[STANDINGS] ブロック順位クリアエラー:`, error);
     throw error;
   }
 }
@@ -1288,7 +1376,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
     // 決勝トーナメントの試合情報を取得
     const finalMatchesResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -1306,7 +1394,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
         LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
-        WHERE mb.tournament_id = ? 
+        WHERE mb.tournament_id = ?
           AND mb.phase = 'final'
         ORDER BY ml.match_number, ml.match_code
       `,
@@ -1428,27 +1516,28 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
 /**
  * 決勝トーナメントの詳細順位を計算する（テンプレート情報を活用）
  */
-async function calculateDetailedFinalTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+async function calculateDetailedFinalTournamentStandings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    console.log(`[DETAILED_FINAL_RANKINGS] 詳細順位計算開始: Tournament ${tournamentId}`);
-    
+    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    console.log(`[DETAILED_TOURNAMENT_RANKINGS] 詳細順位計算開始: Tournament ${tournamentId}, Phase: ${phaseLabel}`);
+
     // 大会のフォーマットIDを取得
     const formatResult = await db.execute({
       sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
       args: [tournamentId]
     });
-    
+
     if (!formatResult.rows || formatResult.rows.length === 0) {
       throw new Error('大会情報が見つかりません');
     }
-    
+
     const formatId = formatResult.rows[0].format_id as number;
-    console.log(`[DETAILED_FINAL_RANKINGS] フォーマットID: ${formatId}`);
-    
-    // 決勝トーナメントの試合情報とテンプレート情報を結合して取得
+    console.log(`[DETAILED_TOURNAMENT_RANKINGS] フォーマットID: ${formatId}`);
+
+    // トーナメントの試合情報とテンプレート情報を結合して取得
     const finalMatchesResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -1470,12 +1559,12 @@ async function calculateDetailedFinalTournamentStandings(tournamentId: number): 
         LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
         LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
         LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
-        WHERE mb.tournament_id = ? 
-          AND mb.phase = 'final'
+        WHERE mb.tournament_id = ?
+          AND mb.phase = ?
           AND ml.team1_id IS NOT NULL
         ORDER BY ml.match_code
       `,
-      args: [formatId, tournamentId]
+      args: [formatId, tournamentId, phase]
     });
 
     const finalMatches = finalMatchesResult.rows.map(row => ({
@@ -1496,7 +1585,7 @@ async function calculateDetailedFinalTournamentStandings(tournamentId: number): 
       loser_position_end: row.loser_position_end as number | null
     }));
 
-    console.log(`[DETAILED_FINAL_RANKINGS] 取得した決勝トーナメント試合: ${finalMatches.length}試合`);
+    console.log(`[DETAILED_TOURNAMENT_RANKINGS] 取得した${phaseLabel}トーナメント試合: ${finalMatches.length}試合`);
 
     // 全参加チームを収集
     const allTeams = new Set<string>();
@@ -1509,18 +1598,18 @@ async function calculateDetailedFinalTournamentStandings(tournamentId: number): 
       }
     });
 
-    console.log(`[DETAILED_FINAL_RANKINGS] 決勝トーナメント参加チーム数: ${allTeams.size}`);
+    console.log(`[DETAILED_TOURNAMENT_RANKINGS] ${phaseLabel}トーナメント参加チーム数: ${allTeams.size}`);
 
     const rankings: TeamStanding[] = [];
 
     // 各チームの最終順位を決定（テンプレート情報を活用）
     allTeams.forEach(teamId => {
       const position = calculateTemplateBasedTournamentPosition(teamId, finalMatches);
-      const teamMatch = finalMatches.find(m => 
+      const teamMatch = finalMatches.find(m =>
         m.team1_id === teamId || m.team2_id === teamId
       );
-      const teamName = teamMatch?.team1_id === teamId 
-        ? teamMatch.team1_display_name 
+      const teamName = teamMatch?.team1_id === teamId
+        ? teamMatch.team1_display_name
         : teamMatch?.team2_display_name || '未確定';
 
       rankings.push({
@@ -1555,13 +1644,13 @@ async function calculateDetailedFinalTournamentStandings(tournamentId: number): 
     }, {} as Record<number, string[]>);
 
     Object.entries(positionGroups).forEach(([position, teams]) => {
-      console.log(`[DETAILED_FINAL_RANKINGS] ${position}位: ${teams.join(', ')} (${teams.length}チーム)`);
+      console.log(`[DETAILED_TOURNAMENT_RANKINGS] ${position}位: ${teams.join(', ')} (${teams.length}チーム)`);
     });
 
     return sortedRankings;
 
   } catch (error) {
-    console.error('[DETAILED_FINAL_RANKINGS] 詳細順位計算エラー:', error);
+    console.error('[DETAILED_TOURNAMENT_RANKINGS] 詳細順位計算エラー:', error);
     return [];
   }
 }
@@ -1662,23 +1751,24 @@ function calculateTemplateBasedTournamentPosition(
 /**
  * テンプレートベースの順位計算を実行する
  */
-async function calculateTemplateBasedRankings(tournamentId: number): Promise<TeamStanding[]> {
+async function calculateTemplateBasedRankings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    console.log(`[TEMPLATE_RANKINGS] テンプレートベース順位計算開始: Tournament ${tournamentId}`);
-    
-    // 決勝トーナメントブロックを取得
+    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    console.log(`[TEMPLATE_RANKINGS] テンプレートベース順位計算開始: Tournament ${tournamentId}, Phase: ${phaseLabel}`);
+
+    // トーナメントブロックを取得
     const finalBlockResult = await db.execute({
       sql: `
         SELECT match_block_id, team_rankings
-        FROM t_match_blocks 
-        WHERE tournament_id = ? AND phase = 'final'
+        FROM t_match_blocks
+        WHERE tournament_id = ? AND phase = ?
         LIMIT 1
       `,
-      args: [tournamentId]
+      args: [tournamentId, phase]
     });
 
     if (finalBlockResult.rows.length === 0) {
-      console.log(`[TEMPLATE_RANKINGS] 決勝トーナメントブロックが見つかりません`);
+      console.log(`[TEMPLATE_RANKINGS] ${phaseLabel}トーナメントブロックが見つかりません`);
       return [];
     }
 
@@ -1720,7 +1810,7 @@ async function calculateTemplateBasedRankings(tournamentId: number): Promise<Tea
       args: [finalBlockId]
     });
 
-    console.log(`[TEMPLATE_RANKINGS] 確定済み決勝トーナメント試合: ${finalMatchesResult.rows.length}試合`);
+    console.log(`[TEMPLATE_RANKINGS] 確定済み${phaseLabel}トーナメント試合: ${finalMatchesResult.rows.length}試合`);
 
     if (finalMatchesResult.rows.length === 0) {
       console.log(`[TEMPLATE_RANKINGS] 確定済み試合がないため、テンプレートベース計算をスキップ`);
@@ -1891,18 +1981,56 @@ export async function calculateMultiSportBlockStandings(
     }
 
     // 参加チーム一覧を取得
-    const teamsResult = await db.execute({
-      sql: `
-        SELECT DISTINCT tt.team_id, t.team_name, t.team_omission
-        FROM t_tournament_teams tt
-        INNER JOIN m_teams t ON tt.team_id = t.team_id
-        WHERE tt.tournament_id = ? AND tt.assigned_block = (
-          SELECT block_name FROM t_match_blocks WHERE match_block_id = ?
-        )
-        ORDER BY t.team_name
-      `,
-      args: [tournamentId, matchBlockId]
+    // 決勝フェーズのブロックでは assigned_block が更新されない場合があるため、
+    // 試合データから直接チーム情報を取得する
+    const blockInfoQuery = await db.execute({
+      sql: `SELECT phase, block_name FROM t_match_blocks WHERE match_block_id = ?`,
+      args: [matchBlockId]
     });
+
+    const blockPhase = blockInfoQuery.rows[0]?.phase as string;
+    const blockName = blockInfoQuery.rows[0]?.block_name as string;
+
+    let teamsResult;
+
+    if (blockPhase === 'final') {
+      // 決勝フェーズの場合は試合データから直接チーム情報を取得
+      console.log(`[MULTI_SPORT_STANDINGS] 決勝フェーズのブロックのため、試合データからチーム情報を取得`);
+      teamsResult = await db.execute({
+        sql: `
+          SELECT DISTINCT
+            ml.team1_id as team_id,
+            COALESCE(t.team_name, ml.team1_display_name) as team_name,
+            t.team_omission
+          FROM t_matches_live ml
+          LEFT JOIN m_teams t ON ml.team1_id = t.team_id
+          WHERE ml.match_block_id = ? AND ml.team1_id IS NOT NULL
+          UNION
+          SELECT DISTINCT
+            ml.team2_id as team_id,
+            COALESCE(t.team_name, ml.team2_display_name) as team_name,
+            t.team_omission
+          FROM t_matches_live ml
+          LEFT JOIN m_teams t ON ml.team2_id = t.team_id
+          WHERE ml.match_block_id = ? AND ml.team2_id IS NOT NULL
+          ORDER BY team_name
+        `,
+        args: [matchBlockId, matchBlockId]
+      });
+    } else {
+      // 予選フェーズの場合は従来通り assigned_block を使用
+      console.log(`[MULTI_SPORT_STANDINGS] 予選フェーズのブロックのため、assigned_block から取得`);
+      teamsResult = await db.execute({
+        sql: `
+          SELECT DISTINCT tt.team_id, t.team_name, t.team_omission
+          FROM t_tournament_teams tt
+          INNER JOIN m_teams t ON tt.team_id = t.team_id
+          WHERE tt.tournament_id = ? AND tt.assigned_block = ?
+          ORDER BY t.team_name
+        `,
+        args: [tournamentId, blockName]
+      });
+    }
 
     console.log(`[MULTI_SPORT_STANDINGS] 参加チーム数: ${teamsResult.rows.length}`);
 
@@ -2115,103 +2243,10 @@ export async function calculateMultiSportBlockStandings(
 
           tieBreakingApplied = result.tieBreakingApplied;
 
-          // 手動順位設定が必要な場合は通知作成（予選リーグは全試合確定後のみ）
+          // 手動順位設定が必要な場合のログ出力
+          // 通知作成は createTieNotificationIfNeeded で行われるため、ここでは通知作成しない
           if (requiresManualRanking(result)) {
-            // 予選リーグの場合は全試合が確定しているかチェック
-            let shouldCreateNotification = true;
-            if (phase === 'preliminary') {
-              try {
-                const allMatchesInBlock = await db.execute({
-                  sql: `
-                    SELECT COUNT(*) as total_matches,
-                           COUNT(CASE WHEN mf.match_id IS NOT NULL THEN 1 END) as confirmed_matches
-                    FROM t_matches_live ml
-                    LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-                    WHERE ml.match_block_id = ?
-                  `,
-                  args: [matchBlockId]
-                });
-                
-                const totalMatches = allMatchesInBlock.rows[0]?.total_matches as number || 0;
-                const confirmedMatches = allMatchesInBlock.rows[0]?.confirmed_matches as number || 0;
-                
-                console.log(`[TIE_BREAKING] ブロック${matchBlockId}: 確定試合 ${confirmedMatches}/${totalMatches}`);
-                
-                if (confirmedMatches < totalMatches) {
-                  console.log(`[TIE_BREAKING] 予選リーグの全試合が未確定のため通知をスキップ`);
-                  shouldCreateNotification = false;
-                }
-              } catch (error) {
-                console.error('[TIE_BREAKING] 試合確定状況チェックエラー:', error);
-              }
-            }
-            
-            if (!shouldCreateNotification) {
-              console.log(`[TIE_BREAKING] 通知作成をスキップしました`);
-            } else {
-              // ブロック情報を取得
-              let blockName = '不明';
-              try {
-                console.log(`[TIE_BREAKING] ブロック情報取得開始: matchBlockId=${matchBlockId}`);
-              const blockInfo = await db.execute({
-                sql: `SELECT block_name FROM t_match_blocks WHERE match_block_id = ?`,
-                args: [matchBlockId]
-              });
-              console.log(`[TIE_BREAKING] ブロック情報取得結果:`, blockInfo.rows);
-              if (blockInfo.rows.length > 0) {
-                blockName = blockInfo.rows[0].block_name as string;
-                console.log(`[TIE_BREAKING] ブロック名設定: ${blockName}`);
-              } else {
-                console.log(`[TIE_BREAKING] ブロック情報が見つかりません: matchBlockId=${matchBlockId}`);
-              }
-            } catch (error) {
-              console.error('[TIE_BREAKING] ブロック名取得エラー:', error);
-            }
-
-            // 同順位チーム情報を準備
-            const tiedTeams: Array<{team_id: string, team_name: string}> = [];
-            console.log(`[TIE_BREAKING] 同順位チーム情報準備開始: lotteriesRequired=`, result.lotteriesRequired);
-            result.lotteriesRequired.forEach(lotteryGroupString => {
-              // カンマ区切りのチームIDを分割
-              const teamIds = lotteryGroupString.split(',');
-              teamIds.forEach(teamId => {
-                const teamInfo = teamStandings.find(t => t.team_id === teamId.trim());
-                if (teamInfo) {
-                  tiedTeams.push({
-                    team_id: teamInfo.team_id,
-                    team_name: teamInfo.team_name
-                  });
-                  console.log(`[TIE_BREAKING] 同順位チーム追加: ${teamInfo.team_name} (${teamInfo.team_id})`);
-                }
-              });
-            });
-            console.log(`[TIE_BREAKING] 同順位チーム情報準備完了: tiedTeams=`, tiedTeams);
-
-            const title = blockName !== '不明' ? `${blockName}ブロック 手動順位設定が必要` : '手動順位設定が必要';
-            const message = blockName !== '不明' 
-              ? `${blockName}ブロックで抽選による順位決定が必要です。手動で順位を設定してください。`
-              : `${phase === 'preliminary' ? '予選' : '決勝'}で抽選による順位決定が必要です。手動で順位を設定してください。`;
-
-            const metadata = { 
-              match_block_id: matchBlockId, 
-              block_name: blockName,
-              lottery_groups: result.lotteriesRequired,
-              tied_teams: tiedTeams,
-              tie_type: result.lotteriesRequired.length > 0 ? 'multiple' : 'unknown'
-            };
-
-            console.log(`[TIE_BREAKING] 通知作成: title="${title}", message="${message}"`);
-            console.log(`[TIE_BREAKING] 通知メタデータ:`, metadata);
-
-            await createTournamentNotification(
-              tournamentId,
-              'manual_ranking_required',
-              title,
-              message,
-              'warning',
-              metadata
-            );
-            }
+            console.log(`[TIE_BREAKING] 手動順位設定が必要（通知は createTieNotificationIfNeeded で作成済み）`);
           }
 
           console.log(`[TIE_BREAKING] カスタム順位決定完了: 適用=${tieBreakingApplied}, 手動設定必要=${requiresManualRanking(result)}`);

@@ -17,19 +17,20 @@ async function getGroupedPublicTournaments(_teamId?: string) {
     const result = await response.json();
 
     // ステータス別にグループ化されたデータ構造に対応
-    // result.data = { ongoing: [...], recruiting: [...], completed: [...] }
+    // result.data = { recruiting: [...], before_event: [...], ongoing: [...], completed: [...] }
     if (result.success && result.data) {
       return {
         ongoing: result.data.ongoing || [],
         recruiting: result.data.recruiting || [],
+        before_event: result.data.before_event || [],
         completed: result.data.completed || []
       };
     }
 
-    return { ongoing: [], recruiting: [], completed: [] };
+    return { ongoing: [], recruiting: [], before_event: [], completed: [] };
   } catch (error) {
     console.error('Failed to fetch grouped tournaments:', error);
-    return { ongoing: [], recruiting: [], completed: [] };
+    return { ongoing: [], recruiting: [], before_event: [], completed: [] };
   }
 }
 
@@ -117,7 +118,7 @@ export default async function Home() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <Link href="/tournaments?status=ongoing" className="block">
               <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
                 <CardContent className="pt-6">
@@ -134,6 +135,16 @@ export default async function Home() {
                   <Clock className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                   <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.recruiting.length}</h3>
                   <p className="text-muted-foreground">募集中の大会数</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/tournaments?status=before_event" className="block">
+              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="pt-6">
+                  <Calendar className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.before_event.length}</h3>
+                  <p className="text-muted-foreground">開催前の大会数</p>
                 </CardContent>
               </Card>
             </Link>
@@ -167,7 +178,7 @@ export default async function Home() {
             </p>
           </div>
 
-          {(groupedData.ongoing.length > 0 || groupedData.recruiting.length > 0 || groupedData.completed.length > 0) ? (
+          {(groupedData.ongoing.length > 0 || groupedData.recruiting.length > 0 || groupedData.before_event.length > 0 || groupedData.completed.length > 0) ? (
             <div className="space-y-12 mb-8">
               {/* 開催中の大会 */}
               {groupedData.ongoing.length > 0 && (
@@ -208,6 +219,31 @@ export default async function Home() {
                   </div>
                   <div className="space-y-6">
                     {groupedData.recruiting.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                      <TournamentGroupCard
+                        key={groupData.group.group_id}
+                        group={groupData.group}
+                        tournaments={groupData.divisions}
+                        userRole={session?.user?.role}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 開催前の大会 */}
+              {groupedData.before_event.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-6">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-lg border-2 border-orange-300 dark:border-orange-700">
+                      <Calendar className="h-5 w-5 text-orange-700 dark:text-orange-300" />
+                      <h3 className="text-xl font-bold text-orange-800 dark:text-orange-200">開催前の大会</h3>
+                      <span className="ml-2 px-2 py-1 bg-orange-600 text-white rounded-full text-sm font-medium">
+                        {groupedData.before_event.length}件
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    {groupedData.before_event.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <TournamentGroupCard
                         key={groupData.group.group_id}
                         group={groupData.group}

@@ -77,7 +77,7 @@ function TournamentOverview({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ongoing':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">進行中</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">開催中</span>;
       case 'completed':
         return <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted text-foreground">完了</span>;
       case 'planning':

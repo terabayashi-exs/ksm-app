@@ -1006,7 +1006,7 @@ export default function AdminMatchesPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">試合管理</h1>
+                <h1 className="text-3xl font-bold text-foreground">試合結果入力</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                   「{tournament.tournament_name}」の試合進行状況管理
                 </p>

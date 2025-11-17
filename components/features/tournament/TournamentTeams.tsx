@@ -12,7 +12,8 @@ import {
 const groupTeamsByBlock = (teams: SimpleTournamentTeam[]): Record<string, SimpleTournamentTeam[]> => {
   const grouped: Record<string, SimpleTournamentTeam[]> = {};
   teams.forEach(team => {
-    const blockName = team.assigned_block || '未分類';
+    // 表示用ブロック名を使用（決勝進出チームは1位リーグ等、予選チームはassigned_block）
+    const blockName = team.display_block || team.assigned_block || '未分類';
     if (!grouped[blockName]) {
       grouped[blockName] = [];
     }
