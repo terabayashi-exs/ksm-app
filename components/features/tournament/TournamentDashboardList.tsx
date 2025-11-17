@@ -188,7 +188,7 @@ export default function TournamentDashboardList() {
             alert(`⚠️ 部分削除完了\n\n関連データは削除されましたが、大会メインレコードが残存しています。\nもう一度削除ボタンを押すか、システム管理者にお問い合わせください。\n\n【削除情報】\n• 削除されたレコード数: ${result.deletionSummary?.totalDeletedRecords || 'N/A'}\n• メインレコード削除: 失敗`);
           }
         } else {
-          alert(result.message || '大会を削除しました');
+          alert(result.message || '部門を削除しました');
         }
       } else {
         alert(`削除エラー: ${result.error}`);

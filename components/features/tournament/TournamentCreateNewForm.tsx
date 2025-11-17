@@ -331,8 +331,8 @@ export default function TournamentCreateNewForm() {
       const result = await response.json();
 
       if (result.success) {
-        // 作成後は大会詳細ページにリダイレクト
-        router.push(`/admin/tournament-groups/${data.group_id}`);
+        // 作成後は管理者ダッシュボードにリダイレクト
+        router.push('/admin');
       } else {
         alert(`エラー: ${result.error}`);
       }
