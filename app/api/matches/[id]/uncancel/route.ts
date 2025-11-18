@@ -85,15 +85,13 @@ export async function POST(
       console.log(`✓ 試合${match.match_code}の中止結果をt_matches_finalから削除しました`);
     }
 
-    // 3. 順位表の再計算
-    try {
-      const { recalculateAllTournamentRankings } = await import('@/lib/standings-calculator');
-      await recalculateAllTournamentRankings(match.tournament_id);
-      console.log(`✓ 大会${match.tournament_id}の順位表を再計算しました`);
-    } catch (error) {
-      console.error('順位表再計算エラー:', error);
-      // 順位表の再計算に失敗しても、中止解除は成功として扱う
-    }
+    // 3. 順位表の再計算（中止解除では実行しない）
+    // 中止解除により試合が未確定状態に戻るだけなので、
+    // 手動設定した順位を保持するため、順位表の再計算は行わない
+    console.log(`ℹ 中止解除のため、順位表の再計算をスキップしました（手動設定順位を保持）`);
+
+    // 将来的に、中止解除後に自動で順位計算が必要な場合は、
+    // ここでupdateBlockRankingsOnMatchConfirmを呼び出すことができます
 
     return NextResponse.json({
       success: true,

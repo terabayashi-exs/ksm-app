@@ -299,18 +299,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       WHERE contact_email = ?
     `, [data.contact_email]);
 
-    // 2. 異なるメールアドレスで同じチーム名・略称が存在しないかチェック
-    const existingByName = await db.execute(`
-      SELECT team_id, contact_email FROM m_teams
-      WHERE (team_name = ? OR team_omission = ?) AND contact_email != ?
-    `, [data.team_name, data.team_omission, data.contact_email]);
-
-    if (existingByName.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: `チーム名またはチーム略称が別の組織によって既に使用されています` },
-        { status: 409 }
-      );
-    }
+    // 2. マスターチームの重複チェックは削除
+    // （同じ大会内での重複のみチェックすることで、複数の大会で同じチーム名を使用可能にする）
 
     // 3. 既存マスターチームの場合、既にこの大会に参加していないかチェック
     let teamId = '';
@@ -321,15 +311,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
       teamId = existingTeam.team_id;
       isExistingMasterTeam = true;
 
-      // 既にこの大会に参加していないかチェック
+      // 同じメールアドレスのチームが既にこの大会に参加している場合はエラー
+      // （複数チーム参加機能があるため、別のチーム名での参加は許可）
       const alreadyJoined = await db.execute(`
-        SELECT tournament_team_id FROM t_tournament_teams
-        WHERE tournament_id = ? AND team_id = ?
-      `, [tournamentId, teamId]);
+        SELECT tt.tournament_team_id, tt.team_name, tt.team_omission
+        FROM t_tournament_teams tt
+        WHERE tt.tournament_id = ?
+          AND tt.team_id = ?
+          AND (tt.team_name = ? OR tt.team_omission = ?)
+      `, [tournamentId, teamId, data.tournament_team_name, data.tournament_team_omission]);
 
       if (alreadyJoined.rows.length > 0) {
+        const joined = alreadyJoined.rows[0] as unknown as { team_name: string; team_omission: string };
         return NextResponse.json(
-          { success: false, error: `このチーム（${existingTeam.team_name}）は既にこの大会に参加しています` },
+          { success: false, error: `このチーム名「${joined.team_name}」または略称「${joined.team_omission}」は既にこの大会に参加しています` },
           { status: 409 }
         );
       }

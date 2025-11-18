@@ -68,6 +68,7 @@ export interface MatchResult {
   match_code: string;
   is_confirmed: boolean;
   match_status: string | null;
+  cancellation_type: string | null;
   // サッカー専用データ（該当する場合のみ）
   soccer_data?: SoccerScoreData;
 }
@@ -271,6 +272,7 @@ async function getBlockResults(
           mf.is_draw,
           mf.is_walkover,
           ml.match_status,
+          ml.cancellation_type,
           -- 多競技対応の拡張情報（現在のスキーマに対応）
           ml.period_count,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
@@ -311,7 +313,8 @@ async function getBlockResults(
         is_walkover: Boolean(row.is_walkover),
         match_code: row.match_code as string,
         is_confirmed: Boolean(row.is_confirmed),
-        match_status: row.match_status as string | null
+        match_status: row.match_status as string | null,
+        cancellation_type: row.cancellation_type as string | null
       };
 
       // 多競技対応の拡張データ
@@ -414,10 +417,35 @@ function createMatchMatrix(
       return;
     }
     
+    // 中止された試合の場合
+    if (match.match_status === 'cancelled') {
+      let cancelLabel = '中止';
+      if (match.cancellation_type === 'no_count') {
+        cancelLabel = '中止\n（天候等）';
+      } else if (match.cancellation_type === 'no_show_both') {
+        cancelLabel = '中止\n（両者不参加）';
+      } else if (match.cancellation_type === 'no_show_team1' || match.cancellation_type === 'no_show_team2') {
+        cancelLabel = '中止\n（不戦勝）';
+      }
+
+      matrix[team1Id][team2Id] = {
+        result: null,
+        score: cancelLabel,
+        match_code: match.match_code
+      };
+
+      matrix[team2Id][team1Id] = {
+        result: null,
+        score: cancelLabel,
+        match_code: match.match_code
+      };
+      return;
+    }
+
     // 未実施・進行中・完了（未確定）の試合の場合は状態を表示
     if (!match.is_confirmed || match.team1_goals === null || match.team2_goals === null) {
       let displayText = match.match_code; // デフォルトは試合コード
-      
+
       // 試合状態に応じて表示テキストを決定（試合コード付き）
       switch (match.match_status) {
         case 'scheduled':
@@ -432,13 +460,13 @@ function createMatchMatrix(
         default:
           displayText = match.match_code; // 状態不明の場合は試合コード
       }
-      
+
       matrix[team1Id][team2Id] = {
         result: null,
         score: displayText,
         match_code: match.match_code
       };
-      
+
       matrix[team2Id][team1Id] = {
         result: null,
         score: displayText,
@@ -578,6 +606,8 @@ export function getResultColor(result: 'win' | 'loss' | 'draw' | null, score?: s
         return 'text-orange-600 bg-white font-medium animate-pulse';
       } else if (score === '試合完了') {
         return 'text-purple-600 bg-white font-medium';
+      } else if (score?.includes('中止')) {
+        return 'text-red-600 bg-white font-medium';
       }
       return 'text-gray-600 bg-white font-medium'; // 試合コード用にスタイルを調整
   }

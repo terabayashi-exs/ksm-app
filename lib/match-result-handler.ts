@@ -60,11 +60,13 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
     // トランザクション開始
     await db.execute({ sql: 'BEGIN TRANSACTION' });
 
-    // t_matches_liveから試合データを取得
+    // t_matches_liveから試合データを取得（中止試合は除外）
     const liveMatchResult = await db.execute({
       sql: `
-        SELECT * FROM t_matches_live 
-        WHERE match_id = ? AND result_status = 'pending'
+        SELECT * FROM t_matches_live
+        WHERE match_id = ?
+          AND result_status = 'pending'
+          AND (match_status IS NULL OR match_status != 'cancelled')
       `,
       args: [matchId]
     });
@@ -188,11 +190,13 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
     const updatedBlocks = new Set<number>();
 
     for (const matchId of matchIds) {
-      // 各試合を確定（順位表更新は後でまとめて実行）
+      // 各試合を確定（順位表更新は後でまとめて実行）（中止試合は除外）
       const liveMatchResult = await db.execute({
         sql: `
-          SELECT * FROM t_matches_live 
-          WHERE match_id = ? AND result_status = 'pending'
+          SELECT * FROM t_matches_live
+          WHERE match_id = ?
+            AND result_status = 'pending'
+            AND (match_status IS NULL OR match_status != 'cancelled')
         `,
         args: [matchId]
       });

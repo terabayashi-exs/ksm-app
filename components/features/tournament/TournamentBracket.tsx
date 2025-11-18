@@ -138,13 +138,33 @@ function MatchCard({
 
   const winnerIndex = getWinnerTeam();
 
+  // 中止試合の場合の特別処理
+  if (match.match_status === 'cancelled') {
+    return (
+      <div className={`relative bg-card border-2 border-red-300 rounded-lg p-3 shadow-sm ${className}`} {...props}>
+        {/* 試合コード */}
+        <div className={`absolute -top-2 left-3 border px-2 py-1 rounded-full text-xs font-medium ${getMatchCodeColor(match.match_code)}`}>
+          {match.match_code}
+        </div>
+
+        {/* 中止マーク */}
+        <div className="flex flex-col items-center justify-center h-20 bg-red-50 rounded">
+          <span className="text-red-600 font-bold text-sm mb-1">試合中止</span>
+          <span className="text-xs text-red-500">{match.team1_display_name}</span>
+          <span className="text-xs text-muted-foreground">vs</span>
+          <span className="text-xs text-red-500">{match.team2_display_name}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`relative bg-card border border-border rounded-lg p-3 shadow-sm ${className}`} {...props}>
       {/* 試合コード */}
       <div className={`absolute -top-2 left-3 border px-2 py-1 rounded-full text-xs font-medium ${getMatchCodeColor(match.match_code)}`}>
         {match.match_code}
       </div>
-      
+
       {/* チーム1 */}
       <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-border rounded cursor-default transition-all ${
         winnerIndex === 0 
