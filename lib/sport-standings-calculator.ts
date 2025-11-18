@@ -203,7 +203,7 @@ export async function getTournamentSportCode(tournamentId: number): Promise<stri
 export async function getMultiSportMatchResults(matchBlockId: number, tournamentId: number): Promise<unknown[]> {
   try {
     const result = await db.execute(`
-      SELECT 
+      SELECT
         mf.match_id,
         mf.match_block_id,
         mf.team1_id,
@@ -227,8 +227,9 @@ export async function getMultiSportMatchResults(matchBlockId: number, tournament
       LEFT JOIN t_tournament_rules tr ON tour.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       WHERE mf.match_block_id = ?
         AND mb.tournament_id = ?
+        AND (ml.match_status IS NULL OR ml.match_status != 'cancelled')
     `, [matchBlockId, tournamentId]);
-    
+
     return result.rows;
   } catch (error) {
     console.error('Failed to get multi-sport match results:', error);

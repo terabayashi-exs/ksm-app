@@ -134,11 +134,41 @@ export async function POST(
       console.log(`✓ 試合${match.match_code}の中止結果をt_matches_finalに記録しました`);
     }
 
-    // 3. 順位表の再計算
+    // 3. 順位表の再計算（最後の試合の場合のみ）
     try {
-      const { recalculateAllTournamentRankings } = await import('@/lib/standings-calculator');
-      await recalculateAllTournamentRankings(match.tournament_id);
-      console.log(`✓ 大会${match.tournament_id}の順位表を再計算しました`);
+      // ブロック内の全試合数を取得
+      const totalMatchesResult = await db.execute(`
+        SELECT COUNT(*) as total_matches
+        FROM t_matches_live
+        WHERE match_block_id = ?
+      `, [match.match_block_id]);
+
+      const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+
+      // 確定済み + 中止済み試合数を取得
+      const completedMatchesResult = await db.execute(`
+        SELECT COUNT(*) as completed_matches
+        FROM t_matches_live ml
+        WHERE ml.match_block_id = ?
+          AND (
+            EXISTS (SELECT 1 FROM t_matches_final mf WHERE mf.match_id = ml.match_id)
+            OR ml.match_status = 'cancelled'
+          )
+      `, [match.match_block_id]);
+
+      const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
+
+      console.log(`ブロック ${match.match_block_id}: 全試合数=${totalMatches}, 完了試合数=${completedMatches}`);
+
+      // 最後の試合の場合のみ順位表を再計算
+      if (completedMatches >= totalMatches && totalMatches > 0) {
+        console.log(`✓ ブロック ${match.match_block_id} の最後の試合のため、順位表を再計算します`);
+        const { updateBlockRankingsOnMatchConfirm } = await import('@/lib/standings-calculator');
+        await updateBlockRankingsOnMatchConfirm(match.match_block_id, match.tournament_id);
+        console.log(`✓ ブロック ${match.match_block_id} の順位表を再計算しました`);
+      } else {
+        console.log(`ℹ ブロック ${match.match_block_id} の最後の試合ではないため、順位表の再計算をスキップしました`);
+      }
     } catch (error) {
       console.error('順位表再計算エラー:', error);
       // 順位表の再計算に失敗しても、中止処理は成功として扱う

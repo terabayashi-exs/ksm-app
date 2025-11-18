@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AlertCircle, Plus } from 'lucide-react';
+import { AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 interface IncompleteTournamentGroup {
   group_id: number;
@@ -19,25 +19,56 @@ interface IncompleteTournamentGroup {
 export default function IncompleteTournamentGroups() {
   const [incompleteGroups, setIncompleteGroups] = useState<IncompleteTournamentGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  const fetchIncompleteGroups = async () => {
+    try {
+      const response = await fetch('/api/tournament-groups/incomplete');
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setIncompleteGroups(result.data);
+      }
+    } catch (err) {
+      console.error('作成中の大会取得エラー:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchIncompleteGroups = async () => {
-      try {
-        const response = await fetch('/api/tournament-groups/incomplete');
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          setIncompleteGroups(result.data);
-        }
-      } catch (err) {
-        console.error('作成中の大会取得エラー:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchIncompleteGroups();
   }, []);
+
+  const handleDelete = async (groupId: number, groupName: string) => {
+    // 確認ダイアログ
+    if (!confirm(`大会「${groupName}」を削除してもよろしいですか？\n\nこの操作は取り消せません。`)) {
+      return;
+    }
+
+    setDeleting(groupId);
+
+    try {
+      const response = await fetch(`/api/tournament-groups/${groupId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`大会「${groupName}」を削除しました`);
+        // リストを再取得
+        await fetchIncompleteGroups();
+      } else {
+        alert(`削除に失敗しました: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('大会削除エラー:', err);
+      alert('削除中にエラーが発生しました');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -102,6 +133,16 @@ export default function IncompleteTournamentGroups() {
                 <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
                   編集
                 </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600 dark:border-red-800 dark:hover:bg-red-950/30 dark:text-red-400"
+                onClick={() => handleDelete(group.group_id, group.group_name)}
+                disabled={deleting === group.group_id}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                {deleting === group.group_id ? '削除中...' : '削除'}
               </Button>
             </div>
           </div>

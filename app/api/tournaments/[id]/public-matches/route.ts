@@ -240,7 +240,8 @@ export async function GET(
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
                 ml.remarks,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
-                COALESCE(ms.match_status, 'scheduled') as actual_match_status
+                COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
+                ml.cancellation_type
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
@@ -280,7 +281,8 @@ export async function GET(
                 mf.is_walkover,
                 COALESCE(mf.remarks, ml.remarks) as remarks,
                 mf.updated_at as confirmed_at,
-                COALESCE(ms.match_status, 'scheduled') as actual_match_status
+                COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
+                ml.cancellation_type
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
@@ -322,7 +324,8 @@ export async function GET(
             CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
             ml.remarks,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
-            COALESCE(ms.match_status, 'scheduled') as actual_match_status
+            COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
+            ml.cancellation_type
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
@@ -461,7 +464,8 @@ export async function GET(
           match_status: String(row.actual_match_status || 'scheduled'),
           result_status: row.confirmed_at ? 'confirmed' : ((row.team1_goals !== null && row.team1_goals !== undefined) ? 'pending' : 'none'),
           remarks: row.remarks ? String(row.remarks) : null,
-          has_result: (row.team1_goals !== null && row.team1_goals !== undefined) && (row.team2_goals !== null && row.team2_goals !== undefined)
+          has_result: (row.team1_goals !== null && row.team1_goals !== undefined) && (row.team2_goals !== null && row.team2_goals !== undefined),
+          cancellation_type: row.cancellation_type ? String(row.cancellation_type) : null
         };
         
         matches.push(processedMatch);

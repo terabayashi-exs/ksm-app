@@ -7,13 +7,24 @@ import Link from "next/link";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import SignOutButton from "@/components/features/auth/SignOutButton";
+import { db } from "@/lib/db";
 
 export default async function AdminDashboard() {
   const session = await auth();
-  
+
   if (!session || session.user.role !== "admin") {
     redirect("/auth/login");
   }
+
+  // 作成中の大会（部門がない大会）の数を取得
+  const incompleteGroupsResult = await db.execute(`
+    SELECT COUNT(*) as count
+    FROM t_tournament_groups tg
+    WHERE NOT EXISTS (
+      SELECT 1 FROM t_tournaments t WHERE t.group_id = tg.group_id
+    )
+  `);
+  const hasIncompleteGroups = Number(incompleteGroupsResult.rows[0]?.count || 0) > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,19 +78,21 @@ export default async function AdminDashboard() {
           </Card>
 
           {/* 作成中の大会（部門がまだない大会） */}
-          <Card className="border-2 border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/10">
-            <CardHeader>
-              <CardTitle className="text-amber-800 dark:text-amber-200 flex items-center">
-                ⚠️ 作成中の大会
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-amber-700 dark:text-amber-300 mb-4 text-sm">
-                大会は作成されましたが、まだ部門が設定されていません。部門を作成して大会を完成させましょう。
-              </p>
-              <IncompleteTournamentGroups />
-            </CardContent>
-          </Card>
+          {hasIncompleteGroups && (
+            <Card className="border-2 border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/10">
+              <CardHeader>
+                <CardTitle className="text-amber-800 dark:text-amber-200 flex items-center">
+                  ⚠️ 作成中の大会
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-amber-700 dark:text-amber-300 mb-4 text-sm">
+                  大会は作成されましたが、まだ部門が設定されていません。部門を作成して大会を完成させましょう。
+                </p>
+                <IncompleteTournamentGroups />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* 管理メニューセクション */}

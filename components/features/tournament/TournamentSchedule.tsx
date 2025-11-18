@@ -36,6 +36,7 @@ interface MatchData {
   result_status: string;
   remarks: string | null;
   has_result: boolean;
+  cancellation_type: string | null;
 }
 
 interface TournamentScheduleProps {
@@ -149,9 +150,21 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
             icon: <AlertTriangle className="h-4 w-4 text-purple-500" />
           };
         case 'cancelled':
+          // 中止の種別に応じた表示
+          let cancelLabel = '中止';
+          if (match.cancellation_type === 'no_count') {
+            cancelLabel = '中止（天候等）';
+          } else if (match.cancellation_type === 'no_show_both') {
+            cancelLabel = '中止（両者不参加）';
+          } else if (match.cancellation_type === 'no_show_team1') {
+            cancelLabel = '中止（不戦勝）';
+          } else if (match.cancellation_type === 'no_show_team2') {
+            cancelLabel = '中止（不戦勝）';
+          }
+
           return {
             status: 'cancelled',
-            display: <span className="text-red-600 text-sm font-medium">中止</span>,
+            display: <span className="text-red-600 text-sm font-medium">{cancelLabel}</span>,
             icon: <XCircle className="h-4 w-4 text-red-500" />
           };
         default:
