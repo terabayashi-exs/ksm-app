@@ -1,5 +1,6 @@
 // app/layout.tsx
 import AuthSessionProvider from "@/components/providers/session-provider";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 export const metadata = {
@@ -96,6 +97,7 @@ export default function RootLayout({
         <AuthSessionProvider>
           {children}
         </AuthSessionProvider>
+        <Analytics />
       </body>
     </html>
   );
