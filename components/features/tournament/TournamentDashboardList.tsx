@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
@@ -46,6 +47,7 @@ interface ApiResponse {
 }
 
 export default function TournamentDashboardList() {
+  const { data: session } = useSession();
   const [tournaments, setTournaments] = useState<TournamentDashboardData>({
     before_recruitment: [],
     recruiting: [],
@@ -66,6 +68,9 @@ export default function TournamentDashboardList() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [archiving, setArchiving] = useState<number | null>(null);
   const [notificationCounts, setNotificationCounts] = useState<Record<number, number>>({});
+
+  // "admin"ユーザーかどうかを判定
+  const isAdminUser = session?.user?.id === 'admin';
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -424,26 +429,28 @@ export default function TournamentDashboardList() {
               </Button>
             </>
           ) : (
-            // アーカイブ済み大会の場合は削除ボタンのみ表示
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => handleDeleteTournament(tournament)}
-              disabled={deleting === tournament.tournament_id}
-              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-            >
-              {deleting === tournament.tournament_id ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                  削除中...
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  削除
-                </div>
-              )}
-            </Button>
+            // アーカイブ済み大会の場合は削除ボタンのみ表示（adminユーザーのみ）
+            isAdminUser && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDeleteTournament(tournament)}
+                disabled={deleting === tournament.tournament_id}
+                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              >
+                {deleting === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    削除中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    削除
+                  </div>
+                )}
+              </Button>
+            )
           )}
           {(tournament.status === 'before_recruitment' || tournament.status === 'recruiting' || tournament.status === 'before_event') && !tournament.is_archived && (
             <>
@@ -485,25 +492,27 @@ export default function TournamentDashboardList() {
                   ファイル管理
                 </Link>
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => handleDeleteTournament(tournament)}
-                disabled={deleting === tournament.tournament_id}
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-              >
-                {deleting === tournament.tournament_id ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                    削除中...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    削除
-                  </div>
-                )}
-              </Button>
+              {isAdminUser && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteTournament(tournament)}
+                  disabled={deleting === tournament.tournament_id}
+                  className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                >
+                  {deleting === tournament.tournament_id ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                      削除中...
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      削除
+                    </div>
+                  )}
+                </Button>
+              )}
             </>
           )}
           {tournament.status === 'ongoing' && !tournament.is_archived && (
@@ -536,25 +545,27 @@ export default function TournamentDashboardList() {
                   ファイル管理
                 </Link>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleDeleteTournament(tournament)}
-                disabled={deleting === tournament.tournament_id}
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-              >
-                {deleting === tournament.tournament_id ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                    削除中...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    削除
-                  </div>
-                )}
-              </Button>
+              {isAdminUser && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteTournament(tournament)}
+                  disabled={deleting === tournament.tournament_id}
+                  className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                >
+                  {deleting === tournament.tournament_id ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                      削除中...
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      削除
+                    </div>
+                  )}
+                </Button>
+              )}
             </>
           )}
           {tournament.status === 'completed' && !tournament.is_archived && (
@@ -587,10 +598,10 @@ export default function TournamentDashboardList() {
                   ファイル管理
                 </Link>
               </Button>
-              {!tournament.is_archived && (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+              {!tournament.is_archived && isAdminUser && (
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleArchiveTournament(tournament)}
                   disabled={archiving === tournament.tournament_id}
                   className="border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
@@ -608,25 +619,27 @@ export default function TournamentDashboardList() {
                   )}
                 </Button>
               )}
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => handleDeleteTournament(tournament)}
-                disabled={deleting === tournament.tournament_id}
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-              >
-                {deleting === tournament.tournament_id ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                    削除中...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    削除
-                  </div>
-                )}
-              </Button>
+              {isAdminUser && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteTournament(tournament)}
+                  disabled={deleting === tournament.tournament_id}
+                  className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                >
+                  {deleting === tournament.tournament_id ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                      削除中...
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      削除
+                    </div>
+                  )}
+                </Button>
+              )}
             </>
           )}
         </div>
