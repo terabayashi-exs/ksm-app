@@ -24,6 +24,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
+        let isClosed = false;
+
+        // Helper function to safely enqueue data
+        const safeEnqueue = (data: Uint8Array) => {
+          if (!isClosed) {
+            try {
+              controller.enqueue(data);
+            } catch (error) {
+              console.error('Failed to enqueue data:', error);
+              isClosed = true;
+            }
+          }
+        };
 
         // Initial data send
         const sendInitialData = async () => {
@@ -31,9 +44,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
             // 多競技対応：大会の競技種別設定を取得
             const sportCode = await getTournamentSportCode(tournamentId);
             const sportConfig = getSportScoreConfig(sportCode);
-            
+
             const matches = await db.execute(`
-              SELECT 
+              SELECT
                 ml.match_id,
                 ml.match_code,
                 ml.team1_display_name,
@@ -74,7 +87,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             };
 
             const message = `data: ${JSON.stringify(data)}\n\n`;
-            controller.enqueue(encoder.encode(message));
+            safeEnqueue(encoder.encode(message));
           } catch (error) {
             console.error('Initial data send error:', error);
           }
@@ -85,9 +98,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         // Poll for updates every 5 seconds
         // In a production environment, you would use database triggers or WebSockets
         const intervalId = setInterval(async () => {
+          if (isClosed) {
+            clearInterval(intervalId);
+            return;
+          }
+
           try {
             const recentUpdates = await db.execute(`
-              SELECT 
+              SELECT
                 ml.match_id,
                 ml.match_code,
                 ml.team1_display_name,
@@ -101,7 +119,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-              WHERE mb.tournament_id = ? 
+              WHERE mb.tournament_id = ?
                 AND ms.updated_at > datetime('now', '-10 seconds')
               ORDER BY ms.updated_at DESC
             `, [tournamentId]);
@@ -125,12 +143,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
               };
 
               const message = `data: ${JSON.stringify(data)}\n\n`;
-              controller.enqueue(encoder.encode(message));
+              safeEnqueue(encoder.encode(message));
             }
 
             // Send heartbeat
             const heartbeat = `data: ${JSON.stringify({ type: 'heartbeat', timestamp: new Date().toISOString() })}\n\n`;
-            controller.enqueue(encoder.encode(heartbeat));
+            safeEnqueue(encoder.encode(heartbeat));
 
           } catch (error) {
             console.error('SSE update error:', error);
@@ -139,8 +157,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
         // Cleanup on close
         request.signal.addEventListener('abort', () => {
+          isClosed = true;
           clearInterval(intervalId);
-          controller.close();
+          try {
+            controller.close();
+          } catch {
+            // Controller already closed, ignore
+          }
         });
       }
     });
