@@ -135,13 +135,15 @@ export default function RefereeMatchPage() {
           // 現在のスコアを初期化
           const periodCount = result.data.period_count || 1;
           let currentScores;
-          
+          let hasExistingScores = false;
+
           // APIからスコアデータがある場合はそれを使用
           if (result.data.team1_scores && result.data.team2_scores) {
             currentScores = {
               team1: (result.data.team1_scores as (string | number)[]).map((score) => Number(score) || 0),
               team2: (result.data.team2_scores as (string | number)[]).map((score) => Number(score) || 0)
             };
+            hasExistingScores = true;
           } else {
             // スコアデータがない場合は0で初期化
             currentScores = {
@@ -149,8 +151,13 @@ export default function RefereeMatchPage() {
               team2: new Array(periodCount).fill(0)
             };
           }
-          
+
           setScores(currentScores);
+
+          // 既にスコアが保存されている場合はisSavedをtrueに設定
+          if (hasExistingScores) {
+            setIsSaved(true);
+          }
           
           // 拡張データの取得（ピリオド名表示用）
           try {
@@ -202,8 +209,10 @@ export default function RefereeMatchPage() {
               team1: (result.data.team1_scores as (string | number)[]).map((score) => Number(score) || 0),
               team2: (result.data.team2_scores as (string | number)[]).map((score) => Number(score) || 0)
             });
+            // スコアが既に保存されている場合はisSavedをtrueに設定
+            setIsSaved(true);
           }
-          
+
           // 勝者情報を復元（状態取得時も実行）
           if (result.data.winner_team_id) {
             if (result.data.winner_team_id === result.data.team1_id) {
@@ -214,7 +223,7 @@ export default function RefereeMatchPage() {
           } else {
             setWinnerTeam(null);
           }
-          
+
           // matchの備考を更新
           if (result.data.remarks) {
             setMatchRemarks(result.data.remarks);
@@ -250,11 +259,9 @@ export default function RefereeMatchPage() {
 
       if (response.ok && result.success) {
         setMatch(prev => prev ? { ...prev, ...result.data } : null);
-        
+
         if (action === 'start') {
           alert('試合を開始しました！');
-          // 試合開始時は初期スコア（0-0）が既に保存されているとみなす
-          setIsSaved(true);
         } else if (action === 'end') {
           alert('試合を終了しました。お疲れ様でした！');
         }
