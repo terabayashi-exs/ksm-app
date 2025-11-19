@@ -5,12 +5,13 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { User, Settings, LogOut } from "lucide-react";
 
 export default function Header() {
@@ -47,6 +48,9 @@ export default function Header() {
 
           {/* ユーザーメニュー */}
           <div className="flex items-center space-x-4">
+            {/* テーマ切り替えボタン */}
+            <ThemeToggle />
+
             {status === "loading" ? (
               <div className="w-8 h-8 bg-muted rounded-full animate-pulse"></div>
             ) : session?.user ? (

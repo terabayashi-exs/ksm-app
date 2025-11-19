@@ -1,5 +1,6 @@
 // app/layout.tsx
 import AuthSessionProvider from "@/components/providers/session-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
@@ -94,9 +95,11 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <AuthSessionProvider>
-          {children}
-        </AuthSessionProvider>
+        <ThemeProvider>
+          <AuthSessionProvider>
+            {children}
+          </AuthSessionProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
