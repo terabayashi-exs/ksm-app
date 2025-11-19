@@ -9,19 +9,6 @@ import {
 } from '@/lib/tournament-teams-simple';
 
 // 基本的なヘルパー関数をローカルで定義
-const groupTeamsByBlock = (teams: SimpleTournamentTeam[]): Record<string, SimpleTournamentTeam[]> => {
-  const grouped: Record<string, SimpleTournamentTeam[]> = {};
-  teams.forEach(team => {
-    // 表示用ブロック名を使用（決勝進出チームは1位リーグ等、予選チームはassigned_block）
-    const blockName = team.display_block || team.assigned_block || '未分類';
-    if (!grouped[blockName]) {
-      grouped[blockName] = [];
-    }
-    grouped[blockName].push(team);
-  });
-  return grouped;
-};
-
 const getTeamStatus = (team: SimpleTournamentTeam) => {
   if (team.player_count === 0) {
     return {
@@ -95,7 +82,7 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
       newExpanded.delete(teamId);
     } else {
       newExpanded.add(teamId);
-      
+
       // 選手データを取得（まだ取得していない場合）
       if (!teamPlayers[teamId]) {
         try {
@@ -115,32 +102,6 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
       }
     }
     setExpandedTeams(newExpanded);
-  };
-
-  // ブロック分類関数（他のページと統一）
-  const getBlockKey = (blockName: string): string => {
-    // blockNameが既に「予選Aブロック」形式の場合はそのまま返す
-    if (blockName.includes('予選') || blockName.includes('決勝')) {
-      return blockName;
-    }
-    
-    // 単純なブロック名（A, B, C, D）の場合
-    if (['A', 'B', 'C', 'D'].includes(blockName)) {
-      return `予選${blockName}ブロック`;
-    }
-    
-    return blockName;
-  };
-
-  // ブロック色の取得
-  const getBlockColor = (blockKey: string): string => {
-    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
-    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
-    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
-    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
-    if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
-    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
-    return 'bg-muted text-muted-foreground';
   };
 
   if (loading) {
@@ -177,8 +138,6 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
     );
   }
 
-  const teamsByBlock = groupTeamsByBlock(teamsData.teams);
-
   return (
     <div className="space-y-6">
       {/* 概要統計 */}
@@ -203,30 +162,17 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
         </CardContent>
       </Card>
 
-      {/* ブロック別チーム一覧 */}
-      {Object.entries(teamsByBlock).map(([blockName, teams]) => (
-        <Card key={blockName}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                {(() => {
-                  const blockKey = getBlockKey(blockName);
-                  return (
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
-                      {blockKey}
-                    </span>
-                  );
-                })()}
-                <span className="text-sm text-muted-foreground flex items-center">
-                  <Users className="h-4 w-4 mr-1" />
-                  {teams.length}チーム
-                </span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {teams.map((team) => {
+      {/* チーム一覧 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Users className="h-5 w-5 mr-2 text-blue-600" />
+            参加チーム一覧
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {teamsData.teams.map((team) => {
                 const teamStatus = getTeamStatus(team);
                 const isExpanded = expandedTeams.has(team.team_id);
 
@@ -335,7 +281,6 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
             </div>
           </CardContent>
         </Card>
-      ))}
     </div>
   );
 }
