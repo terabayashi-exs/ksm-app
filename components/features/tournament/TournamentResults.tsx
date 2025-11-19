@@ -870,54 +870,54 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                               
                               {/* 勝点 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="font-bold text-sm md:text-lg text-black">
+                                <span className="font-bold text-sm md:text-lg text-gray-900 dark:text-gray-100">
                                   {teamStanding?.points || 0}
                                 </span>
                               </td>
-                              
+
                               {/* 試合数 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="text-xs md:text-base text-black">{teamStanding?.matches_played || 0}</span>
+                                <span className="text-xs md:text-base text-gray-900 dark:text-gray-100">{teamStanding?.matches_played || 0}</span>
                               </td>
-                              
+
                               {/* 勝利 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="text-black font-medium text-xs md:text-base">
+                                <span className="text-gray-900 dark:text-gray-100 font-medium text-xs md:text-base">
                                   {teamStanding?.wins || 0}
                                 </span>
                               </td>
-                              
+
                               {/* 引分 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="text-black font-medium text-xs md:text-base">
+                                <span className="text-gray-900 dark:text-gray-100 font-medium text-xs md:text-base">
                                   {teamStanding?.draws || 0}
                                 </span>
                               </td>
-                              
+
                               {/* 敗北 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="text-black font-medium text-xs md:text-base">
+                                <span className="text-gray-900 dark:text-gray-100 font-medium text-xs md:text-base">
                                   {teamStanding?.losses || 0}
                                 </span>
                               </td>
-                              
+
                               {/* 総得点 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="font-medium text-xs md:text-base text-black">
+                                <span className="font-medium text-xs md:text-base text-gray-900 dark:text-gray-100">
                                   {teamStanding?.goals_for || 0}
                                 </span>
                               </td>
-                              
+
                               {/* 総失点 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="font-medium text-xs md:text-base text-black">
+                                <span className="font-medium text-xs md:text-base text-gray-900 dark:text-gray-100">
                                   {teamStanding?.goals_against || 0}
                                 </span>
                               </td>
-                              
+
                               {/* 得失差 */}
                               <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
-                                <span className="font-bold text-xs md:text-base text-black">
+                                <span className="font-bold text-xs md:text-base text-gray-900 dark:text-gray-100">
                                   {teamStanding ? (
                                     `${(teamStanding.goal_difference || 0) > 0 ? '+' : ''}${teamStanding.goal_difference || 0}`
                                   ) : '0'}
@@ -974,7 +974,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                   </div>
 
                   {/* 注意書き */}
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     ※ 対戦結果：縦のチーム名が横のチーム名に対する結果を表示
                   </div>
                 </div>
@@ -997,7 +997,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                 )}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 このブロックには参加チームがありません
               </div>
             )}

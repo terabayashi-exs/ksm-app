@@ -6,7 +6,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
 import MatchNewsArea from './MatchNewsArea';
-import PublicFilesList from './PublicFilesList';
 
 interface MatchData {
   match_id: number;
@@ -532,14 +531,6 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     <div className="space-y-6">
       {/* 試合速報エリア */}
       <MatchNewsArea tournamentId={tournamentId} />
-
-      {/* 大会資料（コンパクト版） */}
-      <PublicFilesList 
-        tournamentId={tournamentId}
-        showTitle={true}
-        layout="compact"
-        maxFiles={3}
-      />
 
       {/* ブロック別タブ */}
       <Tabs defaultValue="all" className="w-full">
