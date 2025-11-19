@@ -181,7 +181,21 @@ async function getBlockResults(
   match_matrix: MatchMatrix;
 }> {
   try {
-    // ブロック内のチーム一覧を取得（ブロック内ポジション順）
+    // 大会のformat_idとブロック情報を取得
+    const tournamentInfoResult = await db.execute({
+      sql: `
+        SELECT t.format_id, mb.block_name
+        FROM t_tournaments t
+        JOIN t_match_blocks mb ON mb.tournament_id = t.tournament_id
+        WHERE mb.match_block_id = ?
+      `,
+      args: [matchBlockId]
+    });
+
+    const formatId = tournamentInfoResult.rows[0]?.format_id as number;
+    const blockName = tournamentInfoResult.rows[0]?.block_name as string || '';
+
+    // ブロック内のチーム一覧を取得（予選の場合はblock_position順）
     const teamsResult = await db.execute({
       sql: `
         SELECT DISTINCT
@@ -192,14 +206,10 @@ async function getBlockResults(
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ?
-        AND tt.assigned_block = (
-          SELECT block_name
-          FROM t_match_blocks
-          WHERE match_block_id = ?
-        )
-        ORDER BY tt.block_position NULLS LAST, t.team_name
+        AND tt.assigned_block = ?
+        ORDER BY tt.block_position NULLS LAST
       `,
-      args: [tournamentId, matchBlockId]
+      args: [tournamentId, blockName]
     });
 
     let teams: TeamInfo[] = (teamsResult.rows || []).map(row => ({
@@ -215,21 +225,23 @@ async function getBlockResults(
         sql: `
           WITH team_positions AS (
             SELECT DISTINCT
-              ml.team1_display_name as template_display_name,
+              COALESCE(mt.team1_display_name, ml.team1_display_name) as template_display_name,
               ml.team1_id as team_id,
               t.team_name,
               t.team_omission
             FROM t_matches_live ml
+            LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
             LEFT JOIN m_teams t ON ml.team1_id = t.team_id
             WHERE ml.match_block_id = ?
             AND ml.team1_display_name IS NOT NULL
             UNION
             SELECT DISTINCT
-              ml.team2_display_name as template_display_name,
+              COALESCE(mt.team2_display_name, ml.team2_display_name) as template_display_name,
               ml.team2_id as team_id,
               t.team_name,
               t.team_omission
             FROM t_matches_live ml
+            LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
             LEFT JOIN m_teams t ON ml.team2_id = t.team_id
             WHERE ml.match_block_id = ?
             AND ml.team2_display_name IS NOT NULL
@@ -243,7 +255,7 @@ async function getBlockResults(
           GROUP BY template_display_name
           ORDER BY template_display_name
         `,
-        args: [matchBlockId, matchBlockId]
+        args: [formatId, matchBlockId, formatId, matchBlockId]
       });
 
       teams = (placeholderTeamsResult.rows || []).map((row, index) => ({
