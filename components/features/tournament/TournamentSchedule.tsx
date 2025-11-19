@@ -326,7 +326,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">{filteredMatches.length}</div>
             <div className="text-sm text-muted-foreground">試合数</div>
@@ -345,12 +345,6 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
               {filteredMatches.filter(m => m.has_result).length}
             </div>
             <div className="text-sm text-muted-foreground">実施済み</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {Math.max(...filteredMatches.map(m => m.court_number || 0), 0)}
-            </div>
-            <div className="text-sm text-muted-foreground">コート数</div>
           </div>
         </div>
       </CardContent>
