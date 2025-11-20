@@ -45,24 +45,18 @@ export default async function Home() {
       <Header />
       
       {/* ヒーローセクション */}
-      <section className="relative py-16 overflow-hidden">
-        {/* シンプルな背景 */}
-        <div className="absolute inset-0">
-          {/* ロゴに合わせた明るい芝生風のグラデーション背景 */}
-          <div className="absolute inset-0 bg-gradient-to-b from-lime-100/60 via-green-100/40 to-emerald-50/20 dark:from-green-800/30 dark:via-green-900/20 dark:to-transparent"></div>
-        </div>
-        
+      <section className="relative py-16 overflow-hidden bg-transparent">
         {/* コンテンツ */}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            {/* 大きなロゴ画像 */}
+            {/* 大きなロゴ画像（透過対応） */}
             <div className="mb-8 relative w-full max-w-6xl mx-auto">
               <Image
                 src="/images/system_logo.png"
                 alt="楽勝 GO"
                 width={1000}
                 height={1000}
-                className="mx-auto w-full h-auto max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl relative z-10"
+                className="mx-auto w-full h-auto max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl"
                 style={{ objectFit: 'contain' }}
                 priority
               />

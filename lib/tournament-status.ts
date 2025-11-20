@@ -282,21 +282,23 @@ async function checkTournamentHasOngoingMatches(tournamentId: number): Promise<b
 async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> {
   try {
     const { db } = await import('@/lib/db');
-    
+
     // 全試合数を取得
     const totalResult = await db.execute(`
       SELECT COUNT(*) as total_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
-        AND ml.team1_id IS NOT NULL 
+        AND ml.team1_id IS NOT NULL
         AND ml.team2_id IS NOT NULL
     `, [tournamentId]);
 
     const totalMatches = totalResult.rows[0]?.total_matches as number || 0;
-    
+
     if (totalMatches === 0) {
-      return false; // 試合がまだ設定されていない
+      // 試合が設定されていない場合は、全試合完了とみなす
+      // （試合がない大会は完了済み扱い）
+      return true;
     }
 
     // 確定済み試合数を取得
