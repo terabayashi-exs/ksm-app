@@ -1,4 +1,5 @@
 // components/layout/Footer.tsx
+import Image from "next/image";
 
 export default function Footer() {
   return (
@@ -8,29 +9,17 @@ export default function Footer() {
           {/* システム情報 */}
           <div className="mb-8">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-2 rounded-lg shadow-md">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* トーナメント構造を表現 */}
-                  <path 
-                    d="M4 6h4v2H4V6zM4 16h4v2H4v-2zM16 6h4v2h-4V6zM16 16h4v2h-4v-2z" 
-                    fill="currentColor" 
-                    opacity="0.8"
-                  />
-                  {/* 中央の接続線 */}
-                  <path 
-                    d="M8 7h4v1H8V7zM8 17h4v-1H8v1zM12 8v8h1V8h-1z" 
-                    fill="currentColor"
-                  />
-                  {/* 勝者の表現（星） */}
-                  <path 
-                    d="M12 2l1.09 3.26L16 5l-2.91 1.74L14 10l-2-1.2L10 10l.91-3.26L8 5l2.91.26L12 2z" 
-                    fill="#FFD700" 
-                    opacity="0.9"
-                  />
-                </svg>
+              <div className="relative w-10 h-10">
+                <Image
+                  src="/images/system_logo.png"
+                  alt="楽勝 GO"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-foreground">Rakusyo GO</h3>
+                <h3 className="text-lg font-bold text-foreground">楽勝 GO</h3>
                 <p className="text-sm text-muted-foreground">Sports Tournament Management System</p>
               </div>
             </div>
@@ -39,7 +28,7 @@ export default function Footer() {
               大会の作成から結果の公開まで、一元的に管理できます。
             </p>
             <div className="text-sm text-muted-foreground">
-              <span>© 2024 Rakusyo GO</span>
+              <span>© 2024 楽勝 GO</span>
             </div>
           </div>
         </div>
