@@ -406,13 +406,13 @@ async function TournamentDetailContent({ params }: PageProps) {
 
           {/* ページヘッダー */}
           <div className="mb-8">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-foreground mb-2">{tournament.tournament_name}</h1>
                 <p className="text-muted-foreground">部門の詳細情報をご覧いただけます</p>
               </div>
               {/* 部門切り替え */}
-              <div className="ml-4">
+              <div className="sm:ml-4">
                 <DivisionSwitcher
                   currentDivisionId={tournament.tournament_id}
                   currentDivisionName={tournament.tournament_name}

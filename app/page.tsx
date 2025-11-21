@@ -52,10 +52,10 @@ export default async function Home() {
             {/* 大きなロゴ画像（透過対応） */}
             <div className="mb-8 relative w-full max-w-6xl mx-auto">
               <Image
-                src="/images/system_logo.png"
+                src="/images/systemlogo_1000_250-タイトルなし.png"
                 alt="楽勝 GO"
                 width={1000}
-                height={1000}
+                height={250}
                 className="mx-auto w-full h-auto max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl"
                 style={{ objectFit: 'contain' }}
                 priority

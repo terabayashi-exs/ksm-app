@@ -8,19 +8,15 @@ export default function Footer() {
         <div className="text-center">
           {/* システム情報 */}
           <div className="mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="relative w-10 h-10">
+            <div className="flex items-center justify-center mb-4">
+              <div className="relative h-16">
                 <Image
-                  src="/images/system_logo.png"
+                  src="/images/systemlogo_1000_313-タイトルあり.png"
                   alt="楽勝 GO"
-                  width={40}
-                  height={40}
-                  className="w-full h-full object-contain"
+                  width={1000}
+                  height={313}
+                  className="h-full w-auto object-contain"
                 />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground">楽勝 GO</h3>
-                <p className="text-sm text-muted-foreground">Sports Tournament Management System</p>
               </div>
             </div>
             <p className="text-muted-foreground text-sm mb-4 max-w-2xl mx-auto">
