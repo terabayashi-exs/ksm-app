@@ -21,26 +21,19 @@ export default function Header() {
     <header className="bg-card shadow-sm border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* ロゴ・タイトル */}
+          {/* ロゴ */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="relative">
+            <Link href="/" className="flex items-center">
+              <div className="relative h-12">
                 <Image
-                  src="/images/system_logo.png"
+                  src="/images/systemlogo_1000_313-タイトルあり.png"
                   alt="楽勝 GO"
-                  width={32}
-                  height={32}
-                  className="rounded-lg"
+                  width={1000}
+                  height={313}
+                  className="h-full w-auto"
                   style={{ objectFit: 'contain' }}
+                  priority
                 />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">
-                  楽勝 GO
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  Sports Tournament Management
-                </p>
               </div>
             </Link>
           </div>
@@ -48,8 +41,10 @@ export default function Header() {
 
           {/* ユーザーメニュー */}
           <div className="flex items-center space-x-4">
-            {/* テーマ切り替えボタン */}
-            <ThemeToggle />
+            {/* テーマ切り替えボタン（モバイルでは非表示） */}
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
 
             {status === "loading" ? (
               <div className="w-8 h-8 bg-muted rounded-full animate-pulse"></div>
