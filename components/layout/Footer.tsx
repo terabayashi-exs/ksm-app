@@ -24,7 +24,7 @@ export default function Footer() {
               大会の作成から結果の公開まで、一元的に管理できます。
             </p>
             <div className="text-sm text-muted-foreground">
-              <span>© 2024 楽勝 GO</span>
+              <span>© 2025 楽勝 GO</span>
             </div>
           </div>
         </div>
