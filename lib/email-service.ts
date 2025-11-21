@@ -60,7 +60,7 @@ export class EmailService {
       },
       apiKey: process.env.EMAIL_API_KEY,
       fromEmail: process.env.FROM_EMAIL || 'noreply@ksm-app.com',
-      fromName: process.env.FROM_NAME || 'PK選手権大会運営'
+      fromName: process.env.FROM_NAME || '楽勝 GO 運営'
     };
   }
 

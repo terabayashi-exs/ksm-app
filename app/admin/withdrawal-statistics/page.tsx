@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth';
 import WithdrawalStatistics from '@/components/features/admin/WithdrawalStatistics';
 
 export const metadata = {
-  title: '辞退申請統計 | PK選手権大会管理',
+  title: '辞退申請統計 | 楽勝 GO 管理',
   description: '辞退申請の統計情報とレポート'
 };
 
