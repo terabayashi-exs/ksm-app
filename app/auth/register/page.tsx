@@ -156,9 +156,6 @@ function TeamRegisterForm() {
             <UserPlus className="h-8 w-8" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">チーム登録</h1>
-          <p className="mt-2 text-muted-foreground">
-            PK選手権大会への参加チーム登録
-          </p>
         </div>
 
         {/* 戻るリンク */}

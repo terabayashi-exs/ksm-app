@@ -47,7 +47,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 PK選手権大会</h1>
+            <h1>🏆 楽勝 GO</h1>
             <p>辞退申請承認のお知らせ</p>
         </div>
         
@@ -98,7 +98,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
             <p>このメールは自動送信されています。<br>
             {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
             {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>
-            <p>© PK選手権大会運営事務局</p>
+            <p>© 楽勝 GO 運営事務局</p>
         </div>
     </div>
 </body>
@@ -110,7 +110,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 {{contactPerson}} 様
 
 いつもお世話になっております。
-PK選手権大会運営事務局です。
+楽勝 GO 運営事務局です。
 
 ■ 辞退申請が承認されました
 チーム名: {{teamName}}
@@ -144,7 +144,7 @@ PK選手権大会運営事務局です。
 このメールは自動送信されています。
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
 {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}
-© PK選手権大会運営事務局
+© 楽勝 GO 運営事務局
 ───────────────────────────
 `
   };
@@ -181,7 +181,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 PK選手権大会</h1>
+            <h1>🏆 楽勝 GO</h1>
             <p>辞退申請についてのお知らせ</p>
         </div>
         
@@ -231,7 +231,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
             <p>このメールは自動送信されています。<br>
             {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
             {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>
-            <p>© PK選手権大会運営事務局</p>
+            <p>© 楽勝 GO 運営事務局</p>
         </div>
     </div>
 </body>
@@ -243,7 +243,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 {{contactPerson}} 様
 
 いつもお世話になっております。
-PK選手権大会運営事務局です。
+楽勝 GO 運営事務局です。
 
 ■ 辞退申請について
 チーム名: {{teamName}}
@@ -276,7 +276,7 @@ PK選手権大会運営事務局です。
 このメールは自動送信されています。
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
 {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}
-© PK選手権大会運営事務局
+© 楽勝 GO 運営事務局
 ───────────────────────────
 `
   };
@@ -312,7 +312,7 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 PK選手権大会</h1>
+            <h1>🏆 楽勝 GO</h1>
             <p>辞退申請受付確認</p>
         </div>
         
@@ -351,7 +351,7 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
             <p>このメールは自動送信されています。<br>
             {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
             {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>
-            <p>© PK選手権大会運営事務局</p>
+            <p>© 楽勝 GO 運営事務局</p>
         </div>
     </div>
 </body>
@@ -363,7 +363,7 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 {{contactPerson}} 様
 
 いつもお世話になっております。
-PK選手権大会運営事務局です。
+楽勝 GO 運営事務局です。
 
 ■ 辞退申請を受け付けました
 チーム名: {{teamName}}
@@ -388,7 +388,7 @@ PK選手権大会運営事務局です。
 このメールは自動送信されています。
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
 {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}
-© PK選手権大会運営事務局
+© 楽勝 GO 運営事務局
 ───────────────────────────
 `
   };
