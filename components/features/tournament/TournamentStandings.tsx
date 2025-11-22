@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Medal, Award, TrendingUp, Users, Target, Hash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Medal, Award, TrendingUp, Users, Target, Hash, RefreshCw } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 // 多競技対応の型定義
 interface SportConfig {
@@ -59,6 +61,7 @@ interface TournamentStandingsProps {
 }
 
 export default function TournamentStandings({ tournamentId }: TournamentStandingsProps) {
+  const { data: session } = useSession();
   const [standings, setStandings] = useState<BlockStanding[]>([]);
   const [totalMatches, setTotalMatches] = useState<number>(0);
   const [totalTeams, setTotalTeams] = useState<number>(0);
@@ -67,6 +70,8 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
   const [finalFormatType, setFinalFormatType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalculateMessage, setRecalculateMessage] = useState<string | null>(null);
 
   // 順位表データの取得
   useEffect(() => {
@@ -134,6 +139,58 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
 
     fetchStandings();
   }, [tournamentId]);
+
+  // 順位表の再計算
+  const handleRecalculate = async () => {
+    if (!session) {
+      setRecalculateMessage('ログインが必要です');
+      return;
+    }
+
+    setRecalculating(true);
+    setRecalculateMessage(null);
+
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/recalculate-standings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setRecalculateMessage(result.message);
+
+        // 順位表を再取得
+        const standingsResponse = await fetch(`/api/tournaments/${tournamentId}/standings`, {
+          cache: 'no-store'
+        });
+
+        if (standingsResponse.ok) {
+          const standingsData = await standingsResponse.json();
+          if (standingsData.success) {
+            setStandings(standingsData.data);
+            setTotalMatches(standingsData.total_matches || 0);
+            setTotalTeams(standingsData.total_teams || 0);
+          }
+        }
+
+        // 3秒後にメッセージを消す
+        setTimeout(() => {
+          setRecalculateMessage(null);
+        }, 3000);
+      } else {
+        setRecalculateMessage(`エラー: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('順位表再計算エラー:', error);
+      setRecalculateMessage(`エラー: ${error instanceof Error ? error.message : '再計算に失敗しました'}`);
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   // ブロック分類関数（日程・結果ページと同じロジック）
   const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
@@ -292,12 +349,37 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
       {/* 概要統計 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Trophy className="h-5 w-5 mr-2 text-blue-600" />
-            順位表概要
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Trophy className="h-5 w-5 mr-2 text-blue-600" />
+              順位表概要
+            </div>
+            {session && (
+              <Button
+                onClick={handleRecalculate}
+                disabled={recalculating}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
+                {recalculating ? '再計算中...' : '順位表を再計算'}
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* 再計算メッセージ */}
+          {recalculateMessage && (
+            <div className={`mb-4 p-3 rounded-lg ${
+              recalculateMessage.includes('エラー')
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {recalculateMessage}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
