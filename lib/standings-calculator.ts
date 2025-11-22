@@ -521,7 +521,7 @@ async function getParticipatingTeamsForBlock(
 /**
  * 特定ブロックの順位表を計算する
  */
-async function calculateBlockStandings(
+export async function calculateBlockStandings(
   matchBlockId: number,
   tournamentId: number
 ): Promise<TeamStanding[]> {
