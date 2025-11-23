@@ -526,38 +526,290 @@ async function updateFinalTournamentMatches(
  * 特定ブロックの順位確定後に進出処理を実行（自動トリガー用）
  */
 export async function checkAndPromoteBlockWinners(
-  tournamentId: number, 
+  tournamentId: number,
   completedBlockId: number
 ): Promise<void> {
   try {
     console.log(`[PROMOTION] ブロック ${completedBlockId} 完了後の進出チェック`);
-    
+
     // 全予選ブロックの順位が確定しているかチェック
     const blocksResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           COUNT(*) as total_blocks,
           COUNT(CASE WHEN team_rankings IS NOT NULL THEN 1 END) as completed_blocks
-        FROM t_match_blocks 
+        FROM t_match_blocks
         WHERE tournament_id = ? AND phase = 'preliminary'
       `,
       args: [tournamentId]
     });
-    
+
     const totalBlocks = blocksResult.rows[0]?.total_blocks as number || 0;
     const completedBlocks = blocksResult.rows[0]?.completed_blocks as number || 0;
-    
+
     console.log(`[PROMOTION] 予選ブロック進捗: ${completedBlocks}/${totalBlocks}`);
-    
+
     if (completedBlocks === totalBlocks && totalBlocks > 0) {
       console.log(`[PROMOTION] 全予選ブロック完了、決勝トーナメント進出処理開始`);
       await promoteTeamsToFinalTournament(tournamentId);
     } else {
       console.log(`[PROMOTION] まだ未完了のブロックがあります`);
     }
-    
+
   } catch (error) {
     console.error(`[PROMOTION] ブロック進出チェックエラー:`, error);
     // エラーでも処理は続行
+  }
+}
+
+/**
+ * 決勝トーナメント試合の進出条件チェック結果
+ */
+export interface PromotionValidationIssue {
+  match_code: string;
+  match_id: number;
+  position: 'team1' | 'team2';
+  expected_source: string;  // 例: "C_3"
+  expected_team_id: string | null;
+  expected_team_name: string | null;
+  current_team_id: string | null;
+  current_team_name: string | null;
+  is_placeholder: boolean;  // プレースホルダー表記（"C3位"など）のまま
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+export interface PromotionValidationResult {
+  isValid: boolean;
+  totalMatches: number;
+  checkedMatches: number;
+  issues: PromotionValidationIssue[];
+  summary: {
+    errorCount: number;
+    warningCount: number;
+    placeholderCount: number;
+  };
+}
+
+/**
+ * 決勝トーナメント試合の進出条件が正しく設定されているかチェック
+ * 順位表再計算時に実行され、未設定や誤設定を検出する
+ */
+export async function validateFinalTournamentPromotions(tournamentId: number): Promise<PromotionValidationResult> {
+  const issues: PromotionValidationIssue[] = [];
+
+  try {
+    console.log(`[PROMOTION_VALIDATION] 決勝トーナメント進出条件チェック開始: Tournament ${tournamentId}`);
+
+    // 1. 大会のフォーマットIDを取得
+    const formatResult = await db.execute({
+      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
+      args: [tournamentId]
+    });
+
+    if (formatResult.rows.length === 0) {
+      throw new Error(`Tournament ${tournamentId} not found`);
+    }
+
+    const formatId = formatResult.rows[0].format_id as number;
+
+    // 2. 予選ブロックの順位表から進出チーム情報を取得
+    const blockRankings = await getAllBlockRankings(tournamentId);
+    const promotions = await extractTopTeamsDynamic(tournamentId, blockRankings);
+
+    console.log(`[PROMOTION_VALIDATION] 進出チーム情報取得完了: ${Object.keys(promotions).length}件`);
+
+    // 3. 決勝トーナメント試合のテンプレートと実際のデータを取得
+    const matchesResult = await db.execute({
+      sql: `
+        SELECT
+          ml.match_id,
+          ml.match_code,
+          ml.team1_id,
+          ml.team2_id,
+          ml.team1_display_name,
+          ml.team2_display_name,
+          mt.team1_source,
+          mt.team2_source,
+          mt.team1_display_name as template_team1_display,
+          mt.team2_display_name as template_team2_display,
+          CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ?
+        WHERE mb.tournament_id = ? AND mb.phase = 'final'
+        ORDER BY ml.match_code
+      `,
+      args: [formatId, tournamentId]
+    });
+
+    console.log(`[PROMOTION_VALIDATION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
+
+    // 4. 各試合の進出条件をチェック
+    for (const match of matchesResult.rows) {
+      const matchId = match.match_id as number;
+      const matchCode = match.match_code as string;
+      const team1Id = match.team1_id as string | null;
+      const team2Id = match.team2_id as string | null;
+      const team1DisplayName = match.team1_display_name as string;
+      const team2DisplayName = match.team2_display_name as string;
+      const team1Source = match.team1_source as string | null;
+      const team2Source = match.team2_source as string | null;
+      const templateTeam1Display = match.template_team1_display as string;
+      const templateTeam2Display = match.template_team2_display as string;
+      const isConfirmed = Boolean(match.is_confirmed);
+
+      // team1のチェック（予選ブロック進出パターンのみ）
+      if (team1Source && team1Source.match(/^[A-Z]_\d+$/)) {
+        const expectedTeam = promotions[team1Source];
+
+        if (expectedTeam) {
+          // 期待されるチームIDと実際のチームIDを比較
+          if (team1Id !== expectedTeam.team_id) {
+            const isPlaceholder = team1DisplayName === templateTeam1Display;
+
+            issues.push({
+              match_code: matchCode,
+              match_id: matchId,
+              position: 'team1',
+              expected_source: team1Source,
+              expected_team_id: expectedTeam.team_id,
+              expected_team_name: expectedTeam.team_name,
+              current_team_id: team1Id,
+              current_team_name: team1DisplayName,
+              is_placeholder: isPlaceholder,
+              severity: isConfirmed ? 'error' : 'warning',
+              message: isPlaceholder
+                ? `team1がプレースホルダー表記のまま: "${team1DisplayName}" → 正しくは "${expectedTeam.team_name}"`
+                : `team1が誤設定: "${team1DisplayName}" → 正しくは "${expectedTeam.team_name}"`
+            });
+
+            console.log(`[PROMOTION_VALIDATION] ⚠️ ${matchCode} team1: "${team1DisplayName}" → 期待値 "${expectedTeam.team_name}"`);
+          }
+        } else {
+          // 進出チーム情報が見つからない（予選ブロック未完了の可能性）
+          console.log(`[PROMOTION_VALIDATION] ${matchCode} team1: ${team1Source} の進出チーム情報なし（予選未完了の可能性）`);
+        }
+      }
+
+      // team2のチェック（予選ブロック進出パターンのみ）
+      if (team2Source && team2Source.match(/^[A-Z]_\d+$/)) {
+        const expectedTeam = promotions[team2Source];
+
+        if (expectedTeam) {
+          // 期待されるチームIDと実際のチームIDを比較
+          if (team2Id !== expectedTeam.team_id) {
+            const isPlaceholder = team2DisplayName === templateTeam2Display;
+
+            issues.push({
+              match_code: matchCode,
+              match_id: matchId,
+              position: 'team2',
+              expected_source: team2Source,
+              expected_team_id: expectedTeam.team_id,
+              expected_team_name: expectedTeam.team_name,
+              current_team_id: team2Id,
+              current_team_name: team2DisplayName,
+              is_placeholder: isPlaceholder,
+              severity: isConfirmed ? 'error' : 'warning',
+              message: isPlaceholder
+                ? `team2がプレースホルダー表記のまま: "${team2DisplayName}" → 正しくは "${expectedTeam.team_name}"`
+                : `team2が誤設定: "${team2DisplayName}" → 正しくは "${expectedTeam.team_name}"`
+            });
+
+            console.log(`[PROMOTION_VALIDATION] ⚠️ ${matchCode} team2: "${team2DisplayName}" → 期待値 "${expectedTeam.team_name}"`);
+          }
+        } else {
+          // 進出チーム情報が見つからない（予選ブロック未完了の可能性）
+          console.log(`[PROMOTION_VALIDATION] ${matchCode} team2: ${team2Source} の進出チーム情報なし（予選未完了の可能性）`);
+        }
+      }
+    }
+
+    // 5. チェック結果のサマリー
+    const errorCount = issues.filter(i => i.severity === 'error').length;
+    const warningCount = issues.filter(i => i.severity === 'warning').length;
+    const placeholderCount = issues.filter(i => i.is_placeholder).length;
+
+    const result: PromotionValidationResult = {
+      isValid: issues.length === 0,
+      totalMatches: matchesResult.rows.length,
+      checkedMatches: matchesResult.rows.length,
+      issues,
+      summary: {
+        errorCount,
+        warningCount,
+        placeholderCount
+      }
+    };
+
+    console.log(`[PROMOTION_VALIDATION] チェック完了: ${result.isValid ? '✅ 正常' : '⚠️ 問題あり'}`);
+    console.log(`[PROMOTION_VALIDATION] エラー: ${errorCount}件、警告: ${warningCount}件、プレースホルダー残存: ${placeholderCount}件`);
+
+    return result;
+
+  } catch (error) {
+    console.error(`[PROMOTION_VALIDATION] チェック処理エラー:`, error);
+    return {
+      isValid: false,
+      totalMatches: 0,
+      checkedMatches: 0,
+      issues,
+      summary: {
+        errorCount: 0,
+        warningCount: 0,
+        placeholderCount: 0
+      }
+    };
+  }
+}
+
+/**
+ * 進出条件チェックで検出された問題を自動修正
+ */
+export async function autoFixPromotionIssues(tournamentId: number, issues: PromotionValidationIssue[]): Promise<{
+  fixedCount: number;
+  failedCount: number;
+  errors: string[];
+}> {
+  let fixedCount = 0;
+  let failedCount = 0;
+  const errors: string[] = [];
+
+  try {
+    console.log(`[PROMOTION_AUTO_FIX] 自動修正開始: ${issues.length}件の問題`);
+
+    for (const issue of issues) {
+      try {
+        const field = issue.position === 'team1' ? 'team1' : 'team2';
+
+        await db.execute({
+          sql: `
+            UPDATE t_matches_live
+            SET ${field}_id = ?, ${field}_display_name = ?, updated_at = datetime('now', '+9 hours')
+            WHERE match_id = ?
+          `,
+          args: [issue.expected_team_id, issue.expected_team_name, issue.match_id]
+        });
+
+        console.log(`[PROMOTION_AUTO_FIX] ✅ ${issue.match_code} ${field}: "${issue.current_team_name}" → "${issue.expected_team_name}"`);
+        fixedCount++;
+
+      } catch (error) {
+        const errorMsg = `${issue.match_code} ${issue.position}の修正失敗: ${error}`;
+        console.error(`[PROMOTION_AUTO_FIX] ❌ ${errorMsg}`);
+        errors.push(errorMsg);
+        failedCount++;
+      }
+    }
+
+    console.log(`[PROMOTION_AUTO_FIX] 修正完了: 成功 ${fixedCount}件、失敗 ${failedCount}件`);
+
+    return { fixedCount, failedCount, errors };
+
+  } catch (error) {
+    console.error(`[PROMOTION_AUTO_FIX] 自動修正処理エラー:`, error);
+    return { fixedCount, failedCount, errors: [...errors, String(error)] };
   }
 }

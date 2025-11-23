@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { getTournamentSportCode } from '@/lib/sport-standings-calculator';
 import { calculateBlockStandings, calculateMultiSportBlockStandings } from '@/lib/standings-calculator';
+import { validateFinalTournamentPromotions, autoFixPromotionIssues } from '@/lib/tournament-promotion';
 
 /**
  * 大会の全ブロックの順位表を強制的に再計算するAPI
@@ -186,7 +187,47 @@ export async function POST(
 
     console.log(`[RECALCULATE_STANDINGS] 完了: 成功=${successCount}, エラー=${errorCount}, スキップ=${skippedCount}`);
 
-    return NextResponse.json({
+    // 決勝トーナメント進出条件の検証と自動修正
+    let validationResult;
+    let autoFixResult;
+    try {
+      console.log(`[RECALCULATE_STANDINGS] 決勝トーナメント進出条件チェック開始...`);
+      validationResult = await validateFinalTournamentPromotions(tournamentId);
+
+      if (!validationResult.isValid && validationResult.issues.length > 0) {
+        console.log(`[RECALCULATE_STANDINGS] ${validationResult.issues.length}件の問題を検出、自動修正を実行...`);
+        autoFixResult = await autoFixPromotionIssues(tournamentId, validationResult.issues);
+
+        console.log(`[RECALCULATE_STANDINGS] 自動修正完了: 成功=${autoFixResult.fixedCount}件, 失敗=${autoFixResult.failedCount}件`);
+      } else {
+        console.log(`[RECALCULATE_STANDINGS] 決勝トーナメント進出条件: 問題なし`);
+      }
+    } catch (validationError) {
+      console.error(`[RECALCULATE_STANDINGS] 進出条件チェックでエラー:`, validationError);
+      // チェックエラーは致命的ではないため処理は継続
+    }
+
+    // レスポンス作成
+    const response: {
+      success: boolean;
+      message: string;
+      tournament_name: string;
+      results: typeof results;
+      summary: {
+        total_blocks: number;
+        success: number;
+        error: number;
+        skipped: number;
+      };
+      promotion_validation?: {
+        checked: boolean;
+        is_valid: boolean;
+        issues_found: number;
+        auto_fixed: number;
+        fix_failed: number;
+        details: typeof validationResult;
+      };
+    } = {
       success: true,
       message: `順位表の再計算が完了しました（成功: ${successCount}件, エラー: ${errorCount}件, スキップ: ${skippedCount}件）`,
       tournament_name: tournamentName,
@@ -197,7 +238,29 @@ export async function POST(
         error: errorCount,
         skipped: skippedCount
       }
-    });
+    };
+
+    // 進出条件チェック結果を追加
+    if (validationResult) {
+      response.promotion_validation = {
+        checked: true,
+        is_valid: validationResult.isValid,
+        issues_found: validationResult.issues.length,
+        auto_fixed: autoFixResult?.fixedCount || 0,
+        fix_failed: autoFixResult?.failedCount || 0,
+        details: validationResult
+      };
+
+      // 問題が検出された場合はメッセージを更新
+      if (!validationResult.isValid) {
+        const fixedMsg = autoFixResult?.fixedCount
+          ? ` ${autoFixResult.fixedCount}件の進出条件を自動修正しました。`
+          : '';
+        response.message += fixedMsg;
+      }
+    }
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('[RECALCULATE_STANDINGS] エラー:', error);
