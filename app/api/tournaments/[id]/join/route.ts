@@ -462,14 +462,15 @@ async function handleTournamentJoin(
                   tournament_id,
                   team_id,
                   player_id,
+                  tournament_team_id,
                   jersey_number,
                   player_status,
                   registration_date,
                   created_at,
                   updated_at
-                ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+                ) VALUES (?, ?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
               `, [
-                tournamentId, teamId, playerId,
+                tournamentId, teamId, playerId, tournamentTeamId,
                 player.jersey_number !== undefined ? player.jersey_number : null
               ]);
               console.log(`Inserted new player ${playerId} registration`);
@@ -481,14 +482,15 @@ async function handleTournamentJoin(
                 tournament_id,
                 team_id,
                 player_id,
+                tournament_team_id,
                 jersey_number,
                 player_status,
                 registration_date,
                 created_at,
                 updated_at
-              ) VALUES (?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+              ) VALUES (?, ?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
             `, [
-              tournamentId, teamId, playerId,
+              tournamentId, teamId, playerId, tournamentTeamId,
               player.jersey_number !== undefined ? player.jersey_number : null
             ]);
           }

@@ -22,6 +22,7 @@ interface MatchNewsData {
   phase: string;
   block_name: string | null;
   court_number: number | null;
+  court_name?: string | null;
   start_time: string | null;
   end_time: string | null;
   updated_at: string;
@@ -272,7 +273,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                     </span>
                     {match.court_number && (
                       <span className="text-xs text-gray-600">
-                        コート{match.court_number}
+                        {match.court_name || match.court_number}
                       </span>
                     )}
                   </div>

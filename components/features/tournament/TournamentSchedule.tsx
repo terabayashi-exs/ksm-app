@@ -18,6 +18,7 @@ interface MatchData {
   team1_display_name: string;
   team2_display_name: string;
   court_number: number | null;
+  court_name?: string | null;
   start_time: string | null;
   phase: string;
   display_round_name: string;
@@ -365,7 +366,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
 
     return (
       <>
-        {sortedFilteredDates.map((date, dateIndex) => {
+        {sortedFilteredDates.map((date, _dateIndex) => {
           const dayMatches = filteredMatchesByDate[date];
           
           // ブロック別にマッチを分類
@@ -386,7 +387,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Calendar className="h-5 w-5 mr-2" />
-                      開催日 {dateIndex + 1}: {formatDateOnly(date)}
+                      開催日: {formatDateOnly(date)}
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="h-4 w-4 mr-1" />
@@ -433,14 +434,14 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse min-w-[600px]">
+                      <table className="w-full border-collapse min-w-[700px]">
                         <thead>
                           <tr className="border-b">
-                            <th className="text-left py-3 px-2 font-medium w-16 md:w-20">時間</th>
-                            <th className="text-left py-3 px-2 font-medium w-16 md:w-20">試合</th>
-                            <th className="text-left py-3 px-2 font-medium w-32 md:w-auto">対戦</th>
-                            <th className="text-left py-3 px-2 font-medium w-20 md:w-24">結果</th>
-                            <th className="text-left py-3 px-2 font-medium w-16 md:w-20">コート</th>
+                            <th className="text-left py-3 px-2 font-medium w-20">時間</th>
+                            <th className="text-left py-3 px-2 font-medium w-20">試合</th>
+                            <th className="text-left py-3 px-2 font-medium">対戦</th>
+                            <th className="text-right py-3 px-2 font-medium w-[200px]">結果</th>
+                            <th className="text-right py-3 px-2 font-medium w-[100px]">コート</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -489,23 +490,27 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="py-2 px-2">
-                                    <div className="flex items-center space-x-1">
+                                  <td className="py-2 px-2 whitespace-nowrap text-right">
+                                    <div className="flex items-center justify-end space-x-1">
                                       <div className="hidden md:inline">{result.icon}</div>
                                       <div className="text-xs md:text-sm">{result.display}</div>
                                     </div>
                                     {match.remarks && (
-                                      <div className="text-xs text-muted-foreground mt-1 hidden md:block">
+                                      <div className="text-xs text-muted-foreground mt-1 hidden md:block text-right">
                                         {match.remarks}
                                       </div>
                                     )}
                                   </td>
-                                  <td className="py-2 px-2">
+                                  <td className="py-2 px-2 whitespace-nowrap text-right">
                                     {match.court_number ? (
-                                      <div className="flex items-center text-xs md:text-sm">
+                                      <div className="flex items-center justify-end text-xs md:text-sm">
                                         <MapPin className="h-3 w-3 mr-1 text-muted-foreground hidden md:inline" />
-                                        <span className="md:hidden">C{match.court_number}</span>
-                                        <span className="hidden md:inline">コート{match.court_number}</span>
+                                        <span className="md:hidden">
+                                          {match.court_name || match.court_number}
+                                        </span>
+                                        <span className="hidden md:inline">
+                                          {match.court_name || match.court_number}
+                                        </span>
                                       </div>
                                     ) : (
                                       <span className="text-muted-foreground text-xs">-</span>

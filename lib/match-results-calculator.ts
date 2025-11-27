@@ -200,8 +200,8 @@ async function getBlockResults(
       sql: `
         SELECT DISTINCT
           tt.team_id,
-          t.team_name,
-          t.team_omission,
+          COALESCE(tt.team_name, t.team_name) as team_name,
+          COALESCE(tt.team_omission, t.team_omission) as team_omission,
           tt.block_position
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
@@ -227,10 +227,12 @@ async function getBlockResults(
             SELECT DISTINCT
               COALESCE(mt.team1_display_name, ml.team1_display_name) as template_display_name,
               ml.team1_id as team_id,
-              t.team_name,
-              t.team_omission
+              COALESCE(tt.team_name, t.team_name) as team_name,
+              COALESCE(tt.team_omission, t.team_omission) as team_omission
             FROM t_matches_live ml
             LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+            LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+            LEFT JOIN t_tournament_teams tt ON ml.team1_id = tt.team_id AND mb.tournament_id = tt.tournament_id
             LEFT JOIN m_teams t ON ml.team1_id = t.team_id
             WHERE ml.match_block_id = ?
             AND ml.team1_display_name IS NOT NULL
@@ -238,10 +240,12 @@ async function getBlockResults(
             SELECT DISTINCT
               COALESCE(mt.team2_display_name, ml.team2_display_name) as template_display_name,
               ml.team2_id as team_id,
-              t.team_name,
-              t.team_omission
+              COALESCE(tt.team_name, t.team_name) as team_name,
+              COALESCE(tt.team_omission, t.team_omission) as team_omission
             FROM t_matches_live ml
             LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+            LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+            LEFT JOIN t_tournament_teams tt ON ml.team2_id = tt.team_id AND mb.tournament_id = tt.tournament_id
             LEFT JOIN m_teams t ON ml.team2_id = t.team_id
             WHERE ml.match_block_id = ?
             AND ml.team2_display_name IS NOT NULL

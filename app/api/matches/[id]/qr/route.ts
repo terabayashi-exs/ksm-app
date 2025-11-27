@@ -23,12 +23,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 試合情報を取得（実際のチーム名と競技種別も含む）
     const result = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
         ml.team1_display_name,
         ml.team2_display_name,
         ml.court_number,
+        tc.court_name,
         ml.start_time,
         ml.tournament_date,
         mb.tournament_id,
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+      LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       WHERE ml.match_id = ?
     `, [matchId]);
 
@@ -127,6 +129,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         team1_name: match.team1_real_name || match.team1_display_name, // 実チーム名を優先
         team2_name: match.team2_real_name || match.team2_display_name, // 実チーム名を優先
         court_number: match.court_number,
+        court_name: match.court_name ? String(match.court_name) : null,
         scheduled_time: match.start_time,
         qr_url: qrUrl,
         token: token,
@@ -177,7 +180,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // 簡易的な管理者認証（セッション確認は省略）
       // 試合情報を取得（実チーム名と略称も含む）
       const result = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -185,6 +188,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
+          tc.court_name,
           ml.start_time,
           ml.period_count,
           ml.team1_scores,
@@ -210,6 +214,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
@@ -237,6 +242,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           team1_omission: match.team1_omission,
           team2_omission: match.team2_omission,
           court_number: match.court_number,
+          court_name: match.court_name ? String(match.court_name) : null,
           scheduled_time: match.start_time,
           period_count: match.period_count,
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
@@ -276,7 +282,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       // 試合情報を取得（実チーム名も含む）
       const result = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -284,6 +290,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
+          tc.court_name,
           ml.start_time,
           ml.period_count,
           ml.team1_scores,
@@ -309,6 +316,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
@@ -336,6 +344,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           team1_omission: match.team1_omission,
           team2_omission: match.team2_omission,
           court_number: match.court_number,
+          court_name: match.court_name ? String(match.court_name) : null,
           scheduled_time: match.start_time,
           period_count: match.period_count,
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1

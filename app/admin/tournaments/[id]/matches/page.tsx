@@ -39,6 +39,7 @@ interface MatchData {
   team1_name: string;
   team2_name: string;
   court_number: number;
+  court_name?: string | null;
   scheduled_time: string;
   tournament_date: string;
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
@@ -209,7 +210,11 @@ export default function AdminMatchesPage() {
                 matches: []
               });
             }
-            blocksMap.get(match.match_block_id)!.matches.push(match);
+            const block = blocksMap.get(match.match_block_id)!;
+            // 重複チェック: 同じmatch_idが既に存在しないか確認
+            if (!block.matches.some(m => m.match_id === match.match_id)) {
+              block.matches.push(match);
+            }
           });
           
           // 各ブロック内の試合を試合コード順にソート
@@ -1176,7 +1181,7 @@ export default function AdminMatchesPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {blockMatches.map((match) => (
-                        <div key={match.match_id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div key={`${match.match_block_id}-${match.match_code}-${match.match_id}`} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
                             {/* 試合情報 */}
                             <div className="lg:col-span-2">
@@ -1237,7 +1242,7 @@ export default function AdminMatchesPage() {
                                 )}
                                 <div className="flex items-center">
                                   <MapPin className="w-4 h-4 mr-1" />
-                                  コート{match.court_number}
+                                  {match.court_name ? match.court_name : `コート${match.court_number}`}
                                 </div>
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />

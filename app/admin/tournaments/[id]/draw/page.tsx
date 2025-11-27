@@ -9,6 +9,7 @@ import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin, ChevronUp, ChevronDo
 import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
 
 interface Team {
+  tournament_team_id: number;
   team_id: string;
   team_name: string;
   team_omission?: string;
@@ -110,6 +111,7 @@ export default function TournamentDrawPage() {
             return team != null && typeof team === 'object' && 'team_id' in team && Boolean((team as SimpleTournamentTeam).team_id);
           }) // undefinedやnullのチームを除外
           .map((team: SimpleTournamentTeam) => ({
+            tournament_team_id: team.tournament_team_id || 0,
             team_id: team.team_id || '',
             team_name: team.team_name || '',
             team_omission: team.team_omission || '',
@@ -193,15 +195,16 @@ export default function TournamentDrawPage() {
 
         // 振分け済みチームを各ブロックに配置
         let hasAssignedTeams = false;
-        assignedTeams.forEach((team: { 
-          team_id: string; 
-          team_name: string; 
+        assignedTeams.forEach((team: {
+          tournament_team_id: number;
+          team_id: string;
+          team_name: string;
           team_omission?: string;
           contact_person?: string;
           contact_email?: string;
           player_count?: number;
-          assigned_block: string; 
-          block_position: string 
+          assigned_block: string;
+          block_position: string
         }) => {
           if (team.assigned_block && team.block_position && preliminaryBlocks.has(team.assigned_block) && team.team_id && team.team_name) {
             const blockPosition = parseInt(team.block_position);
@@ -210,6 +213,7 @@ export default function TournamentDrawPage() {
             // 配列の境界チェック（動的なサイズに対応）
             if (arrayIndex >= 0 && arrayIndex < maxTeamsPerBlock) {
               const formattedTeam: Team = {
+                tournament_team_id: team.tournament_team_id,
                 team_id: team.team_id,
                 team_name: team.team_name,
                 team_omission: team.team_omission || '',
@@ -217,7 +221,7 @@ export default function TournamentDrawPage() {
                 contact_email: team.contact_email || '',
                 registered_players_count: team.player_count || 0
               };
-              
+
               blockTeamMap[team.assigned_block][arrayIndex] = formattedTeam;
               hasAssignedTeams = true;
             }
@@ -286,18 +290,18 @@ export default function TournamentDrawPage() {
   };
 
   // チームをブロック間で移動
-  const moveTeam = (teamId: string, fromBlockIndex: number, toBlockIndex: number) => {
+  const moveTeam = (tournamentTeamId: number, fromBlockIndex: number, toBlockIndex: number) => {
     if (fromBlockIndex === toBlockIndex) return;
 
     const newBlocks = [...blocks];
     const fromBlock = newBlocks[fromBlockIndex];
     const toBlock = newBlocks[toBlockIndex];
-    
-    const teamIndex = fromBlock.teams.findIndex(team => team && team.team_id === teamId);
+
+    const teamIndex = fromBlock.teams.findIndex(team => team && team.tournament_team_id === tournamentTeamId);
     if (teamIndex === -1) return;
 
     const [team] = fromBlock.teams.splice(teamIndex, 1);
-    
+
     // 移動するチームが有効か確認
     if (team && team.team_id && team.team_name) {
       toBlock.teams.push(team);
@@ -342,6 +346,7 @@ export default function TournamentDrawPage() {
         teams: block.teams
           .filter(team => team && team.team_id)
           .map((team, index) => ({
+            tournament_team_id: team.tournament_team_id,
             team_id: team.team_id,
             block_position: index + 1
           }))
@@ -529,13 +534,13 @@ export default function TournamentDrawPage() {
                     if (!team || !team.team_id) return null;
                     
                     // このチームが既にブロックに振分けされているかチェック
-                    const isAssigned = blocks.some(block => 
-                      block.teams && block.teams.some(blockTeam => blockTeam && blockTeam.team_id === team.team_id)
+                    const isAssigned = blocks.some(block =>
+                      block.teams && block.teams.some(blockTeam => blockTeam && blockTeam.tournament_team_id === team.tournament_team_id)
                     );
-                    
+
                     return (
-                      <div 
-                        key={team.team_id}
+                      <div
+                        key={team.tournament_team_id}
                         className={`p-3 border rounded-lg hover:bg-muted ${
                           isAssigned ? 'bg-muted border-muted opacity-75' : ''
                         }`}
@@ -585,8 +590,8 @@ export default function TournamentDrawPage() {
                         }
                         
                         return (
-                          <div 
-                            key={team.team_id}
+                          <div
+                            key={team.tournament_team_id}
                             className="p-4 bg-blue-50 border border-blue-200 rounded-lg"
                           >
                             {/* チーム情報エリア */}
@@ -634,7 +639,7 @@ export default function TournamentDrawPage() {
                                         key={otherBlockIndex}
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => moveTeam(team.team_id, blockIndex, otherBlockIndex)}
+                                        onClick={() => moveTeam(team.tournament_team_id, blockIndex, otherBlockIndex)}
                                         className="text-xs px-2 py-1 h-7 min-w-[2.5rem]"
                                       >
                                         → {blocks[otherBlockIndex].block_name}

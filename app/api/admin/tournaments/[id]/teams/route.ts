@@ -117,24 +117,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
         m.contact_email,
         m.contact_phone,
         m.team_name as master_team_name,
-        COUNT(tp.tournament_player_id) as player_count
+        m.registration_type,
+        (
+          SELECT COUNT(*)
+          FROM t_tournament_players tp
+          WHERE tp.tournament_team_id = tt.tournament_team_id
+        ) as player_count
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
-      LEFT JOIN t_tournament_players tp ON (tt.tournament_id = tp.tournament_id AND tt.team_id = tp.team_id)
       WHERE tt.tournament_id = ?
-      GROUP BY
-        tt.tournament_team_id,
-        tt.team_id,
-        tt.tournament_id,
-        tt.team_name,
-        tt.team_omission,
-        tt.withdrawal_status,
-        tt.registration_method,
-        tt.created_at,
-        m.contact_person,
-        m.contact_email,
-        m.contact_phone,
-        m.team_name
       ORDER BY tt.created_at ASC
     `, [tournamentId]);
 
@@ -311,28 +302,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       teamId = existingTeam.team_id;
       isExistingMasterTeam = true;
 
-      // 同じメールアドレスのチームが既にこの大会に参加している場合はエラー
-      // （複数チーム参加機能があるため、別のチーム名での参加は許可）
-      const alreadyJoined = await db.execute(`
-        SELECT tt.tournament_team_id, tt.team_name, tt.team_omission
-        FROM t_tournament_teams tt
-        WHERE tt.tournament_id = ?
-          AND tt.team_id = ?
-          AND (tt.team_name = ? OR tt.team_omission = ?)
-      `, [tournamentId, teamId, data.tournament_team_name, data.tournament_team_omission]);
-
-      if (alreadyJoined.rows.length > 0) {
-        const joined = alreadyJoined.rows[0] as unknown as { team_name: string; team_omission: string };
-        return NextResponse.json(
-          { success: false, error: `このチーム名「${joined.team_name}」または略称「${joined.team_omission}」は既にこの大会に参加しています` },
-          { status: 409 }
-        );
-      }
-
-      console.log('Using existing master team:', {
+      console.log('Using existing master team (reusing password):', {
         teamId,
-        teamName: existingTeam.team_name,
-        contactEmail: data.contact_email
+        masterTeamName: existingTeam.team_name,
+        contactEmail: data.contact_email,
+        newTournamentTeamName: data.tournament_team_name
       });
     }
 
@@ -495,14 +469,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
             tournament_id,
             team_id,
             player_id,
+            tournament_team_id,
             jersey_number,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [
           tournamentId,
           teamId,
           playerId,
+          tournamentTeamId,
           player.uniform_number || null
         ]);
         
@@ -523,7 +499,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         tournament_team_id: tournamentTeamId,
         tournament_team_name: data.tournament_team_name,
         players_count: data.players.length,
-        temporary_password: data.temporary_password,
+        temporary_password: isExistingMasterTeam ? null : data.temporary_password,
         contact_email: data.contact_email,
         is_existing_team: isExistingMasterTeam
       }

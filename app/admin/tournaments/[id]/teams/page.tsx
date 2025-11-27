@@ -96,8 +96,14 @@ export default function TeamRegistrationPage() {
       try {
         // 管理者用APIから大会情報と参加チーム一覧を取得
         const response = await fetch(`/api/admin/tournaments/${tournamentId}/teams`);
+
+        if (!response.ok) {
+          console.error('データ取得エラー:', `HTTPエラー: ${response.status}`);
+          return;
+        }
+
         const result = await response.json();
-        
+
         if (result.success) {
           setTournament(result.data.tournament);
           setExistingTeams(result.data.teams);
@@ -150,6 +156,17 @@ export default function TeamRegistrationPage() {
         body: JSON.stringify(teamData),
       });
 
+      if (!response.ok) {
+        let errorMessage = `HTTPエラー: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // JSONパースに失敗した場合はHTTPステータスのみ
+        }
+        throw new Error(errorMessage);
+      }
+
       const result = await response.json();
 
       if (result.success) {
@@ -181,7 +198,14 @@ export default function TeamRegistrationPage() {
           players: []
         });
 
-        alert(`チーム「${result.data.team_name}」の管理者代行登録が完了しました。\n\n【重要】以下の情報をチーム代表者にお伝えください：\n\n- ログインID: ${result.data.team_id}\n- 仮パスワード: ${tempPassword}\n- メールアドレス: ${result.data.contact_email}\n\n※代表者には初回ログイン時のパスワード変更をお願いしてください。`);
+        const passwordInfo = result.data.is_existing_team
+          ? '既存のパスワードを使用'
+          : `${tempPassword}`;
+        const passwordNote = result.data.is_existing_team
+          ? ''
+          : '\n\n※代表者には初回ログイン時のパスワード変更をお願いしてください。';
+
+        alert(`チーム「${result.data.team_name}」の管理者代行登録が完了しました。\n\n【重要】以下の情報をチーム代表者にお伝えください：\n\n- ログインID: ${result.data.team_id}\n- パスワード: ${passwordInfo}\n- メールアドレス: ${result.data.contact_email}${passwordNote}`);
       } else {
         throw new Error(result.error || '登録に失敗しました');
       }
@@ -418,14 +442,33 @@ export default function TeamRegistrationPage() {
             body: JSON.stringify(teamData),
           });
 
+          // レスポンスが空でないか確認してからJSONをパース
+          if (!response.ok) {
+            // HTTPエラーの場合
+            let errorMessage = `HTTPエラー: ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorMessage;
+            } catch {
+              // JSONパースに失敗した場合はHTTPステータスのみ
+            }
+            results.push({
+              success: false,
+              teamName: team.team_name,
+              error: errorMessage
+            });
+            continue;
+          }
+
           const result = await response.json();
-          
+
           if (result.success) {
             results.push({
               success: true,
               teamName: team.team_name,
               teamId: result.data.team_id,
-              tempPassword: tempPassword
+              tempPassword: result.data.temporary_password || tempPassword,
+              isExistingTeam: result.data.is_existing_team
             });
           } else {
             results.push({
@@ -434,11 +477,11 @@ export default function TeamRegistrationPage() {
               error: result.error
             });
           }
-        } catch {
+        } catch (error) {
           results.push({
             success: false,
             teamName: team.team_name,
-            error: 'API呼び出しエラー'
+            error: error instanceof Error ? error.message : 'API呼び出しエラー'
           });
         }
       }
@@ -466,7 +509,11 @@ export default function TeamRegistrationPage() {
           .forEach(r => {
             message += `\n[${r.teamName}]\n`;
             message += `ログインID: ${r.teamId}\n`;
-            message += `仮パスワード: ${r.tempPassword}\n`;
+            if (r.isExistingTeam) {
+              message += `パスワード: 既存のパスワードを使用\n`;
+            } else {
+              message += `仮パスワード: ${r.tempPassword}\n`;
+            }
           });
       }
 
@@ -512,14 +559,25 @@ export default function TeamRegistrationPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ teamId: team.team_id }),
+        body: JSON.stringify({ tournamentTeamId: team.tournament_team_id }),
       });
+
+      if (!response.ok) {
+        let errorMessage = `HTTPエラー: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // JSONパースに失敗した場合はHTTPステータスのみ
+        }
+        throw new Error(errorMessage);
+      }
 
       const result = await response.json();
 
       if (result.success) {
-        // UI状態を更新
-        setExistingTeams(prev => prev.filter(t => t.team_id !== team.team_id));
+        // UI状態を更新（tournament_team_idで特定のエントリーのみ削除）
+        setExistingTeams(prev => prev.filter(t => t.tournament_team_id !== team.tournament_team_id));
         alert(`チーム「${teamName}」を正常に削除しました。`);
       } else {
         throw new Error(result.error || 'チーム削除に失敗しました');

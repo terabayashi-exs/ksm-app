@@ -482,12 +482,12 @@ async function getParticipatingTeamsForBlock(
       sql: `
         SELECT DISTINCT
           tt.team_id,
-          t.team_name,
-          t.team_omission
+          COALESCE(tt.team_name, t.team_name) as team_name,
+          COALESCE(tt.team_omission, t.team_omission) as team_omission
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ? AND tt.assigned_block = ?
-        ORDER BY t.team_name
+        ORDER BY COALESCE(tt.team_name, t.team_name)
       `,
       args: [tournamentId, blockName]
     });
@@ -549,22 +549,24 @@ export async function calculateBlockStandings(
         sql: `
           SELECT DISTINCT
             ml.team1_id as team_id,
-            COALESCE(t.team_name, ml.team1_display_name) as team_name,
-            t.team_omission
+            COALESCE(tt.team_name, t.team_name, ml.team1_display_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
           FROM t_matches_live ml
+          LEFT JOIN t_tournament_teams tt ON ml.team1_id = tt.team_id AND tt.tournament_id = ?
           LEFT JOIN m_teams t ON ml.team1_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team1_id IS NOT NULL
           UNION
           SELECT DISTINCT
             ml.team2_id as team_id,
-            COALESCE(t.team_name, ml.team2_display_name) as team_name,
-            t.team_omission
+            COALESCE(tt.team_name, t.team_name, ml.team2_display_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
           FROM t_matches_live ml
+          LEFT JOIN t_tournament_teams tt ON ml.team2_id = tt.team_id AND tt.tournament_id = ?
           LEFT JOIN m_teams t ON ml.team2_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team2_id IS NOT NULL
           ORDER BY team_name
         `,
-        args: [matchBlockId, matchBlockId]
+        args: [tournamentId, matchBlockId, tournamentId, matchBlockId]
       });
     } else {
       // 予選フェーズの場合は従来通り assigned_block を使用
@@ -573,13 +575,13 @@ export async function calculateBlockStandings(
         sql: `
           SELECT DISTINCT
             tt.team_id,
-            t.team_name,
-            t.team_omission
+            COALESCE(tt.team_name, t.team_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
           FROM t_tournament_teams tt
           JOIN m_teams t ON tt.team_id = t.team_id
           WHERE tt.tournament_id = ?
           AND tt.assigned_block = ?
-          ORDER BY t.team_name
+          ORDER BY COALESCE(tt.team_name, t.team_name)
         `,
         args: [tournamentId, blockName]
       });
@@ -1264,24 +1266,26 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number): 
       sql: `
         SELECT DISTINCT team_id, team_name, team_omission
         FROM (
-          SELECT 
+          SELECT
             ml.team1_id as team_id,
-            COALESCE(t1.team_name, ml.team1_display_name) as team_name,
-            COALESCE(t1.team_omission, '') as team_omission
+            COALESCE(tt1.team_name, t1.team_name, ml.team1_display_name) as team_name,
+            COALESCE(tt1.team_omission, t1.team_omission, '') as team_omission
           FROM t_matches_live ml
           LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_tournament_teams tt1 ON ml.team1_id = tt1.team_id AND mb.tournament_id = tt1.tournament_id
           LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
           WHERE mb.tournament_id = ? AND mb.phase = 'final'
             AND ml.team1_id IS NOT NULL
-            
+
           UNION
-          
-          SELECT 
+
+          SELECT
             ml.team2_id as team_id,
-            COALESCE(t2.team_name, ml.team2_display_name) as team_name,
-            COALESCE(t2.team_omission, '') as team_omission
+            COALESCE(tt2.team_name, t2.team_name, ml.team2_display_name) as team_name,
+            COALESCE(tt2.team_omission, t2.team_omission, '') as team_omission
           FROM t_matches_live ml
           LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_tournament_teams tt2 ON ml.team2_id = tt2.team_id AND mb.tournament_id = tt2.tournament_id
           LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
           WHERE mb.tournament_id = ? AND mb.phase = 'final'
             AND ml.team2_id IS NOT NULL
@@ -2028,33 +2032,38 @@ export async function calculateMultiSportBlockStandings(
         sql: `
           SELECT DISTINCT
             ml.team1_id as team_id,
-            COALESCE(t.team_name, ml.team1_display_name) as team_name,
-            t.team_omission
+            COALESCE(tt.team_name, t.team_name, ml.team1_display_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
           FROM t_matches_live ml
+          LEFT JOIN t_tournament_teams tt ON ml.team1_id = tt.team_id AND tt.tournament_id = ?
           LEFT JOIN m_teams t ON ml.team1_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team1_id IS NOT NULL
           UNION
           SELECT DISTINCT
             ml.team2_id as team_id,
-            COALESCE(t.team_name, ml.team2_display_name) as team_name,
-            t.team_omission
+            COALESCE(tt.team_name, t.team_name, ml.team2_display_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
           FROM t_matches_live ml
+          LEFT JOIN t_tournament_teams tt ON ml.team2_id = tt.team_id AND tt.tournament_id = ?
           LEFT JOIN m_teams t ON ml.team2_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team2_id IS NOT NULL
           ORDER BY team_name
         `,
-        args: [matchBlockId, matchBlockId]
+        args: [tournamentId, matchBlockId, tournamentId, matchBlockId]
       });
     } else {
       // 予選フェーズの場合は従来通り assigned_block を使用
       console.log(`[MULTI_SPORT_STANDINGS] 予選フェーズのブロックのため、assigned_block から取得`);
       teamsResult = await db.execute({
         sql: `
-          SELECT DISTINCT tt.team_id, t.team_name, t.team_omission
+          SELECT DISTINCT
+            tt.team_id,
+            COALESCE(tt.team_name, t.team_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
           FROM t_tournament_teams tt
           INNER JOIN m_teams t ON tt.team_id = t.team_id
           WHERE tt.tournament_id = ? AND tt.assigned_block = ?
-          ORDER BY t.team_name
+          ORDER BY COALESCE(tt.team_name, t.team_name)
         `,
         args: [tournamentId, blockName]
       });
@@ -2543,10 +2552,17 @@ async function calculateDetailedBlockTournamentStandings(matchBlockId: number, t
     const teamRankings: TeamStanding[] = [];
 
     for (const teamId of allTeams) {
-      // チーム名を取得
+      // チーム名を取得（大会固有のチーム名を優先）
       const teamResult = await db.execute({
-        sql: `SELECT team_name, team_omission FROM m_teams WHERE team_id = ?`,
-        args: [teamId]
+        sql: `
+          SELECT
+            COALESCE(tt.team_name, t.team_name) as team_name,
+            COALESCE(tt.team_omission, t.team_omission) as team_omission
+          FROM t_tournament_teams tt
+          INNER JOIN m_teams t ON tt.team_id = t.team_id
+          WHERE tt.tournament_id = ? AND tt.team_id = ?
+        `,
+        args: [tournamentId, teamId]
       });
 
       const teamName = teamResult.rows[0]?.team_name as string || teamId;

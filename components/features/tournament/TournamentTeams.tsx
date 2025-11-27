@@ -37,8 +37,8 @@ interface TournamentTeamsProps {
 
 export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) {
   const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(null);
-  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
-  const [teamPlayers, setTeamPlayers] = useState<Record<string, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
+  const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
+  const [teamPlayers, setTeamPlayers] = useState<Record<number, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,28 +76,28 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
   }, [tournamentId]);
 
   // チーム展開の切り替え
-  const toggleTeamExpansion = async (teamId: string) => {
+  const toggleTeamExpansion = async (tournamentTeamId: number) => {
     const newExpanded = new Set(expandedTeams);
-    if (newExpanded.has(teamId)) {
-      newExpanded.delete(teamId);
+    if (newExpanded.has(tournamentTeamId)) {
+      newExpanded.delete(tournamentTeamId);
     } else {
-      newExpanded.add(teamId);
+      newExpanded.add(tournamentTeamId);
 
       // 選手データを取得（まだ取得していない場合）
-      if (!teamPlayers[teamId]) {
+      if (!teamPlayers[tournamentTeamId]) {
         try {
-          const response = await fetch(`/api/tournaments/${tournamentId}/teams/${teamId}/players`);
+          const response = await fetch(`/api/tournaments/${tournamentId}/teams/${tournamentTeamId}/players`);
           if (response.ok) {
             const result = await response.json();
             if (result.success) {
               setTeamPlayers(prev => ({
                 ...prev,
-                [teamId]: result.data
+                [tournamentTeamId]: result.data
               }));
             }
           }
         } catch (error) {
-          console.error(`選手データの取得に失敗: ${teamId}`, error);
+          console.error(`選手データの取得に失敗: ${tournamentTeamId}`, error);
         }
       }
     }
@@ -174,14 +174,14 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
           <div className="space-y-4">
             {teamsData.teams.map((team) => {
                 const teamStatus = getTeamStatus(team);
-                const isExpanded = expandedTeams.has(team.team_id);
+                const isExpanded = expandedTeams.has(team.tournament_team_id);
 
                 return (
-                  <div key={team.team_id} className="border rounded-lg">
+                  <div key={team.tournament_team_id} className="border rounded-lg">
                     {/* チーム基本情報 */}
-                    <div 
+                    <div
                       className="p-4 cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => toggleTeamExpansion(team.team_id)}
+                      onClick={() => toggleTeamExpansion(team.tournament_team_id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -226,7 +226,7 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                           )}
 
                           {/* 選手一覧 */}
-                          {teamPlayers[team.team_id] && teamPlayers[team.team_id].length > 0 ? (
+                          {teamPlayers[team.tournament_team_id] && teamPlayers[team.tournament_team_id].length > 0 ? (
                             <div>
                               <h4 className="font-medium text-muted-foreground mb-3 flex items-center">
                                 <Users className="h-4 w-4 mr-1" />
@@ -242,8 +242,8 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {teamPlayers[team.team_id]?.map((player, index) => (
-                                      <tr key={`${team.team_id}-${index}`} className="border-b">
+                                    {teamPlayers[team.tournament_team_id]?.map((player, index) => (
+                                      <tr key={`${team.tournament_team_id}-${index}`} className="border-b">
                                         <td className="py-2 px-3">
                                           {player.jersey_number ? (
                                             <span className="flex items-center">

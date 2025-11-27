@@ -31,6 +31,7 @@ interface MatchData {
   team1_omission?: string;
   team2_omission?: string;
   court_number: number;
+  court_name?: string | null;
   scheduled_time: string;
   period_count: number;
   current_period: number;
@@ -590,7 +591,7 @@ export default function RefereeMatchPage() {
               <div className="flex items-center justify-center space-x-6 text-sm text-muted-foreground">
                 <div className="flex items-center">
                   <MapPin className="w-4 h-4 mr-1" />
-                  コート{match.court_number}
+                  {match.court_name ? match.court_name : `コート${match.court_number}`}
                 </div>
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-1" />

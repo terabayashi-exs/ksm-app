@@ -37,6 +37,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
           COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
           ml.court_number,
+          tc.court_name,
           ml.start_time,
           ml.match_status,
           ml.updated_at,
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
         LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         WHERE mb.tournament_id = ?
           AND (
             ml.match_status = 'ongoing'
@@ -163,6 +165,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         phase: String(row.phase || 'preliminary'),
         block_name: String(row.block_name || ''),
         court_number: row.court_number ? Number(row.court_number) : null,
+        court_name: row.court_name ? String(row.court_name) : null,
         start_time: row.start_time ? String(row.start_time) : null,
         end_time: null, // 終了時刻は別途取得が必要な場合は追加
         updated_at: String(row.updated_at)
