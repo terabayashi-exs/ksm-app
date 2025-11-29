@@ -574,7 +574,7 @@ export default function AdminMatchesPage() {
   // 中止種別のラベル取得
   const getCancellationTypeLabel = (type: string): string => {
     switch (type) {
-      case 'no_show_both': return '両チーム不参加（両者0勝点）';
+      case 'no_show_both': return '両チーム不参加（0-0引き分け、各1勝点）';
       case 'no_show_team1': return `${selectedMatch?.team1_name || 'チーム1'}不参加（${selectedMatch?.team2_name || 'チーム2'}不戦勝）`;
       case 'no_show_team2': return `${selectedMatch?.team2_name || 'チーム2'}不参加（${selectedMatch?.team1_name || 'チーム1'}不戦勝）`;
       case 'no_count': return '中止（試合数カウントしない）';
@@ -1411,8 +1411,13 @@ export default function AdminMatchesPage() {
                   「{selectedMatch?.team1_name} vs {selectedMatch?.team2_name}」を中止します。
                 </p>
                 <Label className="text-base font-medium">中止理由を選択してください</Label>
+                <p className="text-xs text-muted-foreground mt-2 bg-blue-50 p-2 rounded">
+                  💡 <strong>選択ガイド：</strong><br/>
+                  • <strong>中止</strong>: 大会全体の中止・辞退・欠席の場合（試合数にカウントしない）<br/>
+                  • <strong>その他3つ</strong>: 遅刻・1試合のみの特別処理（試合数にカウントする）
+                </p>
               </div>
-              
+
               <div className="space-y-3">
                 <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-background">
                   <input
@@ -1423,8 +1428,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">両チーム不参加</div>
-                    <div className="text-sm text-muted-foreground">両チーム0勝点、試合数にカウント</div>
+                    <div className="font-medium">両チーム不参加（遅刻・その試合のみ欠場）</div>
+                    <div className="text-sm text-muted-foreground">0-0引き分け扱い、各1勝点、試合数にカウント</div>
                   </div>
                 </label>
 
@@ -1437,8 +1442,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">{selectedMatch?.team1_name}不参加</div>
-                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）</div>
+                    <div className="font-medium">{selectedMatch?.team1_name}不参加（遅刻・その試合のみ欠場）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）、試合数にカウント</div>
                   </div>
                 </label>
 
@@ -1451,8 +1456,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">{selectedMatch?.team2_name}不参加</div>
-                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）</div>
+                    <div className="font-medium">{selectedMatch?.team2_name}不参加（遅刻・その試合のみ欠場）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）、試合数にカウント</div>
                   </div>
                 </label>
 
@@ -1465,8 +1470,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">中止</div>
-                    <div className="text-sm text-muted-foreground">試合数にカウントしない</div>
+                    <div className="font-medium">中止（大会全体を辞退・欠席）</div>
+                    <div className="text-sm text-muted-foreground">試合数にカウントしない、順位に影響なし</div>
                   </div>
                 </label>
               </div>

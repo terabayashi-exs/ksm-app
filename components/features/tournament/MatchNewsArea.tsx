@@ -119,6 +119,11 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
     // 試合終了済みで、スコアが入力されている場合
     if (match.match_status === 'completed' && (match.score_display || (match.team1_goals !== null && match.team2_goals !== null))) {
       if (match.is_walkover) {
+        // 不戦引き分けの場合（両チーム不参加）
+        if (match.is_draw) {
+          return `不戦引分 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
+        }
+        // 通常の不戦勝（片方チーム不参加）
         return `不戦勝 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
       }
       
@@ -143,6 +148,11 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
     }
 
     if (match.is_walkover) {
+      // 不戦引き分けの場合（両チーム不参加）
+      if (match.is_draw) {
+        return `不戦引分 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
+      }
+      // 通常の不戦勝（片方チーム不参加）
       return `不戦勝 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
     }
 

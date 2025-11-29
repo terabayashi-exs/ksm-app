@@ -15,6 +15,8 @@ interface MatchData {
   match_code: string;
   team1_id: string | null;
   team2_id: string | null;
+  team1_tournament_team_id?: number | null;
+  team2_tournament_team_id?: number | null;
   team1_display_name: string;
   team2_display_name: string;
   court_number: number | null;
@@ -30,6 +32,7 @@ interface MatchData {
   team1_pk_goals?: number | null; // PK戦スコア（追加）
   team2_pk_goals?: number | null; // PK戦スコア（追加）
   winner_team_id: string | null;
+  winner_tournament_team_id?: number | null;
   is_draw: boolean;
   is_walkover: boolean;
   match_status: string;
@@ -178,10 +181,25 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
 
     if (match.is_walkover) {
       const walkoverScore = `${match.team1_goals ?? 0} - ${match.team2_goals ?? 0}`;
+      // 不戦引き分けの場合（両チーム不参加）
+      if (match.is_draw) {
+        return {
+          status: 'walkover_draw',
+          display: <span className="text-blue-600 text-sm font-medium">不戦引分 {walkoverScore}</span>,
+          icon: <AlertTriangle className="h-4 w-4 text-blue-500" />
+        };
+      }
+      // 通常の不戦勝（片方チーム不参加）
+      // 勝者を判定してwinnerプロパティを追加
+      const winnerIsTeam1 = match.winner_tournament_team_id
+        ? match.winner_tournament_team_id === match.team1_tournament_team_id
+        : match.winner_team_id === match.team1_id;
+
       return {
         status: 'walkover',
         display: <span className="text-orange-600 text-sm font-medium">不戦勝 {walkoverScore}</span>,
-        icon: <AlertTriangle className="h-4 w-4 text-orange-500" />
+        icon: <AlertTriangle className="h-4 w-4 text-orange-500" />,
+        winner: winnerIsTeam1 ? 'team1' : 'team2'
       };
     }
 
@@ -210,7 +228,10 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     }
 
     // 勝敗がついている場合
-    const winnerIsTeam1 = match.winner_team_id === match.team1_id;
+    // tournament_team_idが利用可能な場合はそちらを優先、なければteam_idで比較
+    const winnerIsTeam1 = match.winner_tournament_team_id
+      ? match.winner_tournament_team_id === match.team1_tournament_team_id
+      : match.winner_team_id === match.team1_id;
     return {
       status: 'completed',
       display: (

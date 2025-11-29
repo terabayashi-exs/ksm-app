@@ -76,10 +76,11 @@ export interface MatchResult {
 }
 
 export interface TeamInfo {
+  tournament_team_id: number; // 一意のID（PRIMARY KEY）
   team_id: string;
   team_name: string;
   team_omission?: string;
-  display_name: string; // 略称優先の表示名
+  display_name: string; // 略称優先の表示名（画面表示用）
 }
 
 export interface BlockResults {
@@ -96,8 +97,8 @@ export interface BlockResults {
 }
 
 export interface MatchMatrix {
-  [teamDisplayName: string]: {
-    [opponentDisplayName: string]: {
+  [tournamentTeamId: number]: {
+    [opponentTournamentTeamId: number]: {
       result: 'win' | 'loss' | 'draw' | null;
       score: string; // 多競技対応：スコア表示形式
       match_code: string;
@@ -201,6 +202,7 @@ async function getBlockResults(
     const teamsResult = await db.execute({
       sql: `
         SELECT DISTINCT
+          tt.tournament_team_id,
           COALESCE(ml1.team1_id, ml2.team2_id) as team_id,
           COALESCE(ml1.team1_display_name, ml2.team2_display_name) as display_name,
           tt.team_name,
@@ -218,6 +220,7 @@ async function getBlockResults(
     });
 
     let teams: TeamInfo[] = (teamsResult.rows || []).map(row => ({
+      tournament_team_id: row.tournament_team_id as number,
       team_id: row.team_id as string,
       team_name: row.team_name as string,
       team_omission: row.team_omission as string || undefined,
@@ -235,6 +238,7 @@ async function getBlockResults(
               COALESCE(mt.team1_display_name, ml.team1_display_name) as template_display_name,
               ml.team1_id as team_id,
               ml.team1_display_name as team_display_name,
+              COALESCE(tt_by_name.tournament_team_id, tt_by_block.tournament_team_id) as tournament_team_id,
               COALESCE(tt_by_name.team_name, tt_by_block.team_name, t.team_name) as team_name,
               COALESCE(tt_by_name.team_omission, tt_by_block.team_omission, t.team_omission) as team_omission
             FROM t_matches_live ml
@@ -250,6 +254,7 @@ async function getBlockResults(
               COALESCE(mt.team2_display_name, ml.team2_display_name) as template_display_name,
               ml.team2_id as team_id,
               ml.team2_display_name as team_display_name,
+              COALESCE(tt_by_name.tournament_team_id, tt_by_block.tournament_team_id) as tournament_team_id,
               COALESCE(tt_by_name.team_name, tt_by_block.team_name, t.team_name) as team_name,
               COALESCE(tt_by_name.team_omission, tt_by_block.team_omission, t.team_omission) as team_omission
             FROM t_matches_live ml
@@ -263,6 +268,7 @@ async function getBlockResults(
           )
           SELECT
             template_display_name,
+            MAX(tournament_team_id) as tournament_team_id,
             MAX(team_id) as team_id,
             MAX(team_name) as team_name,
             MAX(team_omission) as team_omission,
@@ -276,12 +282,13 @@ async function getBlockResults(
 
       teams = (placeholderTeamsResult.rows || []).map((row, index) => {
         const teamData = {
+          tournament_team_id: row.tournament_team_id as number || -(matchBlockId * 1000 + index),  // プレースホルダーの場合は負の値
           team_id: row.team_id as string || `placeholder_${matchBlockId}_${index}`,
           team_name: row.team_name as string || row.template_display_name as string,
           team_omission: row.team_omission as string || undefined,
           display_name: (row.team_display_name as string) || (row.template_display_name as string)  // 実際の試合のdisplay_nameを優先
         };
-        console.log(`[PLACEHOLDER_TEAM] ${teamData.display_name} (team_display: ${row.team_display_name}, template: ${row.template_display_name}, omission: ${row.team_omission}, name: ${row.team_name})`);
+        console.log(`[PLACEHOLDER_TEAM] ${teamData.display_name} (tournament_team_id: ${teamData.tournament_team_id}, team_display: ${row.team_display_name}, template: ${row.template_display_name}, omission: ${row.team_omission}, name: ${row.team_name})`);
         return teamData;
       });
     }
@@ -440,10 +447,10 @@ function createMatchMatrix(
 
   // 初期化：全チーム同士の組み合わせをnullで初期化
   teams.forEach(team => {
-    matrix[team.display_name] = {};
+    matrix[team.tournament_team_id] = {};
     teams.forEach(opponent => {
-      if (team.display_name !== opponent.display_name) {
-        matrix[team.display_name][opponent.display_name] = {
+      if (team.tournament_team_id !== opponent.tournament_team_id) {
+        matrix[team.tournament_team_id][opponent.tournament_team_id] = {
           result: null,
           score: '-',
           match_code: ''
@@ -452,13 +459,24 @@ function createMatchMatrix(
     });
   });
 
+  // display_name → tournament_team_id のマッピングを作成
+  const displayNameToTeamId = new Map<string, number>();
+  teams.forEach(team => {
+    displayNameToTeamId.set(team.display_name, team.tournament_team_id);
+  });
+
   // 試合結果を反映
   matches.forEach(match => {
     const team1Name = match.team1_display_name;
     const team2Name = match.team2_display_name;
 
-    // チーム名が存在するかチェック
-    if (!matrix[team1Name] || !matrix[team2Name]) {
+    // display_nameからtournament_team_idを取得
+    const team1Id = displayNameToTeamId.get(team1Name);
+    const team2Id = displayNameToTeamId.get(team2Name);
+
+    // チームIDが存在するかチェック
+    if (team1Id === undefined || team2Id === undefined || !matrix[team1Id] || !matrix[team2Id]) {
+      console.log(`[MATRIX] Team not found: team1="${team1Name}"(${team1Id}), team2="${team2Name}"(${team2Id})`);
       return;
     }
 
@@ -474,13 +492,13 @@ function createMatchMatrix(
         cancelLabel = '中止\n（不戦勝）';
       }
 
-      matrix[team1Name][team2Name] = {
+      matrix[team1Id][team2Id] = {
         result: null,
         score: cancelLabel,
         match_code: match.match_code
       };
 
-      matrix[team2Name][team1Name] = {
+      matrix[team2Id][team1Id] = {
         result: null,
         score: cancelLabel,
         match_code: match.match_code
@@ -513,13 +531,13 @@ function createMatchMatrix(
           displayText = match.match_code; // 状態不明の場合は試合コード
       }
 
-      matrix[team1Name][team2Name] = {
+      matrix[team1Id][team2Id] = {
         result: null,
         score: displayText,
         match_code: match.match_code
       };
 
-      matrix[team2Name][team1Name] = {
+      matrix[team2Id][team1Id] = {
         result: null,
         score: displayText,
         match_code: match.match_code
@@ -530,8 +548,32 @@ function createMatchMatrix(
     const team1Goals = match.team1_goals ?? 0;
     const team2Goals = match.team2_goals ?? 0;
 
-    if (match.is_walkover) {
-      // 不戦勝の場合
+    // 不戦引き分けの特別処理（両チーム不参加の場合）
+    if (match.is_walkover && match.is_draw) {
+      // 両チーム不参加の場合は0-0引き分け扱い
+      console.log(`[MATRIX] Processing walkover draw (both teams absent): ${match.match_code}`);
+
+      if (matrix[team1Id] && matrix[team2Id] && matrix[team1Id][team2Id] && matrix[team2Id][team1Id]) {
+        const team1GoalsDisplay = isNaN(team1Goals) ? 0 : Math.floor(team1Goals);
+        const team2GoalsDisplay = isNaN(team2Goals) ? 0 : Math.floor(team2Goals);
+
+        const team1ScoreDisplay = `不戦引分\n${team1GoalsDisplay}-${team2GoalsDisplay}`;
+        const team2ScoreDisplay = `不戦引分\n${team2GoalsDisplay}-${team1GoalsDisplay}`;
+
+        matrix[team1Id][team2Id] = {
+          result: 'draw',
+          score: team1ScoreDisplay,
+          match_code: match.match_code
+        };
+        matrix[team2Id][team1Id] = {
+          result: 'draw',
+          score: team2ScoreDisplay,
+          match_code: match.match_code
+        };
+        console.log(`[MATRIX] Set walkover draw for ${team1Name}(${team1Id}) vs ${team2Name}(${team2Id})`);
+      }
+    } else if (match.is_walkover) {
+      // 不戦勝の場合（片方チーム不参加）
       console.log(`[MATRIX] Processing walkover: ${match.match_code}, winner=${match.winner_team_id}`);
       const winnerId = match.winner_team_id;
       if (!winnerId) {
@@ -539,16 +581,18 @@ function createMatchMatrix(
         return;
       }
 
-      // winner_team_idからチーム名を特定
+      // winner_team_idからtournament_team_idを特定
+      const winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
+      const loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
       const winnerName = winnerId === match.team1_id ? team1Name : team2Name;
       const loserName = winnerId === match.team1_id ? team2Name : team1Name;
-      console.log(`[MATRIX] Walkover result: winner=${winnerName}, loser=${loserName}`);
+      console.log(`[MATRIX] Walkover result: winner=${winnerName}(${winnerTournamentId}), loser=${loserName}(${loserTournamentId})`);
 
       // スコアを取得
       const team1Goals = match.team1_goals ?? 0;
       const team2Goals = match.team2_goals ?? 0;
 
-      if (matrix[winnerName] && matrix[loserName]) {
+      if (matrix[winnerTournamentId] && matrix[loserTournamentId]) {
         // 勝者側のスコア表示を決定
         const winnerScore = winnerId === match.team1_id
           ? `不戦勝\n${team1Goals}-${team2Goals}`
@@ -559,14 +603,14 @@ function createMatchMatrix(
           ? `不戦敗\n${team2Goals}-${team1Goals}`
           : `不戦敗\n${team1Goals}-${team2Goals}`;
 
-        matrix[winnerName][loserName] = {
+        matrix[winnerTournamentId][loserTournamentId] = {
           result: 'win',
           score: winnerScore,
           match_code: match.match_code
         };
-        console.log(`[MATRIX] Set walkover win for ${winnerName} vs ${loserName}`);
+        console.log(`[MATRIX] Set walkover win for ${winnerName}(${winnerTournamentId}) vs ${loserName}(${loserTournamentId})`);
 
-        matrix[loserName][winnerName] = {
+        matrix[loserTournamentId][winnerTournamentId] = {
           result: 'loss',
           score: loserScore,
           match_code: match.match_code
@@ -574,7 +618,7 @@ function createMatchMatrix(
       }
     } else if (match.is_draw) {
       // 引き分けの場合（多競技対応）
-      if (matrix[team1Name] && matrix[team2Name] && matrix[team1Name][team2Name] && matrix[team2Name][team1Name]) {
+      if (matrix[team1Id] && matrix[team2Id] && matrix[team1Id][team2Id] && matrix[team2Id][team1Id]) {
         const team1GoalsDisplay = isNaN(team1Goals) ? 0 : Math.floor(team1Goals);
         const team2GoalsDisplay = isNaN(team2Goals) ? 0 : Math.floor(team2Goals);
 
@@ -590,14 +634,14 @@ function createMatchMatrix(
           team2ScoreDisplay = `△\n${team2GoalsDisplay}-${team1GoalsDisplay}\n(PK ${team2PkScore})`;
         }
 
-        matrix[team1Name][team2Name] = {
+        matrix[team1Id][team2Id] = {
           result: 'draw',
           score: team1ScoreDisplay,
           match_code: match.match_code,
           soccer_data: match.soccer_data
         };
 
-        matrix[team2Name][team1Name] = {
+        matrix[team2Id][team1Id] = {
           result: 'draw',
           score: team2ScoreDisplay,
           match_code: match.match_code,
@@ -609,15 +653,17 @@ function createMatchMatrix(
       const winnerId = match.winner_team_id;
       if (!winnerId) return;
 
-      // winner_team_idからチーム名を特定
+      // winner_team_idからtournament_team_idを特定
+      const winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
+      const loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
       const winnerName = winnerId === match.team1_id ? team1Name : team2Name;
       const loserName = winnerId === match.team1_id ? team2Name : team1Name;
       const winnerGoals = winnerId === match.team1_id ? team1Goals : team2Goals;
       const loserGoals = winnerId === match.team1_id ? team2Goals : team1Goals;
 
-      console.log(`[MATRIX_WIN] ${match.match_code}: winnerName="${winnerName}", loserName="${loserName}", matrix[winnerName]=${!!matrix[winnerName]}, matrix[loserName]=${!!matrix[loserName]}`);
+      console.log(`[MATRIX_WIN] ${match.match_code}: winnerName="${winnerName}"(${winnerTournamentId}), loserName="${loserName}"(${loserTournamentId}), matrix[${winnerTournamentId}]=${!!matrix[winnerTournamentId]}, matrix[${loserTournamentId}]=${!!matrix[loserTournamentId]}`);
 
-      if (matrix[winnerName] && matrix[loserName] && matrix[winnerName][loserName] && matrix[loserName][winnerName]) {
+      if (matrix[winnerTournamentId] && matrix[loserTournamentId] && matrix[winnerTournamentId][loserTournamentId] && matrix[loserTournamentId][winnerTournamentId]) {
         // 勝者側の表示
         const winnerGoalsDisplay = isNaN(winnerGoals) ? 0 : Math.floor(winnerGoals);
         const loserGoalsDisplay = isNaN(loserGoals) ? 0 : Math.floor(loserGoals);
@@ -638,14 +684,14 @@ function createMatchMatrix(
           loserScoreDisplay = `×\n${loserGoalsDisplay}-${winnerGoalsDisplay}\n(PK ${pkScoreLoser})`;
         }
 
-        matrix[winnerName][loserName] = {
+        matrix[winnerTournamentId][loserTournamentId] = {
           result: 'win',
           score: winnerScoreDisplay,
           match_code: match.match_code,
           soccer_data: winnerId === match.team1_id ? match.soccer_data : undefined
         };
 
-        matrix[loserName][winnerName] = {
+        matrix[loserTournamentId][winnerTournamentId] = {
           result: 'loss',
           score: loserScoreDisplay,
           match_code: match.match_code,

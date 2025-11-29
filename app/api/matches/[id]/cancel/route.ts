@@ -193,8 +193,8 @@ function calculateCancelResult(
       return {
         team1_scores: '0',      // TEXT型、カンマ区切り対応
         team2_scores: '0',
-        winner_team_id: null,   // 両者敗戦
-        is_draw: false
+        winner_team_id: null,   // 勝者なし
+        is_draw: true           // 0-0引き分け扱い（FIFA/JFA規定に準拠）
       };
     case 'no_show_team1':
       return {
