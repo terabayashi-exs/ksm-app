@@ -32,6 +32,7 @@ interface MultiSportTeamStanding extends TeamStanding {
 }
 
 interface TeamStanding {
+  tournament_team_id: number; // 一意のID（PRIMARY KEY） - 同一team_idの複数参加を区別
   team_id: string;
   team_name: string;
   team_omission?: string;
@@ -477,7 +478,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                 <tbody>
                   {block.teams.map((team, teamIndex) => (
                     <tr
-                      key={`${block.block_name}-${team.team_id}-${teamIndex}`} 
+                      key={`${block.block_name}-${team.tournament_team_id || team.team_id}-${teamIndex}`} 
                       className={`border-b transition-colors ${
                         team.position === 0 
                           ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 

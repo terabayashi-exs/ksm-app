@@ -231,13 +231,33 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       });
     }
 
+    // winner_tournament_team_idを取得
+    let winnerTournamentTeamId: number | null = null;
+    if (updateData.winner_team_id) {
+      const winnerResult = await db.execute(`
+        SELECT team1_tournament_team_id, team2_tournament_team_id, team1_id, team2_id
+        FROM t_matches_live
+        WHERE match_id = ?
+      `, [matchId]);
+
+      if (winnerResult.rows.length > 0) {
+        const matchRow = winnerResult.rows[0];
+        if (matchRow.team1_id === updateData.winner_team_id) {
+          winnerTournamentTeamId = matchRow.team1_tournament_team_id as number | null;
+        } else if (matchRow.team2_id === updateData.winner_team_id) {
+          winnerTournamentTeamId = matchRow.team2_tournament_team_id as number | null;
+        }
+      }
+    }
+
     // データベース更新
     await db.execute(`
-      UPDATE t_matches_live 
-      SET 
+      UPDATE t_matches_live
+      SET
         team1_scores = ?,
         team2_scores = ?,
         winner_team_id = ?,
+        winner_tournament_team_id = ?,
         remarks = ?,
         updated_at = datetime('now', '+9 hours')
       WHERE match_id = ?
@@ -245,6 +265,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       JSON.stringify(team1Scores),
       JSON.stringify(team2Scores),
       updateData.winner_team_id || null,
+      winnerTournamentTeamId,
       finalRemarks,
       matchId
     ]);

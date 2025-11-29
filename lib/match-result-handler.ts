@@ -83,11 +83,12 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       sql: `
         INSERT INTO t_matches_final (
           match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_display_name, team2_display_name,
+          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_display_name, team2_display_name,
           court_number, start_time, team1_scores, team2_scores,
-          winner_team_id, is_draw, is_walkover, remarks,
+          winner_team_id, winner_tournament_team_id, is_draw, is_walkover, remarks,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `,
       args: [
         match.match_block_id,
@@ -96,6 +97,8 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         match.match_code,
         match.team1_id,
         match.team2_id,
+        match.team1_tournament_team_id,
+        match.team2_tournament_team_id,
         match.team1_display_name,
         match.team2_display_name,
         match.court_number,
@@ -103,6 +106,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         Math.floor(Number(match.team1_scores) || 0),
         Math.floor(Number(match.team2_scores) || 0),
         match.winner_team_id,
+        match.winner_tournament_team_id,
         match.is_draw,
         match.is_walkover,
         match.remarks
@@ -214,11 +218,12 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
         sql: `
           INSERT INTO t_matches_final (
             match_block_id, tournament_date, match_number, match_code,
-            team1_id, team2_id, team1_display_name, team2_display_name,
+            team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+            team1_display_name, team2_display_name,
             court_number, start_time, team1_scores, team2_scores,
-            winner_team_id, is_draw, is_walkover, remarks,
+            winner_team_id, winner_tournament_team_id, is_draw, is_walkover, remarks,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `,
         args: [
           match.match_block_id,
@@ -227,6 +232,8 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           match.match_code,
           match.team1_id,
           match.team2_id,
+          match.team1_tournament_team_id,
+          match.team2_tournament_team_id,
           match.team1_display_name,
           match.team2_display_name,
           match.court_number,
@@ -234,6 +241,7 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           Math.floor(Number(match.team1_scores) || 0),
           Math.floor(Number(match.team2_scores) || 0),
           match.winner_team_id,
+          match.winner_tournament_team_id,
           match.is_draw,
           match.is_walkover,
           match.remarks

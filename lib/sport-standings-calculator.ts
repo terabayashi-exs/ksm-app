@@ -73,6 +73,7 @@ export interface SoccerScoreData {
  * 多競技対応TeamStanding
  */
 export interface MultiSportTeamStanding {
+  tournament_team_id: number; // 一意のID（PRIMARY KEY） - 同一team_idの複数参加を区別
   team_id: string;
   team_name: string;
   team_omission?: string;

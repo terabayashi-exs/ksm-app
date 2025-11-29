@@ -493,11 +493,11 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                     ${(team.team_omission || team.team_name).substring(0, teamCount > 5 ? 8 : 12)}
                   </td>
                   ${block.teams.map(opponent => {
-                    if (team.display_name === opponent.display_name) {
+                    if (team.tournament_team_id === opponent.tournament_team_id) {
                       return `<td style="border: 1px solid #D1D5DB; padding: 10px; background: #9CA3AF; color: #FFFFFF; text-align: center; font-weight: bold; font-size: 15px; width: ${cellSizes.matchResult};">-</td>`;
                     }
 
-                    const matchData = block.match_matrix[team.display_name]?.[opponent.display_name];
+                    const matchData = block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id];
                     const result = matchData?.result || null;
                     const score = matchData?.score || '-';
                     const backgroundColor = getResultBackgroundColor();
@@ -830,19 +830,19 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                               key={`${block.block_name}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
                               className="border border-border p-1 md:p-2 text-center bg-card"
                             >
-                              {team.display_name === opponent.display_name ? (
+                              {team.tournament_team_id === opponent.tournament_team_id ? (
                                 <div className="w-full h-8 md:h-10 bg-muted flex items-center justify-center">
                                   <span className="text-muted-foreground text-sm md:text-base">-</span>
                                 </div>
                               ) : (
                                 <div
                                   className={`w-full h-8 md:h-10 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
-                                    getResultColor(block.match_matrix[team.display_name]?.[opponent.display_name]?.result || null, block.match_matrix[team.display_name]?.[opponent.display_name]?.score)
+                                    getResultColor(block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.result || null, block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score)
                                   }`}
-                                  title={`vs ${opponent.team_name} (${block.match_matrix[team.display_name]?.[opponent.display_name]?.match_code || ''})`}
+                                  title={`vs ${opponent.team_name} (${block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.match_code || ''})`}
                                 >
                                   <div className="text-center leading-tight whitespace-pre-line text-xs md:text-sm">
-                                    {block.match_matrix[team.display_name]?.[opponent.display_name]?.score || '-'}
+                                    {block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score || '-'}
                                   </div>
                                 </div>
                               )}
