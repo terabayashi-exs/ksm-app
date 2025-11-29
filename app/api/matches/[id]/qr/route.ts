@@ -33,11 +33,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         ml.start_time,
         ml.tournament_date,
         mb.tournament_id,
-        -- 実際のチーム名と略称を取得
+        -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
         t1.team_name as team1_real_name,
         t2.team_name as team2_real_name,
-        mt1.team_omission as team1_omission,
-        mt2.team_omission as team2_omission,
+        COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+        COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
         -- 多競技対応：競技種別を取得
         st.sport_code,
         st.sport_name
@@ -45,8 +45,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
       LEFT JOIN m_sport_types st ON tour.sport_type_id = st.sport_type_id
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
+      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
       LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -203,15 +203,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
           mf.team1_scores as final_team1_scores,
           mf.team2_scores as final_team2_scores,
           mf.winner_team_id as final_winner_team_id,
-          -- 実際のチーム名と略称を取得
+          -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
           t1.team_name as team1_real_name,
           t2.team_name as team2_real_name,
-          mt1.team_omission as team1_omission,
-          mt2.team_omission as team2_omission
+          COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+          COALESCE(t2.team_omission, mt2.team_omission) as team2_omission
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
+        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -305,15 +305,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
           mf.team1_scores as final_team1_scores,
           mf.team2_scores as final_team2_scores,
           mf.winner_team_id as final_winner_team_id,
-          -- 実際のチーム名と略称を取得
+          -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
           t1.team_name as team1_real_name,
           t2.team_name as team2_real_name,
-          mt1.team_omission as team1_omission,
-          mt2.team_omission as team2_omission
+          COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+          COALESCE(t2.team_omission, mt2.team_omission) as team2_omission
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
+        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1

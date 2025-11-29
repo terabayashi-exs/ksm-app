@@ -431,7 +431,7 @@ async function TournamentDetailContent({ params }: PageProps) {
               </TabsTrigger>
               <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline sm:inline">日程・</span>結果
+                日程<span className="hidden xs:inline sm:inline">・結果</span>
               </TabsTrigger>
               <TabsTrigger value="preliminary" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />

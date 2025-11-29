@@ -357,12 +357,23 @@ export async function updateBlockRankingsOnMatchConfirm(matchBlockId: number, to
     const confirmedMatches = matchCountResult.rows[0]?.count as number || 0;
     console.log(`[STANDINGS] 確定済み試合数: ${confirmedMatches}件`);
     
+    // 不戦勝設定を取得
+    const { getTournamentWalkoverSettings } = await import('./tournament-rules');
+    const walkoverSettings = await getTournamentWalkoverSettings(tournamentId);
+    const walkoverWinnerGoals = walkoverSettings.winner_goals;
+    const walkoverLoserGoals = walkoverSettings.loser_goals;
+
     // 競技種別に応じて適切な順位計算関数を使用
     let blockStandings: TeamStanding[];
-    
+
     if (sportCode === 'soccer') {
       console.log(`[STANDINGS] サッカー競技: calculateMultiSportBlockStandingsを使用`);
-      const multiSportStandings = await calculateMultiSportBlockStandings(matchBlockId, tournamentId);
+      const multiSportStandings = await calculateMultiSportBlockStandings(
+        matchBlockId,
+        tournamentId,
+        walkoverWinnerGoals,
+        walkoverLoserGoals
+      );
       // 従来形式に変換
       blockStandings = multiSportStandings.map(convertMultiSportToLegacyStanding);
     } else {
@@ -591,7 +602,7 @@ export async function calculateBlockStandings(
       return [];
     }
 
-    // 確定試合結果を取得（t_matches_finalから、中止試合は除外）
+    // 確定試合結果を取得（t_matches_finalから、天候等による中止試合のみ除外、不戦勝・不戦敗は含める）
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -608,7 +619,7 @@ export async function calculateBlockStandings(
         LEFT JOIN t_matches_live ml ON mf.match_id = ml.match_id
         WHERE mf.match_block_id = ?
           AND (mf.team1_id IS NOT NULL AND mf.team2_id IS NOT NULL)
-          AND (ml.match_status IS NULL OR ml.match_status != 'cancelled')
+          AND (ml.match_status IS NULL OR ml.match_status != 'cancelled' OR mf.is_walkover = 1)
       `,
       args: [matchBlockId]
     });
@@ -709,41 +720,46 @@ export async function calculateBlockStandings(
       };
     });
 
-    // 順位を決定（正しい順序: 1.勝点 > 2.得失点差 > 3.総得点 > 4.直接対決 > 5.抽選）
+    // 順位を決定（正しい順序: 1.試合実施数 > 2.勝点 > 3.得失点差 > 4.総得点 > 5.直接対決 > 6.抽選）
     teamStandings.sort((a, b) => {
-      // 1. 勝点の多い順
+      // 1. 試合実施数の多い順（試合を実施したチームを優先）
+      if (a.matches_played !== b.matches_played) {
+        return b.matches_played - a.matches_played;
+      }
+
+      // 2. 勝点の多い順
       if (a.points !== b.points) {
         return b.points - a.points;
       }
-      
-      // 2. 得失点差の良い順
+
+      // 3. 得失点差の良い順
       if (a.goal_difference !== b.goal_difference) {
         return b.goal_difference - a.goal_difference;
       }
-      
-      // 3. 総得点の多い順
+
+      // 4. 総得点の多い順
       if (a.goals_for !== b.goals_for) {
         return b.goals_for - a.goals_for;
       }
-      
-      // 4. 直接対決の結果
+
+      // 5. 直接対決の結果
       const headToHead = calculateHeadToHead(a.team_id, b.team_id, matches);
-      
+
       // 直接対決の勝点を計算（PK選手権では延長戦により引き分けなし）
       let teamAHeadToHeadPoints = 0;
       let teamBHeadToHeadPoints = 0;
-      
+
       teamAHeadToHeadPoints += headToHead.teamAWins * winPoints;
       teamAHeadToHeadPoints += headToHead.draws * drawPoints;
-      
+
       teamBHeadToHeadPoints += headToHead.teamBWins * winPoints;
       teamBHeadToHeadPoints += headToHead.draws * drawPoints;
-      
+
       if (teamAHeadToHeadPoints !== teamBHeadToHeadPoints) {
         return teamBHeadToHeadPoints - teamAHeadToHeadPoints;
       }
-      
-      // 5. 抽選（チーム名の辞書順で代用）
+
+      // 6. 抽選（チーム名の辞書順で代用）
       return a.team_name.localeCompare(b.team_name, 'ja');
     });
 
@@ -919,10 +935,24 @@ export async function checkBlockCompletionAndPromote(
 
 /**
  * ブロックが未完了の場合、順位情報をクリアする
+ * ブロックが完了済みの場合は、順位情報を再計算する
  */
 export async function clearBlockRankingsIfIncomplete(matchBlockId: number): Promise<void> {
   try {
     console.log(`[STANDINGS] ブロック順位クリアチェック開始: Block ${matchBlockId}`);
+
+    // ブロック情報とtournament_idを取得
+    const blockInfoResult = await db.execute({
+      sql: `SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?`,
+      args: [matchBlockId]
+    });
+
+    if (!blockInfoResult.rows || blockInfoResult.rows.length === 0) {
+      console.error(`[STANDINGS] ブロック ${matchBlockId} が見つかりません`);
+      return;
+    }
+
+    const tournamentId = blockInfoResult.rows[0].tournament_id as number;
 
     // ブロックが完了しているかチェック
     const isCompleted = await checkIfBlockAllMatchesCompleted(matchBlockId);
@@ -940,7 +970,9 @@ export async function clearBlockRankingsIfIncomplete(matchBlockId: number): Prom
 
       console.log(`[STANDINGS] ブロック ${matchBlockId} の順位情報をクリアしました（未完了のため）`);
     } else {
-      console.log(`[STANDINGS] ブロック ${matchBlockId} は完了済みのため、順位情報を保持`);
+      // 完了済みの場合、順位情報を再計算
+      console.log(`[STANDINGS] ブロック ${matchBlockId} は完了済みのため、順位情報を再計算`);
+      await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
     }
   } catch (error) {
     console.error(`[STANDINGS] ブロック順位クリアエラー:`, error);
@@ -2199,9 +2231,15 @@ export async function calculateMultiSportBlockStandings(
           
           // まず基本的な順位付け（デフォルトロジック）
           const basicSorted = [...teamStandings].sort((a, b) => {
+            // 1. 試合実施数の多い順（試合を実施したチームを優先）
+            if (a.matches_played !== b.matches_played) return b.matches_played - a.matches_played;
+            // 2. 勝点の多い順
             if (a.points !== b.points) return b.points - a.points;
+            // 3. 得失点差の良い順
             if (a.score_difference !== b.score_difference) return b.score_difference - a.score_difference;
+            // 4. 総得点の多い順
             if (a.scores_for !== b.scores_for) return b.scores_for - a.scores_for;
+            // 5. チーム名の辞書順
             return a.team_name.localeCompare(b.team_name);
           });
 
@@ -2297,9 +2335,15 @@ export async function calculateMultiSportBlockStandings(
     // カスタムルールが適用されなかった場合はデフォルトロジック
     if (!tieBreakingApplied) {
       const sortedStandings = [...teamStandings].sort((a, b) => {
+        // 1. 試合実施数の多い順（試合を実施したチームを優先）
+        if (a.matches_played !== b.matches_played) return b.matches_played - a.matches_played;
+        // 2. 勝点の多い順
         if (a.points !== b.points) return b.points - a.points;
+        // 3. 得失点差の良い順
         if (a.score_difference !== b.score_difference) return b.score_difference - a.score_difference;
+        // 4. 総得点の多い順
         if (a.scores_for !== b.scores_for) return b.scores_for - a.scores_for;
+        // 5. チーム名の辞書順
         return a.team_name.localeCompare(b.team_name);
       });
 

@@ -227,7 +227,7 @@ export async function getMultiSportMatchResults(matchBlockId: number, tournament
       LEFT JOIN t_tournament_rules tr ON tour.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       WHERE mf.match_block_id = ?
         AND mb.tournament_id = ?
-        AND (ml.match_status IS NULL OR ml.match_status != 'cancelled')
+        AND (ml.match_status IS NULL OR ml.match_status != 'cancelled' OR mf.is_walkover = 1)
     `, [matchBlockId, tournamentId]);
 
     return result.rows;

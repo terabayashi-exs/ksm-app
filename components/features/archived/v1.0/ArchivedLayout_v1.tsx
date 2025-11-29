@@ -200,9 +200,10 @@ function ArchivedTournamentSchedule_v1({ matches, teams }: { matches: MatchData[
     }
 
     if (match.is_walkover) {
+      const walkoverScore = `${match.team1_goals ?? 0} - ${match.team2_goals ?? 0}`;
       return {
         status: 'walkover',
-        display: <span className="text-orange-600 text-sm font-medium">不戦勝</span>,
+        display: <span className="text-orange-600 text-sm font-medium">不戦勝 {walkoverScore}</span>,
         icon: <Target className="h-4 w-4 text-orange-500" />
       };
     }
@@ -499,19 +500,29 @@ function ArchivedTournamentResults_v1({ results, teams, standings }: { results: 
         // 不戦勝の場合
         const winnerId = match.winner_team_id;
         if (!winnerId) return;
-        
+
         const loserId = winnerId === team1Id ? team2Id : team1Id;
-        
+
         if (matrix[winnerId] && matrix[loserId]) {
+          // 勝者側のスコア表示を決定
+          const winnerScore = winnerId === team1Id
+            ? `不戦勝\n${team1Goals}-${team2Goals}`
+            : `不戦勝\n${team2Goals}-${team1Goals}`;
+
+          // 敗者側のスコア表示を決定
+          const loserScore = loserId === team1Id
+            ? `不戦敗\n${team1Goals}-${team2Goals}`
+            : `不戦敗\n${team2Goals}-${team1Goals}`;
+
           matrix[winnerId][loserId] = {
             result: 'win',
-            score: '不戦勝',
+            score: winnerScore,
             match_code: match.match_code
           };
-          
+
           matrix[loserId][winnerId] = {
             result: 'loss',
-            score: '不戦敗',
+            score: loserScore,
             match_code: match.match_code
           };
         }
@@ -683,9 +694,9 @@ function ArchivedTournamentResults_v1({ results, teams, standings }: { results: 
                             チーム
                           </th>
                           {/* 対戦結果の列ヘッダー（チーム略称を縦書き表示） */}
-                          {blockTeams.map((opponent) => (
-                            <th 
-                              key={opponent.team_id}
+                          {blockTeams.map((opponent, opponentIndex) => (
+                            <th
+                              key={`${blockName}-header-${opponent.team_id}-${opponentIndex}`}
                               className="border border-gray-300 p-1 md:p-2 bg-green-50 text-xs md:text-base font-medium text-gray-700 min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
                             >
                               <div 
@@ -750,11 +761,11 @@ function ArchivedTournamentResults_v1({ results, teams, standings }: { results: 
                         </tr>
                       </thead>
                       <tbody>
-                        {blockTeams.map((team) => {
+                        {blockTeams.map((team, teamIndex) => {
                           const teamStanding = getTeamStanding(team.team_id, blockName);
-                          
+
                           return (
-                            <tr key={team.team_id}>
+                            <tr key={`${blockName}-row-${team.team_id}-${teamIndex}`}>
                               {/* チーム名（略称優先） */}
                               <td className="border border-gray-300 p-2 md:p-3 bg-gray-50 font-medium text-sm md:text-base">
                                 <div 
@@ -770,11 +781,11 @@ function ArchivedTournamentResults_v1({ results, teams, standings }: { results: 
                                   </span>
                                 </div>
                               </td>
-                              
+
                               {/* 対戦結果 */}
-                              {blockTeams.map((opponent) => (
-                                <td 
-                                  key={opponent.team_id}
+                              {blockTeams.map((opponent, opponentIndex) => (
+                                <td
+                                  key={`${blockName}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
                                   className="border border-gray-300 p-1 md:p-2 text-center bg-white"
                                 >
                                   {team.team_id === opponent.team_id ? (
@@ -1145,9 +1156,9 @@ function ArchivedTournamentStandings_v1({ standings, matches }: { standings: Sta
                       </tr>
                     </thead>
                     <tbody>
-                      {rankings.map((team) => (
-                        <tr 
-                          key={team.team_id} 
+                      {rankings.map((team, teamIndex) => (
+                        <tr
+                          key={`${block.block_name}-${team.team_id}-${teamIndex}`} 
                           className={`border-b transition-colors ${team.position > 0 ? getPositionBgColor(team.position) : 'hover:bg-gray-50'}`}
                         >
                           <td className="py-2 md:py-3 px-2 md:px-3">
@@ -1378,12 +1389,12 @@ function ArchivedTournamentTeams_v1({ teams }: { teams: TeamData[] }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {teams.map((team) => {
+              {teams.map((team, teamIndex) => {
                 const teamStatus = getTeamStatus(team);
                 const isExpanded = expandedTeams.has(team.team_id);
 
                 return (
-                  <div key={team.team_id} className="border rounded-lg">
+                  <div key={`team-list-${team.team_id}-${teamIndex}`} className="border rounded-lg">
                     {/* チーム基本情報 */}
                     <div 
                       className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"

@@ -153,7 +153,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
           // 中止の種別に応じた表示
           let cancelLabel = '中止';
           if (match.cancellation_type === 'no_count') {
-            cancelLabel = '中止（天候等）';
+            cancelLabel = '中止';
           } else if (match.cancellation_type === 'no_show_both') {
             cancelLabel = '中止（両者不参加）';
           } else if (match.cancellation_type === 'no_show_team1') {
@@ -177,9 +177,10 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     }
 
     if (match.is_walkover) {
+      const walkoverScore = `${match.team1_goals ?? 0} - ${match.team2_goals ?? 0}`;
       return {
         status: 'walkover',
-        display: <span className="text-orange-600 text-sm font-medium">不戦勝</span>,
+        display: <span className="text-orange-600 text-sm font-medium">不戦勝 {walkoverScore}</span>,
         icon: <AlertTriangle className="h-4 w-4 text-orange-500" />
       };
     }
@@ -495,7 +496,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
                                       <div className="hidden md:inline">{result.icon}</div>
                                       <div className="text-xs md:text-sm">{result.display}</div>
                                     </div>
-                                    {match.remarks && (
+                                    {match.remarks && !match.is_walkover && (
                                       <div className="text-xs text-muted-foreground mt-1 hidden md:block text-right">
                                         {match.remarks}
                                       </div>

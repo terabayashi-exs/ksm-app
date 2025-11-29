@@ -78,7 +78,7 @@ export async function GET(
     // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
     const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
     const matchesResult = await db.execute(`
-      SELECT DISTINCT
+      SELECT
         ml.match_id,
         ml.match_block_id,
         ml.tournament_date,
@@ -105,9 +105,9 @@ export async function GET(
         mb.block_order,
         -- m_match_templatesからround_nameを取得
         mt.round_name,
-        -- 実際のチーム名を取得
-        t1.team_name as team1_real_name,
-        t2.team_name as team2_real_name,
+        -- 実際のチーム名を取得（ブロック指定で一意に取得）
+        (SELECT team_name FROM t_tournament_teams WHERE team_id = ml.team1_id AND tournament_id = mb.tournament_id AND assigned_block = mb.block_name LIMIT 1) as team1_real_name,
+        (SELECT team_name FROM t_tournament_teams WHERE team_id = ml.team2_id AND tournament_id = mb.tournament_id AND assigned_block = mb.block_name LIMIT 1) as team2_real_name,
         -- 試合状態テーブルから情報取得
         ms.match_status,
         ms.current_period as status_current_period,
@@ -125,8 +125,6 @@ export async function GET(
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
       LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id

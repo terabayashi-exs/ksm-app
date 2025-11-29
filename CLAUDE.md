@@ -58,9 +58,63 @@
 
 主要テーブル構成：
 - **マスタテーブル**: m_venues, m_teams, m_players, m_administrators, m_tournament_formats, m_match_templates, m_subscription_plans
-- **トランザクションテーブル**: t_tournaments, t_tournament_teams, t_match_blocks, t_matches_live, t_matches_final, t_administrator_subscriptions, t_subscription_usage, t_payment_history
+- **トランザクションテーブル**: t_tournaments, t_tournament_teams, t_match_blocks, t_matches_live, t_matches_final, t_administrator_subscriptions, t_subscription_usage, t_payment_history, t_tournament_match_overrides
 
 詳細な設計については`./docs/database/KSM.md`を参照してください。
+
+### 柔軟な試合進出条件システム（t_tournament_match_overrides）
+
+チーム辞退等により予定と異なる進出条件が必要になった場合、大会別に試合の進出元チームをオーバーライドできるシステムです。
+
+#### **データ構造**
+```sql
+CREATE TABLE t_tournament_match_overrides (
+  override_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournament_id INTEGER NOT NULL,
+  match_code TEXT NOT NULL,                    -- 'M1', 'T1'など
+  team1_source_override TEXT,                  -- 元の条件を上書き（例: 'A_3' → 'B_4'）
+  team2_source_override TEXT,
+  override_reason TEXT,                        -- 変更理由
+  overridden_by TEXT,                          -- 変更実施者
+  overridden_at TEXT DEFAULT (datetime('now', '+9 hours')),
+  created_at TEXT DEFAULT (datetime('now', '+9 hours')),
+  updated_at TEXT DEFAULT (datetime('now', '+9 hours')),
+  UNIQUE(tournament_id, match_code),
+  FOREIGN KEY (tournament_id) REFERENCES t_tournaments(tournament_id) ON DELETE CASCADE
+);
+```
+
+#### **使用パターン**
+```sql
+-- 例: Aブロック2チーム辞退により、M1試合（Aブロック3位 vs Bブロック4位）を調整
+-- 元々: A_3 vs B_4
+-- 変更後: B_4 vs C_4（Aブロック3位チームが存在しないため）
+
+INSERT INTO t_tournament_match_overrides
+  (tournament_id, match_code, team1_source_override, override_reason, overridden_by)
+VALUES
+  (9, 'M1', 'B_4', 'Aブロック2チーム辞退により進出チーム不足', 'admin@example.com');
+```
+
+#### **適用ロジック（COALESCE パターン）**
+```sql
+-- 試合進出元チーム取得時にオーバーライドを優先適用
+SELECT
+  COALESCE(override.team1_source_override, template.team1_source) as team1_source,
+  COALESCE(override.team2_source_override, template.team2_source) as team2_source
+FROM m_match_templates template
+LEFT JOIN t_tournament_match_overrides override
+  ON template.format_id = ?
+  AND template.match_code = override.match_code
+  AND override.tournament_id = ?
+WHERE template.match_code = ?;
+```
+
+#### **運用メリット**
+- **柔軟性**: テンプレート変更なしで大会別に条件調整
+- **トレーサビリティ**: 変更理由・実施者を記録
+- **安全性**: NULL時はデフォルト条件を使用（既存動作を破壊しない）
+- **保守性**: 大会終了後もオーバーライド履歴が残る
 
 ### Tursoでのトランザクション制限
 

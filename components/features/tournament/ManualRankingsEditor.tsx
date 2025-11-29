@@ -636,7 +636,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
                   {block.team_rankings
                     .sort((a, b) => a.position - b.position)
                     .map((team, teamIndex) => (
-                    <div key={team.team_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={`${block.block_name}-${team.team_id}-${teamIndex}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Label htmlFor={`position-${block.match_block_id}-${team.team_id}`} className="text-sm font-medium">
                           順位:
@@ -740,7 +740,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
                             {block.team_rankings
                               .sort((a, b) => a.position - b.position)
                               .map((team, teamIndex) => (
-                                <div key={team.team_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div key={`${block.block_name}-mobile-${team.team_id}-${teamIndex}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                   <div className="flex items-center gap-2">
                                     <Label htmlFor={`position-${block.match_block_id}-${team.team_id}`} className="text-sm font-medium">
                                       順位:
@@ -838,7 +838,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
                   {finalTournamentBlock.team_rankings
                     .sort((a, b) => a.position - b.position)
                     .map((team, teamIndex) => (
-                    <div key={team.team_id} className={`flex items-center gap-3 p-3 rounded-lg ${
+                    <div key={`final-${team.team_id}-${teamIndex}`} className={`flex items-center gap-3 p-3 rounded-lg ${
                       team.is_confirmed ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-200'
                     }`}>
                       <div className="flex items-center gap-2">

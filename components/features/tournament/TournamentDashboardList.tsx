@@ -410,24 +410,24 @@ export default function TournamentDashboardList() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <Button asChild size="sm" variant="outline" className="flex-1 hover:border-blue-300 hover:bg-blue-50">
+          <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
             <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
               詳細
             </Link>
           </Button>
           {!tournament.is_archived ? (
             <>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
                   部門編集
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
                   コート名設定
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                   ルール設定
                 </Link>
@@ -441,16 +441,16 @@ export default function TournamentDashboardList() {
                 variant="outline"
                 onClick={() => handleDeleteTournament(tournament)}
                 disabled={deleting === tournament.tournament_id}
-                className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                className="text-sm border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
               >
                 {deleting === tournament.tournament_id ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
                     削除中...
                   </div>
                 ) : (
                   <div className="flex items-center">
-                    <Trash2 className="w-3 h-3 mr-1" />
+                    <Trash2 className="w-4 h-4 mr-2" />
                     削除
                   </div>
                 )}
@@ -459,12 +459,12 @@ export default function TournamentDashboardList() {
           )}
           {(tournament.status === 'before_recruitment' || tournament.status === 'recruiting' || tournament.status === 'before_event') && !tournament.is_archived && (
             <>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                   チーム登録
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
                   組合せ作成・編集
                 </Link>
@@ -473,26 +473,31 @@ export default function TournamentDashboardList() {
                 asChild
                 size="sm"
                 variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                className={hasNotifications(tournament.tournament_id)
+                className={`text-sm ${hasNotifications(tournament.tournament_id)
                   ? "bg-red-600 hover:bg-red-700"
                   : "hover:border-blue-300 hover:bg-blue-50"
-                }
+                }`}
               >
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                   試合結果入力
                   {hasNotifications(tournament.tournament_id) && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                    <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
                       {getNotificationCount(tournament.tournament_id)}
                     </span>
                   )}
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                   順位設定
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                  選出条件変更
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                   ファイル管理
                 </Link>
@@ -503,16 +508,16 @@ export default function TournamentDashboardList() {
                   variant="outline"
                   onClick={() => handleDeleteTournament(tournament)}
                   disabled={deleting === tournament.tournament_id}
-                  className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                  className="text-sm border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                 >
                   {deleting === tournament.tournament_id ? (
                     <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
                       削除中...
                     </div>
                   ) : (
                     <div className="flex items-center">
-                      <Trash2 className="w-3 h-3 mr-1" />
+                      <Trash2 className="w-4 h-4 mr-2" />
                       削除
                     </div>
                   )}
@@ -545,6 +550,11 @@ export default function TournamentDashboardList() {
                   順位設定
                 </Link>
               </Button>
+              <Button asChild size="sm" variant="outline" className="hover:border-orange-300 hover:bg-orange-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                  選出条件変更
+                </Link>
+              </Button>
               <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                   ファイル管理
@@ -556,16 +566,16 @@ export default function TournamentDashboardList() {
                   variant="outline"
                   onClick={() => handleDeleteTournament(tournament)}
                   disabled={deleting === tournament.tournament_id}
-                  className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                  className="text-sm border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                 >
                   {deleting === tournament.tournament_id ? (
                     <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
                       削除中...
                     </div>
                   ) : (
                     <div className="flex items-center">
-                      <Trash2 className="w-3 h-3 mr-1" />
+                      <Trash2 className="w-4 h-4 mr-2" />
                       削除
                     </div>
                   )}
@@ -579,26 +589,31 @@ export default function TournamentDashboardList() {
                 asChild
                 size="sm"
                 variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                className={hasNotifications(tournament.tournament_id)
+                className={`text-sm ${hasNotifications(tournament.tournament_id)
                   ? "bg-red-600 hover:bg-red-700"
                   : "hover:border-blue-300 hover:bg-blue-50"
-                }
+                }`}
               >
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                   試合結果入力
                   {hasNotifications(tournament.tournament_id) && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                    <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
                       {getNotificationCount(tournament.tournament_id)}
                     </span>
                   )}
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                   順位設定
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                  選出条件変更
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                   ファイル管理
                 </Link>
@@ -609,16 +624,16 @@ export default function TournamentDashboardList() {
                   variant="outline"
                   onClick={() => handleArchiveTournament(tournament)}
                   disabled={archiving === tournament.tournament_id}
-                  className="border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                  className="text-sm border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
                 >
                   {archiving === tournament.tournament_id ? (
                     <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-1"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
                       アーカイブ中...
                     </div>
                   ) : (
                     <div className="flex items-center">
-                      <Archive className="w-3 h-3 mr-1" />
+                      <Archive className="w-4 h-4 mr-2" />
                       アーカイブ
                     </div>
                   )}
@@ -630,16 +645,16 @@ export default function TournamentDashboardList() {
                   variant="outline"
                   onClick={() => handleDeleteTournament(tournament)}
                   disabled={deleting === tournament.tournament_id}
-                  className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                  className="text-sm border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                 >
                   {deleting === tournament.tournament_id ? (
                     <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
                       削除中...
                     </div>
                   ) : (
                     <div className="flex items-center">
-                      <Trash2 className="w-3 h-3 mr-1" />
+                      <Trash2 className="w-4 h-4 mr-2" />
                       削除
                     </div>
                   )}
@@ -681,10 +696,10 @@ export default function TournamentDashboardList() {
                   <Button
                     asChild
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                    className="text-sm bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
                   >
                     <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
-                      <Plus className="w-4 h-4 mr-1" />
+                      <Plus className="w-4 h-4 mr-2" />
                       部門作成
                     </Link>
                   </Button>

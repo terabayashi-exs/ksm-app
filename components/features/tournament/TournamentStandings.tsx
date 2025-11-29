@@ -475,9 +475,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                   </tr>
                 </thead>
                 <tbody>
-                  {block.teams.map((team) => (
-                    <tr 
-                      key={team.team_id} 
+                  {block.teams.map((team, teamIndex) => (
+                    <tr
+                      key={`${block.block_name}-${team.team_id}-${teamIndex}`} 
                       className={`border-b transition-colors ${
                         team.position === 0 
                           ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 

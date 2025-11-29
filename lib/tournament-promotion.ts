@@ -200,14 +200,18 @@ async function extractTopTeamsDynamic(
     
     const formatId = formatResult.rows[0].format_id as number;
     
-    // 決勝トーナメントのテンプレートから必要な進出条件を取得（動的対応）
+    // 決勝トーナメントのテンプレートから必要な進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
-        SELECT DISTINCT team1_source, team2_source
-        FROM m_match_templates
-        WHERE format_id = ? AND phase = 'final'
+        SELECT DISTINCT
+          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
+        FROM m_match_templates mt
+        LEFT JOIN t_tournament_match_overrides mo
+          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
+        WHERE mt.format_id = ? AND mt.phase = 'final'
       `,
-      args: [formatId]
+      args: [tournamentId, formatId]
     });
     
     // 必要な進出パターンを抽出（ブロック_順位形式のみ、試合の勝敗は除外）
@@ -382,22 +386,24 @@ async function updateFinalTournamentMatches(
 
     console.log(`[PROMOTION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
 
-    // テンプレートから各試合の進出条件を取得（round_nameも取得）
+    // テンプレートから各試合の進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
         SELECT
           mt.match_code,
           mt.round_name,
-          mt.team1_source,
-          mt.team2_source,
+          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
           mt.team1_display_name as template_team1_name,
           mt.team2_display_name as template_team2_name
         FROM m_match_templates mt
         JOIN t_tournaments t ON mt.format_id = t.format_id
+        LEFT JOIN t_tournament_match_overrides mo
+          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
         WHERE t.tournament_id = ? AND mt.phase = 'final'
         ORDER BY mt.match_code
       `,
-      args: [tournamentId]
+      args: [tournamentId, tournamentId]
     });
 
     // テンプレート情報をマップ化

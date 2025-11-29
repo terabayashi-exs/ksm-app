@@ -98,6 +98,10 @@ export default function AdminMatchesPage() {
     supports_pk: boolean;
     ruleConfig?: SportRuleConfig;
   } | null>(null);
+  const [walkoverSettings, setWalkoverSettings] = useState<{
+    winner_goals: number;
+    loser_goals: number;
+  }>({ winner_goals: 3, loser_goals: 0 }); // デフォルト値
 
   // データ取得関数を外部に抽出（useCallbackで最適化）
   const fetchData = useCallback(async (showLoader = false) => {
@@ -172,6 +176,24 @@ export default function AdminMatchesPage() {
           };
           console.log('[MATCHES_PAGE] Setting fallback config:', fallbackConfig);
           setSportConfig(fallbackConfig);
+        }
+
+        // 不戦勝設定を取得
+        try {
+          const walkoverResponse = await fetch(`/api/tournaments/${tournamentId}/walkover-settings`);
+          if (walkoverResponse.ok) {
+            const walkoverResult = await walkoverResponse.json();
+            if (walkoverResult.success && walkoverResult.data) {
+              setWalkoverSettings({
+                winner_goals: walkoverResult.data.winner_goals,
+                loser_goals: walkoverResult.data.loser_goals
+              });
+              console.log('[MATCHES_PAGE] Walkover settings loaded:', walkoverResult.data);
+            }
+          }
+        } catch (error) {
+          console.error('[MATCHES_PAGE] Failed to load walkover settings:', error);
+          // デフォルト値を使用（既にstate初期値で設定済み）
         }
 
         // 試合一覧取得
@@ -555,7 +577,7 @@ export default function AdminMatchesPage() {
       case 'no_show_both': return '両チーム不参加（両者0勝点）';
       case 'no_show_team1': return `${selectedMatch?.team1_name || 'チーム1'}不参加（${selectedMatch?.team2_name || 'チーム2'}不戦勝）`;
       case 'no_show_team2': return `${selectedMatch?.team2_name || 'チーム2'}不参加（${selectedMatch?.team1_name || 'チーム1'}不戦勝）`;
-      case 'no_count': return '天候等による中止（試合数カウントしない）';
+      case 'no_count': return '中止（試合数カウントしない）';
       default: return '不明';
     }
   };
@@ -1416,7 +1438,7 @@ export default function AdminMatchesPage() {
                   />
                   <div>
                     <div className="font-medium">{selectedMatch?.team1_name}不参加</div>
-                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（3-0）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）</div>
                   </div>
                 </label>
 
@@ -1430,7 +1452,7 @@ export default function AdminMatchesPage() {
                   />
                   <div>
                     <div className="font-medium">{selectedMatch?.team2_name}不参加</div>
-                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（3-0）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）</div>
                   </div>
                 </label>
 
@@ -1443,7 +1465,7 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">天候等による中止</div>
+                    <div className="font-medium">中止</div>
                     <div className="text-sm text-muted-foreground">試合数にカウントしない</div>
                   </div>
                 </label>
