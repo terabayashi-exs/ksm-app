@@ -1040,8 +1040,17 @@ export default function AdminMatchesPage() {
               </div>
             </div>
             
-            {/* リフレッシュボタンのみ表示 */}
+            {/* QRコード一覧・リフレッシュボタン */}
             <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/admin/tournaments/${tournamentId}/qr-list`, '_blank')}
+                className="flex items-center"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                QRコード一覧
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
