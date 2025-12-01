@@ -72,6 +72,8 @@ export const config = {
     // 認証が必要なルートを指定
     "/admin/:path*",
     "/team/:path*",
-    "/auth/:path*"
+    "/auth/:path*",
+    // 審判ルートも明示的に追加（middlewareで除外処理を行う）
+    "/referee/:path*"
   ]
 };
