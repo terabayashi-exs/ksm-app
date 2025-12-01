@@ -68,39 +68,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // JWTトークン生成（試合開始30分前から終了30分後まで有効）
     const now = new Date();
-    
-    // 実際の試合日程を使用
-    let matchDate;
-    try {
-      const tournamentDateStr = match.tournament_date ? String(match.tournament_date) : '';
-      
-      if (tournamentDateStr && tournamentDateStr.startsWith('{')) {
-        // JSON形式の場合
-        const dateObj = JSON.parse(tournamentDateStr);
-        matchDate = dateObj[1] || dateObj['1'] || new Date().toISOString().split('T')[0];
-      } else if (tournamentDateStr && tournamentDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        // YYYY-MM-DD形式の場合
-        matchDate = tournamentDateStr;
-      } else {
-        // デフォルトは今日の日付
-        matchDate = new Date().toISOString().split('T')[0];
-      }
-    } catch (error) {
-      console.warn('Tournament date parse error:', error);
-      matchDate = new Date().toISOString().split('T')[0];
-    }
-    
-    const matchTime = new Date(`${matchDate} ${match.start_time}`);
-    
-    // 開発環境では長期間有効なトークンを生成
-    let validFrom, validUntil;
-    if (process.env.NODE_ENV === 'development') {
-      validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 1時間前から
-      validUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24時間後まで
-    } else {
-      validFrom = new Date(matchTime.getTime() - 30 * 60 * 1000); // 30分前
-      validUntil = new Date(matchTime.getTime() + 90 * 60 * 1000); // 90分後（試合時間+30分）
-    }
+
+    // トークン有効期限の設定
+    // QRコード発行時点から48時間有効（前日のQRコード一覧作成に対応）
+    const validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 発行1時間前から有効
+    const validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 発行から48時間後まで有効
 
     const payload = {
       match_id: matchId,
