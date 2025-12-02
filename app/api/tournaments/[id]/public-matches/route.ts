@@ -224,8 +224,14 @@ export async function GET(
                 ml.match_code,
                 ml.team1_id,
                 ml.team2_id,
-                ml.team1_display_name,
-                ml.team2_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
+                  ELSE ml.team1_display_name
+                END as team1_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
+                  ELSE ml.team2_display_name
+                END as team2_display_name,
                 ml.court_number,
                 tc.court_name,
                 ml.start_time,
@@ -247,6 +253,8 @@ export async function GET(
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+              LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
+              LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
               ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
@@ -265,8 +273,14 @@ export async function GET(
                 ml.match_code,
                 ml.team1_id,
                 ml.team2_id,
-                ml.team1_display_name,
-                ml.team2_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
+                  ELSE ml.team1_display_name
+                END as team1_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
+                  ELSE ml.team2_display_name
+                END as team2_display_name,
                 ml.court_number,
                 tc.court_name,
                 ml.start_time,
@@ -289,6 +303,8 @@ export async function GET(
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+              LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
+              LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
               ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC

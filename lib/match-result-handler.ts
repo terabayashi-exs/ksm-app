@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { updateFinalTournamentRankings, updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
+import { checkAndPromoteOnMatchConfirm } from '@/lib/tournament-promotion';
 
 /**
  * 大会の全試合が確定されているかチェックし、完了していれば大会ステータスを更新する
@@ -144,7 +145,16 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       
       // 順位表を更新（多競技対応版）
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
-      
+
+      // オーバーライド設定を考慮した自動進出チェック
+      try {
+        const matchCode = match.match_code as string;
+        await checkAndPromoteOnMatchConfirm(tournamentId, matchBlockId, matchCode);
+      } catch (promoteError) {
+        console.error(`[MATCH_CONFIRM] オーバーライド考慮の自動進出処理でエラーが発生しましたが、試合確定は完了しました:`, promoteError);
+        // エラーが発生しても試合確定処理は成功とする
+      }
+
       // 決勝トーナメントの場合は決勝順位も更新
       const blockPhaseResult = await db.execute({
         sql: 'SELECT phase FROM t_match_blocks WHERE match_block_id = ?',
@@ -281,19 +291,28 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
     // 更新されたブロックの順位表を一括更新
     const affectedTournaments = new Set<number>();
     const finalTournamentsToUpdate = new Set<number>();
-    
+
     for (const matchBlockId of updatedBlocks) {
       const blockResult = await db.execute({
-        sql: 'SELECT tournament_id, phase FROM t_match_blocks WHERE match_block_id = ?',
+        sql: 'SELECT tournament_id, phase, block_name FROM t_match_blocks WHERE match_block_id = ?',
         args: [matchBlockId]
       });
 
       if (blockResult.rows && blockResult.rows.length > 0) {
         const tournamentId = blockResult.rows[0].tournament_id as number;
         const phase = blockResult.rows[0].phase as string;
-        
+        const blockName = blockResult.rows[0].block_name as string;
+
         affectedTournaments.add(tournamentId);
         await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
+
+        // オーバーライド設定を考慮した自動進出チェック（一括確定時）
+        try {
+          await checkAndPromoteOnMatchConfirm(tournamentId, matchBlockId, blockName);
+        } catch (promoteError) {
+          console.error(`[BULK_CONFIRM] オーバーライド考慮の自動進出処理でエラーが発生しました (Block ${matchBlockId}):`, promoteError);
+          // エラーが発生しても処理は継続
+        }
         
         // 決勝トーナメントの場合はテンプレートベース順位設定と決勝順位更新対象に追加
         if (phase === 'final') {

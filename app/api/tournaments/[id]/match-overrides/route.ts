@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { checkAndPromoteOnOverrideChange } from '@/lib/tournament-promotion';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -182,6 +183,14 @@ export async function POST(
 
     console.log(`[MATCH_OVERRIDE] Created override for tournament ${tournamentId}, match ${match_code}`);
     console.log(`[MATCH_OVERRIDE] team1_source_override: ${team1_source_override}, team2_source_override: ${team2_source_override}`);
+
+    // オーバーライド変更後の自動進出処理チェック
+    try {
+      await checkAndPromoteOnOverrideChange(tournamentId, [match_code]);
+    } catch (promoteError) {
+      console.error(`[MATCH_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`, promoteError);
+      // エラーが発生してもオーバーライド設定は成功とする
+    }
 
     return NextResponse.json({
       success: true,

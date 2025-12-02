@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { checkAndPromoteOnOverrideChange } from '@/lib/tournament-promotion';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -152,6 +153,17 @@ export async function POST(
     }
 
     console.log(`[BULK_OVERRIDE] Updated ${updateCount} matches for tournament ${tournamentId}: ${from_source} -> ${to_source}`);
+
+    // 影響を受ける試合コードのリストを作成
+    const affectedMatchCodes = templatesResult.rows.map(row => String(row.match_code));
+
+    // オーバーライド変更後の自動進出処理チェック
+    try {
+      await checkAndPromoteOnOverrideChange(tournamentId, affectedMatchCodes);
+    } catch (promoteError) {
+      console.error(`[BULK_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`, promoteError);
+      // エラーが発生してもオーバーライド設定は成功とする
+    }
 
     return NextResponse.json({
       success: true,

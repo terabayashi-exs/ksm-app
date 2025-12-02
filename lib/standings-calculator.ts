@@ -1465,6 +1465,8 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
           ml.team2_tournament_team_id,
           COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
           COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
+          t1.team_omission as team1_omission,
+          t2.team_omission as team2_omission,
           mf.team1_scores,
           mf.team2_scores,
           mf.winner_team_id,
@@ -1493,6 +1495,8 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
       team2_tournament_team_id: row.team2_tournament_team_id as number | null,
       team1_display_name: row.team1_display_name as string,
       team2_display_name: row.team2_display_name as string,
+      team1_omission: row.team1_omission as string | null,
+      team2_omission: row.team2_omission as string | null,
       team1_scores: row.team1_scores as number | null,
       team2_scores: row.team2_scores as number | null,
       winner_team_id: row.winner_team_id as string | null,
@@ -1526,7 +1530,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
         tournament_team_id: winnerTournamentTeamId,
         team_id: winnerId,
         team_name: finalMatch.team1_id === winnerId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
-        team_omission: undefined,
+        team_omission: (finalMatch.team1_id === winnerId ? finalMatch.team1_omission : finalMatch.team2_omission) || undefined,
         position: 1,
         points: 0,
         matches_played: 0,
@@ -1544,7 +1548,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
           tournament_team_id: loserTournamentTeamId,
           team_id: loserId,
           team_name: finalMatch.team1_id === loserId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
-          team_omission: undefined,
+          team_omission: (finalMatch.team1_id === loserId ? finalMatch.team1_omission : finalMatch.team2_omission) || undefined,
           position: 2,
           points: 0,
           matches_played: 0,
@@ -1571,6 +1575,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
           (m.team1_id === teamId || m.team2_id === teamId)
         );
         const displayName = teamMatch?.team1_id === teamId ? teamMatch.team1_display_name : teamMatch?.team2_display_name;
+        const teamOmission = teamMatch?.team1_id === teamId ? teamMatch.team1_omission : teamMatch?.team2_omission;
         const tournamentTeamId = teamMatch?.team1_id === teamId ? teamMatch.team1_tournament_team_id : teamMatch?.team2_tournament_team_id;
 
         // tournament_team_idがnullの場合はスキップ（プレースホルダーチーム）
@@ -1583,7 +1588,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
           tournament_team_id: tournamentTeamId,
           team_id: teamId,
           team_name: displayName || '未確定',
-          team_omission: undefined,
+          team_omission: teamOmission || undefined,
           position: dynamicPosition,
           points: 0,
           matches_played: 0,

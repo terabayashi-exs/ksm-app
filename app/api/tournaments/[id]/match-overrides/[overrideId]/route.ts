@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { checkAndPromoteOnOverrideChange } from '@/lib/tournament-promotion';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -49,9 +50,9 @@ export async function PUT(
       );
     }
 
-    // オーバーライド存在確認
+    // オーバーライド存在確認（match_codeも取得）
     const checkResult = await db.execute(`
-      SELECT override_id FROM t_tournament_match_overrides
+      SELECT override_id, match_code FROM t_tournament_match_overrides
       WHERE override_id = ? AND tournament_id = ?
     `, [overrideId, tournamentId]);
 
@@ -61,6 +62,8 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    const matchCode = String(checkResult.rows[0].match_code);
 
     // オーバーライド更新
     await db.execute(`
@@ -83,6 +86,14 @@ export async function PUT(
     ]);
 
     console.log(`[MATCH_OVERRIDE] Updated override ${overrideId} for tournament ${tournamentId}`);
+
+    // オーバーライド変更後の自動進出処理チェック
+    try {
+      await checkAndPromoteOnOverrideChange(tournamentId, [matchCode]);
+    } catch (promoteError) {
+      console.error(`[MATCH_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`, promoteError);
+      // エラーが発生してもオーバーライド設定は成功とする
+    }
 
     return NextResponse.json({
       success: true,
@@ -130,9 +141,9 @@ export async function DELETE(
       );
     }
 
-    // オーバーライド存在確認
+    // オーバーライド存在確認（match_codeも取得）
     const checkResult = await db.execute(`
-      SELECT override_id FROM t_tournament_match_overrides
+      SELECT override_id, match_code FROM t_tournament_match_overrides
       WHERE override_id = ? AND tournament_id = ?
     `, [overrideId, tournamentId]);
 
@@ -143,6 +154,8 @@ export async function DELETE(
       );
     }
 
+    const matchCode = String(checkResult.rows[0].match_code);
+
     // オーバーライド削除
     await db.execute(`
       DELETE FROM t_tournament_match_overrides
@@ -150,6 +163,14 @@ export async function DELETE(
     `, [overrideId, tournamentId]);
 
     console.log(`[MATCH_OVERRIDE] Deleted override ${overrideId} for tournament ${tournamentId}`);
+
+    // オーバーライド削除後の自動進出処理チェック（元の条件に戻る）
+    try {
+      await checkAndPromoteOnOverrideChange(tournamentId, [matchCode]);
+    } catch (promoteError) {
+      console.error(`[MATCH_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド削除は完了しました:`, promoteError);
+      // エラーが発生してもオーバーライド削除は成功とする
+    }
 
     return NextResponse.json({
       success: true,
