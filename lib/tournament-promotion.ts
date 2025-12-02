@@ -948,12 +948,12 @@ export async function checkAndPromoteOnOverrideChange(tournamentId: number, over
  * 試合確定時にオーバーライド設定を考慮した自動進出チェックを行う
  * @param tournamentId 大会ID
  * @param matchBlockId 確定された試合のブロックID
- * @param matchCodeOrBlockName 試合コードまたはブロック名
+ * @param _matchCodeOrBlockName 試合コードまたはブロック名（将来の拡張用）
  */
 export async function checkAndPromoteOnMatchConfirm(
   tournamentId: number,
   matchBlockId: number,
-  matchCodeOrBlockName: string
+  _matchCodeOrBlockName: string
 ): Promise<void> {
   try {
     console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 試合確定後の自動進出チェック開始: Tournament ${tournamentId}, Block ${matchBlockId}`);

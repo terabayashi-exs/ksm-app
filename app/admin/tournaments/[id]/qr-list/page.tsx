@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -48,15 +49,7 @@ export default function QRListPage() {
   const [includeCompleted, setIncludeCompleted] = useState(false);
   const [validity, setValidity] = useState<{ validFrom: string; validUntil: string } | null>(null);
 
-  useEffect(() => {
-    fetchMatches();
-  }, [tournamentId, includeCompleted]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [matches, filterPhase, filterBlock]);
-
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     try {
       setLoading(true);
       const url = `/api/tournaments/${tournamentId}/qr-list${includeCompleted ? '?includeCompleted=true' : ''}`;
@@ -77,9 +70,9 @@ export default function QRListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tournamentId, includeCompleted]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...matches];
 
     if (filterPhase !== 'all') {
@@ -91,7 +84,15 @@ export default function QRListPage() {
     }
 
     setFilteredMatches(filtered);
-  };
+  }, [matches, filterPhase, filterBlock]);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const handlePrint = () => {
     window.print();
@@ -278,11 +279,14 @@ export default function QRListPage() {
 
                       {/* QRコード */}
                       <div className="text-center">
-                        <img
+                        <Image
                           src={match.qr_image_url}
                           alt={`QRコード: ${match.match_code}`}
-                          className="w-48 h-48 mx-auto border-2 border-gray-300 rounded-md qr-code-image"
+                          width={192}
+                          height={192}
+                          className="mx-auto border-2 border-gray-300 rounded-md qr-code-image"
                           loading="lazy"
+                          unoptimized
                         />
                         <p className="text-xs text-gray-500 mt-2 no-print">
                           審判はこのQRコードをスキャンして結果を入力
