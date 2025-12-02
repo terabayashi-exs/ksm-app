@@ -359,11 +359,8 @@ export default function AdminMatchesPage() {
       });
       
       const result = await response.json();
-      
+
       if (result.success) {
-        const actionLabel = sportConfig?.score_label || '得点';
-        alert(`${matchCode}の${actionLabel}結果を確定しました！`);
-        
         // マッチリストを更新して確定済み状態を反映
         setMatches(prevMatches => 
           prevMatches.map(match => 
