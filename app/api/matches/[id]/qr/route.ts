@@ -89,9 +89,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const token = jwt.sign(payload, secret);
     console.log('Generated token length:', token.length);
 
-    // QRコード用URL生成
+    // QRコード用URL生成（QRコード経由であることを示すパラメータを追加）
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const qrUrl = `${baseUrl}/referee/match/${matchId}?token=${token}`;
+    const qrUrl = `${baseUrl}/referee/match/${matchId}?token=${token}&from=qr`;
 
     return NextResponse.json({
       success: true,

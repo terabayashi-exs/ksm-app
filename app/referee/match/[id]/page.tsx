@@ -52,6 +52,7 @@ export default function RefereeMatchPage() {
   const searchParams = useSearchParams();
   const matchId = params.id as string;
   const token = searchParams.get('token');
+  const fromQR = searchParams.get('from') === 'qr'; // QRコード経由かどうかを判定
 
   const [match, setMatch] = useState<MatchData | null>(null);
   const [extendedData, setExtendedData] = useState<{
@@ -552,12 +553,12 @@ export default function RefereeMatchPage() {
         {/* ヘッダー */}
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-4">
-            {/* 戻るボタン */}
-            {tournamentId && (
+            {/* 戻るボタン（QRコード経由でない場合のみ表示） */}
+            {tournamentId && !fromQR && (
               <div className="mb-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => router.push(`/admin/tournaments/${tournamentId}/matches`)}
                   className="flex items-center space-x-2"
                 >
@@ -1035,6 +1036,26 @@ export default function RefereeMatchPage() {
                     >
                       {updating ? '保存中...' : 'スコア・結果を保存'}
                     </Button>
+
+                    {/* 試合終了ボタン（スコア入力エリア下部） */}
+                    {match.match_status === 'ongoing' && (
+                      <Button
+                        className="w-full bg-red-600 hover:bg-red-700"
+                        onClick={() => {
+                          // 結果が保存されていない場合は警告を表示
+                          if (!isSaved) {
+                            if (!window.confirm('スコア・結果が保存されていません。\n\n試合を終了する前に「スコア・結果を保存」ボタンを押して結果を保存してください。\n\nこのまま試合を終了しますか？')) {
+                              return;
+                            }
+                          }
+                          updateMatchStatus('end');
+                        }}
+                        disabled={updating || isConfirmed}
+                      >
+                        <Square className="w-5 h-5 mr-2" />
+                        試合終了
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

@@ -77,9 +77,9 @@ export async function GET(
         { algorithm: 'HS256' }
       );
 
-      // 審判用URLを生成
+      // 審判用URLを生成（QRコード経由であることを示すパラメータを追加）
       const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      const refereeUrl = `${baseUrl}/referee/match/${match.match_id}?token=${token}`;
+      const refereeUrl = `${baseUrl}/referee/match/${match.match_id}?token=${token}&from=qr`;
 
       // QRコード画像URLを生成
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(refereeUrl)}`;
