@@ -39,6 +39,7 @@ interface MatchData {
   team1_name: string;
   team2_name: string;
   court_number: number;
+  court_name?: string | null;
   scheduled_time: string;
   tournament_date: string;
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
@@ -97,6 +98,10 @@ export default function AdminMatchesPage() {
     supports_pk: boolean;
     ruleConfig?: SportRuleConfig;
   } | null>(null);
+  const [walkoverSettings, setWalkoverSettings] = useState<{
+    winner_goals: number;
+    loser_goals: number;
+  }>({ winner_goals: 3, loser_goals: 0 }); // デフォルト値
 
   // データ取得関数を外部に抽出（useCallbackで最適化）
   const fetchData = useCallback(async (showLoader = false) => {
@@ -173,6 +178,24 @@ export default function AdminMatchesPage() {
           setSportConfig(fallbackConfig);
         }
 
+        // 不戦勝設定を取得
+        try {
+          const walkoverResponse = await fetch(`/api/tournaments/${tournamentId}/walkover-settings`);
+          if (walkoverResponse.ok) {
+            const walkoverResult = await walkoverResponse.json();
+            if (walkoverResult.success && walkoverResult.data) {
+              setWalkoverSettings({
+                winner_goals: walkoverResult.data.winner_goals,
+                loser_goals: walkoverResult.data.loser_goals
+              });
+              console.log('[MATCHES_PAGE] Walkover settings loaded:', walkoverResult.data);
+            }
+          }
+        } catch (error) {
+          console.error('[MATCHES_PAGE] Failed to load walkover settings:', error);
+          // デフォルト値を使用（既にstate初期値で設定済み）
+        }
+
         // 試合一覧取得
         console.log('Fetching matches for tournament:', tournamentId);
         const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches`, {
@@ -209,7 +232,11 @@ export default function AdminMatchesPage() {
                 matches: []
               });
             }
-            blocksMap.get(match.match_block_id)!.matches.push(match);
+            const block = blocksMap.get(match.match_block_id)!;
+            // 重複チェック: 同じmatch_idが既に存在しないか確認
+            if (!block.matches.some(m => m.match_id === match.match_id)) {
+              block.matches.push(match);
+            }
           });
           
           // 各ブロック内の試合を試合コード順にソート
@@ -332,11 +359,8 @@ export default function AdminMatchesPage() {
       });
       
       const result = await response.json();
-      
+
       if (result.success) {
-        const actionLabel = sportConfig?.score_label || '得点';
-        alert(`${matchCode}の${actionLabel}結果を確定しました！`);
-        
         // マッチリストを更新して確定済み状態を反映
         setMatches(prevMatches => 
           prevMatches.map(match => 
@@ -547,10 +571,10 @@ export default function AdminMatchesPage() {
   // 中止種別のラベル取得
   const getCancellationTypeLabel = (type: string): string => {
     switch (type) {
-      case 'no_show_both': return '両チーム不参加（両者0勝点）';
+      case 'no_show_both': return '両チーム不参加（0-0引き分け、各1勝点）';
       case 'no_show_team1': return `${selectedMatch?.team1_name || 'チーム1'}不参加（${selectedMatch?.team2_name || 'チーム2'}不戦勝）`;
       case 'no_show_team2': return `${selectedMatch?.team2_name || 'チーム2'}不参加（${selectedMatch?.team1_name || 'チーム1'}不戦勝）`;
-      case 'no_count': return '天候等による中止（試合数カウントしない）';
+      case 'no_count': return '中止（試合数カウントしない）';
       default: return '不明';
     }
   };
@@ -1013,8 +1037,17 @@ export default function AdminMatchesPage() {
               </div>
             </div>
             
-            {/* リフレッシュボタンのみ表示 */}
+            {/* QRコード一覧・リフレッシュボタン */}
             <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/admin/tournaments/${tournamentId}/qr-list`, '_blank')}
+                className="flex items-center"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                QRコード一覧
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -1176,7 +1209,7 @@ export default function AdminMatchesPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {blockMatches.map((match) => (
-                        <div key={match.match_id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div key={`${match.match_block_id}-${match.match_code}-${match.match_id}`} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
                             {/* 試合情報 */}
                             <div className="lg:col-span-2">
@@ -1237,7 +1270,7 @@ export default function AdminMatchesPage() {
                                 )}
                                 <div className="flex items-center">
                                   <MapPin className="w-4 h-4 mr-1" />
-                                  コート{match.court_number}
+                                  {match.court_name ? match.court_name : `コート${match.court_number}`}
                                 </div>
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
@@ -1384,8 +1417,13 @@ export default function AdminMatchesPage() {
                   「{selectedMatch?.team1_name} vs {selectedMatch?.team2_name}」を中止します。
                 </p>
                 <Label className="text-base font-medium">中止理由を選択してください</Label>
+                <p className="text-xs text-muted-foreground mt-2 bg-blue-50 p-2 rounded">
+                  💡 <strong>選択ガイド：</strong><br/>
+                  • <strong>中止</strong>: 大会全体の中止・辞退・欠席の場合（試合数にカウントしない）<br/>
+                  • <strong>その他3つ</strong>: 遅刻・1試合のみの特別処理（試合数にカウントする）
+                </p>
               </div>
-              
+
               <div className="space-y-3">
                 <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-background">
                   <input
@@ -1396,8 +1434,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">両チーム不参加</div>
-                    <div className="text-sm text-muted-foreground">両チーム0勝点、試合数にカウント</div>
+                    <div className="font-medium">両チーム不参加（遅刻・その試合のみ欠場）</div>
+                    <div className="text-sm text-muted-foreground">0-0引き分け扱い、各1勝点、試合数にカウント</div>
                   </div>
                 </label>
 
@@ -1410,8 +1448,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">{selectedMatch?.team1_name}不参加</div>
-                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（3-0）</div>
+                    <div className="font-medium">{selectedMatch?.team1_name}不参加（遅刻・その試合のみ欠場）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team2_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）、試合数にカウント</div>
                   </div>
                 </label>
 
@@ -1424,8 +1462,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">{selectedMatch?.team2_name}不参加</div>
-                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（3-0）</div>
+                    <div className="font-medium">{selectedMatch?.team2_name}不参加（遅刻・その試合のみ欠場）</div>
+                    <div className="text-sm text-muted-foreground">{selectedMatch?.team1_name}不戦勝（{walkoverSettings.winner_goals}-{walkoverSettings.loser_goals}）、試合数にカウント</div>
                   </div>
                 </label>
 
@@ -1438,8 +1476,8 @@ export default function AdminMatchesPage() {
                     className="text-blue-600"
                   />
                   <div>
-                    <div className="font-medium">天候等による中止</div>
-                    <div className="text-sm text-muted-foreground">試合数にカウントしない</div>
+                    <div className="font-medium">中止（大会全体を辞退・欠席）</div>
+                    <div className="text-sm text-muted-foreground">試合数にカウントしない、順位に影響なし</div>
                   </div>
                 </label>
               </div>

@@ -22,6 +22,7 @@ interface MatchNewsData {
   phase: string;
   block_name: string | null;
   court_number: number | null;
+  court_name?: string | null;
   start_time: string | null;
   end_time: string | null;
   updated_at: string;
@@ -118,7 +119,12 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
     // 試合終了済みで、スコアが入力されている場合
     if (match.match_status === 'completed' && (match.score_display || (match.team1_goals !== null && match.team2_goals !== null))) {
       if (match.is_walkover) {
-        return '不戦勝';
+        // 不戦引き分けの場合（両チーム不参加）
+        if (match.is_draw) {
+          return `不戦引分 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
+        }
+        // 通常の不戦勝（片方チーム不参加）
+        return `不戦勝 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
       }
       
       // フォーマット済みスコア表示があればそれを優先（PK戦考慮済み）
@@ -142,7 +148,12 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
     }
 
     if (match.is_walkover) {
-      return '不戦勝';
+      // 不戦引き分けの場合（両チーム不参加）
+      if (match.is_draw) {
+        return `不戦引分 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
+      }
+      // 通常の不戦勝（片方チーム不参加）
+      return `不戦勝 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
     }
 
     // 結果があるがスコアがnullの場合のチェック
@@ -272,7 +283,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                     </span>
                     {match.court_number && (
                       <span className="text-xs text-gray-600">
-                        コート{match.court_number}
+                        {match.court_name || match.court_number}
                       </span>
                     )}
                   </div>

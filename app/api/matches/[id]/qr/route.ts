@@ -23,20 +23,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 試合情報を取得（実際のチーム名と競技種別も含む）
     const result = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
         ml.team1_display_name,
         ml.team2_display_name,
         ml.court_number,
+        tc.court_name,
         ml.start_time,
         ml.tournament_date,
         mb.tournament_id,
-        -- 実際のチーム名と略称を取得
+        -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
         t1.team_name as team1_real_name,
         t2.team_name as team2_real_name,
-        mt1.team_omission as team1_omission,
-        mt2.team_omission as team2_omission,
+        COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+        COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
         -- 多競技対応：競技種別を取得
         st.sport_code,
         st.sport_name
@@ -44,10 +45,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
       LEFT JOIN m_sport_types st ON tour.sport_type_id = st.sport_type_id
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
+      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+      LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       WHERE ml.match_id = ?
     `, [matchId]);
 
@@ -66,39 +68,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // JWTトークン生成（試合開始30分前から終了30分後まで有効）
     const now = new Date();
-    
-    // 実際の試合日程を使用
-    let matchDate;
-    try {
-      const tournamentDateStr = match.tournament_date ? String(match.tournament_date) : '';
-      
-      if (tournamentDateStr && tournamentDateStr.startsWith('{')) {
-        // JSON形式の場合
-        const dateObj = JSON.parse(tournamentDateStr);
-        matchDate = dateObj[1] || dateObj['1'] || new Date().toISOString().split('T')[0];
-      } else if (tournamentDateStr && tournamentDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        // YYYY-MM-DD形式の場合
-        matchDate = tournamentDateStr;
-      } else {
-        // デフォルトは今日の日付
-        matchDate = new Date().toISOString().split('T')[0];
-      }
-    } catch (error) {
-      console.warn('Tournament date parse error:', error);
-      matchDate = new Date().toISOString().split('T')[0];
-    }
-    
-    const matchTime = new Date(`${matchDate} ${match.start_time}`);
-    
-    // 開発環境では長期間有効なトークンを生成
-    let validFrom, validUntil;
-    if (process.env.NODE_ENV === 'development') {
-      validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 1時間前から
-      validUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24時間後まで
-    } else {
-      validFrom = new Date(matchTime.getTime() - 30 * 60 * 1000); // 30分前
-      validUntil = new Date(matchTime.getTime() + 90 * 60 * 1000); // 90分後（試合時間+30分）
-    }
+
+    // トークン有効期限の設定
+    // QRコード発行時点から48時間有効（前日のQRコード一覧作成に対応）
+    const validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 発行1時間前から有効
+    const validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 発行から48時間後まで有効
 
     const payload = {
       match_id: matchId,
@@ -115,9 +89,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const token = jwt.sign(payload, secret);
     console.log('Generated token length:', token.length);
 
-    // QRコード用URL生成
+    // QRコード用URL生成（QRコード経由であることを示すパラメータを追加）
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const qrUrl = `${baseUrl}/referee/match/${matchId}?token=${token}`;
+    const qrUrl = `${baseUrl}/referee/match/${matchId}?token=${token}&from=qr`;
 
     return NextResponse.json({
       success: true,
@@ -127,6 +101,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         team1_name: match.team1_real_name || match.team1_display_name, // 実チーム名を優先
         team2_name: match.team2_real_name || match.team2_display_name, // 実チーム名を優先
         court_number: match.court_number,
+        court_name: match.court_name ? String(match.court_name) : null,
         scheduled_time: match.start_time,
         qr_url: qrUrl,
         token: token,
@@ -177,7 +152,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // 簡易的な管理者認証（セッション確認は省略）
       // 試合情報を取得（実チーム名と略称も含む）
       const result = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -185,6 +160,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
+          tc.court_name,
           ml.start_time,
           ml.period_count,
           ml.team1_scores,
@@ -199,17 +175,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
           mf.team1_scores as final_team1_scores,
           mf.team2_scores as final_team2_scores,
           mf.winner_team_id as final_winner_team_id,
-          -- 実際のチーム名と略称を取得
+          -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
           t1.team_name as team1_real_name,
           t2.team_name as team2_real_name,
-          mt1.team_omission as team1_omission,
-          mt2.team_omission as team2_omission
+          COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+          COALESCE(t2.team_omission, mt2.team_omission) as team2_omission
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
+        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
@@ -237,6 +214,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           team1_omission: match.team1_omission,
           team2_omission: match.team2_omission,
           court_number: match.court_number,
+          court_name: match.court_name ? String(match.court_name) : null,
           scheduled_time: match.start_time,
           period_count: match.period_count,
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
@@ -276,7 +254,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       // 試合情報を取得（実チーム名も含む）
       const result = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -284,6 +262,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
+          tc.court_name,
           ml.start_time,
           ml.period_count,
           ml.team1_scores,
@@ -298,17 +277,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
           mf.team1_scores as final_team1_scores,
           mf.team2_scores as final_team2_scores,
           mf.winner_team_id as final_winner_team_id,
-          -- 実際のチーム名と略称を取得
+          -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
           t1.team_name as team1_real_name,
           t2.team_name as team2_real_name,
-          mt1.team_omission as team1_omission,
-          mt2.team_omission as team2_omission
+          COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+          COALESCE(t2.team_omission, mt2.team_omission) as team2_omission
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
+        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
@@ -336,6 +316,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           team1_omission: match.team1_omission,
           team2_omission: match.team2_omission,
           court_number: match.court_number,
+          court_name: match.court_name ? String(match.court_name) : null,
           scheduled_time: match.start_time,
           period_count: match.period_count,
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1

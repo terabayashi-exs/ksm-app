@@ -5,7 +5,13 @@ import { getToken } from "next-auth/jwt";
 
 export default async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  
+
+  // 審判用ルート（/referee/*）は認証不要で通過させる
+  const isRefereeRoute = nextUrl.pathname.startsWith("/referee");
+  if (isRefereeRoute) {
+    return NextResponse.next();
+  }
+
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isLoggedIn = !!token;
   const userRole = token?.role;
@@ -13,7 +19,7 @@ export default async function middleware(req: NextRequest) {
   // Edge browser localStorage fix headers
   const response = NextResponse.next();
   const userAgent = req.headers.get('user-agent') || '';
-  
+
   if (userAgent.includes('Edg') && process.env.NODE_ENV === 'development') {
     response.headers.set('X-Edge-Fix', 'true');
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -66,6 +72,8 @@ export const config = {
     // 認証が必要なルートを指定
     "/admin/:path*",
     "/team/:path*",
-    "/auth/:path*"
+    "/auth/:path*",
+    // 審判ルートも明示的に追加（middlewareで除外処理を行う）
+    "/referee/:path*"
   ]
 };

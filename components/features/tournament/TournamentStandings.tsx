@@ -32,6 +32,7 @@ interface MultiSportTeamStanding extends TeamStanding {
 }
 
 interface TeamStanding {
+  tournament_team_id: number; // 一意のID（PRIMARY KEY） - 同一team_idの複数参加を区別
   team_id: string;
   team_name: string;
   team_omission?: string;
@@ -475,9 +476,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                   </tr>
                 </thead>
                 <tbody>
-                  {block.teams.map((team) => (
-                    <tr 
-                      key={team.team_id} 
+                  {block.teams.map((team, teamIndex) => (
+                    <tr
+                      key={`${block.block_name}-${team.tournament_team_id || team.team_id}-${teamIndex}`} 
                       className={`border-b transition-colors ${
                         team.position === 0 
                           ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 
@@ -489,9 +490,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                       <td className="py-2 md:py-3 px-2 md:px-3">
                         <div className="flex items-center">
                           <span className="hidden md:inline-block mr-2">
-                            {team.position > 0 ? getPositionIcon(team.position) : team.position === 0 ? <span className="text-gray-400">-</span> : <Hash className="h-4 w-4 text-gray-400" />}
+                            {team.matches_played === 0 ? <span className="text-gray-400">-</span> : team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
                           </span>
-                          <span className="font-bold text-base md:text-lg">{team.position === 0 ? '-' : team.position}</span>
+                          <span className="font-bold text-base md:text-lg">{team.matches_played === 0 ? '-' : team.position}</span>
                         </div>
                       </td>
                       <td className="py-2 md:py-3 px-2 md:px-3">

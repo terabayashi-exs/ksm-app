@@ -493,11 +493,11 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                     ${(team.team_omission || team.team_name).substring(0, teamCount > 5 ? 8 : 12)}
                   </td>
                   ${block.teams.map(opponent => {
-                    if (team.team_id === opponent.team_id) {
+                    if (team.tournament_team_id === opponent.tournament_team_id) {
                       return `<td style="border: 1px solid #D1D5DB; padding: 10px; background: #9CA3AF; color: #FFFFFF; text-align: center; font-weight: bold; font-size: 15px; width: ${cellSizes.matchResult};">-</td>`;
                     }
-                    
-                    const matchData = block.match_matrix[team.team_id]?.[opponent.team_id];
+
+                    const matchData = block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id];
                     const result = matchData?.result || null;
                     const score = matchData?.score || '-';
                     const backgroundColor = getResultBackgroundColor();
@@ -511,7 +511,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                   }).join('')}
                   <!-- 順位 -->
                   <td style="border: 1px solid #D1D5DB; padding: 10px; background: #EBF8FF; text-align: center; font-weight: bold; font-size: 15px; width: ${cellSizes.rank};">
-                    ${positionIcon}${teamStanding?.position || '-'}
+                    ${teamStanding?.matches_played === 0 ? '-' : (positionIcon + (teamStanding?.position || '-'))}
                   </td>
                   <!-- 勝点 -->
                   <td style="border: 1px solid #D1D5DB; padding: 10px; background: #EBF8FF; text-align: center; font-weight: bold; color: #2563EB; font-size: 15px; width: ${cellSizes.points};">
@@ -734,9 +734,9 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                         チーム
                       </th>
                       {/* 対戦結果の列ヘッダー（チーム略称を縦書き表示） */}
-                      {block.teams.map((opponent) => (
-                        <th 
-                          key={opponent.team_id}
+                      {block.teams.map((opponent, opponentIndex) => (
+                        <th
+                          key={`${block.block_name}-header-${opponent.team_id}-${opponentIndex}`}
                           className="border border-border p-1 md:p-2 bg-green-50 dark:bg-green-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
                         >
                           <div 
@@ -803,11 +803,11 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                     </tr>
                   </thead>
                   <tbody>
-                    {block.teams.map((team) => {
+                    {block.teams.map((team, teamIndex) => {
                       const teamStanding = getTeamStanding(team.team_id, block.match_block_id);
-                      
+
                       return (
-                        <tr key={team.team_id}>
+                        <tr key={`${block.block_name}-row-${team.team_id}-${teamIndex}`}>
                           {/* チーム名（略称優先） */}
                           <td className="border border-border p-2 md:p-3 bg-muted font-medium text-sm md:text-base">
                             <div 
@@ -825,24 +825,24 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                           </td>
                           
                           {/* 対戦結果 */}
-                          {block.teams.map((opponent) => (
-                            <td 
-                              key={opponent.team_id}
+                          {block.teams.map((opponent, opponentIndex) => (
+                            <td
+                              key={`${block.block_name}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
                               className="border border-border p-1 md:p-2 text-center bg-card"
                             >
-                              {team.team_id === opponent.team_id ? (
+                              {team.tournament_team_id === opponent.tournament_team_id ? (
                                 <div className="w-full h-8 md:h-10 bg-muted flex items-center justify-center">
                                   <span className="text-muted-foreground text-sm md:text-base">-</span>
                                 </div>
                               ) : (
-                                <div 
+                                <div
                                   className={`w-full h-8 md:h-10 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
-                                    getResultColor(block.match_matrix[team.team_id]?.[opponent.team_id]?.result || null, block.match_matrix[team.team_id]?.[opponent.team_id]?.score)
+                                    getResultColor(block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.result || null, block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score)
                                   }`}
-                                  title={`vs ${opponent.team_name} (${block.match_matrix[team.team_id]?.[opponent.team_id]?.match_code || ''})`}
+                                  title={`vs ${opponent.team_name} (${block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.match_code || ''})`}
                                 >
                                   <div className="text-center leading-tight whitespace-pre-line text-xs md:text-sm">
-                                    {block.match_matrix[team.team_id]?.[opponent.team_id]?.score || '-'}
+                                    {block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score || '-'}
                                   </div>
                                 </div>
                               )}
@@ -857,9 +857,11 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                                 <div className="flex items-center justify-center">
                                   {teamStanding ? (
                                     <>
-                                      <span className="hidden md:inline-block mr-1">{getPositionIcon(teamStanding.position)}</span>
+                                      <span className="hidden md:inline-block mr-1">
+                                        {teamStanding.matches_played === 0 ? <span className="text-muted-foreground">-</span> : getPositionIcon(teamStanding.position)}
+                                      </span>
                                       <span className="font-bold text-sm md:text-base">
-                                        {teamStanding.position > 0 ? teamStanding.position : '-'}
+                                        {teamStanding.matches_played === 0 ? '-' : teamStanding.position}
                                       </span>
                                     </>
                                   ) : (

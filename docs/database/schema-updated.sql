@@ -258,6 +258,7 @@ CREATE TABLE "t_tournament_players" (
         tournament_id INTEGER NOT NULL,
         team_id TEXT NOT NULL,
         player_id INTEGER NOT NULL,
+        tournament_team_id INTEGER,
         jersey_number INTEGER,
         player_status TEXT NOT NULL DEFAULT 'active',
         registration_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -265,11 +266,17 @@ CREATE TABLE "t_tournament_players" (
         remarks TEXT,
         created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
         updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+        player_name TEXT,
+        player_omission TEXT,
         FOREIGN KEY (tournament_id) REFERENCES t_tournaments(tournament_id),
         FOREIGN KEY (team_id) REFERENCES m_teams(team_id),
         FOREIGN KEY (player_id) REFERENCES m_players(player_id),
+        FOREIGN KEY (tournament_team_id) REFERENCES t_tournament_teams(tournament_team_id),
         UNIQUE(tournament_id, team_id, player_id)
       );
+
+CREATE INDEX IF NOT EXISTS idx_tournament_players_tournament_team_id
+  ON t_tournament_players(tournament_team_id);
 
 -- t_tournament_rules
 CREATE TABLE t_tournament_rules (

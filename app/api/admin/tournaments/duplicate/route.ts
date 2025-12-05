@@ -385,7 +385,7 @@ async function duplicateTeamsAndPlayers(sourceTournamentId: number, newTournamen
     const teamData = team as any;
     
     // チーム情報を複製（t_tournament_teamsテーブルの実際のフィールドのみ使用）
-    await db.execute(`
+    const teamInsertResult = await db.execute(`
       INSERT INTO t_tournament_teams (
         tournament_id, team_id, assigned_block, block_position,
         team_name, team_omission, withdrawal_status, withdrawal_reason,
@@ -410,6 +410,8 @@ async function duplicateTeamsAndPlayers(sourceTournamentId: number, newTournamen
       teamData.updated_at
     ]);
 
+    const newTournamentTeamId = Number(teamInsertResult.lastInsertRowid);
+
     // 選手情報の複製
     const playersResult = await db.execute(`
       SELECT * FROM t_tournament_players WHERE tournament_id = ? AND team_id = ?
@@ -419,13 +421,14 @@ async function duplicateTeamsAndPlayers(sourceTournamentId: number, newTournamen
       const playerData = player as any;
       await db.execute(`
         INSERT INTO t_tournament_players (
-          tournament_id, team_id, player_id, jersey_number, player_status, 
+          tournament_id, team_id, player_id, tournament_team_id, jersey_number, player_status,
           registration_date, withdrawal_date, remarks, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newTournamentId,
         playerData.team_id,
         playerData.player_id,
+        newTournamentTeamId,
         playerData.jersey_number,
         playerData.player_status,
         playerData.registration_date,

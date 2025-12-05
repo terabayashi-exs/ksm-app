@@ -169,7 +169,7 @@ export async function GET(
           console.log('t_matches_final table does not exist, using only t_matches_live data');
           // t_matches_finalテーブルが存在しない場合は、t_matches_liveのデータのみを使用
           matchesResult = await db.execute(`
-            SELECT 
+            SELECT
               ml.match_id,
               ml.match_block_id,
               ml.tournament_date,
@@ -177,9 +177,10 @@ export async function GET(
               ml.match_code,
               ml.team1_id,
               ml.team2_id,
-              COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name) as team1_display_name,
-              COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name) as team2_display_name,
+              ml.team1_display_name,
+              ml.team2_display_name,
               ml.court_number,
+              tc.court_name,
               ml.start_time,
               mb.phase,
               mb.display_round_name,
@@ -195,8 +196,7 @@ export async function GET(
               CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at
             FROM t_matches_live ml
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-            LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-            LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+            LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
             WHERE mb.tournament_id = ?
             ORDER BY mb.block_order ASC, ml.match_number ASC
           `, [tournamentId]);
@@ -216,7 +216,7 @@ export async function GET(
             // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
             const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
-              SELECT 
+              SELECT
                 ml.match_id,
                 ml.match_block_id,
                 ml.tournament_date,
@@ -224,9 +224,16 @@ export async function GET(
                 ml.match_code,
                 ml.team1_id,
                 ml.team2_id,
-                COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name) as team1_display_name,
-                COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name) as team2_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
+                  ELSE ml.team1_display_name
+                END as team1_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
+                  ELSE ml.team2_display_name
+                END as team2_display_name,
                 ml.court_number,
+                tc.court_name,
                 ml.start_time,
                 mb.phase,
                 mb.display_round_name,
@@ -245,6 +252,7 @@ export async function GET(
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+              LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
@@ -257,7 +265,7 @@ export async function GET(
             // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
             const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
-              SELECT 
+              SELECT
                 ml.match_id,
                 ml.match_block_id,
                 ml.tournament_date,
@@ -265,9 +273,16 @@ export async function GET(
                 ml.match_code,
                 ml.team1_id,
                 ml.team2_id,
-                COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name) as team1_display_name,
-                COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name) as team2_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
+                  ELSE ml.team1_display_name
+                END as team1_display_name,
+                CASE
+                  WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
+                  ELSE ml.team2_display_name
+                END as team2_display_name,
                 ml.court_number,
+                tc.court_name,
                 ml.start_time,
                 mb.phase,
                 mb.display_round_name,
@@ -287,6 +302,7 @@ export async function GET(
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+              LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
@@ -300,7 +316,7 @@ export async function GET(
         // テーブル構造チェックに失敗した場合は、t_matches_liveのみを使用
         console.log('Falling back to t_matches_live only query');
         matchesResult = await db.execute(`
-          SELECT 
+          SELECT
             ml.match_id,
             ml.match_block_id,
             ml.tournament_date,
@@ -308,9 +324,10 @@ export async function GET(
             ml.match_code,
             ml.team1_id,
             ml.team2_id,
-            COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
-            COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
+            ml.team1_display_name,
+            ml.team2_display_name,
             ml.court_number,
+            tc.court_name,
             ml.start_time,
             mb.phase,
             mb.display_round_name,
@@ -329,8 +346,7 @@ export async function GET(
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-          LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-          LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+          LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
           WHERE mb.tournament_id = ?
           ORDER BY mb.block_order ASC, ml.match_number ASC
         `, [tournamentId]);
@@ -439,6 +455,7 @@ export async function GET(
           team1_display_name: String(row.team1_display_name || 'チーム1'),
           team2_display_name: String(row.team2_display_name || 'チーム2'),
           court_number: row.court_number ? Number(row.court_number) : 1,
+          court_name: row.court_name ? String(row.court_name) : null,
           start_time: row.start_time ? String(row.start_time) : null,
           // ブロック情報
           phase: String(row.phase || 'preliminary'),

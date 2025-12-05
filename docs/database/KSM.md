@@ -181,6 +181,7 @@ erDiagram
         integer tournament_id FK "大会ID"
         text team_id FK "チームID"
         integer player_id FK "選手ID"
+        integer tournament_team_id FK "大会参加チームID（複数チーム参加の区別用）"
         integer jersey_number "大会での背番号"
         text player_status "選手状態（active/withdrawn）"
         datetime registration_date "登録日時（CURRENT_TIMESTAMP）"
@@ -188,6 +189,8 @@ erDiagram
         text remarks "備考"
         datetime created_at "作成日時（JST）"
         datetime updated_at "更新日時（JST）"
+        text player_name "大会固有の選手名"
+        text player_omission "大会固有の選手略称"
     }
 
     t_match_blocks {

@@ -10,6 +10,8 @@ interface BracketMatch {
   match_code: string;
   team1_id?: string;
   team2_id?: string;
+  team1_tournament_team_id?: number | null;
+  team2_tournament_team_id?: number | null;
   team1_display_name: string;
   team2_display_name: string;
   team1_goals: number;
@@ -19,6 +21,7 @@ interface BracketMatch {
   team2_scores?: number[];
   active_periods?: number[];
   winner_team_id?: string;
+  winner_tournament_team_id?: number | null;
   is_draw: boolean;
   is_walkover: boolean;
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
@@ -76,10 +79,18 @@ function MatchCard({
   [key: string]: unknown;
 }) {
   const getWinnerTeam = () => {
-    if (!match.winner_team_id || !match.is_confirmed) return null;
-    // winner_team_idとteam1_id/team2_idを正しく比較
-    if (match.winner_team_id === match.team1_id) return 0; // team1が勝者
-    if (match.winner_team_id === match.team2_id) return 1; // team2が勝者
+    if (!match.is_confirmed) return null;
+
+    // tournament_team_idが利用可能な場合はそちらを優先、なければteam_idで比較
+    if (match.winner_tournament_team_id !== undefined && match.winner_tournament_team_id !== null) {
+      if (match.winner_tournament_team_id === match.team1_tournament_team_id) return 0; // team1が勝者
+      if (match.winner_tournament_team_id === match.team2_tournament_team_id) return 1; // team2が勝者
+    } else if (match.winner_team_id) {
+      // フォールバック: team_idで比較
+      if (match.winner_team_id === match.team1_id) return 0; // team1が勝者
+      if (match.winner_team_id === match.team2_id) return 1; // team2が勝者
+    }
+
     return null;
   };
 

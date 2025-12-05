@@ -89,6 +89,7 @@ export async function GET(
         ml.team1_display_name,
         ml.team2_display_name,
         ml.court_number,
+        tc.court_name,
         ml.start_time,
         ml.team1_scores,
         ml.team2_scores,
@@ -104,9 +105,9 @@ export async function GET(
         mb.block_order,
         -- m_match_templatesからround_nameを取得
         mt.round_name,
-        -- 実際のチーム名を取得
-        t1.team_name as team1_real_name,
-        t2.team_name as team2_real_name,
+        -- 実際のチーム名を取得（ブロック指定で一意に取得）
+        (SELECT team_name FROM t_tournament_teams WHERE team_id = ml.team1_id AND tournament_id = mb.tournament_id AND assigned_block = mb.block_name LIMIT 1) as team1_real_name,
+        (SELECT team_name FROM t_tournament_teams WHERE team_id = ml.team2_id AND tournament_id = mb.tournament_id AND assigned_block = mb.block_name LIMIT 1) as team2_real_name,
         -- 試合状態テーブルから情報取得
         ms.match_status,
         ms.current_period as status_current_period,
@@ -124,8 +125,7 @@ export async function GET(
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+      LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
@@ -168,6 +168,7 @@ export async function GET(
         team1_name: String(row.team1_real_name || row.team1_display_name), // 実チーム名を優先、なければプレースホルダー
         team2_name: String(row.team2_real_name || row.team2_display_name), // 実チーム名を優先、なければプレースホルダー
         court_number: row.court_number ? Number(row.court_number) : null,
+        court_name: row.court_name ? String(row.court_name) : null,
         scheduled_time: row.start_time ? String(row.start_time) : null, // scheduled_timeに統一
         period_count: Number(row.period_count || 1),
         current_period: currentPeriod,

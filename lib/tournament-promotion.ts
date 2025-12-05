@@ -200,14 +200,18 @@ async function extractTopTeamsDynamic(
     
     const formatId = formatResult.rows[0].format_id as number;
     
-    // 決勝トーナメントのテンプレートから必要な進出条件を取得（動的対応）
+    // 決勝トーナメントのテンプレートから必要な進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
-        SELECT DISTINCT team1_source, team2_source
-        FROM m_match_templates
-        WHERE format_id = ? AND phase = 'final'
+        SELECT DISTINCT
+          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
+        FROM m_match_templates mt
+        LEFT JOIN t_tournament_match_overrides mo
+          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
+        WHERE mt.format_id = ? AND mt.phase = 'final'
       `,
-      args: [formatId]
+      args: [tournamentId, formatId]
     });
     
     // 必要な進出パターンを抽出（ブロック_順位形式のみ、試合の勝敗は除外）
@@ -382,22 +386,24 @@ async function updateFinalTournamentMatches(
 
     console.log(`[PROMOTION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
 
-    // テンプレートから各試合の進出条件を取得（round_nameも取得）
+    // テンプレートから各試合の進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
         SELECT
           mt.match_code,
           mt.round_name,
-          mt.team1_source,
-          mt.team2_source,
+          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
           mt.team1_display_name as template_team1_name,
           mt.team2_display_name as template_team2_name
         FROM m_match_templates mt
         JOIN t_tournaments t ON mt.format_id = t.format_id
+        LEFT JOIN t_tournament_match_overrides mo
+          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
         WHERE t.tournament_id = ? AND mt.phase = 'final'
         ORDER BY mt.match_code
       `,
-      args: [tournamentId]
+      args: [tournamentId, tournamentId]
     });
 
     // テンプレート情報をマップ化
@@ -619,7 +625,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
 
     console.log(`[PROMOTION_VALIDATION] 進出チーム情報取得完了: ${Object.keys(promotions).length}件`);
 
-    // 3. 決勝トーナメント試合のテンプレートと実際のデータを取得
+    // 3. 決勝トーナメント試合のテンプレートと実際のデータを取得（オーバーライド適用）
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -629,8 +635,8 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
           ml.team2_id,
           ml.team1_display_name,
           ml.team2_display_name,
-          mt.team1_source,
-          mt.team2_source,
+          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
           mt.team1_display_name as template_team1_display,
           mt.team2_display_name as template_team2_display,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
@@ -638,10 +644,11 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ?
+        LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = ?
         WHERE mb.tournament_id = ? AND mb.phase = 'final'
         ORDER BY ml.match_code
       `,
-      args: [formatId, tournamentId]
+      args: [formatId, tournamentId, tournamentId]
     });
 
     console.log(`[PROMOTION_VALIDATION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
@@ -811,5 +818,225 @@ export async function autoFixPromotionIssues(tournamentId: number, issues: Promo
   } catch (error) {
     console.error(`[PROMOTION_AUTO_FIX] 自動修正処理エラー:`, error);
     return { fixedCount, failedCount, errors: [...errors, String(error)] };
+  }
+}
+
+/**
+ * オーバーライド設定が影響するブロックの試合が全て確定しているかチェックし、
+ * 確定している場合は自動的に決勝進出処理を実行
+ * @param tournamentId 大会ID
+ * @param overrideMatchCodes 影響を受ける試合コード一覧
+ */
+export async function checkAndPromoteOnOverrideChange(tournamentId: number, overrideMatchCodes: string[]): Promise<void> {
+  try {
+    console.log(`[OVERRIDE_AUTO_PROMOTE] オーバーライド変更後の自動進出チェック開始: Tournament ${tournamentId}`);
+    console.log(`[OVERRIDE_AUTO_PROMOTE] 影響を受ける試合コード: ${overrideMatchCodes.join(', ')}`);
+
+    // 影響を受ける試合が属するブロックを特定
+    const affectedBlocksResult = await db.execute({
+      sql: `
+        SELECT DISTINCT mb.match_block_id, mb.block_name
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ? AND ml.match_code IN (${overrideMatchCodes.map(() => '?').join(',')})
+      `,
+      args: [tournamentId, ...overrideMatchCodes]
+    });
+
+    if (affectedBlocksResult.rows.length === 0) {
+      console.log(`[OVERRIDE_AUTO_PROMOTE] 影響を受けるブロックが見つかりませんでした`);
+      return;
+    }
+
+    const affectedBlocks = affectedBlocksResult.rows.map(row => ({
+      match_block_id: Number(row.match_block_id),
+      block_name: String(row.block_name)
+    }));
+
+    console.log(`[OVERRIDE_AUTO_PROMOTE] 影響を受けるブロック: ${affectedBlocks.map(b => b.block_name).join(', ')}`);
+
+    // 各ブロックの進出元を特定（予選ブロックのパターン: A_1, A_2, B_1, B_2...）
+    const sourceBlockPattern = /^([A-Z])_\d+$/;
+    const sourceBlocks = new Set<string>();
+
+    for (const matchCode of overrideMatchCodes) {
+      // このmatch_codeの元の進出条件を取得
+      const sourceResult = await db.execute({
+        sql: `
+          SELECT
+            COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+            COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
+          FROM m_match_templates mt
+          INNER JOIN t_tournaments t ON t.format_id = mt.format_id
+          LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = t.tournament_id
+          WHERE t.tournament_id = ? AND mt.match_code = ?
+        `,
+        args: [tournamentId, matchCode]
+      });
+
+      if (sourceResult.rows.length > 0) {
+        const team1Source = sourceResult.rows[0].team1_source;
+        const team2Source = sourceResult.rows[0].team2_source;
+
+        // パターンマッチでブロック名を抽出（例: A_1 → A, B_2 → B）
+        if (team1Source) {
+          const match1 = String(team1Source).match(sourceBlockPattern);
+          if (match1) sourceBlocks.add(match1[1]);
+        }
+        if (team2Source) {
+          const match2 = String(team2Source).match(sourceBlockPattern);
+          if (match2) sourceBlocks.add(match2[1]);
+        }
+      }
+    }
+
+    console.log(`[OVERRIDE_AUTO_PROMOTE] 進出元予選ブロック: ${Array.from(sourceBlocks).join(', ')}`);
+
+    // 各進出元ブロックの試合が全て確定しているかチェック
+    for (const blockName of sourceBlocks) {
+      const blockResult = await db.execute({
+        sql: `
+          SELECT match_block_id, block_name
+          FROM t_match_blocks
+          WHERE tournament_id = ? AND phase = 'preliminary' AND block_name = ?
+        `,
+        args: [tournamentId, blockName]
+      });
+
+      if (blockResult.rows.length === 0) {
+        console.log(`[OVERRIDE_AUTO_PROMOTE] ブロック ${blockName} が見つかりませんでした`);
+        continue;
+      }
+
+      const blockId = Number(blockResult.rows[0].match_block_id);
+
+      // ブロック内の試合確定状況をチェック
+      const matchStatusResult = await db.execute({
+        sql: `
+          SELECT
+            COUNT(*) as total_matches,
+            COUNT(CASE WHEN ml.result_status = 'confirmed' OR ml.match_status = 'cancelled' THEN 1 END) as completed_matches
+          FROM t_matches_live ml
+          WHERE ml.match_block_id = ?
+        `,
+        args: [blockId]
+      });
+
+      const totalMatches = Number(matchStatusResult.rows[0].total_matches);
+      const completedMatches = Number(matchStatusResult.rows[0].completed_matches);
+
+      console.log(`[OVERRIDE_AUTO_PROMOTE] ブロック ${blockName} (ID: ${blockId}): ${completedMatches}/${totalMatches} 試合完了`);
+
+      if (completedMatches === totalMatches && totalMatches > 0) {
+        // 全試合が確定または中止されている場合、自動的に進出処理を実行
+        console.log(`[OVERRIDE_AUTO_PROMOTE] ブロック ${blockName} の全試合が完了しているため、進出処理を実行します`);
+        await promoteTeamsToFinalTournament(tournamentId, blockId);
+      } else {
+        console.log(`[OVERRIDE_AUTO_PROMOTE] ブロック ${blockName} はまだ完了していないため、進出処理はスキップします`);
+      }
+    }
+
+    console.log(`[OVERRIDE_AUTO_PROMOTE] 自動進出チェック完了`);
+
+  } catch (error) {
+    console.error(`[OVERRIDE_AUTO_PROMOTE] 自動進出チェックエラー:`, error);
+    // エラーが発生してもオーバーライド設定は成功扱いとする（進出処理は後で手動実行可能）
+  }
+}
+
+/**
+ * 試合確定時にオーバーライド設定を考慮した自動進出チェックを行う
+ * @param tournamentId 大会ID
+ * @param matchBlockId 確定された試合のブロックID
+ * @param _matchCodeOrBlockName 試合コードまたはブロック名（将来の拡張用）
+ */
+export async function checkAndPromoteOnMatchConfirm(
+  tournamentId: number,
+  matchBlockId: number,
+  _matchCodeOrBlockName: string
+): Promise<void> {
+  try {
+    console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 試合確定後の自動進出チェック開始: Tournament ${tournamentId}, Block ${matchBlockId}`);
+
+    // ブロックのフェーズを確認（予選ブロックのみ処理）
+    const blockInfoResult = await db.execute({
+      sql: `
+        SELECT phase, block_name
+        FROM t_match_blocks
+        WHERE match_block_id = ?
+      `,
+      args: [matchBlockId]
+    });
+
+    if (blockInfoResult.rows.length === 0) {
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロックが見つかりませんでした`);
+      return;
+    }
+
+    const phase = String(blockInfoResult.rows[0].phase);
+    const blockName = String(blockInfoResult.rows[0].block_name);
+
+    if (phase !== 'preliminary') {
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 決勝トーナメントの試合のため、自動進出チェックをスキップします`);
+      return;
+    }
+
+    // ブロック内の試合確定状況をチェック
+    const matchStatusResult = await db.execute({
+      sql: `
+        SELECT
+          COUNT(*) as total_matches,
+          COUNT(CASE WHEN ml.result_status = 'confirmed' OR ml.match_status = 'cancelled' THEN 1 END) as completed_matches
+        FROM t_matches_live ml
+        WHERE ml.match_block_id = ?
+      `,
+      args: [matchBlockId]
+    });
+
+    const totalMatches = Number(matchStatusResult.rows[0].total_matches);
+    const completedMatches = Number(matchStatusResult.rows[0].completed_matches);
+
+    console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName}: ${completedMatches}/${totalMatches} 試合完了`);
+
+    if (completedMatches === totalMatches && totalMatches > 0) {
+      // 全試合が確定または中止されている場合
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName} の全試合が完了しました`);
+
+      // このブロックを進出元とする決勝トーナメント試合にオーバーライドがあるかチェック
+      const overrideCheckResult = await db.execute({
+        sql: `
+          SELECT COUNT(*) as override_count
+          FROM t_tournament_match_overrides mo
+          INNER JOIN m_match_templates mt ON mt.match_code = mo.match_code
+          INNER JOIN t_tournaments t ON t.tournament_id = mo.tournament_id AND t.format_id = mt.format_id
+          WHERE mo.tournament_id = ?
+            AND mt.phase = 'final'
+            AND (
+              COALESCE(mo.team1_source_override, mt.team1_source) LIKE ? OR
+              COALESCE(mo.team2_source_override, mt.team2_source) LIKE ?
+            )
+        `,
+        args: [tournamentId, `${blockName}_%`, `${blockName}_%`]
+      });
+
+      const overrideCount = Number(overrideCheckResult.rows[0]?.override_count || 0);
+
+      if (overrideCount > 0) {
+        console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName} を進出元とする決勝試合に ${overrideCount} 件のオーバーライドが設定されています`);
+        console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] オーバーライド設定を考慮した進出処理を実行します`);
+      } else {
+        console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName} にオーバーライドは設定されていません（通常の進出処理を実行）`);
+      }
+
+      // 進出処理を実行（オーバーライドは内部で自動的に考慮される）
+      await promoteTeamsToFinalTournament(tournamentId, matchBlockId);
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName} の進出処理が完了しました`);
+    } else {
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName} はまだ完了していません（${totalMatches - completedMatches} 試合残り）`);
+    }
+
+  } catch (error) {
+    console.error(`[MATCH_CONFIRM_AUTO_PROMOTE] 試合確定後の自動進出チェックエラー:`, error);
+    // エラーが発生しても試合確定処理は成功扱いとする
   }
 }

@@ -803,9 +803,10 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
     }
 
     if (match.is_walkover) {
+      const walkoverScore = `${match.team1_goals ?? 0} - ${match.team2_goals ?? 0}`;
       return {
         status: 'walkover',
-        display: <span className="text-orange-600 text-sm font-medium">不戦勝</span>,
+        display: <span className="text-orange-600 text-sm font-medium">不戦勝 {walkoverScore}</span>,
         icon: <AlertTriangle className="h-4 w-4 text-orange-500" />
       };
     }
@@ -2390,12 +2391,17 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                   
                   if (match.is_walkover) {
                     // 不戦勝/不戦敗
+                    const team1Goals = match.team1_goals !== undefined ?
+                      Math.floor(match.team1_goals) : calculateArchiveGoals(match.team1_scores);
+                    const team2Goals = match.team2_goals !== undefined ?
+                      Math.floor(match.team2_goals) : calculateArchiveGoals(match.team2_scores);
+
                     if (match.winner_team_id === team1.team_id) {
                       result = 'win';
-                      score = '不戦勝';
+                      score = `不戦勝\n${team1Goals}-${team2Goals}`;
                     } else {
                       result = 'loss';
-                      score = '不戦敗';
+                      score = `不戦敗\n${team1Goals}-${team2Goals}`;
                     }
                   } else if (match.is_draw) {
                     result = 'draw';
@@ -2642,9 +2648,9 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                         チーム
                       </th>
                       {/* 対戦結果の列ヘッダー（チーム略称を縦書き表示） */}
-                      {block.teams.map((opponent) => (
-                        <th 
-                          key={opponent.team_id}
+                      {block.teams.map((opponent, opponentIndex) => (
+                        <th
+                          key={`${block.block_name}-header-${opponent.team_id}-${opponentIndex}`}
                           className="border border-border p-1 md:p-2 bg-green-50 dark:bg-green-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
                         >
                           <div 
@@ -2710,11 +2716,11 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                     </tr>
                   </thead>
                   <tbody>
-                    {block.teams.map((team) => {
+                    {block.teams.map((team, teamIndex) => {
                       const teamStanding = getTeamStanding(team.team_id, block.block_name);
-                      
+
                       return (
-                        <tr key={team.team_id}>
+                        <tr key={`${block.block_name}-row-${team.team_id}-${teamIndex}`}>
                           {/* チーム名（略称優先） */}
                           <td className="border border-border p-2 md:p-3 bg-muted font-medium text-sm md:text-base">
                             <div 
@@ -2729,11 +2735,11 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                               </span>
                             </div>
                           </td>
-                          
+
                           {/* 対戦結果 */}
-                          {block.teams.map((opponent) => (
-                            <td 
-                              key={opponent.team_id}
+                          {block.teams.map((opponent, opponentIndex) => (
+                            <td
+                              key={`${block.block_name}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
                               className="border border-border p-1 md:p-2 text-center bg-card"
                             >
                               {team.team_id === opponent.team_id ? (
@@ -3368,9 +3374,9 @@ const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sport
                     </tr>
                   </thead>
                   <tbody>
-                    {blockTeams.map((team) => (
-                      <tr 
-                        key={team.team_id} 
+                    {blockTeams.map((team, teamIndex) => (
+                      <tr
+                        key={`${block.block_name}-${team.team_id}-${teamIndex}`} 
                         className={`border-b transition-colors ${ 
                           team.position === 0 
                             ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 
@@ -3640,10 +3646,10 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {blockTeams.map((team) => {
+              {blockTeams.map((team, teamIndex) => {
                 const teamStatus = getTeamStatus(team);
                 const isExpanded = expandedTeams.has(team.team_id);
-                
+
                 // 選手データのデバッグ情報出力
                 if (team.team_id === blockTeams[0]?.team_id) {
                   console.log(`[DEBUG] ${team.team_name} の選手データ:`, team.players);
@@ -3652,7 +3658,7 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                 }
 
                 return (
-                  <div key={team.team_id} className="border rounded-lg">
+                  <div key={`team-list-${team.team_id}-${teamIndex}`} className="border rounded-lg">
                     {/* チーム基本情報 */}
                     <div 
                       className="p-4 cursor-pointer hover:bg-muted transition-colors"

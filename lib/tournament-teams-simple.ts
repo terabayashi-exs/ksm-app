@@ -175,8 +175,8 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
           tt.team_id,
           tt.assigned_block,
           tt.block_position,
-          t.team_name,
-          t.team_omission,
+          COALESCE(tt.team_name, t.team_name) as team_name,
+          COALESCE(tt.team_omission, t.team_omission) as team_omission,
           t.contact_person,
           t.contact_email,
           t.contact_phone
@@ -194,15 +194,15 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
 
     if (teamsResult.rows && teamsResult.rows.length > 0) {
       for (const teamRow of teamsResult.rows) {
-        // 各チームの選手数を取得
+        // 各チームの選手数を取得（tournament_team_idを使用して特定のエントリーの選手のみカウント）
         const playerCountResult = await db.execute({
           sql: `
             SELECT COUNT(*) as player_count
             FROM t_tournament_players tp
-            WHERE tp.tournament_id = ? AND tp.team_id = ?
+            WHERE tp.tournament_team_id = ?
             AND tp.player_status = 'active'
           `,
-          args: [tournamentId, teamRow.team_id]
+          args: [teamRow.tournament_team_id]
         });
 
         const playerCount = (playerCountResult.rows?.[0]?.player_count as number) || 0;

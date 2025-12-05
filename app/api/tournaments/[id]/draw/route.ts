@@ -37,18 +37,17 @@ export async function POST(
         WHERE tournament_id = ?
       `, [tournamentId]);
 
-      // 新しい振分情報を保存
+      // 新しい振分情報を保存（tournament_team_idを使用して特定のエントリーのみ更新）
       for (const block of blocks) {
         for (const team of block.teams) {
           await db.execute(`
-            UPDATE t_tournament_teams 
-            SET assigned_block = ?, block_position = ? 
-            WHERE tournament_id = ? AND team_id = ?
+            UPDATE t_tournament_teams
+            SET assigned_block = ?, block_position = ?
+            WHERE tournament_team_id = ?
           `, [
             block.block_name,
             team.block_position,
-            tournamentId,
-            team.team_id
+            team.tournament_team_id
           ]);
         }
       }
@@ -62,22 +61,35 @@ export async function POST(
         WHERE mb.tournament_id = ? AND mb.phase = 'preliminary'
       `, [tournamentId]);
 
-      // 各試合について、表示名に対応する実際のチームIDを設定
+      // 各試合について、表示名に対応する実際のチームIDと実際のチーム名を設定
       for (const match of matchesResult.rows) {
         const blockName = match.block_name as string;
         const team1DisplayName = match.team1_display_name as string;
         const team2DisplayName = match.team2_display_name as string;
 
         // "A1チーム" -> ブロックA、1番目のチーム
-        const team1Id = await getTeamIdByPosition(tournamentId, blockName, team1DisplayName);
-        const team2Id = await getTeamIdByPosition(tournamentId, blockName, team2DisplayName);
+        const team1Data = await getTeamDataByPosition(tournamentId, blockName, team1DisplayName);
+        const team2Data = await getTeamDataByPosition(tournamentId, blockName, team2DisplayName);
 
-        if (team1Id && team2Id) {
+        if (team1Data && team2Data) {
           await db.execute(`
-            UPDATE t_matches_live 
-            SET team1_id = ?, team2_id = ?
+            UPDATE t_matches_live
+            SET team1_id = ?,
+                team2_id = ?,
+                team1_tournament_team_id = ?,
+                team2_tournament_team_id = ?,
+                team1_display_name = ?,
+                team2_display_name = ?
             WHERE match_id = ?
-          `, [team1Id, team2Id, match.match_id]);
+          `, [
+            team1Data.team_id,
+            team2Data.team_id,
+            team1Data.tournament_team_id,
+            team2Data.tournament_team_id,
+            team1Data.team_name,
+            team2Data.team_name,
+            match.match_id
+          ]);
         }
       }
 
@@ -104,12 +116,12 @@ export async function POST(
   }
 }
 
-// 表示名からチームIDを取得する関数
-async function getTeamIdByPosition(
-  tournamentId: number, 
-  blockName: string, 
+// 表示名からチームデータ（team_id, tournament_team_id, team_name）を取得する関数
+async function getTeamDataByPosition(
+  tournamentId: number,
+  blockName: string,
   displayName: string
-): Promise<string | null> {
+): Promise<{ team_id: string; tournament_team_id: number; team_name: string } | null> {
   // "A1チーム" -> ブロックA、1番目のチーム
   const match = displayName.match(/^([A-Z])(\d+)チーム$/);
   if (!match) return null;
@@ -120,10 +132,19 @@ async function getTeamIdByPosition(
   const positionNum = parseInt(position);
 
   const result = await db.execute(`
-    SELECT team_id 
-    FROM t_tournament_teams 
+    SELECT
+      team_id,
+      tournament_team_id,
+      COALESCE(team_omission, team_name) as team_name
+    FROM t_tournament_teams
     WHERE tournament_id = ? AND assigned_block = ? AND block_position = ?
   `, [tournamentId, blockName, positionNum]);
 
-  return result.rows.length > 0 ? result.rows[0].team_id as string : null;
+  if (result.rows.length === 0) return null;
+
+  return {
+    team_id: result.rows[0].team_id as string,
+    tournament_team_id: result.rows[0].tournament_team_id as number,
+    team_name: result.rows[0].team_name as string
+  };
 }

@@ -30,23 +30,30 @@ async function getTournamentProgressionRules(matchCode: string, tournamentId: nu
     
     const formatId = formatResult.rows[0].format_id as number;
     
-    // この試合を参照している他の試合を検索
+    // この試合を参照している他の試合を検索（オーバーライドを考慮）
     const winnerPattern = `${matchCode}_winner`;
     const loserPattern = `${matchCode}_loser`;
-    
+
     console.log(`[TOURNAMENT_PROGRESSION] Searching for matches that reference ${winnerPattern} or ${loserPattern}`);
-    
+
     const dependentMatchesResult = await db.execute(`
-      SELECT 
-        match_code,
-        team1_source,
-        team2_source,
-        team1_display_name,
-        team2_display_name
-      FROM m_match_templates
-      WHERE format_id = ?
-      AND (team1_source = ? OR team1_source = ? OR team2_source = ? OR team2_source = ?)
-    `, [formatId, winnerPattern, loserPattern, winnerPattern, loserPattern]);
+      SELECT
+        mt.match_code,
+        COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
+        COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
+        mt.team1_display_name,
+        mt.team2_display_name
+      FROM m_match_templates mt
+      LEFT JOIN t_tournament_match_overrides mo
+        ON mt.match_code = mo.match_code AND mo.tournament_id = ?
+      WHERE mt.format_id = ?
+      AND (
+        COALESCE(mo.team1_source_override, mt.team1_source) = ?
+        OR COALESCE(mo.team1_source_override, mt.team1_source) = ?
+        OR COALESCE(mo.team2_source_override, mt.team2_source) = ?
+        OR COALESCE(mo.team2_source_override, mt.team2_source) = ?
+      )
+    `, [tournamentId, formatId, winnerPattern, loserPattern, winnerPattern, loserPattern]);
     
     console.log(`[TOURNAMENT_PROGRESSION] Found ${dependentMatchesResult.rows.length} dependent matches`);
     

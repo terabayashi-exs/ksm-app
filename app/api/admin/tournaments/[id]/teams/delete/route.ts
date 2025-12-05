@@ -29,33 +29,34 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const { teamId } = body;
+    const { tournamentTeamId } = body;
 
-    if (!teamId) {
+    if (!tournamentTeamId) {
       return NextResponse.json(
-        { success: false, error: 'チームIDが必要です' },
+        { success: false, error: '大会チームIDが必要です' },
         { status: 400 }
       );
     }
 
     console.log('Admin team deletion request:', {
       tournamentId,
-      teamId,
+      tournamentTeamId,
       adminId: session.user.id
     });
 
     // 削除対象チームの詳細情報を取得
     const teamInfoResult = await db.execute(`
-      SELECT 
+      SELECT
         tt.tournament_team_id,
+        tt.team_id,
         tt.team_name as tournament_team_name,
         m.team_name as master_team_name,
         m.registration_type,
         m.contact_email
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
-      WHERE tt.tournament_id = ? AND tt.team_id = ?
-    `, [tournamentId, teamId]);
+      WHERE tt.tournament_id = ? AND tt.tournament_team_id = ?
+    `, [tournamentId, tournamentTeamId]);
 
     if (teamInfoResult.rows.length === 0) {
       return NextResponse.json(
@@ -65,13 +66,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     const teamInfo = teamInfoResult.rows[0];
+    const teamId = String(teamInfo.team_id);
 
     // 管理者代行登録チームのみ削除可能
     if (teamInfo.registration_type !== 'admin_proxy') {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: '管理者代行登録されたチームのみ削除可能です' 
+        {
+          success: false,
+          error: '管理者代行登録されたチームのみ削除可能です'
         },
         { status: 403 }
       );
@@ -99,18 +101,18 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     `, [tournamentId, teamId, teamId, teamId]);
     console.log('Deleted final matches');
 
-    // 2. 大会参加選手を削除
+    // 2. 大会参加選手を削除（tournament_team_idを使用して特定のエントリーのみ削除）
     await db.execute(`
       DELETE FROM t_tournament_players
-      WHERE tournament_id = ? AND team_id = ?
-    `, [tournamentId, teamId]);
+      WHERE tournament_team_id = ?
+    `, [tournamentTeamId]);
     console.log('Deleted tournament players');
 
-    // 3. 大会参加チームを削除
+    // 3. 大会参加チームを削除（tournament_team_idを使用して特定のエントリーのみ削除）
     await db.execute(`
       DELETE FROM t_tournament_teams
-      WHERE tournament_id = ? AND team_id = ?
-    `, [tournamentId, teamId]);
+      WHERE tournament_team_id = ?
+    `, [tournamentTeamId]);
     console.log('Deleted tournament team');
 
     // 注: マスターデータ（m_teams、m_players）は削除しない
@@ -121,7 +123,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       message: 'チームを正常に削除しました',
       data: {
         deletedTeam: {
-          team_id: teamId,
+          tournament_team_id: tournamentTeamId,
+          team_id: String(teamInfo.team_id),
           tournament_team_name: String(teamInfo.tournament_team_name),
           master_team_name: String(teamInfo.master_team_name),
           contact_email: String(teamInfo.contact_email)

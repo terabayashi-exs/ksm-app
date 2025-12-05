@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { updateFinalTournamentRankings, updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
+import { checkAndPromoteOnMatchConfirm } from '@/lib/tournament-promotion';
 
 /**
  * 大会の全試合が確定されているかチェックし、完了していれば大会ステータスを更新する
@@ -57,8 +58,7 @@ async function checkAndCompleteTournament(tournamentId: number): Promise<void> {
  */
 export async function confirmMatchResult(matchId: number): Promise<void> {
   try {
-    // トランザクション開始
-    await db.execute({ sql: 'BEGIN TRANSACTION' });
+    // Tursoではトランザクションがサポートされていないため、個別処理で実行
 
     // t_matches_liveから試合データを取得（中止試合は除外）
     const liveMatchResult = await db.execute({
@@ -83,11 +83,12 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       sql: `
         INSERT INTO t_matches_final (
           match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_display_name, team2_display_name,
+          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_display_name, team2_display_name,
           court_number, start_time, team1_scores, team2_scores,
-          winner_team_id, is_draw, is_walkover, remarks,
+          winner_team_id, winner_tournament_team_id, is_draw, is_walkover, remarks,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `,
       args: [
         match.match_block_id,
@@ -96,6 +97,8 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         match.match_code,
         match.team1_id,
         match.team2_id,
+        match.team1_tournament_team_id,
+        match.team2_tournament_team_id,
         match.team1_display_name,
         match.team2_display_name,
         match.court_number,
@@ -103,6 +106,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         Math.floor(Number(match.team1_scores) || 0),
         Math.floor(Number(match.team2_scores) || 0),
         match.winner_team_id,
+        match.winner_tournament_team_id,
         match.is_draw,
         match.is_walkover,
         match.remarks
@@ -140,7 +144,16 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       
       // 順位表を更新（多競技対応版）
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
-      
+
+      // オーバーライド設定を考慮した自動進出チェック
+      try {
+        const matchCode = match.match_code as string;
+        await checkAndPromoteOnMatchConfirm(tournamentId, matchBlockId, matchCode);
+      } catch (promoteError) {
+        console.error(`[MATCH_CONFIRM] オーバーライド考慮の自動進出処理でエラーが発生しましたが、試合確定は完了しました:`, promoteError);
+        // エラーが発生しても試合確定処理は成功とする
+      }
+
       // 決勝トーナメントの場合は決勝順位も更新
       const blockPhaseResult = await db.execute({
         sql: 'SELECT phase FROM t_match_blocks WHERE match_block_id = ?',
@@ -169,12 +182,10 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       await checkAndCompleteTournament(tournamentId);
     }
 
-    // トランザクション確定
-    await db.execute({ sql: 'COMMIT' });
+    // Tursoではトランザクションがサポートされていないため、コミット不要
 
   } catch (error) {
-    // トランザクション回復
-    await db.execute({ sql: 'ROLLBACK' });
+    // Tursoではトランザクションがサポートされていないため、ロールバック不可
     console.error('試合結果確定エラー:', error);
     throw new Error('試合結果の確定に失敗しました');
   }
@@ -185,7 +196,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
  */
 export async function confirmMultipleMatchResults(matchIds: number[]): Promise<void> {
   try {
-    await db.execute({ sql: 'BEGIN TRANSACTION' });
+    // Tursoではトランザクションがサポートされていないため、個別処理で実行
 
     const updatedBlocks = new Set<number>();
 
@@ -214,11 +225,12 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
         sql: `
           INSERT INTO t_matches_final (
             match_block_id, tournament_date, match_number, match_code,
-            team1_id, team2_id, team1_display_name, team2_display_name,
+            team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+            team1_display_name, team2_display_name,
             court_number, start_time, team1_scores, team2_scores,
-            winner_team_id, is_draw, is_walkover, remarks,
+            winner_team_id, winner_tournament_team_id, is_draw, is_walkover, remarks,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `,
         args: [
           match.match_block_id,
@@ -227,6 +239,8 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           match.match_code,
           match.team1_id,
           match.team2_id,
+          match.team1_tournament_team_id,
+          match.team2_tournament_team_id,
           match.team1_display_name,
           match.team2_display_name,
           match.court_number,
@@ -234,6 +248,7 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           Math.floor(Number(match.team1_scores) || 0),
           Math.floor(Number(match.team2_scores) || 0),
           match.winner_team_id,
+          match.winner_tournament_team_id,
           match.is_draw,
           match.is_walkover,
           match.remarks
@@ -273,19 +288,28 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
     // 更新されたブロックの順位表を一括更新
     const affectedTournaments = new Set<number>();
     const finalTournamentsToUpdate = new Set<number>();
-    
+
     for (const matchBlockId of updatedBlocks) {
       const blockResult = await db.execute({
-        sql: 'SELECT tournament_id, phase FROM t_match_blocks WHERE match_block_id = ?',
+        sql: 'SELECT tournament_id, phase, block_name FROM t_match_blocks WHERE match_block_id = ?',
         args: [matchBlockId]
       });
 
       if (blockResult.rows && blockResult.rows.length > 0) {
         const tournamentId = blockResult.rows[0].tournament_id as number;
         const phase = blockResult.rows[0].phase as string;
-        
+        const blockName = blockResult.rows[0].block_name as string;
+
         affectedTournaments.add(tournamentId);
         await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
+
+        // オーバーライド設定を考慮した自動進出チェック（一括確定時）
+        try {
+          await checkAndPromoteOnMatchConfirm(tournamentId, matchBlockId, blockName);
+        } catch (promoteError) {
+          console.error(`[BULK_CONFIRM] オーバーライド考慮の自動進出処理でエラーが発生しました (Block ${matchBlockId}):`, promoteError);
+          // エラーが発生しても処理は継続
+        }
         
         // 決勝トーナメントの場合はテンプレートベース順位設定と決勝順位更新対象に追加
         if (phase === 'final') {
@@ -340,12 +364,12 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
       await checkAndCompleteTournament(tournamentId);
     }
 
-    await db.execute({ sql: 'COMMIT' });
+    // Tursoではトランザクションがサポートされていないため、コミット不要
 
     console.log(`${matchIds.length}試合の結果を一括確定し、${updatedBlocks.size}ブロックの順位表を更新しました`);
 
   } catch (error) {
-    await db.execute({ sql: 'ROLLBACK' });
+    // Tursoではトランザクションがサポートされていないため、ロールバック不可
     console.error('一括試合結果確定エラー:', error);
     throw new Error('一括試合結果の確定に失敗しました');
   }
