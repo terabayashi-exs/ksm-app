@@ -225,10 +225,12 @@ export async function GET(
                 ml.team1_id,
                 ml.team2_id,
                 CASE
+                  WHEN ml.team1_tournament_team_id IS NOT NULL THEN COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name)
                   WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
                   ELSE ml.team1_display_name
                 END as team1_display_name,
                 CASE
+                  WHEN ml.team2_tournament_team_id IS NOT NULL THEN COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name)
                   WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
                   ELSE ml.team2_display_name
                 END as team2_display_name,
@@ -253,6 +255,8 @@ export async function GET(
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+              LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+              LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
@@ -274,10 +278,12 @@ export async function GET(
                 ml.team1_id,
                 ml.team2_id,
                 CASE
+                  WHEN ml.team1_tournament_team_id IS NOT NULL THEN COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name)
                   WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
                   ELSE ml.team1_display_name
                 END as team1_display_name,
                 CASE
+                  WHEN ml.team2_tournament_team_id IS NOT NULL THEN COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name)
                   WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
                   ELSE ml.team2_display_name
                 END as team2_display_name,
@@ -303,6 +309,8 @@ export async function GET(
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+              LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+              LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?

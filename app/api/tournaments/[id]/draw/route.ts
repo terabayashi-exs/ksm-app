@@ -72,22 +72,20 @@ export async function POST(
         const team2Data = await getTeamDataByPosition(tournamentId, blockName, team2DisplayName);
 
         if (team1Data && team2Data) {
+          // display_nameはプレースホルダー形式のまま維持
+          // UIではtournament_team_idを使って実際のチーム名を表示する
           await db.execute(`
             UPDATE t_matches_live
             SET team1_id = ?,
                 team2_id = ?,
                 team1_tournament_team_id = ?,
-                team2_tournament_team_id = ?,
-                team1_display_name = ?,
-                team2_display_name = ?
+                team2_tournament_team_id = ?
             WHERE match_id = ?
           `, [
             team1Data.team_id,
             team2Data.team_id,
             team1Data.tournament_team_id,
             team2Data.tournament_team_id,
-            team1Data.team_name,
-            team2Data.team_name,
             match.match_id
           ]);
         }

@@ -29,13 +29,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
     
     // 速報対象の試合を取得
     const matchesResult = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
           ml.team2_id,
-          COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
-          COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
+          CASE
+            WHEN ml.team1_tournament_team_id IS NOT NULL THEN COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name)
+            ELSE COALESCE(t1.team_name, ml.team1_display_name)
+          END as team1_display_name,
+          CASE
+            WHEN ml.team2_tournament_team_id IS NOT NULL THEN COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name)
+            ELSE COALESCE(t2.team_name, ml.team2_display_name)
+          END as team2_display_name,
           ml.court_number,
           tc.court_name,
           ml.start_time,
@@ -57,6 +63,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as has_result
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
         LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -64,11 +72,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         WHERE mb.tournament_id = ?
           AND (
             ml.match_status = 'ongoing'
-            OR 
+            OR
             (ml.match_status = 'completed' AND ml.updated_at >= ?)
           )
-        ORDER BY 
-          CASE ml.match_status 
+        ORDER BY
+          CASE ml.match_status
             WHEN 'ongoing' THEN 1
             WHEN 'completed' THEN 2
             ELSE 3
