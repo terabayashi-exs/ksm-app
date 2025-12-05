@@ -206,29 +206,34 @@ export async function getMultiSportMatchResults(matchBlockId: number, tournament
     const result = await db.execute(`
       SELECT
         mf.match_id,
+        mf.match_code,
         mf.match_block_id,
         mf.team1_id,
         mf.team2_id,
+        mf.team1_tournament_team_id,
+        mf.team2_tournament_team_id,
+        mf.team1_display_name,
+        mf.team2_display_name,
         mf.team1_scores,
         mf.team2_scores,
         mf.winner_team_id,
+        mf.winner_tournament_team_id,
         mf.is_draw,
         mf.is_walkover,
-        -- 拡張情報（サッカー用）
-        ml.period_count,
+        -- period_countを大会ルールから取得（デフォルト1）
+        COALESCE(tr.active_periods, 1) as period_count,
         -- 大会ルール情報
         tr.active_periods,
         -- 競技種別
         st.sport_code
       FROM t_matches_final mf
-      INNER JOIN t_matches_live ml ON mf.match_id = ml.match_id
       INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
       INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
       INNER JOIN m_sport_types st ON tour.sport_type_id = st.sport_type_id
       LEFT JOIN t_tournament_rules tr ON tour.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       WHERE mf.match_block_id = ?
         AND mb.tournament_id = ?
-        AND (ml.match_status IS NULL OR ml.match_status != 'cancelled' OR mf.is_walkover = 1)
+        AND mf.is_walkover = 0
     `, [matchBlockId, tournamentId]);
 
     return result.rows;

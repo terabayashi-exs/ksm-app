@@ -503,6 +503,8 @@ async function generateMatchesFromTemplate(
           match_code,
           team1_id,
           team2_id,
+          team1_tournament_team_id,
+          team2_tournament_team_id,
           team1_display_name,
           team2_display_name,
           court_number,
@@ -511,8 +513,9 @@ async function generateMatchesFromTemplate(
           team2_scores,
           period_count,
           winner_team_id,
+          winner_tournament_team_id,
           remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         blockId,
         tournamentDate,
@@ -520,6 +523,8 @@ async function generateMatchesFromTemplate(
         template.match_code,
         template.team1_source || null, // 初期状態では未確定
         template.team2_source || null, // 初期状態では未確定
+        null, // team1_tournament_team_id - 組合せ確定時に設定
+        null, // team2_tournament_team_id - 組合せ確定時に設定
         template.team1_display_name,
         template.team2_display_name,
         courtNumber, // スケジュール計算結果から設定
@@ -528,6 +533,7 @@ async function generateMatchesFromTemplate(
         null, // team2_scores は初期状態でnull
         periodCount, // テンプレートから取得したperiod_count
         null, // winner_team_id は結果確定時に設定
+        null, // winner_tournament_team_id は結果確定時に設定
         null  // remarks
       ]);
     }

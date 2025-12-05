@@ -68,21 +68,28 @@ export async function POST(
         const team2DisplayName = match.team2_display_name as string;
 
         // "A1チーム" -> ブロックA、1番目のチーム
-        const team1Id = await getTeamIdByPosition(tournamentId, blockName, team1DisplayName);
-        const team2Id = await getTeamIdByPosition(tournamentId, blockName, team2DisplayName);
+        const team1Data = await getTeamDataByPosition(tournamentId, blockName, team1DisplayName);
+        const team2Data = await getTeamDataByPosition(tournamentId, blockName, team2DisplayName);
 
-        if (team1Id && team2Id) {
-          // 実際のチーム名を取得（tournament_team_idではなくteam_idとblock_positionで特定）
-          const team1Name = await getTeamNameByPosition(tournamentId, blockName, team1DisplayName);
-          const team2Name = await getTeamNameByPosition(tournamentId, blockName, team2DisplayName);
-
-          if (team1Name && team2Name) {
-            await db.execute(`
-              UPDATE t_matches_live
-              SET team1_id = ?, team2_id = ?, team1_display_name = ?, team2_display_name = ?
-              WHERE match_id = ?
-            `, [team1Id, team2Id, team1Name, team2Name, match.match_id]);
-          }
+        if (team1Data && team2Data) {
+          await db.execute(`
+            UPDATE t_matches_live
+            SET team1_id = ?,
+                team2_id = ?,
+                team1_tournament_team_id = ?,
+                team2_tournament_team_id = ?,
+                team1_display_name = ?,
+                team2_display_name = ?
+            WHERE match_id = ?
+          `, [
+            team1Data.team_id,
+            team2Data.team_id,
+            team1Data.tournament_team_id,
+            team2Data.tournament_team_id,
+            team1Data.team_name,
+            team2Data.team_name,
+            match.match_id
+          ]);
         }
       }
 
@@ -109,12 +116,12 @@ export async function POST(
   }
 }
 
-// 表示名からチームIDを取得する関数
-async function getTeamIdByPosition(
+// 表示名からチームデータ（team_id, tournament_team_id, team_name）を取得する関数
+async function getTeamDataByPosition(
   tournamentId: number,
   blockName: string,
   displayName: string
-): Promise<string | null> {
+): Promise<{ team_id: string; tournament_team_id: number; team_name: string } | null> {
   // "A1チーム" -> ブロックA、1番目のチーム
   const match = displayName.match(/^([A-Z])(\d+)チーム$/);
   if (!match) return null;
@@ -125,36 +132,19 @@ async function getTeamIdByPosition(
   const positionNum = parseInt(position);
 
   const result = await db.execute(`
-    SELECT team_id
+    SELECT
+      team_id,
+      tournament_team_id,
+      COALESCE(team_omission, team_name) as team_name
     FROM t_tournament_teams
     WHERE tournament_id = ? AND assigned_block = ? AND block_position = ?
   `, [tournamentId, blockName, positionNum]);
 
-  return result.rows.length > 0 ? result.rows[0].team_id as string : null;
-}
+  if (result.rows.length === 0) return null;
 
-// 表示名から実際のチーム名を取得する関数
-async function getTeamNameByPosition(
-  tournamentId: number,
-  blockName: string,
-  displayName: string
-): Promise<string | null> {
-  // "A1チーム" -> ブロックA、1番目のチーム
-  const match = displayName.match(/^([A-Z])(\d+)チーム$/);
-  if (!match) return null;
-
-  const [, expectedBlockName, position] = match;
-  if (expectedBlockName !== blockName) return null;
-
-  const positionNum = parseInt(position);
-
-  // tournament_team_idではなく、team_idとblock_positionで特定
-  // COALESCE関数で大会固有のチーム名を優先し、なければマスターチーム名を使用
-  const result = await db.execute(`
-    SELECT COALESCE(tt.team_omission, tt.team_name) as team_name
-    FROM t_tournament_teams tt
-    WHERE tt.tournament_id = ? AND tt.assigned_block = ? AND tt.block_position = ?
-  `, [tournamentId, blockName, positionNum]);
-
-  return result.rows.length > 0 ? result.rows[0].team_name as string : null;
+  return {
+    team_id: result.rows[0].team_id as string,
+    tournament_team_id: result.rows[0].tournament_team_id as number,
+    team_name: result.rows[0].team_name as string
+  };
 }

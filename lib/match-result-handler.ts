@@ -58,8 +58,7 @@ async function checkAndCompleteTournament(tournamentId: number): Promise<void> {
  */
 export async function confirmMatchResult(matchId: number): Promise<void> {
   try {
-    // トランザクション開始
-    await db.execute({ sql: 'BEGIN TRANSACTION' });
+    // Tursoではトランザクションがサポートされていないため、個別処理で実行
 
     // t_matches_liveから試合データを取得（中止試合は除外）
     const liveMatchResult = await db.execute({
@@ -183,12 +182,10 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       await checkAndCompleteTournament(tournamentId);
     }
 
-    // トランザクション確定
-    await db.execute({ sql: 'COMMIT' });
+    // Tursoではトランザクションがサポートされていないため、コミット不要
 
   } catch (error) {
-    // トランザクション回復
-    await db.execute({ sql: 'ROLLBACK' });
+    // Tursoではトランザクションがサポートされていないため、ロールバック不可
     console.error('試合結果確定エラー:', error);
     throw new Error('試合結果の確定に失敗しました');
   }
@@ -199,7 +196,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
  */
 export async function confirmMultipleMatchResults(matchIds: number[]): Promise<void> {
   try {
-    await db.execute({ sql: 'BEGIN TRANSACTION' });
+    // Tursoではトランザクションがサポートされていないため、個別処理で実行
 
     const updatedBlocks = new Set<number>();
 
@@ -367,12 +364,12 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
       await checkAndCompleteTournament(tournamentId);
     }
 
-    await db.execute({ sql: 'COMMIT' });
+    // Tursoではトランザクションがサポートされていないため、コミット不要
 
     console.log(`${matchIds.length}試合の結果を一括確定し、${updatedBlocks.size}ブロックの順位表を更新しました`);
 
   } catch (error) {
-    await db.execute({ sql: 'ROLLBACK' });
+    // Tursoではトランザクションがサポートされていないため、ロールバック不可
     console.error('一括試合結果確定エラー:', error);
     throw new Error('一括試合結果の確定に失敗しました');
   }

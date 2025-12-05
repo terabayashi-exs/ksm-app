@@ -490,9 +490,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                       <td className="py-2 md:py-3 px-2 md:px-3">
                         <div className="flex items-center">
                           <span className="hidden md:inline-block mr-2">
-                            {team.position > 0 ? getPositionIcon(team.position) : team.position === 0 ? <span className="text-gray-400">-</span> : <Hash className="h-4 w-4 text-gray-400" />}
+                            {team.matches_played === 0 ? <span className="text-gray-400">-</span> : team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
                           </span>
-                          <span className="font-bold text-base md:text-lg">{team.position === 0 ? '-' : team.position}</span>
+                          <span className="font-bold text-base md:text-lg">{team.matches_played === 0 ? '-' : team.position}</span>
                         </div>
                       </td>
                       <td className="py-2 md:py-3 px-2 md:px-3">

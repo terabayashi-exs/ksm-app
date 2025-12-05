@@ -511,7 +511,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                   }).join('')}
                   <!-- 順位 -->
                   <td style="border: 1px solid #D1D5DB; padding: 10px; background: #EBF8FF; text-align: center; font-weight: bold; font-size: 15px; width: ${cellSizes.rank};">
-                    ${positionIcon}${teamStanding?.position || '-'}
+                    ${teamStanding?.matches_played === 0 ? '-' : (positionIcon + (teamStanding?.position || '-'))}
                   </td>
                   <!-- 勝点 -->
                   <td style="border: 1px solid #D1D5DB; padding: 10px; background: #EBF8FF; text-align: center; font-weight: bold; color: #2563EB; font-size: 15px; width: ${cellSizes.points};">
@@ -857,9 +857,11 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                                 <div className="flex items-center justify-center">
                                   {teamStanding ? (
                                     <>
-                                      <span className="hidden md:inline-block mr-1">{getPositionIcon(teamStanding.position)}</span>
+                                      <span className="hidden md:inline-block mr-1">
+                                        {teamStanding.matches_played === 0 ? <span className="text-muted-foreground">-</span> : getPositionIcon(teamStanding.position)}
+                                      </span>
                                       <span className="font-bold text-sm md:text-base">
-                                        {teamStanding.position > 0 ? teamStanding.position : '-'}
+                                        {teamStanding.matches_played === 0 ? '-' : teamStanding.position}
                                       </span>
                                     </>
                                   ) : (
