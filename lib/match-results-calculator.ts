@@ -56,6 +56,8 @@ export interface MatchResult {
   match_block_id: number;
   team1_id: string;
   team2_id: string;
+  team1_tournament_team_id: number | null; // 複数エントリーチーム対応
+  team2_tournament_team_id: number | null; // 複数エントリーチーム対応
   team1_display_name: string;
   team2_display_name: string;
   team1_goals: number | null;
@@ -199,24 +201,63 @@ async function getBlockResults(
     const blockName = tournamentInfoResult.rows[0]?.block_name as string || '';
 
     // ブロック内のチーム一覧を取得（試合データから実際に使用されているdisplay_nameを取得）
+    // tournament_team_idを使ってJOINすることで複数エントリーチームを正しく区別
+    // 決勝リーグ対応: テンプレート表示名でソートして表示順序を維持
     const teamsResult = await db.execute({
       sql: `
-        SELECT DISTINCT
+        SELECT
           tt.tournament_team_id,
-          COALESCE(ml1.team1_id, ml2.team2_id) as team_id,
-          COALESCE(ml1.team1_display_name, ml2.team2_display_name) as display_name,
+          tt.team_id,
           tt.team_name,
           tt.team_omission,
-          tt.block_position
+          tt.block_position,
+          COALESCE(
+            (
+              SELECT COALESCE(mt.team1_display_name, ml.team1_display_name)
+              FROM t_matches_live ml
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              WHERE ml.team1_tournament_team_id = tt.tournament_team_id
+                AND ml.match_block_id = ?
+              LIMIT 1
+            ),
+            (
+              SELECT COALESCE(mt.team2_display_name, ml.team2_display_name)
+              FROM t_matches_live ml
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              WHERE ml.team2_tournament_team_id = tt.tournament_team_id
+                AND ml.match_block_id = ?
+              LIMIT 1
+            )
+          ) as display_name,
+          COALESCE(
+            (
+              SELECT COALESCE(mt.team1_display_name, ml.team1_display_name)
+              FROM t_matches_live ml
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              WHERE ml.team1_tournament_team_id = tt.tournament_team_id
+                AND ml.match_block_id = ?
+              LIMIT 1
+            ),
+            (
+              SELECT COALESCE(mt.team2_display_name, ml.team2_display_name)
+              FROM t_matches_live ml
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              WHERE ml.team2_tournament_team_id = tt.tournament_team_id
+                AND ml.match_block_id = ?
+              LIMIT 1
+            )
+          ) as template_display_name
         FROM t_tournament_teams tt
-        LEFT JOIN t_matches_live ml1 ON tt.team_id = ml1.team1_id AND ml1.match_block_id = ?
-        LEFT JOIN t_matches_live ml2 ON tt.team_id = ml2.team2_id AND ml2.match_block_id = ?
         WHERE tt.tournament_id = ?
-        AND tt.assigned_block = ?
-        AND COALESCE(ml1.team1_id, ml2.team2_id) IS NOT NULL
-        ORDER BY tt.block_position NULLS LAST
+          AND EXISTS (
+            SELECT 1 FROM t_matches_live ml
+            WHERE (ml.team1_tournament_team_id = tt.tournament_team_id
+                   OR ml.team2_tournament_team_id = tt.tournament_team_id)
+              AND ml.match_block_id = ?
+          )
+        ORDER BY template_display_name NULLS LAST, tt.block_position NULLS LAST
       `,
-      args: [matchBlockId, matchBlockId, tournamentId, blockName]
+      args: [formatId, matchBlockId, formatId, matchBlockId, formatId, matchBlockId, formatId, matchBlockId, tournamentId, matchBlockId]
     });
 
     let teams: TeamInfo[] = (teamsResult.rows || []).map(row => ({
@@ -230,6 +271,7 @@ async function getBlockResults(
     console.log(`[TEAMS] Block ${blockName}: Found ${teams.length} teams:`, teams.map(t => `${t.team_id}:${t.display_name}`).join(', '));
 
     // チーム登録がない場合、試合から実際のチーム情報を取得（略称含む、未確定チームも含む）
+    // 決勝リーグ対応: tournament_team_idを使用し、テンプレート表示名でソート
     if (teams.length === 0) {
       const placeholderTeamsResult = await db.execute({
         sql: `
@@ -238,15 +280,12 @@ async function getBlockResults(
               COALESCE(mt.team1_display_name, ml.team1_display_name) as template_display_name,
               ml.team1_id as team_id,
               ml.team1_display_name as team_display_name,
-              COALESCE(tt_by_name.tournament_team_id, tt_by_block.tournament_team_id) as tournament_team_id,
-              COALESCE(tt_by_name.team_name, tt_by_block.team_name, t.team_name) as team_name,
-              COALESCE(tt_by_name.team_omission, tt_by_block.team_omission, t.team_omission) as team_omission
+              ml.team1_tournament_team_id as tournament_team_id,
+              tt.team_name,
+              tt.team_omission
             FROM t_matches_live ml
             LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
-            LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-            LEFT JOIN t_tournament_teams tt_by_name ON ml.team1_id = tt_by_name.team_id AND mb.tournament_id = tt_by_name.tournament_id AND ml.team1_display_name = tt_by_name.team_name
-            LEFT JOIN t_tournament_teams tt_by_block ON ml.team1_id = tt_by_block.team_id AND mb.tournament_id = tt_by_block.tournament_id AND tt_by_block.assigned_block = mb.block_name
-            LEFT JOIN m_teams t ON ml.team1_id = t.team_id
+            LEFT JOIN t_tournament_teams tt ON ml.team1_tournament_team_id = tt.tournament_team_id
             WHERE ml.match_block_id = ?
             AND ml.team1_display_name IS NOT NULL
             UNION
@@ -254,15 +293,12 @@ async function getBlockResults(
               COALESCE(mt.team2_display_name, ml.team2_display_name) as template_display_name,
               ml.team2_id as team_id,
               ml.team2_display_name as team_display_name,
-              COALESCE(tt_by_name.tournament_team_id, tt_by_block.tournament_team_id) as tournament_team_id,
-              COALESCE(tt_by_name.team_name, tt_by_block.team_name, t.team_name) as team_name,
-              COALESCE(tt_by_name.team_omission, tt_by_block.team_omission, t.team_omission) as team_omission
+              ml.team2_tournament_team_id as tournament_team_id,
+              tt.team_name,
+              tt.team_omission
             FROM t_matches_live ml
             LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
-            LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-            LEFT JOIN t_tournament_teams tt_by_name ON ml.team2_id = tt_by_name.team_id AND mb.tournament_id = tt_by_name.tournament_id AND ml.team2_display_name = tt_by_name.team_name
-            LEFT JOIN t_tournament_teams tt_by_block ON ml.team2_id = tt_by_block.team_id AND mb.tournament_id = tt_by_block.tournament_id AND tt_by_block.assigned_block = mb.block_name
-            LEFT JOIN m_teams t ON ml.team2_id = t.team_id
+            LEFT JOIN t_tournament_teams tt ON ml.team2_tournament_team_id = tt.tournament_team_id
             WHERE ml.match_block_id = ?
             AND ml.team2_display_name IS NOT NULL
           )
@@ -295,6 +331,7 @@ async function getBlockResults(
 
     // 確定済みの試合と未確定試合のコード情報を取得（現在のスキーマに対応）
     // チーム登録がない場合も表示できるよう、team_display_nameを含める
+    // tournament_team_idも取得して複数エントリーチームに対応
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -302,6 +339,8 @@ async function getBlockResults(
           ml.match_block_id,
           ml.team1_id,
           ml.team2_id,
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id,
           ml.team1_display_name,
           ml.team2_display_name,
           ml.match_code,
@@ -328,12 +367,24 @@ async function getBlockResults(
       // チームIDがnullの場合、プレースホルダーIDを生成
       const team1Id = row.team1_id as string | null;
       const team2Id = row.team2_id as string | null;
+      const team1TournamentTeamId = row.team1_tournament_team_id as number | null;
+      const team2TournamentTeamId = row.team2_tournament_team_id as number | null;
       const team1DisplayName = row.team1_display_name as string;
       const team2DisplayName = row.team2_display_name as string;
 
-      // teamsリストから対応するプレースホルダーIDを検索
-      const getTeamId = (actualId: string | null, displayName: string): string => {
-        if (actualId) return actualId;
+      // teamsリストから対応するチームIDを検索
+      // tournament_team_idが設定されている場合は優先使用（複数エントリーチーム対応）
+      const getTeamId = (actualId: string | null, tournamentTeamId: number | null, displayName: string): string => {
+        if (actualId) {
+          // tournament_team_idが設定されている場合は、それを使ってteam_idを取得
+          if (tournamentTeamId) {
+            const teamWithTournamentId = teams.find(t => t.tournament_team_id === tournamentTeamId);
+            if (teamWithTournamentId) {
+              return teamWithTournamentId.team_id;
+            }
+          }
+          return actualId;
+        }
         const placeholderTeam = teams.find(t => t.display_name === displayName);
         return placeholderTeam?.team_id || `placeholder_${displayName}`;
       };
@@ -353,8 +404,10 @@ async function getBlockResults(
       const baseMatch: MatchResult = {
         match_id: row.match_id as number,
         match_block_id: row.match_block_id as number,
-        team1_id: getTeamId(team1Id, team1DisplayName),
-        team2_id: getTeamId(team2Id, team2DisplayName),
+        team1_id: getTeamId(team1Id, team1TournamentTeamId, team1DisplayName),
+        team2_id: getTeamId(team2Id, team2TournamentTeamId, team2DisplayName),
+        team1_tournament_team_id: team1TournamentTeamId,
+        team2_tournament_team_id: team2TournamentTeamId,
         team1_display_name: team1DisplayName,
         team2_display_name: team2DisplayName,
         // スコアの処理（カンマ区切り対応）
@@ -459,24 +512,25 @@ function createMatchMatrix(
     });
   });
 
-  // display_name → tournament_team_id のマッピングを作成
-  const displayNameToTeamId = new Map<string, number>();
-  teams.forEach(team => {
-    displayNameToTeamId.set(team.display_name, team.tournament_team_id);
-  });
-
   // 試合結果を反映
   matches.forEach(match => {
     const team1Name = match.team1_display_name;
     const team2Name = match.team2_display_name;
 
-    // display_nameからtournament_team_idを取得
-    const team1Id = displayNameToTeamId.get(team1Name);
-    const team2Id = displayNameToTeamId.get(team2Name);
+    // tournament_team_idを直接使用（複数エントリーチーム対応）
+    const team1Id = match.team1_tournament_team_id;
+    const team2Id = match.team2_tournament_team_id;
 
     // チームIDが存在するかチェック
-    if (team1Id === undefined || team2Id === undefined || !matrix[team1Id] || !matrix[team2Id]) {
-      console.log(`[MATRIX] Team not found: team1="${team1Name}"(${team1Id}), team2="${team2Name}"(${team2Id})`);
+    // 決勝トーナメントでは未確定チームの可能性があるため、より詳細なログを出力
+    if (!team1Id || !team2Id) {
+      console.log(`[MATRIX] Missing tournament_team_id: ${match.match_code}, team1="${team1Name}"(${team1Id}), team2="${team2Name}"(${team2Id})`);
+      return;
+    }
+
+    if (!matrix[team1Id] || !matrix[team2Id]) {
+      console.log(`[MATRIX] Matrix not initialized for tournament_team_id: ${match.match_code}, team1Id=${team1Id} exists:${!!matrix[team1Id]}, team2Id=${team2Id} exists:${!!matrix[team2Id]}`);
+      console.log(`[MATRIX] Available team IDs in matrix: ${Object.keys(matrix).join(', ')}`);
       return;
     }
 
@@ -581,11 +635,43 @@ function createMatchMatrix(
         return;
       }
 
-      // winner_team_idからtournament_team_idを特定
-      const winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
-      const loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
-      const winnerName = winnerId === match.team1_id ? team1Name : team2Name;
-      const loserName = winnerId === match.team1_id ? team2Name : team1Name;
+      // winner_team_idとtournament_team_idを使って勝者を特定（複数エントリーチーム対応）
+      let winnerTournamentId: number;
+      let loserTournamentId: number;
+      let winnerName: string;
+      let loserName: string;
+
+      // tournament_team_idが設定されている場合は、それを使って判定
+      if (match.team1_tournament_team_id && match.team2_tournament_team_id) {
+        // team_idとtournament_team_idの両方を確認して勝者を特定
+        const team1 = teams.find(t => t.tournament_team_id === match.team1_tournament_team_id);
+        const team2 = teams.find(t => t.tournament_team_id === match.team2_tournament_team_id);
+
+        if (team1 && team2 && team1.team_id === winnerId) {
+          winnerTournamentId = team1.tournament_team_id;
+          loserTournamentId = team2.tournament_team_id;
+          winnerName = team1Name;
+          loserName = team2Name;
+        } else if (team1 && team2 && team2.team_id === winnerId) {
+          winnerTournamentId = team2.tournament_team_id;
+          loserTournamentId = team1.tournament_team_id;
+          winnerName = team2Name;
+          loserName = team1Name;
+        } else {
+          // フォールバック: team_idのみで判定（従来の方法）
+          winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
+          loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
+          winnerName = winnerId === match.team1_id ? team1Name : team2Name;
+          loserName = winnerId === match.team1_id ? team2Name : team1Name;
+        }
+      } else {
+        // tournament_team_idが設定されていない場合は従来の方法（team_idのみで判定）
+        winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
+        loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
+        winnerName = winnerId === match.team1_id ? team1Name : team2Name;
+        loserName = winnerId === match.team1_id ? team2Name : team1Name;
+      }
+
       console.log(`[MATRIX] Walkover result: winner=${winnerName}(${winnerTournamentId}), loser=${loserName}(${loserTournamentId})`);
 
       // スコアを取得
@@ -653,13 +739,52 @@ function createMatchMatrix(
       const winnerId = match.winner_team_id;
       if (!winnerId) return;
 
-      // winner_team_idからtournament_team_idを特定
-      const winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
-      const loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
-      const winnerName = winnerId === match.team1_id ? team1Name : team2Name;
-      const loserName = winnerId === match.team1_id ? team2Name : team1Name;
-      const winnerGoals = winnerId === match.team1_id ? team1Goals : team2Goals;
-      const loserGoals = winnerId === match.team1_id ? team2Goals : team1Goals;
+      // winner_team_idとtournament_team_idを使って勝者を特定（複数エントリーチーム対応）
+      let winnerTournamentId: number;
+      let loserTournamentId: number;
+      let winnerName: string;
+      let loserName: string;
+      let winnerGoals: number;
+      let loserGoals: number;
+
+      // tournament_team_idが設定されている場合は、それを使って判定
+      if (match.team1_tournament_team_id && match.team2_tournament_team_id) {
+        // team_idとtournament_team_idの両方を確認して勝者を特定
+        const team1 = teams.find(t => t.tournament_team_id === match.team1_tournament_team_id);
+        const team2 = teams.find(t => t.tournament_team_id === match.team2_tournament_team_id);
+
+        if (team1 && team2 && team1.team_id === winnerId) {
+          winnerTournamentId = team1.tournament_team_id;
+          loserTournamentId = team2.tournament_team_id;
+          winnerName = team1Name;
+          loserName = team2Name;
+          winnerGoals = team1Goals;
+          loserGoals = team2Goals;
+        } else if (team1 && team2 && team2.team_id === winnerId) {
+          winnerTournamentId = team2.tournament_team_id;
+          loserTournamentId = team1.tournament_team_id;
+          winnerName = team2Name;
+          loserName = team1Name;
+          winnerGoals = team2Goals;
+          loserGoals = team1Goals;
+        } else {
+          // フォールバック: team_idのみで判定（従来の方法）
+          winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
+          loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
+          winnerName = winnerId === match.team1_id ? team1Name : team2Name;
+          loserName = winnerId === match.team1_id ? team2Name : team1Name;
+          winnerGoals = winnerId === match.team1_id ? team1Goals : team2Goals;
+          loserGoals = winnerId === match.team1_id ? team2Goals : team1Goals;
+        }
+      } else {
+        // tournament_team_idが設定されていない場合は従来の方法（team_idのみで判定）
+        winnerTournamentId = winnerId === match.team1_id ? team1Id : team2Id;
+        loserTournamentId = winnerId === match.team1_id ? team2Id : team1Id;
+        winnerName = winnerId === match.team1_id ? team1Name : team2Name;
+        loserName = winnerId === match.team1_id ? team2Name : team1Name;
+        winnerGoals = winnerId === match.team1_id ? team1Goals : team2Goals;
+        loserGoals = winnerId === match.team1_id ? team2Goals : team1Goals;
+      }
 
       console.log(`[MATRIX_WIN] ${match.match_code}: winnerName="${winnerName}"(${winnerTournamentId}), loserName="${loserName}"(${loserTournamentId}), matrix[${winnerTournamentId}]=${!!matrix[winnerTournamentId]}, matrix[${loserTournamentId}]=${!!matrix[loserTournamentId]}`);
 

@@ -8,6 +8,7 @@ import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
 import { SportScoreConfig } from '@/lib/sport-standings-calculator';
 
 interface TeamStanding {
+  tournament_team_id: number; // 一意のID - 複数エントリーチーム対応
   team_id: string;
   team_name: string;
   team_omission?: string;
@@ -480,7 +481,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
           </thead>
           <tbody>
             ${block.teams.map(team => {
-              const teamStanding = blockStandings.find(s => s.team_id === team.team_id);
+              const teamStanding = blockStandings.find(s => s.tournament_team_id === team.tournament_team_id);
               const positionIcon = teamStanding?.position === 1 ? '🏆' : 
                                  teamStanding?.position === 2 ? '🥈' : 
                                  teamStanding?.position === 3 ? '🥉' : '';
@@ -585,10 +586,10 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     return blockStanding ? blockStanding.teams : [];
   };
 
-  // チーム順位情報を取得
-  const getTeamStanding = (teamId: string, blockId: number): TeamStanding | undefined => {
+  // チーム順位情報を取得（複数エントリーチーム対応）
+  const getTeamStanding = (tournamentTeamId: number, blockId: number): TeamStanding | undefined => {
     const blockTeams = getStandingsForBlock(blockId);
-    return blockTeams.find((team: TeamStanding) => team.team_id === teamId);
+    return blockTeams.find((team: TeamStanding) => team.tournament_team_id === tournamentTeamId);
   };
 
   // 順位アイコンの取得（順位表コンポーネントと同じ）
@@ -804,7 +805,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                   </thead>
                   <tbody>
                     {block.teams.map((team, teamIndex) => {
-                      const teamStanding = getTeamStanding(team.team_id, block.match_block_id);
+                      const teamStanding = getTeamStanding(team.tournament_team_id, block.match_block_id);
 
                       return (
                         <tr key={`${block.block_name}-row-${team.team_id}-${teamIndex}`}>

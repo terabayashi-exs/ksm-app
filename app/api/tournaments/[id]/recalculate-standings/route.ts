@@ -130,6 +130,7 @@ export async function POST(
 
           // 従来形式に変換
           blockStandings = multiSportStandings.map(team => ({
+            tournament_team_id: team.tournament_team_id,
             team_id: team.team_id,
             team_name: team.team_name,
             team_omission: team.team_omission,
