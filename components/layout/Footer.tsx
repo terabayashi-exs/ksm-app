@@ -25,6 +25,9 @@ export default function Footer() {
             </p>
             <div className="text-sm text-muted-foreground">
               <span>© 2025 楽勝 GO</span>
+              <span className="ml-3 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded border border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
+                BETA
+              </span>
             </div>
           </div>
         </div>
