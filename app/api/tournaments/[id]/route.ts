@@ -44,6 +44,7 @@ export async function GET(
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.sport_type_id,
+        t.show_players_public,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -79,6 +80,7 @@ export async function GET(
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
+      show_players_public: Number(row.show_players_public) === 1,
       sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : undefined,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
@@ -199,6 +201,7 @@ export async function PUT(
         public_start_date = ?,
         recruitment_start_date = ?,
         recruitment_end_date = ?,
+        show_players_public = ?,
         updated_at = datetime('now', 'localtime')
       WHERE tournament_id = ?
     `, [
@@ -213,6 +216,7 @@ export async function PUT(
       data.public_start_date,
       data.recruitment_start_date,
       data.recruitment_end_date,
+      data.show_players_public ? 1 : 0,
       tournamentId
     ]);
 
@@ -245,7 +249,7 @@ export async function PUT(
 
     // 更新された大会の詳細を取得
     const updatedResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.format_id,
@@ -260,6 +264,7 @@ export async function PUT(
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.show_players_public,
         t.created_at,
         t.updated_at,
         v.venue_name,
@@ -286,6 +291,7 @@ export async function PUT(
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
+      show_players_public: Number(row.show_players_public) === 1,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,

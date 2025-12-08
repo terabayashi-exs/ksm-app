@@ -13,7 +13,7 @@ async function getTournament(id: string): Promise<Tournament | null> {
   try {
     // Fetching tournament data server-side
     const result = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.format_id,
@@ -25,6 +25,7 @@ async function getTournament(id: string): Promise<Tournament | null> {
         t.break_duration_minutes,
         t.status,
         t.visibility,
+        t.show_players_public,
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
@@ -55,6 +56,7 @@ async function getTournament(id: string): Promise<Tournament | null> {
       break_duration_minutes: Number(row.break_duration_minutes),
       status: row.status as TournamentStatus,
       visibility: row.visibility === 'open' ? 1 : 0,
+      show_players_public: Number(row.show_players_public) === 1,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,

@@ -90,6 +90,7 @@ const tournamentCreateSchema = z.object({
   break_duration_minutes: z.number().min(0, "休憩時間は0分以上で入力してください").max(30, "休憩時間は30分以下で入力してください"),
   start_time: z.string().min(1, "開始時刻は必須です"),
   is_public: z.boolean(),
+  show_players_public: z.boolean(),
   public_start_date: z.string().min(1, "公開開始日は必須です"),
   recruitment_start_date: z.string().min(1, "募集開始日は必須です"),
   recruitment_end_date: z.string().min(1, "募集終了日は必須です"),
@@ -138,6 +139,7 @@ export default function TournamentCreateNewForm() {
       break_duration_minutes: 5,
       start_time: "13:00",
       is_public: true,
+      show_players_public: false,
       public_start_date: new Date(Date.now()).toISOString().split('T')[0],
       recruitment_start_date: new Date(Date.now()).toISOString().split('T')[0],
       recruitment_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -366,8 +368,10 @@ export default function TournamentCreateNewForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sportTypes.map((sportType) => {
               const periods = JSON.parse(sportType.period_definitions);
-              const scoreIcon = sportType.score_type === 'time' ? '⏱️' : 
-                               sportType.score_type === 'rank' ? '🏅' : '⚽';
+              const scoreIcon = sportType.sport_code === 'soccer' ? '⚽' :
+                               sportType.sport_code === 'baseball' ? '⚾' :
+                               sportType.sport_code === 'basketball' ? '🏀' :
+                               sportType.sport_code === 'pk' ? '⚽' : '⚽';
               
               return (
                 <Card 
@@ -956,6 +960,25 @@ export default function TournamentCreateNewForm() {
             </ul>
           </div>
 
+          {/* 選手情報公開設定 */}
+          <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              type="checkbox"
+              id="show_players_public"
+              {...register("show_players_public")}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div className="flex-1">
+              <Label htmlFor="show_players_public" className="cursor-pointer font-medium">
+                参加選手情報を一般公開する
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
+                チェックを外すと、大会運営者のみが閲覧可能になります。
+              </p>
+            </div>
+          </div>
+
           {/* 公開フラグは自動的にtrueに設定 */}
           <input type="hidden" {...register("is_public")} value="true" />
         </CardContent>
@@ -1050,6 +1073,40 @@ export default function TournamentCreateNewForm() {
                 editMode={false}
                 onScheduleChange={handleScheduleChange}
               />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* エラーサマリー */}
+      {Object.keys(errors).length > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-red-800 mb-2">入力内容にエラーがあります</h3>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                  {errors.group_id && <li>{errors.group_id.message}</li>}
+                  {errors.tournament_name && <li>{errors.tournament_name.message}</li>}
+                  {errors.sport_type_id && <li>{errors.sport_type_id.message}</li>}
+                  {errors.format_id && <li>{errors.format_id.message}</li>}
+                  {errors.venue_id && <li>{errors.venue_id.message}</li>}
+                  {errors.team_count && <li>{errors.team_count.message}</li>}
+                  {errors.court_count && <li>{errors.court_count.message}</li>}
+                  {errors.tournament_dates && <li>{errors.tournament_dates.message}</li>}
+                  {errors.match_duration_minutes && <li>{errors.match_duration_minutes.message}</li>}
+                  {errors.break_duration_minutes && <li>{errors.break_duration_minutes.message}</li>}
+                  {errors.start_time && <li>{errors.start_time.message}</li>}
+                  {errors.public_start_date && <li>{errors.public_start_date.message}</li>}
+                  {errors.recruitment_start_date && <li>{errors.recruitment_start_date.message}</li>}
+                  {errors.recruitment_end_date && <li>{errors.recruitment_end_date.message}</li>}
+                </ul>
+              </div>
             </div>
           </CardContent>
         </Card>

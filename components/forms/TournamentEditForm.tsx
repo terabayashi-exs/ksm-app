@@ -38,6 +38,7 @@ const editTournamentSchema = z.object({
   match_duration_minutes: z.number().min(5, '試合時間は5分以上で入力してください').max(120, '試合時間は120分以下で入力してください'),
   break_duration_minutes: z.number().min(0, '休憩時間は0分以上で入力してください').max(60, '休憩時間は60分以下で入力してください'),
   is_public: z.boolean(),
+  show_players_public: z.boolean(),
   public_start_date: z.string().min(1, '公開開始日は必須です'),
   recruitment_start_date: z.string().min(1, '募集開始日は必須です'),
   recruitment_end_date: z.string().min(1, '募集終了日は必須です')
@@ -104,6 +105,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     match_duration_minutes: number;
     break_duration_minutes: number;
     is_public: boolean;
+    show_players_public: boolean;
     public_start_date: string;
     recruitment_start_date: string;
     recruitment_end_date: string;
@@ -122,6 +124,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       match_duration_minutes: tournament.match_duration_minutes,
       break_duration_minutes: tournament.break_duration_minutes,
       is_public: tournament.visibility === 1,
+      show_players_public: tournament.show_players_public || false,
       public_start_date: tournament.public_start_date || new Date().toISOString().split('T')[0],
       recruitment_start_date: tournament.recruitment_start_date || new Date().toISOString().split('T')[0],
       recruitment_end_date: tournament.recruitment_end_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -677,8 +680,57 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 <li>• 募集終了日: チームの参加申込みを締め切る日</li>
               </ul>
             </div>
+
+            {/* 選手情報公開設定 */}
+            <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <input
+                type="checkbox"
+                id="show_players_public"
+                {...form.register('show_players_public')}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div className="flex-1">
+                <Label htmlFor="show_players_public" className="cursor-pointer font-medium">
+                  参加選手情報を一般公開する
+                </Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
+                  チェックを外すと、大会運営者のみが閲覧可能になります。
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        {/* エラーサマリー */}
+        {Object.keys(form.formState.errors).length > 0 && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-red-800 mb-2">入力内容にエラーがあります</h3>
+                  <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                    {form.formState.errors.tournament_name && <li>{form.formState.errors.tournament_name.message}</li>}
+                    {form.formState.errors.venue_id && <li>{form.formState.errors.venue_id.message}</li>}
+                    {form.formState.errors.team_count && <li>{form.formState.errors.team_count.message}</li>}
+                    {form.formState.errors.court_count && <li>{form.formState.errors.court_count.message}</li>}
+                    {form.formState.errors.tournament_dates && <li>{form.formState.errors.tournament_dates.message}</li>}
+                    {form.formState.errors.match_duration_minutes && <li>{form.formState.errors.match_duration_minutes.message}</li>}
+                    {form.formState.errors.break_duration_minutes && <li>{form.formState.errors.break_duration_minutes.message}</li>}
+                    {form.formState.errors.public_start_date && <li>{form.formState.errors.public_start_date.message}</li>}
+                    {form.formState.errors.recruitment_start_date && <li>{form.formState.errors.recruitment_start_date.message}</li>}
+                    {form.formState.errors.recruitment_end_date && <li>{form.formState.errors.recruitment_end_date.message}</li>}
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 送信ボタン */}
         <div className="flex justify-end space-x-4">

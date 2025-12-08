@@ -26,6 +26,7 @@ export interface Tournament {
   break_duration_minutes: number;
   status: TournamentStatus;
   visibility: number; // 公開フラグ (0: 非公開, 1: 公開)
+  show_players_public?: boolean; // 選手情報公開フラグ (false: 非公開, true: 公開)
   public_start_date?: string; // 公開開始日
   recruitment_start_date?: string; // 募集開始日
   recruitment_end_date?: string; // 募集終了日

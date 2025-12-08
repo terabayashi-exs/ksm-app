@@ -41,6 +41,7 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
   const [teamPlayers, setTeamPlayers] = useState<Record<number, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [canViewPlayers, setCanViewPlayers] = useState(false);
 
   // 参加チームデータの取得
   useEffect(() => {
@@ -60,6 +61,7 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
 
         if (result.success) {
           setTeamsData(result.data);
+          setCanViewPlayers(result.canViewPlayers || false);
         } else {
           console.error('API Error Details:', result);
           setError(result.error || '参加チーム情報の取得に失敗しました');
@@ -83,8 +85,8 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
     } else {
       newExpanded.add(tournamentTeamId);
 
-      // 選手データを取得（まだ取得していない場合）
-      if (!teamPlayers[tournamentTeamId]) {
+      // 選手情報閲覧権限がある場合のみ選手データを取得
+      if (canViewPlayers && !teamPlayers[tournamentTeamId]) {
         try {
           const response = await fetch(`/api/tournaments/${tournamentId}/teams/${tournamentTeamId}/players`);
           if (response.ok) {
@@ -226,50 +228,54 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                           )}
 
                           {/* 選手一覧 */}
-                          {teamPlayers[team.tournament_team_id] && teamPlayers[team.tournament_team_id].length > 0 ? (
-                            <div>
-                              <h4 className="font-medium text-muted-foreground mb-3 flex items-center">
-                                <Users className="h-4 w-4 mr-1" />
-                                参加選手一覧
-                              </h4>
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="border-b bg-white">
-                                      <th className="text-left py-2 px-3 font-medium">背番号</th>
-                                      <th className="text-left py-2 px-3 font-medium">選手名</th>
-                                      <th className="text-left py-2 px-3 font-medium">状態</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {teamPlayers[team.tournament_team_id]?.map((player, index) => (
-                                      <tr key={`${team.tournament_team_id}-${index}`} className="border-b">
-                                        <td className="py-2 px-3">
-                                          {player.jersey_number ? (
-                                            <span className="flex items-center">
-                                              <Hash className="h-3 w-3 mr-1 text-muted-foreground" />
-                                              {player.jersey_number}
-                                            </span>
-                                          ) : (
-                                            <span className="text-muted-foreground">-</span>
-                                          )}
-                                        </td>
-                                        <td className="py-2 px-3 font-medium">{player.player_name}</td>
-                                        <td className="py-2 px-3">
-                                          <span className="px-2 py-1 rounded-full text-xs text-green-600 bg-green-50">
-                                            出場
-                                          </span>
-                                        </td>
+                          {canViewPlayers ? (
+                            teamPlayers[team.tournament_team_id] && teamPlayers[team.tournament_team_id].length > 0 ? (
+                              <div>
+                                <h4 className="font-medium text-muted-foreground mb-3 flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  参加選手一覧
+                                </h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="border-b bg-white">
+                                        <th className="text-left py-2 px-3 font-medium">背番号</th>
+                                        <th className="text-left py-2 px-3 font-medium">選手名</th>
                                       </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                    </thead>
+                                    <tbody>
+                                      {teamPlayers[team.tournament_team_id]?.map((player, index) => (
+                                        <tr key={`${team.tournament_team_id}-${index}`} className="border-b">
+                                          <td className="py-2 px-3">
+                                            {player.jersey_number ? (
+                                              <span className="flex items-center">
+                                                <Hash className="h-3 w-3 mr-1 text-muted-foreground" />
+                                                {player.jersey_number}
+                                              </span>
+                                            ) : (
+                                              <span className="text-muted-foreground">-</span>
+                                            )}
+                                          </td>
+                                          <td className="py-2 px-3 font-medium">{player.player_name}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <div className="text-center py-6 text-muted-foreground">
+                                <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                                <p>このチームにはまだ選手が登録されていません</p>
+                              </div>
+                            )
                           ) : (
-                            <div className="text-center py-6 text-muted-foreground">
-                              <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                              <p>このチームにはまだ選手が登録されていません</p>
+                            <div className="text-center py-6 bg-yellow-50 rounded-lg border border-yellow-200">
+                              <Users className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
+                              <p className="font-medium text-yellow-800">選手情報は非公開です</p>
+                              <p className="text-sm text-yellow-700 mt-1">
+                                大会運営者のみ閲覧可能です
+                              </p>
                             </div>
                           )}
                         </div>

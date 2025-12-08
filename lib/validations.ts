@@ -56,7 +56,8 @@ export const tournamentCreateSchema = z.object({
 
   // 公開設定
   is_public: z.boolean().optional().default(false),
-  
+  show_players_public: z.boolean().optional().default(false),
+
   // 公開・募集日程
   public_start_date: z.string()
     .min(1, '公開開始日は必須です')

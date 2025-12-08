@@ -85,7 +85,7 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
       for (const teamRow of teamsResult.rows) {
         const playersResult = await db.execute({
           sql: `
-            SELECT 
+            SELECT
               tp.tournament_player_id,
               tp.player_id,
               tp.jersey_number,
@@ -96,11 +96,11 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
               p.player_name
             FROM t_tournament_players tp
             JOIN m_players p ON tp.player_id = p.player_id
-            WHERE tp.tournament_id = ? AND tp.team_id = ?
+            WHERE tp.tournament_id = ? AND tp.tournament_team_id = ?
             AND tp.player_status = 'active'
             ORDER BY tp.jersey_number, p.player_name
           `,
-          args: [tournamentId, teamRow.team_id]
+          args: [tournamentId, teamRow.tournament_team_id]
         });
 
         const players: TournamentPlayer[] = (playersResult.rows || []).map(row => ({
@@ -156,13 +156,13 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
  * 特定チームの選手一覧を取得する
  */
 export async function getTeamPlayers(
-  tournamentId: number, 
-  teamId: string
+  tournamentId: number,
+  tournamentTeamId: number
 ): Promise<TournamentPlayer[]> {
   try {
     const playersResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           tp.tournament_player_id,
           tp.player_id,
           tp.jersey_number,
@@ -173,10 +173,10 @@ export async function getTeamPlayers(
           p.player_name
         FROM t_tournament_players tp
         JOIN m_players p ON tp.player_id = p.player_id
-        WHERE tp.tournament_id = ? AND tp.team_id = ?
+        WHERE tp.tournament_id = ? AND tp.tournament_team_id = ?
         ORDER BY tp.jersey_number, p.player_name
       `,
-      args: [tournamentId, teamId]
+      args: [tournamentId, tournamentTeamId]
     });
 
     return (playersResult.rows || []).map(row => ({
@@ -191,7 +191,7 @@ export async function getTeamPlayers(
     }));
 
   } catch (error) {
-    console.error(`チーム ${teamId} の選手一覧取得エラー:`, error);
+    console.error(`大会参加チーム ${tournamentTeamId} の選手一覧取得エラー:`, error);
     throw new Error('選手一覧の取得に失敗しました');
   }
 }

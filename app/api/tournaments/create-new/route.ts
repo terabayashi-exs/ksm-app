@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       recruitment_start_date,
       recruitment_end_date,
       event_start_date,
+      show_players_public = false,
       custom_schedule = []
     } = data;
 
@@ -65,11 +66,12 @@ export async function POST(request: NextRequest) {
         public_start_date,
         recruitment_start_date,
         recruitment_end_date,
+        show_players_public,
         created_by,
         archive_ui_version,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       group_id,
       tournament_name,
@@ -86,6 +88,7 @@ export async function POST(request: NextRequest) {
       public_start_date,
       recruitment_start_date,
       recruitment_end_date,
+      show_players_public ? 1 : 0,  // show_players_public
       session.user.id,
       currentArchiveVersion
     ]);
