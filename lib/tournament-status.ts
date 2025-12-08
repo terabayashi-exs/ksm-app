@@ -301,7 +301,7 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       return true;
     }
 
-    // 確定済み試合数を取得
+    // 確定済み試合数 + 中止試合数を取得
     const confirmedResult = await db.execute(`
       SELECT COUNT(*) as confirmed_matches
       FROM t_matches_final mf
@@ -311,10 +311,23 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
     `, [tournamentId]);
 
     const confirmedMatches = confirmedResult.rows[0]?.confirmed_matches as number || 0;
-    
-    console.log(`Tournament ${tournamentId}: ${confirmedMatches}/${totalMatches} matches confirmed`);
-    
-    return confirmedMatches === totalMatches;
+
+    // 中止試合数を取得
+    const cancelledResult = await db.execute(`
+      SELECT COUNT(*) as cancelled_matches
+      FROM t_matches_live ml
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND ml.match_status = 'cancelled'
+    `, [tournamentId]);
+
+    const cancelledMatches = cancelledResult.rows[0]?.cancelled_matches as number || 0;
+
+    const completedMatches = confirmedMatches + cancelledMatches;
+
+    console.log(`Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed: ${confirmedMatches}, cancelled: ${cancelledMatches})`);
+
+    return completedMatches === totalMatches;
   } catch (error) {
     console.warn('全試合確定チェックエラー:', error);
     return false;
