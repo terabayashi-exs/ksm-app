@@ -416,24 +416,41 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // 選手をマスター選手テーブルに登録（選手がいる場合のみ）
     const playerIds: number[] = [];
-    
+
     if (data.players.length > 0) {
       for (const player of data.players) {
-        const playerResult = await db.execute(`
-          INSERT INTO m_players (
-            player_name,
-            current_team_id,
-            is_active,
-            created_at,
-            updated_at
-          ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-        `, [
-          player.player_name,
-          teamId
-        ]);
-        
-        playerIds.push(Number(playerResult.lastInsertRowid));
-        console.log(`Created player: ${player.player_name} with ID: ${playerResult.lastInsertRowid}`);
+        // 既存選手をチェック（同じチームID + 同じ選手名）
+        const existingPlayer = await db.execute(`
+          SELECT player_id FROM m_players
+          WHERE current_team_id = ? AND player_name = ? AND is_active = 1
+        `, [teamId, player.player_name]);
+
+        let playerId: number;
+
+        if (existingPlayer.rows.length > 0) {
+          // 既存選手を再利用
+          playerId = Number(existingPlayer.rows[0].player_id);
+          console.log(`Reusing existing player: ${player.player_name} with ID: ${playerId}`);
+        } else {
+          // 新規選手を作成
+          const playerResult = await db.execute(`
+            INSERT INTO m_players (
+              player_name,
+              current_team_id,
+              is_active,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          `, [
+            player.player_name,
+            teamId
+          ]);
+
+          playerId = Number(playerResult.lastInsertRowid);
+          console.log(`Created new player: ${player.player_name} with ID: ${playerId}`);
+        }
+
+        playerIds.push(playerId);
       }
     }
 

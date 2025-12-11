@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
+import { sendEmail } from '@/lib/email/mailer';
+import { generateTournamentJoinConfirmation } from '@/lib/email/templates';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -265,16 +267,19 @@ async function handleTournamentJoin(
       }
     }
 
-    // 大会の存在と募集期間をチェック
+    // 大会の存在と募集期間をチェック（会場情報も取得）
     const tournamentResult = await db.execute(`
-      SELECT 
-        tournament_id,
-        tournament_name,
-        recruitment_start_date,
-        recruitment_end_date,
-        status
-      FROM t_tournaments 
-      WHERE tournament_id = ? AND visibility = 'open'
+      SELECT
+        t.tournament_id,
+        t.tournament_name,
+        t.recruitment_start_date,
+        t.recruitment_end_date,
+        t.status,
+        t.tournament_dates,
+        v.venue_name
+      FROM t_tournaments t
+      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      WHERE t.tournament_id = ? AND t.visibility = 'open'
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -528,14 +533,81 @@ async function handleTournamentJoin(
         throw new Error(`選手 ${player.player_name} の処理中にエラーが発生しました: ${playerError instanceof Error ? playerError.message : 'Unknown error'}`);
       }
     }
-    
+
     console.log('All players processed successfully');
+
+    // 新規参加の場合のみメール送信（編集時は送信しない）
+    if (!actualEditMode) {
+      try {
+        // チーム代表者のメールアドレスを取得
+        const teamInfoResult = await db.execute(`
+          SELECT contact_email, team_name
+          FROM m_teams
+          WHERE team_id = ?
+        `, [teamId]);
+
+        if (teamInfoResult.rows.length > 0) {
+          const teamInfo = teamInfoResult.rows[0];
+          const contactEmail = String(teamInfo.contact_email);
+
+          // 大会日程を整形
+          let tournamentDateStr = '未定';
+          try {
+            if (tournament.tournament_dates) {
+              const dates = JSON.parse(String(tournament.tournament_dates));
+              if (Array.isArray(dates) && dates.length > 0) {
+                tournamentDateStr = dates
+                  .map((d: string) => new Date(d).toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short'
+                  }))
+                  .join('、');
+              }
+            }
+          } catch (dateParseError) {
+            console.error('Failed to parse tournament dates:', dateParseError);
+          }
+
+          // 大会詳細ページのURL
+          const tournamentUrl = `${process.env.NEXTAUTH_URL}/public/tournaments/${tournamentId}`;
+
+          // メールテンプレート生成
+          const emailContent = generateTournamentJoinConfirmation({
+            teamName: data.tournament_team_name,
+            tournamentName: String(tournament.tournament_name),
+            tournamentDate: tournamentDateStr,
+            venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
+            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+            playerCount: data.players.length,
+            tournamentUrl: tournamentUrl
+          });
+
+          // メール送信
+          await sendEmail({
+            to: contactEmail,
+            subject: emailContent.subject,
+            text: emailContent.text,
+            html: emailContent.html
+          });
+
+          console.log(`✅ Confirmation email sent to ${contactEmail}`);
+        } else {
+          console.warn('⚠️ Team contact email not found, skipping email notification');
+        }
+      } catch (emailError) {
+        // メール送信エラーは処理を中断せずにログのみ出力
+        console.error('❌ Failed to send confirmation email:', emailError);
+        // エラーが発生してもユーザーには成功として返す（メールは補助的な機能）
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      message: actualEditMode 
-        ? '参加選手の変更が完了しました' 
-        : newTeamModeFromData 
+      message: actualEditMode
+        ? '参加選手の変更が完了しました'
+        : newTeamModeFromData
         ? '追加チームでの参加申し込みが完了しました'
         : '大会への参加申し込みが完了しました',
       data: {
