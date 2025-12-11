@@ -1,0 +1,213 @@
+# データベース設計仕様書
+
+このドキュメントでは、KSM-Appプロジェクトのデータベース設計について詳述します。
+
+## 📊 データベース設計概要
+
+データベース設計は[./database/KSM.md](../database/KSM.md)に詳細なER図（Mermaid記法）で定義されています。
+
+### 主要テーブル構成
+
+#### マスタテーブル
+- `m_venues` - 会場マスター
+- `m_teams` - チームマスター
+- `m_players` - 選手マスター
+- `m_administrators` - 管理者マスター
+- `m_tournament_formats` - 大会フォーマットマスター
+- `m_match_templates` - 試合テンプレートマスター
+- `m_subscription_plans` - サブスクリプションプランマスター
+
+#### トランザクションテーブル
+- `t_tournaments` - 大会情報
+- `t_tournament_teams` - 大会参加チーム
+- `t_match_blocks` - 試合ブロック（予選グループ、決勝トーナメントなど）
+- `t_matches_live` - 進行中試合情報
+- `t_matches_final` - 確定済み試合結果
+- `t_administrator_subscriptions` - 管理者サブスクリプション
+- `t_subscription_usage` - サブスクリプション使用状況
+- `t_payment_history` - 決済履歴
+- `t_tournament_match_overrides` - 試合進出条件オーバーライド
+
+詳細な設計については[../database/KSM.md](../database/KSM.md)を参照してください。
+
+### 柔軟な試合進出条件システム（t_tournament_match_overrides）
+
+チーム辞退等により予定と異なる進出条件が必要になった場合、大会別に試合の進出元チームをオーバーライドできるシステムです。
+
+#### **データ構造**
+```sql
+CREATE TABLE t_tournament_match_overrides (
+  override_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournament_id INTEGER NOT NULL,
+  match_code TEXT NOT NULL,                    -- 'M1', 'T1'など
+  team1_source_override TEXT,                  -- 元の条件を上書き（例: 'A_3' → 'B_4'）
+  team2_source_override TEXT,
+  override_reason TEXT,                        -- 変更理由
+  overridden_by TEXT,                          -- 変更実施者
+  overridden_at TEXT DEFAULT (datetime('now', '+9 hours')),
+  created_at TEXT DEFAULT (datetime('now', '+9 hours')),
+  updated_at TEXT DEFAULT (datetime('now', '+9 hours')),
+  UNIQUE(tournament_id, match_code),
+  FOREIGN KEY (tournament_id) REFERENCES t_tournaments(tournament_id) ON DELETE CASCADE
+);
+```
+
+#### **使用パターン**
+```sql
+-- 例: Aブロック2チーム辞退により、M1試合（Aブロック3位 vs Bブロック4位）を調整
+-- 元々: A_3 vs B_4
+-- 変更後: B_4 vs C_4（Aブロック3位チームが存在しないため）
+
+INSERT INTO t_tournament_match_overrides
+  (tournament_id, match_code, team1_source_override, override_reason, overridden_by)
+VALUES
+  (9, 'M1', 'B_4', 'Aブロック2チーム辞退により進出チーム不足', 'admin@example.com');
+```
+
+#### **適用ロジック（COALESCE パターン）**
+```sql
+-- 試合進出元チーム取得時にオーバーライドを優先適用
+SELECT
+  COALESCE(override.team1_source_override, template.team1_source) as team1_source,
+  COALESCE(override.team2_source_override, template.team2_source) as team2_source
+FROM m_match_templates template
+LEFT JOIN t_tournament_match_overrides override
+  ON template.format_id = ?
+  AND template.match_code = override.match_code
+  AND override.tournament_id = ?
+WHERE template.match_code = ?;
+```
+
+#### **運用メリット**
+- **柔軟性**: テンプレート変更なしで大会別に条件調整
+- **トレーサビリティ**: 変更理由・実施者を記録
+- **安全性**: NULL時はデフォルト条件を使用（既存動作を破壊しない）
+- **保守性**: 大会終了後もオーバーライド履歴が残る
+
+### Tursoでのトランザクション制限
+
+Turso（リモートSQLite）を使用する際の重要な制限事項：
+
+#### **制限内容**
+- 従来のSQLiteトランザクション構文（`BEGIN TRANSACTION`, `COMMIT`, `ROLLBACK`）がサポートされていない
+- リモートデータベースの性質上、トランザクション処理に制約がある
+
+#### **対処法**
+1. **トランザクションを使用しない設計**
+   ```typescript
+   // ❌ 動作しない (Tursoでエラーが発生)
+   await db.execute('BEGIN TRANSACTION');
+   // ... 処理 ...
+   await db.execute('COMMIT');
+   
+   // ✅ 推奨される方法
+   try {
+     // 個別のUPDATE/INSERTを順次実行
+     await db.execute('UPDATE ...');
+     await db.execute('INSERT ...');
+   } catch (error) {
+     // エラーハンドリング
+   }
+   ```
+
+2. **処理順序の工夫**
+   - データ整合性を保つため、処理順序を慎重に設計
+   - 削除→挿入/更新の順序でデータの不整合を最小化
+
+3. **エラーハンドリング**
+   - トランザクションによるロールバックができないため、エラー発生時の復旧処理を個別に実装
+   - 部分的な処理失敗を想定した設計
+
+#### **実装例（組合せ保存処理）**
+```typescript
+// app/api/tournaments/[id]/draw/route.ts
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    // 1. 既存データをクリア
+    await db.execute(`UPDATE t_tournament_teams SET assigned_block = NULL, block_position = NULL WHERE tournament_id = ?`, [tournamentId]);
+    
+    // 2. 新しいデータを保存
+    for (const block of blocks) {
+      for (const team of block.teams) {
+        await db.execute(`UPDATE t_tournament_teams SET assigned_block = ?, block_position = ? WHERE tournament_id = ? AND team_id = ?`, [block.block_name, team.block_position, tournamentId, team.team_id]);
+      }
+    }
+    
+    // 3. 関連データの更新
+    // ... 試合データ更新処理
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    // トランザクションロールバックは使用できないため、
+    // エラー時の対処は個別に実装する必要がある
+    throw error;
+  }
+}
+```
+
+#### **注意事項**
+- 本番環境でもこの制限は適用される
+- データベース設計時にトランザクション前提の処理を避ける
+- 複雑な処理は複数のAPI呼び出しに分割することを検討する
+
+
+## ⏰ タイムゾーン仕様
+
+### 基本方針
+本システムでは**日本標準時（JST = UTC+9）**を標準タイムゾーンとして使用します。
+
+### データベース設計
+#### **SQLite datetime関数の使用**
+- **標準形式**: `datetime('now', '+9 hours')` 
+- **非推奨**: `CURRENT_TIMESTAMP`（UTC時刻で記録されるため）
+- **非推奨**: `datetime('now')`（UTC時刻で記録されるため）
+
+#### **実装例**
+```sql
+-- ✅ 正しい日本時間での記録
+INSERT INTO table_name (created_at, updated_at) 
+VALUES (datetime('now', '+9 hours'), datetime('now', '+9 hours'));
+
+-- ✅ 更新時の日本時間
+UPDATE table_name 
+SET updated_at = datetime('now', '+9 hours') 
+WHERE id = ?;
+
+-- ❌ 避けるべき（UTC時刻が記録される）
+INSERT INTO table_name (created_at) VALUES (CURRENT_TIMESTAMP);
+INSERT INTO table_name (created_at) VALUES (datetime('now'));
+```
+
+### 適用箇所
+以下の全てのタイムスタンプフィールドで日本時間を使用：
+
+#### **API エンドポイント**
+- `lib/standings-calculator.ts`: 順位表更新時刻
+- `app/api/tournaments/[id]/join/route.ts`: チーム・選手登録時刻
+- `lib/match-result-handler.ts`: 試合結果確定時刻
+- `app/api/tournaments/[id]/manual-rankings/route.ts`: 手動順位更新時刻
+- `app/api/teams/register/route.ts`: チーム新規登録時刻
+- `app/api/teams/players/route.ts`: 選手情報更新時刻
+- `app/api/admin/tournaments/[id]/teams/route.ts`: 管理者代行登録時刻
+- `app/api/matches/[id]/status/route.ts`: 試合状態更新時刻
+
+#### **主要テーブル**
+- `m_teams`: チームマスターの作成・更新日時
+- `m_players`: 選手マスターの作成・更新日時
+- `t_tournament_teams`: 大会参加チームの登録・更新日時
+- `t_tournament_players`: 大会参加選手の登録・更新日時
+- `t_match_blocks`: ブロック順位表の更新日時
+- `t_matches_final`: 試合結果の確定日時
+- `t_match_status`: 試合状態の更新日時
+
+### 運用上の利点
+1. **ユーザー体験**: 日本の運営者・参加者に分かりやすい時刻表示
+2. **データ整合性**: 全システム内で統一された時刻基準
+3. **トラブルシューティング**: ログ時刻とユーザー操作時刻の一致
+4. **運営効率**: 大会スケジュールとシステム時刻の自然な対応
+
+### 注意事項
+- デプロイ先（Vercel）のサーバー時刻に依存せず、SQLite関数で明示的に日本時間を指定
+- フロントエンド表示では `toLocaleString('ja-JP')` で日本形式での時刻表示を推奨
+- 日付比較処理では時差を考慮した適切な処理を実装
+
