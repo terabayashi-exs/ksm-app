@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings } from 'lucide-react';
 import { getStatusLabel } from '@/lib/tournament-status';
+import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from '@/lib/format-change';
+import { FormatChangeDialog } from './FormatChangeDialog';
+import { FormatSelectionModal } from './FormatSelectionModal';
 
 interface GroupedTournamentData {
   grouped: Record<string, {
@@ -69,6 +72,16 @@ export default function TournamentDashboardList() {
   const [archiving, setArchiving] = useState<number | null>(null);
   const [notificationCounts, setNotificationCounts] = useState<Record<number, number>>({});
 
+  // フォーマット変更関連のstate
+  const [showFormatSelectionModal, setShowFormatSelectionModal] = useState(false);
+  const [showFormatChangeDialog, setShowFormatChangeDialog] = useState(false);
+  const [formatChangeCheckResult, setFormatChangeCheckResult] = useState<FormatChangeCheckResponse['data'] | null>(null);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
+  const [isFormatChanging, setIsFormatChanging] = useState(false);
+  const [availableFormats, setAvailableFormats] = useState<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number }>>([]);
+  const [selectedNewFormatId, setSelectedNewFormatId] = useState<number | null>(null);
+  const [selectedNewFormatName, setSelectedNewFormatName] = useState<string>('');
+
   // "admin"ユーザーかどうかを判定
   const isAdminUser = session?.user?.id === 'admin';
 
@@ -106,6 +119,24 @@ export default function TournamentDashboardList() {
 
     fetchTournaments();
     fetchNotificationCounts();
+  }, []);
+
+  // フォーマット一覧を取得
+  useEffect(() => {
+    const fetchFormats = async () => {
+      try {
+        const response = await fetch('/api/admin/tournament-formats');
+        const result = await response.json();
+
+        if (result.success && result.formats) {
+          setAvailableFormats(result.formats);
+        }
+      } catch (err) {
+        console.error('フォーマット取得エラー:', err);
+      }
+    };
+
+    fetchFormats();
   }, []);
 
   const handleDeleteTournament = async (tournament: Tournament) => {
@@ -203,6 +234,114 @@ export default function TournamentDashboardList() {
       alert('削除中にエラーが発生しました');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  // フォーマット変更ボタンクリック時
+  const handleFormatChangeClick = async (tournament: Tournament) => {
+    setSelectedTournamentId(tournament.tournament_id);
+    setIsFormatChanging(true);
+
+    try {
+      // 変更可否チェック
+      const checkResult = await checkFormatChangeEligibility(tournament.tournament_id);
+
+      if (checkResult.success && checkResult.data) {
+        setFormatChangeCheckResult(checkResult.data);
+
+        // 現在のフォーマット以外を選択肢として表示
+        const otherFormats = availableFormats.filter(
+          f => f.format_id !== checkResult.data!.current_format_id
+        );
+
+        if (otherFormats.length === 0) {
+          alert('変更可能な他のフォーマットが見つかりません。\n新しいフォーマットを作成してください。');
+          setIsFormatChanging(false);
+          return;
+        }
+
+        // フォーマット選択モーダルを表示
+        setShowFormatSelectionModal(true);
+      } else {
+        alert(`変更可否チェックエラー: ${checkResult.error}`);
+      }
+    } catch (err) {
+      console.error('フォーマット変更チェックエラー:', err);
+      alert('フォーマット変更チェック中にエラーが発生しました');
+    } finally {
+      setIsFormatChanging(false);
+    }
+  };
+
+  // フォーマット選択モーダルでフォーマットが選択された時
+  const handleFormatSelection = (formatId: number, formatName: string) => {
+    setSelectedNewFormatId(formatId);
+    setSelectedNewFormatName(formatName);
+    setShowFormatSelectionModal(false);
+    setShowFormatChangeDialog(true);
+  };
+
+  // フォーマット変更確定
+  const handleConfirmFormatChange = async () => {
+    if (!selectedTournamentId || !selectedNewFormatId) return;
+
+    setIsFormatChanging(true);
+
+    try {
+      const result = await changeFormat(selectedTournamentId, selectedNewFormatId, true);
+
+      if (result.success) {
+        alert(
+          `✅ ${result.message}\n\n` +
+          `【変更内容】\n` +
+          `• 大会: ${result.data?.tournament_name}\n` +
+          `• 旧フォーマット: ${result.data?.old_format_name}\n` +
+          `• 新フォーマット: ${result.data?.new_format_name}\n\n` +
+          `【削除されたデータ】\n` +
+          `• 試合結果: ${result.data?.deleted_data.matches_final}件\n` +
+          `• 試合データ: ${result.data?.deleted_data.matches_live}件\n` +
+          `• ブロック: ${result.data?.deleted_data.match_blocks}件\n` +
+          `• リセットしたチーム: ${result.data?.deleted_data.reset_teams}件\n\n` +
+          `【作成されたデータ】\n` +
+          `• ブロック: ${result.data?.created_data?.match_blocks || 0}件\n` +
+          `• 試合: ${result.data?.created_data?.matches || 0}件\n\n` +
+          `次は「組合せ作成・編集」から新しいフォーマットでチームを配置してください。`
+        );
+
+        // ダッシュボードをリフレッシュ
+        const response = await fetch('/api/tournaments/dashboard');
+        const dashboardResult: ApiResponse = await response.json();
+
+        if (dashboardResult.success && dashboardResult.data) {
+          setTournaments(dashboardResult.data);
+        }
+
+        setShowFormatChangeDialog(false);
+        setSelectedTournamentId(null);
+        setSelectedNewFormatId(null);
+        setFormatChangeCheckResult(null);
+      } else {
+        // エラー詳細の表示
+        let errorMessage = `フォーマット変更エラー: ${result.error}`;
+
+        if (result.details?.reason === 'MATCH_RESULTS_EXIST') {
+          errorMessage += `\n\n【詳細】\n`;
+          errorMessage += `${result.details.message}\n`;
+          errorMessage += `完了試合: ${result.details.completedCount}件\n`;
+          errorMessage += `確定試合: ${result.details.confirmedCount}件\n\n`;
+          errorMessage += `${result.details.suggestion}`;
+        } else if (result.details?.reason === 'INVALID_TOURNAMENT_STATUS') {
+          errorMessage += `\n\n【詳細】\n${result.details.message}`;
+        }
+
+        alert(errorMessage);
+        setShowFormatChangeDialog(false);
+      }
+    } catch (err) {
+      console.error('フォーマット変更エラー:', err);
+      alert('フォーマット変更中にエラーが発生しました');
+    } finally {
+      setIsFormatChanging(false);
     }
   };
 
@@ -470,6 +609,26 @@ export default function TournamentDashboardList() {
                 </Link>
               </Button>
               <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleFormatChangeClick(tournament)}
+                disabled={isFormatChanging && selectedTournamentId === tournament.tournament_id}
+                className="text-sm border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                title="部門のフォーマットを変更（試合データは削除されます）"
+              >
+                {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                    確認中...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Settings className="w-4 h-4 mr-2" />
+                    フォーマット変更
+                  </div>
+                )}
+              </Button>
+              <Button
                 asChild
                 size="sm"
                 variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
@@ -735,6 +894,37 @@ export default function TournamentDashboardList() {
 
   return (
     <div className="space-y-6">
+      {/* フォーマット選択モーダル */}
+      {showFormatSelectionModal && formatChangeCheckResult && (
+        <FormatSelectionModal
+          currentFormatId={formatChangeCheckResult.current_format_id}
+          currentFormatName={formatChangeCheckResult.current_format_name}
+          availableFormats={availableFormats}
+          onSelect={handleFormatSelection}
+          onCancel={() => {
+            setShowFormatSelectionModal(false);
+            setSelectedTournamentId(null);
+            setFormatChangeCheckResult(null);
+          }}
+        />
+      )}
+
+      {/* フォーマット変更ダイアログ */}
+      {showFormatChangeDialog && formatChangeCheckResult && (
+        <FormatChangeDialog
+          checkResult={formatChangeCheckResult}
+          newFormatName={selectedNewFormatName}
+          onConfirm={handleConfirmFormatChange}
+          onCancel={() => {
+            setShowFormatChangeDialog(false);
+            setSelectedTournamentId(null);
+            setSelectedNewFormatId(null);
+            setFormatChangeCheckResult(null);
+          }}
+          isProcessing={isFormatChanging}
+        />
+      )}
+
       {/* 募集前の大会 */}
       {tournaments.before_recruitment.length > 0 && (
         <>

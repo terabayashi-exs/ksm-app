@@ -18,51 +18,16 @@ import {
   TeamStandingData
 } from '@/lib/tie-breaking-calculator';
 import { getTournamentPointSystem, PointSystem } from '@/lib/point-system-loader';
+import { parseTotalScore, parseScoreArray } from '@/lib/score-parser';
 
 /**
- * スコア文字列を数値に変換（カンマ区切り対応）
+ * スコア文字列を数値に変換（全形式対応）
  * 注: この関数は非サッカー競技用です。サッカーの場合はcalculateMultiSportBlockStandingsのanalyzeScore関数が使用されます。
  * 非サッカー競技（pk_championshipなど）では全ピリオドを合計します。
  */
 function parseScore(score: string | number | bigint | ArrayBuffer | null | undefined): number {
-  if (score === null || score === undefined) {
-    return 0;
-  }
-
-  if (typeof score === 'number') {
-    return isNaN(score) ? 0 : score;
-  }
-
-  if (typeof score === 'bigint') {
-    return Number(score);
-  }
-
-  if (score instanceof ArrayBuffer) {
-    const decoder = new TextDecoder();
-    const stringValue = decoder.decode(score);
-    return parseScore(stringValue);
-  }
-
-  if (typeof score === 'string') {
-    // 空文字列の場合
-    if (score.trim() === '') {
-      return 0;
-    }
-
-    // カンマ区切りの場合は全ピリオドを合計
-    // 非サッカー競技（pk_championshipなど）では全ピリオドを合計
-    if (score.includes(',')) {
-      const scores = score.split(',').map(s => parseInt(s.trim()) || 0);
-      const total = scores.reduce((sum, score) => sum + score, 0);
-      return isNaN(total) ? 0 : total;
-    }
-
-    // 単一値の場合
-    const parsed = parseInt(score.trim());
-    return isNaN(parsed) ? 0 : parsed;
-  }
-
-  return 0;
+  // parseTotalScore() を使用して統一的に処理
+  return parseTotalScore(score);
 }
 
 // Re-export for other modules
@@ -2078,7 +2043,8 @@ export async function calculateMultiSportBlockStandings(
         };
       }
       
-      const periods = scoreStr.split(',').map(s => parseInt(s.trim()) || 0);
+      // parseScoreArray()で全形式に対応
+      const periods = parseScoreArray(scoreStr);
       
       // PK競技の場合: シンプルな合計計算
       if (currentSportCode === 'pk') {

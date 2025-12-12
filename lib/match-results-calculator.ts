@@ -1,54 +1,21 @@
 // lib/match-results-calculator.ts
 import { db } from '@/lib/db';
-import { 
-  getSportScoreConfig, 
-  getTournamentSportCode, 
+import {
+  getSportScoreConfig,
+  getTournamentSportCode,
   extractSoccerScoreData,
   SportScoreConfig,
   SoccerScoreData
 } from '@/lib/sport-standings-calculator';
+import { parseTotalScore } from '@/lib/score-parser';
 
 /**
- * スコア文字列を数値に変換（カンマ区切り対応）
+ * スコア文字列を数値に変換（全形式対応）
+ * @deprecated 新しいコードでは parseTotalScore を使用してください
  */
 function parseScore(score: string | number | bigint | ArrayBuffer | null | undefined): number | null {
-  if (score === null || score === undefined) {
-    return null;
-  }
-  
-  if (typeof score === 'number') {
-    return isNaN(score) ? null : score;
-  }
-  
-  if (typeof score === 'bigint') {
-    return Number(score);
-  }
-  
-  if (score instanceof ArrayBuffer) {
-    // ArrayBufferを文字列として扱う
-    const decoder = new TextDecoder();
-    const stringValue = decoder.decode(score);
-    return parseScore(stringValue); // 再帰的に処理
-  }
-  
-  if (typeof score === 'string') {
-    // 空文字列の場合
-    if (score.trim() === '') {
-      return null;
-    }
-    
-    // カンマ区切りの場合は合計を計算
-    if (score.includes(',')) {
-      const total = score.split(',').reduce((sum, s) => sum + (parseInt(s.trim()) || 0), 0);
-      return isNaN(total) ? null : total;
-    }
-    
-    // 単一値の場合
-    const parsed = parseInt(score.trim());
-    return isNaN(parsed) ? null : parsed;
-  }
-  
-  return null;
+  const result = parseTotalScore(score);
+  return result === 0 && !score ? null : result;
 }
 
 export interface MatchResult {

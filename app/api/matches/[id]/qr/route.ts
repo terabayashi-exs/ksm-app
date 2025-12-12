@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { getSportScoreConfig } from '@/lib/sport-standings-calculator';
+import { parseScoreArray } from '@/lib/score-parser';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -220,11 +221,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
           match_status: match.match_status || 'scheduled',
           team1_scores: match.is_confirmed
-            ? (match.final_team1_scores ? String(match.final_team1_scores).split(',').map((score: string) => Number(score) || 0) : null)
-            : (match.team1_scores ? String(match.team1_scores).split(',').map((score: string) => Number(score) || 0) : null),
+            ? (match.final_team1_scores ? parseScoreArray(match.final_team1_scores) : null)
+            : (match.team1_scores ? parseScoreArray(match.team1_scores) : null),
           team2_scores: match.is_confirmed
-            ? (match.final_team2_scores ? String(match.final_team2_scores).split(',').map((score: string) => Number(score) || 0) : null)
-            : (match.team2_scores ? String(match.team2_scores).split(',').map((score: string) => Number(score) || 0) : null),
+            ? (match.final_team2_scores ? parseScoreArray(match.final_team2_scores) : null)
+            : (match.team2_scores ? parseScoreArray(match.team2_scores) : null),
           winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
           is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,
@@ -322,11 +323,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
           current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
           match_status: match.match_status || 'scheduled',
           team1_scores: match.is_confirmed
-            ? (match.final_team1_scores ? String(match.final_team1_scores).split(',').map((score: string) => Number(score) || 0) : null)
-            : (match.team1_scores ? String(match.team1_scores).split(',').map((score: string) => Number(score) || 0) : null),
+            ? (match.final_team1_scores ? parseScoreArray(match.final_team1_scores) : null)
+            : (match.team1_scores ? parseScoreArray(match.team1_scores) : null),
           team2_scores: match.is_confirmed
-            ? (match.final_team2_scores ? String(match.final_team2_scores).split(',').map((score: string) => Number(score) || 0) : null)
-            : (match.team2_scores ? String(match.team2_scores).split(',').map((score: string) => Number(score) || 0) : null),
+            ? (match.final_team2_scores ? parseScoreArray(match.final_team2_scores) : null)
+            : (match.team2_scores ? parseScoreArray(match.team2_scores) : null),
           winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
           is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,

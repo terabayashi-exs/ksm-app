@@ -26,6 +26,7 @@ import { useSession } from 'next-auth/react';
 import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
 import { SPORT_RULE_CONFIGS, SportRuleConfig } from '@/lib/tournament-rules';
 import NotificationBanner from '@/components/features/tournament/NotificationBanner';
+import { parseScoreArray, parseTotalScore } from '@/lib/score-parser';
 
 interface Tournament {
   tournament_id: number;
@@ -605,37 +606,18 @@ export default function AdminMatchesPage() {
     if (match.final_team1_scores && match.final_team2_scores) {
       // 確定済みスコアを使用
       try {
-        // PKスポーツ特有の形式に対応: "0,3" = 通常0点 + PK3点
-        if (match.final_team1_scores.includes(',')) {
-          team1Scores = match.final_team1_scores.split(',').map(s => parseInt(s || '0'));
-        } else {
-          team1Scores = [parseInt(match.final_team1_scores || '0')];
-        }
-        
-        if (match.final_team2_scores.includes(',')) {
-          team2Scores = match.final_team2_scores.split(',').map(s => parseInt(s || '0'));
-        } else {
-          team2Scores = [parseInt(match.final_team2_scores || '0')];
-        }
+        team1Scores = parseScoreArray(match.final_team1_scores);
+        team2Scores = parseScoreArray(match.final_team2_scores);
         console.log(`[WINNER_DEBUG] ${match.match_code} - Final scores parsed:`, { team1Scores, team2Scores });
       } catch (error) {
         console.error(`[WINNER_DEBUG] ${match.match_code} - Score parsing error:`, error);
-        team1Scores = [parseInt(match.final_team1_scores || '0')];
-        team2Scores = [parseInt(match.final_team2_scores || '0')];
+        team1Scores = [0];
+        team2Scores = [0];
       }
     } else if (match.team1_scores !== undefined && match.team2_scores !== undefined) {
       // 未確定スコアを使用
-      if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
-        team1Scores = match.team1_scores.split(',').map(s => parseInt(s || '0'));
-      } else {
-        team1Scores = [typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) : match.team1_scores || 0];
-      }
-      
-      if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
-        team2Scores = match.team2_scores.split(',').map(s => parseInt(s || '0'));
-      } else {
-        team2Scores = [typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) : match.team2_scores || 0];
-      }
+      team1Scores = parseScoreArray(match.team1_scores);
+      team2Scores = parseScoreArray(match.team2_scores);
       console.log(`[WINNER_DEBUG] ${match.match_code} - Live scores parsed:`, { team1Scores, team2Scores });
     } else {
       console.log(`[WINNER_DEBUG] ${match.match_code} - No valid scores found`);
@@ -733,24 +715,11 @@ export default function AdminMatchesPage() {
           team2Scores = JSON.parse(match.final_team2_scores);
           console.log('[SCORE_DEBUG] JSON parse successful:', { team1Scores, team2Scores });
         } catch (jsonError) {
-          console.log('[SCORE_DEBUG] JSON parse failed, trying CSV:', jsonError);
-          // CSV形式または単一値の場合
-          if (match.final_team1_scores.includes(',')) {
-            // カンマ区切りの場合
-            team1Scores = match.final_team1_scores.split(',').map(s => parseInt(s || '0'));
-          } else {
-            // 単一値の場合
-            team1Scores = [parseInt(match.final_team1_scores || '0')];
-          }
-          
-          if (match.final_team2_scores.includes(',')) {
-            // カンマ区切りの場合
-            team2Scores = match.final_team2_scores.split(',').map(s => parseInt(s || '0'));
-          } else {
-            // 単一値の場合
-            team2Scores = [parseInt(match.final_team2_scores || '0')];
-          }
-          console.log('[SCORE_DEBUG] CSV/Single value parse result:', { team1Scores, team2Scores });
+          console.log('[SCORE_DEBUG] JSON parse failed, using parseScoreArray:', jsonError);
+          // parseScoreArray()で全形式に対応
+          team1Scores = parseScoreArray(match.final_team1_scores);
+          team2Scores = parseScoreArray(match.final_team2_scores);
+          console.log('[SCORE_DEBUG] parseScoreArray result:', { team1Scores, team2Scores });
         }
 
         // 配列の安全性チェック
@@ -824,19 +793,10 @@ export default function AdminMatchesPage() {
         if ((sportConfig?.sport_code === 'pk_championship') || (sportConfig?.supports_pk && sportConfig.ruleConfig?.default_periods)) {
           let team1Scores: number[] = [];
           let team2Scores: number[] = [];
-          
+
           // スコアを配列に変換
-          if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
-            team1Scores = match.team1_scores.split(',').map(s => parseInt(s) || 0);
-          } else {
-            team1Scores = [typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) || 0 : match.team1_scores || 0];
-          }
-          
-          if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
-            team2Scores = match.team2_scores.split(',').map(s => parseInt(s) || 0);
-          } else {
-            team2Scores = [typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) || 0 : match.team2_scores || 0];
-          }
+          team1Scores = parseScoreArray(match.team1_scores);
+          team2Scores = parseScoreArray(match.team2_scores);
           
           let regularTotal1 = 0;
           let regularTotal2 = 0;
@@ -867,19 +827,10 @@ export default function AdminMatchesPage() {
         if (sportConfig?.sport_code === 'pk_championship') {
           let team1Scores: number[] = [];
           let team2Scores: number[] = [];
-          
+
           // スコアを配列に変換
-          if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
-            team1Scores = match.team1_scores.split(',').map(s => parseInt(s) || 0);
-          } else {
-            team1Scores = [typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) || 0 : match.team1_scores || 0];
-          }
-          
-          if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
-            team2Scores = match.team2_scores.split(',').map(s => parseInt(s) || 0);
-          } else {
-            team2Scores = [typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) || 0 : match.team2_scores || 0];
-          }
+          team1Scores = parseScoreArray(match.team1_scores);
+          team2Scores = parseScoreArray(match.team2_scores);
           
           const regular1 = team1Scores[0] || 0;
           const regular2 = team2Scores[0] || 0;
@@ -893,25 +844,9 @@ export default function AdminMatchesPage() {
         }
 
         // 通常の処理（PK戦がない場合またはサッカー以外）
-        let team1Total = 0;
-        let team2Total = 0;
-        
-        if (typeof match.team1_scores === 'string' && match.team1_scores.includes(',')) {
-          // カンマ区切りの場合
-          team1Total = match.team1_scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-        } else {
-          // 単一値の場合
-          team1Total = typeof match.team1_scores === 'string' ? parseInt(match.team1_scores) || 0 : match.team1_scores || 0;
-        }
-        
-        if (typeof match.team2_scores === 'string' && match.team2_scores.includes(',')) {
-          // カンマ区切りの場合
-          team2Total = match.team2_scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-        } else {
-          // 単一値の場合
-          team2Total = typeof match.team2_scores === 'string' ? parseInt(match.team2_scores) || 0 : match.team2_scores || 0;
-        }
-        
+        const team1Total = parseTotalScore(match.team1_scores);
+        const team2Total = parseTotalScore(match.team2_scores);
+
         return `${team1Total} - ${team2Total}`;
       }
     } catch (error) {
