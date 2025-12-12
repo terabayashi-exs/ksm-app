@@ -8,7 +8,7 @@
 
 ### 主要テーブル構成
 
-#### マスタテーブル
+#### マスタテーブル (9テーブル)
 - `m_venues` - 会場マスター
 - `m_teams` - チームマスター
 - `m_players` - 選手マスター
@@ -16,19 +16,107 @@
 - `m_tournament_formats` - 大会フォーマットマスター
 - `m_match_templates` - 試合テンプレートマスター
 - `m_subscription_plans` - サブスクリプションプランマスター
+- `m_sport_types` - 競技種別マスター（PK戦、ハンドボール等）
+- `m_tournament_groups` - 大会グループマスター（大会分類用）
 
-#### トランザクションテーブル
+#### トランザクションテーブル (18テーブル)
 - `t_tournaments` - 大会情報
 - `t_tournament_teams` - 大会参加チーム
+- `t_tournament_players` - 大会参加選手
 - `t_match_blocks` - 試合ブロック（予選グループ、決勝トーナメントなど）
 - `t_matches_live` - 進行中試合情報
 - `t_matches_final` - 確定済み試合結果
+- `t_match_status` - 試合状態管理
+- `t_tournament_rules` - 大会ルール設定
+- `t_tournament_courts` - 大会コート情報
+- `t_tournament_files` - 大会関連ファイル（Blob Storage連携）
+- `t_tournament_groups` - 大会グループ
+- `t_tournament_match_overrides` - 試合進出条件オーバーライド
+- `t_tournament_notifications` - 大会通知情報
 - `t_administrator_subscriptions` - 管理者サブスクリプション
 - `t_subscription_usage` - サブスクリプション使用状況
 - `t_payment_history` - 決済履歴
-- `t_tournament_match_overrides` - 試合進出条件オーバーライド
+- `t_archived_tournament_json` - アーカイブ済み大会データ（JSON形式）
+- `sqlite_sequence` - SQLite内部シーケンステーブル
 
 詳細な設計については[../database/KSM.md](../database/KSM.md)を参照してください。
+
+### スコアシステムの拡張（複数ピリオド対応）
+
+従来の単一スコア方式（`team1_goals`, `team2_goals`）から、複数ピリオド対応のスコア方式に変更されました。
+
+#### **変更内容**
+- **旧方式**: `team1_goals INTEGER`, `team2_goals INTEGER`（単一整数値）
+- **新方式**: `team1_scores TEXT`, `team2_scores TEXT`（JSON配列形式）
+
+#### **データフォーマット仕様** ⚠️ 重要
+スコアデータは**必ずJSON配列形式**で保存します。
+
+```json
+// ✅ 正しい形式（JSON配列）
+"[3, 2, 1]"  // 前半3点、後半2点、延長1点
+"[2, 2]"     // 前半2点、後半2点
+"[5]"        // 単一ピリオド5点
+
+// ❌ 非推奨形式（レガシー互換性のため読み取りのみ対応）
+"3,2,1"      // カンマ区切り形式（古い実装）
+"5"          // 単一数値形式（古い実装）
+```
+
+#### **スコアデータの読み書き**
+
+**書き込み（保存時）**: 必ず `formatScoreArray()` を使用
+```typescript
+import { formatScoreArray } from '@/lib/score-parser';
+
+const scores = [3, 2, 1];
+const scoreData = formatScoreArray(scores);  // "[3,2,1]"
+```
+
+**読み取り（表示時）**: 必ず `parseScoreArray()` または `parseTotalScore()` を使用
+```typescript
+import { parseScoreArray, parseTotalScore } from '@/lib/score-parser';
+
+// 配列として取得（ピリオド別表示が必要な場合）
+const scores = parseScoreArray(scoreData);  // [3, 2, 1]
+
+// 合計値のみ取得（順位表などで使用）
+const total = parseTotalScore(scoreData);   // 6
+```
+
+⚠️ **注意**: `split(',')` や `includes(',')` を直接使用しないでください。全形式に対応した `score-parser.ts` のヘルパー関数を必ず使用してください。
+
+#### **PK戦の特殊処理**
+
+サッカー等の競技でPK戦がある場合、通常時間とPK戦のスコアは**独立して扱います**。
+
+```typescript
+// サッカー: 前半1点、後半1点、延長0点、PK戦5点
+const scores = [1, 1, 0, 5];
+
+// 通常時間の合計（順位表計算に使用）
+const regularGoals = scores.slice(0, 3).reduce((sum, s) => sum + s, 0);  // 2
+
+// PK戦のスコア（表示のみ）
+const pkGoals = scores[3];  // 5
+
+// 表示: "2 - 1 (PK 5-4)"
+```
+
+#### **対応競技**
+- **PK戦**: 1ピリオド制（通常）
+- **フットサル**: 2ピリオド制（前半・後半）
+- **ハンドボール**: 2ピリオド制（前半・後半）+ 延長・PK対応
+- **サッカー**: 2ピリオド制（前半・後半）+ 延長・PK対応
+- **バスケットボール**: 4ピリオド制（1Q・2Q・3Q・4Q）+ 延長対応
+
+#### **適用テーブル**
+- `t_matches_live`: 進行中試合のスコア記録
+- `t_matches_final`: 確定済み試合結果のスコア保存
+
+#### **データ移行履歴**
+- **2025-12-12**: 全スコアデータをJSON配列形式に統一（287レコード移行完了）
+- 移行前の形式（カンマ区切り、単一数値）からの読み取りは後方互換性のため維持
 
 ### 柔軟な試合進出条件システム（t_tournament_match_overrides）
 

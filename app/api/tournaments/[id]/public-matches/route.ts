@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
+import { parseScoreArray } from '@/lib/score-parser';
 
 // キャッシュを無効化
 export const dynamic = 'force-dynamic';
@@ -384,31 +385,8 @@ export async function GET(
         return { goals: null, scoreDisplay: null };
       }
 
-      // スコアを配列に変換
-      let scores: number[] = [];
-      
-      // ArrayBufferの場合
-      if (scoreData instanceof ArrayBuffer) {
-        const decoder = new TextDecoder();
-        const stringValue = decoder.decode(scoreData);
-        if (stringValue.includes(',')) {
-          scores = stringValue.split(',').map((s: string) => Number(s) || 0);
-        } else {
-          scores = [Number(stringValue) || 0];
-        }
-      }
-      // bigintの場合
-      else if (typeof scoreData === 'bigint') {
-        scores = [Number(scoreData)];
-      }
-      // 文字列の場合
-      else if (typeof scoreData === 'string' && scoreData.includes(',')) {
-        scores = scoreData.split(',').map((s: string) => Number(s) || 0);
-      } 
-      // その他の場合
-      else {
-        scores = [Number(scoreData) || 0];
-      }
+      // parseScoreArray()を使って全形式に対応
+      const scores = parseScoreArray(scoreData);
 
       // サッカーでPK戦がある場合の特別処理
       if (sportConfig?.supports_pk && scores.length >= 5) {

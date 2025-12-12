@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTournamentSportCode, getSportScoreConfig, extractSoccerScoreData } from '@/lib/sport-standings-calculator';
+import { parseScoreArray, parseTotalScore } from '@/lib/score-parser';
 
 export async function GET(
   request: NextRequest,
@@ -77,6 +78,10 @@ export async function GET(
 
     // データを整形（多競技対応）
     const bracketData = matches.rows.map(row => {
+      // スコアデータをパース（確定済みスコアを優先）
+      const team1GoalsData = row.team1_goals as string | null;
+      const team2GoalsData = row.team2_goals as string | null;
+
       const baseData = {
         match_id: row.match_id as number,
         match_code: row.match_code as string,
@@ -86,8 +91,8 @@ export async function GET(
         team2_tournament_team_id: row.team2_tournament_team_id as number | null,
         team1_display_name: row.team1_display_name as string,
         team2_display_name: row.team2_display_name as string,
-        team1_goals: parseInt(row.team1_goals as string) || 0,
-        team2_goals: parseInt(row.team2_goals as string) || 0,
+        team1_goals: team1GoalsData ? parseTotalScore(team1GoalsData) : 0,
+        team2_goals: team2GoalsData ? parseTotalScore(team2GoalsData) : 0,
         winner_team_id: row.winner_team_id as string | null,
         winner_tournament_team_id: row.winner_tournament_team_id as number | null,
         is_draw: Boolean(row.is_draw),
@@ -107,19 +112,9 @@ export async function GET(
         const livePeriodCount = row.live_period_count as number | null;
 
         if (liveTeam1ScoresStr && liveTeam2ScoresStr) {
-          // カンマ区切り文字列を配列に変換（JSONではない場合の対応）
-          let team1Scores: number[];
-          let team2Scores: number[];
-          
-          try {
-            // まずJSONとしてパースを試行
-            team1Scores = JSON.parse(liveTeam1ScoresStr);
-            team2Scores = JSON.parse(liveTeam2ScoresStr);
-          } catch {
-            // JSON形式でない場合はカンマ区切り文字列として処理
-            team1Scores = liveTeam1ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
-            team2Scores = liveTeam2ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
-          }
+          // parseScoreArray()で全形式に対応
+          const team1Scores = parseScoreArray(liveTeam1ScoresStr);
+          const team2Scores = parseScoreArray(liveTeam2ScoresStr);
 
           // period_countからactive_periodsを生成
           let activePeriods: number[] = [];

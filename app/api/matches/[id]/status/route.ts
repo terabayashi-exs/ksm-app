@@ -1,6 +1,7 @@
 // app/api/matches/[id]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { parseScoreArray, formatScoreArray } from '@/lib/score-parser';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -84,8 +85,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         match_status: match.match_status || 'scheduled',
         actual_start_time: match.actual_start_time,
         actual_end_time: match.actual_end_time,
-        team1_scores: match.team1_scores ? String(match.team1_scores).split(',').map((score: string) => Number(score) || 0) : null,
-        team2_scores: match.team2_scores ? String(match.team2_scores).split(',').map((score: string) => Number(score) || 0) : null,
+        team1_scores: match.team1_scores ? parseScoreArray(match.team1_scores) : null,
+        team2_scores: match.team2_scores ? parseScoreArray(match.team2_scores) : null,
         winner_team_id: match.winner_team_id,
         remarks: match.remarks,
         updated_by: match.updated_by,
@@ -177,15 +178,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       case 'update_scores':
         // スコア・結果更新
         if (team1_scores && team2_scores) {
-          // ピリオド別スコアをカンマ区切りで保存
-          const team1ScoresStr = Array.isArray(team1_scores) 
-            ? team1_scores.map(score => Math.floor(score || 0)).join(',')
-            : String(Math.floor(team1_scores || 0));
-          const team2ScoresStr = Array.isArray(team2_scores) 
-            ? team2_scores.map(score => Math.floor(score || 0)).join(',')
-            : String(Math.floor(team2_scores || 0));
+          // ピリオド別スコアをJSON配列形式で保存
+          const team1ScoresStr = formatScoreArray(team1_scores);
+          const team2ScoresStr = formatScoreArray(team2_scores);
 
-          console.log('Updating scores (period-by-period):', {
+          console.log('Updating scores (JSON array format):', {
             team1_scores: team1_scores,
             team2_scores: team2_scores,
             team1ScoresStr,
@@ -196,7 +193,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           });
 
           await db.execute(`
-            UPDATE t_matches_live 
+            UPDATE t_matches_live
             SET team1_scores = ?, team2_scores = ?, winner_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
           `, [team1ScoresStr, team2ScoresStr, winner_team_id, remarks, matchId]);
@@ -266,8 +263,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         current_period: updatedMatch.current_period || 1,
         actual_start_time: updatedMatch.actual_start_time,
         actual_end_time: updatedMatch.actual_end_time,
-        team1_scores: updatedMatch.team1_scores ? String(updatedMatch.team1_scores).split(',').map((score: string) => Number(score) || 0) : null,
-        team2_scores: updatedMatch.team2_scores ? String(updatedMatch.team2_scores).split(',').map((score: string) => Number(score) || 0) : null,
+        team1_scores: updatedMatch.team1_scores ? parseScoreArray(updatedMatch.team1_scores) : null,
+        team2_scores: updatedMatch.team2_scores ? parseScoreArray(updatedMatch.team2_scores) : null,
         updated_by: updatedMatch.updated_by,
         updated_at: updatedMatch.status_updated_at
       }

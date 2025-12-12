@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
+import { parseTotalScore } from '@/lib/score-parser';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -109,14 +110,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
     
     // ログ用にスコア合計を計算
-    const team1Total = liveMatch.team1_scores ? 
-      (typeof liveMatch.team1_scores === 'string' && liveMatch.team1_scores.includes(',') ?
-        liveMatch.team1_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
-        Math.floor(Number(liveMatch.team1_scores) || 0)) : 0;
-    const team2Total = liveMatch.team2_scores ? 
-      (typeof liveMatch.team2_scores === 'string' && liveMatch.team2_scores.includes(',') ?
-        liveMatch.team2_scores.split(',').reduce((sum, score) => sum + (Number(score) || 0), 0) :
-        Math.floor(Number(liveMatch.team2_scores) || 0)) : 0;
+    const team1Total = parseTotalScore(liveMatch.team1_scores);
+    const team2Total = parseTotalScore(liveMatch.team2_scores);
     
     console.log(`[MATCH_CONFIRM] Calculated totals: ${team1Total}-${team2Total}`);
     console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_id} vs ${liveMatch.team2_id} (${team1Total}-${team2Total})`);

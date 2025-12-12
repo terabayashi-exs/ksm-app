@@ -2,6 +2,7 @@
 import { BlobStorage } from './blob-storage';
 import { db } from './db';
 import { ArchiveVersionManager } from './archive-version-manager';
+import { parseTotalScore } from './score-parser';
 
 /**
  * アーカイブインデックスの型定義
@@ -418,8 +419,7 @@ export class TournamentBlobArchiver {
       // スコアの計算処理を追加
       const processedMatches = matchesResult.rows.map(match => {
         const calculateGoals = (scores: string | null): number => {
-          if (!scores) return 0;
-          return scores.split(',').reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+          return parseTotalScore(scores);
         };
 
         return {
