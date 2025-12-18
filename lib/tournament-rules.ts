@@ -8,7 +8,6 @@ export interface TournamentRule {
   use_extra_time: boolean;
   use_penalty: boolean;
   active_periods: string; // JSON文字列: ["1", "2", "3", "4", "5"] など
-  win_condition: 'score' | 'time' | 'points';
   notes?: string;
   point_system?: string; // JSON文字列: {"win": 3, "draw": 1, "loss": 0}
   walkover_settings?: string; // JSON文字列: {"winner_goals": 3, "loser_goals": 0}
@@ -50,15 +49,13 @@ export const SPORT_RULE_CONFIGS: Record<string, SportRuleConfig> = {
       phase: 'preliminary',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'score'
+      active_periods: '["1"]'
     },
     default_final_rules: {
       phase: 'final',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'score'
+      active_periods: '["1"]'
     }
   },
   
@@ -102,15 +99,13 @@ export const SPORT_RULE_CONFIGS: Record<string, SportRuleConfig> = {
       phase: 'preliminary',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1", "2"]', // 前半・後半のみ
-      win_condition: 'score'
+      active_periods: '["1", "2"]' // 前半・後半のみ
     },
     default_final_rules: {
       phase: 'final',
       use_extra_time: true,
       use_penalty: true,
-      active_periods: '["1", "2", "3", "4", "5"]', // 全ピリオド使用可能
-      win_condition: 'score'
+      active_periods: '["1", "2", "3", "4", "5"]' // 全ピリオド使用可能
     }
   },
   
@@ -130,15 +125,13 @@ export const SPORT_RULE_CONFIGS: Record<string, SportRuleConfig> = {
       phase: 'preliminary',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'score'
+      active_periods: '["1"]'
     },
     default_final_rules: {
       phase: 'final',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'score'
+      active_periods: '["1"]'
     }
   },
   
@@ -158,15 +151,13 @@ export const SPORT_RULE_CONFIGS: Record<string, SportRuleConfig> = {
       phase: 'preliminary',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'time'
+      active_periods: '["1"]'
     },
     default_final_rules: {
       phase: 'final',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'time'
+      active_periods: '["1"]'
     }
   }
 };
@@ -229,16 +220,14 @@ export function getLegacyDefaultRules(tournamentId: number): TournamentRule[] {
       phase: 'preliminary',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'score'
+      active_periods: '["1"]'
     },
     {
       tournament_id: tournamentId,
       phase: 'final',
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]',
-      win_condition: 'score'
+      active_periods: '["1"]'
     }
   ];
 }

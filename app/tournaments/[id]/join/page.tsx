@@ -24,7 +24,7 @@ interface TeamPlayer {
 
 async function getTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
   const result = await db.execute(`
-    SELECT 
+    SELECT DISTINCT
       player_id,
       player_name,
       jersey_number,
@@ -35,12 +35,14 @@ async function getTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
   `, [teamId]);
 
   // データベースの行オブジェクトをプレーンオブジェクトに変換
-  return result.rows.map(row => ({
+  const players = result.rows.map(row => ({
     player_id: Number(row.player_id),
     player_name: String(row.player_name),
     jersey_number: row.jersey_number ? Number(row.jersey_number) : null,
     is_active: Number(row.is_active)
   }));
+
+  return players;
 }
 
 async function checkExistingParticipation(tournamentId: number, teamId: string) {
@@ -60,7 +62,7 @@ interface ExistingTournamentPlayer {
 
 async function getExistingTournamentPlayers(tournamentId: number, teamId: string): Promise<ExistingTournamentPlayer[]> {
   const result = await db.execute(`
-    SELECT 
+    SELECT DISTINCT
       tp.player_id,
       p.player_name,
       tp.jersey_number
@@ -111,14 +113,13 @@ async function getExistingTournamentTeamInfo(tournamentId: number, teamId: strin
 
 async function getExistingTournamentPlayersForSpecificTeam(tournamentId: number, teamId: string, tournamentTeamId: number): Promise<ExistingTournamentPlayer[]> {
   const result = await db.execute(`
-    SELECT 
+    SELECT DISTINCT
       tp.player_id,
       p.player_name,
       tp.jersey_number
     FROM t_tournament_players tp
     INNER JOIN m_players p ON tp.player_id = p.player_id
-    INNER JOIN t_tournament_teams tt ON tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id
-    WHERE tp.tournament_id = ? AND tp.team_id = ? AND tt.tournament_team_id = ? AND tp.player_status = 'active'
+    WHERE tp.tournament_id = ? AND tp.team_id = ? AND tp.tournament_team_id = ? AND tp.player_status = 'active'
     ORDER BY tp.jersey_number ASC, p.player_name ASC
   `, [tournamentId, teamId, tournamentTeamId]);
 
@@ -136,13 +137,6 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
   const tournamentId = parseInt(resolvedParams.id);
   const isNewTeamMode = resolvedSearchParams.mode === 'new';
   const specificTeamId = resolvedSearchParams.team ? parseInt(resolvedSearchParams.team) : null;
-  
-  console.log('TournamentJoinPage Debug:', {
-    rawId: resolvedParams.id,
-    parsedId: tournamentId,
-    isNaN: isNaN(tournamentId),
-    type: typeof resolvedParams.id
-  });
 
   // 認証チェック（チーム権限必須）
   if (!session || session.user.role !== 'team') {

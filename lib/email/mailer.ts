@@ -16,6 +16,8 @@ export interface EmailOptions {
   subject: string;
   text: string;
   html: string;
+  cc?: string | string[];
+  bcc?: string | string[];
 }
 
 /**
@@ -26,6 +28,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     const info = await transporter.sendMail({
       from: `"${process.env.SMTP_FROM_NAME || 'KSM App'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
       to: options.to,
+      cc: options.cc,
+      bcc: options.bcc,
       subject: options.subject,
       text: options.text,
       html: options.html,
@@ -34,6 +38,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     console.log('✅ メール送信成功:', {
       messageId: info.messageId,
       to: options.to,
+      cc: options.cc,
+      bcc: options.bcc ? `[${Array.isArray(options.bcc) ? options.bcc.length : 1}件]` : undefined,
       subject: options.subject,
     });
   } catch (error) {

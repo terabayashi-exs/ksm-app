@@ -178,22 +178,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       `, [rulesJson, enabledFlag, tournamentId, phase]);
     } else {
       // 新規レコードを作成（基本的なルール設定も含む）
-      const defaultRuleConfig = phase === 'preliminary' 
-        ? { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]', win_condition: 'score' }
-        : { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]', win_condition: 'score' };
+      const defaultRuleConfig = phase === 'preliminary'
+        ? { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]' }
+        : { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]' };
 
       await db.execute(`
         INSERT INTO t_tournament_rules (
-          tournament_id, phase, use_extra_time, use_penalty, 
-          active_periods, win_condition, tie_breaking_rules, tie_breaking_enabled,
+          tournament_id, phase, use_extra_time, use_penalty,
+          active_periods, tie_breaking_rules, tie_breaking_enabled,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
-        tournamentId, phase, 
+        tournamentId, phase,
         defaultRuleConfig.use_extra_time,
         defaultRuleConfig.use_penalty,
         defaultRuleConfig.active_periods,
-        defaultRuleConfig.win_condition,
         rulesJson, enabledFlag
       ]);
     }

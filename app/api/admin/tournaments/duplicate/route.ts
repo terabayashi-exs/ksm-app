@@ -250,7 +250,6 @@ async function duplicateTournamentRules(sourceTournamentId: number, newTournamen
       use_extra_time: ruleData.use_extra_time,
       use_penalty: ruleData.use_penalty,
       active_periods: ruleData.active_periods,
-      win_condition: ruleData.win_condition,
       point_system: ruleData.point_system,
       walkover_settings: ruleData.walkover_settings,
       tie_breaking_rules: ruleData.tie_breaking_rules,
@@ -260,16 +259,15 @@ async function duplicateTournamentRules(sourceTournamentId: number, newTournamen
     await db.execute(`
       INSERT INTO t_tournament_rules (
         tournament_id, phase, use_extra_time, use_penalty, active_periods,
-        win_condition, notes, point_system, walkover_settings,
+        notes, point_system, walkover_settings,
         tie_breaking_rules, tie_breaking_enabled
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newTournamentId,
       ruleData.phase,
       ruleData.use_extra_time,
       ruleData.use_penalty,
       ruleData.active_periods,
-      ruleData.win_condition || 'score',
       ruleData.notes || null,
       ruleData.point_system || null,
       ruleData.walkover_settings || null,

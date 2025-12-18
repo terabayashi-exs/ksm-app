@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp, CheckCircle, Building2 } from 'lucide-react';
+import { Calendar, MapPin, Trophy, ChevronDown, ChevronUp, CheckCircle, Building2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { getStatusLabel, type TournamentStatus } from '@/lib/tournament-status';
 
@@ -15,6 +15,8 @@ interface Tournament {
   format_name: string;
   venue_name: string;
   team_count: number;
+  confirmed_count?: number;
+  waitlisted_count?: number;
   status: TournamentStatus;
   event_start_date: string;
   category_name?: string | null;
@@ -170,14 +172,10 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                     </p>
                   )}
                   
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
                     <span className="flex items-center gap-1">
                       <Trophy className="h-3 w-3" />
                       {tournament.format_name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {tournament.team_count}チーム
                     </span>
                     {tournament.event_start_date && (
                       <span className="flex items-center gap-1">
@@ -190,6 +188,29 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                       {tournament.venue_name || '会場未定'}
                     </span>
                   </div>
+
+                  {/* 参加状況（募集中の大会のみ） */}
+                  {tournament.status === 'recruiting' && (
+                    <div className="mb-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* 想定チーム数 */}
+                        <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
+                          <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
+                          <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count || 0}</div>
+                        </div>
+                        {/* 参加確定 */}
+                        <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                          <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加確定</div>
+                          <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                        </div>
+                        {/* キャンセル待ち */}
+                        <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
+                          <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">キャンセル待ち</div>
+                          <div className="text-base font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex flex-col gap-1 ml-4">

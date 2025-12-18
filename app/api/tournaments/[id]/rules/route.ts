@@ -26,10 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     
     // 大会情報を取得（競技種別を含む）
     const tournamentResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.sport_type_id,
+        t.format_id,
         st.sport_name,
         st.sport_code,
         st.supports_point_system,
@@ -48,11 +49,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     
     // 既存のルール設定を取得
     const rulesResult = await db.execute(`
-      SELECT 
-        tournament_rule_id, tournament_id, phase, use_extra_time, use_penalty, 
-        active_periods, win_condition, notes, point_system, walkover_settings, created_at, updated_at
-      FROM t_tournament_rules 
-      WHERE tournament_id = ? 
+      SELECT
+        tournament_rule_id, tournament_id, phase, use_extra_time, use_penalty,
+        active_periods, notes, point_system, walkover_settings, created_at, updated_at
+      FROM t_tournament_rules
+      WHERE tournament_id = ?
       ORDER BY phase
     `, [tournamentId]);
     
@@ -83,7 +84,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         use_extra_time: Boolean(row.use_extra_time),
         use_penalty: Boolean(row.use_penalty),
         active_periods: String(row.active_periods),
-        win_condition: row.win_condition as 'score' | 'time' | 'points',
         notes: row.notes ? String(row.notes) : undefined,
         point_system: row.point_system ? String(row.point_system) : undefined,
         walkover_settings: row.walkover_settings ? String(row.walkover_settings) : undefined,
@@ -157,17 +157,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     for (const rule of rules) {
       await db.execute(`
         INSERT INTO t_tournament_rules (
-          tournament_id, phase, use_extra_time, use_penalty, 
-          active_periods, win_condition, notes, point_system, walkover_settings,
+          tournament_id, phase, use_extra_time, use_penalty,
+          active_periods, notes, point_system, walkover_settings,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         tournamentId,
         rule.phase,
         rule.use_extra_time ? 1 : 0,
         rule.use_penalty ? 1 : 0,
         rule.active_periods,
-        rule.win_condition,
         rule.notes || null,
         pointSystemJson,
         walkoverSettingsJson
@@ -186,7 +185,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // POST: デフォルトルール設定
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   try {
     const session = await auth();
@@ -232,17 +231,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const rule of defaultRules) {
       await db.execute(`
         INSERT INTO t_tournament_rules (
-          tournament_id, phase, use_extra_time, use_penalty, 
-          active_periods, win_condition, notes, point_system, walkover_settings,
+          tournament_id, phase, use_extra_time, use_penalty,
+          active_periods, notes, point_system, walkover_settings,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         rule.tournament_id,
         rule.phase,
         rule.use_extra_time ? 1 : 0,
         rule.use_penalty ? 1 : 0,
         rule.active_periods,
-        rule.win_condition,
         rule.notes || null,
         defaultPointSystem,
         defaultWalkoverSettings

@@ -94,13 +94,23 @@ export async function calculateTournamentStatus(
 
   if (tournamentId) {
     try {
-      allMatchesCompleted = await checkAllMatchesCompleted(tournamentId);
+      // タイムアウト付きでチェック（5秒）
+      const timeoutPromise = new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
+
+      allMatchesCompleted = await Promise.race([
+        checkAllMatchesCompleted(tournamentId),
+        timeoutPromise
+      ]);
 
       console.log(`📊 Tournament ${tournamentId} match status:`, {
         allMatchesCompleted
       });
     } catch (error) {
       console.warn('試合状況チェックエラー:', error);
+      // エラー時は false を返す（試合が完了していないと仮定）
+      allMatchesCompleted = false;
     }
   }
   
@@ -123,10 +133,25 @@ export async function calculateTournamentStatus(
   // 実際に試合が開始されている場合は、日付に関わらず開催中とする
   let matchBasedOngoing = false;
   if (tournamentId) {
-    matchBasedOngoing = await checkTournamentHasOngoingMatches(tournamentId);
-    if (matchBasedOngoing) {
-      console.log(`🏁 Tournament ${tournamentId}: Status set to 'ongoing' because matches have started`);
-      return 'ongoing';
+    try {
+      // タイムアウト付きでチェック（5秒）
+      const timeoutPromise = new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
+
+      matchBasedOngoing = await Promise.race([
+        checkTournamentHasOngoingMatches(tournamentId),
+        timeoutPromise
+      ]);
+
+      if (matchBasedOngoing) {
+        console.log(`🏁 Tournament ${tournamentId}: Status set to 'ongoing' because matches have started`);
+        return 'ongoing';
+      }
+    } catch (error) {
+      console.warn('進行中試合チェックエラー:', error);
+      // エラー時は false を返す（試合が開始されていないと仮定）
+      matchBasedOngoing = false;
     }
   }
 

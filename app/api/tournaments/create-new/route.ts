@@ -357,17 +357,16 @@ export async function POST(request: NextRequest) {
       for (const rule of tournamentRules) {
         await db.execute(`
           INSERT INTO t_tournament_rules (
-            tournament_id, phase, use_extra_time, use_penalty, 
-            active_periods, win_condition, notes, point_system,
+            tournament_id, phase, use_extra_time, use_penalty,
+            active_periods, notes, point_system,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [
           rule.tournament_id,
           rule.phase,
           rule.use_extra_time ? 1 : 0,
           rule.use_penalty ? 1 : 0,
           rule.active_periods,
-          rule.win_condition,
           rule.notes || null,
           defaultPointSystem
         ]);
