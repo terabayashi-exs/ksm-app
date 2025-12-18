@@ -51,13 +51,23 @@ const playerSchema = z.object({
 
 const formSchema = z.object({
   tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
-  tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(10, 'チーム略称は10文字以内で入力してください'),
+  tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(5, 'チーム略称は5文字以内で入力してください'),
   players: z.array(playerSchema)
     .min(1, '最低1人の選手が必要です')
     .max(20, '選手は最大20人まで登録可能です')
     .refine((players) => {
-      // 背番号の重複チェック（番号が設定されている選手のみ）
-      const numbers = players
+      // 選手名の重複チェック（参加する選手のみ）
+      const participatingPlayers = players.filter(p => p.is_participating);
+      const names = participatingPlayers.map(p => p.player_name);
+      const uniqueNames = new Set(names);
+      return names.length === uniqueNames.size;
+    }, {
+      message: '同じ名前の選手が重複しています'
+    })
+    .refine((players) => {
+      // 背番号の重複チェック（参加する選手で番号が設定されている選手のみ）
+      const participatingPlayers = players.filter(p => p.is_participating);
+      const numbers = participatingPlayers
         .filter(p => p.jersey_number !== undefined && p.jersey_number !== null)
         .map(p => p.jersey_number);
       const uniqueNumbers = new Set(numbers);
@@ -69,9 +79,9 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function TournamentJoinForm({ 
-  tournamentId, 
-  teamPlayers, 
+export default function TournamentJoinForm({
+  tournamentId,
+  teamPlayers,
   existingTournamentPlayers = [],
   existingTournamentTeamInfo = null,
   isEditMode = false,
@@ -83,7 +93,12 @@ export default function TournamentJoinForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+  // teamPlayersから重複を除外（念のため）
+  const uniqueTeamPlayers = Array.from(
+    new Map(teamPlayers.map(p => [p.player_id, p])).values()
+  );
+
+  const { control, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       tournament_team_name: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_name,
@@ -100,13 +115,42 @@ export default function TournamentJoinForm({
 
   // 既存選手の選択状態を管理
   const [selectedExistingPlayers, setSelectedExistingPlayers] = useState<Set<number>>(new Set());
+  const [initialized, setInitialized] = useState(false);
+
+  // specificTeamIdやtournamentIdが変わったら初期化フラグと選手データをリセット
+  useEffect(() => {
+    console.log('Resetting form due to parameter change');
+    setInitialized(false);
+    setSelectedExistingPlayers(new Set());
+
+    // フォームの選手データをクリア
+    reset({
+      tournament_team_name: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_name,
+      tournament_team_omission: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_omission,
+      players: []
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentId, specificTeamId]);
 
   // 編集モードの場合、既存の参加選手情報でフォームを初期化
   useEffect(() => {
+    // 初期化済みの場合はスキップ
+    if (initialized) return;
+
+    // 編集モードで既存選手データがある場合のみ初期化
     if (isEditMode && existingTournamentPlayers.length > 0) {
+      console.log('Initializing form with existing players:', existingTournamentPlayers);
+
       const existingPlayerIds = new Set<number>();
-      
-      existingTournamentPlayers.forEach(player => {
+
+      // 重複を除外しながら追加
+      const uniquePlayers = Array.from(
+        new Map(existingTournamentPlayers.map(p => [p.player_id, p])).values()
+      );
+
+      console.log('Unique players to add:', uniquePlayers);
+
+      uniquePlayers.forEach(player => {
         existingPlayerIds.add(player.player_id);
         append({
           player_id: player.player_id,
@@ -116,25 +160,34 @@ export default function TournamentJoinForm({
           is_selected: true
         });
       });
-      
+
       setSelectedExistingPlayers(existingPlayerIds);
+      setInitialized(true);
+
+      console.log('Form initialization complete, total fields:', uniquePlayers.length);
     }
-  }, [isEditMode, existingTournamentPlayers, append]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, existingTournamentPlayers, initialized]);
 
   // 既存選手の選択/非選択を処理
   const handleExistingPlayerToggle = (player: TeamPlayer, checked: boolean) => {
     const newSelected = new Set(selectedExistingPlayers);
-    
+
     if (checked) {
       newSelected.add(player.player_id);
-      // フォームに追加
-      append({
-        player_id: player.player_id,
-        player_name: player.player_name,
-        jersey_number: player.jersey_number || undefined,
-        is_participating: true,
-        is_selected: true
-      });
+
+      // 既にフォームに存在するかチェック
+      const existingIndex = fields.findIndex(f => f.player_id === player.player_id);
+      if (existingIndex === -1) {
+        // フォームに追加（存在しない場合のみ）
+        append({
+          player_id: player.player_id,
+          player_name: player.player_name,
+          jersey_number: player.jersey_number || undefined,
+          is_participating: true,
+          is_selected: true
+        });
+      }
     } else {
       newSelected.delete(player.player_id);
       // フォームから削除
@@ -143,7 +196,7 @@ export default function TournamentJoinForm({
         remove(index);
       }
     }
-    
+
     setSelectedExistingPlayers(newSelected);
   };
 
@@ -166,6 +219,17 @@ export default function TournamentJoinForm({
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError('');
+
+    // デバッグ: 送信データをログ出力
+    console.log('Form submission data:', {
+      players: data.players,
+      participatingPlayers: data.players.filter(p => p.is_participating),
+      playerNames: data.players.filter(p => p.is_participating).map(p => p.player_name),
+      duplicateCheck: {
+        total: data.players.filter(p => p.is_participating).length,
+        unique: new Set(data.players.filter(p => p.is_participating).map(p => p.player_name)).size
+      }
+    });
 
     try {
       const apiUrl = `/api/tournaments/${tournamentId}/join`;
@@ -224,14 +288,17 @@ export default function TournamentJoinForm({
       if (result.success) {
         router.push(`/team?${isEditMode ? 'updated' : 'joined'}=${tournamentId}`);
       } else {
-        console.error('Tournament join failed:', result);
+        // エラーメッセージの組み立て
         let errorMessage = result.error || (isEditMode ? '参加選手の変更に失敗しました' : '参加申し込みに失敗しました');
-        
-        // 開発環境でより詳細なエラーを表示
-        if (process.env.NODE_ENV === 'development' && result.details) {
-          errorMessage += `\n\n開発情報:\n${JSON.stringify(result.details, null, 2)}`;
+
+        // detailsがある場合、より分かりやすく表示
+        if (result.details && Array.isArray(result.details)) {
+          const detailMessages = result.details.map((detail: { message?: string }) => detail.message).filter(Boolean);
+          if (detailMessages.length > 0) {
+            errorMessage = detailMessages.join('\n');
+          }
         }
-        
+
         setError(errorMessage);
       }
     } catch (error) {
@@ -294,7 +361,7 @@ export default function TournamentJoinForm({
       </Card>
 
       {/* 既存選手選択セクション */}
-      {teamPlayers.length > 0 && (
+      {uniqueTeamPlayers.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -307,7 +374,7 @@ export default function TournamentJoinForm({
               チームに登録済みの選手から参加者を選択してください
             </p>
             <div className="space-y-3">
-              {teamPlayers.map((player) => {
+              {uniqueTeamPlayers.map((player) => {
                 const isSelected = selectedExistingPlayers.has(player.player_id);
                 const fieldIndex = fields.findIndex(f => f.player_id === player.player_id);
                 
@@ -355,104 +422,106 @@ export default function TournamentJoinForm({
         </Card>
       )}
 
-      {/* 新規選手追加セクション */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center">
-              <UserPlus className="h-5 w-5 mr-2" />
-              新規選手追加
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addNewPlayer}
-              disabled={loading}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              選手を追加
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            新しい選手を手動で追加できます
-          </p>
-          
-          {fields.filter(f => !f.player_id).length > 0 ? (
-            <div className="space-y-4">
-              {fields.map((field, index) => {
-                if (field.player_id) return null; // 既存選手はスキップ
-                
-                return (
-                  <div key={field.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium">新規選手 {index + 1}</h4>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeNewPlayer(index)}
-                        disabled={loading}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`player-name-${index}`}>選手名 *</Label>
-                        <Input
-                          id={`player-name-${index}`}
-                          {...control.register(`players.${index}.player_name`)}
-                          placeholder="選手名を入力"
-                          disabled={loading}
-                        />
-                        {errors.players?.[index]?.player_name && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.players[index]?.player_name?.message}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor={`jersey-${index}`}>背番号</Label>
-                        <Input
-                          id={`jersey-${index}`}
-                          type="number"
-                          min="1"
-                          max="99"
-                          {...control.register(`players.${index}.jersey_number`, {
-                            setValueAs: (value) => {
-                              if (value === '' || value === null || value === undefined) {
-                                return undefined;
-                              }
-                              const num = parseInt(value, 10);
-                              return isNaN(num) ? undefined : num;
-                            }
-                          })}
-                          placeholder="1-99"
-                          disabled={loading}
-                        />
-                        {errors.players?.[index]?.jersey_number && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.players[index]?.jersey_number?.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">
-              新規選手を追加するには上の「選手を追加」ボタンをクリックしてください
+      {/* 新規選手追加セクション（新規登録時のみ表示） */}
+      {!isEditMode && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <UserPlus className="h-5 w-5 mr-2" />
+                新規選手追加
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addNewPlayer}
+                disabled={loading}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                選手を追加
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              新しい選手を手動で追加できます
             </p>
-          )}
-        </CardContent>
-      </Card>
+
+            {fields.filter(f => !f.player_id).length > 0 ? (
+              <div className="space-y-4">
+                {fields.map((field, index) => {
+                  if (field.player_id) return null; // 既存選手はスキップ
+
+                  return (
+                    <div key={field.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium">新規選手 {index + 1}</h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeNewPlayer(index)}
+                          disabled={loading}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`player-name-${index}`}>選手名 *</Label>
+                          <Input
+                            id={`player-name-${index}`}
+                            {...control.register(`players.${index}.player_name`)}
+                            placeholder="選手名を入力"
+                            disabled={loading}
+                          />
+                          {errors.players?.[index]?.player_name && (
+                            <p className="text-red-500 text-sm mt-1">
+                              {errors.players[index]?.player_name?.message}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Label htmlFor={`jersey-${index}`}>背番号</Label>
+                          <Input
+                            id={`jersey-${index}`}
+                            type="number"
+                            min="1"
+                            max="99"
+                            {...control.register(`players.${index}.jersey_number`, {
+                              setValueAs: (value) => {
+                                if (value === '' || value === null || value === undefined) {
+                                  return undefined;
+                                }
+                                const num = parseInt(value, 10);
+                                return isNaN(num) ? undefined : num;
+                              }
+                            })}
+                            placeholder="1-99"
+                            disabled={loading}
+                          />
+                          {errors.players?.[index]?.jersey_number && (
+                            <p className="text-red-500 text-sm mt-1">
+                              {errors.players[index]?.jersey_number?.message}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">
+                新規選手を追加するには上の「選手を追加」ボタンをクリックしてください
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* エラー表示 */}
       {error && (
@@ -462,38 +531,32 @@ export default function TournamentJoinForm({
       )}
 
       {/* フォームエラー表示 */}
-      {errors.players && (
+      {(errors.players?.message || errors.players?.root?.message) && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-red-600 text-sm">{errors.players.message}</p>
+          <p className="text-red-600 text-sm">
+            {String(errors.players?.message || errors.players?.root?.message)}
+          </p>
         </div>
       )}
-
-      {/* 参加選手数表示 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-        <p className="text-blue-800 text-sm">
-          <strong>参加選手数:</strong> {fields.length}人
-          {fields.length === 0 && <span className="text-red-600 ml-2">（最低1人の選手が必要です）</span>}
-        </p>
-      </div>
-
 
       {/* 送信ボタン */}
       <div className="flex justify-end space-x-4">
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => router.push('/team')}
           disabled={loading}
         >
           キャンセル
         </Button>
         <Button
           type="submit"
+          variant="outline"
           disabled={loading || fields.length === 0}
         >
-          {loading 
-            ? (isEditMode ? '変更中...' : (isNewTeamMode ? '追加申し込み中...' : '申し込み中...')) 
-            : (isEditMode ? '参加選手を変更' : (isNewTeamMode ? '追加チームで参加申し込み' : '大会に参加申し込み'))
+          {loading
+            ? (isEditMode ? '保存中...' : (isNewTeamMode ? '追加申し込み中...' : '申し込み中...'))
+            : (isEditMode ? '保存' : (isNewTeamMode ? '追加チームで参加申し込み' : '大会に参加申し込み'))
           }
         </Button>
       </div>

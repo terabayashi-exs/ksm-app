@@ -97,13 +97,20 @@ npm run dev
 - バージョン管理システム
 - 時点凍結による表示一貫性保証
 
+#### 📧 メール送信
+- 参加チームへの一括通知機能
+- プリセットテンプレート（5種類）
+- Gmail SMTP経由（BCC送信、5件制限）
+- 送信記録の自動保存
+
 ### 技術スタック概要
 
 - **フレームワーク**: Next.js 15.5.7 (App Router) + React 19.0.0
 - **言語**: TypeScript 5.x（型安全性100%）
 - **UI**: Tailwind CSS 4.x + shadcn/ui
-- **データベース**: Turso (リモートSQLite)
+- **データベース**: Turso (libSQL)
 - **認証**: NextAuth.js 4.24.11
+- **メール配信**: nodemailer 6.10.1 (Gmail SMTP)
 - **デプロイ**: Vercel
 - **ストレージ**: Vercel Blob Storage
 - **フォーム**: React Hook Form 7.61.1 + Zod 4.0.14

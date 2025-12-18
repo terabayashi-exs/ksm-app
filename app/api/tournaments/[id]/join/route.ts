@@ -4,7 +4,10 @@ import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
 import { sendEmail } from '@/lib/email/mailer';
-import { generateTournamentJoinConfirmation } from '@/lib/email/templates';
+import {
+  generateTournamentJoinConfirmation,
+  generateTournamentWaitlistConfirmation
+} from '@/lib/email/templates';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -32,8 +35,18 @@ const tournamentJoinSchema = z.object({
   .min(1, '最低1人の選手が必要です')
   .max(20, '選手は最大20人まで登録可能です')
   .refine((players) => {
-    // 背番号の重複チェック
-    const numbers = players.filter(p => p.jersey_number !== undefined).map(p => p.jersey_number);
+    // 選手名の重複チェック（参加する選手のみ）
+    const participatingPlayers = players.filter(p => p.is_participating);
+    const names = participatingPlayers.map(p => p.player_name);
+    const uniqueNames = new Set(names);
+    return names.length === uniqueNames.size;
+  }, {
+    message: '同じ名前の選手が重複しています'
+  })
+  .refine((players) => {
+    // 背番号の重複チェック（参加する選手のみ）
+    const participatingPlayers = players.filter(p => p.is_participating);
+    const numbers = participatingPlayers.filter(p => p.jersey_number !== undefined).map(p => p.jersey_number);
     const uniqueNumbers = new Set(numbers);
     return numbers.length === uniqueNumbers.size;
   }, {
@@ -267,18 +280,23 @@ async function handleTournamentJoin(
       }
     }
 
-    // 大会の存在と募集期間をチェック（会場情報も取得）
+    // 大会の存在と募集期間をチェック（会場情報・グループ情報も取得）
     const tournamentResult = await db.execute(`
       SELECT
         t.tournament_id,
         t.tournament_name,
+        t.category_name,
+        t.group_id,
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
         t.tournament_dates,
-        v.venue_name
+        t.team_count as max_teams,
+        v.venue_name,
+        g.group_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.tournament_id = ? AND t.visibility = 'open'
     `, [tournamentId]);
 
@@ -340,194 +358,165 @@ async function handleTournamentJoin(
             updated_at = datetime('now', '+9 hours')
           WHERE tournament_team_id = ?
         `, [data.tournament_team_name, data.tournament_team_omission, specificTeamIdFromData]);
-        
-        // 特定チーム編集時: 複雑な削除処理はスキップし、更新ベースで対応
-        // 現在のスキーマでは特定チームの選手のみを削除することが困難なため、
-        // 登録時にUPSERT処理で対応する
-        console.log(`Specific team edit mode: will use UPSERT approach for players`);
-        
+
+        // 特定チーム編集時: tournament_team_idで選手を削除
+        await db.execute(`
+          DELETE FROM t_tournament_players
+          WHERE tournament_id = ? AND team_id = ? AND tournament_team_id = ?
+        `, [tournamentId, teamId, specificTeamIdFromData]);
+
         console.log(`Updated specific team ${specificTeamIdFromData} and deleted its players`);
       } else {
         // 従来の編集モード（最初のチームを編集）
         tournamentTeamId = Number(existingJoinResult.rows[0].tournament_team_id);
-        
+
         // チーム名・略称を更新
         await db.execute(`
           UPDATE t_tournament_teams SET
             team_name = ?,
             team_omission = ?,
             updated_at = datetime('now', '+9 hours')
-          WHERE tournament_id = ? AND team_id = ?
-        `, [data.tournament_team_name, data.tournament_team_omission, tournamentId, teamId]);
-        
-        // 既存の参加選手をすべて削除
+          WHERE tournament_team_id = ?
+        `, [data.tournament_team_name, data.tournament_team_omission, tournamentTeamId]);
+
+        // 既存の参加選手を削除（tournament_team_idで特定）
         await db.execute(`
-          DELETE FROM t_tournament_players 
-          WHERE tournament_id = ? AND team_id = ?
-        `, [tournamentId, teamId]);
-        
+          DELETE FROM t_tournament_players
+          WHERE tournament_id = ? AND team_id = ? AND tournament_team_id = ?
+        `, [tournamentId, teamId, tournamentTeamId]);
+
         console.log('Updated team names and deleted existing tournament players for edit mode');
       }
     } else {
-      // 新規参加の場合はチーム参加登録
+      // 新規参加の場合: 定員チェックしてparticipation_statusを決定
+      const confirmedTeamsResult = await db.execute(`
+        SELECT COUNT(*) as count
+        FROM t_tournament_teams
+        WHERE tournament_id = ? AND participation_status = 'confirmed'
+      `, [tournamentId]);
+
+      const confirmedCount = Number(confirmedTeamsResult.rows[0].count);
+      const maxTeams = Number(tournament.max_teams);
+      const isFull = confirmedCount >= maxTeams;
+      const participationStatus = isFull ? 'waitlisted' : 'confirmed';
+
+      console.log('定員チェック:', {
+        confirmedCount,
+        maxTeams,
+        isFull,
+        participationStatus
+      });
+
+      // チーム参加登録
       const joinResult = await db.execute(`
         INSERT INTO t_tournament_teams (
           tournament_id,
           team_id,
           team_name,
           team_omission,
+          participation_status,
           registration_method,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, 'self_registered', datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [tournamentId, teamId, data.tournament_team_name, data.tournament_team_omission]);
+        ) VALUES (?, ?, ?, ?, ?, 'self_registered', datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      `, [tournamentId, teamId, data.tournament_team_name, data.tournament_team_omission, participationStatus]);
 
       tournamentTeamId = Number(joinResult.lastInsertRowid);
     }
 
     // 参加選手の処理
     console.log('Processing players:', data.players.length);
-    
-    for (let i = 0; i < data.players.length; i++) {
-      const player = data.players[i];
+
+    // 参加する選手のみ処理
+    const participatingPlayers = data.players.filter(p => p.is_participating);
+    console.log('Participating players:', participatingPlayers.length);
+
+    for (let i = 0; i < participatingPlayers.length; i++) {
+      const player = participatingPlayers[i];
       let playerId = player.player_id;
-      
+
       console.log(`Processing player ${i + 1}:`, {
         player_id: player.player_id,
         player_name: player.player_name,
         jersey_number: player.jersey_number
       });
-      
+
       try {
-        if (player.player_id) {
-          // 既存選手の場合、有効フラグを更新（背番号は大会用テーブルで管理）
-          console.log(`Updating existing player ${player.player_id}`);
+        if (actualEditMode) {
+          // 編集モード時: 既存選手（player_idあり）のみ処理
+          if (!player.player_id) {
+            throw new Error('編集モード時は既存選手のみ選択可能です');
+          }
+
+          playerId = player.player_id;
+
+          // 選手マスターの有効フラグを更新
           await db.execute(`
             UPDATE m_players SET
               is_active = 1,
               updated_at = datetime('now', '+9 hours')
             WHERE player_id = ? AND current_team_id = ?
-          `, [
-            player.player_id,
-            teamId
-          ]);
+          `, [playerId, teamId]);
+
         } else {
-          // 新規選手の場合、選手マスターに追加
-          console.log(`Creating new player: ${player.player_name}`);
-          const newPlayerResult = await db.execute(`
-            INSERT INTO m_players (
-              player_name,
-              current_team_id,
-              is_active,
-              created_at,
-              updated_at
-            ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-          `, [
-            player.player_name,
-            teamId
-          ]);
-          playerId = Number(newPlayerResult.lastInsertRowid);
-          console.log(`New player created with ID: ${playerId}`);
-        }
-
-        // 大会参加選手テーブルに登録（背番号は大会専用）
-        console.log(`Registering player ${playerId} for tournament ${tournamentId} with jersey ${player.jersey_number || 'null'}`);
-        
-        // 大会参加選手テーブルに登録 - 重複エラーをハンドリング
-        try {
-          // playerId が undefined でないことを確認
-          if (!playerId) {
-            throw new Error(`Player ID is undefined for player: ${player.player_name}`);
-          }
-
-          if (specificTeamIdFromData) {
-            // 特定チーム編集時: 既存レコードがあれば更新、なければ挿入
-            const existingPlayerCheck = await db.execute(`
-              SELECT tournament_player_id FROM t_tournament_players
-              WHERE tournament_id = ? AND team_id = ? AND player_id = ?
-            `, [tournamentId, teamId, playerId]);
-
-            if (existingPlayerCheck.rows.length > 0) {
-              // 既存レコードを更新
-              await db.execute(`
-                UPDATE t_tournament_players SET
-                  jersey_number = ?,
-                  player_status = 'active',
-                  updated_at = datetime('now', '+9 hours')
-                WHERE tournament_id = ? AND team_id = ? AND player_id = ?
-              `, [
-                player.jersey_number !== undefined ? player.jersey_number : null,
-                tournamentId, teamId, playerId
-              ]);
-              console.log(`Updated existing player ${playerId} registration`);
-            } else {
-              // 新規挿入
-              await db.execute(`
-                INSERT INTO t_tournament_players (
-                  tournament_id,
-                  team_id,
-                  player_id,
-                  tournament_team_id,
-                  jersey_number,
-                  player_status,
-                  registration_date,
-                  created_at,
-                  updated_at
-                ) VALUES (?, ?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-              `, [
-                tournamentId, teamId, playerId, tournamentTeamId,
-                player.jersey_number !== undefined ? player.jersey_number : null
-              ]);
-              console.log(`Inserted new player ${playerId} registration`);
-            }
-          } else {
-            // 通常の新規登録
+          // 新規登録時: 既存選手または新規選手
+          if (player.player_id) {
+            // 既存選手の場合、有効フラグを更新
+            console.log(`Updating existing player ${player.player_id}`);
             await db.execute(`
-              INSERT INTO t_tournament_players (
-                tournament_id,
-                team_id,
-                player_id,
-                tournament_team_id,
-                jersey_number,
-                player_status,
-                registration_date,
+              UPDATE m_players SET
+                is_active = 1,
+                updated_at = datetime('now', '+9 hours')
+              WHERE player_id = ? AND current_team_id = ?
+            `, [player.player_id, teamId]);
+
+            playerId = player.player_id;
+          } else {
+            // 新規選手の場合、選手マスターに追加
+            console.log(`Creating new player: ${player.player_name}`);
+            const newPlayerResult = await db.execute(`
+              INSERT INTO m_players (
+                player_name,
+                current_team_id,
+                is_active,
                 created_at,
                 updated_at
-              ) VALUES (?, ?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-            `, [
-              tournamentId, teamId, playerId, tournamentTeamId,
-              player.jersey_number !== undefined ? player.jersey_number : null
-            ]);
-          }
-        } catch (insertError) {
-          if (insertError instanceof Error && insertError.message.includes('UNIQUE constraint failed')) {
-            console.log(`Player ${playerId} already registered - skipping (this is expected behavior for existing players)`);
-            // 既存選手の場合は背番号のみ更新
-            try {
-              if (!playerId) {
-                throw new Error(`Player ID is undefined for player: ${player.player_name}`);
-              }
-              
-              await db.execute(`
-                UPDATE t_tournament_players SET
-                  jersey_number = ?,
-                  updated_at = datetime('now', '+9 hours')
-                WHERE tournament_id = ? AND team_id = ? AND player_id = ?
-              `, [
-                player.jersey_number !== undefined ? player.jersey_number : null,
-                tournamentId, teamId, playerId
-              ]);
-              console.log(`Updated jersey number for existing player ${playerId}`);
-            } catch (updateError) {
-              console.error(`Failed to update jersey number for player ${playerId}:`, updateError);
-              // この場合でもエラーとしない（選手は既に登録済み）
-            }
-          } else {
-            throw insertError; // その他のエラーは再スロー
+              ) VALUES (?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+            `, [player.player_name, teamId]);
+
+            playerId = Number(newPlayerResult.lastInsertRowid);
+            console.log(`New player created with ID: ${playerId}`);
           }
         }
+
+        // playerId の確認
+        if (!playerId) {
+          throw new Error(`Player ID is undefined for player: ${player.player_name}`);
+        }
+
+        // 大会参加選手テーブルに登録
+        // 編集モード時は既に全削除済みなので、単純にINSERTするだけ
+        console.log(`Registering player ${playerId} for tournament ${tournamentId} with jersey ${player.jersey_number || 'null'}`);
+
+        await db.execute(`
+          INSERT INTO t_tournament_players (
+            tournament_id,
+            team_id,
+            player_id,
+            tournament_team_id,
+            jersey_number,
+            player_status,
+            registration_date,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, 'active', datetime('now', '+9 hours'), datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [
+          tournamentId, teamId, playerId, tournamentTeamId,
+          player.jersey_number !== undefined ? player.jersey_number : null
+        ]);
+
         console.log(`Player ${playerId} successfully registered for tournament`);
-        
+
       } catch (playerError) {
         console.error(`Error processing player ${i + 1}:`, playerError);
         throw new Error(`選手 ${player.player_name} の処理中にエラーが発生しました: ${playerError instanceof Error ? playerError.message : 'Unknown error'}`);
@@ -537,6 +526,7 @@ async function handleTournamentJoin(
     console.log('All players processed successfully');
 
     // 新規参加の場合のみメール送信（編集時は送信しない）
+    console.log('Email sending check:', { actualEditMode, willSendEmail: !actualEditMode });
     if (!actualEditMode) {
       try {
         // チーム代表者のメールアドレスを取得
@@ -554,8 +544,10 @@ async function handleTournamentJoin(
           let tournamentDateStr = '未定';
           try {
             if (tournament.tournament_dates) {
-              const dates = JSON.parse(String(tournament.tournament_dates));
-              if (Array.isArray(dates) && dates.length > 0) {
+              const datesData = JSON.parse(String(tournament.tournament_dates));
+              // オブジェクト形式 {"day1": "2025-01-15", "day2": "2025-01-16"} の場合
+              const dates = Object.values(datesData).filter(d => d) as string[];
+              if (dates.length > 0) {
                 tournamentDateStr = dates
                   .map((d: string) => new Date(d).toLocaleDateString('ja-JP', {
                     year: 'numeric',
@@ -573,16 +565,52 @@ async function handleTournamentJoin(
           // 大会詳細ページのURL
           const tournamentUrl = `${process.env.NEXTAUTH_URL}/public/tournaments/${tournamentId}`;
 
-          // メールテンプレート生成
-          const emailContent = generateTournamentJoinConfirmation({
-            teamName: data.tournament_team_name,
-            tournamentName: String(tournament.tournament_name),
-            tournamentDate: tournamentDateStr,
-            venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
-            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
-            playerCount: data.players.length,
-            tournamentUrl: tournamentUrl
-          });
+          // 登録されたチームの participation_status を確認
+          const registeredTeamResult = await db.execute(`
+            SELECT participation_status FROM t_tournament_teams
+            WHERE tournament_team_id = ?
+          `, [tournamentTeamId]);
+
+          const registeredTeam = registeredTeamResult.rows[0];
+          const isWaitlisted = registeredTeam && registeredTeam.participation_status === 'waitlisted';
+
+          // キャンセル待ち順位を計算
+          let waitlistPosition = 1;
+          if (isWaitlisted) {
+            const waitlistTeamsResult = await db.execute(`
+              SELECT COUNT(*) as count FROM t_tournament_teams
+              WHERE tournament_id = ?
+                AND participation_status = 'waitlisted'
+                AND tournament_team_id < ?
+            `, [tournamentId, tournamentTeamId]);
+            waitlistPosition = Number(waitlistTeamsResult.rows[0].count) + 1;
+          }
+
+          // メールテンプレート生成（キャンセル待ちか参加確定か）
+          const emailContent = isWaitlisted
+            ? generateTournamentWaitlistConfirmation({
+                teamName: data.tournament_team_name,
+                tournamentName: String(tournament.tournament_name),
+                groupName: tournament.group_name ? String(tournament.group_name) : undefined,
+                categoryName: tournament.category_name ? String(tournament.category_name) : undefined,
+                tournamentDate: tournamentDateStr,
+                venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
+                contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+                playerCount: data.players.length,
+                tournamentUrl: tournamentUrl,
+                waitlistPosition: waitlistPosition
+              })
+            : generateTournamentJoinConfirmation({
+                teamName: data.tournament_team_name,
+                tournamentName: String(tournament.tournament_name),
+                groupName: tournament.group_name ? String(tournament.group_name) : undefined,
+                categoryName: tournament.category_name ? String(tournament.category_name) : undefined,
+                tournamentDate: tournamentDateStr,
+                venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
+                contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+                playerCount: data.players.length,
+                tournamentUrl: tournamentUrl
+              });
 
           // メール送信
           await sendEmail({
@@ -592,7 +620,7 @@ async function handleTournamentJoin(
             html: emailContent.html
           });
 
-          console.log(`✅ Confirmation email sent to ${contactEmail}`);
+          console.log(`✅ ${isWaitlisted ? 'Waitlist' : 'Confirmation'} email sent to ${contactEmail}`);
         } else {
           console.warn('⚠️ Team contact email not found, skipping email notification');
         }

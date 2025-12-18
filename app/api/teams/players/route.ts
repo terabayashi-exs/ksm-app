@@ -22,6 +22,14 @@ const playersUpdateSchema = z.object({
   .min(1, '最低1人の選手が必要です')
   .max(20, '選手は最大20人まで登録可能です')
   .refine((players) => {
+    // 選手名の重複チェック
+    const names = players.map(p => p.player_name);
+    const uniqueNames = new Set(names);
+    return names.length === uniqueNames.size;
+  }, {
+    message: '同じ名前の選手が重複しています'
+  })
+  .refine((players) => {
     // 背番号の重複チェック
     const numbers = players.filter(p => p.jersey_number !== undefined).map(p => p.jersey_number);
     const uniqueNumbers = new Set(numbers);
@@ -143,23 +151,38 @@ export async function PUT(request: NextRequest) {
         } else {
           // 新しい選手の追加
           console.log('Adding new player:', player.player_name);
-          const result = await db.execute(`
-            INSERT INTO m_players (
-              player_name,
-              jersey_number,
-              current_team_id,
-              is_active,
-              created_at,
-              updated_at
-            ) VALUES (?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-          `, [
-            player.player_name,
-            player.jersey_number || null,
-            teamId
-          ]);
-          const newPlayerId = Number(result.lastInsertRowid);
-          console.log('New player added with ID:', newPlayerId);
-          updatedPlayerIds.push(newPlayerId);
+          try {
+            const result = await db.execute(`
+              INSERT INTO m_players (
+                player_name,
+                jersey_number,
+                current_team_id,
+                is_active,
+                created_at,
+                updated_at
+              ) VALUES (?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+            `, [
+              player.player_name,
+              player.jersey_number || null,
+              teamId
+            ]);
+            const newPlayerId = Number(result.lastInsertRowid);
+            console.log('New player added with ID:', newPlayerId);
+            updatedPlayerIds.push(newPlayerId);
+          } catch (insertError: unknown) {
+            // UNIQUE制約違反をキャッチ
+            if (insertError instanceof Error && insertError.message.includes('UNIQUE constraint failed')) {
+              console.error('Duplicate player name detected:', player.player_name);
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: `選手「${player.player_name}」は既に登録されています。同じ名前の選手を登録することはできません。`
+                },
+                { status: 400 }
+              );
+            }
+            throw insertError;
+          }
         }
       }
 

@@ -187,20 +187,25 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* 辞退申請管理 */}
-          <Card>
+          {/* 参加チーム管理 */}
+          <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
             <CardHeader>
-              <CardTitle>辞退申請管理</CardTitle>
+              <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center">
+                👥 参加チーム管理
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">
-                チームからの大会辞退申請を確認・承認・却下します
+              <p className="text-blue-700 dark:text-blue-300 mb-4">
+                各大会の参加チーム状態を管理します（参加確定・キャンセル待ち・辞退申請・キャンセル）
               </p>
               <div className="space-y-2">
                 <Button asChild variant="outline" className="w-full border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-700 dark:hover:bg-blue-950/20">
-                  <Link href="/admin/withdrawal-requests">辞退申請一覧</Link>
+                  <Link href="/admin/tournaments">大会を選択して管理</Link>
                 </Button>
               </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">
+                ℹ️ 各部門カードに参加状況が表示されます
+              </p>
             </CardContent>
           </Card>
 

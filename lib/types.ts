@@ -60,6 +60,11 @@ export interface Tournament {
   group_name?: string | null;
   group_description?: string | null;
   group_color?: string | null;
+  // 参加状況統計
+  confirmed_count?: number;
+  waitlisted_count?: number;
+  withdrawal_requested_count?: number;
+  withdrawal_approved_count?: number;
 }
 
 /**

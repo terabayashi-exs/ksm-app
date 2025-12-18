@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Clock, Target, AlertTriangle, RotateCcw, Save, Trophy, Plus, Trash2, Move, Award } from "lucide-react";
@@ -27,6 +26,7 @@ interface TournamentInfo {
   sport_type_id: number;
   sport_name: string;
   sport_code: string;
+  format_id: number;
 }
 
 interface TournamentRulesFormProps {
@@ -36,7 +36,6 @@ interface TournamentRulesFormProps {
 interface FormRule {
   phase: 'preliminary' | 'final';
   active_periods: number[];
-  win_condition: 'score' | 'time' | 'points';
   notes: string;
 }
 
@@ -58,13 +57,11 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
     preliminary: {
       phase: 'preliminary',
       active_periods: [1],
-      win_condition: 'score',
       notes: ''
     },
     final: {
       phase: 'final',
       active_periods: [1],
-      win_condition: 'score',
       notes: ''
     }
   });
@@ -130,13 +127,11 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             preliminary: {
               phase: 'preliminary',
               active_periods: preliminaryRule ? parseActivePeriods(preliminaryRule.active_periods) : [1],
-              win_condition: preliminaryRule?.win_condition || 'score',
               notes: preliminaryRule?.notes || ''
             },
             final: {
               phase: 'final',
               active_periods: finalRule ? parseActivePeriods(finalRule.active_periods) : [1],
-              win_condition: finalRule?.win_condition || 'score',
               notes: finalRule?.notes || ''
             }
           });
@@ -320,14 +315,16 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
         const finalValidation = validateSoccerPeriodSettings(
           rules.final.active_periods.map(p => p.toString())
         );
-        
+
+        // 予選は必須でバリデーション
         if (!preliminaryValidation.valid) {
           alert(`予選ルールに問題があります:\n${preliminaryValidation.error}`);
           setSaving(false);
           return;
         }
-        
-        if (!finalValidation.valid) {
+
+        // 決勝はピリオドが選択されている場合のみバリデーション（任意）
+        if (rules.final.active_periods.length > 0 && !finalValidation.valid) {
           alert(`決勝ルールに問題があります:\n${finalValidation.error}`);
           setSaving(false);
           return;
@@ -340,7 +337,6 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           use_extra_time: false,
           use_penalty: false,
           active_periods: stringifyActivePeriods(rules.preliminary.active_periods),
-          win_condition: rules.preliminary.win_condition,
           notes: rules.preliminary.notes
         },
         {
@@ -348,7 +344,6 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           use_extra_time: false,
           use_penalty: false,
           active_periods: stringifyActivePeriods(rules.final.active_periods),
-          win_condition: rules.final.win_condition,
           notes: rules.final.notes
         }
       ];
@@ -520,29 +515,6 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             )}
           </div>
 
-
-          {/* 勝利条件 */}
-          <div className="space-y-2">
-            <Label>勝利条件</Label>
-            <Select
-              value={phaseRule.win_condition}
-              onValueChange={(value) => 
-                setRules(prev => ({
-                  ...prev,
-                  [phase]: { ...prev[phase], win_condition: value as 'score' | 'time' | 'points' }
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="score">スコア</SelectItem>
-                <SelectItem value="time">タイム</SelectItem>
-                <SelectItem value="points">ポイント</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* 備考 */}
           <div className="space-y-2">

@@ -542,10 +542,40 @@ export default function TournamentDashboardList() {
             <MapPin className="w-4 h-4 mr-2" />
             <span>{tournament.venue_name || `会場ID: ${tournament.venue_id}`}</span>
           </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <Users className="w-4 h-4 mr-2" />
-            <span>{tournament.team_count}チーム参加</span>
-          </div>
+
+          {/* 参加状況詳細 */}
+          {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.withdrawal_approved_count ?? 0) > 0) && (
+            <div className="mt-3">
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
+              <div className="grid grid-cols-5 gap-2">
+                {/* 想定チーム数 */}
+                <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
+                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
+                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+                </div>
+                {/* 参加確定 */}
+                <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加確定</div>
+                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                </div>
+                {/* キャンセル待ち */}
+                <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
+                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">キャンセル待ち</div>
+                  <div className="text-lg font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                </div>
+                {/* 辞退申請中 */}
+                <div className="p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
+                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-1">辞退申請中</div>
+                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                </div>
+                {/* 辞退承認済み */}
+                <div className="p-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800 text-center">
+                  <div className="text-xs text-red-700 dark:text-red-400 font-medium mb-1">辞退承認済み</div>
+                  <div className="text-lg font-bold text-red-700 dark:text-red-400">{tournament.withdrawal_approved_count || 0}</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 flex-wrap">
@@ -627,6 +657,17 @@ export default function TournamentDashboardList() {
                     フォーマット変更
                   </div>
                 )}
+              </Button>
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                  <Users className="w-4 h-4 mr-2" />
+                  参加チーム管理
+                </Link>
               </Button>
               <Button
                 asChild

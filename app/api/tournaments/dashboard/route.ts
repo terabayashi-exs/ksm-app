@@ -58,7 +58,11 @@ export async function GET() {
         a.organization_name,
         g.group_name,
         g.event_description as group_description,
-        NULL as group_color
+        NULL as group_color,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active') as confirmed_count,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'waitlisted' AND tt.withdrawal_status = 'active') as waitlisted_count,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.withdrawal_status = 'withdrawal_requested') as withdrawal_requested_count,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.withdrawal_status = 'withdrawal_approved') as withdrawal_approved_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -108,7 +112,11 @@ export async function GET() {
         a.organization_name,
         g.group_name,
         g.event_description as group_description,
-        NULL as group_color
+        NULL as group_color,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active') as confirmed_count,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'waitlisted' AND tt.withdrawal_status = 'active') as waitlisted_count,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.withdrawal_status = 'withdrawal_requested') as withdrawal_requested_count,
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.withdrawal_status = 'withdrawal_approved') as withdrawal_approved_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
@@ -244,7 +252,11 @@ export async function GET() {
         category_name: row.category_name as string | null,
         group_name: row.group_name as string | null,
         group_description: row.group_description as string | null,
-        group_color: row.group_color as string | null
+        group_color: row.group_color as string | null,
+        confirmed_count: Number(row.confirmed_count) || 0,
+        waitlisted_count: Number(row.waitlisted_count) || 0,
+        withdrawal_requested_count: Number(row.withdrawal_requested_count) || 0,
+        withdrawal_approved_count: Number(row.withdrawal_approved_count) || 0
       } as Tournament;
     }));
 
