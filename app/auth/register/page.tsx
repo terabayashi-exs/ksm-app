@@ -243,11 +243,12 @@ function TeamRegisterForm() {
                   id="team_omission"
                   type="text"
                   placeholder="例: SCA"
+                  maxLength={5}
                   {...form.register('team_omission')}
                   className={form.formState.errors.team_omission ? 'border-red-500' : ''}
                 />
                 <p className="text-xs text-muted-foreground">
-                  トーナメント表などで表示される短縮名です（任意）
+                  トーナメント表などで表示される短縮名です（5文字以内、任意）
                 </p>
                 {form.formState.errors.team_omission && (
                   <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">

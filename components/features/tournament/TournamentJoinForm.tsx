@@ -331,19 +331,20 @@ export default function TournamentJoinForm({
               <Input
                 id="tournament_team_name"
                 {...control.register('tournament_team_name')}
-                placeholder={isNewTeamMode ? "例: エクシーズ2" : "例: エクシーズ1"}
+                placeholder={isNewTeamMode ? "例: サンプルチームB" : "例: サンプルチームA"}
               />
               {errors.tournament_team_name && (
                 <p className="text-sm text-red-600 mt-1">{errors.tournament_team_name.message}</p>
               )}
             </div>
-            
+
             <div>
               <Label htmlFor="tournament_team_omission">チーム略称 *</Label>
               <Input
                 id="tournament_team_omission"
+                maxLength={5}
                 {...control.register('tournament_team_omission')}
-                placeholder={isNewTeamMode ? "例: EXZ2" : "例: EXZ1"}
+                placeholder={isNewTeamMode ? "例: SPB" : "例: SPA"}
               />
               {errors.tournament_team_omission && (
                 <p className="text-sm text-red-600 mt-1">{errors.tournament_team_omission.message}</p>

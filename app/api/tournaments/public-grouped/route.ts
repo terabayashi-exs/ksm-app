@@ -62,8 +62,7 @@ export async function GET(_request: NextRequest) {
           a.logo_blob_url,
           a.organization_name,
           COUNT(DISTINCT tt.team_id) as registered_teams,
-          (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.participation_status = 'confirmed' OR tt2.participation_status IS NULL) AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as confirmed_count,
-          (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND tt2.participation_status = 'waitlisted' AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as waitlisted_count,
+          (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count,
           ${teamId ? 'CASE WHEN utt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
         FROM t_tournaments t
         LEFT JOIN m_venues v ON t.venue_id = v.venue_id
@@ -121,8 +120,7 @@ export async function GET(_request: NextRequest) {
           venue_name: divRow.venue_name as string,
           team_count: Number(divRow.team_count),
           registered_teams: Number(divRow.registered_teams),
-          confirmed_count: Number(divRow.confirmed_count) || 0,
-          waitlisted_count: Number(divRow.waitlisted_count) || 0,
+          applied_count: Number(divRow.applied_count) || 0,
           status: mappedStatus,
           recruitment_start_date: divRow.recruitment_start_date as string,
           recruitment_end_date: divRow.recruitment_end_date as string,

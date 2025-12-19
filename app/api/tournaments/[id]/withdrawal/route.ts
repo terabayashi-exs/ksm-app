@@ -143,40 +143,70 @@ export async function GET(
     const resolvedParams = await params;
     const tournamentId = parseInt(resolvedParams.id);
 
+    // URLパラメータからtournament_team_idを取得
+    const { searchParams } = new URL(request.url);
+    const tournamentTeamIdParam = searchParams.get('team');
+
     // ユーザーのチームIDを取得
     const teamCheck = await db.execute(`
       SELECT team_id FROM m_teams WHERE contact_email = ?
     `, [session.user.email]);
 
     if (teamCheck.rows.length === 0) {
-      return NextResponse.json({ 
-        error: 'チーム情報が見つかりません' 
+      return NextResponse.json({
+        error: 'チーム情報が見つかりません'
       }, { status: 404 });
     }
 
     const teamId = teamCheck.rows[0].team_id;
 
     // 大会参加状況と辞退状況を取得
-    const withdrawalInfo = await db.execute(`
-      SELECT 
-        tt.tournament_team_id,
-        tt.team_name,
-        tt.team_omission,
-        tt.withdrawal_status,
-        tt.withdrawal_reason,
-        tt.withdrawal_requested_at,
-        tt.withdrawal_processed_at,
-        tt.withdrawal_processed_by,
-        t.tournament_name,
-        t.status as tournament_status
-      FROM t_tournament_teams tt
-      INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
-      WHERE tt.tournament_id = ? AND tt.team_id = ?
-    `, [tournamentId, teamId]);
+    let withdrawalInfo;
+
+    if (tournamentTeamIdParam) {
+      // tournament_team_idが指定されている場合、それを優先
+      const tournamentTeamId = parseInt(tournamentTeamIdParam);
+
+      withdrawalInfo = await db.execute(`
+        SELECT
+          tt.tournament_team_id,
+          tt.team_name,
+          tt.team_omission,
+          tt.withdrawal_status,
+          tt.withdrawal_reason,
+          tt.withdrawal_requested_at,
+          tt.withdrawal_processed_at,
+          tt.withdrawal_processed_by,
+          t.tournament_name,
+          t.status as tournament_status
+        FROM t_tournament_teams tt
+        INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
+        WHERE tt.tournament_id = ? AND tt.tournament_team_id = ? AND tt.team_id = ?
+      `, [tournamentId, tournamentTeamId, teamId]);
+    } else {
+      // tournament_team_idがない場合、team_idで最初の1件を取得（後方互換性）
+      withdrawalInfo = await db.execute(`
+        SELECT
+          tt.tournament_team_id,
+          tt.team_name,
+          tt.team_omission,
+          tt.withdrawal_status,
+          tt.withdrawal_reason,
+          tt.withdrawal_requested_at,
+          tt.withdrawal_processed_at,
+          tt.withdrawal_processed_by,
+          t.tournament_name,
+          t.status as tournament_status
+        FROM t_tournament_teams tt
+        INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
+        WHERE tt.tournament_id = ? AND tt.team_id = ?
+        LIMIT 1
+      `, [tournamentId, teamId]);
+    }
 
     if (withdrawalInfo.rows.length === 0) {
-      return NextResponse.json({ 
-        error: 'この大会への参加情報が見つかりません' 
+      return NextResponse.json({
+        error: 'この大会への参加情報が見つかりません'
       }, { status: 404 });
     }
 

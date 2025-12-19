@@ -15,8 +15,7 @@ interface Tournament {
   format_name: string;
   venue_name: string;
   team_count: number;
-  confirmed_count?: number;
-  waitlisted_count?: number;
+  applied_count?: number;
   status: TournamentStatus;
   event_start_date: string;
   category_name?: string | null;
@@ -192,21 +191,16 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                   {/* 参加状況（募集中の大会のみ） */}
                   {tournament.status === 'recruiting' && (
                     <div className="mb-2">
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {/* 想定チーム数 */}
                         <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
                           <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
                           <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count || 0}</div>
                         </div>
-                        {/* 参加確定 */}
+                        {/* 参加申請 */}
                         <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                          <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加確定</div>
-                          <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
-                        </div>
-                        {/* キャンセル待ち */}
-                        <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
-                          <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">キャンセル待ち</div>
-                          <div className="text-base font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                          <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加申請</div>
+                          <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.applied_count || 0}</div>
                         </div>
                       </div>
                     </div>

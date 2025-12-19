@@ -46,8 +46,7 @@ export async function GET() {
         t.tournament_dates,
         g.group_name,
         g.event_description as group_description,
-        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND (tt.participation_status = 'confirmed' OR tt.participation_status IS NULL) AND (tt.withdrawal_status = 'active' OR tt.withdrawal_status IS NULL)) as confirmed_count,
-        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'waitlisted' AND (tt.withdrawal_status = 'active' OR tt.withdrawal_status IS NULL)) as waitlisted_count
+        (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND (tt.withdrawal_status = 'active' OR tt.withdrawal_status IS NULL)) as applied_count
       FROM t_tournaments t
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
@@ -92,8 +91,7 @@ export async function GET() {
         tt.withdrawal_requested_at,
         tt.withdrawal_processed_at,
         (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id AND tp.tournament_team_id = tt.tournament_team_id) as player_count,
-        (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.participation_status = 'confirmed' OR tt2.participation_status IS NULL) AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as confirmed_count,
-        (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND tt2.participation_status = 'waitlisted' AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as waitlisted_count
+        (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count
       FROM t_tournaments t
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
@@ -129,8 +127,7 @@ export async function GET() {
         tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
         event_start_date: null, // tournament_datesをパースする場合は後で追加
         team_count: Number(row.team_count) || 0,
-        confirmed_count: Number(row.confirmed_count) || 0,
-        waitlisted_count: Number(row.waitlisted_count) || 0
+        applied_count: Number(row.applied_count) || 0
       };
     }));
 
@@ -176,8 +173,7 @@ export async function GET() {
         player_count: Number(row.player_count),
         event_start_date: null,
         team_count: Number(row.team_count) || 0,
-        confirmed_count: Number(row.confirmed_count) || 0,
-        waitlisted_count: Number(row.waitlisted_count) || 0
+        applied_count: Number(row.applied_count) || 0
       };
     }));
 
@@ -202,8 +198,7 @@ export async function GET() {
           tournament_dates: team.tournament_dates,
           event_start_date: null,
           team_count: team.team_count,
-          confirmed_count: team.confirmed_count,
-          waitlisted_count: team.waitlisted_count,
+          applied_count: team.applied_count,
           teams: []
         });
       }

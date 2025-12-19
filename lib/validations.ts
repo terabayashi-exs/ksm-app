@@ -126,7 +126,7 @@ export const teamRegisterSchema = z.object({
     .max(50, 'チーム名は50文字以内で入力してください'),
   
   team_omission: z.string()
-    .max(10, 'チーム略称は10文字以内で入力してください')
+    .max(5, 'チーム略称は5文字以内で入力してください')
     .optional(),
   
   contact_person: z.string()

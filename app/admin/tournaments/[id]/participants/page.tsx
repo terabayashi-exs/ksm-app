@@ -110,10 +110,8 @@ export default async function ParticipantsPage({ params }: PageProps) {
             <h3 className="font-semibold text-blue-800 mb-2">💡 参加チーム管理について</h3>
             <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
               <li>参加確定チームをキャンセル待ちに変更すると、参加枠が空きます</li>
-              <li>キャンセル待ちチームを参加確定に変更すると、メールで通知されます</li>
               <li>辞退申請を承認すると、自動的にキャンセル済みになります</li>
               <li>辞退承認後は、試合結果に影響を与える可能性があります</li>
-              <li>状態変更時はチーム代表者にメール通知が送信されます（設定で無効化可能）</li>
             </ul>
           </CardContent>
         </Card>

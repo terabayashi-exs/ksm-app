@@ -113,6 +113,32 @@ export async function GET(
         tt.created_at ASC
     `, [tournamentId]);
 
+    // 各チームのメール送信履歴を取得
+    const emailHistoryResult = await db.execute(`
+      SELECT
+        tournament_team_id,
+        template_id,
+        subject,
+        sent_at
+      FROM t_email_send_history
+      WHERE tournament_id = ?
+      ORDER BY sent_at DESC
+    `, [tournamentId]);
+
+    // チームIDごとに送信履歴をグループ化
+    const emailHistoryByTeam = new Map<number, Array<{template_id: string; subject: string; sent_at: string}>>();
+    for (const row of emailHistoryResult.rows) {
+      const teamId = Number(row.tournament_team_id);
+      if (!emailHistoryByTeam.has(teamId)) {
+        emailHistoryByTeam.set(teamId, []);
+      }
+      emailHistoryByTeam.get(teamId)!.push({
+        template_id: String(row.template_id),
+        subject: String(row.subject),
+        sent_at: String(row.sent_at)
+      });
+    }
+
     // 統計情報を計算
     const participants = participantsResult.rows;
     const statistics = {
@@ -137,8 +163,11 @@ export async function GET(
     // 試合予定数を計算（フォーマットから）
     const scheduledMatches = 8; // TODO: フォーマット別に計算
 
-    // 辞退影響度を計算
+    // 辞退影響度を計算し、メール送信履歴を追加
     const participantsWithImpact = participantsWithPosition.map(p => {
+      const tournamentTeamId = Number(p.tournament_team_id);
+      const emailHistory = emailHistoryByTeam.get(tournamentTeamId) || [];
+
       if (p.withdrawal_status === 'withdrawal_requested') {
         const completedRatio = Number(p.completed_matches) / scheduledMatches;
         let impact: 'low' | 'medium' | 'high' = 'low';
@@ -152,12 +181,14 @@ export async function GET(
         return {
           ...p,
           scheduled_matches: scheduledMatches,
-          withdrawal_impact: impact
+          withdrawal_impact: impact,
+          email_history: emailHistory
         };
       }
       return {
         ...p,
-        scheduled_matches: scheduledMatches
+        scheduled_matches: scheduledMatches,
+        email_history: emailHistory
       };
     });
 
@@ -231,7 +262,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { tournament_team_id, action, admin_comment, send_notification = true } = body;
+    const { tournament_team_id, action, admin_comment, send_notification = false } = body;
 
     if (!tournament_team_id || !action) {
       return NextResponse.json(
@@ -420,6 +451,49 @@ export async function PUT(
           html: emailTemplate.html
         });
         console.log(`✅ 通知メール送信成功: ${team.contact_email}`);
+
+        // メール送信履歴を記録
+        try {
+          // template_id を action から判定
+          let templateId = 'custom';
+          switch (action) {
+            case 'confirm':
+              templateId = 'participationConfirmed';
+              break;
+            case 'waitlist':
+              templateId = 'waitlist';
+              break;
+            case 'cancel':
+              templateId = 'participationCancelled';
+              break;
+            case 'approve_withdrawal':
+              templateId = 'withdrawal_approved';
+              break;
+            case 'reject_withdrawal':
+              templateId = 'withdrawal_rejected';
+              break;
+          }
+
+          await db.execute(`
+            INSERT INTO t_email_send_history (
+              tournament_id,
+              tournament_team_id,
+              sent_by,
+              template_id,
+              subject
+            ) VALUES (?, ?, ?, ?, ?)
+          `, [
+            tournamentId,
+            tournament_team_id,
+            session.user.id,
+            templateId,
+            emailTemplate.subject
+          ]);
+          console.log(`✅ メール送信履歴記録完了: ${templateId}`);
+        } catch (historyError) {
+          console.error('❌ メール送信履歴記録エラー:', historyError);
+          // 履歴記録失敗してもメール送信は成功とする
+        }
       } catch (emailError) {
         console.error('❌ メール送信エラー:', emailError);
         // メール送信失敗してもAPIレスポンスは成功として返す

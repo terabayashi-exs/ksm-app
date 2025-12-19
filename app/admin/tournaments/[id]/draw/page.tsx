@@ -513,11 +513,14 @@ export default function TournamentDrawPage() {
           {/* 参加チーム一覧 */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                参加チーム一覧 ({registeredTeams.length}チーム)
+              <CardTitle className="flex flex-col gap-2">
+                <span>参加チーム一覧 ({registeredTeams.length}チーム)</span>
+                <span className="text-sm font-normal text-blue-600">
+                  ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
+                </span>
                 {hasExistingDraw && (
-                  <span className="text-sm font-normal text-green-600 ml-2">
-                    ※ 振分け済みチームは各ブロックに表示
+                  <span className="text-sm font-normal text-green-600">
+                    ※ 振分け済みチームは各ブロックに表示されています
                   </span>
                 )}
               </CardTitle>

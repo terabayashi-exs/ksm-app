@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings } from 'lucide-react';
 import { getStatusLabel } from '@/lib/tournament-status';
 import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from '@/lib/format-change';
@@ -51,6 +52,7 @@ interface ApiResponse {
 
 export default function TournamentDashboardList() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentDashboardData>({
     before_recruitment: [],
     recruiting: [],
@@ -271,6 +273,27 @@ export default function TournamentDashboardList() {
     } finally {
       setIsFormatChanging(false);
     }
+  };
+
+  // 組合せ作成ボタンクリック時
+  const handleDrawClick = (tournament: Tournament) => {
+    const confirmedCount = tournament.confirmed_count || 0;
+    const expectedCount = tournament.team_count;
+    const waitlistedCount = tournament.waitlisted_count || 0;
+
+    if (confirmedCount !== expectedCount) {
+      const message = `⚠️ チーム数の確認\n\n` +
+        `参加確定: ${confirmedCount}チーム\n` +
+        `想定チーム数: ${expectedCount}チーム\n` +
+        `キャンセル待ち: ${waitlistedCount}チーム\n\n` +
+        `想定チーム数と異なりますが、このまま組合せ作成画面に進みますか？`;
+
+      if (!confirm(message)) {
+        return;
+      }
+    }
+
+    router.push(`/admin/tournaments/${tournament.tournament_id}/draw`);
   };
 
   // フォーマット選択モーダルでフォーマットが選択された時
@@ -544,7 +567,7 @@ export default function TournamentDashboardList() {
           </div>
 
           {/* 参加状況詳細 */}
-          {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.withdrawal_approved_count ?? 0) > 0) && (
+          {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
               <div className="grid grid-cols-5 gap-2">
@@ -568,10 +591,10 @@ export default function TournamentDashboardList() {
                   <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-1">辞退申請中</div>
                   <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
-                {/* 辞退承認済み */}
-                <div className="p-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800 text-center">
-                  <div className="text-xs text-red-700 dark:text-red-400 font-medium mb-1">辞退承認済み</div>
-                  <div className="text-lg font-bold text-red-700 dark:text-red-400">{tournament.withdrawal_approved_count || 0}</div>
+                {/* キャンセル済 */}
+                <div className="p-2 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
+                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">キャンセル済</div>
+                  <div className="text-lg font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
             </div>
@@ -633,10 +656,13 @@ export default function TournamentDashboardList() {
                   チーム登録
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
-                  組合せ作成・編集
-                </Link>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDrawClick(tournament)}
+                className="text-sm hover:border-blue-300 hover:bg-blue-50"
+              >
+                組合せ作成・編集
               </Button>
               <Button
                 size="sm"
