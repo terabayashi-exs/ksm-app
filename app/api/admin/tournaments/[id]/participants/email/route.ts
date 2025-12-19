@@ -13,6 +13,7 @@ interface EmailRequest {
   body: string;
   tournamentName?: string;
   organizerEmail?: string; // 大会運営者メールアドレス
+  preset_id?: string; // 使用したテンプレートID
 }
 
 export async function POST(
@@ -106,6 +107,28 @@ export async function POST(
             bcc: [team.contact_email as string], // BCCで各チーム代表者に送信
           });
 
+          // メール送信履歴を記録
+          try {
+            await db.execute(`
+              INSERT INTO t_email_send_history (
+                tournament_id,
+                tournament_team_id,
+                sent_by,
+                template_id,
+                subject
+              ) VALUES (?, ?, ?, ?, ?)
+            `, [
+              tournamentId,
+              team.tournament_team_id,
+              session.user.id,
+              body.preset_id || 'custom', // プリセットIDがあれば記録
+              emailTemplate.subject
+            ]);
+          } catch (historyError) {
+            console.error(`履歴記録失敗 (${team.tournament_team_name}):`, historyError);
+            // 履歴記録失敗してもメール送信は成功とする
+          }
+
           successCount++;
         } catch (error) {
           console.error(`メール送信失敗 (${team.tournament_team_name}):`, error);
@@ -153,6 +176,34 @@ export async function POST(
         html: emailTemplate.html,
         bcc: bccAddresses, // BCCで各チーム代表者に送信（重複除去済み）
       });
+
+      // メール送信履歴を記録（BCC一括送信でも各チームに記録）
+      let historySuccessCount = 0;
+      for (const team of teamsResult.rows) {
+        try {
+          await db.execute(`
+            INSERT INTO t_email_send_history (
+              tournament_id,
+              tournament_team_id,
+              sent_by,
+              template_id,
+              subject
+            ) VALUES (?, ?, ?, ?, ?)
+          `, [
+            tournamentId,
+            team.tournament_team_id,
+            session.user.id,
+            body.preset_id || 'custom', // プリセットIDがあれば記録
+            emailTemplate.subject
+          ]);
+          historySuccessCount++;
+        } catch (historyError) {
+          console.error(`履歴記録失敗 (${team.tournament_team_name || team.master_team_name}):`, historyError);
+          // 履歴記録失敗してもメール送信は成功とする
+        }
+      }
+
+      console.log(`✅ BCC一括送信: ${bccAddresses.length}件のメール送信、${historySuccessCount}/${teamsResult.rows.length}件の履歴記録完了`);
 
       // 成功レスポンス（BCC一括送信）
       return NextResponse.json({

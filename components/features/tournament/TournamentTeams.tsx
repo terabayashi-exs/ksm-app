@@ -167,9 +167,14 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
       {/* チーム一覧 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="h-5 w-5 mr-2 text-blue-600" />
-            参加チーム一覧
+          <CardTitle className="flex flex-col gap-2">
+            <div className="flex items-center">
+              <Users className="h-5 w-5 mr-2 text-blue-600" />
+              参加チーム一覧
+            </div>
+            <span className="text-sm font-normal text-blue-600">
+              ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>

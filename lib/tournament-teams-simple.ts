@@ -167,7 +167,7 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
     // 決勝フェーズのチーム順序マップを取得
     const finalTeamOrderMap = await getFinalPhaseTeamsInOrder(tournamentId);
 
-    // 参加チーム一覧を取得
+    // 参加チーム一覧を取得（参加確定チームのみ）
     const teamsResult = await db.execute({
       sql: `
         SELECT
@@ -183,6 +183,8 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ?
+          AND tt.participation_status = 'confirmed'
+          AND tt.withdrawal_status = 'active'
       `,
       args: [tournamentId]
     });

@@ -195,6 +195,25 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
                 ✕ キャンセル
               </Button>
             </>
+          ) : team.participation_status === 'cancelled' ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+                onClick={() => onAction(team, 'confirm')}
+              >
+                ✓ 確定に戻す
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-600 text-amber-600 hover:bg-amber-50"
+                onClick={() => onAction(team, 'waitlist')}
+              >
+                → 待機に戻す
+              </Button>
+            </>
           ) : null}
         </div>
 

@@ -64,7 +64,17 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
   const fetchWithdrawalInfo = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/tournaments/${tournamentId}/withdrawal`);
+
+      // URLパラメータからtournament_team_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const teamParam = urlParams.get('team');
+
+      // APIリクエストURLを構築
+      const apiUrl = teamParam
+        ? `/api/tournaments/${tournamentId}/withdrawal?team=${teamParam}`
+        : `/api/tournaments/${tournamentId}/withdrawal`;
+
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         throw new Error('辞退情報の取得に失敗しました');

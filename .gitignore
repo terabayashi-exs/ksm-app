@@ -52,3 +52,4 @@ scripts/fix-*.js
 dev-server.log
 dev-server.pid
 data/backup-*.json
+data/ksm.db

@@ -5,8 +5,7 @@ import { auth } from '@/lib/auth';
 import { z } from 'zod';
 import { sendEmail } from '@/lib/email/mailer';
 import {
-  generateTournamentJoinConfirmation,
-  generateTournamentWaitlistConfirmation
+  generateTournamentApplicationConfirmation
 } from '@/lib/email/templates';
 
 interface RouteContext {
@@ -565,52 +564,18 @@ async function handleTournamentJoin(
           // 大会詳細ページのURL
           const tournamentUrl = `${process.env.NEXTAUTH_URL}/public/tournaments/${tournamentId}`;
 
-          // 登録されたチームの participation_status を確認
-          const registeredTeamResult = await db.execute(`
-            SELECT participation_status FROM t_tournament_teams
-            WHERE tournament_team_id = ?
-          `, [tournamentTeamId]);
-
-          const registeredTeam = registeredTeamResult.rows[0];
-          const isWaitlisted = registeredTeam && registeredTeam.participation_status === 'waitlisted';
-
-          // キャンセル待ち順位を計算
-          let waitlistPosition = 1;
-          if (isWaitlisted) {
-            const waitlistTeamsResult = await db.execute(`
-              SELECT COUNT(*) as count FROM t_tournament_teams
-              WHERE tournament_id = ?
-                AND participation_status = 'waitlisted'
-                AND tournament_team_id < ?
-            `, [tournamentId, tournamentTeamId]);
-            waitlistPosition = Number(waitlistTeamsResult.rows[0].count) + 1;
-          }
-
-          // メールテンプレート生成（キャンセル待ちか参加確定か）
-          const emailContent = isWaitlisted
-            ? generateTournamentWaitlistConfirmation({
-                teamName: data.tournament_team_name,
-                tournamentName: String(tournament.tournament_name),
-                groupName: tournament.group_name ? String(tournament.group_name) : undefined,
-                categoryName: tournament.category_name ? String(tournament.category_name) : undefined,
-                tournamentDate: tournamentDateStr,
-                venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
-                contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
-                playerCount: data.players.length,
-                tournamentUrl: tournamentUrl,
-                waitlistPosition: waitlistPosition
-              })
-            : generateTournamentJoinConfirmation({
-                teamName: data.tournament_team_name,
-                tournamentName: String(tournament.tournament_name),
-                groupName: tournament.group_name ? String(tournament.group_name) : undefined,
-                categoryName: tournament.category_name ? String(tournament.category_name) : undefined,
-                tournamentDate: tournamentDateStr,
-                venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
-                contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
-                playerCount: data.players.length,
-                tournamentUrl: tournamentUrl
-              });
+          // メールテンプレート生成（統一版）
+          const emailContent = generateTournamentApplicationConfirmation({
+            teamName: data.tournament_team_name,
+            tournamentName: String(tournament.tournament_name),
+            groupName: tournament.group_name ? String(tournament.group_name) : undefined,
+            categoryName: tournament.category_name ? String(tournament.category_name) : undefined,
+            tournamentDate: tournamentDateStr,
+            venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
+            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+            playerCount: data.players.length,
+            tournamentUrl: tournamentUrl
+          });
 
           // メール送信
           await sendEmail({
@@ -620,7 +585,29 @@ async function handleTournamentJoin(
             html: emailContent.html
           });
 
-          console.log(`✅ ${isWaitlisted ? 'Waitlist' : 'Confirmation'} email sent to ${contactEmail}`);
+          console.log(`✅ Application confirmation email sent to ${contactEmail}`);
+
+          // メール送信履歴を記録
+          try {
+            await db.execute(`
+              INSERT INTO t_email_send_history (
+                tournament_id,
+                tournament_team_id,
+                sent_by,
+                template_id,
+                subject
+              ) VALUES (?, ?, ?, ?, ?)
+            `, [
+              tournamentId,
+              tournamentTeamId,
+              'system', // 自動送信
+              'auto_application', // 自動申請受付メール
+              emailContent.subject
+            ]);
+          } catch (historyError) {
+            console.error('履歴記録失敗:', historyError);
+            // 履歴記録失敗してもメール送信は成功とする
+          }
         } else {
           console.warn('⚠️ Team contact email not found, skipping email notification');
         }

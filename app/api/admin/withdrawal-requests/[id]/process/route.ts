@@ -21,7 +21,7 @@ export async function POST(
 
     const resolvedParams = await params;
     const tournamentTeamId = parseInt(resolvedParams.id);
-    const { action, admin_comment } = await request.json();
+    const { action, admin_comment, send_notification = false } = await request.json();
 
     // 入力値検証
     if (!action || !['approve', 'reject'].includes(action)) {
@@ -106,22 +106,24 @@ export async function POST(
       await processWithdrawalApproval(tournamentTeamId, withdrawal);
     }
 
-    // メール通知を送信（非同期で実行、エラーが発生してもメイン処理は継続）
-    try {
-      if (action === 'approve') {
-        // 承認通知を送信（バックグラウンドで実行）
-        sendWithdrawalApprovedNotification(tournamentTeamId, admin_comment, adminId).catch(error => {
-          console.error('承認通知送信エラー:', error);
-        });
-      } else {
-        // 却下通知を送信（バックグラウンドで実行）
-        sendWithdrawalRejectedNotification(tournamentTeamId, admin_comment, adminId).catch(error => {
-          console.error('却下通知送信エラー:', error);
-        });
+    // メール通知を送信（send_notificationがtrueの場合のみ）
+    if (send_notification) {
+      try {
+        if (action === 'approve') {
+          // 承認通知を送信（バックグラウンドで実行）
+          sendWithdrawalApprovedNotification(tournamentTeamId, admin_comment, adminId).catch(error => {
+            console.error('承認通知送信エラー:', error);
+          });
+        } else {
+          // 却下通知を送信（バックグラウンドで実行）
+          sendWithdrawalRejectedNotification(tournamentTeamId, admin_comment, adminId).catch(error => {
+            console.error('却下通知送信エラー:', error);
+          });
+        }
+      } catch (notificationError) {
+        console.error('通知送信準備エラー:', notificationError);
+        // 通知エラーはメイン処理に影響させない
       }
-    } catch (notificationError) {
-      console.error('通知送信準備エラー:', notificationError);
-      // 通知エラーはメイン処理に影響させない
     }
 
     // 管理者コメントがある場合は別途記録（将来的に管理者コメントテーブルを作成することを想定）

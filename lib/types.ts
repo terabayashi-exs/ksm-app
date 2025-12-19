@@ -63,8 +63,9 @@ export interface Tournament {
   // 参加状況統計
   confirmed_count?: number;
   waitlisted_count?: number;
+  applied_count?: number;
   withdrawal_requested_count?: number;
-  withdrawal_approved_count?: number;
+  cancelled_count?: number;
 }
 
 /**
