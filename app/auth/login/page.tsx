@@ -164,6 +164,17 @@ function LoginForm() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "ログイン中..." : "ログイン"}
               </Button>
+
+              {activeTab === "team" && (
+                <div className="text-center">
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    パスワードを忘れた方はこちら
+                  </Link>
+                </div>
+              )}
             </form>
 
             <div className="mt-6 text-center">
