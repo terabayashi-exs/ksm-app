@@ -19,7 +19,7 @@
 - `m_sport_types` - 競技種別マスター（PK戦、ハンドボール等）
 - `m_tournament_groups` - 大会グループマスター（大会分類用）
 
-#### トランザクションテーブル (19テーブル)
+#### トランザクションテーブル (20テーブル)
 - `t_tournaments` - 大会情報
 - `t_tournament_teams` - 大会参加チーム（`participation_status`カラム追加: 2025-12-19）
 - `t_tournament_players` - 大会参加選手
@@ -34,6 +34,7 @@
 - `t_tournament_match_overrides` - 試合進出条件オーバーライド
 - `t_tournament_notifications` - 大会通知情報
 - `t_email_send_history` - メール送信履歴（新規追加: 2025-12-19）
+- `t_password_reset_tokens` - パスワードリセットトークン（新規追加: 2025-12-22）
 - `t_administrator_subscriptions` - 管理者サブスクリプション
 - `t_subscription_usage` - サブスクリプション使用状況
 - `t_payment_history` - 決済履歴
@@ -299,4 +300,66 @@ INSERT INTO table_name (created_at) VALUES (datetime('now'));
 - デプロイ先（Vercel）のサーバー時刻に依存せず、SQLite関数で明示的に日本時間を指定
 - フロントエンド表示では `toLocaleString('ja-JP')` で日本形式での時刻表示を推奨
 - 日付比較処理では時差を考慮した適切な処理を実装
+
+## 🔐 パスワードリセットトークンテーブル
+
+### テーブル: `t_password_reset_tokens`
+
+チーム代表者のパスワードリセット機能で使用するワンタイムトークンを管理します。
+
+#### テーブル定義
+
+```sql
+CREATE TABLE t_password_reset_tokens (
+    token_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id TEXT NOT NULL,
+    reset_token TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME,
+    created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+    FOREIGN KEY (team_id) REFERENCES m_teams(team_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_reset_token ON t_password_reset_tokens(reset_token);
+CREATE INDEX idx_team_reset_tokens ON t_password_reset_tokens(team_id);
+CREATE INDEX idx_expires_at ON t_password_reset_tokens(expires_at);
+```
+
+#### カラム説明
+
+| カラム名 | 型 | 制約 | 説明 |
+|---------|-----|------|------|
+| token_id | INTEGER | PRIMARY KEY | トークンID（自動採番） |
+| team_id | TEXT | NOT NULL, FK | チームID（`m_teams.team_id`参照） |
+| reset_token | TEXT | NOT NULL, UNIQUE | リセットトークン（64文字のランダムハッシュ） |
+| expires_at | DATETIME | NOT NULL | トークン有効期限（JST、発行から1時間） |
+| used_at | DATETIME | NULL | トークン使用日時（JST、未使用の場合はNULL） |
+| created_at | DATETIME | DEFAULT | トークン作成日時（JST、自動設定） |
+
+#### 機能仕様
+
+**トークン生成:**
+- `crypto.randomBytes(32).toString('hex')` で暗号学的に安全なトークンを生成
+- 有効期限は発行時刻から1時間後に設定（`datetime('now', '+9 hours', '+1 hour')`）
+
+**トークン検証:**
+1. トークンの存在確認
+2. 使用済みチェック（`used_at IS NULL`）
+3. 有効期限チェック（現在時刻 < `expires_at`）
+
+**セキュリティ:**
+- ワンタイムトークン（1回使用後は`used_at`に使用時刻を記録）
+- 有効期限切れトークンは自動的に無効化
+- チーム削除時にトークンも連動削除（`ON DELETE CASCADE`）
+
+**クリーンアップ:**
+- 同一チームの未使用トークンは新規発行時に自動削除
+- 期限切れトークンは定期的にクリーンアップ可能（`idx_expires_at`で高速検索）
+
+#### 実装ファイル
+
+- API: `/app/api/auth/forgot-password/route.ts` - トークン発行・メール送信
+- API: `/app/api/auth/reset-password/route.ts` - トークン検証・パスワード更新
+- 画面: `/app/auth/forgot-password/page.tsx` - パスワード忘れ申請画面
+- 画面: `/app/auth/reset-password/page.tsx` - パスワードリセット実行画面
 

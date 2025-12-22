@@ -283,6 +283,132 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 }
 
 /**
+ * パスワードリセット用メール
+ */
+export interface PasswordResetEmailVariables {
+  teamName: string;
+  teamId: string;
+  resetUrl: string;
+  expiresAt: string;
+}
+
+export function getPasswordResetTemplate(): EmailTemplate {
+  return {
+    subject: '【楽勝 GO】パスワードリセットのご案内',
+
+    htmlBody: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パスワードリセット</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: #3b82f6; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { padding: 30px; }
+        .info-box { background: #dbeafe; border: 1px solid #3b82f6; border-radius: 6px; padding: 15px; margin: 20px 0; }
+        .warning-box { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 15px; margin: 20px 0; }
+        .highlight { background: #ecfdf5; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; }
+        .footer { background: #f8fafc; padding: 20px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; color: #64748b; }
+        .btn { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; font-weight: bold; }
+        h1 { margin: 0; font-size: 24px; }
+        h2 { color: #1e40af; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .code-box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 14px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 楽勝 GO</h1>
+            <p>パスワードリセットのご案内</p>
+        </div>
+
+        <div class="content">
+            <p>{{teamName}} 様</p>
+
+            <div class="highlight">
+                <h2>🔑 パスワードリセットリクエスト</h2>
+                <p>パスワードリセットのリクエストを受け付けました。</p>
+                <p><strong>チームID:</strong> {{teamId}}</p>
+            </div>
+
+            <div class="info-box">
+                <h3>📋 リセット手順</h3>
+                <p>以下のボタンをクリックして、新しいパスワードを設定してください。</p>
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="{{resetUrl}}" class="btn">パスワードをリセットする</a>
+                </div>
+                <p style="font-size: 12px; color: #64748b;">ボタンが機能しない場合は、以下のURLをブラウザにコピー&ペーストしてください：</p>
+                <div class="code-box">{{resetUrl}}</div>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ 重要事項</h3>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>有効期限:</strong> {{expiresAt}} まで（1時間）</li>
+                    <li><strong>セキュリティ:</strong> このリンクは1回のみ使用可能です</li>
+                    <li><strong>心当たりがない場合:</strong> このメールを無視してください</li>
+                </ul>
+            </div>
+
+            <h2>🔒 セキュリティについて</h2>
+            <ul>
+                <li>パスワードリセットを申請していない場合は、このメールを無視してください</li>
+                <li>このリンクを他人と共有しないでください</li>
+                <li>不審なアクセスがあった場合は、運営事務局までご連絡ください</li>
+            </ul>
+
+            <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
+        </div>
+
+        <div class="footer">
+            <p>このメールは自動送信されています。<br>
+            心当たりがない場合は、このメールを破棄してください。</p>
+            <p>© 楽勝 GO 運営事務局</p>
+        </div>
+    </div>
+</body>
+</html>`,
+
+    textBody: `
+【楽勝 GO】パスワードリセットのご案内
+
+{{teamName}} 様
+
+パスワードリセットのリクエストを受け付けました。
+
+■ リセット情報
+チームID: {{teamId}}
+
+■ リセット手順
+以下のURLにアクセスして、新しいパスワードを設定してください。
+
+{{resetUrl}}
+
+■ 重要事項
+・有効期限: {{expiresAt}} まで（1時間）
+・このリンクは1回のみ使用可能です
+・心当たりがない場合は、このメールを無視してください
+
+■ セキュリティについて
+・パスワードリセットを申請していない場合は、このメールを無視してください
+・このリンクを他人と共有しないでください
+・不審なアクセスがあった場合は、運営事務局までご連絡ください
+
+ご不明な点がございましたら、お気軽にお問い合わせください。
+
+───────────────────────────
+このメールは自動送信されています。
+心当たりがない場合は、このメールを破棄してください。
+© 楽勝 GO 運営事務局
+───────────────────────────
+`
+  };
+}
+
+/**
  * 辞退申請受付確認メール
  */
 export function getWithdrawalReceivedTemplate(): EmailTemplate {

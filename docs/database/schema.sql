@@ -230,4 +230,20 @@ CREATE INDEX IF NOT EXISTS idx_matches_live_status ON t_matches_live(match_statu
 CREATE INDEX IF NOT EXISTS idx_matches_live_result_status ON t_matches_live(result_status);
 CREATE INDEX IF NOT EXISTS idx_matches_final_block ON t_matches_final(match_block_id);
 
+-- パスワードリセットトークンテーブル
+CREATE TABLE IF NOT EXISTS t_password_reset_tokens (
+    token_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id TEXT NOT NULL,
+    reset_token TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME,
+    created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+    FOREIGN KEY (team_id) REFERENCES m_teams(team_id) ON DELETE CASCADE
+);
+
+-- パスワードリセットトークンテーブルのインデックス
+CREATE INDEX IF NOT EXISTS idx_reset_token ON t_password_reset_tokens(reset_token);
+CREATE INDEX IF NOT EXISTS idx_team_reset_tokens ON t_password_reset_tokens(team_id);
+CREATE INDEX IF NOT EXISTS idx_expires_at ON t_password_reset_tokens(expires_at);
+
 -- 外部キー制約は各テーブル作成時に定義済み
