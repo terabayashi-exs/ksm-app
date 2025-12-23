@@ -97,14 +97,28 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" asChild>
-                  <Link href="/auth/login">ログイン</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/auth/register">チーム登録</Link>
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <User className="mr-2 h-4 w-4" />
+                    ログイン
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/auth/admin/login" className="flex items-center cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      管理者ログイン
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/auth/team/login" className="flex items-center cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      チーム代表者ログイン
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,16 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, UserPlus, AlertCircle, CheckCircle, Plus, Trash2, Users } from 'lucide-react';
+import { Loader2, ArrowLeft, UserPlus, AlertCircle, CheckCircle, Plus, Trash2, Users, Eye, EyeOff } from 'lucide-react';
 import { teamWithPlayersRegisterSchema, type TeamWithPlayersRegisterForm } from '@/lib/validations';
 
 function TeamRegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const token = searchParams.get('token');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
 
   const form = useForm<TeamWithPlayersRegisterForm>({
     resolver: zodResolver(teamWithPlayersRegisterSchema),
@@ -33,13 +37,63 @@ function TeamRegisterForm() {
       contact_phone: '',
       password: '',
       password_confirmation: '',
-      players: [
-        { player_name: '', player_number: undefined }
-      ]
+      players: []
     }
   });
 
   const watchedPlayers = form.watch('players');
+
+  // トークン検証
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) {
+        // トークンがない場合はメールアドレス入力ページにリダイレクト
+        router.push('/auth/register/email');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/verify-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // メールアドレスをフォームにセット
+          form.setValue('contact_email', data.email);
+          setIsVerifying(false);
+        } else {
+          setError(data.error || 'トークンの検証に失敗しました');
+          setTimeout(() => {
+            router.push('/auth/register/email');
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Token verification error:', error);
+        setError('トークンの検証中にエラーが発生しました');
+        setTimeout(() => {
+          router.push('/auth/register/email');
+        }, 3000);
+      }
+    };
+
+    verifyToken();
+  }, [token, router, form]);
+
+  // トークン検証中の表示
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">トークンを確認しています...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 選手の追加
   const addPlayer = () => {
@@ -53,9 +107,7 @@ function TeamRegisterForm() {
   // 選手の削除
   const removePlayer = (index: number) => {
     const currentPlayers = form.getValues('players');
-    if (currentPlayers.length > 1) {
-      form.setValue('players', currentPlayers.filter((_, i) => i !== index));
-    }
+    form.setValue('players', currentPlayers.filter((_, i) => i !== index));
   };
 
   const onSubmit = async (data: TeamWithPlayersRegisterForm) => {
@@ -69,13 +121,15 @@ function TeamRegisterForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, token }), // トークンを含める
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setSuccess(`チーム・選手登録が完了しました。${result.data?.players_count}人の選手が登録されました。自動ログインしています...`);
+        const playerCount = result.data?.players_count || 0;
+        const playerMessage = playerCount > 0 ? `${playerCount}人の選手が登録されました。` : '選手は後から追加できます。';
+        setSuccess(`チーム登録が完了しました。${playerMessage}自動ログインしています...`);
         
         // 自動ログイン処理
         try {
@@ -91,9 +145,9 @@ function TeamRegisterForm() {
           if (signInResult?.ok) {
             // ログイン成功 - 遷移先を決定
             if (callbackUrl !== '/' && callbackUrl.includes('/tournaments/')) {
-              setSuccess(`チーム・選手登録が完了しました。大会参加画面に移動します...`);
+              setSuccess(`チーム登録が完了しました。${playerMessage}大会参加画面に移動します...`);
             } else {
-              setSuccess(`チーム・選手登録が完了しました。チームダッシュボードに移動します...`);
+              setSuccess(`チーム登録が完了しました。${playerMessage}チームダッシュボードに移動します...`);
             }
             setTimeout(() => {
               // 大会参加用のコールバックURLがある場合は大会参加画面へ
@@ -107,21 +161,21 @@ function TeamRegisterForm() {
           } else {
             // ログイン失敗 - 手動ログインページに遷移
             console.warn('Auto login failed:', signInResult?.error);
-            setSuccess(`チーム・選手登録が完了しました。ログインページに移動します...`);
+            setSuccess(`チーム登録が完了しました。${playerMessage}ログインページに移動します...`);
             setTimeout(() => {
-              router.push(`/auth/login${callbackUrl !== '/' ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`);
+              router.push(`/auth/team/login${callbackUrl !== '/' ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`);
             }, 2000);
           }
         } catch (loginError) {
           console.error('Auto login error:', loginError);
           // 自動ログイン失敗 - 手動ログインページに遷移
-          setSuccess(`チーム・選手登録が完了しました。ログインページに移動します...`);
+          setSuccess(`チーム登録が完了しました。${playerMessage}ログインページに移動します...`);
           setTimeout(() => {
             // 大会参加用の場合はコールバックURL付き、そうでなければ通常のログインページ
             if (callbackUrl !== '/' && callbackUrl.includes('/tournaments/')) {
-              router.push(`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+              router.push(`/auth/team/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
             } else {
-              router.push('/auth/login');
+              router.push('/auth/team/login');
             }
           }, 2000);
         }
@@ -288,8 +342,13 @@ function TeamRegisterForm() {
                   type="email"
                   placeholder="例: team@example.com"
                   {...form.register('contact_email')}
-                  className={form.formState.errors.contact_email ? 'border-red-500' : ''}
+                  className={`bg-muted ${form.formState.errors.contact_email ? 'border-red-500' : ''}`}
+                  readOnly
+                  disabled
                 />
+                <p className="text-xs text-muted-foreground">
+                  ※ メール認証済みのアドレスです（変更不可）
+                </p>
                 {form.formState.errors.contact_email && (
                   <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
@@ -323,13 +382,22 @@ function TeamRegisterForm() {
               {/* パスワード */}
               <div className="space-y-2">
                 <Label htmlFor="password">パスワード *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="6文字以上で入力してください"
-                  {...form.register('password')}
-                  className={form.formState.errors.password ? 'border-red-500' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="6文字以上で入力してください"
+                    {...form.register('password')}
+                    className={`pr-10 ${form.formState.errors.password ? 'border-red-500' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {form.formState.errors.password && (
                   <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
@@ -343,13 +411,22 @@ function TeamRegisterForm() {
               {/* パスワード確認 */}
               <div className="space-y-2">
                 <Label htmlFor="password_confirmation">パスワード確認 *</Label>
-                <Input
-                  id="password_confirmation"
-                  type="password"
-                  placeholder="パスワードを再度入力してください"
-                  {...form.register('password_confirmation')}
-                  className={form.formState.errors.password_confirmation ? 'border-red-500' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    id="password_confirmation"
+                    type={showPasswordConfirmation ? "text" : "password"}
+                    placeholder="パスワードを再度入力してください"
+                    {...form.register('password_confirmation')}
+                    className={`pr-10 ${form.formState.errors.password_confirmation ? 'border-red-500' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPasswordConfirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {form.formState.errors.password_confirmation && (
                   <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
@@ -363,7 +440,7 @@ function TeamRegisterForm() {
               {/* 選手登録 */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">選手登録 *</Label>
+                  <Label className="text-base font-medium">選手登録（任意）</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -381,17 +458,15 @@ function TeamRegisterForm() {
                     <Card key={index} className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-medium text-sm">選手 {index + 1}</h4>
-                        {watchedPlayers.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removePlayer(index)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removePlayer(index)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -451,7 +526,7 @@ function TeamRegisterForm() {
 
                 <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    📝 最低1人の選手登録が必要です。背番号は空白でも登録可能です。背番号を設定する場合は重複しないようにしてください。
+                    📝 選手登録は任意です。後から追加することも可能です。背番号は空白でも登録可能です。背番号を設定する場合は重複しないようにしてください。
                   </p>
                 </div>
               </div>
@@ -482,7 +557,7 @@ function TeamRegisterForm() {
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
             既にアカウントをお持ちの方は{' '}
-            <Link href="/auth/login" className="text-blue-600 hover:text-blue-500 font-medium">
+            <Link href="/auth/team/login" className="text-blue-600 hover:text-blue-500 font-medium">
               こちらからログイン
             </Link>
           </p>

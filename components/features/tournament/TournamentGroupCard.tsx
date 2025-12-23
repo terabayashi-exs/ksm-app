@@ -233,9 +233,9 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                    tournament.status !== 'completed' && (
                     <Button asChild size="sm" variant="outline">
                       <Link href={
-                        userRole === 'team' 
+                        userRole === 'team'
                           ? `/tournaments/${tournament.tournament_id}/join`
-                          : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/join`)}`
+                          : `/auth/team/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/join`)}`
                       }>
                         参加
                       </Link>

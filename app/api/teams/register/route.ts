@@ -7,13 +7,14 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+    const { token } = body; // トークンを取得
+
     // バリデーション
     const validationResult = teamWithPlayersRegisterSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'バリデーションエラー',
           details: validationResult.error.issues.map(err => ({
             field: err.path.join('.'),
@@ -25,6 +26,56 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validationResult.data;
+
+    // トークンの検証（必須）
+    if (!token) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'メール認証が必要です',
+        },
+        { status: 400 }
+      );
+    }
+
+    // トークン検証
+    const tokenResult = await db.execute(`
+      SELECT token_id, email, used, expires_at
+      FROM t_email_verification_tokens
+      WHERE token = ? AND purpose = 'registration'
+    `, [token]);
+
+    if (tokenResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: '無効な認証トークンです' },
+        { status: 400 }
+      );
+    }
+
+    const tokenData = tokenResult.rows[0];
+
+    if (tokenData.used) {
+      return NextResponse.json(
+        { success: false, error: 'このトークンは既に使用されています' },
+        { status: 400 }
+      );
+    }
+
+    const expiresAt = new Date(String(tokenData.expires_at));
+    if (expiresAt < new Date()) {
+      return NextResponse.json(
+        { success: false, error: '認証トークンの有効期限が切れています' },
+        { status: 400 }
+      );
+    }
+
+    // メールアドレスの一致確認
+    if (tokenData.email !== data.contact_email) {
+      return NextResponse.json(
+        { success: false, error: 'メールアドレスが認証時のものと一致しません' },
+        { status: 400 }
+      );
+    }
 
     // チームIDの重複チェック
     console.log('Checking team ID:', data.team_id);
@@ -121,6 +172,16 @@ export async function POST(request: NextRequest) {
       }
       console.log('All players inserted successfully');
 
+      // トークンを使用済みにする
+      if (token) {
+        await db.execute(`
+          UPDATE t_email_verification_tokens
+          SET used = 1, used_at = datetime('now', '+9 hours')
+          WHERE token = ?
+        `, [token]);
+        console.log('Token marked as used');
+      }
+
       return NextResponse.json({
         success: true,
         message: 'チーム・選手登録が完了しました',
@@ -159,13 +220,27 @@ export async function POST(request: NextRequest) {
       details = error.message;
       
       // SQLiteエラーの場合
-      if (error.message.includes('UNIQUE constraint failed')) {
-        if (error.message.includes('team_id')) {
-          errorMessage = 'このチームIDは既に使用されています';
-        } else if (error.message.includes('contact_email')) {
-          errorMessage = 'このメールアドレスは既に使用されています';
+      if (error.message.includes('UNIQUE constraint failed') || error.message.includes('SQLITE_CONSTRAINT')) {
+        if (error.message.includes('team_id') || error.message.includes('m_teams.team_id')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'このチームIDは既に登録されています。別のチームIDをお選びください。',
+              field: 'team_id'
+            },
+            { status: 409 }
+          );
+        } else if (error.message.includes('contact_email') || error.message.includes('m_teams.contact_email')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。',
+              field: 'contact_email'
+            },
+            { status: 409 }
+          );
         } else {
-          errorMessage = '重複するデータが存在します';
+          errorMessage = '重複するデータが存在します。入力内容をご確認ください。';
         }
       }
     }

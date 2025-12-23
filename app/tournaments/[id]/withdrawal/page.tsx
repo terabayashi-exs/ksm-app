@@ -38,9 +38,9 @@ async function getTournamentInfo(tournamentId: number, userEmail: string) {
 
 export default async function WithdrawalPage({ params }: PageProps) {
   const session = await auth();
-  
+
   if (!session) {
-    redirect('/auth/login');
+    redirect('/auth/team/login');
   }
 
   const resolvedParams = await params;
