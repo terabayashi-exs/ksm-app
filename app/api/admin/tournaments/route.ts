@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const offset = searchParams.get('offset');
 
     let query = `
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.status,
@@ -44,10 +44,12 @@ export async function GET(request: NextRequest) {
         t.updated_at,
         t.is_archived,
         t.team_count,
+        t.group_id,
         v.venue_name,
         f.format_name,
         COUNT(tt.team_id) as current_registered_teams
       FROM t_tournaments t
+      LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // 作成者フィルタリング（adminユーザー以外は自分が作成した大会のみ）
     if (!isAdmin) {
-      conditions.push('t.created_by = ?');
+      conditions.push('tg.admin_login_id = ?');
       params.push(userId);
     }
 
@@ -111,7 +113,7 @@ export async function GET(request: NextRequest) {
     }
 
     // GROUP BY と ORDER BY を追加
-    query += ' GROUP BY t.tournament_id, t.tournament_name, t.status, t.tournament_dates, t.created_at, t.updated_at, v.venue_name, f.format_name';
+    query += ' GROUP BY t.tournament_id, t.tournament_name, t.status, t.tournament_dates, t.created_at, t.updated_at, t.is_archived, t.team_count, t.group_id, v.venue_name, f.format_name';
     query += ' ORDER BY t.created_at DESC';
 
     // ページネーション

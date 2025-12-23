@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { 
-  TournamentRule, 
+import {
+  TournamentRule,
   SPORT_RULE_CONFIGS,
   generateDefaultRules,
   isLegacyTournament,
-  getLegacyDefaultRules 
+  getLegacyDefaultRules
 } from "@/lib/tournament-rules";
+import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -132,9 +133,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
+
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
+    }
+
+    // 期限切れチェック（編集）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canEdit'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
+      );
     }
 
     const tournamentId = parseInt(resolvedParams.id);
@@ -189,9 +206,25 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
+
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
+    }
+
+    // 期限切れチェック（編集）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canEdit'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
+      );
     }
 
     const tournamentId = parseInt(resolvedParams.id);

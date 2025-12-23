@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 // 個別大会取得（所属部門含む）
 export async function GET(
@@ -108,6 +109,22 @@ export async function PUT(
       return NextResponse.json(
         { error: '管理者権限が必要です' },
         { status: 401 }
+      );
+    }
+
+    // 期限切れチェック（編集）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canEdit'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
       );
     }
 

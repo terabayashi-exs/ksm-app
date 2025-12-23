@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { canCreateTournamentGroup } from '@/lib/subscription/plan-checker';
+import { recalculateUsage, checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 // 大会一覧取得
 export async function GET(request: NextRequest) {
@@ -15,8 +17,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const userId = session.user.id;
+    const isAdmin = userId === 'admin';
+
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('include_inactive') === 'true';
+
+    const params: (string | number)[] = [];
 
     let query = `
       SELECT
@@ -40,6 +47,12 @@ export async function GET(request: NextRequest) {
       WHERE 1=1
     `;
 
+    // 作成者フィルタリング（adminユーザー以外は自分が作成した大会のみ）
+    if (!isAdmin) {
+      query += ` AND tg.admin_login_id = ?`;
+      params.push(userId);
+    }
+
     if (!includeInactive) {
       query += ` AND tg.visibility = 'open'`;
     }
@@ -49,7 +62,7 @@ export async function GET(request: NextRequest) {
       ORDER BY tg.event_start_date DESC, tg.created_at DESC
     `;
 
-    const result = await db.execute(query);
+    const result = await db.execute(query, params);
 
     return NextResponse.json({
       success: true,
@@ -76,6 +89,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 期限切れチェック（新規作成）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canCreateNew'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       group_name,
@@ -97,6 +126,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // プラン制限チェック
+    const adminLoginId = session.user.id;
+    const planCheck = await canCreateTournamentGroup(adminLoginId);
+
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: planCheck.reason,
+          current: planCheck.current,
+          limit: planCheck.limit,
+          planLimitExceeded: true
+        },
+        { status: 403 }
+      );
+    }
+
     // 大会作成
     const result = await db.execute(`
       INSERT INTO t_tournament_groups (
@@ -109,9 +154,10 @@ export async function POST(request: NextRequest) {
         recruitment_end_date,
         visibility,
         event_description,
+        admin_login_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       group_name,
       organizer || null,
@@ -121,10 +167,14 @@ export async function POST(request: NextRequest) {
       recruitment_start_date || null,
       recruitment_end_date || null,
       visibility,
-      event_description || null
+      event_description || null,
+      adminLoginId
     ]);
 
     const groupId = Number(result.lastInsertRowid);
+
+    // 使用状況を更新
+    await recalculateUsage(adminLoginId);
 
     // 作成した大会を取得
     const createdGroup = await db.execute(`

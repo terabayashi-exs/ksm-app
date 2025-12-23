@@ -3,11 +3,15 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import SignOutButton from "@/components/features/auth/SignOutButton";
+import PlanBadge from "@/components/features/subscription/PlanBadge";
 import { db } from "@/lib/db";
+import { getCurrentSubscriptionInfo } from "@/lib/subscription/subscription-service";
 
 export default async function AdminDashboard() {
   const session = await auth();
@@ -26,6 +30,11 @@ export default async function AdminDashboard() {
   `);
   const hasIncompleteGroups = Number(incompleteGroupsResult.rows[0]?.count || 0) > 0;
 
+  // サブスクリプション情報を取得
+  const subscriptionInfo = await getCurrentSubscriptionInfo(session.user.id);
+  const canCreateTournament = subscriptionInfo?.canCreateTournament ?? true;
+  const isTrialExpired = subscriptionInfo?.isTrialExpired ?? false;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-card shadow-sm border-b border-border">
@@ -37,7 +46,8 @@ export default async function AdminDashboard() {
                 ようこそ、{session.user.name}さん
               </p>
             </div>
-            <div>
+            <div className="flex items-center gap-4">
+              <PlanBadge />
               <SignOutButton />
             </div>
           </div>
@@ -45,13 +55,44 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 期限切れ警告 */}
+        {isTrialExpired && (
+          <Alert variant="destructive" className="mb-6 border-2">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertTitle className="text-lg font-bold">無料トライアル期間が終了しました</AlertTitle>
+            <AlertDescription className="mt-2">
+              <p className="mb-3">現在は以下の操作のみ可能です：</p>
+              <ul className="list-disc list-inside space-y-1 mb-4 ml-2">
+                <li>大会・部門の閲覧</li>
+                <li>大会のアーカイブ化</li>
+                <li>大会・部門の削除</li>
+              </ul>
+              <p className="font-semibold mb-3">
+                ⚠️ 編集・新規作成・試合結果入力はできません
+              </p>
+              <div className="flex gap-3">
+                <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Link href="/admin/subscription/plans">
+                    プランを選択して継続
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/admin/tournaments">
+                    大会を整理する
+                  </Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* 大会一覧セクション */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-foreground mb-6">大会状況</h2>
           <p className="text-sm text-muted-foreground mb-4">
             各大会の部門別状況を確認できます
           </p>
-          <TournamentDashboardList />
+          <TournamentDashboardList isTrialExpired={isTrialExpired} />
         </div>
 
         {/* 大会作成セクション */}
@@ -69,11 +110,38 @@ export default async function AdminDashboard() {
               <p className="text-green-700 dark:text-green-300 mb-6">
                 新しい大会を作成して、部門の設定やチーム募集を開始できます
               </p>
-              <Button asChild size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600 shadow-md">
-                <Link href="/admin/tournament-groups/create">
-                  <span className="text-lg">➕ 大会作成を開始</span>
-                </Link>
-              </Button>
+              {isTrialExpired ? (
+                <div className="space-y-3">
+                  <Button disabled size="lg" className="w-full bg-gray-400 text-white cursor-not-allowed">
+                    <span className="text-lg">🔒 トライアル期間終了</span>
+                  </Button>
+                  <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                    新規大会作成にはプランのアップグレードが必要です
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full border-2 border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-950/20">
+                    <Link href="/admin/subscription/plans">
+                      プランを選択
+                    </Link>
+                  </Button>
+                </div>
+              ) : canCreateTournament ? (
+                <Button asChild size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600 shadow-md">
+                  <Link href="/admin/tournament-groups/create">
+                    <span className="text-lg">➕ 大会作成を開始</span>
+                  </Link>
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <Button disabled size="lg" className="w-full bg-gray-400 text-white cursor-not-allowed">
+                    <span className="text-lg">🔒 大会作成上限に達しています</span>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="w-full border-2 border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-950/20">
+                    <Link href="/admin/subscription/plans">
+                      プランをアップグレード
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -3,15 +3,34 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ArchiveVersionManager } from "@/lib/archive-version-manager";
 import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from "@/lib/tournament-rules";
+import { canAddDivision } from "@/lib/subscription/plan-checker";
+import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    
+
     if (!session || session.user.role !== "admin") {
       return NextResponse.json(
         { success: false, error: "管理者権限が必要です" },
         { status: 401 }
+      );
+    }
+
+    // 期限切れチェック（新規作成）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canCreateNew'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
       );
     }
 
@@ -42,6 +61,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "必須項目が不足しています" },
         { status: 400 }
+      );
+    }
+
+    // 部門追加可否チェック（サブスクリプションプラン制限）
+    const divisionCheckResult = await canAddDivision(session.user.id, Number(group_id));
+    if (!divisionCheckResult.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "部門作成制限に達しています",
+          reason: divisionCheckResult.reason,
+          current: divisionCheckResult.current,
+          limit: divisionCheckResult.limit
+        },
+        { status: 403 }
       );
     }
 
