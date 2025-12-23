@@ -6,6 +6,7 @@ import { tournamentCreateSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
 import type { TournamentStatus } from '@/lib/tournament-status';
+import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -120,6 +121,23 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
+      );
+    }
+
+    // 期限切れチェック（編集）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canEdit'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
       );
     }
 

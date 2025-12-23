@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, Trash2, Lock } from 'lucide-react';
 
 interface IncompleteTournamentGroup {
   group_id: number;
@@ -16,10 +16,18 @@ interface IncompleteTournamentGroup {
   tournament_count: number;
 }
 
+interface DivisionCheckResult {
+  allowed: boolean;
+  reason?: string;
+  current: number;
+  limit: number;
+}
+
 export default function IncompleteTournamentGroups() {
   const [incompleteGroups, setIncompleteGroups] = useState<IncompleteTournamentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [divisionChecks, setDivisionChecks] = useState<Record<number, DivisionCheckResult>>({});
 
   const fetchIncompleteGroups = async () => {
     try {
@@ -28,6 +36,15 @@ export default function IncompleteTournamentGroups() {
 
       if (result.success && result.data) {
         setIncompleteGroups(result.data);
+
+        // 各大会の部門追加可否をチェック
+        const checks: Record<number, DivisionCheckResult> = {};
+        for (const group of result.data) {
+          const checkRes = await fetch(`/api/admin/subscription/can-add-division?group_id=${group.group_id}`);
+          const checkData = await checkRes.json();
+          checks[group.group_id] = checkData;
+        }
+        setDivisionChecks(checks);
       }
     } catch (err) {
       console.error('作成中の大会取得エラー:', err);
@@ -114,16 +131,39 @@ export default function IncompleteTournamentGroups() {
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <Button
-                asChild
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
-              >
-                <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  部門作成
-                </Link>
-              </Button>
+              {divisionChecks[group.group_id]?.allowed ? (
+                <Button
+                  asChild
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                >
+                  <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    部門作成
+                  </Link>
+                </Button>
+              ) : (
+                <div className="space-y-1">
+                  <Button
+                    disabled
+                    size="sm"
+                    className="w-full bg-gray-400 text-white cursor-not-allowed"
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    上限達成
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 text-xs"
+                  >
+                    <Link href="/admin/subscription/plans">
+                      プラン変更
+                    </Link>
+                  </Button>
+                </div>
+              )}
               <Button
                 asChild
                 size="sm"

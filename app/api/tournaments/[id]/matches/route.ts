@@ -105,9 +105,9 @@ export async function GET(
         mb.block_order,
         -- m_match_templatesからround_nameを取得
         mt.round_name,
-        -- 実際のチーム名を取得（ブロック指定で一意に取得）
-        (SELECT team_name FROM t_tournament_teams WHERE team_id = ml.team1_id AND tournament_id = mb.tournament_id AND assigned_block = mb.block_name LIMIT 1) as team1_real_name,
-        (SELECT team_name FROM t_tournament_teams WHERE team_id = ml.team2_id AND tournament_id = mb.tournament_id AND assigned_block = mb.block_name LIMIT 1) as team2_real_name,
+        -- 実際のチーム名を取得（tournament_team_idで一意に取得）
+        tt1.team_name as team1_real_name,
+        tt2.team_name as team2_real_name,
         -- 試合状態テーブルから情報取得
         ms.match_status,
         ms.current_period as status_current_period,
@@ -126,6 +126,8 @@ export async function GET(
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+      LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+      LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?

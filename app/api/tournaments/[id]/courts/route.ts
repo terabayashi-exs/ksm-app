@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getTournamentCourtSettings, saveCourtName, deleteCourtName } from '@/lib/court-name-helper';
+import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 /**
  * GET /api/tournaments/[id]/courts
@@ -59,6 +60,23 @@ export async function POST(
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
+      );
+    }
+
+    // 期限切れチェック（編集）
+    const permissionCheck = await checkTrialExpiredPermission(
+      session.user.id,
+      'canEdit'
+    );
+
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: permissionCheck.reason,
+          trialExpired: true
+        },
+        { status: 403 }
       );
     }
 

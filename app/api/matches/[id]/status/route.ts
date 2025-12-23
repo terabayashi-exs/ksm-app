@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { parseScoreArray, formatScoreArray } from '@/lib/score-parser';
+import { auth } from '@/lib/auth';
+import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -50,8 +52,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         mt2.team_omission as team2_omission
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id
+      LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
+      LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
@@ -115,6 +117,28 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         { success: false, error: '無効な試合IDです' },
         { status: 400 }
       );
+    }
+
+    // 認証チェック（審判トークンまたは管理者）
+    const session = await auth();
+
+    // 期限切れチェック（試合結果入力）- 管理者のみチェック（審判トークンは除外）
+    if (session && session.user.role === 'admin') {
+      const permissionCheck = await checkTrialExpiredPermission(
+        session.user.id,
+        'canManageResults'
+      );
+
+      if (!permissionCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: permissionCheck.reason,
+            trialExpired: true
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const { action, updated_by, current_period, team1_scores, team2_scores, winner_team_id, remarks } = body;

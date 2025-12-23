@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const tournamentGroupSchema = z.object({
   group_name: z.string().min(1, '大会名は必須です').max(100, '大会名は100文字以内で入力してください'),
@@ -42,6 +44,11 @@ export default function TournamentGroupCreateForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [planLimitError, setPlanLimitError] = useState<{
+    message: string;
+    current: number;
+    limit: number;
+  } | null>(null);
 
   const {
     register,
@@ -76,6 +83,7 @@ export default function TournamentGroupCreateForm() {
   const onSubmit = async (data: TournamentGroupFormData) => {
     setIsSubmitting(true);
     setError(null);
+    setPlanLimitError(null);
 
     try {
       const response = await fetch('/api/tournament-groups', {
@@ -94,6 +102,13 @@ export default function TournamentGroupCreateForm() {
       if (result.success) {
         // 大会詳細画面にリダイレクト
         router.push(`/admin/tournament-groups/${result.data.group_id}`);
+      } else if (result.planLimitExceeded) {
+        // プラン制限エラー
+        setPlanLimitError({
+          message: result.error,
+          current: result.current,
+          limit: result.limit,
+        });
       } else {
         setError(result.error || '大会の作成に失敗しました');
       }
@@ -109,6 +124,35 @@ export default function TournamentGroupCreateForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* プラン制限エラー表示 */}
+      {planLimitError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>大会作成数が上限に達しました</AlertTitle>
+          <AlertDescription className="mt-2 space-y-2">
+            <p>{planLimitError.message}</p>
+            <p className="text-sm">
+              現在: {planLimitError.current}大会 / 上限: {planLimitError.limit}大会
+            </p>
+            <Button
+              type="button"
+              onClick={() => router.push('/admin/subscription/plans')}
+              className="mt-2"
+            >
+              プランをアップグレード
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* 通常エラー表示 */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>基本情報</CardTitle>
