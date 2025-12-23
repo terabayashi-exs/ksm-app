@@ -85,12 +85,12 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
   
   // 認証チェック（チーム権限必須）
   if (!session || session.user.role !== 'team') {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/teams`)}`);
+    redirect(`/auth/team/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/teams`)}`);
   }
 
   const teamId = session.user.teamId;
   if (!teamId) {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/teams`)}`);
+    redirect(`/auth/team/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/teams`)}`);
   }
 
   // 大会情報取得

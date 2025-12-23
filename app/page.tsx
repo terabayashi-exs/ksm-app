@@ -92,10 +92,13 @@ export default async function Home() {
             ) : (
               <>
                 <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                  <Link href="/auth/login">ログイン</Link>
+                  <Link href="/auth/admin/login">管理者ログイン</Link>
+                </Button>
+                <Button asChild size="lg" className="bg-green-600 text-white hover:bg-green-700">
+                  <Link href="/auth/team/login">チーム代表者ログイン</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                  <Link href="/auth/register">チーム登録</Link>
+                  <Link href="/auth/register/email">チーム登録</Link>
                 </Button>
               </>
             )}

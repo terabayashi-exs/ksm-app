@@ -44,11 +44,11 @@ export default async function middleware(req: NextRequest) {
   if (isAdminRoute) {
     if (!isLoggedIn) {
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
+        new URL(`/auth/admin/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
       );
     }
     if (userRole !== "admin") {
-      return NextResponse.redirect(new URL("/auth/login", nextUrl));
+      return NextResponse.redirect(new URL("/auth/admin/login", nextUrl));
     }
   }
 
@@ -56,11 +56,11 @@ export default async function middleware(req: NextRequest) {
   if (isTeamRoute) {
     if (!isLoggedIn) {
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
+        new URL(`/auth/team/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
       );
     }
     if (userRole !== "team") {
-      return NextResponse.redirect(new URL("/auth/login", nextUrl));
+      return NextResponse.redirect(new URL("/auth/team/login", nextUrl));
     }
   }
 

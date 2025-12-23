@@ -176,7 +176,7 @@ export type PlayerRegisterForm = z.infer<typeof playerRegisterSchema>;
 // チーム登録時に選手も含むスキーマ
 export const teamWithPlayersRegisterSchema = teamRegisterSchema.extend({
   players: z.array(playerRegisterSchema)
-    .min(1, '最低1人の選手を登録してください')
+    .min(0, '選手は0人以上で登録してください')
     .max(20, '選手は最大20人まで登録可能です')
     .refine((players) => {
       // 背番号の重複チェック

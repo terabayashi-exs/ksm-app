@@ -140,12 +140,12 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
 
   // 認証チェック（チーム権限必須）
   if (!session || session.user.role !== 'team') {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/join`)}`);
+    redirect(`/auth/team/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/join`)}`);
   }
 
   const teamId = session.user.teamId;
   if (!teamId) {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/join`)}`);
+    redirect(`/auth/team/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/join`)}`);
   }
 
   // 大会情報取得（グループ情報含む）
