@@ -46,8 +46,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
       LEFT JOIN m_sport_types st ON tour.sport_type_id = st.sport_type_id
-      LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
-      LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
+      LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
+      LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
       LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -183,8 +183,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           COALESCE(t2.team_omission, mt2.team_omission) as team2_omission
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
+        LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
+        LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -285,8 +285,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           COALESCE(t2.team_omission, mt2.team_omission) as team2_omission
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_id = t1.team_id AND mb.tournament_id = t1.tournament_id AND t1.assigned_block = mb.block_name
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_id = t2.team_id AND mb.tournament_id = t2.tournament_id AND t2.assigned_block = mb.block_name
+        LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
+        LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
