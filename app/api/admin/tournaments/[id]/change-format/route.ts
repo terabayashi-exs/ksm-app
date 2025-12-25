@@ -180,6 +180,67 @@ export async function PUT(
       );
     }
 
+    // 新しいフォーマットのday_number最大値を取得
+    const newTemplates = await db.execute(`
+      SELECT MAX(day_number) as max_day_number
+      FROM m_match_templates
+      WHERE format_id = ?
+    `, [new_format_id]);
+
+    const maxDayNumber = Number(newTemplates.rows[0]?.max_day_number || 1);
+
+    // 大会の開催日程を自動調整
+    const existingTournamentDates = JSON.parse(String(tournament.tournament_dates || '{}'));
+    const providedDays = Object.keys(existingTournamentDates).map(Number).sort((a, b) => a - b);
+    const maxProvidedDay = Math.max(...providedDays, 0);
+
+    const adjustedTournamentDates: Record<string, string> = {};
+    let datesAdjusted = false;
+    let datesAdded = 0;
+    let datesRemoved = 0;
+
+    // 必要な日数分のみを保持（余分な日は削除）
+    for (let i = 1; i <= maxDayNumber; i++) {
+      if (existingTournamentDates[i.toString()]) {
+        // 既存の日付をそのまま使用
+        adjustedTournamentDates[i.toString()] = existingTournamentDates[i.toString()];
+      } else {
+        // 不足している日を追加
+        const previousDate = adjustedTournamentDates[(i - 1).toString()] ||
+                           existingTournamentDates[(i - 1).toString()] ||
+                           new Date().toISOString().split('T')[0];
+        const baseDate = new Date(previousDate);
+        baseDate.setDate(baseDate.getDate() + 1);
+        adjustedTournamentDates[i.toString()] = baseDate.toISOString().split('T')[0];
+        datesAdjusted = true;
+        datesAdded++;
+      }
+    }
+
+    // 余分な日数を削除
+    const removedDays: number[] = [];
+    for (let i = maxDayNumber + 1; i <= maxProvidedDay; i++) {
+      if (existingTournamentDates[i.toString()]) {
+        removedDays.push(i);
+        datesRemoved++;
+        datesAdjusted = true;
+      }
+    }
+
+    // 調整後の開催日程をデータベースに保存
+    if (datesAdjusted) {
+      await db.execute(`
+        UPDATE t_tournaments SET
+          tournament_dates = ?,
+          updated_at = datetime('now', '+9 hours')
+        WHERE tournament_id = ?
+      `, [JSON.stringify(adjustedTournamentDates), tournamentId]);
+
+      console.log(`   ✅ 開催日程を自動調整しました:`);
+      console.log(`      追加: ${datesAdded}日, 削除: ${datesRemoved}日 (day ${removedDays.join(', ')})`);
+      console.log(`      調整後: ${JSON.stringify(adjustedTournamentDates)}`);
+    }
+
     console.log(`✅ Format change validation passed`);
     console.log(`   Tournament: ${tournament.tournament_name} (ID: ${tournamentId})`);
     console.log(`   Old Format: ${tournament.current_format_name} (ID: ${oldFormatId})`);
@@ -367,9 +428,28 @@ export async function PUT(
 
     console.log(`   ✅ Recreated ${createdBlocks} blocks and ${createdMatches} matches`);
 
+    // 成功メッセージの構築
+    let successMessage = `フォーマット変更が完了しました。新しいフォーマットで${createdBlocks}ブロック、${createdMatches}試合が作成されました。`;
+
+    if (datesAdjusted) {
+      const adjustedDaysCount = Object.keys(adjustedTournamentDates).length;
+      successMessage += `\n\n⚠️ フォーマット変更により開催日数が${adjustedDaysCount}日間に自動調整されました。`;
+
+      if (datesAdded > 0) {
+        successMessage += `\n  - ${datesAdded}日分の開催日を追加しました。`;
+      }
+      if (datesRemoved > 0) {
+        successMessage += `\n  - 余分な開催日（day ${removedDays.join(', ')}）を削除しました。`;
+      }
+
+      successMessage += `\n\n部門編集画面で日程を確認・調整してください。`;
+    }
+
+    successMessage += '\n\n組合せ抽選画面からチームを配置してください。';
+
     return NextResponse.json({
       success: true,
-      message: `フォーマット変更が完了しました。新しいフォーマットで${createdBlocks}ブロック、${createdMatches}試合が作成されました。組合せ抽選画面からチームを配置してください。`,
+      message: successMessage,
       data: {
         tournament_id: tournamentId,
         tournament_name: String(tournament.tournament_name),
@@ -378,6 +458,8 @@ export async function PUT(
         new_format_id: new_format_id,
         new_format_name: String(newFormat.rows[0].format_name),
         target_team_count: Number(newFormat.rows[0].target_team_count),
+        dates_adjusted: datesAdjusted,
+        adjusted_tournament_dates: datesAdjusted ? adjustedTournamentDates : undefined,
         deleted_data: {
           matches_final: deletedFinalCount,
           matches_live: Number(deletedLiveMatches.rowsAffected || 0),

@@ -238,17 +238,64 @@ export async function PUT(
       tournamentId
     ]);
 
+    // 試合日付の再計算（開催日程変更に対応）
+    try {
+      // フォーマットIDを取得
+      const formatResult = await db.execute(`
+        SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      `, [tournamentId]);
+
+      if (formatResult.rows.length > 0) {
+        const formatId = Number(formatResult.rows[0].format_id);
+
+        // 日付マッピングを作成
+        const dateMapping = data.tournament_dates.reduce((acc, td) => {
+          acc[td.dayNumber] = td.date;
+          return acc;
+        }, {} as Record<number, string>);
+
+        // すべての試合のtournament_dateを再計算
+        const matchesResult = await db.execute(`
+          SELECT ml.match_id, ml.match_code, mt.day_number
+          FROM t_matches_live ml
+          INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+          WHERE mb.tournament_id = ?
+        `, [formatId, tournamentId]);
+
+        let updatedCount = 0;
+        for (const match of matchesResult.rows) {
+          const dayNumber = Number(match.day_number || 1);
+          const tournamentDate = dateMapping[dayNumber];
+
+          if (tournamentDate) {
+            await db.execute(`
+              UPDATE t_matches_live
+              SET tournament_date = ?
+              WHERE match_id = ?
+            `, [tournamentDate, match.match_id]);
+            updatedCount++;
+          }
+        }
+
+        console.log(`[TOURNAMENT_EDIT] 試合日付を再計算: ${updatedCount}件更新`);
+      }
+    } catch (dateUpdateError) {
+      console.error('[TOURNAMENT_EDIT] 試合日付の再計算エラー:', dateUpdateError);
+      // エラーが発生しても処理は続行（試合日付の更新は補助的な処理）
+    }
+
     // スケジュール再計算と更新
     try {
       const customMatches = (body as { customMatches?: Array<{ match_id: number; start_time: string; court_number: number; }> }).customMatches || [];
       const typedCustomMatches = customMatches as Array<{
         match_id: number;
-        start_time: string; 
+        start_time: string;
         court_number: number;
       }> | undefined;
-      
+
       // Custom match data received for tournament update
-      
+
       if (typedCustomMatches && typedCustomMatches.length > 0) {
         // カスタムスケジュールが指定されている場合、それを適用
         // Applying custom schedule to matches

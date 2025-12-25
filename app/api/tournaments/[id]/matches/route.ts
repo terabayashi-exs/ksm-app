@@ -103,8 +103,9 @@ export async function GET(
         mb.block_name,
         mb.match_type,
         mb.block_order,
-        -- m_match_templatesからround_nameを取得
+        -- m_match_templatesからround_nameとday_numberを取得
         mt.round_name,
+        mt.day_number,
         -- 実際のチーム名を取得（tournament_team_idで一意に取得）
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,

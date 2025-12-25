@@ -229,74 +229,91 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     try {
       // Processing actual matches for schedule display
       // Actual matches loaded for display
-      
-      // 実際の試合データを日付別にグループ化してスケジュール形式に変換
-      const dateGroups = actualMatches.reduce((acc, match) => {
-        const date = match.tournament_date;
-        if (!acc[date]) {
-          acc[date] = [];
-        }
-        acc[date].push(match);
-        return acc;
-      }, {} as Record<string, typeof actualMatches>);
 
-      const days = Object.entries(dateGroups)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, matches], dayIndex) => {
-          const sortedMatches = matches.sort((a, b) => a.match_number - b.match_number);
-          
-          const scheduleMatches = sortedMatches.map(match => {
-            const startTime = match.scheduled_time || '--:--';
-            const endTime = match.scheduled_time ? 
-              minutesToTime(timeToMinutes(match.scheduled_time) + settings.matchDurationMinutes) : 
-              '--:--';
-            
-            // Processing match schedule data
-            
-            return {
-              template: {
-                template_id: match.match_number,
-                format_id: formatId || 0,
-                match_number: match.match_number,
-                match_code: match.match_code,
-                match_type: match.match_type,
-                phase: match.phase,
-                round_name: match.display_round_name,
-                block_name: match.block_name || undefined,
-                team1_source: match.team1_id || undefined,
-                team2_source: match.team2_id || undefined,
-                team1_display_name: match.team1_name || match.team1_display_name,
-                team2_display_name: match.team2_name || match.team2_display_name,
-                day_number: dayIndex + 1,
-                execution_priority: match.match_number,
-                created_at: ''
-              },
-              date: date,
-              startTime: startTime,
-              endTime: endTime,
-              courtNumber: match.court_number || 1,
-              timeSlot: match.match_number
-            };
-          });
+      // デバッグ: 最初の3試合のday_number確認
+      console.log('[SchedulePreview] Debug: First 3 matches with day_number:');
+      actualMatches.slice(0, 3).forEach((match, idx) => {
+        const dayNum = (match as Record<string, unknown>).day_number;
+        console.log(`  Match ${idx}: code=${match.match_code}, block=${match.block_name}, day_number=${dayNum}, tournament_date=${match.tournament_date}`);
+      });
+      console.log('[SchedulePreview] settings.tournamentDates:', settings.tournamentDates);
 
-          // その日の総所要時間を計算
-          const dayStartTime = scheduleMatches.length > 0 
-            ? Math.min(...scheduleMatches.map(m => timeToMinutes(m.startTime)))
-            : timeToMinutes(settings.startTime);
-          const dayEndTime = scheduleMatches.length > 0 
-            ? Math.max(...scheduleMatches.map(m => timeToMinutes(m.endTime)))
-            : timeToMinutes(settings.startTime);
-          const dayDuration = minutesToTime(dayEndTime - dayStartTime);
+      // settings.tournamentDatesに基づいて日付の枠を作成し、
+      // テンプレートのday_numberを使って試合を適切な日付に配置
+      const days = (settings.tournamentDates || []).map((tournamentDate) => {
+        const dayNumber = tournamentDate.dayNumber;
+        const date = tournamentDate.date;
+
+        console.log(`[SchedulePreview] Processing day ${dayNumber} (${date})`);
+
+        // このday_numberに該当する試合を抽出
+        // APIから取得したday_number、または既存のtournament_dateから判定
+        const matchesForDay = actualMatches.filter(match => {
+          // APIから取得したday_numberを優先的に使用
+          const matchDayNumber = (match as Record<string, unknown>).day_number as number | undefined;
+          if (matchDayNumber) {
+            return matchDayNumber === dayNumber;
+          }
+          // day_numberがない場合は、tournament_dateで判定（後方互換性）
+          return match.tournament_date === date;
+        });
+
+        console.log(`[SchedulePreview] Day ${dayNumber}: Found ${matchesForDay.length} matches`);
+
+        const sortedMatches = matchesForDay.sort((a, b) => a.match_number - b.match_number);
+
+        const scheduleMatches = sortedMatches.map(match => {
+          const startTime = match.scheduled_time || '--:--';
+          const endTime = match.scheduled_time ?
+            minutesToTime(timeToMinutes(match.scheduled_time) + settings.matchDurationMinutes) :
+            '--:--';
+
+          // Processing match schedule data
 
           return {
+            template: {
+              template_id: match.match_number,
+              format_id: formatId || 0,
+              match_number: match.match_number,
+              match_code: match.match_code,
+              match_type: match.match_type,
+              phase: match.phase,
+              round_name: match.display_round_name,
+              block_name: match.block_name || undefined,
+              team1_source: match.team1_id || undefined,
+              team2_source: match.team2_id || undefined,
+              team1_display_name: match.team1_name || match.team1_display_name,
+              team2_display_name: match.team2_name || match.team2_display_name,
+              day_number: dayNumber,
+              execution_priority: match.match_number,
+              created_at: ''
+            },
             date: date,
-            dayNumber: dayIndex + 1,
-            matches: scheduleMatches,
-            totalDuration: dayDuration,
-            requiredCourts: Math.max(...scheduleMatches.map(m => m.courtNumber)),
-            timeSlots: scheduleMatches.length
+            startTime: startTime,
+            endTime: endTime,
+            courtNumber: match.court_number || 1,
+            timeSlot: match.match_number
           };
         });
+
+        // その日の総所要時間を計算
+        const dayStartTime = scheduleMatches.length > 0
+          ? Math.min(...scheduleMatches.map(m => timeToMinutes(m.startTime)))
+          : timeToMinutes(settings.startTime);
+        const dayEndTime = scheduleMatches.length > 0
+          ? Math.max(...scheduleMatches.map(m => timeToMinutes(m.endTime)))
+          : timeToMinutes(settings.startTime);
+        const dayDuration = minutesToTime(dayEndTime - dayStartTime);
+
+        return {
+          date: date,
+          dayNumber: dayNumber,
+          matches: scheduleMatches,
+          totalDuration: dayDuration,
+          requiredCourts: scheduleMatches.length > 0 ? Math.max(...scheduleMatches.map(m => m.courtNumber)) : 1,
+          timeSlots: scheduleMatches.length
+        };
+      });
 
       // 全体の総所要時間を計算（すべての日の最早開始時刻から最遅終了時刻まで）
       let overallStartTime = Infinity;
@@ -349,7 +366,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setError('試合データの処理エラー');
       console.error('試合データ処理エラー:', err);
     }
-  }, [actualMatches, editMode, formatId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [actualMatches, editMode, formatId, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 初期データ通知用のuseEffect（無限ループ対策）
   useEffect(() => {
@@ -941,8 +958,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Calendar className="w-5 h-5 mr-2" />
-                    開催日 {day.dayNumber}: {new Date(day.date).toLocaleDateString('ja-JP', { 
-                      month: 'short', 
+                    {displaySchedule.days.length > 1 ? `開催日${day.dayNumber}：` : '開催日：'}{new Date(day.date).toLocaleDateString('ja-JP', {
+                      month: 'long',
                       day: 'numeric',
                       weekday: 'short'
                     })}
