@@ -208,8 +208,8 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
             <Home className="h-4 w-4" />
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <Link href="/public/tournaments" className="hover:text-foreground transition-colors">
-            大会一覧
+          <Link href="/team" className="hover:text-foreground transition-colors">
+            チームダッシュボード
           </Link>
           {group && (
             <>
