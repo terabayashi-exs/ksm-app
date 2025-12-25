@@ -282,6 +282,80 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       return;
     }
 
+    // フォーマットに必要な開催日数をチェック（警告のみ、保存は許可）
+    try {
+      const templateResponse = await fetch(`/api/tournaments/formats/${tournament.format_id}/templates`);
+      const templateResult = await templateResponse.json();
+
+      if (templateResult.success && templateResult.data.statistics) {
+        const maxDayNumber = templateResult.data.statistics.maxDayNumber || 1;
+        const requiredDays = templateResult.data.statistics.requiredDays || 1;
+
+        // 開催日数の検証（警告のみ）
+        const providedDayNumbers = data.tournament_dates.map(d => d.dayNumber);
+        const maxProvidedDay = Math.max(...providedDayNumbers);
+
+        if (maxProvidedDay < maxDayNumber) {
+          // 警告を表示するが、保存は許可する
+          const proceed = confirm(
+            `⚠️ 警告\n\n` +
+            `現在のフォーマットは${requiredDays}日間の開催が必要です（day ${maxDayNumber}まで）。\n` +
+            `開催日程は${maxProvidedDay}日分しか登録されていません。\n\n` +
+            `このまま保存すると、day ${maxProvidedDay + 1}以降の試合が最終日（day ${maxProvidedDay}）に配置されます。\n\n` +
+            `続行しますか？`
+          );
+
+          if (!proceed) {
+            setLoading(false);
+            return;
+          }
+        }
+
+        // day_numberに抜けがある場合も警告（保存は許可）
+        const missingDays = [];
+        for (let i = 1; i <= maxDayNumber; i++) {
+          if (!providedDayNumbers.includes(i)) {
+            missingDays.push(i);
+          }
+        }
+
+        if (missingDays.length > 0) {
+          const proceed = confirm(
+            `⚠️ 警告\n\n` +
+            `開催日程にday ${missingDays.join(', ')}が登録されていません。\n` +
+            `フォーマットに必要な全ての日程（day 1〜${maxDayNumber}）を登録することを推奨します。\n\n` +
+            `このまま保存すると、不足している日の試合が他の日に配置される可能性があります。\n\n` +
+            `続行しますか？`
+          );
+
+          if (!proceed) {
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 余分な開催日がある場合も警告（保存は許可）
+        const extraDays = providedDayNumbers.filter(day => day > maxDayNumber);
+        if (extraDays.length > 0) {
+          const proceed = confirm(
+            `⚠️ 警告\n\n` +
+            `現在のフォーマットは${requiredDays}日間（day ${maxDayNumber}まで）の開催ですが、\n` +
+            `day ${extraDays.join(', ')}が登録されています。\n\n` +
+            `これらの日には試合が配置されません（余分な開催日）。\n\n` +
+            `続行しますか？`
+          );
+
+          if (!proceed) {
+            setLoading(false);
+            return;
+          }
+        }
+      }
+    } catch (templateError) {
+      console.error('テンプレート情報の取得に失敗:', templateError);
+      // テンプレート情報の取得に失敗しても処理は続行（警告のみ）
+    }
+
     try {
       // カスタムスケジュールが設定されていない場合は既存の試合時間を保持
       const finalCustomMatches = customMatches.length > 0 ? customMatches : currentMatches;

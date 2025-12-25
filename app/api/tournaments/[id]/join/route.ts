@@ -528,6 +528,21 @@ async function handleTournamentJoin(
     console.log('Email sending check:', { actualEditMode, willSendEmail: !actualEditMode });
     if (!actualEditMode) {
       try {
+        // 環境変数の確認ログ（本番環境デバッグ用）
+        console.log('🔍 SMTP環境変数チェック:', {
+          hasHost: !!process.env.SMTP_HOST,
+          host: process.env.SMTP_HOST,
+          hasPort: !!process.env.SMTP_PORT,
+          port: process.env.SMTP_PORT,
+          hasUser: !!process.env.SMTP_USER,
+          userPrefix: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 5) + '***' : 'undefined',
+          hasPassword: !!process.env.SMTP_PASSWORD,
+          passwordLength: process.env.SMTP_PASSWORD ? process.env.SMTP_PASSWORD.length : 0,
+          hasFromEmail: !!process.env.SMTP_FROM_EMAIL,
+          fromEmail: process.env.SMTP_FROM_EMAIL,
+          nodeEnv: process.env.NODE_ENV
+        });
+
         // チーム代表者のメールアドレスを取得
         const teamInfoResult = await db.execute(`
           SELECT contact_email, team_name
@@ -538,6 +553,11 @@ async function handleTournamentJoin(
         if (teamInfoResult.rows.length > 0) {
           const teamInfo = teamInfoResult.rows[0];
           const contactEmail = String(teamInfo.contact_email);
+
+          console.log('📧 メール送信先:', {
+            to: contactEmail,
+            teamName: teamInfo.team_name
+          });
 
           // 大会日程を整形
           let tournamentDateStr = '未定';
@@ -614,7 +634,38 @@ async function handleTournamentJoin(
       } catch (emailError) {
         // メール送信エラーは処理を中断せずにログのみ出力
         console.error('❌ Failed to send confirmation email:', emailError);
-        // エラーが発生してもユーザーには成功として返す（メールは補助的な機能）
+
+        // エラー詳細をレスポンスに含める（デバッグ用 - 本番でも一時的に有効化）
+        const emailErrorObj = emailError as Record<string, unknown>;
+        const errorDetails = {
+          errorMessage: emailError instanceof Error ? emailError.message : String(emailError),
+          errorType: emailError?.constructor?.name,
+          // nodemailerエラーの詳細情報
+          code: emailErrorObj?.code as string | undefined,
+          command: emailErrorObj?.command as string | undefined,
+          response: emailErrorObj?.response as string | undefined,
+        };
+
+        console.error('📧 Email error details:', errorDetails);
+
+        return NextResponse.json({
+          success: true, // 参加登録自体は成功
+          warning: 'メール送信に失敗しました',
+          emailError: errorDetails,
+          message: actualEditMode
+            ? '参加選手の変更が完了しました（確認メール送信失敗）'
+            : '大会への参加申し込みが完了しました（確認メール送信失敗）',
+          data: {
+            tournament_id: tournamentId,
+            tournament_name: String(tournament.tournament_name),
+            tournament_team_id: Number(tournamentTeamId),
+            tournament_team_name: data.tournament_team_name,
+            tournament_team_omission: data.tournament_team_omission,
+            players_count: data.players.length,
+            is_edit_mode: actualEditMode,
+            is_new_team_mode: newTeamModeFromData
+          }
+        });
       }
     }
 

@@ -291,17 +291,55 @@ export default function TournamentCreateNewForm() {
   const handleFormatSelect = async (formatId: number) => {
     const allFormats = [...(recommendation?.recommendedFormats || []), ...(recommendation?.allFormats || [])];
     const format = allFormats.find(f => f.format_id === formatId);
-    
+
     setSelectedFormat(format || null);
     setValue("format_id", formatId);
-    
-    // 開催日を自動設定
-    const baseDates = [{
-      dayNumber: 1,
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    }];
-    setValue('tournament_dates', baseDates);
-    
+
+    // フォーマットのテンプレート情報を取得して必要な開催日数を確認
+    try {
+      const response = await fetch(`/api/tournaments/formats/${formatId}/templates`);
+      const result = await response.json();
+
+      if (result.success && result.data.statistics) {
+        const requiredDays = result.data.statistics.requiredDays || 1;
+        const maxDayNumber = result.data.statistics.maxDayNumber || 1;
+
+        // 必要な日数分の開催日を自動生成
+        const baseDates = [];
+        const baseDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        for (let i = 1; i <= maxDayNumber; i++) {
+          const date = new Date(baseDate);
+          date.setDate(baseDate.getDate() + (i - 1));
+          baseDates.push({
+            dayNumber: i,
+            date: date.toISOString().split('T')[0]
+          });
+        }
+
+        setValue('tournament_dates', baseDates);
+
+        if (requiredDays > 1) {
+          console.log(`フォーマットID ${formatId} は ${requiredDays}日間の開催が必要です`);
+        }
+      } else {
+        // テンプレート情報が取得できない場合は1日のみ
+        const baseDates = [{
+          dayNumber: 1,
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        }];
+        setValue('tournament_dates', baseDates);
+      }
+    } catch (error) {
+      console.error('テンプレート情報の取得に失敗:', error);
+      // エラー時は1日のみ
+      const baseDates = [{
+        dayNumber: 1,
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      }];
+      setValue('tournament_dates', baseDates);
+    }
+
     setStep('details');
   };
 
@@ -310,6 +348,41 @@ export default function TournamentCreateNewForm() {
     setIsSubmitting(true);
 
     try {
+      // フォーマットに必要な開催日数をチェック
+      const templateResponse = await fetch(`/api/tournaments/formats/${data.format_id}/templates`);
+      const templateResult = await templateResponse.json();
+
+      if (templateResult.success && templateResult.data.statistics) {
+        const maxDayNumber = templateResult.data.statistics.maxDayNumber || 1;
+        const requiredDays = templateResult.data.statistics.requiredDays || 1;
+
+        // 開催日数の検証
+        const providedDayNumbers = data.tournament_dates.map(d => d.dayNumber);
+        const maxProvidedDay = Math.max(...providedDayNumbers);
+
+        if (maxProvidedDay < maxDayNumber) {
+          alert(
+            `選択したフォーマットは${requiredDays}日間の開催が必要です（day ${maxDayNumber}まで）。\n` +
+            `現在の開催日程は${maxProvidedDay}日分しか登録されていません。\n\n` +
+            `開催日程を追加してください。`
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
+        // day_numberに抜けがないかチェック
+        for (let i = 1; i <= maxDayNumber; i++) {
+          if (!providedDayNumbers.includes(i)) {
+            alert(
+              `開催日程にday ${i}が登録されていません。\n` +
+              `フォーマットに必要な全ての日程（day 1〜${maxDayNumber}）を登録してください。`
+            );
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+
       // tournament_datesをJSON形式に変換
       const tournamentDatesJson: Record<string, string> = {};
       data.tournament_dates.forEach((dateInfo) => {
