@@ -276,39 +276,18 @@ function TeamRegisterForm() {
                 <Input
                   id="team_name"
                   type="text"
-                  placeholder="例: サッカークラブA"
+                  placeholder="例: サッカークラブ"
                   {...form.register('team_name')}
                   className={form.formState.errors.team_name ? 'border-red-500' : ''}
                 />
+                <p className="text-xs text-muted-foreground">
+                  ※ これは管理用の名称です。大会に参加する際には、別途参加チーム名とチーム略称を登録する必要があります。
+                </p>
                 {form.formState.errors.team_name && (
                   <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                     <p className="text-sm text-red-600 dark:text-red-400">
                       {form.formState.errors.team_name.message}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* チーム略称 */}
-              <div className="space-y-2">
-                <Label htmlFor="team_omission">チーム略称</Label>
-                <Input
-                  id="team_omission"
-                  type="text"
-                  placeholder="例: SCA"
-                  maxLength={5}
-                  {...form.register('team_omission')}
-                  className={form.formState.errors.team_omission ? 'border-red-500' : ''}
-                />
-                <p className="text-xs text-muted-foreground">
-                  トーナメント表などで表示される短縮名です（5文字以内、任意）
-                </p>
-                {form.formState.errors.team_omission && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.team_omission.message}
                     </p>
                   </div>
                 )}
@@ -454,7 +433,7 @@ function TeamRegisterForm() {
                 </div>
 
                 <div className="space-y-4">
-                  {watchedPlayers?.map((player, index) => (
+                  {watchedPlayers?.map((_, index) => (
                     <Card key={index} className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-medium text-sm">選手 {index + 1}</h4>
