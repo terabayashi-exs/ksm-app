@@ -9,8 +9,9 @@ export const runtime = 'nodejs';
 export async function GET() {
   try {
     const session = await auth();
-    
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+
+    // admin roleを持つユーザー（システム管理者または大会運営者）のみアクセス可能
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
