@@ -53,7 +53,6 @@ const formSchema = z.object({
   tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
   tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(5, 'チーム略称は5文字以内で入力してください'),
   players: z.array(playerSchema)
-    .min(1, '最低1人の選手が必要です')
     .max(20, '選手は最大20人まで登録可能です')
     .refine((players) => {
       // 選手名の重複チェック（参加する選手のみ）
@@ -346,6 +345,9 @@ export default function TournamentJoinForm({
                 {...control.register('tournament_team_omission')}
                 placeholder={isNewTeamMode ? "例: SPB" : "例: SPA"}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                全角4文字以内で入力してください
+              </p>
               {errors.tournament_team_omission && (
                 <p className="text-sm text-red-600 mt-1">{errors.tournament_team_omission.message}</p>
               )}
@@ -553,7 +555,7 @@ export default function TournamentJoinForm({
         <Button
           type="submit"
           variant="outline"
-          disabled={loading || fields.length === 0}
+          disabled={loading}
         >
           {loading
             ? (isEditMode ? '保存中...' : (isNewTeamMode ? '追加申し込み中...' : '申し込み中...'))
