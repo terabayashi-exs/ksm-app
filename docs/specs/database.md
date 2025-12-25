@@ -19,7 +19,7 @@
 - `m_sport_types` - 競技種別マスター（PK戦、ハンドボール等）
 - `m_tournament_groups` - 大会グループマスター（大会分類用）
 
-#### トランザクションテーブル (20テーブル)
+#### トランザクションテーブル (21テーブル)
 - `t_tournaments` - 大会情報
 - `t_tournament_teams` - 大会参加チーム（`participation_status`カラム追加: 2025-12-19）
 - `t_tournament_players` - 大会参加選手
@@ -34,6 +34,7 @@
 - `t_tournament_match_overrides` - 試合進出条件オーバーライド
 - `t_tournament_notifications` - 大会通知情報
 - `t_email_send_history` - メール送信履歴（新規追加: 2025-12-19）
+- `t_email_verification_tokens` - メール認証トークン（新規追加: 2025-12-23）
 - `t_password_reset_tokens` - パスワードリセットトークン（新規追加: 2025-12-22）
 - `t_administrator_subscriptions` - 管理者サブスクリプション
 - `t_subscription_usage` - サブスクリプション使用状況

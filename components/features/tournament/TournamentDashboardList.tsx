@@ -157,8 +157,13 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
         const response = await fetch('/api/admin/tournament-formats');
         const result = await response.json();
 
+        console.log('Tournament formats API response:', result);
+
         if (result.success && result.formats) {
+          console.log('Setting available formats:', result.formats.length, 'formats');
           setAvailableFormats(result.formats);
+        } else {
+          console.error('Failed to load formats:', result);
         }
       } catch (err) {
         console.error('フォーマット取得エラー:', err);
@@ -272,19 +277,26 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
     setIsFormatChanging(true);
 
     try {
+      // デバッグ: 利用可能なフォーマットを確認
+      console.log('Available formats:', availableFormats);
+
       // 変更可否チェック
       const checkResult = await checkFormatChangeEligibility(tournament.tournament_id);
 
       if (checkResult.success && checkResult.data) {
         setFormatChangeCheckResult(checkResult.data);
 
+        console.log('Current format ID:', checkResult.data.current_format_id);
+
         // 現在のフォーマット以外を選択肢として表示
         const otherFormats = availableFormats.filter(
           f => f.format_id !== checkResult.data!.current_format_id
         );
 
+        console.log('Other formats:', otherFormats);
+
         if (otherFormats.length === 0) {
-          alert('変更可能な他のフォーマットが見つかりません。\n新しいフォーマットを作成してください。');
+          alert(`変更可能な他のフォーマットが見つかりません。\n\n利用可能なフォーマット数: ${availableFormats.length}\n現在のフォーマットID: ${checkResult.data.current_format_id}\n\n新しいフォーマットを作成するか、ページを再読み込みしてください。`);
           setIsFormatChanging(false);
           return;
         }
