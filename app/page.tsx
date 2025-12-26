@@ -77,14 +77,9 @@ export default async function Home() {
             {session?.user ? (
               <>
                 {session.user.role === "admin" ? (
-                  <>
-                    <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                      <Link href="/admin">管理者ダッシュボード</Link>
-                    </Button>
-                    <Button asChild size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                      <Link href="/public/tournaments">大会一覧を見る</Link>
-                    </Button>
-                  </>
+                  <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                    <Link href="/admin">管理者ダッシュボード</Link>
+                  </Button>
                 ) : (
                   <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
                     <Link href="/team">チームダッシュボード</Link>

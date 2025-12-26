@@ -34,7 +34,8 @@ export function generateCustomBroadcastEmail(data: {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
+    timeZone: 'Asia/Tokyo'
   });
   processedBody = processedBody.replace(/\[処理日時\]/g, processedDate);
 

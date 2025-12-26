@@ -192,12 +192,12 @@ export async function GET(
       };
     });
 
-    // 管理者メールアドレス取得（大会運営者として使用）
+    // 管理者メールアドレス取得（ログイン中の管理者のメールアドレス）
     let adminEmail: string | null = null;
     try {
       const adminResult = await db.execute(`
-        SELECT email FROM m_administrators LIMIT 1
-      `);
+        SELECT email FROM m_administrators WHERE admin_login_id = ?
+      `, [session.user.id]);
       if (adminResult.rows.length > 0) {
         adminEmail = String(adminResult.rows[0].email);
       }
@@ -383,13 +383,13 @@ export async function PUT(
               .replace(/{{tournamentName}}/g, String(team.tournament_name))
               .replace(/{{teamName}}/g, String(team.team_name))
               .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP'))
+              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
               .replace(/{{adminComment}}/g, admin_comment || ''),
             text: template.textBody
               .replace(/{{tournamentName}}/g, String(team.tournament_name))
               .replace(/{{teamName}}/g, String(team.team_name))
               .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP'))
+              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
               .replace(/{{adminComment}}/g, admin_comment || '')
           };
         }
@@ -419,13 +419,13 @@ export async function PUT(
               .replace(/{{tournamentName}}/g, String(team.tournament_name))
               .replace(/{{teamName}}/g, String(team.team_name))
               .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP'))
+              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
               .replace(/{{adminComment}}/g, admin_comment || ''),
             text: template.textBody
               .replace(/{{tournamentName}}/g, String(team.tournament_name))
               .replace(/{{teamName}}/g, String(team.team_name))
               .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP'))
+              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
               .replace(/{{adminComment}}/g, admin_comment || '')
           };
         }
