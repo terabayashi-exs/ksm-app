@@ -100,11 +100,11 @@ export async function POST(
           });
 
           await sendEmail({
-            to: fromEmail, // 自分宛（送信記録用）
+            to: team.contact_email as string, // 対象チームのメールアドレス
             subject: emailTemplate.subject,
             text: emailTemplate.text,
             html: emailTemplate.html,
-            bcc: [team.contact_email as string], // BCCで各チーム代表者に送信
+            bcc: [fromEmail], // BCCで運営アドレスに送信（送信記録用）
           });
 
           // メール送信履歴を記録

@@ -51,7 +51,7 @@ export default function EmailSendPage() {
 
   // フィルタリング用のステート
   const [filterStatus, setFilterStatus] = useState<string>('all'); // all, confirmed, waitlisted, cancelled
-  const [filterEmailSent, setFilterEmailSent] = useState<string>('all'); // all, sent, not_sent
+  const [filterEmailSent, setFilterEmailSent] = useState<string>('all'); // all, sent, not_sent, not_sent_{template_id}
 
   const MAX_SELECTION = 5;
 
@@ -114,6 +114,15 @@ export default function EmailSendPage() {
     }
     if (filterEmailSent === 'not_sent' && manualEmailHistory.length > 0) {
       return false;
+    }
+
+    // 特定のテンプレート未送信フィルタ
+    if (filterEmailSent.startsWith('not_sent_')) {
+      const templateId = filterEmailSent.replace('not_sent_', '');
+      const hasSent = team.email_history?.some(h => h.template_id === templateId) || false;
+      if (hasSent) {
+        return false;
+      }
     }
 
     return true;
@@ -412,8 +421,9 @@ export default function EmailSendPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all" className="text-sm">すべて</SelectItem>
-                        <SelectItem value="sent" className="text-sm">送信済み</SelectItem>
-                        <SelectItem value="not_sent" className="text-sm">未送信</SelectItem>
+                        <SelectItem value="not_sent_participationConfirmed" className="text-sm">参加確定通知 未送信</SelectItem>
+                        <SelectItem value="not_sent_participationNotSelected" className="text-sm">参加見送り通知 未送信</SelectItem>
+                        <SelectItem value="not_sent_tournamentClosing" className="text-sm">大会終了のお礼 未送信</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

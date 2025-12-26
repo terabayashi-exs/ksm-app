@@ -28,7 +28,7 @@ ${data.categoryName ? `部門名: ${data.categoryName}` : ''}
 開催日: ${data.tournamentDate}
 ${data.venueName ? `会場: ${data.venueName}` : ''}
 登録選手数: ${data.playerCount}名
-申請日時: ${new Date().toLocaleString('ja-JP')}
+申請日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 今後の流れ
@@ -214,7 +214,7 @@ ${data.contactEmail}
         </div>
         <div class="info-row">
           <span class="info-label">申請日時:</span>
-          <span class="info-value">${new Date().toLocaleString('ja-JP')}</span>
+          <span class="info-value">${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
         </div>
       </div>
 

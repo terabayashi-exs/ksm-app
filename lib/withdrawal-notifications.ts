@@ -60,7 +60,8 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Asia/Tokyo'
       }),
       tournamentDate: teamInfo.tournament_dates ? formatTournamentDates(teamInfo.tournament_dates) : undefined,
       venueInfo: teamInfo.venue_name || undefined,
