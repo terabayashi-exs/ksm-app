@@ -33,11 +33,42 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-6">
             このシステムは大会運営の効率化を目的として開発されました。
             <br />
             ご質問やサポートが必要な場合は、管理者にお問い合わせください。
           </p>
+
+          {/* 運営・開発ロゴ */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>運営・お問い合せ:</span>
+              <a
+                href="https://www.toyama-koueki.co.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block transition-opacity hover:opacity-70"
+              >
+                <Image
+                  src="/images/kouekilogo.png"
+                  alt="富山交易株式会社"
+                  width={378}
+                  height={60}
+                  className="h-10 w-auto object-contain"
+                />
+              </a>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>開発:</span>
+              <Image
+                src="/images/aslogo.png"
+                alt="A&S.IT"
+                width={122}
+                height={60}
+                className="h-10 w-auto object-contain"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </footer>
