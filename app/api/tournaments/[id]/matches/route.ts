@@ -103,9 +103,12 @@ export async function GET(
         mb.block_name,
         mb.match_type,
         mb.block_order,
-        -- m_match_templatesからround_nameとday_numberを取得
+        -- m_match_templatesからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
         mt.round_name,
         mt.day_number,
+        mt.team1_source,
+        mt.team2_source,
+        mt.is_bye_match,
         -- 実際のチーム名を取得（tournament_team_idで一意に取得）
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
@@ -197,7 +200,13 @@ export async function GET(
         round_name: row.round_name ? String(row.round_name) : null,
         block_name: row.block_name ? String(row.block_name) : null,
         match_type: String(row.match_type),
-        block_order: Number(row.block_order)
+        block_order: Number(row.block_order),
+        // テンプレート情報（不戦勝対応）
+        team1_source: row.team1_source ? String(row.team1_source) : null,
+        team2_source: row.team2_source ? String(row.team2_source) : null,
+        is_bye_match: row.is_bye_match ? Number(row.is_bye_match) : 0,
+        team1_display_name: String(row.team1_display_name || ''),
+        team2_display_name: String(row.team2_display_name || '')
       };
     });
 

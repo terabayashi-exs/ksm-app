@@ -43,8 +43,8 @@ interface TournamentFormatEditFormProps {
     block_name?: string;
     team1_source?: string;
     team2_source?: string;
-    team1_display_name: string;
-    team2_display_name: string;
+    team1_display_name: string;  // 空文字列許容（不戦勝試合対応）
+    team2_display_name: string;  // 空文字列許容（不戦勝試合対応）
     day_number: number;
     execution_priority: number;
     court_number?: number;
@@ -80,8 +80,8 @@ interface MatchTemplate {
   block_name: string;
   team1_source: string;
   team2_source: string;
-  team1_display_name: string;
-  team2_display_name: string;
+  team1_display_name: string;  // 空文字列許容（不戦勝試合対応）
+  team2_display_name: string;  // 空文字列許容（不戦勝試合対応）
   day_number: number;
   execution_priority: number;
   court_number?: number;
@@ -277,12 +277,22 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
     }
 
     setIsSubmitting(true);
-    
+
     try {
+      // 前後の空白をトリミング（不戦勝試合は空文字列のまま）
+      const processedData = {
+        ...data,
+        templates: data.templates.map(template => ({
+          ...template,
+          team1_display_name: template.team1_display_name?.trim() || "",
+          team2_display_name: template.team2_display_name?.trim() || "",
+        }))
+      };
+
       const response = await fetch(`/api/admin/tournament-formats/${format.format_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(processedData)
       });
 
       const result = await response.json();
@@ -500,6 +510,18 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* 不戦勝試合の説明 */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800 font-medium mb-1">💡 不戦勝試合について</p>
+              <p className="text-xs text-blue-700">
+                チーム数が2のべき乗でない場合（例: 5チーム）、不戦勝試合を設定できます。
+                <br />
+                <strong>チーム1表示名</strong>または<strong>チーム2表示名</strong>のどちらか一方を<strong>空欄</strong>にすると、自動的に不戦勝試合として扱われます。
+                <br />
+                不戦勝試合ではコート番号は自動的にNULLに設定されます。
+              </p>
+            </div>
+
             {errors.templates && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600 flex items-center">
@@ -519,8 +541,18 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">フェーズ</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">ラウンド名</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">ブロック名</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム1表示名</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム2表示名</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      チーム1表示名
+                      <div className="text-[10px] normal-case font-normal text-gray-400 mt-0.5">
+                        不戦勝の場合は空欄可
+                      </div>
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      チーム2表示名
+                      <div className="text-[10px] normal-case font-normal text-gray-400 mt-0.5">
+                        不戦勝の場合は空欄可
+                      </div>
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム1ソース</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム2ソース</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">日付番号</th>
@@ -606,15 +638,15 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team1_display_name`)}
-                          className={errors.templates?.[index]?.team1_display_name ? "border-red-500 w-32" : "w-32"}
-                          placeholder="A1チーム"
+                          className={errors.templates?.[index]?.team1_display_name ? "border-red-500 w-40" : "w-40"}
+                          placeholder="A1チーム (空欄=不戦勝)"
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team2_display_name`)}
-                          className={errors.templates?.[index]?.team2_display_name ? "border-red-500 w-32" : "w-32"}
-                          placeholder="A2チーム"
+                          className={errors.templates?.[index]?.team2_display_name ? "border-red-500 w-40" : "w-40"}
+                          placeholder="A2チーム (空欄=不戦勝)"
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">

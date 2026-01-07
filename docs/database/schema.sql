@@ -72,11 +72,15 @@ CREATE TABLE IF NOT EXISTS m_match_templates (
     block_name TEXT,
     team1_source TEXT,
     team2_source TEXT,
-    team1_display_name TEXT NOT NULL,
-    team2_display_name TEXT NOT NULL,
+    team1_display_name TEXT,  -- NULL許容（不戦勝試合対応）
+    team2_display_name TEXT,  -- NULL許容（不戦勝試合対応）
     day_number INTEGER NOT NULL DEFAULT 1,
     execution_priority INTEGER NOT NULL DEFAULT 0,
+    court_number INTEGER,
+    suggested_start_time TEXT,
+    is_bye_match INTEGER DEFAULT 0 NOT NULL,  -- 0: 通常試合, 1: 不戦勝試合
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (format_id) REFERENCES m_tournament_formats(format_id)
 );
 

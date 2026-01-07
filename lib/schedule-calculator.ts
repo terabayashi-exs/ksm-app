@@ -326,10 +326,15 @@ function checkTimeConflicts(days: DaySchedule[]): TimeConflict[] {
     for (const match of matches) {
       const team1 = match.template.team1_display_name;
       const team2 = match.template.team2_display_name;
-      
+
+      // 不戦勝試合（team1またはteam2が空文字列）の場合はスキップ
+      if (!team1 || !team2 || team1.trim() === '' || team2.trim() === '') {
+        continue;
+      }
+
       if (!teamMatches[team1]) teamMatches[team1] = [];
       if (!teamMatches[team2]) teamMatches[team2] = [];
-      
+
       teamMatches[team1].push(match);
       teamMatches[team2].push(match);
     }
