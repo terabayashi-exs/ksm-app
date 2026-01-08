@@ -328,7 +328,10 @@ async function handleTournamentJoin(
     // 新チーム追加モードの場合は既存参加チェックをスキップ
     if (!actualEditMode && !newTeamModeFromData && alreadyJoined) {
       return NextResponse.json(
-        { success: false, error: '既にこの大会に参加申し込み済みです' },
+        {
+          success: false,
+          error: '既にこの大会に参加申し込み済みです。同じ大会に追加のチームで参加する場合は、チーム代表者ダッシュボード画面の「参加チームを追加する」ボタンから申し込んでください。'
+        },
         { status: 409 }
       );
     }
@@ -690,9 +693,23 @@ async function handleTournamentJoin(
 
   } catch (error) {
     console.error('Tournament join error:', error);
+
+    // UNIQUE制約エラーの場合の特別処理
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      if (error.message.includes('tournament_id') && error.message.includes('team_id')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: '既にこの大会に参加申し込み済みです。同じ大会に追加のチームで参加する場合は、チーム代表者ダッシュボード画面の「参加チームを追加する」ボタンから申し込んでください。'
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '大会参加申し込みに失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
