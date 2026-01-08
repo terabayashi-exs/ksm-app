@@ -64,11 +64,13 @@ export async function POST(
         m.contact_person,
         tt.participation_status,
         t.tournament_name,
-        tg.group_name
+        tg.group_name,
+        a.organization_name
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       WHERE tt.tournament_id = ? AND tt.tournament_team_id IN (${placeholders})
       `,
       [tournamentId, ...tournamentTeamIds]
@@ -78,7 +80,8 @@ export async function POST(
       return NextResponse.json({ error: '指定されたチームが見つかりません' }, { status: 404 });
     }
 
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com';
+    // 運営メールアドレス（BCC送信先）
+    const bccEmail = process.env.SMTP_BCC_EMAIL || 'rakusyo-mail@rakusyo-go.com';
 
     // {{teamName}} プレースホルダーが含まれているかチェック
     const hasTeamNamePlaceholder = emailBody.includes('{{teamName}}');
@@ -101,6 +104,7 @@ export async function POST(
             tournamentName: teamsResult.rows[0].tournament_name as string, // 部門名
             groupName: teamsResult.rows[0].group_name as string | undefined, // 大会名
             organizerEmail,
+            organizationName: teamsResult.rows[0].organization_name as string | undefined, // 大会管理者の組織名
             tournamentId,
           });
 
@@ -109,7 +113,7 @@ export async function POST(
             subject: emailTemplate.subject,
             text: emailTemplate.text,
             html: emailTemplate.html,
-            bcc: [fromEmail], // BCCで運営アドレスに送信（送信記録用）
+            bcc: [bccEmail], // BCCで運営アドレスに送信（送信記録用）
           });
 
           // メール送信履歴を記録
@@ -159,29 +163,41 @@ export async function POST(
         errors: errors.length > 0 ? errors : undefined,
       });
     } else {
-      // チーム名プレースホルダーがない場合：従来通りBCC一括送信（重複除去あり）
+      // チーム名プレースホルダーがない場合
       const emailTemplate = generateCustomBroadcastEmail({
         title,
         body: emailBody,
         tournamentName: teamsResult.rows[0].tournament_name as string, // 部門名
         groupName: teamsResult.rows[0].group_name as string | undefined, // 大会名
         organizerEmail,
+        organizationName: teamsResult.rows[0].organization_name as string | undefined, // 大会管理者の組織名
         tournamentId,
       });
 
-      // BCC用のメールアドレスリスト作成（重複除去）
-      const bccAddresses = [...new Set(
-        teamsResult.rows.map((row) => row.contact_email as string)
-      )];
+      // 送信先チーム数で送信方法を分岐
+      if (teamsResult.rows.length === 1) {
+        // 1件のみの場合：To = チーム代表者、BCC = 運営アドレス
+        await sendEmail({
+          to: teamsResult.rows[0].contact_email as string,
+          subject: emailTemplate.subject,
+          text: emailTemplate.text,
+          html: emailTemplate.html,
+          bcc: [bccEmail],
+        });
+      } else {
+        // 複数件の場合：To = 運営アドレス、BCC = チーム代表者（重複除去）
+        const bccAddresses = [...new Set(
+          teamsResult.rows.map((row) => row.contact_email as string)
+        )];
 
-      // メール送信
-      await sendEmail({
-        to: fromEmail, // 自分宛（送信記録用）
-        subject: emailTemplate.subject,
-        text: emailTemplate.text,
-        html: emailTemplate.html,
-        bcc: bccAddresses, // BCCで各チーム代表者に送信（重複除去済み）
-      });
+        await sendEmail({
+          to: bccEmail, // 運営アドレス
+          subject: emailTemplate.subject,
+          text: emailTemplate.text,
+          html: emailTemplate.html,
+          bcc: bccAddresses, // BCCで各チーム代表者に送信（重複除去済み）
+        });
+      }
 
       // メール送信履歴を記録（BCC一括送信でも各チームに記録）
       let historySuccessCount = 0;
@@ -209,16 +225,18 @@ export async function POST(
         }
       }
 
-      console.log(`✅ BCC一括送信: ${bccAddresses.length}件のメール送信、${historySuccessCount}/${teamsResult.rows.length}件の履歴記録完了`);
+      // 成功レスポンス
+      const successMessage = teamsResult.rows.length === 1
+        ? '1件のメールを送信しました'
+        : `${teamsResult.rows.length}件のメールをBCCで一括送信しました`;
 
-      // 成功レスポンス（BCC一括送信）
+      console.log(`✅ メール送信完了: ${successMessage}、${historySuccessCount}/${teamsResult.rows.length}件の履歴記録完了`);
+
       return NextResponse.json({
         success: true,
-        successCount: bccAddresses.length,
+        successCount: teamsResult.rows.length,
         teamCount: teamsResult.rows.length,
-        message: bccAddresses.length !== teamsResult.rows.length
-          ? `${bccAddresses.length}件のメールアドレスに送信しました（${teamsResult.rows.length}チーム選択、重複除去済み）`
-          : `${bccAddresses.length}件のメールを送信しました`,
+        message: successMessage,
       });
     }
   } catch (error) {
