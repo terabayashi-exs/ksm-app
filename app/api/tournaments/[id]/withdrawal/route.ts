@@ -99,14 +99,13 @@ export async function POST(
       WHERE tournament_team_id = ? AND tournament_id = ?
     `, [withdrawal_reason.trim(), tournament_team_id, tournamentId]);
 
-    // 受付確認メール通知を送信（バックグラウンドで実行、エラーが発生してもメイン処理は継続）
+    // 受付確認メール通知を送信
     try {
-      sendWithdrawalReceivedNotification(tournament_team_id).catch(error => {
-        console.error('受付確認通知送信エラー:', error);
-      });
+      await sendWithdrawalReceivedNotification(tournament_team_id);
+      console.log(`✅ 辞退受付メール送信完了: ${tournament_team_id}`);
     } catch (notificationError) {
-      console.error('受付確認通知送信準備エラー:', notificationError);
-      // 通知エラーはメイン処理に影響させない
+      console.error('❌ 受付確認通知送信エラー:', notificationError);
+      // 通知エラーはメイン処理に影響させない（辞退申請自体は成功として扱う）
     }
 
     // 成功レスポンス

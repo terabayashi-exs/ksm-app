@@ -6,6 +6,8 @@ import { EmailTemplate } from './email-service';
 export interface WithdrawalEmailVariables {
   teamName: string;
   tournamentName: string;
+  groupName?: string;
+  categoryName?: string;
   contactPerson: string;
   adminComment?: string;
   withdrawalReason?: string;
@@ -21,7 +23,7 @@ export interface WithdrawalEmailVariables {
  */
 export function getWithdrawalApprovedTemplate(): EmailTemplate {
   return {
-    subject: '【{{tournamentName}}】辞退申請が承認されました',
+    subject: '【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}】辞退申請が承認されました',
     
     htmlBody: `
 <!DOCTYPE html>
@@ -58,7 +60,8 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
             <div class="highlight">
                 <h2>辞退申請が承認されました</h2>
                 <p><strong>チーム名:</strong> {{teamName}}</p>
-                <p><strong>大会名:</strong> {{tournamentName}}</p>
+                <p><strong>大会名:</strong> {{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}</p>
+                {{#if categoryName}}<p><strong>部門名:</strong> {{categoryName}}</p>{{/if}}
                 <p><strong>処理日時:</strong> {{processedDate}}</p>
                 <div class="status">承認済み</div>
             </div>
@@ -85,7 +88,12 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 
             <h2>🏢 大会情報</h2>
             <div class="info-box">
+                {{#if groupName}}
+                <p><strong>大会名:</strong> {{groupName}}</p>
+                <p><strong>部門名:</strong> {{tournamentName}}</p>
+                {{else}}
                 <p><strong>大会名:</strong> {{tournamentName}}</p>
+                {{/if}}
                 {{#if tournamentDate}}<p><strong>開催予定:</strong> {{tournamentDate}}</p>{{/if}}
                 {{#if venueInfo}}<p><strong>会場:</strong> {{venueInfo}}</p>{{/if}}
             </div>
@@ -114,7 +122,8 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 
 ■ 辞退申請が承認されました
 チーム名: {{teamName}}
-大会名: {{tournamentName}}
+大会名: {{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}
+{{#if categoryName}}部門名: {{categoryName}}{{/if}}
 処理日時: {{processedDate}}
 ステータス: 承認済み
 
@@ -133,7 +142,12 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 ・お問い合わせ: ご不明な点がございましたらお気軽にご連絡ください
 
 ■ 大会情報
+{{#if groupName}}
+大会名: {{groupName}}
+部門名: {{tournamentName}}
+{{else}}
 大会名: {{tournamentName}}
+{{/if}}
 {{#if tournamentDate}}開催予定: {{tournamentDate}}{{/if}}
 {{#if venueInfo}}会場: {{venueInfo}}{{/if}}
 
@@ -155,7 +169,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
  */
 export function getWithdrawalRejectedTemplate(): EmailTemplate {
   return {
-    subject: '【{{tournamentName}}】辞退申請について',
+    subject: '【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}】辞退申請について',
     
     htmlBody: `
 <!DOCTYPE html>
@@ -192,7 +206,8 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
             <div class="highlight">
                 <h2>辞退申請について</h2>
                 <p><strong>チーム名:</strong> {{teamName}}</p>
-                <p><strong>大会名:</strong> {{tournamentName}}</p>
+                <p><strong>大会名:</strong> {{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}</p>
+                {{#if categoryName}}<p><strong>部門名:</strong> {{categoryName}}</p>{{/if}}
                 <p><strong>処理日時:</strong> {{processedDate}}</p>
                 <div class="status">要再検討</div>
             </div>
@@ -218,7 +233,12 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 
             <h2>🏢 大会情報</h2>
             <div class="info-box">
+                {{#if groupName}}
+                <p><strong>大会名:</strong> {{groupName}}</p>
+                <p><strong>部門名:</strong> {{tournamentName}}</p>
+                {{else}}
                 <p><strong>大会名:</strong> {{tournamentName}}</p>
+                {{/if}}
                 {{#if tournamentDate}}<p><strong>開催予定:</strong> {{tournamentDate}}</p>{{/if}}
                 {{#if venueInfo}}<p><strong>会場:</strong> {{venueInfo}}</p>{{/if}}
             </div>
@@ -247,7 +267,8 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 
 ■ 辞退申請について
 チーム名: {{teamName}}
-大会名: {{tournamentName}}
+大会名: {{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}
+{{#if categoryName}}部門名: {{categoryName}}{{/if}}
 処理日時: {{processedDate}}
 ステータス: 要再検討
 
@@ -265,7 +286,12 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 ・参加継続: 現在の参加状態は維持されています
 
 ■ 大会情報
+{{#if groupName}}
+大会名: {{groupName}}
+部門名: {{tournamentName}}
+{{else}}
 大会名: {{tournamentName}}
+{{/if}}
 {{#if tournamentDate}}開催予定: {{tournamentDate}}{{/if}}
 {{#if venueInfo}}会場: {{venueInfo}}{{/if}}
 
@@ -413,7 +439,7 @@ export function getPasswordResetTemplate(): EmailTemplate {
  */
 export function getWithdrawalReceivedTemplate(): EmailTemplate {
   return {
-    subject: '【{{tournamentName}}】辞退申請を受け付けました',
+    subject: '【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}{{#if categoryName}} ({{categoryName}}){{/if}}】辞退申請を受け付けました',
     
     htmlBody: `
 <!DOCTYPE html>
@@ -449,7 +475,8 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
             <div class="highlight">
                 <h2>辞退申請を受け付けました</h2>
                 <p><strong>チーム名:</strong> {{teamName}}</p>
-                <p><strong>大会名:</strong> {{tournamentName}}</p>
+                <p><strong>大会名:</strong> {{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}</p>
+                {{#if categoryName}}<p><strong>部門名:</strong> {{categoryName}}</p>{{/if}}
                 <p><strong>申請日時:</strong> {{processedDate}}</p>
                 <div class="status">審査中</div>
             </div>
@@ -493,7 +520,8 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 
 ■ 辞退申請を受け付けました
 チーム名: {{teamName}}
-大会名: {{tournamentName}}
+大会名: {{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}
+{{#if categoryName}}部門名: {{categoryName}}{{/if}}
 申請日時: {{processedDate}}
 ステータス: 審査中
 

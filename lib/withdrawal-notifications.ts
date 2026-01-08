@@ -1,12 +1,12 @@
 // lib/withdrawal-notifications.ts
 // 辞退申請関連の通知機能
 
-import { sendEmail } from './email-service';
-import { 
-  getWithdrawalApprovedTemplate, 
-  getWithdrawalRejectedTemplate, 
+import { sendEmail } from './email/mailer';
+import {
+  getWithdrawalApprovedTemplate,
+  getWithdrawalRejectedTemplate,
   getWithdrawalReceivedTemplate,
-  WithdrawalEmailVariables 
+  WithdrawalEmailVariables
 } from './email-templates';
 import { db } from './db';
 
@@ -51,7 +51,9 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
     // テンプレート変数の準備
     const variables: WithdrawalEmailVariables = {
       teamName: teamInfo.team_name,
-      tournamentName: teamInfo.tournament_name,
+      tournamentName: teamInfo.tournament_name,  // 部門名（t_tournaments.tournament_name）
+      groupName: teamInfo.group_name || undefined,  // グループ大会名（t_tournament_groups.group_name）
+      categoryName: teamInfo.tournament_name, // tournament_nameを部門名として使用（後方互換性のため）
       contactPerson: teamInfo.contact_person,
       adminComment: data.adminComment,
       withdrawalReason: teamInfo.withdrawal_reason || undefined,
@@ -69,21 +71,133 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
       contactPhone: process.env.ADMIN_PHONE
     };
 
+    // デバッグログ
+    console.log('📧 [DEBUG] Email Variables:', {
+      tournamentName: variables.tournamentName,
+      groupName: variables.groupName,
+      teamInfo_tournament_name: teamInfo.tournament_name,
+      teamInfo_group_name: teamInfo.group_name
+    });
+
     // Handlebarライクなテンプレート処理用の変数変換
     const templateVariables = convertToTemplateVariables(variables);
 
-    // メール送信
-    const result = await sendEmail({
-      to: teamInfo.contact_email,
-      toName: teamInfo.contact_person,
-      template,
-      variables: templateVariables
+    console.log('📧 [DEBUG] Template Variables:', {
+      tournamentName: templateVariables.tournamentName,
+      groupName: templateVariables.groupName,
+      'hasGroupNameFlag': templateVariables['#if groupName']
     });
 
-    // 送信ログを記録
-    await logNotificationSent(data.tournamentTeamId, data.action, result);
+    // テンプレート処理（Handlebars風の変数置換）
+    const processTemplate = (text: string): string => {
+      let processed = text;
 
-    return result;
+      // 1. {{#if key}} ... {{else}} ... {{/if}} の処理（最も具体的なパターンから処理）
+      let changed = true;
+      while (changed) {
+        changed = false;
+        // #if フラグを持つキーのみ処理（'#if 'で始まるキーはスキップ）
+        Object.entries(templateVariables).forEach(([key, value]) => {
+          if (key.startsWith('#if ')) return; // フラグキーはスキップ
+
+          const ifElseRegex = new RegExp(`\\{\\{#if ${key}\\}\\}([\\s\\S]*?)\\{\\{else\\}\\}([\\s\\S]*?)\\{\\{/if\\}\\}`, 'g');
+          const newProcessed = processed.replace(ifElseRegex, (_match, truePart, falsePart) => {
+            changed = true;
+            // 実際の値の存在をチェック
+            return value ? truePart : falsePart;
+          });
+          processed = newProcessed;
+        });
+      }
+
+      // 2. {{#if key}} ... {{/if}} の処理（elseなし）
+      changed = true;
+      while (changed) {
+        changed = false;
+        Object.entries(templateVariables).forEach(([key, value]) => {
+          if (key.startsWith('#if ')) return; // フラグキーはスキップ
+
+          const ifRegex = new RegExp(`\\{\\{#if ${key}\\}\\}([\\s\\S]*?)\\{\\{/if\\}\\}`, 'g');
+          const newProcessed = processed.replace(ifRegex, (_match, content) => {
+            changed = true;
+            return value ? content : '';
+          });
+          processed = newProcessed;
+        });
+      }
+
+      // 3. {{key}} 形式の単純な変数置換（フラグキーは除外）
+      Object.entries(templateVariables).forEach(([key, value]) => {
+        if (key.startsWith('#if ') || key === '/if') return; // フラグキーはスキップ
+
+        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+        processed = processed.replace(regex, value || '');
+      });
+
+      return processed;
+    };
+
+    // メール送信
+    try {
+      // テンプレート処理後のメール内容
+      const processedSubject = processTemplate(template.subject);
+      const processedText = processTemplate(template.textBody);
+      const processedHtml = processTemplate(template.htmlBody);
+
+      // デバッグ: HTMLの大会情報セクションを抽出
+      const tournamentInfoMatch = processedHtml.match(/<h2>🏢 大会情報<\/h2>([\s\S]{0,300})/);
+      console.log('📧 [DEBUG] Processed HTML Tournament Info Section:', tournamentInfoMatch ? tournamentInfoMatch[0] : 'NOT FOUND');
+
+      // デバッグ: メールHTMLを一時ファイルに保存
+      try {
+        const fs = await import('fs/promises');
+        await fs.writeFile(
+          `/tmp/withdrawal-email-${data.tournamentTeamId}-${Date.now()}.html`,
+          processedHtml,
+          'utf-8'
+        );
+        console.log(`📧 [DEBUG] メールHTMLを保存: /tmp/withdrawal-email-${data.tournamentTeamId}-${Date.now()}.html`);
+      } catch (fsError) {
+        console.error('ファイル保存エラー:', fsError);
+      }
+
+      await sendEmail({
+        to: teamInfo.contact_email,
+        subject: processedSubject,
+        text: processedText,
+        html: processedHtml
+      });
+
+      // 送信成功
+      const result = {
+        success: true,
+        messageId: `withdrawal-${data.action}-${Date.now()}`,
+        subject: processedSubject,  // 実際のメールタイトルを追加
+        // デバッグ情報
+        debug: {
+          tournamentName: variables.tournamentName,
+          groupName: variables.groupName,
+          hasGroupName: !!variables.groupName
+        }
+      };
+
+      // 送信ログを記録
+      await logNotificationSent(data.tournamentTeamId, data.action, result);
+
+      return result;
+    } catch (emailError) {
+      console.error('メール送信実行エラー:', emailError);
+      const result = {
+        success: false,
+        error: emailError instanceof Error ? emailError.message : 'Email sending failed',
+        subject: processTemplate(template.subject)  // エラー時もタイトルを記録
+      };
+
+      // 失敗ログを記録
+      await logNotificationSent(data.tournamentTeamId, data.action, result);
+
+      return result;
+    }
 
   } catch (error) {
     console.error('辞退通知送信エラー:', error);
@@ -99,11 +213,12 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
  */
 async function getWithdrawalTeamInfo(tournamentTeamId: number) {
   const result = await db.execute(`
-    SELECT 
+    SELECT
       tt.team_name,
       tt.withdrawal_reason,
       tt.withdrawal_requested_at,
       t.tournament_name,
+      tg.group_name,
       t.tournament_dates,
       v.venue_name,
       mt.contact_person,
@@ -111,6 +226,7 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
       mt.contact_phone
     FROM t_tournament_teams tt
     INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
+    LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
     LEFT JOIN m_venues v ON t.venue_id = v.venue_id
     INNER JOIN m_teams mt ON tt.team_id = mt.team_id
     WHERE tt.tournament_team_id = ?
@@ -126,6 +242,7 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
     withdrawal_reason: row.withdrawal_reason ? String(row.withdrawal_reason) : null,
     withdrawal_requested_at: row.withdrawal_requested_at ? String(row.withdrawal_requested_at) : null,
     tournament_name: String(row.tournament_name),
+    group_name: row.group_name ? String(row.group_name) : null,
     tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
     venue_name: row.venue_name ? String(row.venue_name) : null,
     contact_person: String(row.contact_person),
@@ -169,6 +286,9 @@ function convertToTemplateVariables(variables: WithdrawalEmailVariables): Record
   });
 
   // 条件分岐用のフラグを追加
+  if (variables.groupName) {
+    converted['#if groupName'] = 'true';
+  }
   if (variables.adminComment) {
     converted['#if adminComment'] = 'true';
     converted['/if'] = '';
@@ -198,24 +318,78 @@ function convertToTemplateVariables(variables: WithdrawalEmailVariables): Record
 async function logNotificationSent(
   tournamentTeamId: number,
   action: string,
-  result: { success: boolean; messageId?: string; error?: string }
+  result: { success: boolean; messageId?: string; error?: string; subject?: string }
 ): Promise<void> {
   try {
-    const logMessage = result.success 
+    // チーム・大会情報を取得
+    const teamInfoResult = await db.execute(`
+      SELECT
+        tt.tournament_id,
+        mt.contact_email
+      FROM t_tournament_teams tt
+      INNER JOIN m_teams mt ON tt.team_id = mt.team_id
+      WHERE tt.tournament_team_id = ?
+    `, [tournamentTeamId]);
+
+    if (teamInfoResult.rows.length === 0) {
+      console.error('通知ログ記録エラー: チーム情報が見つかりません');
+      return;
+    }
+
+    const teamInfo = teamInfoResult.rows[0];
+
+    // 実際のメールタイトルを使用（result.subjectが存在する場合）
+    const subject = result.subject || (() => {
+      // フォールバック: result.subjectがない場合の件名
+      switch (action) {
+        case 'received':
+          return '辞退申請受付確認';
+        case 'approved':
+          return '辞退申請承認通知';
+        case 'rejected':
+          return '辞退申請却下通知';
+        default:
+          return '辞退関連通知';
+      }
+    })();
+
+    // template_idを決定（参加申請と区別できるように）
+    let templateId = '';
+    switch (action) {
+      case 'received':
+        templateId = 'auto_withdrawal_received';  // 辞退申請受付自動通知
+        break;
+      case 'approved':
+        templateId = 'auto_withdrawal_approved';  // 辞退承認自動通知
+        break;
+      case 'rejected':
+        templateId = 'auto_withdrawal_rejected';  // 辞退却下自動通知
+        break;
+      default:
+        templateId = 'auto_withdrawal_other';
+    }
+
+    // t_email_send_historyに記録（テーブルスキーマに合わせた形式）
+    await db.execute(`
+      INSERT INTO t_email_send_history (
+        tournament_id,
+        tournament_team_id,
+        sent_by,
+        template_id,
+        subject,
+        sent_at
+      ) VALUES (?, ?, ?, ?, ?, datetime('now', '+9 hours'))
+    `, [
+      teamInfo.tournament_id,
+      tournamentTeamId,
+      'system',
+      templateId,
+      subject
+    ]);
+
+    const logMessage = result.success
       ? `辞退通知送信成功 (${action}): ${result.messageId}`
       : `辞退通知送信失敗 (${action}): ${result.error}`;
-    
-    await db.execute(`
-      UPDATE t_tournament_teams
-      SET 
-        remarks = CASE 
-          WHEN remarks IS NULL OR remarks = '' 
-          THEN ? || ' (' || datetime('now', '+9 hours') || ')'
-          ELSE remarks || ' | ' || ? || ' (' || datetime('now', '+9 hours') || ')'
-        END,
-        updated_at = datetime('now', '+9 hours')
-      WHERE tournament_team_id = ?
-    `, [logMessage, logMessage, tournamentTeamId]);
 
     console.log(`📧 通知ログ記録: ${logMessage}`);
   } catch (error) {

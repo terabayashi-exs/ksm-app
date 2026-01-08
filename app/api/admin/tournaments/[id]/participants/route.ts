@@ -4,16 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { sendEmail } from '@/lib/email/mailer';
-import {
-  generateParticipationConfirmedNotification,
-  generateParticipationCancelledNotification,
-  generateWaitlistNotification
-} from '@/lib/email/templates';
-import {
-  getWithdrawalApprovedTemplate,
-  getWithdrawalRejectedTemplate
-} from '@/lib/email-templates';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -262,7 +252,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { tournament_team_id, action, admin_comment, send_notification = false } = body;
+    const { tournament_team_id, action, admin_comment } = body;
 
     if (!tournament_team_id || !action) {
       return NextResponse.json(
@@ -291,10 +281,8 @@ export async function PUT(
       );
     }
 
-    const team = teamResult.rows[0];
     let updateQuery = '';
     let updateParams: (string | number | null)[] = [];
-    let emailTemplate = null;
     let successMessage = '';
 
     switch (action) {
@@ -308,14 +296,6 @@ export async function PUT(
         `;
         updateParams = [tournament_team_id];
         successMessage = 'チームを参加確定に変更しました';
-
-        if (send_notification) {
-          emailTemplate = generateParticipationConfirmedNotification({
-            teamName: String(team.team_name),
-            tournamentName: String(team.tournament_name),
-            adminComment: admin_comment
-          });
-        }
         break;
 
       case 'waitlist':
@@ -328,14 +308,6 @@ export async function PUT(
         `;
         updateParams = [tournament_team_id];
         successMessage = 'チームをキャンセル待ちに変更しました';
-
-        if (send_notification) {
-          emailTemplate = generateWaitlistNotification({
-            teamName: String(team.team_name),
-            tournamentName: String(team.tournament_name),
-            adminComment: admin_comment
-          });
-        }
         break;
 
       case 'cancel':
@@ -348,14 +320,6 @@ export async function PUT(
         `;
         updateParams = [tournament_team_id];
         successMessage = 'チームをキャンセル済みに変更しました';
-
-        if (send_notification) {
-          emailTemplate = generateParticipationCancelledNotification({
-            teamName: String(team.team_name),
-            tournamentName: String(team.tournament_name),
-            adminComment: admin_comment
-          });
-        }
         break;
 
       case 'approve_withdrawal':
@@ -372,27 +336,6 @@ export async function PUT(
         `;
         updateParams = [session.user.email, admin_comment || null, tournament_team_id];
         successMessage = '辞退申請を承認しました';
-
-        if (send_notification) {
-          const template = getWithdrawalApprovedTemplate();
-          emailTemplate = {
-            subject: template.subject
-              .replace('{{tournamentName}}', String(team.tournament_name))
-              .replace('{{teamName}}', String(team.team_name)),
-            html: template.htmlBody
-              .replace(/{{tournamentName}}/g, String(team.tournament_name))
-              .replace(/{{teamName}}/g, String(team.team_name))
-              .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
-              .replace(/{{adminComment}}/g, admin_comment || ''),
-            text: template.textBody
-              .replace(/{{tournamentName}}/g, String(team.tournament_name))
-              .replace(/{{teamName}}/g, String(team.team_name))
-              .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
-              .replace(/{{adminComment}}/g, admin_comment || '')
-          };
-        }
         break;
 
       case 'reject_withdrawal':
@@ -408,27 +351,6 @@ export async function PUT(
         `;
         updateParams = [session.user.email, admin_comment || null, tournament_team_id];
         successMessage = '辞退申請を却下しました';
-
-        if (send_notification) {
-          const template = getWithdrawalRejectedTemplate();
-          emailTemplate = {
-            subject: template.subject
-              .replace('{{tournamentName}}', String(team.tournament_name))
-              .replace('{{teamName}}', String(team.team_name)),
-            html: template.htmlBody
-              .replace(/{{tournamentName}}/g, String(team.tournament_name))
-              .replace(/{{teamName}}/g, String(team.team_name))
-              .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
-              .replace(/{{adminComment}}/g, admin_comment || ''),
-            text: template.textBody
-              .replace(/{{tournamentName}}/g, String(team.tournament_name))
-              .replace(/{{teamName}}/g, String(team.team_name))
-              .replace(/{{contactPerson}}/g, String(team.contact_person))
-              .replace(/{{processedDate}}/g, new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }))
-              .replace(/{{adminComment}}/g, admin_comment || '')
-          };
-        }
         break;
 
       default:
@@ -440,65 +362,6 @@ export async function PUT(
 
     // データベース更新
     await db.execute(updateQuery, updateParams);
-
-    // メール送信（エラーが発生しても処理は継続）
-    if (emailTemplate && team.contact_email) {
-      try {
-        await sendEmail({
-          to: String(team.contact_email),
-          subject: emailTemplate.subject,
-          text: emailTemplate.text,
-          html: emailTemplate.html
-        });
-        console.log(`✅ 通知メール送信成功: ${team.contact_email}`);
-
-        // メール送信履歴を記録
-        try {
-          // template_id を action から判定
-          let templateId = 'custom';
-          switch (action) {
-            case 'confirm':
-              templateId = 'participationConfirmed';
-              break;
-            case 'waitlist':
-              templateId = 'waitlist';
-              break;
-            case 'cancel':
-              templateId = 'participationCancelled';
-              break;
-            case 'approve_withdrawal':
-              templateId = 'withdrawal_approved';
-              break;
-            case 'reject_withdrawal':
-              templateId = 'withdrawal_rejected';
-              break;
-          }
-
-          await db.execute(`
-            INSERT INTO t_email_send_history (
-              tournament_id,
-              tournament_team_id,
-              sent_by,
-              template_id,
-              subject
-            ) VALUES (?, ?, ?, ?, ?)
-          `, [
-            tournamentId,
-            tournament_team_id,
-            session.user.id,
-            templateId,
-            emailTemplate.subject
-          ]);
-          console.log(`✅ メール送信履歴記録完了: ${templateId}`);
-        } catch (historyError) {
-          console.error('❌ メール送信履歴記録エラー:', historyError);
-          // 履歴記録失敗してもメール送信は成功とする
-        }
-      } catch (emailError) {
-        console.error('❌ メール送信エラー:', emailError);
-        // メール送信失敗してもAPIレスポンスは成功として返す
-      }
-    }
 
     return NextResponse.json({
       success: true,
