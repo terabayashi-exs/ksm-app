@@ -612,10 +612,14 @@ async function updateTournamentSchedule(
       block_name: row.block_name as string | undefined,
       team1_source: row.team1_source as string | undefined,
       team2_source: row.team2_source as string | undefined,
-      team1_display_name: String(row.team1_display_name),
-      team2_display_name: String(row.team2_display_name),
+      team1_display_name: String(row.team1_display_name || ""),
+      team2_display_name: String(row.team2_display_name || ""),
       day_number: Number(row.day_number),
       execution_priority: Number(row.execution_priority),
+      court_number: row.court_number ? Number(row.court_number) : undefined,
+      suggested_start_time: row.suggested_start_time ? String(row.suggested_start_time) : undefined,
+      period_count: row.period_count ? Number(row.period_count) : undefined,
+      is_bye_match: Number(row.is_bye_match || 0),
       created_at: String(row.created_at)
     }));
 

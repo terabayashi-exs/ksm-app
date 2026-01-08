@@ -49,7 +49,7 @@ interface ParticipantActionsModalProps {
   onClose: () => void;
   team: ParticipantTeam | null;
   action: ActionType | null;
-  onSubmit: (tournamentTeamId: number, action: ActionType, adminComment: string, sendNotification: boolean) => Promise<void>;
+  onSubmit: (tournamentTeamId: number, action: ActionType, adminComment: string) => Promise<void>;
 }
 
 export default function ParticipantActionsModal({
@@ -153,8 +153,7 @@ export default function ParticipantActionsModal({
 
     setSubmitting(true);
     try {
-      // メール送信は常に false（自動送信しない）
-      await onSubmit(team.tournament_team_id, action, adminComment, false);
+      await onSubmit(team.tournament_team_id, action, adminComment);
       setAdminComment('');
       onClose();
     } catch (error) {

@@ -26,7 +26,6 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         t.created_by,
         t.group_id,
         t.group_order,
-        t.category_name,
         v.venue_name,
         f.format_name,
         a.logo_blob_url,
@@ -102,7 +101,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         // グループ情報
         group_id: row.group_id ? Number(row.group_id) : null,
         group_order: Number(row.group_order) || 0,
-        category_name: row.category_name as string | null,
+        category_name: row.tournament_name as string, // tournament_nameを部門名として使用
         group_name: row.group_name as string | null,
         group_description: row.group_description as string | null,
         group_color: row.group_color as string | null,

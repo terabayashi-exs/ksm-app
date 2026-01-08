@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { validateMatchTeams, isByeMatchToNumber } from "@/lib/bye-match-utils";
 
 // GET: 個別フォーマット詳細取得
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -85,15 +86,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // 新しいテンプレートを作成
     for (const template of templates) {
+      // バリデーション
+      const validation = validateMatchTeams(template.team1_display_name, template.team2_display_name);
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+
+      // is_bye_match を自動計算
+      const isByeMatch = isByeMatchToNumber(validation.isByeMatch);
+
+      // 不戦勝試合の場合、コート番号はNULL
+      const courtNumber = validation.isByeMatch ? null : (template.court_number || null);
+
       await db.execute(`
         INSERT INTO m_match_templates (
-          format_id, match_number, match_code, match_type, phase, round_name, 
+          format_id, match_number, match_code, match_type, phase, round_name,
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
-          day_number, execution_priority, court_number, suggested_start_time, 
+          day_number, execution_priority, court_number, suggested_start_time,
           loser_position_start, loser_position_end, winner_position, position_note,
+          is_bye_match,
           created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         formatId,
         template.match_number || 1,
@@ -104,17 +118,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         template.block_name || "",
         template.team1_source || "",
         template.team2_source || "",
-        template.team1_display_name,
-        template.team2_display_name,
+        template.team1_display_name || "",  // 空文字列を使用
+        template.team2_display_name || "",  // 空文字列を使用
         template.day_number || 1,
         template.execution_priority || 1,
-        template.court_number || null,
+        courtNumber,
         template.suggested_start_time || null,
         // 新しい順位設定フィールド
         template.loser_position_start || null,
         template.loser_position_end || null,
         template.winner_position || null,
-        template.position_note || null
+        template.position_note || null,
+        isByeMatch
       ]);
     }
 

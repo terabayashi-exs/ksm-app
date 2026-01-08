@@ -4,7 +4,8 @@
 export function generateCustomBroadcastEmail(data: {
   title: string;
   body: string;
-  tournamentName?: string;
+  tournamentName?: string; // 部門名（t_tournaments.tournament_name）
+  groupName?: string; // 大会名（t_tournament_groups.group_name）
   organizerEmail?: string; // 大会運営者のメールアドレス
   tournamentId?: number; // 大会ID（URL生成用）
   baseUrl?: string; // ベースURL（デフォルト: NEXT_PUBLIC_BASE_URL環境変数）
@@ -44,14 +45,18 @@ export function generateCustomBroadcastEmail(data: {
     ? `\n\nご不明な点がございましたら、大会運営者までお問い合わせください。\n${data.organizerEmail}`
     : '';
 
+  // 大会情報セクションの生成（大会名と部門名の表示）
+  const tournamentInfoText = (data.groupName || data.tournamentName) ? `━━━━━━━━━━━━━━━━━━━━━━━━
+${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
+${data.groupName && data.tournamentName ? `部門名: ${data.tournamentName}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+` : '';
+
   const text = `
 ${processedBody}${contactFooter}
 
-${data.tournamentName ? `━━━━━━━━━━━━━━━━━━━━━━━━
-大会名: ${data.tournamentName}
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-` : ''}楽勝GO大会運営システム
+${tournamentInfoText}楽勝GO大会運営システム
   `.trim();
 
   const html = `
@@ -141,9 +146,14 @@ ${data.tournamentName ? `━━━━━━━━━━━━━━━━━━�
       </div>
       ` : ''}
 
-      ${data.tournamentName ? `
+      ${data.groupName || data.tournamentName ? `
       <div class="tournament-info">
-        <strong>📋 大会名: ${data.tournamentName}</strong>
+        ${data.groupName ? `
+          <strong>📋 大会名: ${data.groupName}</strong>
+          ${data.tournamentName ? `<br><strong>部門名: ${data.tournamentName}</strong>` : ''}
+        ` : `
+          <strong>📋 大会名: ${data.tournamentName}</strong>
+        `}
       </div>
       ` : ''}
     </div>

@@ -240,14 +240,16 @@ export interface MatchTemplate {
   block_name?: string;
   team1_source?: string;
   team2_source?: string;
-  team1_display_name: string;
-  team2_display_name: string;
+  team1_display_name: string;  // 空文字列許容（不戦勝試合対応）
+  team2_display_name: string;  // 空文字列許容（不戦勝試合対応）
   day_number: number;
   execution_priority: number;
   court_number?: number;
   suggested_start_time?: string;
   period_count?: number;
+  is_bye_match: number;  // 0: 通常試合, 1: 不戦勝試合
   created_at: string;
+  updated_at?: string;
 }
 
 export interface MatchBlock {

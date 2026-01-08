@@ -101,6 +101,9 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     match_type: string;
     team1_id: string | null;
     team2_id: string | null;
+    team1_source?: string | null; // テンプレートからのチーム1ソース
+    team2_source?: string | null; // テンプレートからのチーム2ソース
+    is_bye_match?: number; // 不戦勝試合フラグ（0または1）
   }>>([]); // 編集モード用の実際の試合データ
   
   // データ取得中フラグ（競合状態を防ぐため）
@@ -169,9 +172,49 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       try {
         const response = await fetch(`/api/tournaments/formats/${formatId}/templates`);
         const result = await response.json();
-        
+
         if (result.success) {
-          setTemplates(result.data.templates);
+          const allTemplates: MatchTemplate[] = result.data.templates;
+
+          // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
+          const byeMatchWinners: Record<string, string> = {};
+          allTemplates.forEach((t) => {
+            if (t.is_bye_match === 1) {
+              // 不戦勝試合の勝者を特定（空でない方のチーム）
+              const winner = t.team1_display_name || t.team2_display_name;
+              if (winner && t.match_code) {
+                byeMatchWinners[`${t.match_code}_winner`] = winner;
+              }
+            }
+          });
+
+          // 不戦勝試合を除外
+          let filteredTemplates = allTemplates.filter((t) => t.is_bye_match !== 1);
+
+          // 次の試合のteam1_display_name/team2_display_nameを解決
+          filteredTemplates = filteredTemplates.map((t) => {
+            const team1 = t.team1_display_name;
+            const team2 = t.team2_display_name;
+
+            // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
+            let resolvedTeam1 = team1;
+            let resolvedTeam2 = team2;
+
+            if (t.team1_source && byeMatchWinners[t.team1_source]) {
+              resolvedTeam1 = byeMatchWinners[t.team1_source];
+            }
+            if (t.team2_source && byeMatchWinners[t.team2_source]) {
+              resolvedTeam2 = byeMatchWinners[t.team2_source];
+            }
+
+            return {
+              ...t,
+              team1_display_name: resolvedTeam1,
+              team2_display_name: resolvedTeam2
+            };
+          });
+
+          setTemplates(filteredTemplates);
           // setSportCode(result.data.sportCode || null); // Removed: no longer needed for period-based duration
         } else {
           setError(result.error || 'テンプレートの取得に失敗しました');
@@ -230,9 +273,47 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       // Processing actual matches for schedule display
       // Actual matches loaded for display
 
+      // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
+      const byeMatchWinners: Record<string, string> = {};
+      actualMatches.forEach((m) => {
+        if (m.is_bye_match === 1) {
+          // 不戦勝試合の勝者を特定（空でない方のチーム）
+          const winner = m.team1_display_name || m.team2_display_name;
+          if (winner && m.match_code) {
+            byeMatchWinners[`${m.match_code}_winner`] = winner;
+          }
+        }
+      });
+
+      // 不戦勝試合を除外
+      let filteredMatches = actualMatches.filter(match => match.is_bye_match !== 1);
+
+      // 次の試合のteam1_display_name/team2_display_nameを解決
+      filteredMatches = filteredMatches.map((m) => {
+        const team1 = m.team1_display_name;
+        const team2 = m.team2_display_name;
+
+        // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
+        let resolvedTeam1 = team1;
+        let resolvedTeam2 = team2;
+
+        if (m.team1_source && byeMatchWinners[m.team1_source]) {
+          resolvedTeam1 = byeMatchWinners[m.team1_source];
+        }
+        if (m.team2_source && byeMatchWinners[m.team2_source]) {
+          resolvedTeam2 = byeMatchWinners[m.team2_source];
+        }
+
+        return {
+          ...m,
+          team1_display_name: resolvedTeam1,
+          team2_display_name: resolvedTeam2
+        };
+      });
+
       // デバッグ: 最初の3試合のday_number確認
       console.log('[SchedulePreview] Debug: First 3 matches with day_number:');
-      actualMatches.slice(0, 3).forEach((match, idx) => {
+      filteredMatches.slice(0, 3).forEach((match, idx) => {
         const dayNum = (match as Record<string, unknown>).day_number;
         console.log(`  Match ${idx}: code=${match.match_code}, block=${match.block_name}, day_number=${dayNum}, tournament_date=${match.tournament_date}`);
       });
@@ -248,7 +329,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
         // このday_numberに該当する試合を抽出
         // APIから取得したday_number、または既存のtournament_dateから判定
-        const matchesForDay = actualMatches.filter(match => {
+        const matchesForDay = filteredMatches.filter(match => {
           // APIから取得したday_numberを優先的に使用
           const matchDayNumber = (match as Record<string, unknown>).day_number as number | undefined;
           if (matchDayNumber) {
@@ -282,11 +363,23 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               block_name: match.block_name || undefined,
               team1_source: match.team1_id || undefined,
               team2_source: match.team2_id || undefined,
-              team1_display_name: match.team1_name || match.team1_display_name,
-              team2_display_name: match.team2_name || match.team2_display_name,
+              // 解決済みのteam1_display_name/team2_display_nameを優先（不戦勝対応）
+              // team1_idが存在する（実チーム割り当て済み） → team1_name（t_tournament_teams.team_name）を使用
+              // team1_idが存在しない（未割当） → 解決済みのteam1_display_name（不戦勝解決済みまたはプレースホルダー）を使用
+              team1_display_name: (match.team1_id && match.team1_name && match.team1_name.trim() !== '')
+                ? match.team1_name
+                : match.team1_display_name,
+              team2_display_name: (match.team2_id && match.team2_name && match.team2_name.trim() !== '')
+                ? match.team2_name
+                : match.team2_display_name,
               day_number: dayNumber,
               execution_priority: match.match_number,
-              created_at: ''
+              court_number: match.court_number || undefined,
+              suggested_start_time: match.scheduled_time || undefined,
+              period_count: undefined,
+              is_bye_match: match.is_bye_match || 0,
+              created_at: '',
+              updated_at: undefined
             },
             date: date,
             startTime: startTime,

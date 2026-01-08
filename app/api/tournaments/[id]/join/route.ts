@@ -284,7 +284,6 @@ async function handleTournamentJoin(
       SELECT
         t.tournament_id,
         t.tournament_name,
-        t.category_name,
         t.group_id,
         t.recruitment_start_date,
         t.recruitment_end_date,
@@ -585,11 +584,12 @@ async function handleTournamentJoin(
           const tournamentUrl = `${process.env.NEXTAUTH_URL}/public/tournaments/${tournamentId}`;
 
           // メールテンプレート生成（統一版）
+          // tournament_name = 部門名、group_name = 大会名として扱う
           const emailContent = generateTournamentApplicationConfirmation({
             teamName: data.tournament_team_name,
-            tournamentName: String(tournament.tournament_name),
+            tournamentName: tournament.group_name ? String(tournament.group_name) : String(tournament.tournament_name),
             groupName: tournament.group_name ? String(tournament.group_name) : undefined,
-            categoryName: tournament.category_name ? String(tournament.category_name) : undefined,
+            categoryName: String(tournament.tournament_name), // tournament_nameを部門名として使用
             tournamentDate: tournamentDateStr,
             venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
             contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',

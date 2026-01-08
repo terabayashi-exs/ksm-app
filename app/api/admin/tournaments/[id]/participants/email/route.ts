@@ -36,7 +36,7 @@ export async function POST(
 
     // リクエストボディ取得
     const body: EmailRequest = await request.json();
-    const { tournamentTeamIds, title, body: emailBody, tournamentName, organizerEmail } = body;
+    const { tournamentTeamIds, title, body: emailBody, organizerEmail } = body;
 
     // バリデーション
     if (!tournamentTeamIds || !Array.isArray(tournamentTeamIds) || tournamentTeamIds.length === 0) {
@@ -62,9 +62,13 @@ export async function POST(
         m.team_name as master_team_name,
         m.contact_email,
         m.contact_person,
-        tt.participation_status
+        tt.participation_status,
+        t.tournament_name,
+        tg.group_name
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
+      INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
+      LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       WHERE tt.tournament_id = ? AND tt.tournament_team_id IN (${placeholders})
       `,
       [tournamentId, ...tournamentTeamIds]
@@ -94,7 +98,8 @@ export async function POST(
           const emailTemplate = generateCustomBroadcastEmail({
             title,
             body: personalizedBody,
-            tournamentName,
+            tournamentName: teamsResult.rows[0].tournament_name as string, // 部門名
+            groupName: teamsResult.rows[0].group_name as string | undefined, // 大会名
             organizerEmail,
             tournamentId,
           });
@@ -158,7 +163,8 @@ export async function POST(
       const emailTemplate = generateCustomBroadcastEmail({
         title,
         body: emailBody,
-        tournamentName,
+        tournamentName: teamsResult.rows[0].tournament_name as string, // 部門名
+        groupName: teamsResult.rows[0].group_name as string | undefined, // 大会名
         organizerEmail,
         tournamentId,
       });

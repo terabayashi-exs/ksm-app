@@ -21,6 +21,14 @@ import {
 import { Mail, Send, AlertCircle, Loader2, Users, CheckCircle2 } from 'lucide-react';
 import { EMAIL_PRESETS, EmailPresetId } from '@/lib/email/templates-broadcast';
 
+// 自動送信メールのtemplate_id一覧（履歴から除外する）
+const AUTO_TEMPLATE_IDS = [
+  'auto_application',           // 参加申請受付自動通知
+  'auto_withdrawal_received',   // 辞退申請受付自動通知
+  'auto_withdrawal_approved',   // 辞退承認自動通知
+  'auto_withdrawal_rejected'    // 辞退却下自動通知
+] as const;
+
 interface Team {
   tournament_team_id: string; // ユニークキー（同じマスターから複数参加の場合に重複防止）
   team_id: string;
@@ -106,8 +114,8 @@ export default function EmailSendPage() {
       return false;
     }
 
-    // メール送信履歴フィルタ（申請受付（自動）を除外してカウント）
-    const manualEmailHistory = team.email_history?.filter(h => h.template_id !== 'auto_application') || [];
+    // メール送信履歴フィルタ（自動送信メールを除外してカウント）
+    const manualEmailHistory = team.email_history?.filter(h => !AUTO_TEMPLATE_IDS.includes(h.template_id as typeof AUTO_TEMPLATE_IDS[number])) || [];
 
     if (filterEmailSent === 'sent' && manualEmailHistory.length === 0) {
       return false;
@@ -486,8 +494,8 @@ export default function EmailSendPage() {
                               {statusLabel}
                             </div>
                             {(() => {
-                              // 申請受付（自動）を除外した履歴
-                              const filteredHistory = team.email_history?.filter(h => h.template_id !== 'auto_application') || [];
+                              // 自動送信メールを除外した履歴
+                              const filteredHistory = team.email_history?.filter(h => !AUTO_TEMPLATE_IDS.includes(h.template_id as typeof AUTO_TEMPLATE_IDS[number])) || [];
                               if (filteredHistory.length === 0) return null;
 
                               return (

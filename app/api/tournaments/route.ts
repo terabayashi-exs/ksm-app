@@ -293,17 +293,17 @@ async function generateMatchesFromTemplate(
   try {
     // フォーマットIDに対応するテンプレートを取得
     const templatesResult = await db.execute(`
-      SELECT 
-        template_id, format_id, match_number, match_code, match_type, 
-        phase, round_name, block_name, team1_source, team2_source, 
-        team1_display_name, team2_display_name, day_number, 
-        execution_priority, court_number, suggested_start_time, 
-        period_count, created_at, updated_at
-      FROM m_match_templates 
-      WHERE format_id = ? 
+      SELECT
+        template_id, format_id, match_number, match_code, match_type,
+        phase, round_name, block_name, team1_source, team2_source,
+        team1_display_name, team2_display_name, day_number,
+        execution_priority, court_number, suggested_start_time,
+        period_count, is_bye_match, created_at, updated_at
+      FROM m_match_templates
+      WHERE format_id = ?
       ORDER BY execution_priority ASC
     `, [formatId]);
-    
+
     const templates = templatesResult.rows.map(row => ({
       template_id: Number(row.template_id),
       format_id: Number(row.format_id),
@@ -315,13 +315,14 @@ async function generateMatchesFromTemplate(
       block_name: row.block_name as string | undefined,
       team1_source: row.team1_source as string | undefined,
       team2_source: row.team2_source as string | undefined,
-      team1_display_name: String(row.team1_display_name),
-      team2_display_name: String(row.team2_display_name),
+      team1_display_name: String(row.team1_display_name || ""),
+      team2_display_name: String(row.team2_display_name || ""),
       day_number: Number(row.day_number),
       execution_priority: Number(row.execution_priority),
       court_number: row.court_number ? Number(row.court_number) : undefined,
       suggested_start_time: row.suggested_start_time as string | undefined,
       period_count: row.period_count ? Number(row.period_count) : undefined,
+      is_bye_match: Number(row.is_bye_match || 0),
       created_at: String(row.created_at)
     }));
     if (templates.length === 0) {
@@ -438,6 +439,10 @@ async function generateMatchesFromTemplate(
           team2_display_name: template.team2_display_name,
           day_number: template.day_number,
           execution_priority: template.execution_priority,
+          court_number: template.court_number,
+          suggested_start_time: template.suggested_start_time,
+          period_count: template.period_count,
+          is_bye_match: template.is_bye_match || 0,
           created_at: template.created_at
         }));
 

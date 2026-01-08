@@ -13,7 +13,8 @@ export function generateTournamentApplicationConfirmation(data: {
   tournamentUrl: string;
 }): { subject: string; text: string; html: string } {
   const displayTournamentName = data.groupName || data.tournamentName;
-  const subject = `【受付完了】${displayTournamentName} - 参加申請を受け付けました`;
+  const categoryPart = data.categoryName ? ` (${data.categoryName})` : '';
+  const subject = `【受付完了】${displayTournamentName}${categoryPart} - 参加申請を受け付けました`;
 
   const text = `
 ${data.teamName} 様
@@ -23,9 +24,8 @@ ${data.teamName} 様
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 申請内容
 ━━━━━━━━━━━━━━━━━━━━━━━━
-大会名: ${displayTournamentName}
-${data.categoryName ? `部門名: ${data.categoryName}` : ''}
-開催日: ${data.tournamentDate}
+${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
+${data.categoryName ? `部門名: ${data.categoryName}\n` : ''}開催日: ${data.tournamentDate}
 ${data.venueName ? `会場: ${data.venueName}` : ''}
 登録選手数: ${data.playerCount}名
 申請日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
@@ -190,7 +190,7 @@ ${data.contactEmail}
         <h2>📋 申請内容</h2>
         <div class="info-row">
           <span class="info-label">大会名:</span>
-          <span class="info-value">${displayTournamentName}</span>
+          <span class="info-value">${data.groupName || data.tournamentName}</span>
         </div>
         ${data.categoryName ? `
         <div class="info-row">
@@ -270,7 +270,8 @@ export function generateTournamentJoinConfirmation(data: {
 }): { subject: string; text: string; html: string } {
   // 大会名の表示を決定（グループ大会の場合はグループ名を使用）
   const displayTournamentName = data.groupName || data.tournamentName;
-  const subject = `【大会参加確定】${displayTournamentName} - 参加登録が完了しました`;
+  const categoryPart = data.categoryName ? ` (${data.categoryName})` : '';
+  const subject = `【大会参加確定】${displayTournamentName}${categoryPart} - 参加登録が完了しました`;
 
   const text = `
 ${data.teamName} 様
@@ -281,7 +282,7 @@ ${data.teamName} 様
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 大会情報
 ━━━━━━━━━━━━━━━━━━━━━━━━
-大会名: ${displayTournamentName}
+${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
 ${data.categoryName ? `部門名: ${data.categoryName}` : ''}
 開催日: ${data.tournamentDate}
 ${data.venueName ? `会場: ${data.venueName}` : ''}
@@ -448,7 +449,7 @@ ${data.contactEmail}
         <h2>📋 大会情報</h2>
         <div class="info-row">
           <span class="info-label">大会名:</span>
-          <span class="info-value">${displayTournamentName}</span>
+          <span class="info-value">${data.groupName || data.tournamentName}</span>
         </div>
         ${data.categoryName ? `
         <div class="info-row">
@@ -520,7 +521,8 @@ export function generateTournamentWaitlistConfirmation(data: {
   waitlistPosition: number;
 }): { subject: string; text: string; html: string } {
   const displayTournamentName = data.groupName || data.tournamentName;
-  const subject = `【キャンセル待ち登録】${displayTournamentName} - キャンセル待ちとして受付しました`;
+  const categoryPart = data.categoryName ? ` (${data.categoryName})` : '';
+  const subject = `【キャンセル待ち登録】${displayTournamentName}${categoryPart} - キャンセル待ちとして受付しました`;
 
   const text = `
 ${data.teamName} 様
@@ -531,7 +533,7 @@ ${data.teamName} 様
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 登録情報
 ━━━━━━━━━━━━━━━━━━━━━━━━
-大会名: ${displayTournamentName}
+${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
 ${data.categoryName ? `部門名: ${data.categoryName}` : ''}
 開催日: ${data.tournamentDate}
 ${data.venueName ? `会場: ${data.venueName}` : ''}
@@ -674,7 +676,7 @@ ${data.contactEmail}
         <h2>📋 登録情報</h2>
         <div class="info-row">
           <span class="info-label">大会名:</span>
-          <span class="info-value">${displayTournamentName}</span>
+          <span class="info-value">${data.groupName || data.tournamentName}</span>
         </div>
         ${data.categoryName ? `
         <div class="info-row">

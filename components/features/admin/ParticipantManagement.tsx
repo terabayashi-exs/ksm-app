@@ -87,8 +87,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
   const handleSubmitAction = async (
     tournamentTeamId: number,
     action: ActionType,
-    adminComment: string,
-    sendNotification: boolean
+    adminComment: string
   ) => {
     try {
       const response = await fetch(`/api/admin/tournaments/${tournamentId}/participants`, {
@@ -99,8 +98,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
         body: JSON.stringify({
           tournament_team_id: tournamentTeamId,
           action,
-          admin_comment: adminComment,
-          send_notification: sendNotification
+          admin_comment: adminComment
         })
       });
 

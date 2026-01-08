@@ -23,7 +23,7 @@ export async function GET(
 
     // 指定されたフォーマットの試合テンプレートと競技種別情報を取得
     const result = await db.execute(`
-      SELECT 
+      SELECT
         mt.template_id,
         mt.format_id,
         mt.match_number,
@@ -40,6 +40,7 @@ export async function GET(
         mt.execution_priority,
         mt.court_number,
         mt.suggested_start_time,
+        mt.is_bye_match,
         mt.created_at,
         st.sport_code
       FROM m_match_templates mt
@@ -62,13 +63,14 @@ export async function GET(
       block_name: row.block_name as string | undefined,
       team1_source: row.team1_source as string | undefined,
       team2_source: row.team2_source as string | undefined,
-      team1_display_name: String(row.team1_display_name),
-      team2_display_name: String(row.team2_display_name),
+      team1_display_name: String(row.team1_display_name || ""),
+      team2_display_name: String(row.team2_display_name || ""),
       day_number: Number(row.day_number),
       execution_priority: Number(row.execution_priority),
       court_number: row.court_number ? Number(row.court_number) : undefined,
       suggested_start_time: row.suggested_start_time ? String(row.suggested_start_time) : undefined,
       period_count: undefined, // スキーマに存在しないため undefined に設定
+      is_bye_match: Number(row.is_bye_match || 0),
       created_at: String(row.created_at)
     })) as MatchTemplate[];
 

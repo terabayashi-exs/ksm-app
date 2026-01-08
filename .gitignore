@@ -50,6 +50,10 @@ scripts/fix-*.js
 
 # development server files
 dev-server.log
+dev.log
 dev-server.pid
 data/backup-*.json
 data/ksm.db
+
+# test files
+test-*.js
