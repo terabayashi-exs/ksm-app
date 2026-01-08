@@ -68,7 +68,8 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
       tournamentDate: teamInfo.tournament_dates ? formatTournamentDates(teamInfo.tournament_dates) : undefined,
       venueInfo: teamInfo.venue_name || undefined,
       contactEmail: data.adminEmail || process.env.ADMIN_EMAIL,
-      contactPhone: process.env.ADMIN_PHONE
+      contactPhone: process.env.ADMIN_PHONE,
+      organizationName: teamInfo.organization_name || undefined
     };
 
     // デバッグログ
@@ -236,7 +237,8 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
       mt.contact_person,
       mt.contact_email,
       mt.contact_phone,
-      a.email as admin_email
+      a.email as admin_email,
+      a.organization_name
     FROM t_tournament_teams tt
     INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
     LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
@@ -262,7 +264,8 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
     contact_person: String(row.contact_person),
     contact_email: String(row.contact_email),
     contact_phone: row.contact_phone ? String(row.contact_phone) : null,
-    admin_email: row.admin_email ? String(row.admin_email) : null
+    admin_email: row.admin_email ? String(row.admin_email) : null,
+    organization_name: row.organization_name ? String(row.organization_name) : null
   };
 }
 
@@ -322,6 +325,9 @@ function convertToTemplateVariables(variables: WithdrawalEmailVariables): Record
   }
   if (variables.contactPhone) {
     converted['#if contactPhone'] = 'true';
+  }
+  if (variables.organizationName) {
+    converted['#if organizationName'] = 'true';
   }
 
   return converted;

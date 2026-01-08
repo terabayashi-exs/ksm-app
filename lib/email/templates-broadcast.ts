@@ -7,6 +7,7 @@ export function generateCustomBroadcastEmail(data: {
   tournamentName?: string; // 部門名（t_tournaments.tournament_name）
   groupName?: string; // 大会名（t_tournament_groups.group_name）
   organizerEmail?: string; // 大会運営者のメールアドレス
+  organizationName?: string; // 大会管理者の組織名（m_administrators.organization_name）
   tournamentId?: number; // 大会ID（URL生成用）
   baseUrl?: string; // ベースURL（デフォルト: NEXT_PUBLIC_BASE_URL環境変数）
 }): { subject: string; text: string; html: string } {
@@ -160,7 +161,7 @@ ${tournamentInfoText}楽勝GO大会運営システム
 
     <div class="footer">
       <p>楽勝GO大会運営システム</p>
-      <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは楽勝GO運営から送信されています。</p>
+      <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは楽勝GOシステムを利用して、${data.organizationName || '大会管理者'}が送信しています。</p>
     </div>
   </div>
 </body>

@@ -16,6 +16,7 @@ export interface WithdrawalEmailVariables {
   venueInfo?: string;
   contactEmail?: string;
   contactPhone?: string;
+  organizationName?: string; // 大会管理者の組織名
 }
 
 /**
@@ -103,10 +104,9 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
         </div>
         
         <div class="footer">
-            <p>このメールは自動送信されています。<br>
-            {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
-            {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>
-            <p>© 楽勝 GO 運営事務局</p>
+            <p>このメールは自動送信されています。</p>
+            {{#if contactEmail}}<p>お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>{{/if}}
+            <p>このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
         </div>
     </div>
 </body>
@@ -156,9 +156,8 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 
 ───────────────────────────
 このメールは自動送信されています。
-{{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
-{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}
-© 楽勝 GO 運営事務局
+{{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
+このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
 `
   };
@@ -248,10 +247,9 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
         </div>
         
         <div class="footer">
-            <p>このメールは自動送信されています。<br>
-            {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
-            {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>
-            <p>© 楽勝 GO 運営事務局</p>
+            <p>このメールは自動送信されています。</p>
+            {{#if contactEmail}}<p>お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>{{/if}}
+            <p>このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
         </div>
     </div>
 </body>
@@ -300,9 +298,8 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 
 ───────────────────────────
 このメールは自動送信されています。
-{{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
-{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}
-© 楽勝 GO 運営事務局
+{{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
+このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
 `
   };
@@ -501,10 +498,9 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
         </div>
         
         <div class="footer">
-            <p>このメールは自動送信されています。<br>
-            {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
-            {{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>
-            <p>© 楽勝 GO 運営事務局</p>
+            <p>このメールは自動送信されています。</p>
+            {{#if contactEmail}}<p>お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>{{/if}}
+            <p>このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
         </div>
     </div>
 </body>
@@ -540,9 +536,8 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 
 ───────────────────────────
 このメールは自動送信されています。
-{{#if contactEmail}}お問い合わせ: {{contactEmail}}{{/if}}
-{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}
-© 楽勝 GO 運営事務局
+{{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
+このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
 `
   };
