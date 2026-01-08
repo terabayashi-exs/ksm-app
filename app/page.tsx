@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import TournamentGroupCard from "@/components/features/tournament/TournamentGroupCard";
+import AnnouncementList from "@/components/features/announcements/AnnouncementList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -100,6 +101,13 @@ export default async function Home() {
               </>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* お知らせセクション */}
+      <section className="py-8 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AnnouncementList />
         </div>
       </section>
 

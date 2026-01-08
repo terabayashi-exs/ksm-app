@@ -313,6 +313,27 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
 
+          {/* お知らせ管理（adminユーザーのみ） */}
+          {session.user.id === "admin" && (
+            <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
+              <CardHeader>
+                <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center">
+                  📢 お知らせ管理
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-blue-700 dark:text-blue-300 mb-4">
+                  TOPページに表示するお知らせの作成・編集・削除を行います
+                </p>
+                <div className="space-y-2">
+                  <Button asChild variant="outline" className="w-full border-2 border-blue-300 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-700 dark:hover:border-blue-600 dark:hover:bg-blue-950/30">
+                    <Link href="/admin/announcements">お知らせ管理</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
         </div>
       </div>
     </div>
