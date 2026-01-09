@@ -2,6 +2,7 @@
 import { auth } from "@/lib/auth";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import InitialFooterBanner from "@/components/layout/InitialFooterBanner";
 import TournamentGroupCard from "@/components/features/tournament/TournamentGroupCard";
 import AnnouncementList from "@/components/features/announcements/AnnouncementList";
 import { Button } from "@/components/ui/button";
@@ -372,6 +373,9 @@ export default async function Home() {
       </section>
 
       <Footer />
+
+      {/* 初期表示時のみ表示される固定フッターバナー */}
+      <InitialFooterBanner />
     </div>
   );
 }
