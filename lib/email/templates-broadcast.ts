@@ -43,7 +43,7 @@ export function generateCustomBroadcastEmail(data: {
 
   // フッター部分（問い合わせ先）
   const contactFooter = data.organizerEmail
-    ? `\n\nご不明な点がございましたら、大会運営者までお問い合わせください。\n${data.organizerEmail}`
+    ? `\n\nご不明な点がございましたら、${data.organizationName || '大会運営者'}までお問い合わせください。\n${data.organizerEmail}`
     : '';
 
   // 大会情報セクションの生成（大会名と部門名の表示）
@@ -141,7 +141,7 @@ ${tournamentInfoText}楽勝GO大会運営システム
       <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
         <p style="margin: 0; color: #92400e; font-size: 14px;">
           <strong>📧 お問い合わせ先</strong><br>
-          ご不明な点がございましたら、大会運営者までお問い合わせください。<br>
+          ご不明な点がございましたら、${data.organizationName || '大会運営者'}までお問い合わせください。<br>
           <a href="mailto:${data.organizerEmail}" style="color: #2563eb; text-decoration: none;">${data.organizerEmail}</a>
         </p>
       </div>
@@ -349,6 +349,40 @@ export const EMAIL_PRESETS = {
 ・詳細については別途ご連絡させていただきます
 
 ご理解のほど、よろしくお願いいたします。`,
+  },
+  scheduleAnnouncement: {
+    id: 'scheduleAnnouncement',
+    name: '大会日程・組合せ決定通知',
+    title: '大会日程・組合せが決定しました',
+    body: `チーム代表者の皆様
+
+お疲れ様です。大会運営事務局です。
+
+この度は大会へのご参加、誠にありがとうございます。
+大会の日程と試合の組合せが決定いたしましたので、お知らせいたします。
+
+■対象チーム
+{{teamName}}
+
+■お知らせ
+大会の詳細スケジュール、試合の組合せ、対戦相手などの情報が確定しました。
+必ず以下のページから最新の情報をご確認ください。
+
+大会詳細ページ: [URLをここに記載]
+
+■確認いただきたい内容
+・試合スケジュール（日時・会場）
+・対戦相手と組合せ
+・集合時刻と注意事項
+・選手登録情報の最終確認
+
+■お願い
+・チーム代表者の方は、必ず選手全員に試合日程をご共有ください
+・試合当日の遅刻・欠席がないよう、事前の確認をお願いいたします
+・ご不明な点がございましたら、お早めにお問い合わせください
+
+皆様のご参加を心よりお待ちしております。
+当日は、素晴らしい試合ができることを楽しみにしております。`,
   },
 } as const;
 

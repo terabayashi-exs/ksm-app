@@ -263,7 +263,7 @@ export default function AnnouncementManagement() {
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground">
-                    小さい順に表示されます（同順位は新しい順）
+                    大きい順に表示されます（同順位は新しい順）
                   </p>
                 </div>
               </div>

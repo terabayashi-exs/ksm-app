@@ -72,6 +72,7 @@ export default function EmailSendPage() {
       waitlist: 'キャンセル待ち通知',
       withdrawal_approved: '辞退承認通知',
       withdrawal_rejected: '辞退却下通知',
+      scheduleAnnouncement: '大会日程・組合せ決定通知',
       auto_application: '申請受付（自動）',
       custom: 'カスタム',
     };
@@ -87,6 +88,7 @@ export default function EmailSendPage() {
       waitlist: 'text-muted-foreground', // キャンセル待ち通知 - グレー
       withdrawal_approved: 'text-red-600', // 辞退承認通知 - 赤
       withdrawal_rejected: 'text-purple-600', // 辞退却下通知 - 紫
+      scheduleAnnouncement: 'text-blue-600', // 大会日程・組合せ決定通知 - 青
       auto_application: 'text-muted-foreground', // 申請受付（自動） - グレー
       custom: 'text-muted-foreground', // カスタム - グレー
     };

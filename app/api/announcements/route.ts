@@ -15,7 +15,7 @@ export async function GET() {
         updated_at
       FROM t_announcements
       WHERE status = 'published'
-      ORDER BY display_order ASC, created_at DESC
+      ORDER BY display_order DESC, created_at DESC
       LIMIT 5
     `);
 

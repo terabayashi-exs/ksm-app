@@ -24,7 +24,7 @@ export async function GET() {
         a.created_at,
         a.updated_at
       FROM t_announcements a
-      ORDER BY a.display_order ASC, a.created_at DESC
+      ORDER BY a.display_order DESC, a.created_at DESC
     `);
 
     return NextResponse.json({

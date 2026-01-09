@@ -19,27 +19,28 @@
 - `m_sport_types` - 競技種別マスター（PK戦、ハンドボール等）
 - `m_tournament_groups` - 大会グループマスター（大会分類用）
 
-#### トランザクションテーブル (21テーブル)
+#### トランザクションテーブル (22テーブル)
 - `t_tournaments` - 大会情報
-- `t_tournament_teams` - 大会参加チーム（`participation_status`カラム追加: 2025-12-19）
+- `t_tournament_teams` - 大会参加チーム（UNIQUE制約削除: 2026-01-08）
 - `t_tournament_players` - 大会参加選手
 - `t_match_blocks` - 試合ブロック（予選グループ、決勝トーナメントなど）
 - `t_matches_live` - 進行中試合情報
 - `t_matches_final` - 確定済み試合結果
 - `t_match_status` - 試合状態管理
-- `t_tournament_rules` - 大会ルール設定（`win_condition`カラム削除: 2025-12-19）
+- `t_tournament_rules` - 大会ルール設定
 - `t_tournament_courts` - 大会コート情報
 - `t_tournament_files` - 大会関連ファイル（Blob Storage連携）
 - `t_tournament_groups` - 大会グループ
 - `t_tournament_match_overrides` - 試合進出条件オーバーライド
 - `t_tournament_notifications` - 大会通知情報
-- `t_email_send_history` - メール送信履歴（新規追加: 2025-12-19）
-- `t_email_verification_tokens` - メール認証トークン（新規追加: 2025-12-23）
-- `t_password_reset_tokens` - パスワードリセットトークン（新規追加: 2025-12-22）
+- `t_email_send_history` - メール送信履歴
+- `t_email_verification_tokens` - メール認証トークン
+- `t_password_reset_tokens` - パスワードリセットトークン
 - `t_administrator_subscriptions` - 管理者サブスクリプション
 - `t_subscription_usage` - サブスクリプション使用状況
 - `t_payment_history` - 決済履歴
 - `t_archived_tournament_json` - アーカイブ済み大会データ（JSON形式）
+- `t_announcements` - お知らせ情報（新規追加: 2026-01-08）
 - `sqlite_sequence` - SQLite内部シーケンステーブル
 
 詳細な設計については[../database/KSM.md](../database/KSM.md)を参照してください。

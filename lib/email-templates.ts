@@ -84,8 +84,17 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
             <ul>
                 <li><strong>参加費について:</strong> 返金手続きについては別途ご案内いたします</li>
                 <li><strong>次回大会:</strong> 次回大会への参加を心よりお待ちしております</li>
-                <li><strong>お問い合わせ:</strong> ご不明な点がございましたらお気軽にご連絡ください</li>
             </ul>
+
+            {{#if contactEmail}}
+            <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;">
+                    <strong>📧 お問い合わせ先</strong><br>
+                    ご不明な点がございましたら、{{#if organizationName}}{{organizationName}}{{else}}大会運営者{{/if}}までお問い合わせください。<br>
+                    <a href="mailto:{{contactEmail}}" style="color: #2563eb; text-decoration: none;">{{contactEmail}}</a>
+                </p>
+            </div>
+            {{/if}}
 
             <h2>🏢 大会情報</h2>
             <div class="info-box">
@@ -139,7 +148,12 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 ■ 今後について
 ・参加費について: 返金手続きについては別途ご案内いたします
 ・次回大会: 次回大会への参加を心よりお待ちしております
-・お問い合わせ: ご不明な点がございましたらお気軽にご連絡ください
+
+{{#if contactEmail}}
+■ 📧 お問い合わせ先
+ご不明な点がございましたら、{{#if organizationName}}{{organizationName}}{{else}}大会運営者{{/if}}までお問い合わせください。
+{{contactEmail}}
+{{/if}}
 
 ■ 大会情報
 {{#if groupName}}
@@ -230,6 +244,16 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
                 <li><strong>参加継続:</strong> 現在の参加状態は維持されています</li>
             </ul>
 
+            {{#if contactEmail}}
+            <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;">
+                    <strong>📧 お問い合わせ先</strong><br>
+                    ご不明な点がございましたら、{{#if organizationName}}{{organizationName}}{{else}}大会運営者{{/if}}までお問い合わせください。<br>
+                    <a href="mailto:{{contactEmail}}" style="color: #2563eb; text-decoration: none;">{{contactEmail}}</a>
+                </p>
+            </div>
+            {{/if}}
+
             <h2>🏢 大会情報</h2>
             <div class="info-box">
                 {{#if groupName}}
@@ -242,8 +266,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
                 {{#if venueInfo}}<p><strong>会場:</strong> {{venueInfo}}</p>{{/if}}
             </div>
 
-            <p>ご不明な点がございましたら、運営事務局までお気軽にお問い合わせください。<br>
-            引き続きよろしくお願いいたします。</p>
+            <p>引き続きよろしくお願いいたします。</p>
         </div>
         
         <div class="footer">
@@ -283,6 +306,12 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 ・ご相談: 参加に関してご不明な点がございましたら、お気軽にご相談ください
 ・参加継続: 現在の参加状態は維持されています
 
+{{#if contactEmail}}
+■ 📧 お問い合わせ先
+ご不明な点がございましたら、{{#if organizationName}}{{organizationName}}{{else}}大会運営者{{/if}}までお問い合わせください。
+{{contactEmail}}
+{{/if}}
+
 ■ 大会情報
 {{#if groupName}}
 大会名: {{groupName}}
@@ -293,7 +322,6 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 {{#if tournamentDate}}開催予定: {{tournamentDate}}{{/if}}
 {{#if venueInfo}}会場: {{venueInfo}}{{/if}}
 
-ご不明な点がございましたら、運営事務局までお気軽にお問い合わせください。
 引き続きよろしくお願いいたします。
 
 ───────────────────────────
