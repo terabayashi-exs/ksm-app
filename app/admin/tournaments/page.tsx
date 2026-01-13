@@ -381,6 +381,11 @@ export default function AdminTournamentsList() {
                                       手動順位設定
                                     </Link>
                                   </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-yellow-300 hover:bg-yellow-50">
+                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                                      スポンサー管理
+                                    </Link>
+                                  </Button>
                                   {tournament.calculated_status === 'completed' && (
                                     <Button 
                                       size="sm" 
