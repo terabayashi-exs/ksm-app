@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { TournamentBlobArchiver } from '@/lib/tournament-blob-archiver';
+import { deleteBlobsByUrls } from '@/lib/blob-helpers';
 
 export async function DELETE(
   request: NextRequest,
@@ -67,6 +68,7 @@ export async function DELETE(
           { name: 't_tournament_teams', query: 'SELECT COUNT(*) as count FROM t_tournament_teams WHERE tournament_id = ?' },
           { name: 't_tournament_rules', query: 'SELECT COUNT(*) as count FROM t_tournament_rules WHERE tournament_id = ?' },
           { name: 't_tournament_files', query: 'SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ?' },
+          { name: 't_email_send_history', query: 'SELECT COUNT(*) as count FROM t_email_send_history WHERE tournament_id = ?' },
           { name: 't_tournament_notifications', query: 'SELECT COUNT(*) as count FROM t_tournament_notifications WHERE tournament_id = ?' },
           { name: 't_archived_tournament_json', query: 'SELECT COUNT(*) as count FROM t_archived_tournament_json WHERE tournament_id = ?' }
         ];
@@ -87,7 +89,31 @@ export async function DELETE(
 
       await checkRecordCounts();
 
-      // 1. 試合状態データ削除（t_match_statusが存在する場合）
+      // 1. スポンサーバナー画像削除（Blob Storage）
+      // 注意: t_sponsor_bannersはON DELETE CASCADEで自動削除されるため、
+      // その前にBlobから画像を削除する必要がある
+      try {
+        console.log('🗑️ スポンサーバナー画像を削除中...');
+        const bannerResult = await db.execute(
+          'SELECT image_blob_url FROM t_sponsor_banners WHERE tournament_id = ?',
+          [tournamentId]
+        );
+
+        if (bannerResult.rows.length > 0) {
+          const blobUrls = bannerResult.rows.map((row) => row.image_blob_url as string);
+          console.log(`📊 削除対象のバナー画像: ${blobUrls.length}件`);
+
+          const deletedCount = await deleteBlobsByUrls(blobUrls);
+          console.log(`✅ スポンサーバナー画像削除完了: ${deletedCount}/${blobUrls.length}件`);
+        } else {
+          console.log('✓ スポンサーバナー画像: 削除対象なし');
+        }
+      } catch (err) {
+        console.warn('⚠️ スポンサーバナー画像削除でエラー:', err instanceof Error ? err.message : err);
+        // Blob削除エラーは警告に留め、処理は継続
+      }
+
+      // 2. 試合状態データ削除（t_match_statusが存在する場合）
       try {
         const result = await db.execute(
           'DELETE FROM t_match_status WHERE match_block_id IN (SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?)',
@@ -219,7 +245,19 @@ export async function DELETE(
         deletionErrors.push(`t_tournament_files: ${err instanceof Error ? err.message : '不明なエラー'}`);
       }
 
-      // 9. 大会通知削除（t_tournament_notificationsが存在する場合）
+      // 9. メール送信履歴削除（t_email_send_historyが存在する場合）
+      try {
+        const result = await db.execute(
+          'DELETE FROM t_email_send_history WHERE tournament_id = ?',
+          [tournamentId]
+        );
+        console.log(`✓ メール送信履歴データ削除完了: ${result.rowsAffected} レコード`);
+      } catch (err) {
+        console.warn('メール送信履歴データ削除をスキップ:', err instanceof Error ? err.message : err);
+        deletionErrors.push(`t_email_send_history: ${err instanceof Error ? err.message : '不明なエラー'}`);
+      }
+
+      // 10. 大会通知削除（t_tournament_notificationsが存在する場合）
       try {
         const result = await db.execute(
           'DELETE FROM t_tournament_notifications WHERE tournament_id = ?',
@@ -231,7 +269,7 @@ export async function DELETE(
         deletionErrors.push(`t_tournament_notifications: ${err instanceof Error ? err.message : '不明なエラー'}`);
       }
 
-      // 10. アーカイブデータ削除（データベース）
+      // 11. アーカイブデータ削除（データベース）
       try {
         const result = await db.execute(
           'DELETE FROM t_archived_tournament_json WHERE tournament_id = ?',
@@ -243,7 +281,7 @@ export async function DELETE(
         deletionErrors.push(`t_archived_tournament_json: ${err instanceof Error ? err.message : '不明なエラー'}`);
       }
 
-      // 11. アーカイブデータ削除（Blob Storage）
+      // 12. アーカイブデータ削除（Blob Storage）
       if (process.env.BLOB_READ_WRITE_TOKEN) {
         try {
           console.log(`🗑️ Blobアーカイブを削除中... (大会ID: ${tournamentId})`);
@@ -261,10 +299,10 @@ export async function DELETE(
         console.log('⏭️ Blobアーカイブ削除をスキップ: BLOB_READ_WRITE_TOKEN が設定されていません');
       }
 
-      // 12. 最終確認: 全ての外部キー制約チェック
+      // 13. 最終確認: 全ての外部キー制約チェック
       try {
         console.log('🔍 最終外部キー制約チェックを実行中...');
-        
+
         // 全ての関連テーブルの残存レコードをチェック
         const allConstraintChecks = [
           { name: 't_tournament_rules', query: 'SELECT COUNT(*) as count FROM t_tournament_rules WHERE tournament_id = ?' },
@@ -272,6 +310,7 @@ export async function DELETE(
           { name: 't_tournament_players', query: 'SELECT COUNT(*) as count FROM t_tournament_players WHERE tournament_id = ?' },
           { name: 't_match_blocks', query: 'SELECT COUNT(*) as count FROM t_match_blocks WHERE tournament_id = ?' },
           { name: 't_tournament_files', query: 'SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ?' },
+          { name: 't_email_send_history', query: 'SELECT COUNT(*) as count FROM t_email_send_history WHERE tournament_id = ?' },
           { name: 't_tournament_notifications', query: 'SELECT COUNT(*) as count FROM t_tournament_notifications WHERE tournament_id = ?' },
           { name: 't_archived_tournament_json', query: 'SELECT COUNT(*) as count FROM t_archived_tournament_json WHERE tournament_id = ?' }
         ];
@@ -311,7 +350,7 @@ export async function DELETE(
         deletionErrors.push(`外部キー制約チェック失敗: ${constraintError instanceof Error ? constraintError.message : '不明なエラー'}`);
       }
 
-      // 13. 大会データ削除（メインテーブル）- 最終削除
+      // 14. 大会データ削除（メインテーブル）- 最終削除
       try {
 
         const result = await db.execute(

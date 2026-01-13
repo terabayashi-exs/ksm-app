@@ -12,6 +12,7 @@ import TournamentTeams from '@/components/features/tournament/TournamentTeams';
 import TournamentBracket from '@/components/features/tournament/TournamentBracket';
 import TournamentPhaseView from '@/components/features/tournament/TournamentPhaseView';
 import PublicFilesList from '@/components/features/tournament/PublicFilesList';
+import TabContentWithSidebar from '@/components/public/TabContentWithSidebar';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
@@ -452,31 +453,39 @@ async function TournamentDetailContent({ params }: PageProps) {
             </TabsList>
 
             <TabsContent value="overview">
-              <TournamentOverview 
-                tournament={tournament} 
-                bracketPdfExists={bracketPdfExists} 
-                resultsPdfExists={resultsPdfExists} 
-              />
+              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="overview">
+                <TournamentOverview
+                  tournament={tournament}
+                  bracketPdfExists={bracketPdfExists}
+                  resultsPdfExists={resultsPdfExists}
+                />
+              </TabContentWithSidebar>
             </TabsContent>
 
             <TabsContent value="schedule">
-              <ScheduleResults tournament={tournament} />
+              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="schedule">
+                <ScheduleResults tournament={tournament} />
+              </TabContentWithSidebar>
             </TabsContent>
 
             <TabsContent value="preliminary">
-              <TournamentPhaseView
-                tournamentId={tournament.tournament_id}
-                phase="preliminary"
-                phaseName="予選"
-              />
+              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="preliminary">
+                <TournamentPhaseView
+                  tournamentId={tournament.tournament_id}
+                  phase="preliminary"
+                  phaseName="予選"
+                />
+              </TabContentWithSidebar>
             </TabsContent>
 
             <TabsContent value="final">
-              <TournamentPhaseView
-                tournamentId={tournament.tournament_id}
-                phase="final"
-                phaseName="決勝"
-              />
+              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="final">
+                <TournamentPhaseView
+                  tournamentId={tournament.tournament_id}
+                  phase="final"
+                  phaseName="決勝"
+                />
+              </TabContentWithSidebar>
             </TabsContent>
 
             {/* 既存の実装（非表示だが保持）
@@ -490,11 +499,15 @@ async function TournamentDetailContent({ params }: PageProps) {
             */}
 
             <TabsContent value="standings">
-              <Standings tournament={tournament} />
+              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="standings">
+                <Standings tournament={tournament} />
+              </TabContentWithSidebar>
             </TabsContent>
 
             <TabsContent value="teams">
-              <Teams tournament={tournament} />
+              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="teams">
+                <Teams tournament={tournament} />
+              </TabContentWithSidebar>
             </TabsContent>
           </Tabs>
         </div>

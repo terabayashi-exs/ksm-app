@@ -8,7 +8,7 @@ import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle } from 'lucide-react';
 import { getStatusLabel } from '@/lib/tournament-status';
 import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from '@/lib/format-change';
 import { FormatChangeDialog } from './FormatChangeDialog';
@@ -643,6 +643,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
         <div className="flex gap-2 flex-wrap">
           <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
             <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
+              <Eye className="w-4 h-4 mr-1" />
               詳細
             </Link>
           </Button>
@@ -663,6 +664,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                    <FileEdit className="w-4 h-4 mr-1" />
                     部門編集
                   </Link>
                 </Button>
@@ -683,6 +685,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
+                    <MapPin className="w-4 h-4 mr-1" />
                     コート名設定
                   </Link>
                 </Button>
@@ -703,6 +706,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                    <FileText className="w-4 h-4 mr-1" />
                     ルール設定
                   </Link>
                 </Button>
@@ -749,6 +753,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
+                    <Users className="w-4 h-4 mr-1" />
                     チーム登録
                   </Link>
                 </Button>
@@ -763,7 +768,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 className={`text-sm ${isTrialExpired ? 'cursor-not-allowed opacity-50' : 'hover:border-blue-300 hover:bg-blue-50'}`}
                 title={isTrialExpired ? "トライアル期間終了のため編集できません" : ""}
               >
-                {isTrialExpired && <Lock className="w-4 h-4 mr-1" />}
+                {isTrialExpired ? <Lock className="w-4 h-4 mr-1" /> : <Shuffle className="w-4 h-4 mr-1" />}
                 組合せ作成・編集
               </Button>
 
@@ -838,6 +843,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                   }`}
                 >
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                    <ClipboardList className="w-4 h-4 mr-1" />
                     試合結果入力
                     {hasNotifications(tournament.tournament_id) && (
                       <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
@@ -863,6 +869,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                    <Trophy className="w-4 h-4 mr-1" />
                     順位設定
                   </Link>
                 </Button>
@@ -883,6 +890,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                    <Target className="w-4 h-4 mr-1" />
                     選出条件変更
                   </Link>
                 </Button>
@@ -903,10 +911,47 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               ) : (
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                    <FileText className="w-4 h-4 mr-1" />
                     ファイル管理
                   </Link>
                 </Button>
               )}
+
+              {/* スポンサー管理ボタン */}
+              {isTrialExpired ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="text-sm cursor-not-allowed opacity-50"
+                  title="トライアル期間終了のため編集できません"
+                >
+                  <Lock className="w-4 h-4 mr-1" />
+                  スポンサー管理
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                    <Star className="w-4 h-4 mr-1" />
+                    スポンサー管理
+                  </Link>
+                </Button>
+              )}
+
+              {/* アーカイブボタン（無効化） */}
+              {isAdminUser && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="text-sm cursor-not-allowed opacity-50"
+                  title="大会終了後にアーカイブできます"
+                >
+                  <Lock className="w-4 h-4 mr-1" />
+                  アーカイブ
+                </Button>
+              )}
+
               {isAdminUser && (
                 <Button
                   size="sm"
@@ -932,6 +977,56 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
           )}
           {tournament.status === 'ongoing' && !tournament.is_archived && (
             <>
+              {/* チーム登録ボタン（無効化） */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="text-sm cursor-not-allowed opacity-50"
+                title="開催中のため変更できません"
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                チーム登録
+              </Button>
+
+              {/* 組合せ作成・編集ボタン（無効化） */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="text-sm cursor-not-allowed opacity-50"
+                title="開催中のため変更できません"
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                組合せ作成・編集
+              </Button>
+
+              {/* フォーマット変更ボタン（無効化） */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="text-sm cursor-not-allowed opacity-50"
+                title="開催中のため変更できません"
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                フォーマット変更
+              </Button>
+
+              {/* 参加チーム管理ボタン */}
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                  <Users className="w-4 h-4 mr-2" />
+                  参加チーム管理
+                </Link>
+              </Button>
+
+              {/* 試合結果入力ボタン */}
               <Button
                 asChild
                 size="sm"
@@ -942,6 +1037,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 }
               >
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  <ClipboardList className="w-4 h-4 mr-1" />
                   試合結果入力
                   {hasNotifications(tournament.tournament_id) && (
                     <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
@@ -950,21 +1046,53 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                   )}
                 </Link>
               </Button>
+
+              {/* 順位設定ボタン */}
               <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  <Trophy className="w-4 h-4 mr-1" />
                   順位設定
                 </Link>
               </Button>
+
+              {/* 選出条件変更ボタン */}
               <Button asChild size="sm" variant="outline" className="hover:border-orange-300 hover:bg-orange-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                  <Target className="w-4 h-4 mr-1" />
                   選出条件変更
                 </Link>
               </Button>
+
+              {/* ファイル管理ボタン */}
               <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  <FileText className="w-4 h-4 mr-1" />
                   ファイル管理
                 </Link>
               </Button>
+
+              {/* スポンサー管理ボタン */}
+              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                  <Star className="w-4 h-4 mr-1" />
+                  スポンサー管理
+                </Link>
+              </Button>
+
+              {/* アーカイブボタン（無効化） */}
+              {isAdminUser && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="text-sm cursor-not-allowed opacity-50"
+                  title="大会終了後にアーカイブできます"
+                >
+                  <Lock className="w-4 h-4 mr-1" />
+                  アーカイブ
+                </Button>
+              )}
+
               {isAdminUser && (
                 <Button
                   size="sm"
@@ -990,6 +1118,56 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
           )}
           {tournament.status === 'completed' && !tournament.is_archived && (
             <>
+              {/* チーム登録ボタン（無効化） */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="text-sm cursor-not-allowed opacity-50"
+                title="大会終了済みのため変更できません"
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                チーム登録
+              </Button>
+
+              {/* 組合せ作成・編集ボタン（無効化） */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="text-sm cursor-not-allowed opacity-50"
+                title="大会終了済みのため変更できません"
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                組合せ作成・編集
+              </Button>
+
+              {/* フォーマット変更ボタン（無効化） */}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="text-sm cursor-not-allowed opacity-50"
+                title="大会終了済みのため変更できません"
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                フォーマット変更
+              </Button>
+
+              {/* 参加チーム管理ボタン */}
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              >
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                  <Users className="w-4 h-4 mr-2" />
+                  参加チーム管理
+                </Link>
+              </Button>
+
+              {/* 試合結果入力ボタン */}
               <Button
                 asChild
                 size="sm"
@@ -1000,6 +1178,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 }`}
               >
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                  <ClipboardList className="w-4 h-4 mr-1" />
                   試合結果入力
                   {hasNotifications(tournament.tournament_id) && (
                     <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
@@ -1008,21 +1187,39 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                   )}
                 </Link>
               </Button>
+
+              {/* 順位設定ボタン */}
               <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                  <Trophy className="w-4 h-4 mr-1" />
                   順位設定
                 </Link>
               </Button>
+
+              {/* 選出条件変更ボタン */}
               <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                  <Target className="w-4 h-4 mr-1" />
                   選出条件変更
                 </Link>
               </Button>
+
+              {/* ファイル管理ボタン */}
               <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                  <FileText className="w-4 h-4 mr-1" />
                   ファイル管理
                 </Link>
               </Button>
+
+              {/* スポンサー管理ボタン */}
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                  <Star className="w-4 h-4 mr-1" />
+                  スポンサー管理
+                </Link>
+              </Button>
+
               {!tournament.is_archived && isAdminUser && (
                 <Button
                   size="sm"

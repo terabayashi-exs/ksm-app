@@ -19,7 +19,7 @@
 - `m_sport_types` - 競技種別マスター（PK戦、ハンドボール等）
 - `m_tournament_groups` - 大会グループマスター（大会分類用）
 
-#### トランザクションテーブル (22テーブル)
+#### トランザクションテーブル (23テーブル)
 - `t_tournaments` - 大会情報
 - `t_tournament_teams` - 大会参加チーム（UNIQUE制約削除: 2026-01-08）
 - `t_tournament_players` - 大会参加選手
@@ -41,6 +41,7 @@
 - `t_payment_history` - 決済履歴
 - `t_archived_tournament_json` - アーカイブ済み大会データ（JSON形式）
 - `t_announcements` - お知らせ情報（新規追加: 2026-01-08）
+- `t_sponsor_banners` - スポンサーバナー管理（新規追加: 2026-01-13）
 - `sqlite_sequence` - SQLite内部シーケンステーブル
 
 詳細な設計については[../database/KSM.md](../database/KSM.md)を参照してください。
