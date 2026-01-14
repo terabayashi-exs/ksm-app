@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { tournamentCreateSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
-import type { TournamentStatus } from '@/lib/tournament-status';
+import { calculateTournamentStatusSync, type TournamentStatus } from '@/lib/tournament-status';
 import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 interface RouteParams {
@@ -205,6 +205,26 @@ export async function PUT(
       }, {} as Record<string, string>)
     );
 
+    // 現在のstatusを取得（管理者が手動で設定した場合は優先）
+    const currentStatus = String(existingTournament.rows[0].status);
+
+    // ステータスを動的に計算
+    // ただし、管理者が明示的にongoing/completedに設定した場合はそれを優先
+    let newStatus: string;
+    if (currentStatus === 'ongoing' || currentStatus === 'completed') {
+      newStatus = currentStatus; // 管理者の手動設定を優先
+      console.log(`📊 大会ID:${tournamentId} ステータス維持（管理者設定）: ${newStatus}`);
+    } else {
+      newStatus = calculateTournamentStatusSync({
+        status: currentStatus,
+        tournament_dates: tournamentDatesJson,
+        recruitment_start_date: data.recruitment_start_date,
+        recruitment_end_date: data.recruitment_end_date,
+        public_start_date: data.public_start_date
+      });
+      console.log(`📊 大会ID:${tournamentId} ステータス再計算: ${currentStatus} → ${newStatus}`);
+    }
+
     // 大会情報を更新
     await db.execute(`
       UPDATE t_tournaments SET
@@ -215,6 +235,7 @@ export async function PUT(
         tournament_dates = ?,
         match_duration_minutes = ?,
         break_duration_minutes = ?,
+        status = ?,
         visibility = ?,
         public_start_date = ?,
         recruitment_start_date = ?,
@@ -230,6 +251,7 @@ export async function PUT(
       tournamentDatesJson,
       data.match_duration_minutes,
       data.break_duration_minutes,
+      newStatus,  // 動的に計算したステータス
       data.is_public ? 'open' : 'preparing',
       data.public_start_date,
       data.recruitment_start_date,
@@ -505,12 +527,22 @@ export async function DELETE(
         console.log('t_tournament_rules削除エラー（テーブルが存在しない可能性）:', err);
       }
       
-      // t_tournament_players から削除  
+      // t_tournament_players から削除
       await db.execute(`
         DELETE FROM t_tournament_players WHERE tournament_id = ?
       `, [tournamentId]);
       console.log('✓ t_tournament_players削除完了');
-      
+
+      // t_email_send_history から削除（tournament_team_id外部キー制約のため）
+      try {
+        await db.execute(`
+          DELETE FROM t_email_send_history WHERE tournament_id = ?
+        `, [tournamentId]);
+        console.log('✓ t_email_send_history削除完了');
+      } catch (err) {
+        console.log('t_email_send_history削除エラー（テーブルが存在しない可能性）:', err);
+      }
+
       // t_tournament_teams から削除
       await db.execute(`
         DELETE FROM t_tournament_teams WHERE tournament_id = ?

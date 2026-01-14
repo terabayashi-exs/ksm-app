@@ -34,6 +34,7 @@ export async function GET() {
       SELECT
         t.tournament_id,
         t.tournament_name,
+        t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
@@ -52,9 +53,6 @@ export async function GET() {
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.visibility = 'open'
-        AND (t.public_start_date IS NULL OR t.public_start_date <= date('now'))
-        AND (t.recruitment_start_date IS NULL OR t.recruitment_start_date <= date('now'))
-        AND (t.recruitment_end_date IS NULL OR t.recruitment_end_date >= date('now'))
         AND t.tournament_id NOT IN (
           SELECT tournament_id
           FROM t_tournament_teams
@@ -68,6 +66,7 @@ export async function GET() {
       SELECT
         t.tournament_id,
         t.tournament_name,
+        t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
@@ -108,7 +107,7 @@ export async function GET() {
         tournament_dates: row.tournament_dates ? String(row.tournament_dates) : '{}',
         recruitment_start_date: row.recruitment_start_date ? String(row.recruitment_start_date) : null,
         recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : null,
-        public_start_date: null
+        public_start_date: row.public_start_date ? String(row.public_start_date) : null
       }, Number(row.tournament_id));
 
       return {
@@ -131,9 +130,9 @@ export async function GET() {
       };
     }));
 
-    // 募集前（before_recruitment）の大会を除外
+    // 募集中（recruiting）の大会のみを表示
     const availableTournaments = availableTournamentsRaw.filter(tournament =>
-      tournament.status !== 'before_recruitment'
+      tournament.status === 'recruiting'
     );
 
     // 複数チーム参加データを整理し、動的ステータスを計算
@@ -143,7 +142,7 @@ export async function GET() {
         tournament_dates: row.tournament_dates ? String(row.tournament_dates) : '{}',
         recruitment_start_date: row.recruitment_start_date ? String(row.recruitment_start_date) : null,
         recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : null,
-        public_start_date: null
+        public_start_date: row.public_start_date ? String(row.public_start_date) : null
       }, Number(row.tournament_id));
 
       return {
