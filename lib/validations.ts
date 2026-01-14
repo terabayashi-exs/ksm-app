@@ -58,18 +58,18 @@ export const tournamentCreateSchema = z.object({
   is_public: z.boolean().optional().default(false),
   show_players_public: z.boolean().optional().default(false),
 
-  // 公開・募集日程
+  // 公開・募集日程（日付のみまたは日時形式に対応）
   public_start_date: z.string()
-    .min(1, '公開開始日は必須です')
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '公開開始日は YYYY-MM-DD 形式で入力してください'),
-  
+    .min(1, '公開開始日時は必須です')
+    .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, '公開開始日時は YYYY-MM-DD または YYYY-MM-DDTHH:mm 形式で入力してください'),
+
   recruitment_start_date: z.string()
-    .min(1, '募集開始日は必須です')
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '募集開始日は YYYY-MM-DD 形式で入力してください'),
-  
+    .min(1, '募集開始日時は必須です')
+    .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, '募集開始日時は YYYY-MM-DD または YYYY-MM-DDTHH:mm 形式で入力してください'),
+
   recruitment_end_date: z.string()
-    .min(1, '募集終了日は必須です')
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '募集終了日は YYYY-MM-DD 形式で入力してください')
+    .min(1, '募集終了日時は必須です')
+    .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, '募集終了日時は YYYY-MM-DD または YYYY-MM-DDTHH:mm 形式で入力してください')
 }).refine((data) => {
   // 開催日番号の重複チェック
   const dayNumbers = data.tournament_dates.map(d => d.dayNumber);
@@ -98,16 +98,16 @@ export const tournamentCreateSchema = z.object({
   message: 'コート番号に重複があるか、使用コート数より指定されたコート番号が少ないです',
   path: ['available_courts']
 }).refine((data) => {
-  // 募集開始日 >= 公開開始日のチェック
+  // 募集開始日時 >= 公開開始日時のチェック
   return new Date(data.recruitment_start_date) >= new Date(data.public_start_date);
 }, {
-  message: '募集開始日は公開開始日以降で設定してください',
+  message: '募集開始日時は公開開始日時以降で設定してください',
   path: ['recruitment_start_date']
 }).refine((data) => {
-  // 募集終了日 >= 募集開始日のチェック
+  // 募集終了日時 >= 募集開始日時のチェック
   return new Date(data.recruitment_end_date) >= new Date(data.recruitment_start_date);
 }, {
-  message: '募集終了日は募集開始日以降で設定してください',
+  message: '募集終了日時は募集開始日時以降で設定してください',
   path: ['recruitment_end_date']
 });
 

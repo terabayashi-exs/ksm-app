@@ -243,7 +243,7 @@ export default function AdminTournamentsList() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全て</SelectItem>
-                    <SelectItem value="before_recruitment">募集前</SelectItem>
+                    <SelectItem value="planning">募集前</SelectItem>
                     <SelectItem value="recruiting">募集中</SelectItem>
                     <SelectItem value="before_event">開催前</SelectItem>
                     <SelectItem value="ongoing">開催中</SelectItem>

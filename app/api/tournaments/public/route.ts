@@ -11,7 +11,7 @@ export async function GET() {
 
     // 公開されている大会を取得
     const tournamentsResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.format_id,
@@ -20,6 +20,7 @@ export async function GET() {
         t.tournament_dates,
         t.status,
         t.visibility,
+        t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.created_at,
@@ -73,7 +74,8 @@ export async function GET() {
         status: String(row.status),
         recruitment_start_date: row.recruitment_start_date as string | null,
         recruitment_end_date: row.recruitment_end_date as string | null,
-        tournament_dates: String(row.tournament_dates || '{}')
+        tournament_dates: String(row.tournament_dates || '{}'),
+        public_start_date: row.public_start_date as string | null
       }, Number(row.tournament_id)); // tournamentIdを渡して試合進行状況もチェック
 
       return {
@@ -102,6 +104,7 @@ export async function GET() {
     }));
 
     // ステータス別に分類
+    // 注: public_start_date前の大会はstatusが'planning'になるため、自動的に除外される
     const recruiting = tournaments.filter(t => t.status === 'recruiting');
     const beforeEvent = tournaments.filter(t => t.status === 'before_event');
     const ongoing = tournaments.filter(t => t.status === 'ongoing');

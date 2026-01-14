@@ -91,9 +91,9 @@ const tournamentCreateSchema = z.object({
   start_time: z.string().min(1, "開始時刻は必須です"),
   is_public: z.boolean(),
   show_players_public: z.boolean(),
-  public_start_date: z.string().min(1, "公開開始日は必須です"),
-  recruitment_start_date: z.string().min(1, "募集開始日は必須です"),
-  recruitment_end_date: z.string().min(1, "募集終了日は必須です"),
+  public_start_date: z.string().min(1, "公開開始日時は必須です"),
+  recruitment_start_date: z.string().min(1, "募集開始日時は必須です"),
+  recruitment_end_date: z.string().min(1, "募集終了日時は必須です"),
   description: z.string().optional(),
 });
 
@@ -140,9 +140,9 @@ export default function TournamentCreateNewForm() {
       start_time: "13:00",
       is_public: true,
       show_players_public: false,
-      public_start_date: new Date(Date.now()).toISOString().split('T')[0],
-      recruitment_start_date: new Date(Date.now()).toISOString().split('T')[0],
-      recruitment_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      public_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
+      recruitment_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
+      recruitment_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00',
       description: "",
     },
   });
@@ -985,10 +985,10 @@ export default function TournamentCreateNewForm() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="public_start_date">公開開始日 *</Label>
+              <Label htmlFor="public_start_date">公開開始日時 *</Label>
               <Input
                 id="public_start_date"
-                type="date"
+                type="datetime-local"
                 {...register("public_start_date")}
                 className={errors.public_start_date ? "border-red-500" : ""}
               />
@@ -998,10 +998,10 @@ export default function TournamentCreateNewForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="recruitment_start_date">募集開始日 *</Label>
+              <Label htmlFor="recruitment_start_date">募集開始日時 *</Label>
               <Input
                 id="recruitment_start_date"
-                type="date"
+                type="datetime-local"
                 {...register("recruitment_start_date")}
                 className={errors.recruitment_start_date ? "border-red-500" : ""}
               />
@@ -1011,10 +1011,10 @@ export default function TournamentCreateNewForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="recruitment_end_date">募集終了日 *</Label>
+              <Label htmlFor="recruitment_end_date">募集終了日時 *</Label>
               <Input
                 id="recruitment_end_date"
-                type="date"
+                type="datetime-local"
                 {...register("recruitment_end_date")}
                 className={errors.recruitment_end_date ? "border-red-500" : ""}
               />
@@ -1027,9 +1027,9 @@ export default function TournamentCreateNewForm() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-medium text-blue-900 mb-2">日程設定について</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• 公開開始日: 一般ユーザーが大会情報を閲覧できるようになる日</li>
-              <li>• 募集開始日: チームが大会への参加申込みを開始できる日</li>
-              <li>• 募集終了日: チームの参加申込みを締め切る日</li>
+              <li>• 公開開始日時: 一般ユーザーが大会情報を閲覧できるようになる日時</li>
+              <li>• 募集開始日時: チームが大会への参加申込みを開始できる日時</li>
+              <li>• 募集終了日時: チームの参加申込みを締め切る日時</li>
             </ul>
           </div>
 

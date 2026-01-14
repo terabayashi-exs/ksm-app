@@ -29,14 +29,14 @@ interface GroupedTournamentData {
 }
 
 interface TournamentDashboardData {
-  before_recruitment: Tournament[];
+  planning: Tournament[];
   recruiting: Tournament[];
   before_event: Tournament[];
   ongoing: Tournament[];
   completed: Tournament[];
   total: number;
   grouped: {
-    before_recruitment: GroupedTournamentData;
+    planning: GroupedTournamentData;
     recruiting: GroupedTournamentData;
     before_event: GroupedTournamentData;
     ongoing: GroupedTournamentData;
@@ -58,14 +58,14 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
   const { data: session } = useSession();
   const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentDashboardData>({
-    before_recruitment: [],
+    planning: [],
     recruiting: [],
     before_event: [],
     ongoing: [],
     completed: [],
     total: 0,
     grouped: {
-      before_recruitment: { grouped: {}, ungrouped: [] },
+      planning: { grouped: {}, ungrouped: [] },
       recruiting: { grouped: {}, ungrouped: [] },
       before_event: { grouped: {}, ungrouped: [] },
       ongoing: { grouped: {}, ungrouped: [] },
@@ -203,7 +203,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
       if (result.success) {
         // 削除成功時、リストから該当大会を除去
         setTournaments(prev => {
-          const updatedBeforeRecruitment = prev.before_recruitment.filter(t => t.tournament_id !== tournament.tournament_id);
+          const updatedBeforeRecruitment = prev.planning.filter(t => t.tournament_id !== tournament.tournament_id);
           const updatedRecruiting = prev.recruiting.filter(t => t.tournament_id !== tournament.tournament_id);
           const updatedBeforeEvent = prev.before_event.filter(t => t.tournament_id !== tournament.tournament_id);
           const updatedOngoing = prev.ongoing.filter(t => t.tournament_id !== tournament.tournament_id);
@@ -234,14 +234,14 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
           };
 
           return {
-            before_recruitment: updatedBeforeRecruitment,
+            planning: updatedBeforeRecruitment,
             recruiting: updatedRecruiting,
             before_event: updatedBeforeEvent,
             ongoing: updatedOngoing,
             completed: updatedCompleted,
             total: prev.total - 1,
             grouped: {
-              before_recruitment: filterGroupedData(prev.grouped.before_recruitment),
+              planning: filterGroupedData(prev.grouped.planning),
               recruiting: filterGroupedData(prev.grouped.recruiting),
               before_event: filterGroupedData(prev.grouped.before_event),
               ongoing: filterGroupedData(prev.grouped.ongoing),
@@ -558,7 +558,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
           </div>
           <div className="flex gap-2">
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-              tournament.status === 'before_recruitment'
+              tournament.status === 'planning'
                 ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
                 : tournament.status === 'recruiting'
                 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
@@ -594,7 +594,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               <span>{tournament.start_time} - {tournament.end_time}</span>
             </div>
           )}
-          {(!tournament.start_time || !tournament.end_time) && (tournament.status === 'before_recruitment' || tournament.status === 'recruiting' || tournament.status === 'before_event') && (
+          {(!tournament.start_time || !tournament.end_time) && (tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') && (
             <div className="flex items-center text-sm text-gray-500">
               <Clock className="w-4 h-4 mr-2" />
               <span>試合時刻未設定</span>
@@ -736,7 +736,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
               </Button>
             )
           )}
-          {(tournament.status === 'before_recruitment' || tournament.status === 'recruiting' || tournament.status === 'before_event') && !tournament.is_archived && (
+          {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') && !tournament.is_archived && (
             <>
               {/* チーム登録ボタン */}
               {isTrialExpired ? (
@@ -1403,15 +1403,15 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
       )}
 
       {/* 募集前の大会 */}
-      {tournaments.before_recruitment.length > 0 && (
+      {tournaments.planning.length > 0 && (
         <>
           <div className="flex items-center text-gray-500 mb-4">
             <Clock className="w-5 h-5 mr-2" />
             <h3 className="text-xl font-bold">
-              募集前の大会 ({Object.keys(tournaments.grouped.before_recruitment.grouped).length + tournaments.grouped.before_recruitment.ungrouped.length}件)
+              募集前の大会 ({Object.keys(tournaments.grouped.planning.grouped).length + tournaments.grouped.planning.ungrouped.length}件)
             </h3>
           </div>
-          {renderGroupedSection(tournaments.grouped.before_recruitment)}
+          {renderGroupedSection(tournaments.grouped.planning)}
         </>
       )}
 

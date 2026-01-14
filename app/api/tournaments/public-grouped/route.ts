@@ -72,7 +72,6 @@ export async function GET(_request: NextRequest) {
         ${teamId ? 'LEFT JOIN t_tournament_teams utt ON t.tournament_id = utt.tournament_id AND utt.team_id = ?' : ''}
         WHERE t.group_id = ?
           AND t.visibility = 'open'
-          AND t.public_start_date <= date('now')
         GROUP BY t.tournament_id
         ORDER BY t.created_at DESC
       `;
@@ -108,7 +107,7 @@ export async function GET(_request: NextRequest) {
           public_start_date: divRow.public_start_date as string | null
         }, Number(divRow.tournament_id));
 
-        // TournamentStatus をそのまま使用（before_recruitmentは後でフィルタリング）
+        // TournamentStatus をそのまま使用（planningは後でフィルタリング）
         const mappedStatus = calculatedStatus;
 
         return {
@@ -151,10 +150,10 @@ export async function GET(_request: NextRequest) {
       };
     }));
 
-    // before_recruitmentの部門を除外してから処理
+    // planningの部門を除外してから処理
     const publicGroupedData = groupedData.map(group => ({
       ...group,
-      divisions: group.divisions.filter(div => div.status !== 'before_recruitment')
+      divisions: group.divisions.filter(div => div.status !== 'planning')
     })).filter(group => group.divisions.length > 0); // 部門が1つ以上ある大会グループのみ
 
     // ステータス別にグループ化

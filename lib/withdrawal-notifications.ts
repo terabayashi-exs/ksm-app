@@ -309,7 +309,6 @@ function convertToTemplateVariables(variables: WithdrawalEmailVariables): Record
   }
   if (variables.adminComment) {
     converted['#if adminComment'] = 'true';
-    converted['/if'] = '';
   }
   if (variables.withdrawalReason) {
     converted['#if withdrawalReason'] = 'true';

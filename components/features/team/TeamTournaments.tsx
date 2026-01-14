@@ -161,7 +161,7 @@ export default function TeamTournaments() {
   const getStatusBadgeColor = (status: TournamentStatus): string => {
     // TOP画面と同じ色合いを使用
     switch (status) {
-      case 'before_recruitment':
+      case 'planning':
         return 'bg-gray-100 text-gray-800';
       case 'recruiting':
         return 'bg-blue-100 text-blue-800';
@@ -315,7 +315,7 @@ export default function TeamTournaments() {
                             </Button>
                             {/* 辞退申請ボタン（開催前のみ表示） */}
                             {team.withdrawal_status === 'active' &&
-                             (tournament.status === 'before_recruitment' ||
+                             (tournament.status === 'planning' ||
                               tournament.status === 'recruiting' ||
                               tournament.status === 'before_event') && (
                               <Button asChild size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
