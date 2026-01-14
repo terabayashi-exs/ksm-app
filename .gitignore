@@ -58,3 +58,7 @@ data/ksm.db
 
 # test files
 test-*.js
+
+# storybook
+*storybook.log
+storybook-static
