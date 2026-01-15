@@ -25,6 +25,8 @@ interface TournamentBlockProps {
   winnerName?: string;
   /** シードチーム名（パターンに応じて1回戦の空き枠に表示） */
   seedTeams?: string[];
+  /** ラウンドラベル（例: ["準々決勝", "準決勝", "決勝"]） */
+  roundLabels?: string[];
 }
 
 /**
@@ -39,6 +41,7 @@ export function TournamentBlock({
   title,
   winnerName,
   seedTeams = [],
+  roundLabels,
 }: TournamentBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -47,9 +50,11 @@ export function TournamentBlock({
   const pattern = getPatternByMatchCount(matches.length);
   const config = getPatternConfig(pattern);
 
-  // カラム幅
-  const columnWidth = 200;
-  const columnGap = 60;
+  // ステージ間のギャップ
+  const stageGap = 48; // gap-12 = 48px
+  // カラム幅: 常に3カラム分で計算 (containerWidth - 2 * gap) / 3
+  // CSS calc()で動的に計算
+  const columnWidthCalc = `calc((100% - ${stageGap * 2}px) / 3)`;
 
   // 試合をラウンドごとに分配
   const matchesByRound = distributeMatchesToRounds(matches, config);
@@ -162,17 +167,16 @@ export function TournamentBlock({
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       {title && (
-        <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
+        <h3 className="text-lg font-semibold mb-4">{title}</h3>
       )}
 
       <div
         ref={containerRef}
-        className="relative"
+        className="relative flex gap-12 w-full"
         style={{
           height: `${blockHeight}px`,
-          width: `${columnWidth * config.columnCount + columnGap * (config.columnCount - 1)}px`,
         }}
       >
         {/* SVG接続線 */}
@@ -185,23 +189,24 @@ export function TournamentBlock({
         {/* ラウンドごとにカラムを描画 */}
         {config.rounds.map((round, roundIndex) => {
           const roundMatches = matchesByRound[roundIndex] || [];
+          // カスタムラベルがあればそれを使用、なければデフォルト
+          const label = roundLabels?.[roundIndex] ?? round.name;
 
           return (
             <div
               key={round.name}
-              className="absolute"
+              className="relative"
               style={{
-                left: `${roundIndex * (columnWidth + columnGap)}px`,
-                width: `${columnWidth}px`,
+                width: columnWidthCalc,
                 zIndex: 2,
               }}
             >
               <div
                 className={`text-sm font-medium text-center mb-2 px-3 py-1 rounded-full ${getRoundColor(
-                  round.name
+                  label
                 )}`}
               >
-                {round.name}
+                {label}
               </div>
               {/* シードカード（1回戦のみ） */}
               {roundIndex === 0 &&
