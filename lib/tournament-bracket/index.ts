@@ -29,6 +29,19 @@ export type {
 
 // コンポーネント
 export { MatchCard } from "./MatchCard";
+export { SeedCard } from "./SeedCard";
+export { TournamentBlock } from "./TournamentBlock";
+export { MultiBlockBracket } from "./MultiBlockBracket";
+
+// パターン定義
+export {
+  PATTERNS,
+  getPatternByMatchCount,
+  getPatternByTeamCount,
+  getPatternConfig,
+  getRoundColor,
+} from "./patterns";
+export type { PatternType, PatternConfig, RoundConfig, SeedSlot } from "./patterns";
 
 // ユーティリティ
 export { organizeBracket } from "./utils";
