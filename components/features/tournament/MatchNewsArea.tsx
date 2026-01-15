@@ -283,7 +283,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                     </span>
                     {match.court_number && (
                       <span className="text-xs text-gray-600">
-                        {match.court_name || match.court_number}
+                        {match.court_name || `コート${match.court_number}`}
                       </span>
                     )}
                   </div>

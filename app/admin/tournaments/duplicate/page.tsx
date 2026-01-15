@@ -151,8 +151,8 @@ export default function TournamentDuplicatePage() {
             tournament_name: tournament.tournament_name || '名前なし',
             status: tournament.calculated_status || tournament.status || 'unknown',
             team_count: tournament.registered_teams || tournament.team_count || 0,
-            match_count: 0, // 後で取得可能にするため初期値
-            results_count: 0, // 後で取得可能にするため初期値
+            match_count: tournament.match_count || 0,
+            results_count: tournament.results_count || 0,
             created_at: tournament.created_at || new Date().toISOString()
           };
         }).filter(Boolean); // null値を除外

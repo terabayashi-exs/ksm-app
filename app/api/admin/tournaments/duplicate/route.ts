@@ -51,18 +51,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 複製元大会の存在確認
-    const sourceTournament = await db.execute(`
-      SELECT 
-        t.*,
-        st.sport_code,
-        st.sport_name
-      FROM t_tournaments t
-      LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
-      WHERE t.tournament_id = ?
-    `, [source_tournament_id]);
+    console.log(`[DUPLICATE] 開始準備: 大会${source_tournament_id} -> レベル${duplicate_level}, グループ${group_id}`);
 
-    if (sourceTournament.rows.length === 0) {
+    // 複製元大会の存在確認（リトライロジック付き）
+    let sourceTournament;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`[DUPLICATE] 大会情報取得試行 ${retryCount + 1}/${maxRetries}`);
+        sourceTournament = await db.execute(`
+          SELECT
+            t.*,
+            st.sport_code,
+            st.sport_name
+          FROM t_tournaments t
+          LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+          WHERE t.tournament_id = ?
+        `, [source_tournament_id]);
+        break; // 成功したらループを抜ける
+      } catch (error) {
+        retryCount++;
+        console.error(`[DUPLICATE] 大会情報取得エラー (試行 ${retryCount}/${maxRetries}):`, error);
+
+        if (retryCount >= maxRetries) {
+          throw new Error(`データベース接続エラー: 複製元大会の情報を取得できませんでした。しばらく待ってから再試行してください。`);
+        }
+
+        // 指数バックオフで待機
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
+
+    if (!sourceTournament || sourceTournament.rows.length === 0) {
       return NextResponse.json(
         { success: false, error: '複製元の大会が見つかりません' },
         { status: 404 }
@@ -78,6 +100,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[DUPLICATE] 大会名重複チェック中...`);
+
     // 大会名の重複チェック
     const nameCheck = await db.execute(`
       SELECT tournament_id FROM t_tournaments WHERE tournament_name = ?
@@ -90,12 +114,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[DUPLICATE] 開始: 大会${source_tournament_id} -> レベル${duplicate_level}, グループ${group_id}`);
+    console.log(`[DUPLICATE] 複製処理開始: 大会${source_tournament_id} -> レベル${duplicate_level}, グループ${group_id}`);
 
     // 複製実行
     const result = await duplicateTournament(source_tournament_id, new_tournament_name.trim(), duplicate_level, session.user.id, group_id);
 
-    console.log(`[DUPLICATE] 完了: 新しい大会ID ${result.new_tournament_id}`);
+    console.log(`[DUPLICATE] 複製処理完了: 新しい大会ID ${result.new_tournament_id}`);
 
     return NextResponse.json({
       success: true,
@@ -139,21 +163,21 @@ async function duplicateTournament(
   // 2. ルール情報の複製
   await duplicateTournamentRules(sourceTournamentId, newTournamentId);
 
-  // 3. ブロック情報の複製（空の状態）
-  const blockMapping = await duplicateMatchBlocks(sourceTournamentId, newTournamentId, level);
-
-  // 4. 基本試合スケジュールの複製（テンプレートベース）
-  const matchMapping = await duplicateMatchesBasic(sourceTournamentId, newTournamentId, blockMapping);
-
-  let teams_copied = 0;
-  const matches_copied = matchMapping.size;
-
   // レベル2以上: チーム・選手データの複製
   let tournamentTeamMapping = new Map<number, number>();
+  let teams_copied = 0;
   if (['level2', 'level3', 'level4'].includes(level)) {
     tournamentTeamMapping = await duplicateTeamsAndPlayers(sourceTournamentId, newTournamentId);
     teams_copied = tournamentTeamMapping.size;
   }
+
+  // 3. ブロック情報の複製（空の状態）
+  const blockMapping = await duplicateMatchBlocks(sourceTournamentId, newTournamentId, level, tournamentTeamMapping);
+
+  // 4. 基本試合スケジュールの複製（テンプレートベース）
+  const matchMapping = await duplicateMatchesBasic(sourceTournamentId, newTournamentId, blockMapping);
+
+  const matches_copied = matchMapping.size;
 
   // レベル3以上: 組合せ・チーム割り当ての複製
   if (['level3', 'level4'].includes(level)) {
@@ -164,7 +188,7 @@ async function duplicateTournament(
   if (level === 'level4') {
     // まず自動作成された可能性があるt_match_statusレコードを削除
     await cleanupAutoCreatedMatchStatus(newTournamentId);
-    await duplicateMatchProgress(sourceTournamentId, newTournamentId, matchMapping, blockMapping);
+    await duplicateMatchProgress(sourceTournamentId, newTournamentId, matchMapping, blockMapping, tournamentTeamMapping);
   }
 
   return {
@@ -287,7 +311,12 @@ async function duplicateTournamentRules(sourceTournamentId: number, newTournamen
 /**
  * ブロック情報の複製
  */
-async function duplicateMatchBlocks(sourceTournamentId: number, newTournamentId: number, level: string): Promise<Map<number, number>> {
+async function duplicateMatchBlocks(
+  sourceTournamentId: number,
+  newTournamentId: number,
+  level: string,
+  tournamentTeamMapping: Map<number, number>
+): Promise<Map<number, number>> {
   const blocksResult = await db.execute(`
     SELECT * FROM t_match_blocks WHERE tournament_id = ? ORDER BY block_order
   `, [sourceTournamentId]);
@@ -296,6 +325,34 @@ async function duplicateMatchBlocks(sourceTournamentId: number, newTournamentId:
 
   for (const block of blocksResult.rows) {
     const blockData = block as any;
+
+    // team_rankingsのtournament_team_idをマッピング
+    let mappedTeamRankings = null;
+    if (level === 'level4' && blockData.team_rankings) {
+      try {
+        const rankings = JSON.parse(blockData.team_rankings);
+        const mappedRankings = rankings.map((team: any) => {
+          const oldTournamentTeamId = team.tournament_team_id || team.tournamentTeamId;
+          if (oldTournamentTeamId) {
+            const newTournamentTeamId = tournamentTeamMapping.get(Number(oldTournamentTeamId));
+            if (newTournamentTeamId) {
+              return {
+                ...team,
+                tournament_team_id: newTournamentTeamId,
+                tournamentTeamId: newTournamentTeamId
+              };
+            }
+          }
+          return team;
+        });
+        mappedTeamRankings = JSON.stringify(mappedRankings);
+        console.log(`[DUPLICATE] team_rankingsマッピング完了: ${blockData.block_name}ブロック`);
+      } catch (error) {
+        console.error(`[DUPLICATE] team_rankingsパースエラー: ${blockData.block_name}ブロック`, error);
+        mappedTeamRankings = null;
+      }
+    }
+
     const insertResult = await db.execute(`
       INSERT INTO t_match_blocks (
         tournament_id, phase, display_round_name, block_name, match_type, block_order,
@@ -308,7 +365,7 @@ async function duplicateMatchBlocks(sourceTournamentId: number, newTournamentId:
       blockData.block_name,
       blockData.match_type || '通常', // match_type フィールドを追加
       blockData.block_order,
-      level === 'level4' ? blockData.team_rankings : null, // レベル4では順位表もコピー
+      mappedTeamRankings, // マッピング済みのteam_rankings
       blockData.remarks
     ]);
 
@@ -388,16 +445,26 @@ async function duplicateMatchesBasic(
  * @returns tournament_team_idのマッピング（旧ID → 新ID）
  */
 async function duplicateTeamsAndPlayers(sourceTournamentId: number, newTournamentId: number): Promise<Map<number, number>> {
+  console.log(`[DUPLICATE] チーム・選手データ複製開始: 大会${sourceTournamentId} -> 大会${newTournamentId}`);
+
   // チーム情報の複製
   const teamsResult = await db.execute(`
     SELECT * FROM t_tournament_teams WHERE tournament_id = ?
   `, [sourceTournamentId]);
 
+  console.log(`[DUPLICATE] 複製対象チーム数: ${teamsResult.rows.length}`);
+
   const tournamentTeamMapping = new Map<number, number>();
+  let processedTeams = 0;
 
   for (const team of teamsResult.rows) {
     const teamData = team as any;
     const oldTournamentTeamId = Number(teamData.tournament_team_id);
+
+    processedTeams++;
+    if (processedTeams % 5 === 0 || processedTeams === teamsResult.rows.length) {
+      console.log(`[DUPLICATE] チーム処理進捗: ${processedTeams}/${teamsResult.rows.length}`);
+    }
 
     // チーム情報を複製（t_tournament_teamsテーブルの実際のフィールドのみ使用）
     const teamInsertResult = await db.execute(`
@@ -557,17 +624,25 @@ async function duplicateMatchProgress(
   sourceTournamentId: number,
   newTournamentId: number,
   matchMapping: Map<number, number>,
-  blockMapping: Map<number, number>
+  blockMapping: Map<number, number>,
+  tournamentTeamMapping: Map<number, number>
 ): Promise<void> {
   // 1. t_matches_liveの進行データを更新
-  console.log('[DUPLICATE] t_matches_live進行データ複製開始');
+  console.log(`[DUPLICATE] t_matches_live進行データ複製開始: 大会${sourceTournamentId} -> 大会${newTournamentId}`);
   const matchesResult = await db.execute(`
     SELECT ml.* FROM t_matches_live ml
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
     WHERE mb.tournament_id = ?
   `, [sourceTournamentId]);
 
+  console.log(`[DUPLICATE] 複製対象試合数: ${matchesResult.rows.length}`);
+  let processedMatches = 0;
+
   for (const match of matchesResult.rows) {
+    processedMatches++;
+    if (processedMatches % 10 === 0 || processedMatches === matchesResult.rows.length) {
+      console.log(`[DUPLICATE] 試合進行データ処理進捗: ${processedMatches}/${matchesResult.rows.length}`);
+    }
     const matchData = match as any;
     const newMatchId = matchMapping.get(Number(matchData.match_id));
     
@@ -648,15 +723,25 @@ async function duplicateMatchProgress(
     }
 
     try {
-      // 実際のt_matches_finalスキーマに合わせて修正
+      // tournament_team_idのマッピング
+      const oldTeam1TournamentTeamId = matchData.team1_tournament_team_id ? Number(matchData.team1_tournament_team_id) : null;
+      const oldTeam2TournamentTeamId = matchData.team2_tournament_team_id ? Number(matchData.team2_tournament_team_id) : null;
+      const oldWinnerTournamentTeamId = matchData.winner_tournament_team_id ? Number(matchData.winner_tournament_team_id) : null;
+
+      const newTeam1TournamentTeamId = oldTeam1TournamentTeamId ? (tournamentTeamMapping.get(oldTeam1TournamentTeamId) || null) : null;
+      const newTeam2TournamentTeamId = oldTeam2TournamentTeamId ? (tournamentTeamMapping.get(oldTeam2TournamentTeamId) || null) : null;
+      const newWinnerTournamentTeamId = oldWinnerTournamentTeamId ? (tournamentTeamMapping.get(oldWinnerTournamentTeamId) || null) : null;
+
+      // 実際のt_matches_finalスキーマに合わせて修正（tournament_team_id系を追加）
       await db.execute(`
         INSERT INTO t_matches_final (
           match_id, match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_display_name, team2_display_name,
+          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_display_name, team2_display_name,
           court_number, start_time, team1_scores, team2_scores, period_count,
-          winner_team_id, is_draw, is_walkover, match_status, result_status,
+          winner_team_id, winner_tournament_team_id, is_draw, is_walkover, match_status, result_status,
           remarks, created_at, updated_at, cancellation_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newMatchId,
         blockMapping.get(Number(matchData.match_block_id)), // 新しいブロックID
@@ -665,6 +750,8 @@ async function duplicateMatchProgress(
         matchData.match_code,
         matchData.team1_id,
         matchData.team2_id,
+        newTeam1TournamentTeamId, // マッピング済みの新しいID
+        newTeam2TournamentTeamId, // マッピング済みの新しいID
         matchData.team1_display_name,
         matchData.team2_display_name,
         matchData.court_number,
@@ -673,6 +760,7 @@ async function duplicateMatchProgress(
         matchData.team2_scores,
         matchData.period_count || 1,
         matchData.winner_team_id,
+        newWinnerTournamentTeamId, // マッピング済みの新しいID
         matchData.is_draw || 0,
         matchData.is_walkover || 0,
         matchData.match_status || 'completed',
