@@ -546,55 +546,9 @@ async function updateFinalTournamentMatches(
       }
     }
 
-    // 決勝トーナメントに進出したチームのassigned_blockを更新
-    // 戦績表表示で正しくチームを取得できるようにする
-    console.log(`[PROMOTION] 決勝トーナメント進出チームのassigned_block更新開始`);
-
-    // 進出したチームのtournament_team_idとブロック名のマッピングを作成
-    const teamBlockUpdates = new Map<number, string>();
-
-    for (const match of matchesResult.rows) {
-      const matchCode = match.match_code as string;
-      const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
-      const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
-
-      const template = templateMap.get(matchCode);
-      if (!template) continue;
-
-      // team1_sourceからブロック名を取得
-      if (team1TournamentTeamId && template.team1_source) {
-        const blockInfo = teamBlockAssignments.get(template.team1_source);
-        if (blockInfo && !teamBlockUpdates.has(team1TournamentTeamId)) {
-          teamBlockUpdates.set(team1TournamentTeamId, blockInfo.block_name);
-        }
-      }
-
-      // team2_sourceからブロック名を取得
-      if (team2TournamentTeamId && template.team2_source) {
-        const blockInfo = teamBlockAssignments.get(template.team2_source);
-        if (blockInfo && !teamBlockUpdates.has(team2TournamentTeamId)) {
-          teamBlockUpdates.set(team2TournamentTeamId, blockInfo.block_name);
-        }
-      }
-    }
-
-    console.log(`[PROMOTION] assigned_block更新対象: ${teamBlockUpdates.size}チーム`);
-
-    // 各チームのassigned_blockを更新
-    for (const [tournamentTeamId, blockName] of teamBlockUpdates.entries()) {
-      await db.execute({
-        sql: `
-          UPDATE t_tournament_teams
-          SET assigned_block = ?,
-              updated_at = datetime('now', '+9 hours')
-          WHERE tournament_team_id = ?
-        `,
-        args: [blockName, tournamentTeamId]
-      });
-      console.log(`[PROMOTION] ✅ tournament_team_id=${tournamentTeamId} → assigned_block="${blockName}"`);
-    }
-
-    console.log(`[PROMOTION] assigned_block更新完了: ${teamBlockUpdates.size}チーム更新`);
+    // 注: 以前はassigned_blockを更新していましたが、
+    // getParticipatingTeamsForBlock()が試合データから参加チームを取得するようになったため、
+    // assigned_blockの更新は不要になりました（戦績表表示で予選ブロック名を維持）
 
   } catch (error) {
     console.error(`[PROMOTION] 決勝トーナメント試合更新エラー:`, error);
