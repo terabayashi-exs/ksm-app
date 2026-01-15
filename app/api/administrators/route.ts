@@ -118,15 +118,40 @@ export async function POST(request: NextRequest) {
     // パスワードをハッシュ化
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 利用者を作成
+    // freeプランのIDを取得
+    const freePlanResult = await db.execute(`
+      SELECT plan_id FROM m_subscription_plans WHERE plan_code = 'free'
+    `);
+
+    if (freePlanResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'デフォルトプランが見つかりません' },
+        { status: 500 }
+      );
+    }
+
+    const freePlanId = freePlanResult.rows[0].plan_id as number;
+
+    // 利用者を作成（freeプランで開始）
     await db.execute(`
-      INSERT INTO m_administrators (admin_login_id, password_hash, email, created_at, updated_at)
-      VALUES (?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      INSERT INTO m_administrators (admin_login_id, password_hash, email, current_plan_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       admin_name.trim(),
       hashedPassword,
-      email.trim()
+      email.trim(),
+      freePlanId
     ]);
+
+    // サブスクリプション使用状況レコードを作成
+    await db.execute(`
+      INSERT INTO t_subscription_usage (
+        admin_login_id,
+        current_tournament_groups_count,
+        current_tournaments_count,
+        last_calculated_at
+      ) VALUES (?, 0, 0, datetime('now', '+9 hours'))
+    `, [admin_name.trim()]);
 
     return NextResponse.json({
       success: true,

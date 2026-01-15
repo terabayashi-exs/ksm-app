@@ -288,9 +288,72 @@ async function extractTopTeamsDynamic(
       });
     });
 
+    // 試合の勝者・敗者もpromotionsに追加（決勝トーナメント内での進出条件対応）
+    try {
+      const matchWinnersResult = await db.execute({
+        sql: `
+          SELECT
+            mf.match_code,
+            mf.winner_team_id,
+            mf.winner_tournament_team_id,
+            mf.team1_id,
+            mf.team2_id,
+            mf.team1_tournament_team_id,
+            mf.team2_tournament_team_id,
+            mf.team1_display_name,
+            mf.team2_display_name
+          FROM t_matches_final mf
+          JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+          WHERE mb.tournament_id = ?
+            AND mb.phase = 'final'
+            AND mf.winner_team_id IS NOT NULL
+        `,
+        args: [tournamentId]
+      });
+
+      matchWinnersResult.rows.forEach(row => {
+        const matchCode = row.match_code as string;
+        const winnerTeamId = row.winner_team_id as string;
+        const team1Id = row.team1_id as string;
+        const team2Id = row.team2_id as string;
+        const team1TournamentTeamId = row.team1_tournament_team_id as number | null;
+        const team2TournamentTeamId = row.team2_tournament_team_id as number | null;
+        const team1DisplayName = row.team1_display_name as string;
+        const team2DisplayName = row.team2_display_name as string;
+
+        // 勝者を追加
+        const winnerKey = `${matchCode}_winner`;
+        const winnerName = winnerTeamId === team1Id ? team1DisplayName : team2DisplayName;
+        const winnerTournamentTeam = winnerTeamId === team1Id ? team1TournamentTeamId : team2TournamentTeamId;
+
+        promotions[winnerKey] = {
+          tournament_team_id: winnerTournamentTeam || undefined,
+          team_id: winnerTeamId,
+          team_name: winnerName
+        };
+        console.log(`[PROMOTION] ${matchCode}の勝者: ${winnerName}(team_id:${winnerTeamId}, tournament_team_id:${winnerTournamentTeam})`);
+
+        // 敗者を追加
+        const loserKey = `${matchCode}_loser`;
+        const loserTeamId = winnerTeamId === team1Id ? team2Id : team1Id;
+        const loserName = winnerTeamId === team1Id ? team2DisplayName : team1DisplayName;
+        const loserTournamentTeam = winnerTeamId === team1Id ? team2TournamentTeamId : team1TournamentTeamId;
+
+        promotions[loserKey] = {
+          tournament_team_id: loserTournamentTeam || undefined,
+          team_id: loserTeamId,
+          team_name: loserName
+        };
+        console.log(`[PROMOTION] ${matchCode}の敗者: ${loserName}(team_id:${loserTeamId}, tournament_team_id:${loserTournamentTeam})`);
+      });
+    } catch (matchError) {
+      console.error(`[PROMOTION] 試合勝者・敗者取得エラー:`, matchError);
+      // エラーが発生してもブロック進出条件のpromotionsは返す
+    }
+
     console.log(`[PROMOTION] 進出チーム最終確定:`, Object.entries(promotions).map(([key, team]) => `${key}: ${team.team_name}(${team.team_id})`));
     return promotions;
-    
+
   } catch (error) {
     console.error(`[PROMOTION] 動的進出チーム抽出エラー:`, error);
     // フォールバック: 従来の上位2チーム方式
@@ -822,7 +885,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
 /**
  * 進出条件チェックで検出された問題を自動修正
  */
-export async function autoFixPromotionIssues(tournamentId: number, issues: PromotionValidationIssue[]): Promise<{
+export async function autoFixPromotionIssues(_tournamentId: number, issues: PromotionValidationIssue[]): Promise<{
   fixedCount: number;
   failedCount: number;
   errors: string[];
@@ -1031,8 +1094,15 @@ export async function checkAndPromoteOnMatchConfirm(
     const phase = String(blockInfoResult.rows[0].phase);
     const blockName = String(blockInfoResult.rows[0].block_name);
 
+    if (phase === 'final') {
+      // 決勝トーナメントの場合は、この試合の勝者を使って次の試合を更新
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 決勝トーナメントの試合確定、次の試合への進出処理を実行します`);
+      await promoteTeamsToFinalTournament(tournamentId);
+      return;
+    }
+
     if (phase !== 'preliminary') {
-      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 決勝トーナメントの試合のため、自動進出チェックをスキップします`);
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 予選でも決勝でもないため、自動進出チェックをスキップします`);
       return;
     }
 
