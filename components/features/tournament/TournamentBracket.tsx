@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Trophy, Download } from "lucide-react";
+import { Trophy } from "lucide-react";
 import {
   CARD_HEIGHT,
   CARD_GAP,
@@ -228,11 +227,6 @@ const response = await fetch(
     return () => window.removeEventListener("resize", handleResize);
   }, [matches, drawLines]);
 
-  // 印刷機能（PDF保存可）
-  const handlePrint = () => {
-    window.print();
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -343,26 +337,7 @@ const response = await fetch(
         }
       `}</style>
 
-      <div className="space-y-6">
-        {/* ヘッダー */}
-        <div className="text-center no-print">
-          <div className="flex items-center justify-center mb-2">
-            <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-            <h2 className="text-2xl font-bold text-foreground">
-              決勝トーナメント
-            </h2>
-            <Button
-              onClick={handlePrint}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 ml-4"
-            >
-              <Download className="h-4 w-4" />
-              PDF出力（印刷）
-            </Button>
-          </div>
-        </div>
-
+      <div>
         {/* トーナメントブラケット */}
         <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
           <div

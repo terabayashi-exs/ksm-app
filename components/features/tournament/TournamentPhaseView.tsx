@@ -6,7 +6,8 @@ import TournamentResults from './TournamentResults';
 import TournamentBracket from './TournamentBracket';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Loader2, Trophy, Download } from 'lucide-react';
 
 interface TournamentPhaseViewProps {
   tournamentId: number;
@@ -160,11 +161,35 @@ export default function TournamentPhaseView({
       </div>
     );
   } else if (matchType === 'tournament') {
+    const handlePrint = () => {
+      window.print();
+    };
+
     return (
-      <div>
+      <div className="space-y-6">
         <div className="mb-4 text-sm text-muted-foreground">
           {phaseName}はトーナメント形式です。トーナメント表で試合の進行状況を表示しています。
         </div>
+
+        {/* ヘッダー */}
+        <div className="text-center no-print">
+          <div className="flex items-center justify-center mb-2">
+            <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
+            <h2 className="text-2xl font-bold text-foreground">
+              {phaseName}トーナメント
+            </h2>
+            <Button
+              onClick={handlePrint}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 ml-4"
+            >
+              <Download className="h-4 w-4" />
+              PDF出力（印刷）
+            </Button>
+          </div>
+        </div>
+
         <TournamentBracket tournamentId={tournamentId} phase={phase} />
 
         {/* 操作ガイドと注意事項 */}
