@@ -59,7 +59,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
 
   const getStatusBadge = (status: TournamentStatus) => {
     switch (status) {
-      case 'before_recruitment':
+      case 'planning':
         return 'bg-gray-100 text-gray-800';
       case 'recruiting':
         return 'bg-blue-100 text-blue-800';

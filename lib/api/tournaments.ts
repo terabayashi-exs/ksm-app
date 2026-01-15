@@ -155,7 +155,7 @@ export async function getTournamentStats() {
       } else if (calculatedStatus === 'completed') {
         completedCount++;
       } else {
-        // before_recruitment, recruiting, before_event のステータスは開催予定とカウント
+        // planning, recruiting, before_event のステータスは開催予定とカウント
         scheduledCount++;
       }
     }

@@ -19,14 +19,14 @@ export async function GET() {
     const userId = session.user.id;
     const isAdmin = userId === 'admin';
 
-    // 現在日時（JST）
+    // 現在日時（JST）で1年前の日付を計算
     const now = new Date();
-    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const oneYearAgo = new Date(jstNow);
+    const oneYearAgo = new Date(now);
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    // 日付部分のみを YYYY-MM-DD 形式で取得（UTCベース）
     const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
 
-    // 募集中（planning）と開催中（ongoing）の大会を取得
+    // アクティブな大会を取得（planning, ongoing以外も含める - 動的計算で判定）
     const activeResult = await db.execute(`
       SELECT
         t.tournament_id,
@@ -68,7 +68,7 @@ export async function GET() {
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
-      WHERE t.status IN ('planning', 'ongoing')
+      WHERE t.status != 'completed'
         AND (t.created_by = ? OR ? = 1)
       ORDER BY
         CASE t.status
@@ -262,7 +262,7 @@ export async function GET() {
     }));
 
     // グループごとのステータスを判定（部門の中で最も優先度の高いステータス）
-    const groupStatuses: Record<number, 'before_recruitment' | 'recruiting' | 'before_event' | 'ongoing' | 'completed'> = {};
+    const groupStatuses: Record<number, 'planning' | 'recruiting' | 'before_event' | 'ongoing' | 'completed'> = {};
 
     // 各グループのステータスを決定
     tournamentsWithTimes.forEach(tournament => {
@@ -270,7 +270,7 @@ export async function GET() {
         const groupId = tournament.group_id;
         const groupTournaments = tournamentsWithTimes.filter(t => t.group_id === groupId);
 
-        // 優先順位: ongoing > before_event > recruiting > before_recruitment > completed
+        // 優先順位: ongoing > before_event > recruiting > planning > completed
         if (groupTournaments.some(t => t.status === 'ongoing')) {
           groupStatuses[groupId] = 'ongoing';
         }
@@ -280,24 +280,24 @@ export async function GET() {
         else if (groupTournaments.some(t => t.status === 'recruiting')) {
           groupStatuses[groupId] = 'recruiting';
         }
-        else if (groupTournaments.some(t => t.status === 'before_recruitment')) {
-          groupStatuses[groupId] = 'before_recruitment';
+        else if (groupTournaments.some(t => t.status === 'planning')) {
+          groupStatuses[groupId] = 'planning';
         }
         else if (groupTournaments.every(t => t.status === 'completed')) {
           groupStatuses[groupId] = 'completed';
         }
         else {
-          groupStatuses[groupId] = 'before_recruitment';
+          groupStatuses[groupId] = 'planning';
         }
       }
     });
 
     // 大会グループ単位で分類（グループ内の全部門を含める）
-    const before_recruitment = tournamentsWithTimes.filter(t => {
+    const planning = tournamentsWithTimes.filter(t => {
       if (t.group_id) {
-        return groupStatuses[t.group_id] === 'before_recruitment';
+        return groupStatuses[t.group_id] === 'planning';
       } else {
-        return t.status === 'before_recruitment';
+        return t.status === 'planning';
       }
     });
 
@@ -367,7 +367,7 @@ export async function GET() {
       return { grouped, ungrouped };
     };
 
-    const beforeRecruitmentGrouped = groupedTournaments(before_recruitment);
+    const beforeRecruitmentGrouped = groupedTournaments(planning);
     const recruitingGrouped = groupedTournaments(recruiting);
     const beforeEventGrouped = groupedTournaments(before_event);
     const ongoingGrouped = groupedTournaments(ongoing);
@@ -376,7 +376,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        before_recruitment,
+        planning,
         recruiting,
         before_event,
         ongoing,
@@ -384,7 +384,7 @@ export async function GET() {
         total: tournamentsWithTimes.length,
         // グループ化された情報も含める
         grouped: {
-          before_recruitment: beforeRecruitmentGrouped,
+          planning: beforeRecruitmentGrouped,
           recruiting: recruitingGrouped,
           before_event: beforeEventGrouped,
           ongoing: ongoingGrouped,

@@ -439,9 +439,10 @@ export async function recalculateAllTournamentRankings(tournamentId: number): Pr
 
 /**
  * ブロックの参加チーム一覧を取得する（大会開始前用）
+ * assigned_blockベースのチームと、実際に試合に参加しているチームの両方を取得
  */
 async function getParticipatingTeamsForBlock(
-  matchBlockId: number, 
+  matchBlockId: number,
   tournamentId: number
 ): Promise<TeamStanding[]> {
   try {
@@ -458,6 +459,8 @@ async function getParticipatingTeamsForBlock(
     const blockName = blockResult.rows[0].block_name as string;
 
     // 該当ブロックの参加チーム一覧を取得
+    // assigned_blockベースのチームと、実際に試合に参加しているチームの両方を取得
+    // （決勝進出によりassigned_blockが変更されたチームも含める）
     const teamsResult = await db.execute({
       sql: `
         SELECT DISTINCT
@@ -467,10 +470,22 @@ async function getParticipatingTeamsForBlock(
           COALESCE(tt.team_omission, t.team_omission) as team_omission
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
-        WHERE tt.tournament_id = ? AND tt.assigned_block = ?
+        WHERE tt.tournament_id = ?
+        AND (
+          tt.assigned_block = ?
+          OR tt.tournament_team_id IN (
+            SELECT DISTINCT ml.team1_tournament_team_id
+            FROM t_matches_live ml
+            WHERE ml.match_block_id = ? AND ml.team1_tournament_team_id IS NOT NULL
+            UNION
+            SELECT DISTINCT ml.team2_tournament_team_id
+            FROM t_matches_live ml
+            WHERE ml.match_block_id = ? AND ml.team2_tournament_team_id IS NOT NULL
+          )
+        )
         ORDER BY COALESCE(tt.team_name, t.team_name)
       `,
-      args: [tournamentId, blockName]
+      args: [tournamentId, blockName, matchBlockId, matchBlockId]
     });
 
     if (!teamsResult.rows || teamsResult.rows.length === 0) {
@@ -2031,9 +2046,13 @@ export async function calculateMultiSportBlockStandings(
       }
       
       const scoreStr = String(scoreString);
-      
-      if (!scoreStr.includes(',')) {
-        const score = parseInt(scoreStr) || 0;
+
+      // parseScoreArray()で全形式に対応（JSON形式・カンマ区切り・単一数値）
+      const periods = parseScoreArray(scoreStr);
+
+      // 単一スコアの場合（ピリオド数が1つのみ）
+      if (periods.length === 1) {
+        const score = periods[0];
         return {
           regularTime: score,
           pkScore: null,
@@ -2042,9 +2061,6 @@ export async function calculateMultiSportBlockStandings(
           forStandings: score
         };
       }
-      
-      // parseScoreArray()で全形式に対応
-      const periods = parseScoreArray(scoreStr);
       
       // PK競技の場合: シンプルな合計計算
       if (currentSportCode === 'pk') {

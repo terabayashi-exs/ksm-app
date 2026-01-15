@@ -2,7 +2,7 @@
 // 大会ステータス判定ユーティリティ
 
 export type TournamentStatus =
-  | 'before_recruitment'  // 募集前
+  | 'planning'            // 募集前（準備中）
   | 'recruiting'          // 募集中
   | 'before_event'        // 開催前
   | 'ongoing'             // 開催中
@@ -10,19 +10,24 @@ export type TournamentStatus =
 
 /**
  * 日付を正規化（時刻を00:00:00にセット）
+ * 日付のみの場合は00:00:00、時刻付きの場合はそのまま使用
  */
 function normalizeDate(date: Date | string | null | undefined): Date | null {
   if (!date) return null;
   const d = typeof date === 'string' ? new Date(date) : date;
+  // 時刻が含まれている場合（HH:mmの形式）はそのまま返す
+  if (typeof date === 'string' && (date.includes('T') || date.includes(':'))) {
+    return d;
+  }
+  // 日付のみの場合は00:00:00に正規化
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
 /**
- * 現在日時を日付のみに正規化（null安全版）
+ * 現在日時を取得（時刻込み）
  */
 function getNormalizedToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return new Date();
 }
 
 export interface TournamentWithStatus {
@@ -60,6 +65,14 @@ export async function calculateTournamentStatus(
 ): Promise<TournamentStatus> {
   const today = getNormalizedToday();
 
+  // 公開開始日の確認
+  const publicStartDate = normalizeDate(tournament.public_start_date);
+
+  // 公開開始日前の場合は常に 'planning' を返す
+  if (publicStartDate && today < publicStartDate) {
+    return 'planning';
+  }
+
   // 募集日程の確認（日付のみに正規化）
   const recruitmentStart = normalizeDate(tournament.recruitment_start_date);
   const recruitmentEnd = normalizeDate(tournament.recruitment_end_date);
@@ -78,7 +91,10 @@ export async function calculateTournamentStatus(
 
     if (dates.length > 0) {
       tournamentStartDate = dates[0];
-      tournamentEndDate = dates[dates.length - 1];
+      // 大会最終日は23:59:59まで「開催中」とする
+      const lastDate = dates[dates.length - 1];
+      tournamentEndDate = new Date(lastDate.getTime());
+      tournamentEndDate.setHours(23, 59, 59, 999);
     }
   } catch (error) {
     console.warn('tournament_datesのJSON解析に失敗:', tournament.tournament_dates, error);
@@ -163,7 +179,7 @@ export async function calculateTournamentStatus(
 
   // 2. 募集前：募集開始日が未来の場合
   if (recruitmentStart && today < recruitmentStart) {
-    return 'before_recruitment';
+    return 'planning';
   }
 
   // 3. 開催前：募集終了日 < 現在 < 大会開始日
@@ -200,6 +216,14 @@ export function calculateTournamentStatusSync(
   }
 ): TournamentStatus {
   const today = getNormalizedToday();
+
+  // 公開開始日の確認
+  const publicStartDate = normalizeDate(tournament.public_start_date);
+
+  // 公開開始日前の場合は常に 'planning' を返す
+  if (publicStartDate && today < publicStartDate) {
+    return 'planning';
+  }
 
   // 募集日程の確認（日付のみに正規化）
   const recruitmentStart = normalizeDate(tournament.recruitment_start_date);
@@ -246,7 +270,7 @@ export function calculateTournamentStatusSync(
 
   // 2. 募集前：募集開始日が未来の場合
   if (recruitmentStart && today < recruitmentStart) {
-    return 'before_recruitment';
+    return 'planning';
   }
 
   // 3. 開催前：募集終了日 < 現在 < 大会開始日
@@ -267,7 +291,7 @@ export function calculateTournamentStatusSync(
   }
 
   // デフォルト：判定できない場合は募集前とする
-  return 'before_recruitment';
+  return 'planning';
 }
 
 /**
@@ -364,7 +388,7 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
  */
 export function getStatusLabel(status: TournamentStatus): string {
   switch (status) {
-    case 'before_recruitment': return '募集前';
+    case 'planning': return '募集前';
     case 'recruiting': return '募集中';
     case 'before_event': return '開催前';
     case 'ongoing': return '開催中';
@@ -378,7 +402,7 @@ export function getStatusLabel(status: TournamentStatus): string {
  */
 export function getStatusColor(status: TournamentStatus): string {
   switch (status) {
-    case 'before_recruitment': return 'bg-gray-100 !text-black border border-gray-400';
+    case 'planning': return 'bg-gray-100 !text-black border border-gray-400';
     case 'recruiting': return 'bg-blue-100 !text-black border border-blue-400';
     case 'before_event': return 'bg-yellow-100 !text-black border border-yellow-400';
     case 'ongoing': return 'bg-green-100 !text-black border border-green-400';

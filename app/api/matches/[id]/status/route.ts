@@ -206,21 +206,45 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           const team1ScoresStr = formatScoreArray(team1_scores);
           const team2ScoresStr = formatScoreArray(team2_scores);
 
+          // winner_tournament_team_idを取得（winner_team_idに対応するtournament_team_idを取得）
+          let winnerTournamentTeamId: number | null = null;
+          if (winner_team_id) {
+            const matchResult = await db.execute(`
+              SELECT
+                team1_id,
+                team2_id,
+                team1_tournament_team_id,
+                team2_tournament_team_id
+              FROM t_matches_live
+              WHERE match_id = ?
+            `, [matchId]);
+
+            if (matchResult.rows.length > 0) {
+              const matchData = matchResult.rows[0];
+              if (winner_team_id === matchData.team1_id) {
+                winnerTournamentTeamId = matchData.team1_tournament_team_id as number | null;
+              } else if (winner_team_id === matchData.team2_id) {
+                winnerTournamentTeamId = matchData.team2_tournament_team_id as number | null;
+              }
+            }
+          }
+
           console.log('Updating scores (JSON array format):', {
             team1_scores: team1_scores,
             team2_scores: team2_scores,
             team1ScoresStr,
             team2ScoresStr,
             winner_team_id,
+            winner_tournament_team_id: winnerTournamentTeamId,
             remarks,
             matchId
           });
 
           await db.execute(`
             UPDATE t_matches_live
-            SET team1_scores = ?, team2_scores = ?, winner_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
+            SET team1_scores = ?, team2_scores = ?, winner_team_id = ?, winner_tournament_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
-          `, [team1ScoresStr, team2ScoresStr, winner_team_id, remarks, matchId]);
+          `, [team1ScoresStr, team2ScoresStr, winner_team_id, winnerTournamentTeamId, remarks, matchId]);
         }
         break;
 

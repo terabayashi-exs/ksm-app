@@ -54,6 +54,7 @@ dev.log
 dev-server.pid
 data/backup-*.json
 data/ksm.db
+*.db
 
 # test files
 test-*.js

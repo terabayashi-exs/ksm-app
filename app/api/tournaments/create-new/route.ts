@@ -5,6 +5,7 @@ import { ArchiveVersionManager } from "@/lib/archive-version-manager";
 import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from "@/lib/tournament-rules";
 import { canAddDivision } from "@/lib/subscription/plan-checker";
 import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
+import { calculateTournamentStatusSync } from "@/lib/tournament-status";
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,6 +83,17 @@ export async function POST(request: NextRequest) {
     // 現在のアーカイブUIバージョンを取得
     const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
 
+    // ステータスを動的に計算
+    const calculatedStatus = calculateTournamentStatusSync({
+      status: 'planning', // 初期値（計算に影響しない）
+      tournament_dates,
+      recruitment_start_date,
+      recruitment_end_date,
+      public_start_date
+    });
+
+    console.log(`📊 新規大会のステータス計算: ${calculatedStatus}`);
+
     // 大会を作成 - 既存APIと同じフィールド構造を使用
     const tournamentResult = await db.execute(`
       INSERT INTO t_tournaments (
@@ -117,7 +129,7 @@ export async function POST(request: NextRequest) {
       tournament_dates,
       match_duration_minutes,
       break_duration_minutes,
-      'planning',  // status
+      calculatedStatus,  // 動的に計算したステータス
       is_public ? 'open' : 'preparing',  // visibility
       public_start_date,
       recruitment_start_date,

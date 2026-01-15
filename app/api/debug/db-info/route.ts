@@ -66,7 +66,7 @@ export async function GET() {
 
       // 1. 募集前：募集開始日が未来の場合
       if (recruitmentStart && today < recruitmentStart) {
-        return { ...t, calculated_status: 'before_recruitment' };
+        return { ...t, calculated_status: 'planning' };
       }
 
       // 2. 募集中：募集開始日 <= 現在 <= 募集終了日
@@ -93,7 +93,7 @@ export async function GET() {
       }
 
       // デフォルト：判定できない場合は募集前とする
-      return { ...t, calculated_status: 'before_recruitment' };
+      return { ...t, calculated_status: 'planning' };
     });
 
     return NextResponse.json({

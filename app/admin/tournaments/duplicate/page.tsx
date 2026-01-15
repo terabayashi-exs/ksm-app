@@ -20,6 +20,14 @@ interface Tournament {
   created_at: string;
 }
 
+interface TournamentGroup {
+  group_id: number;
+  group_name: string;
+  organizer: string | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
+}
+
 interface DuplicateLevel {
   level: 'level1' | 'level2' | 'level3' | 'level4';
   name: string;
@@ -106,45 +114,49 @@ const DUPLICATE_LEVELS: DuplicateLevel[] = [
 export default function TournamentDuplicatePage() {
   const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<'level1' | 'level2' | 'level3' | 'level4' | null>(null);
   const [newTournamentName, setNewTournamentName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingGroups, setLoadingGroups] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
 
   useEffect(() => {
     fetchTournaments();
+    fetchTournamentGroups();
   }, []);
 
   const fetchTournaments = async () => {
     try {
       const response = await fetch('/api/admin/tournaments');
       const data = await response.json();
-      
+
       if (data.success) {
         // APIレスポンスの構造を確認してから適切に設定
         const tournaments = data.data.tournaments || data.data || [];
-        
+
         // Tournament インターフェースに合うようにデータを変換
         const formattedTournaments = tournaments.map((tournament: any) => {
           if (!tournament || typeof tournament.tournament_id === 'undefined') {
             console.warn('Invalid tournament data:', tournament);
             return null;
           }
-          
+
           return {
             tournament_id: tournament.tournament_id,
             tournament_name: tournament.tournament_name || '名前なし',
             status: tournament.calculated_status || tournament.status || 'unknown',
             team_count: tournament.registered_teams || tournament.team_count || 0,
-            match_count: 0, // 後で取得可能にするため初期値
-            results_count: 0, // 後で取得可能にするため初期値
+            match_count: tournament.match_count || 0,
+            results_count: tournament.results_count || 0,
             created_at: tournament.created_at || new Date().toISOString()
           };
         }).filter(Boolean); // null値を除外
-        
+
         setTournaments(formattedTournaments);
       } else {
         console.error('データ取得エラー:', data.error);
@@ -153,6 +165,24 @@ export default function TournamentDuplicatePage() {
       console.error('データ取得エラー:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTournamentGroups = async () => {
+    try {
+      setLoadingGroups(true);
+      const response = await fetch('/api/tournament-groups');
+      const data = await response.json();
+
+      if (data.success) {
+        setTournamentGroups(data.data || []);
+      } else {
+        console.error('大会グループ取得エラー:', data.error);
+      }
+    } catch (error) {
+      console.error('大会グループ取得エラー:', error);
+    } finally {
+      setLoadingGroups(false);
     }
   };
 
@@ -165,7 +195,7 @@ export default function TournamentDuplicatePage() {
   };
 
   const handleDuplicate = async () => {
-    if (!selectedTournament || !selectedLevel || !newTournamentName.trim()) return;
+    if (!selectedTournament || !selectedLevel || !newTournamentName.trim() || !selectedGroupId) return;
 
     setDuplicating(true);
     try {
@@ -177,13 +207,14 @@ export default function TournamentDuplicatePage() {
         body: JSON.stringify({
           source_tournament_id: selectedTournament,
           new_tournament_name: newTournamentName.trim(),
-          duplicate_level: selectedLevel
+          duplicate_level: selectedLevel,
+          group_id: selectedGroupId
         }),
       });
 
       const result = await response.json();
       setDuplicateResult(result);
-      
+
       if (result.success) {
         // 成功時は最新データを再取得
         await fetchTournaments();
@@ -209,7 +240,7 @@ export default function TournamentDuplicatePage() {
     return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const canExecuteDuplicate = selectedTournament && selectedLevel && newTournamentName.trim();
+  const canExecuteDuplicate = selectedTournament && selectedLevel && newTournamentName.trim() && selectedGroupId;
 
   if (loading) {
     return (
@@ -226,9 +257,9 @@ export default function TournamentDuplicatePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">大会データ複製</h1>
+              <h1 className="text-3xl font-bold text-foreground">部門データ複製</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                既存の大会を複製してデモ用データを効率的に作成できます
+                既存の部門を複製してデモ用データを効率的に作成できます
               </p>
             </div>
             <div className="flex space-x-3">
@@ -249,14 +280,14 @@ export default function TournamentDuplicatePage() {
           <CardHeader>
             <CardTitle className="text-green-800 flex items-center">
               <Copy className="w-5 h-5 mr-2" />
-              📋 大会複製機能について
+              📋 部門複製機能について
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-green-700 space-y-2">
-              <p>• 既存の大会データを新しいIDで複製し、デモ用データを効率的に作成できます</p>
+              <p>• 既存の部門データを新しいIDで複製し、デモ用データを効率的に作成できます</p>
               <p>• 複製レベルを選択することで、デモしたい段階に応じたデータを準備できます</p>
-              <p>• 新しい大会として独立するため、元の大会に影響はありません</p>
+              <p>• 新しい部門として独立するため、元の部門に影響はありません</p>
               <p>• チーム登録前、組合せ前、進行前、完了前の4段階から選択可能です</p>
             </div>
           </CardContent>
@@ -303,9 +334,9 @@ export default function TournamentDuplicatePage() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Database className="w-5 h-5 mr-2" />
-                  複製元大会選択
+                  複製元部門選択
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">複製したい大会を選択してください</p>
+                <p className="text-sm text-muted-foreground">複製したい部門を選択してください</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {tournaments.length === 0 ? (
@@ -359,19 +390,68 @@ export default function TournamentDuplicatePage() {
               </CardContent>
             </Card>
 
-            {/* 新しい大会名入力 */}
+            {/* 所属大会選択 */}
             <Card>
               <CardHeader>
-                <CardTitle>新しい大会名</CardTitle>
-                <p className="text-sm text-muted-foreground">複製後の大会名を入力してください</p>
+                <CardTitle>所属大会選択 (必須)</CardTitle>
+                <p className="text-sm text-muted-foreground">複製する部門が所属する大会を選択してください</p>
               </CardHeader>
               <CardContent>
-                <Label htmlFor="tournament-name">大会名</Label>
+                {loadingGroups ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center text-muted-foreground">読込中...</div>
+                  </div>
+                ) : tournamentGroups.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    大会グループが見つかりません
+                  </div>
+                ) : (
+                  tournamentGroups.map((group) => (
+                    <div
+                      key={group.group_id}
+                      className={`p-4 mb-2 border rounded-lg cursor-pointer transition-colors ${
+                        selectedGroupId === group.group_id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedGroupId(group.group_id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {group.group_name}
+                          </p>
+                          {group.organizer && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              主催: {group.organizer}
+                            </p>
+                          )}
+                          {group.event_start_date && group.event_end_date && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {group.event_start_date} 〜 {group.event_end_date}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 新しい部門名入力 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>新しい部門名</CardTitle>
+                <p className="text-sm text-muted-foreground">複製後の部門名を入力してください</p>
+              </CardHeader>
+              <CardContent>
+                <Label htmlFor="tournament-name">部門名</Label>
                 <Input
                   id="tournament-name"
                   value={newTournamentName}
                   onChange={(e) => setNewTournamentName(e.target.value)}
-                  placeholder="例: サンプル大会 (複製)"
+                  placeholder="例: サンプル部門 (複製)"
                   className="mt-2"
                 />
               </CardContent>
@@ -442,7 +522,7 @@ export default function TournamentDuplicatePage() {
             className="min-w-48"
           >
             <Copy className="w-4 h-4 mr-2" />
-            {duplicating ? '複製中...' : '大会を複製'}
+            {duplicating ? '複製中...' : '部門を複製'}
           </Button>
         </div>
       </div>
@@ -452,15 +532,18 @@ export default function TournamentDuplicatePage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">複製実行の確認</h3>
-            
+
             <div className="space-y-3 mb-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">以下の内容で大会を複製します：</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">以下の内容で部門を複製します：</p>
               <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded space-y-2">
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>複製元:</strong> {tournaments.find(t => t.tournament_id === selectedTournament)?.tournament_name}
+                  <strong>所属大会:</strong> {tournamentGroups.find(g => g.group_id === selectedGroupId)?.group_name}
                 </p>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>新しい大会名:</strong> {newTournamentName}
+                  <strong>複製元部門:</strong> {tournaments.find(t => t.tournament_id === selectedTournament)?.tournament_name}
+                </p>
+                <p className="text-sm text-gray-900 dark:text-gray-100">
+                  <strong>新しい部門名:</strong> {newTournamentName}
                 </p>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
                   <strong>複製レベル:</strong> {DUPLICATE_LEVELS.find(l => l.level === selectedLevel)?.name}
