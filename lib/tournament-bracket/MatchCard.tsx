@@ -145,14 +145,14 @@ export function MatchCard({
 
       {/* チーム1 */}
       <div
-        className={`flex items-center justify-between h-8 px-3 mb-2 border border-border rounded cursor-default transition-all ${
+        className={`flex items-center justify-between h-8 px-3 mb-2 border rounded cursor-default transition-all ${
           winnerIndex === 0
-            ? "bg-green-50 text-green-600 border-green-300 font-medium"
+            ? "bg-green-500/20 text-green-500 border-green-500 font-medium"
             : hasResult && winnerIndex === 1
-            ? "bg-red-50 text-red-600 border-red-300"
+            ? "bg-red-500/20 text-red-500 border-red-500"
             : hasResult && match.is_draw
-            ? "bg-blue-50 text-blue-600 border-blue-300"
-            : "bg-muted text-muted-foreground"
+            ? "bg-blue-500/20 text-blue-500 border-blue-500"
+            : "bg-muted text-muted-foreground border-border"
         }`}
       >
         <span className="text-sm truncate flex-1">
@@ -205,14 +205,14 @@ export function MatchCard({
 
       {/* チーム2 */}
       <div
-        className={`flex items-center justify-between h-8 px-3 border border-border rounded cursor-default transition-all ${
+        className={`flex items-center justify-between h-8 px-3 border rounded cursor-default transition-all ${
           winnerIndex === 1
-            ? "bg-green-50 text-green-600 border-green-300 font-medium"
+            ? "bg-green-500/20 text-green-500 border-green-500 font-medium"
             : hasResult && winnerIndex === 0
-            ? "bg-red-50 text-red-600 border-red-300"
+            ? "bg-red-500/20 text-red-500 border-red-500"
             : hasResult && match.is_draw
-            ? "bg-blue-50 text-blue-600 border-blue-300"
-            : "bg-muted text-muted-foreground"
+            ? "bg-blue-500/20 text-blue-500 border-blue-500"
+            : "bg-muted text-muted-foreground border-border"
         }`}
       >
         <span className="text-sm truncate flex-1">
