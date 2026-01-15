@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import TournamentResults from './TournamentResults';
 import TournamentBracket from './TournamentBracket';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 interface TournamentPhaseViewProps {
@@ -165,6 +166,47 @@ export default function TournamentPhaseView({
           {phaseName}はトーナメント形式です。トーナメント表で試合の進行状況を表示しています。
         </div>
         <TournamentBracket tournamentId={tournamentId} phase={phase} />
+
+        {/* 操作ガイドと注意事項 */}
+        <div className="grid md:grid-cols-2 gap-6 mt-8">
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="pt-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+                </div>
+                <div className="text-sm text-green-700">
+                  <p className="font-medium mb-1">PDF出力方法</p>
+                  <ul className="list-disc list-inside space-y-1 text-green-600">
+                    <li>「PDF出力（印刷）」ボタンをクリック</li>
+                    <li>印刷ダイアログで「送信先」を「PDFに保存」を選択</li>
+                    <li>用紙サイズを「A4」、向きを「横」に設定</li>
+                    <li>「詳細設定」で「背景のグラフィック」をオンにする</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="pt-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="h-2 w-2 bg-blue-400 rounded-full"></div>
+                </div>
+                <div className="text-sm text-blue-700">
+                  <p className="font-medium mb-1">トーナメント表の見方</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-600">
+                    <li>実線は勝利チームの勝ち上がり、点線は敗者の進出先（3位決定戦）</li>
+                    <li>太字は勝利チーム、数字は得点を表示</li>
+                    <li>［T1］などは試合コードを表示</li>
+                    <li>各ブロック上位2チームが決勝トーナメントに進出</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

@@ -9,8 +9,8 @@ export const COLUMN_GAP = 60;
 
 // レイアウト
 export const HEADER_HEIGHT = 44;
-export const PADDING_BOTTOM = 100;
-export const EXTRA_HEIGHT = 200;
+export const PADDING_BOTTOM = 40;
+export const EXTRA_HEIGHT = 0;
 
 // 位置調整
 export const FINE_ADJUSTMENT = 20;
