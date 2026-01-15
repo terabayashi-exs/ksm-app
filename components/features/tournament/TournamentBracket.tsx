@@ -4,67 +4,29 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Download } from "lucide-react";
-
-interface BracketMatch {
-  match_id: number;
-  match_code: string;
-  team1_id?: string;
-  team2_id?: string;
-  team1_tournament_team_id?: number | null;
-  team2_tournament_team_id?: number | null;
-  team1_display_name: string;
-  team2_display_name: string;
-  team1_goals: number;
-  team2_goals: number;
-  // 多競技対応の拡張フィールド
-  team1_scores?: number[];
-  team2_scores?: number[];
-  active_periods?: number[];
-  winner_team_id?: string;
-  winner_tournament_team_id?: number | null;
-  is_draw: boolean;
-  is_walkover: boolean;
-  match_status: "scheduled" | "ongoing" | "completed" | "cancelled";
-  is_confirmed: boolean;
-  execution_priority: number;
-  start_time?: string;
-  court_number?: number;
-  execution_group?: number;
-  // サッカー専用データ（該当する場合のみ）
-  soccer_data?: {
-    regular_goals_for: number;
-    regular_goals_against: number;
-    pk_goals_for?: number;
-    pk_goals_against?: number;
-    is_pk_game: boolean;
-    pk_winner?: boolean;
-  };
-}
-
-interface BracketProps {
-  tournamentId: number;
-  phase?: "preliminary" | "final"; // オプショナル: デフォルトは決勝
-}
-
-// 多競技対応のスポーツ設定インターフェース
-interface SportScoreConfig {
-  sport_code: string;
-  score_label: string;
-  score_against_label: string;
-  difference_label: string;
-  supports_pk: boolean;
-}
-
-interface BracketGroup {
-  groupId: number;
-  groupName: string;
-  matches: BracketMatch[];
-}
-
-interface BracketStructure {
-  groups: BracketGroup[];
-  columnCount: number;
-}
+import {
+  CARD_HEIGHT,
+  CARD_GAP,
+  HEADER_HEIGHT,
+  PADDING_BOTTOM,
+  EXTRA_HEIGHT,
+  FINE_ADJUSTMENT,
+  MIN_SEPARATION,
+  SEPARATION_RATIO,
+  AVOIDANCE_GAP,
+  LINE_OFFSET,
+  QUARTER_FINAL_CODES,
+  SEMI_FINAL_CODES,
+  THIRD_PLACE_CODES,
+  FINAL_CODES,
+} from "@/lib/tournament-bracket/constants";
+import type {
+  BracketMatch,
+  BracketProps,
+  SportScoreConfig,
+  BracketGroup,
+  BracketStructure,
+} from "@/lib/tournament-bracket/types";
 
 // 試合カードコンポーネント
 function MatchCard({
@@ -142,21 +104,13 @@ function MatchCard({
 
   // 試合コードからブロック色を取得
   const getMatchCodeColor = (matchCode: string): string => {
-    // 新形式（M1-M8）に対応
-    if (["M1", "M2", "M3", "M4"].includes(matchCode))
+    if (QUARTER_FINAL_CODES.includes(matchCode))
       return "bg-blue-100 text-blue-800"; // 準々決勝
-    if (["M5", "M6"].includes(matchCode))
+    if (SEMI_FINAL_CODES.includes(matchCode))
       return "bg-purple-100 text-purple-800"; // 準決勝
-    if (matchCode === "M7") return "bg-yellow-100 text-yellow-800"; // 3位決定戦
-    if (matchCode === "M8") return "bg-red-100 text-red-800"; // 決勝
-
-    // 旧形式（T1-T8）にも対応（後方互換性）
-    if (["T1", "T2", "T3", "T4"].includes(matchCode))
-      return "bg-blue-100 text-blue-800"; // 準々決勝
-    if (["T5", "T6"].includes(matchCode))
-      return "bg-purple-100 text-purple-800"; // 準決勝
-    if (matchCode === "T7") return "bg-yellow-100 text-yellow-800"; // 3位決定戦
-    if (matchCode === "T8") return "bg-red-100 text-red-800"; // 決勝
+    if (THIRD_PLACE_CODES.includes(matchCode))
+      return "bg-yellow-100 text-yellow-800"; // 3位決定戦
+    if (FINAL_CODES.includes(matchCode)) return "bg-red-100 text-red-800"; // 決勝
 
     return "bg-muted text-muted-foreground";
   };
@@ -375,19 +329,16 @@ export default function TournamentBracket({
       // フォールバック: 従来の試合コードベースのグループ化
       const groups: BracketGroup[] = [];
 
-      // 新形式（M1-M8）に対応
       const quarterFinals = matches.filter((m) =>
-        ["T1", "T2", "T3", "T4", "M1", "M2", "M3", "M4"].includes(m.match_code)
+        QUARTER_FINAL_CODES.includes(m.match_code)
       );
       const semiFinals = matches.filter((m) =>
-        ["T5", "T6", "M5", "M6"].includes(m.match_code)
+        SEMI_FINAL_CODES.includes(m.match_code)
       );
-      const thirdPlace = matches.find(
-        (m) => m.match_code === "T7" || m.match_code === "M7"
+      const thirdPlace = matches.find((m) =>
+        THIRD_PLACE_CODES.includes(m.match_code)
       );
-      const final = matches.find(
-        (m) => m.match_code === "T8" || m.match_code === "M8"
-      );
+      const final = matches.find((m) => FINAL_CODES.includes(m.match_code));
 
       if (quarterFinals.length > 0) {
         groups.push({
@@ -445,28 +396,22 @@ export default function TournamentBracket({
       matchCount: number,
       matches: BracketMatch[]
     ): string => {
-      // 試合コードから判定（新形式・旧形式両対応）
-      if (
-        matches.some((m) =>
-          ["T1", "T2", "T3", "T4", "M1", "M2", "M3", "M4"].includes(
-            m.match_code
-          )
-        )
-      )
+      // 試合コードから判定
+      if (matches.some((m) => QUARTER_FINAL_CODES.includes(m.match_code)))
         return "準々決勝";
-      if (matches.some((m) => ["T5", "T6", "M5", "M6"].includes(m.match_code)))
+      if (matches.some((m) => SEMI_FINAL_CODES.includes(m.match_code)))
         return "準決勝";
-      if (matches.some((m) => m.match_code === "T7" || m.match_code === "M7"))
+      if (matches.some((m) => THIRD_PLACE_CODES.includes(m.match_code)))
         return "3位決定戦";
-      if (matches.some((m) => m.match_code === "T8" || m.match_code === "M8"))
+      if (matches.some((m) => FINAL_CODES.includes(m.match_code)))
         return "決勝";
 
       // フォールバック: 試合数から推測
       if (matchCount >= 4) return "準々決勝";
       if (matchCount === 2) return "準決勝";
       if (matchCount === 1) {
-        const hasThirdPlace = matches.some(
-          (m) => m.match_code === "T7" || m.match_code === "M7"
+        const hasThirdPlace = matches.some((m) =>
+          THIRD_PLACE_CODES.includes(m.match_code)
         );
         return hasThirdPlace ? "3位決定戦" : "決勝";
       }
@@ -584,20 +529,19 @@ const response = await fetch(
           const thirdPlaceBottom = thirdPlaceRect.bottom - boxRect.top;
 
           // 迂回ポイントを計算（3位決定戦の上または下を通る）
-          const avoidanceGap = 20; // 迂回時の余白
           let avoidanceY: number;
 
           if (p1.y < thirdPlaceTop + thirdPlaceRect.height / 2) {
             // 準決勝が3位決定戦より上にある場合、上を迂回
-            avoidanceY = thirdPlaceTop - avoidanceGap;
+            avoidanceY = thirdPlaceTop - AVOIDANCE_GAP;
           } else {
             // 準決勝が3位決定戦より下にある場合、下を迂回
-            avoidanceY = thirdPlaceBottom + avoidanceGap;
+            avoidanceY = thirdPlaceBottom + AVOIDANCE_GAP;
           }
 
           // 迂回ルート: 右→上/下→右→決勝位置→決勝
-          const midX1 = p1.x + 30; // 準決勝から右に出る
-          const midX2 = p2.x - 30; // 決勝の手前
+          const midX1 = p1.x + LINE_OFFSET;
+          const midX2 = p2.x - LINE_OFFSET;
 
           d = `M ${p1.x} ${p1.y} L ${midX1} ${p1.y} L ${midX1} ${avoidanceY} L ${midX2} ${avoidanceY} L ${midX2} ${p2.y} L ${p2.x} ${p2.y}`;
         } else {
@@ -836,17 +780,13 @@ const response = await fetch(
                 const maxMatchCount = Math.max(
                   ...bracket.groups.map((g) => g.matches.length)
                 );
-                const cardHeight = 140;
-                const cardGap = 24;
-                const headerHeight = 44;
-                const paddingBottom = 100; // より多くのパディングを追加
 
                 return (
-                  headerHeight +
-                  maxMatchCount * cardHeight +
-                  (maxMatchCount - 1) * cardGap +
-                  paddingBottom +
-                  200
+                  HEADER_HEIGHT +
+                  maxMatchCount * CARD_HEIGHT +
+                  (maxMatchCount - 1) * CARD_GAP +
+                  PADDING_BOTTOM +
+                  EXTRA_HEIGHT
                 );
               })()}px`,
             }}
@@ -900,10 +840,6 @@ const response = await fetch(
                     // 後続のグループは前のグループのカードの中央に配置
                     <div className="relative">
                       {group.matches.map((match, matchIndex) => {
-                        const cardHeight = 140;
-                        const cardGap = 24;
-                        const headerHeight = 44;
-
                         let topMargin = 0;
 
                         // 決勝と3位決定戦の場合は特別な位置計算
@@ -932,47 +868,43 @@ const response = await fetch(
                               quarterFinalGroup.matches.length >= 2
                             ) {
                               // 準々決勝の中央位置を計算（準々決勝は space-y-6 で配置）
-                              // space-y-6 = 1.5rem = 24px, しかし実際のmarginを確認してみる
-                              const actualGap = 24; // Tailwind space-y-6 の実際の値
-                              const qf1CenterY = cardHeight / 2; // 70
+                              const qf1CenterY = CARD_HEIGHT / 2;
                               const qf2CenterY =
-                                cardHeight + actualGap + cardHeight / 2; // 140 + 24 + 70 = 234
-                              const qfCenterY = (qf1CenterY + qf2CenterY) / 2; // 152
-                              semiFinalBaseY = qfCenterY - cardHeight / 2; // 82
+                                CARD_HEIGHT + CARD_GAP + CARD_HEIGHT / 2;
+                              const qfCenterY = (qf1CenterY + qf2CenterY) / 2;
+                              semiFinalBaseY = qfCenterY - CARD_HEIGHT / 2;
                             }
 
                             // T5とT6の実際の位置（準決勝の基準位置から計算）
-                            const t5TopMargin = semiFinalBaseY; // 82
+                            const t5TopMargin = semiFinalBaseY;
                             const t6TopMargin =
-                              semiFinalBaseY + cardHeight + cardGap; // 82 + 164 = 246
+                              semiFinalBaseY + CARD_HEIGHT + CARD_GAP;
 
                             // T5とT6のそれぞれの中央Y座標
-                            const t5CenterY = t5TopMargin + cardHeight / 2; // 82 + 70 = 152
-                            const t6CenterY = t6TopMargin + cardHeight / 2; // 246 + 70 = 316
+                            const t5CenterY = t5TopMargin + CARD_HEIGHT / 2;
+                            const t6CenterY = t6TopMargin + CARD_HEIGHT / 2;
 
                             // 準決勝の中央位置
                             const semiFinalCenterY =
-                              (t5CenterY + t6CenterY) / 2; // (152 + 316) / 2 = 234
+                              (t5CenterY + t6CenterY) / 2;
 
                             // 決勝と3位決定戦を異なる位置に配置
                             if (group.groupName === "決勝") {
-                              // 決勝は準決勝の中央に配置（微調整: +20px下に移動）
-                              const fineAdjustment = 20;
+                              // 決勝は準決勝の中央に配置
                               topMargin =
                                 semiFinalCenterY -
-                                cardHeight / 2 +
-                                fineAdjustment; // 234 - 70 + 20 = 184
+                                CARD_HEIGHT / 2 +
+                                FINE_ADJUSTMENT;
                             } else if (group.groupName === "3位決定戦") {
                               // 3位決定戦はトーナメントの山から動的に離れた位置に配置
-                              // 準決勝の高さ（T5からT6までの距離）を基準に分離距離を計算
-                              const semiFinalHeight = t6CenterY - t5CenterY; // T5-T6間の距離
+                              const semiFinalHeight = t6CenterY - t5CenterY;
                               const dynamicSeparationOffset = Math.max(
-                                semiFinalHeight * 0.8, // 準決勝高さの80%以上
-                                120 // 最小120px
+                                semiFinalHeight * SEPARATION_RATIO,
+                                MIN_SEPARATION
                               );
                               topMargin =
                                 t6CenterY +
-                                cardHeight / 2 +
+                                CARD_HEIGHT / 2 +
                                 dynamicSeparationOffset;
                             }
                           } else {
@@ -988,11 +920,11 @@ const response = await fetch(
                             );
                             const avgPosition = (startIdx + endIdx - 1) / 2;
                             const centerPosition =
-                              headerHeight +
-                              cardHeight / 2 +
-                              avgPosition * (cardHeight + cardGap);
+                              HEADER_HEIGHT +
+                              CARD_HEIGHT / 2 +
+                              avgPosition * (CARD_HEIGHT + CARD_GAP);
                             topMargin =
-                              centerPosition - headerHeight - cardHeight / 2;
+                              centerPosition - HEADER_HEIGHT - CARD_HEIGHT / 2;
                           }
                         } else {
                           // 通常のグループ（準決勝など）は従来の計算
@@ -1007,11 +939,11 @@ const response = await fetch(
                           );
                           const avgPosition = (startIdx + endIdx - 1) / 2;
                           const centerPosition =
-                            headerHeight +
-                            cardHeight / 2 +
-                            avgPosition * (cardHeight + cardGap);
+                            HEADER_HEIGHT +
+                            CARD_HEIGHT / 2 +
+                            avgPosition * (CARD_HEIGHT + CARD_GAP);
                           topMargin =
-                            centerPosition - headerHeight - cardHeight / 2;
+                            centerPosition - HEADER_HEIGHT - CARD_HEIGHT / 2;
                         }
 
                         return (
