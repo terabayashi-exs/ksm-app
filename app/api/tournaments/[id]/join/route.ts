@@ -306,10 +306,14 @@ async function handleTournamentJoin(
     }
 
     const tournament = tournamentResult.rows[0];
-    const now = new Date().toISOString().split('T')[0];
 
+    // 募集期間チェック（時刻も含めて厳密にチェック）
     if (tournament.recruitment_start_date && tournament.recruitment_end_date) {
-      if (now < tournament.recruitment_start_date || now > tournament.recruitment_end_date) {
+      const now = new Date();
+      const startDate = new Date(String(tournament.recruitment_start_date));
+      const endDate = new Date(String(tournament.recruitment_end_date));
+
+      if (now < startDate || now > endDate) {
         return NextResponse.json(
           { success: false, error: '募集期間外です' },
           { status: 400 }

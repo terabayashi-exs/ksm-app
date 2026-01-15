@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
+import { parseScoreArray } from '@/lib/score-parser';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -98,21 +99,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
           return { team1Goals: null, team2Goals: null, scoreDisplay: null };
         }
 
-        // スコアを配列に変換
-        let team1Scores: number[] = [];
-        let team2Scores: number[] = [];
-
-        if (typeof team1ScoreData === 'string' && team1ScoreData.includes(',')) {
-          team1Scores = team1ScoreData.split(',').map((s: string) => Number(s) || 0);
-        } else {
-          team1Scores = [Number(team1ScoreData) || 0];
-        }
-
-        if (typeof team2ScoreData === 'string' && team2ScoreData.includes(',')) {
-          team2Scores = team2ScoreData.split(',').map((s: string) => Number(s) || 0);
-        } else {
-          team2Scores = [Number(team2ScoreData) || 0];
-        }
+        // スコアを配列に変換（JSON形式・カンマ区切り形式の両方に対応）
+        const team1Scores = parseScoreArray(team1ScoreData);
+        const team2Scores = parseScoreArray(team2ScoreData);
 
         // PK戦がある場合の特別処理（5つ以上のスコア要素がある場合）
         if (sportConfig?.supports_pk && team1Scores.length >= 5 && team2Scores.length >= 5) {

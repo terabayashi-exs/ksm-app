@@ -340,7 +340,13 @@ export default function TeamTournaments() {
               詳細を見る
             </Link>
           </Button>
-          {!isJoined && tournament.status !== 'ongoing' && tournament.status !== 'completed' && (
+          {!isJoined &&
+           tournament.status !== 'ongoing' &&
+           tournament.status !== 'completed' &&
+           tournament.recruitment_start_date &&
+           tournament.recruitment_end_date &&
+           new Date(tournament.recruitment_start_date) <= new Date() &&
+           new Date() <= new Date(tournament.recruitment_end_date) && (
             <Button asChild variant="outline" className="w-full">
               <Link href={`/tournaments/${tournament.tournament_id}/join`}>
                 大会に参加する

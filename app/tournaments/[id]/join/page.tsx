@@ -156,10 +156,13 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
 
   const { tournament, group } = tournamentData;
 
-  // 募集期間チェック
-  const now = new Date().toISOString().split('T')[0];
+  // 募集期間チェック（時刻も含めて厳密にチェック）
   if (tournament.recruitment_start_date && tournament.recruitment_end_date) {
-    if (now < tournament.recruitment_start_date || now > tournament.recruitment_end_date) {
+    const now = new Date();
+    const startDate = new Date(tournament.recruitment_start_date);
+    const endDate = new Date(tournament.recruitment_end_date);
+
+    if (now < startDate || now > endDate) {
       redirect(`/public/tournaments/${tournamentId}`);
     }
   }

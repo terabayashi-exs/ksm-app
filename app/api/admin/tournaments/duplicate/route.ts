@@ -29,6 +29,7 @@ interface DuplicateRequest {
   source_tournament_id: number;
   new_tournament_name: string;
   duplicate_level: 'level1' | 'level2' | 'level3' | 'level4';
+  group_id?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -41,11 +42,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { source_tournament_id, new_tournament_name, duplicate_level }: DuplicateRequest = await request.json();
+    const { source_tournament_id, new_tournament_name, duplicate_level, group_id }: DuplicateRequest = await request.json();
 
-    if (!source_tournament_id || !new_tournament_name?.trim() || !duplicate_level) {
+    if (!source_tournament_id || !new_tournament_name?.trim() || !duplicate_level || !group_id) {
       return NextResponse.json(
-        { success: false, error: '必要なパラメータが不足しています' },
+        { success: false, error: '必要なパラメータが不足しています（所属大会の選択は必須です）' },
         { status: 400 }
       );
     }
@@ -89,10 +90,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[DUPLICATE] 開始: 大会${source_tournament_id} -> レベル${duplicate_level}`);
+    console.log(`[DUPLICATE] 開始: 大会${source_tournament_id} -> レベル${duplicate_level}, グループ${group_id}`);
 
     // 複製実行
-    const result = await duplicateTournament(source_tournament_id, new_tournament_name.trim(), duplicate_level, session.user.id);
+    const result = await duplicateTournament(source_tournament_id, new_tournament_name.trim(), duplicate_level, session.user.id, group_id);
 
     console.log(`[DUPLICATE] 完了: 新しい大会ID ${result.new_tournament_id}`);
 
@@ -126,13 +127,14 @@ export async function POST(request: NextRequest) {
  * 大会複製のメイン処理
  */
 async function duplicateTournament(
-  sourceTournamentId: number, 
-  newTournamentName: string, 
+  sourceTournamentId: number,
+  newTournamentName: string,
   level: 'level1' | 'level2' | 'level3' | 'level4',
-  createdBy: string
+  createdBy: string,
+  groupId: number
 ) {
   // 1. 大会基本情報の複製
-  const newTournamentId = await duplicateTournamentBasic(sourceTournamentId, newTournamentName, level, createdBy);
+  const newTournamentId = await duplicateTournamentBasic(sourceTournamentId, newTournamentName, level, createdBy, groupId);
   
   // 2. ルール情報の複製
   await duplicateTournamentRules(sourceTournamentId, newTournamentId);
@@ -173,7 +175,7 @@ async function duplicateTournament(
 /**
  * 大会基本情報の複製
  */
-async function duplicateTournamentBasic(sourceTournamentId: number, newTournamentName: string, level: string, createdBy: string): Promise<number> {
+async function duplicateTournamentBasic(sourceTournamentId: number, newTournamentName: string, level: string, createdBy: string, groupId: number): Promise<number> {
   // 複製元の大会情報を取得
   const sourceResult = await db.execute(`
     SELECT * FROM t_tournaments WHERE tournament_id = ?
@@ -202,8 +204,8 @@ async function duplicateTournamentBasic(sourceTournamentId: number, newTournamen
       tournament_name, format_id, venue_id, team_count,
       recruitment_start_date, recruitment_end_date, tournament_dates,
       status, visibility, public_start_date, court_count, match_duration_minutes, break_duration_minutes,
-      sport_type_id, created_by, archive_ui_version, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      sport_type_id, created_by, archive_ui_version, group_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
   `, [
     newTournamentName,
     sourceData.format_id || 1, // デフォルト値を提供
@@ -220,7 +222,8 @@ async function duplicateTournamentBasic(sourceTournamentId: number, newTournamen
     sourceData.break_duration_minutes || 5,
     sourceData.sport_type_id || 1, // 競技種別を複製（重要！）
     createdBy, // 複製実行者のIDを設定
-    currentArchiveVersion // 複製元ではなく現在のUIバージョンを設定（新しい大会用）
+    currentArchiveVersion, // 複製元ではなく現在のUIバージョンを設定（新しい大会用）
+    groupId // 選択された大会グループID
   ]);
 
   return Number(insertResult.lastInsertRowid);
@@ -341,15 +344,19 @@ async function duplicateMatchesBasic(
     const insertResult = await db.execute(`
       INSERT INTO t_matches_live (
         match_block_id, tournament_date, match_number, match_code,
-        team1_id, team2_id, team1_display_name, team2_display_name,
+        team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+        team1_display_name, team2_display_name,
         court_number, start_time, period_count,
-        team1_scores, team2_scores, winner_team_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        team1_scores, team2_scores, winner_team_id, winner_tournament_team_id,
+        is_draw, is_walkover, match_status, result_status, cancellation_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newBlockId,
       String(matchData.tournament_date || '1'), // デフォルト値を提供
       Number(matchData.match_number) || 1,
       String(matchData.match_code) || 'M1',
+      null, // レベル3以降で設定
+      null, // レベル3以降で設定
       null, // レベル3以降で設定
       null, // レベル3以降で設定
       String(matchData.team1_display_name) || 'チーム1',
@@ -359,7 +366,13 @@ async function duplicateMatchesBasic(
       Number(matchData.period_count) || 1,
       '[0]', // 初期スコア
       '[0]', // 初期スコア
-      null // 勝者なし
+      null, // 勝者なし
+      null, // レベル4以降で設定
+      0, // 引き分けフラグ
+      0, // 不戦勝フラグ
+      'scheduled', // 試合状態
+      'none', // 結果状態
+      null // 中止タイプ
     ]);
 
     matchMapping.set(Number(matchData.match_id), Number(insertResult.lastInsertRowid));
@@ -386,11 +399,12 @@ async function duplicateTeamsAndPlayers(sourceTournamentId: number, newTournamen
     const teamInsertResult = await db.execute(`
       INSERT INTO t_tournament_teams (
         tournament_id, team_id, assigned_block, block_position,
-        team_name, team_omission, withdrawal_status, withdrawal_reason,
+        team_name, team_omission, participation_status, registration_method,
+        withdrawal_status, withdrawal_reason,
         withdrawal_requested_at, withdrawal_processed_at,
         withdrawal_processed_by, withdrawal_admin_comment,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newTournamentId,
       teamData.team_id,
@@ -398,6 +412,8 @@ async function duplicateTeamsAndPlayers(sourceTournamentId: number, newTournamen
       null, // レベル3以降で設定
       teamData.team_name,
       teamData.team_omission,
+      teamData.participation_status || 'confirmed', // 参加ステータスを複製（デフォルトは確定）
+      teamData.registration_method || 'self_registered', // 登録種別を複製（デフォルトは自己登録）
       'active', // 辞退状況はリセット
       null,
       null,
@@ -473,7 +489,7 @@ async function duplicateTeamAssignments(
     }
   }
 
-  // 試合のチーム割り当てを更新
+  // 試合のチーム割り当てを更新（tournament_team_idとチーム表示名も含む）
   const matchesResult = await db.execute(`
     SELECT * FROM t_matches_live ml
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -483,15 +499,21 @@ async function duplicateTeamAssignments(
   for (const match of matchesResult.rows) {
     const matchData = match as any;
     const newMatchId = matchMapping.get(Number(matchData.match_id));
-    
+
     if (newMatchId) {
       await db.execute(`
-        UPDATE t_matches_live 
-        SET team1_id = ?, team2_id = ?
+        UPDATE t_matches_live
+        SET team1_id = ?, team2_id = ?,
+            team1_tournament_team_id = ?, team2_tournament_team_id = ?,
+            team1_display_name = ?, team2_display_name = ?
         WHERE match_id = ?
       `, [
         matchData.team1_id,
         matchData.team2_id,
+        matchData.team1_tournament_team_id,
+        matchData.team2_tournament_team_id,
+        matchData.team1_display_name,
+        matchData.team2_display_name,
         newMatchId
       ]);
     }

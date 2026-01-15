@@ -2031,9 +2031,13 @@ export async function calculateMultiSportBlockStandings(
       }
       
       const scoreStr = String(scoreString);
-      
-      if (!scoreStr.includes(',')) {
-        const score = parseInt(scoreStr) || 0;
+
+      // parseScoreArray()で全形式に対応（JSON形式・カンマ区切り・単一数値）
+      const periods = parseScoreArray(scoreStr);
+
+      // 単一スコアの場合（ピリオド数が1つのみ）
+      if (periods.length === 1) {
+        const score = periods[0];
         return {
           regularTime: score,
           pkScore: null,
@@ -2042,9 +2046,6 @@ export async function calculateMultiSportBlockStandings(
           forStandings: score
         };
       }
-      
-      // parseScoreArray()で全形式に対応
-      const periods = parseScoreArray(scoreStr);
       
       // PK競技の場合: シンプルな合計計算
       if (currentSportCode === 'pk') {

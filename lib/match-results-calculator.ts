@@ -7,7 +7,7 @@ import {
   SportScoreConfig,
   SoccerScoreData
 } from '@/lib/sport-standings-calculator';
-import { parseTotalScore } from '@/lib/score-parser';
+import { parseTotalScore, parseScoreArray } from '@/lib/score-parser';
 
 /**
  * スコア文字列を数値に変換（全形式対応）
@@ -396,19 +396,9 @@ async function getBlockResults(
         const periodCount = row.period_count as number | null;
 
         if (team1ScoresStr && team2ScoresStr) {
-          // カンマ区切り文字列を配列に変換（JSONではない場合の対応）
-          let team1Scores: number[];
-          let team2Scores: number[];
-          
-          try {
-            // まずJSONとしてパースを試行
-            team1Scores = JSON.parse(team1ScoresStr);
-            team2Scores = JSON.parse(team2ScoresStr);
-          } catch {
-            // JSON形式でない場合はカンマ区切り文字列として処理
-            team1Scores = team1ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
-            team2Scores = team2ScoresStr.split(',').map(s => parseInt(s.trim()) || 0);
-          }
+          // parseScoreArray()で全形式に対応（JSON形式・カンマ区切り・単一数値）
+          const team1Scores = parseScoreArray(team1ScoresStr);
+          const team2Scores = parseScoreArray(team2ScoresStr);
 
           baseMatch.team1_scores = team1Scores;
           baseMatch.team2_scores = team2Scores;
