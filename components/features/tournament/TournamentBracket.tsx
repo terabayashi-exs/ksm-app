@@ -6,6 +6,7 @@ import {
   TournamentBlock,
   QUARTER_FINAL_CODES,
   SEMI_FINAL_CODES,
+  THIRD_PLACE_CODES,
   FINAL_CODES,
 } from "@/lib/tournament-bracket";
 import type {
@@ -83,6 +84,11 @@ const response = await fetch(
     return [...quarterFinals, ...semiFinals, ...finals];
   };
 
+  // 3位決定戦を取得
+  const getThirdPlaceMatch = (allMatches: BracketMatch[]): BracketMatch | null => {
+    return allMatches.find((m) => THIRD_PLACE_CODES.includes(m.match_code)) || null;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -107,6 +113,7 @@ const response = await fetch(
   }
 
   const blockMatches = organizeMatchesForBlock(matches);
+  const thirdPlaceMatch = getThirdPlaceMatch(matches);
 
   // 試合がない場合
   if (blockMatches.length === 0) {
@@ -199,11 +206,26 @@ const response = await fetch(
       `}</style>
 
       <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
-        <TournamentBlock
-          blockId="main"
-          matches={blockMatches}
-          sportConfig={sportConfig || undefined}
-        />
+        <div className="space-y-8">
+          {/* メインブロック */}
+          <TournamentBlock
+            blockId="main"
+            matches={blockMatches}
+            sportConfig={sportConfig || undefined}
+            roundLabels={["準々決勝", "準決勝", "決勝"]}
+          />
+
+          {/* 3位決定戦ブロック */}
+          {thirdPlaceMatch && (
+            <TournamentBlock
+              blockId="third"
+              matches={[thirdPlaceMatch]}
+              sportConfig={sportConfig || undefined}
+              title="3位決定戦"
+              roundLabels={["3位決定戦"]}
+            />
+          )}
+        </div>
       </div>
     </>
   );
