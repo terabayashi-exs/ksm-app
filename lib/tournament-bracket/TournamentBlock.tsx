@@ -94,24 +94,27 @@ export function TournamentBlock({
       };
     };
 
-    // パスを追加
+    // 接続情報を収集
+    const connections: { fromId: string; toId: string }[] = [];
     const addPath = (fromId: string, toId: string) => {
-      const from = container.querySelector(
-        `[data-match="${fromId}"]`
-      ) as HTMLElement;
-      const to = container.querySelector(
-        `[data-match="${toId}"]`
-      ) as HTMLElement;
+      connections.push({ fromId, toId });
+    };
 
-      if (!from || !to) return;
+    // パターンに応じた接続線を収集
+    drawConnectionsByPattern(pattern, blockId, addPath, config);
 
-      const p1 = midRight(from);
-      const p2 = midLeft(to);
+    // 宛先ごとにグループ化
+    const groupedByDest = connections.reduce(
+      (acc, conn) => {
+        if (!acc[conn.toId]) acc[conn.toId] = [];
+        acc[conn.toId].push(conn.fromId);
+        return acc;
+      },
+      {} as Record<string, string[]>
+    );
 
-      // 直角に曲がる接続線
-      const midX = p1.x + (p2.x - p1.x) * 0.5;
-      const d = `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
-
+    // SVGパスを作成するヘルパー
+    const createPath = (d: string) => {
       const path = document.createElementNS(
         "http://www.w3.org/2000/svg",
         "path"
@@ -120,12 +123,64 @@ export function TournamentBlock({
       path.setAttribute("stroke", "hsl(var(--muted-foreground))");
       path.setAttribute("stroke-width", "2");
       path.setAttribute("fill", "transparent");
-
       svg.appendChild(path);
     };
 
-    // パターンに応じた接続線を描画
-    drawConnectionsByPattern(pattern, blockId, addPath, config);
+    // グループごとに接続線を描画
+    Object.entries(groupedByDest).forEach(([toId, fromIds]) => {
+      const toEl = container.querySelector(
+        `[data-match="${toId}"]`
+      ) as HTMLElement;
+      if (!toEl) return;
+
+      const dest = midLeft(toEl);
+
+      // ソース要素の座標を取得
+      const sources = fromIds
+        .map((fromId) => {
+          const fromEl = container.querySelector(
+            `[data-match="${fromId}"]`
+          ) as HTMLElement;
+          if (!fromEl) return null;
+          return midRight(fromEl);
+        })
+        .filter((p): p is { x: number; y: number } => p !== null);
+
+      if (sources.length === 0) return;
+
+      if (sources.length === 1) {
+        // 単一ソースの場合は従来通り
+        const p1 = sources[0];
+        const midX = p1.x + (dest.x - p1.x) * 0.5;
+        createPath(
+          `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${dest.y} L ${dest.x} ${dest.y}`
+        );
+      } else {
+        // 複数ソースの場合：縦線の中心から横線を引く
+        const minY = Math.min(...sources.map((s) => s.y));
+        const maxY = Math.max(...sources.map((s) => s.y));
+        const centerY = (minY + maxY) / 2;
+        const midX = Math.max(...sources.map((s) => s.x)) + (dest.x - Math.max(...sources.map((s) => s.x))) * 0.5;
+
+        // 各ソースから縦線位置まで横線を引く
+        sources.forEach((p1) => {
+          createPath(`M ${p1.x} ${p1.y} L ${midX} ${p1.y}`);
+        });
+
+        // 縦線を引く
+        createPath(`M ${midX} ${minY} L ${midX} ${maxY}`);
+
+        // 縦線の中心から宛先へ横線を引く
+        createPath(`M ${midX} ${centerY} L ${dest.x} ${centerY}`);
+
+        // 宛先への最後の接続（宛先のY位置が中心と異なる場合）
+        if (Math.abs(centerY - dest.y) > 1) {
+          createPath(
+            `M ${dest.x} ${centerY} L ${dest.x} ${dest.y}`
+          );
+        }
+      }
+    });
 
     // SVGサイズ設定
     svg.setAttribute("width", Math.ceil(containerRect.width).toString());
