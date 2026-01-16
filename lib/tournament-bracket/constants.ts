@@ -21,8 +21,13 @@ export const SEPARATION_RATIO = 0.8;
 export const AVOIDANCE_GAP = 20;
 export const LINE_OFFSET = 30;
 
-// ラウンド順序（match_type ベースのグループ化用）
-// DB の match_type は英語: preliminary, quarterfinal, semifinal, third_place, final
+/**
+ * ラウンド順序（match_type ベースのグループ化用）
+ * DB の match_type は英語: preliminary, quarterfinal, semifinal, third_place, final
+ *
+ * TODO: t_match_blocks 作成時に m_match_templates から match_type を引き継ぐように修正後、
+ *       utils.ts の organizeMatchesByMatchType でこの定数を使用する
+ */
 export const ROUND_ORDER: Record<string, number> = {
   'preliminary': 0,
   'first_round': 1,

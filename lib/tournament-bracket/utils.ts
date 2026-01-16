@@ -126,8 +126,11 @@ export function organizeBracket(matches: BracketMatch[]): BracketStructure {
 
 /**
  * match_type ベースで試合を整理（可変チーム数対応）
- * TODO: t_match_blocks 作成時に m_match_templates から match_type を引き継ぐように修正後、
- *       ハードコードを削除して DB の値を使用する
+ *
+ * TODO: t_match_blocks 作成時に m_match_templates から match_type を引き継ぐように修正後:
+ *       1. QUARTER_FINAL_CODES 等のハードコード定数への依存を削除
+ *       2. ROUND_ORDER と MATCH_TYPE_LABELS を使用して match_type ベースで処理
+ *       3. 3位決定戦の判定も THIRD_PLACE_MATCH_TYPE を使用
  */
 export function organizeMatchesByMatchType(matches: BracketMatch[]): {
   mainMatches: BracketMatch[];
