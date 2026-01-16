@@ -76,15 +76,15 @@ export async function GET(request: NextRequest) {
       matchType: 'exact' | 'close' | 'alternative' 
     }> = [];
 
-    // 1. 完全一致
-    const exactMatch = allFormats.find(format => format.target_team_count === teamCount);
-    if (exactMatch) {
+    // 1. 完全一致（全て取得）
+    const exactMatches = allFormats.filter(format => format.target_team_count === teamCount);
+    exactMatches.forEach(format => {
       recommendedFormats.push({
-        ...exactMatch,
+        ...format,
         recommendationReason: `${teamCount}チームに最適化されたフォーマットです`,
         matchType: 'exact'
       });
-    }
+    });
 
     // 2. 近い数値（±2の範囲）
     const closeMatches = allFormats.filter(format => {
@@ -137,18 +137,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 最大3つまでに制限
-    const finalRecommendations = recommendedFormats.slice(0, 3);
-
     return NextResponse.json({
       success: true,
       data: {
         teamCount,
         sportTypeId,
-        recommendedFormats: finalRecommendations,
+        recommendedFormats: recommendedFormats,
         allFormats: allFormats.map(format => ({
           ...format,
-          isRecommended: finalRecommendations.some(rec => rec.format_id === format.format_id)
+          isRecommended: recommendedFormats.some(rec => rec.format_id === format.format_id)
         }))
       }
     });

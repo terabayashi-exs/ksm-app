@@ -71,7 +71,10 @@ export async function GET(
         t.created_at,
         v.venue_name,
         f.format_name,
-        COUNT(DISTINCT tt.team_id) as registered_teams
+        COUNT(DISTINCT CASE
+          WHEN tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active'
+          THEN tt.tournament_team_id
+        END) as registered_teams
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
