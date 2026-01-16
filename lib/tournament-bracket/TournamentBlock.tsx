@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import { MatchCard } from "./MatchCard";
 import { SeedCard } from "./SeedCard";
-import { CARD_HEIGHT, CARD_GAP } from "./constants";
+import { CARD_HEIGHT, CARD_GAP, HEADER_HEIGHT, PADDING_BOTTOM } from "./constants";
 import {
   getPatternByMatchCount,
   getPatternConfig,
@@ -251,7 +251,8 @@ export function TournamentBlock({
             >
               <div
                 className={`text-sm font-medium text-center mb-2 px-3 py-1 rounded-full ${getRoundColor(
-                  label
+                  roundIndex,
+                  config.rounds.length
                 )}`}
               >
                 {label}
@@ -260,7 +261,7 @@ export function TournamentBlock({
               {roundIndex === 0 &&
                 config.seedSlots?.map((seedSlot, seedIndex) => {
                   const seedTeamName = seedTeams[seedIndex] || "シード選手";
-                  const top = seedSlot.position * (CARD_HEIGHT + CARD_GAP) + 32;
+                  const top = seedSlot.position * (CARD_HEIGHT + CARD_GAP) + HEADER_HEIGHT;
 
                   return (
                     <div
@@ -276,7 +277,7 @@ export function TournamentBlock({
               {/* 通常の試合カード */}
               {roundMatches.map((match, matchIndex) => {
                 const position = round.positions[matchIndex] ?? matchIndex;
-                const top = position * (CARD_HEIGHT + CARD_GAP) + 32;
+                const top = position * (CARD_HEIGHT + CARD_GAP) + HEADER_HEIGHT;
 
                 return (
                   <div
@@ -326,15 +327,16 @@ function distributeMatchesToRounds(
  * ブロックの高さを計算
  */
 function calculateBlockHeight(pattern: PatternType): number {
+  const verticalPadding = HEADER_HEIGHT + PADDING_BOTTOM;
   const heights: Record<PatternType, number> = {
-    P1: CARD_HEIGHT + 64,
-    P2: CARD_HEIGHT + 64,
-    P3: 2 * CARD_HEIGHT + CARD_GAP + 64,
-    P4: 2 * CARD_HEIGHT + CARD_GAP + 64,
-    P5: 3 * CARD_HEIGHT + 2 * CARD_GAP + 64,
-    P6: 4 * CARD_HEIGHT + 3 * CARD_GAP + 64, // シードがposition 3にあるため4スロット必要
-    P7: 4 * CARD_HEIGHT + 3 * CARD_GAP + 64,
-    P8: 4 * CARD_HEIGHT + 3 * CARD_GAP + 64,
+    P1: CARD_HEIGHT + verticalPadding,
+    P2: CARD_HEIGHT + verticalPadding,
+    P3: 2 * CARD_HEIGHT + CARD_GAP + verticalPadding,
+    P4: 2 * CARD_HEIGHT + CARD_GAP + verticalPadding,
+    P5: 3 * CARD_HEIGHT + 2 * CARD_GAP + verticalPadding,
+    P6: 4 * CARD_HEIGHT + 3 * CARD_GAP + verticalPadding, // シードがposition 3にあるため4スロット必要
+    P7: 4 * CARD_HEIGHT + 3 * CARD_GAP + verticalPadding,
+    P8: 4 * CARD_HEIGHT + 3 * CARD_GAP + verticalPadding,
   };
   return heights[pattern];
 }
