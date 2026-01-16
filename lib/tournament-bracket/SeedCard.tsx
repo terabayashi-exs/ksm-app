@@ -23,13 +23,6 @@ export function SeedCard({ teamName, className = "" }: SeedCardProps) {
       <div className="flex items-center justify-between h-8 px-3 bg-emerald-500/20 text-emerald-500 border border-emerald-500 rounded font-medium">
         <span className="text-sm truncate">{teamName}</span>
       </div>
-
-      {/* 状態表示 */}
-      <div className="mt-2 text-center">
-        <span className="text-xs bg-emerald-500/20 text-emerald-500 border border-emerald-500 px-2 py-1 rounded-full">
-          不戦勝
-        </span>
-      </div>
     </div>
   );
 }
