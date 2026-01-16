@@ -350,31 +350,23 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       return true;
     }
 
-    // 確定済み試合数 + 中止試合数を取得
-    const confirmedResult = await db.execute(`
-      SELECT COUNT(*) as confirmed_matches
-      FROM t_matches_final mf
-      INNER JOIN t_matches_live ml ON mf.match_id = ml.match_id
-      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      WHERE mb.tournament_id = ?
-    `, [tournamentId]);
-
-    const confirmedMatches = confirmedResult.rows[0]?.confirmed_matches as number || 0;
-
-    // 中止試合数を取得
-    const cancelledResult = await db.execute(`
-      SELECT COUNT(*) as cancelled_matches
+    // 完了済み試合数を取得
+    // 完了条件: t_matches_finalに登録 OR match_status='cancelled'
+    // 中止試合は確定処理をしなくても「完了」とみなす（インフルエンザ等でチーム不参加の場合）
+    const completedResult = await db.execute(`
+      SELECT COUNT(*) as completed_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
-        AND ml.match_status = 'cancelled'
+        AND ml.team1_id IS NOT NULL
+        AND ml.team2_id IS NOT NULL
+        AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
     `, [tournamentId]);
 
-    const cancelledMatches = cancelledResult.rows[0]?.cancelled_matches as number || 0;
+    const completedMatches = completedResult.rows[0]?.completed_matches as number || 0;
 
-    const completedMatches = confirmedMatches + cancelledMatches;
-
-    console.log(`Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed: ${confirmedMatches}, cancelled: ${cancelledMatches})`);
+    console.log(`Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`);
 
     return completedMatches === totalMatches;
   } catch (error) {

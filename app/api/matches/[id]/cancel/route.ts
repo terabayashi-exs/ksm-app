@@ -159,6 +159,57 @@ export async function POST(
       }
     }
 
+    // 4. 全試合が完了したかチェックして、大会を完了に変更
+    try {
+      const tournamentId = match.tournament_id;
+
+      console.log(`[MATCH_CANCEL] Checking if tournament ${tournamentId} is complete...`);
+
+      // 大会の全試合数を取得（team1_id/team2_idが設定されている試合のみ）
+      const totalMatchesResult = await db.execute(`
+        SELECT COUNT(*) as total_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
+      `, [tournamentId]);
+
+      const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+
+      // 完了済み試合数を取得（確定済み OR 中止）
+      const completedMatchesResult = await db.execute(`
+        SELECT COUNT(*) as completed_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        WHERE mb.tournament_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
+          AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
+      `, [tournamentId]);
+
+      const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
+
+      console.log(`[MATCH_CANCEL] Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`);
+
+      // 全試合が完了している場合
+      if (totalMatches > 0 && completedMatches >= totalMatches) {
+        console.log(`[MATCH_CANCEL] All matches completed for tournament ${tournamentId}. Setting status to completed.`);
+
+        await db.execute(`
+          UPDATE t_tournaments
+          SET status = 'completed', updated_at = datetime('now', '+9 hours')
+          WHERE tournament_id = ?
+        `, [tournamentId]);
+
+        console.log(`[MATCH_CANCEL] ✅ Tournament ${tournamentId} status updated to completed`);
+      }
+    } catch (completionError) {
+      console.error(`[MATCH_CANCEL] ❌ Failed to check tournament completion for tournament ID ${match.tournament_id}:`, completionError);
+      // 大会完了チェックエラーでも中止処理は成功とする（ログのみ）
+    }
+
     return NextResponse.json({
       success: true,
       message: `試合${match.match_code}を中止しました`,
