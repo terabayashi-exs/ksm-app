@@ -192,10 +192,15 @@ export function getPatternConfig(pattern: PatternType): PatternConfig {
 /**
  * ラウンド名の色を取得
  */
-export function getRoundColor(roundName: string): string {
-  if (roundName.includes("準々決勝")) return "bg-blue-100 text-blue-800";
-  if (roundName.includes("準決勝")) return "bg-purple-100 text-purple-800";
-  if (roundName.includes("1回戦")) return "bg-green-100 text-green-800";
-  if (roundName.includes("決勝")) return "bg-red-100 text-red-800";
-  return "bg-muted text-muted-foreground";
+export function getRoundColor(roundIndex: number, totalRounds: number): string {
+  // 最終ラウンド（決勝）
+  if (roundIndex === totalRounds - 1) {
+    return "bg-red-100 text-red-800";
+  }
+  // 最初のラウンド（1回戦/予選）
+  if (roundIndex === 0) {
+    return "bg-green-100 text-green-800";
+  }
+  // 中間ラウンド（準決勝など）
+  return "bg-purple-100 text-purple-800";
 }
