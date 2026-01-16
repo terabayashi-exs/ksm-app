@@ -174,6 +174,19 @@ const response = await fetch(
           .gap-10 {
             gap: 32px !important;
           }
+
+          /* トーナメントブロックの改ページ制御 */
+          .tournament-block {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          /* 3位決定戦セクションは常に新しいページから開始 */
+          .third-place-section {
+            break-before: page !important;
+            page-break-before: always !important;
+            padding-top: 36px !important; /* 1ページ目の上部余白と同等 */
+          }
         }
       `}</style>
 
@@ -189,13 +202,15 @@ const response = await fetch(
 
           {/* 3位決定戦ブロック */}
           {thirdPlaceMatch && (
-            <TournamentBlock
-              blockId="third"
-              matches={[thirdPlaceMatch]}
-              sportConfig={sportConfig || undefined}
-              title="3位決定戦"
-              roundLabels={["3位決定戦"]}
-            />
+            <div className="third-place-section">
+              <TournamentBlock
+                blockId="third"
+                matches={[thirdPlaceMatch]}
+                sportConfig={sportConfig || undefined}
+                title="3位決定戦"
+                roundLabels={["3位決定戦"]}
+              />
+            </div>
           )}
         </div>
       </div>

@@ -71,3 +71,18 @@ body {
     font-feature-settings: normal;
   }
 }
+
+/* 印刷用スタイル */
+@media print {
+  /* ヘッダー・フッター・ナビゲーション非表示 */
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+
+  /* 共通の印刷除外クラス */
+  .no-print {
+    display: none !important;
+  }
+}

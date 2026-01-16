@@ -202,7 +202,7 @@ export function TournamentBlock({
   // P1パターン（1チーム、試合なし）
   if (pattern === "P1") {
     return (
-      <div className="relative">
+      <div className="relative tournament-block">
         {title && (
           <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
         )}
@@ -217,7 +217,7 @@ export function TournamentBlock({
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full tournament-block">
       {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
 
       <div

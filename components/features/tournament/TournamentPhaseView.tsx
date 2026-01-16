@@ -167,7 +167,7 @@ export default function TournamentPhaseView({
 
     return (
       <div className="space-y-6">
-        <div className="mb-4 text-sm text-muted-foreground">
+        <div className="mb-4 text-sm text-muted-foreground no-print">
           {phaseName}はトーナメント形式です。トーナメント表で試合の進行状況を表示しています。
         </div>
 
@@ -193,7 +193,7 @@ export default function TournamentPhaseView({
         <TournamentBracket tournamentId={tournamentId} phase={phase} />
 
         {/* 操作ガイドと注意事項 */}
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
+        <div className="grid md:grid-cols-2 gap-6 mt-8 no-print">
           <Card className="bg-green-50 border-green-200">
             <CardContent className="pt-4">
               <div className="flex items-start space-x-3">
