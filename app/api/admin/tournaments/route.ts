@@ -47,7 +47,10 @@ export async function GET(request: NextRequest) {
         t.group_id,
         v.venue_name,
         f.format_name,
-        COUNT(DISTINCT tt.team_id) as current_registered_teams,
+        COUNT(DISTINCT CASE
+          WHEN tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active'
+          THEN tt.tournament_team_id
+        END) as current_registered_teams,
         COUNT(DISTINCT ml.match_id) as match_count,
         COUNT(DISTINCT mf.match_id) as results_count
       FROM t_tournaments t

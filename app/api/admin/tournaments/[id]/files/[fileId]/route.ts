@@ -16,9 +16,9 @@ export async function DELETE(
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
+        { success: false, error: '認証が必要です' },
         { status: 401 }
       );
     }
@@ -111,9 +111,9 @@ export async function GET(
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
+        { success: false, error: '認証が必要です' },
         { status: 401 }
       );
     }

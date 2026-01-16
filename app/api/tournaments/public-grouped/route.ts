@@ -61,7 +61,10 @@ export async function GET(_request: NextRequest) {
           f.format_name,
           a.logo_blob_url,
           a.organization_name,
-          COUNT(DISTINCT tt.team_id) as registered_teams,
+          COUNT(DISTINCT CASE
+            WHEN tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active'
+            THEN tt.tournament_team_id
+          END) as registered_teams,
           (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count,
           ${teamId ? 'CASE WHEN utt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
         FROM t_tournaments t

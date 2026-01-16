@@ -48,15 +48,15 @@ export async function POST(
     console.log('🔐 認証チェック開始');
     const session = await auth();
     console.log('👤 セッション情報:', session?.user?.id, session?.user?.role);
-    
-    if (!session || session.user.role !== 'admin') {
-      console.log('❌ 認証失敗: 管理者権限なし');
+
+    if (!session) {
+      console.log('❌ 認証失敗: 未認証');
       return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
+        { success: false, error: '認証が必要です' },
         { status: 401 }
       );
     }
-    
+
     console.log('✅ 認証成功');
 
     const { id } = await params;

@@ -27,7 +27,7 @@ interface TournamentFilesPageProps {
 export default async function TournamentFilesPage({ params }: TournamentFilesPageProps) {
   // 認証チェック
   const session = await auth();
-  if (!session || session.user.role !== 'admin') {
+  if (!session) {
     redirect('/auth/login');
   }
 
