@@ -77,32 +77,38 @@ export async function POST(
     }
 
     // 大会ステータスの更新チェック
-    // 全試合が確定済みでない場合、大会ステータスをongoingに戻す
+    // 全試合が完了していない場合、大会ステータスをongoingに戻す
     try {
-      // 大会の全試合数を取得
+      // 大会の全試合数を取得（team1_id/team2_idが設定されている試合のみ）
       const totalMatchesResult = await db.execute(`
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
       `, [match.tournament_id]);
-      
+
       const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
-      
-      // 確定済み試合数を取得（この試合の確定解除後の数）
-      const confirmedMatchesResult = await db.execute(`
-        SELECT COUNT(*) as confirmed_matches
-        FROM t_matches_final mf
-        INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+
+      // 完了済み試合数を取得（確定済み OR 中止）（この試合の確定解除後の数）
+      const completedMatchesResult = await db.execute(`
+        SELECT COUNT(*) as completed_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE mb.tournament_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
+          AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
       `, [match.tournament_id]);
-      
-      const confirmedMatches = confirmedMatchesResult.rows[0]?.confirmed_matches as number || 0;
-      
-      console.log(`大会${match.tournament_id}: 確定済み試合数 ${confirmedMatches}/${totalMatches}`);
-      
-      // 全試合が確定されていない場合、大会ステータスをongoingに戻す
-      if (confirmedMatches < totalMatches) {
+
+      const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
+
+      console.log(`[MATCH_UNCONFIRM] Tournament ${match.tournament_id}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`);
+
+      // 全試合が完了していない場合、大会ステータスをongoingに戻す
+      if (completedMatches < totalMatches) {
         // 現在の大会ステータスを確認
         const tournamentResult = await db.execute(`
           SELECT status FROM t_tournaments WHERE tournament_id = ?

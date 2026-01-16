@@ -164,30 +164,36 @@ export async function POST(request: NextRequest, context: RouteContext) {
       
       console.log(`[MATCH_CONFIRM] Checking if tournament ${tournamentId} is complete...`);
       
-      // 大会の全試合数を取得
+      // 大会の全試合数を取得（team1_id/team2_idが設定されている試合のみ）
       const totalMatchesResult = await db.execute(`
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
       `, [tournamentId]);
-      
+
       const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
-      
-      // 確定済み試合数を取得
-      const confirmedMatchesResult = await db.execute(`
-        SELECT COUNT(*) as confirmed_matches
-        FROM t_matches_final mf
-        INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+
+      // 完了済み試合数を取得（確定済み OR 中止）
+      const completedMatchesResult = await db.execute(`
+        SELECT COUNT(*) as completed_matches
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE mb.tournament_id = ?
+          AND ml.team1_id IS NOT NULL
+          AND ml.team2_id IS NOT NULL
+          AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
       `, [tournamentId]);
-      
-      const confirmedMatches = confirmedMatchesResult.rows[0]?.confirmed_matches as number || 0;
-      
-      console.log(`[MATCH_CONFIRM] Tournament ${tournamentId}: ${confirmedMatches}/${totalMatches} matches confirmed`);
-      
-      // 全試合が確定されている場合
-      if (totalMatches > 0 && confirmedMatches >= totalMatches) {
+
+      const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
+
+      console.log(`[MATCH_CONFIRM] Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`);
+
+      // 全試合が完了している場合
+      if (totalMatches > 0 && completedMatches >= totalMatches) {
         console.log(`[MATCH_CONFIRM] All matches confirmed for tournament ${tournamentId}. Setting status to completed.`);
         
         await db.execute(`
