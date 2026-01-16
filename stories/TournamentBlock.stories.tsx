@@ -146,7 +146,9 @@ const p5Matches: BracketMatch[] = [
 /**
  * P5パターン: 5チーム
  * - 1回戦（1試合）+ 準決勝（2試合）+ 決勝（1試合）= 4試合
- * - 1チームはシード（準決勝へ直接）
+ * - 3チームはシード（準決勝へ直接）
+ *   - 上山: FCバルセロナ, レアル・マドリード → SF1
+ *   - 下山: バイエルン → SF2
  */
 export const P5_FiveTeams: Story = {
   args: {
@@ -154,7 +156,7 @@ export const P5_FiveTeams: Story = {
     matches: p5Matches,
     sportConfig: defaultSportConfig,
     title: "P5: 5チーム",
-    seedTeams: ["FCバルセロナ"],
+    seedTeams: ["FCバルセロナ", "レアル・マドリード", "バイエルン"],
   },
 };
 

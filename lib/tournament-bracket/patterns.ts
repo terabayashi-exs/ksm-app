@@ -89,12 +89,16 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 5,
     totalMatches: 4,
     rounds: [
-      { name: "1回戦", matchCount: 1, positions: [2] }, // 下側の山
-      { name: "準決勝", matchCount: 2, positions: [0, 1.5] },
-      { name: "決勝", matchCount: 1, positions: [0.75] },
+      { name: "1回戦", matchCount: 1, positions: [2] },
+      { name: "準決勝", matchCount: 2, positions: [0.25, 1.75] }, // SF1, SF2を入力の中央に
+      { name: "決勝", matchCount: 1, positions: [1] }, // SFの中間に配置
     ],
     columnCount: 3,
-    seedSlots: [{ position: 0, connectTo: "R1M0" }], // 上側にシード（準決勝1へ直接）
+    seedSlots: [
+      { position: 0, connectTo: "R1M0" },     // Seed1 → SF1 (上)
+      { position: 0.5, connectTo: "R1M0" },   // Seed2 → SF1 (下)
+      { position: 1.5, connectTo: "R1M1" },   // Seed3 → SF2 (M1と近接配置)
+    ],
   },
   P6: {
     type: "P6",
