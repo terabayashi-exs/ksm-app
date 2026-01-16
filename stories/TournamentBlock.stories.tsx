@@ -37,7 +37,8 @@ function createMatch(
   team2: string,
   score1: number,
   score2: number,
-  completed = true
+  completed = true,
+  matchType = "final"
 ): BracketMatch {
   const winner = score1 > score2 ? `team-${id * 2 - 1}` : `team-${id * 2}`;
   return {
@@ -62,6 +63,8 @@ function createMatch(
     match_status: completed ? "completed" : "scheduled",
     is_confirmed: completed,
     execution_priority: id,
+    match_type: matchType,
+    block_name: "決勝トーナメント",
   };
 }
 
@@ -238,8 +241,8 @@ export const P8_EightTeams: Story = {
 // 未開始パターン
 // ========================================
 const p4NotStartedMatches: BracketMatch[] = [
-  { ...createMatch(1, "チームA", "チームB", 0, 0, false) },
-  { ...createMatch(2, "チームC", "チームD", 0, 0, false) },
+  { ...createMatch(1, "チームA", "チームB", 0, 0, false, "semifinal") },
+  { ...createMatch(2, "チームC", "チームD", 0, 0, false, "semifinal") },
   {
     match_id: 3,
     match_code: "M3",
@@ -252,6 +255,8 @@ const p4NotStartedMatches: BracketMatch[] = [
     match_status: "scheduled",
     is_confirmed: false,
     execution_priority: 3,
+    match_type: "final",
+    block_name: "決勝トーナメント",
   },
 ];
 

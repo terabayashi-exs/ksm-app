@@ -27,6 +27,10 @@ export interface BracketMatch {
   start_time?: string;
   court_number?: number;
   execution_group?: number;
+  // ブロック情報（t_match_blocks からJOIN）
+  match_type: string;
+  block_name: string;
+  display_round_name?: string;
   // サッカー専用データ（該当する場合のみ）
   soccer_data?: {
     regular_goals_for: number;

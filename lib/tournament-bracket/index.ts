@@ -11,6 +11,9 @@ export {
   SEPARATION_RATIO,
   AVOIDANCE_GAP,
   LINE_OFFSET,
+  ROUND_ORDER,
+  THIRD_PLACE_MATCH_TYPE,
+  MATCH_TYPE_LABELS,
   QUARTER_FINAL_CODES,
   SEMI_FINAL_CODES,
   THIRD_PLACE_CODES,
@@ -44,4 +47,4 @@ export {
 export type { PatternType, PatternConfig, RoundConfig, SeedSlot } from "./patterns";
 
 // ユーティリティ
-export { organizeBracket } from "./utils";
+export { organizeBracket, organizeMatchesByMatchType } from "./utils";

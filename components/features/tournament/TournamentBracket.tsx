@@ -4,10 +4,7 @@ import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
 import {
   TournamentBlock,
-  QUARTER_FINAL_CODES,
-  SEMI_FINAL_CODES,
-  THIRD_PLACE_CODES,
-  FINAL_CODES,
+  organizeMatchesByMatchType,
 } from "@/lib/tournament-bracket";
 import type {
   BracketMatch,
@@ -65,30 +62,6 @@ const response = await fetch(
     fetchMatches();
   }, [tournamentId, phase]);
 
-  // 試合をブロック用に整理（3位決定戦を除外し、順序を調整）
-  const organizeMatchesForBlock = (allMatches: BracketMatch[]): BracketMatch[] => {
-    // 準々決勝を取得してソート
-    const quarterFinals = allMatches
-      .filter((m) => QUARTER_FINAL_CODES.includes(m.match_code))
-      .sort((a, b) => a.match_code.localeCompare(b.match_code));
-
-    // 準決勝を取得してソート
-    const semiFinals = allMatches
-      .filter((m) => SEMI_FINAL_CODES.includes(m.match_code))
-      .sort((a, b) => a.match_code.localeCompare(b.match_code));
-
-    // 決勝を取得
-    const finals = allMatches.filter((m) => FINAL_CODES.includes(m.match_code));
-
-    // 7試合を順番に並べる
-    return [...quarterFinals, ...semiFinals, ...finals];
-  };
-
-  // 3位決定戦を取得
-  const getThirdPlaceMatch = (allMatches: BracketMatch[]): BracketMatch | null => {
-    return allMatches.find((m) => THIRD_PLACE_CODES.includes(m.match_code)) || null;
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -112,11 +85,10 @@ const response = await fetch(
     );
   }
 
-  const blockMatches = organizeMatchesForBlock(matches);
-  const thirdPlaceMatch = getThirdPlaceMatch(matches);
+  const { mainMatches, thirdPlaceMatch, roundLabels } = organizeMatchesByMatchType(matches);
 
   // 試合がない場合
-  if (blockMatches.length === 0) {
+  if (mainMatches.length === 0) {
     return (
       <div className="text-center py-16">
         <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -210,9 +182,9 @@ const response = await fetch(
           {/* メインブロック */}
           <TournamentBlock
             blockId="main"
-            matches={blockMatches}
+            matches={mainMatches}
             sportConfig={sportConfig || undefined}
-            roundLabels={["準々決勝", "準決勝", "決勝"]}
+            roundLabels={roundLabels}
           />
 
           {/* 3位決定戦ブロック */}
