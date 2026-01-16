@@ -17,16 +17,16 @@ interface TournamentBlockProps {
   blockId: string;
   /** 試合データ（0-7試合） */
   matches: BracketMatch[];
-  /** スポーツ設定 */
-  sportConfig?: SportScoreConfig;
   /** ブロックタイトル */
   title?: string;
-  /** 勝者チーム名（P1パターン用） */
-  winnerName?: string;
-  /** シードチーム名（パターンに応じて1回戦の空き枠に表示） */
-  seedTeams?: string[];
   /** ラウンドラベル（例: ["準々決勝", "準決勝", "決勝"]） */
   roundLabels?: string[];
+  /** シードチーム名（パターンに応じて1回戦の空き枠に表示） */
+  seedTeams?: string[];
+  /** 勝者チーム名（P1パターン用） */
+  winnerName?: string;
+  /** スポーツ設定 */
+  sportConfig?: SportScoreConfig;
 }
 
 /**
@@ -104,14 +104,11 @@ export function TournamentBlock({
     drawConnectionsByPattern(pattern, blockId, addPath, config);
 
     // 宛先ごとにグループ化
-    const groupedByDest = connections.reduce(
-      (acc, conn) => {
-        if (!acc[conn.toId]) acc[conn.toId] = [];
-        acc[conn.toId].push(conn.fromId);
-        return acc;
-      },
-      {} as Record<string, string[]>
-    );
+    const groupedByDest = connections.reduce((acc, conn) => {
+      if (!acc[conn.toId]) acc[conn.toId] = [];
+      acc[conn.toId].push(conn.fromId);
+      return acc;
+    }, {} as Record<string, string[]>);
 
     // SVGパスを作成するヘルパー
     const createPath = (d: string) => {
@@ -160,7 +157,9 @@ export function TournamentBlock({
         const minY = Math.min(...sources.map((s) => s.y));
         const maxY = Math.max(...sources.map((s) => s.y));
         const centerY = (minY + maxY) / 2;
-        const midX = Math.max(...sources.map((s) => s.x)) + (dest.x - Math.max(...sources.map((s) => s.x))) * 0.5;
+        const midX =
+          Math.max(...sources.map((s) => s.x)) +
+          (dest.x - Math.max(...sources.map((s) => s.x))) * 0.5;
 
         // 各ソースから縦線位置まで横線を引く
         sources.forEach((p1) => {
@@ -175,9 +174,7 @@ export function TournamentBlock({
 
         // 宛先への最後の接続（宛先のY位置が中心と異なる場合）
         if (Math.abs(centerY - dest.y) > 1) {
-          createPath(
-            `M ${dest.x} ${centerY} L ${dest.x} ${dest.y}`
-          );
+          createPath(`M ${dest.x} ${centerY} L ${dest.x} ${dest.y}`);
         }
       }
     });
@@ -212,9 +209,7 @@ export function TournamentBlock({
         <div className="flex items-center justify-center p-8 bg-card border border-border rounded-lg">
           <div className="text-center">
             <div className="text-sm text-muted-foreground mb-2">不戦勝</div>
-            <div className="text-lg font-semibold">
-              {winnerName || "勝者"}
-            </div>
+            <div className="text-lg font-semibold">{winnerName || "勝者"}</div>
           </div>
         </div>
       </div>
@@ -223,9 +218,7 @@ export function TournamentBlock({
 
   return (
     <div className="relative w-full">
-      {title && (
-        <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      )}
+      {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
 
       <div
         ref={containerRef}
@@ -411,4 +404,3 @@ function drawConnectionsByPattern(
       break;
   }
 }
-
