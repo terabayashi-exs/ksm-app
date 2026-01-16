@@ -53,6 +53,12 @@ interface Block {
   teams: Team[];
 }
 
+interface BlockTeamCount {
+  block_name: string;
+  expected_team_count: number;
+  match_count: number;
+}
+
 export default function TournamentDrawPage() {
   const router = useRouter();
   const params = useParams();
@@ -62,6 +68,7 @@ export default function TournamentDrawPage() {
   const [registeredTeams, setRegisteredTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [blockTeamCounts, setBlockTeamCounts] = useState<BlockTeamCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +146,18 @@ export default function TournamentDrawPage() {
         }
         
         setMatches(matchesData.data);
-        
+
+        // ブロック別の想定チーム数を取得
+        const blockCountsResponse = await fetch(`/api/tournaments/${tournamentId}/block-team-counts`);
+        const blockCountsData = await blockCountsResponse.json();
+
+        if (blockCountsResponse.ok && blockCountsData.success) {
+          setBlockTeamCounts(blockCountsData.data.block_team_counts);
+          console.log('Block team counts loaded:', blockCountsData.data.block_team_counts);
+        } else {
+          console.warn('Failed to load block team counts:', blockCountsData.error);
+        }
+
         // ブロック初期化
         await initializeBlocks(formattedTeams, matchesData.data);
 
@@ -268,25 +286,80 @@ export default function TournamentDrawPage() {
     }
   }, [tournamentId]);
 
-  // ランダム振分実行
+  // ブロックの想定チーム数を取得するヘルパー関数
+  const getExpectedTeamCount = (blockName: string): number | null => {
+    const blockCount = blockTeamCounts.find(bc => bc.block_name === blockName);
+    return blockCount ? blockCount.expected_team_count : null;
+  };
+
+  // ブロックのステータスを判定（緑/黄/赤）
+  const getBlockStatus = (block: Block): 'match' | 'insufficient' | 'excess' | 'unknown' => {
+    const currentCount = block.teams.filter(team => team && team.team_id).length;
+    const expectedCount = getExpectedTeamCount(block.block_name);
+
+    if (expectedCount === null) return 'unknown';
+
+    if (currentCount === expectedCount) return 'match';
+    if (currentCount < expectedCount) return 'insufficient';
+    return 'excess';
+  };
+
+  // ステータスに応じた色を返す
+  const getBlockHeaderClass = (status: 'match' | 'insufficient' | 'excess' | 'unknown'): string => {
+    switch (status) {
+      case 'match':
+        return 'bg-green-50 border-green-300 text-green-900';
+      case 'insufficient':
+        return 'bg-yellow-50 border-yellow-300 text-yellow-900';
+      case 'excess':
+        return 'bg-red-50 border-red-300 text-red-900';
+      default:
+        return '';
+    }
+  };
+
+  // ランダム振付実行
   const handleRandomDraw = () => {
     if (blocks.length === 0) return;
 
     // 有効なチームのみをシャッフル対象にする
     const validTeams = registeredTeams.filter(team => team && team.team_id && team.team_name);
     const shuffledTeams = [...validTeams].sort(() => Math.random() - 0.5);
-    const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
-    
-    const newBlocks = blocks.map((block, index) => {
-      const startIndex = index * teamsPerBlock;
-      const endIndex = Math.min(startIndex + teamsPerBlock, shuffledTeams.length);
-      return {
-        ...block,
-        teams: shuffledTeams.slice(startIndex, endIndex)
-      };
-    });
 
-    setBlocks(newBlocks);
+    // 想定チーム数が取得できている場合はそれに従って振分
+    if (blockTeamCounts.length > 0) {
+      const newBlocks: Block[] = blocks.map(block => ({
+        ...block,
+        teams: [] as Team[]
+      }));
+
+      let teamIndex = 0;
+      blocks.forEach((block, blockIndex) => {
+        const expectedCount = getExpectedTeamCount(block.block_name);
+        const count = expectedCount !== null ? expectedCount : Math.ceil(shuffledTeams.length / blocks.length);
+
+        for (let i = 0; i < count && teamIndex < shuffledTeams.length; i++) {
+          newBlocks[blockIndex].teams.push(shuffledTeams[teamIndex]);
+          teamIndex++;
+        }
+      });
+
+      setBlocks(newBlocks);
+    } else {
+      // 想定チーム数が取得できない場合は均等に振分
+      const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
+
+      const newBlocks = blocks.map((block, index) => {
+        const startIndex = index * teamsPerBlock;
+        const endIndex = Math.min(startIndex + teamsPerBlock, shuffledTeams.length);
+        return {
+          ...block,
+          teams: shuffledTeams.slice(startIndex, endIndex)
+        };
+      });
+
+      setBlocks(newBlocks);
+    }
   };
 
   // チームをブロック間で移動
@@ -340,7 +413,28 @@ export default function TournamentDrawPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      
+
+      // バリデーション: ブロックごとに想定チーム数と現在のチーム数を確認
+      if (blockTeamCounts.length > 0) {
+        const errors: string[] = [];
+
+        blocks.forEach(block => {
+          const currentCount = block.teams.filter(team => team && team.team_id).length;
+          const expectedCount = getExpectedTeamCount(block.block_name);
+
+          if (expectedCount !== null && currentCount !== expectedCount) {
+            errors.push(`${block.block_name}ブロック: ${currentCount}/${expectedCount}チーム (想定と一致しません)`);
+          }
+        });
+
+        if (errors.length > 0) {
+          const errorMessage = '以下のブロックで想定チーム数と異なります:\n\n' + errors.join('\n') + '\n\n保存を中止しました。';
+          alert(errorMessage);
+          setSaving(false);
+          return;
+        }
+      }
+
       const drawData = blocks.map(block => ({
         block_name: block.block_name,
         teams: block.teams
@@ -359,7 +453,7 @@ export default function TournamentDrawPage() {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok || !result.success) {
         const errorMessage = result.error || '振分結果の保存に失敗しました';
         const detailsMessage = result.details ? ` (詳細: ${result.details})` : '';
@@ -572,14 +666,20 @@ export default function TournamentDrawPage() {
 
           {/* ブロック振分結果 */}
           <div className="space-y-4">
-            {blocks.map((block, blockIndex) => (
-              <Card key={block.block_name}>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    {block.block_name}ブロック ({block.teams.filter(team => team && team.team_id).length}チーム)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+            {blocks.map((block, blockIndex) => {
+              const currentCount = block.teams.filter(team => team && team.team_id).length;
+              const expectedCount = getExpectedTeamCount(block.block_name);
+              const status = getBlockStatus(block);
+              const headerClass = getBlockHeaderClass(status);
+
+              return (
+                <Card key={block.block_name}>
+                  <CardHeader className={headerClass}>
+                    <CardTitle className="text-lg">
+                      {block.block_name}ブロック ({currentCount}{expectedCount !== null ? `/${expectedCount}` : ''}チーム)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
                   {block.teams.filter(team => team && team.team_id).length === 0 ? (
                     <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
                       <p className="text-muted-foreground">チームが振り分けられていません</p>
@@ -660,7 +760,8 @@ export default function TournamentDrawPage() {
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </div>
 

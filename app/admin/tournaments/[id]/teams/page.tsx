@@ -455,6 +455,7 @@ export default function TeamRegistrationPage() {
             results.push({
               success: false,
               teamName: team.team_name,
+              teamOmission: team.team_omission,
               error: errorMessage
             });
             continue;
@@ -474,6 +475,7 @@ export default function TeamRegistrationPage() {
             results.push({
               success: false,
               teamName: team.team_name,
+              teamOmission: team.team_omission,
               error: result.error
             });
           }
@@ -481,6 +483,7 @@ export default function TeamRegistrationPage() {
           results.push({
             success: false,
             teamName: team.team_name,
+            teamOmission: team.team_omission,
             error: error instanceof Error ? error.message : 'API呼び出しエラー'
           });
         }
@@ -498,8 +501,9 @@ export default function TeamRegistrationPage() {
         results
           .filter(r => !r.success)
           .forEach(r => {
-            message += `- ${r.teamName}: ${r.error}\n`;
+            message += `- ${r.teamName} (${r.teamOmission}): ${r.error}\n`;
           });
+        message += '\n※チーム名または略称が既に使用されている場合は、CSVファイルで異なる名称に変更してください。';
       }
 
       if (successCount > 0) {
