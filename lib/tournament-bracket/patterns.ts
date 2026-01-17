@@ -7,8 +7,6 @@
 export type PatternType = "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P8";
 
 export interface RoundConfig {
-  /** ラウンド名 */
-  name: string;
   /** ラウンド内の試合数 */
   matchCount: number;
   /** 各試合の垂直位置インデックス（上から0始まり） */
@@ -60,7 +58,7 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     type: "P2",
     teamCount: 2,
     totalMatches: 1,
-    rounds: [{ name: "決勝", matchCount: 1, positions: [0] }],
+    rounds: [{ matchCount: 1, positions: [0] }],
     columnCount: 1,
   },
   P3: {
@@ -68,8 +66,8 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 3,
     totalMatches: 2,
     rounds: [
-      { name: "1回戦", matchCount: 1, positions: [1] }, // 下側
-      { name: "決勝", matchCount: 1, positions: [0.5] }, // 中央
+      { matchCount: 1, positions: [1] }, // 下側
+      { matchCount: 1, positions: [0.5] }, // 中央
     ],
     columnCount: 2,
     seedSlots: [{ position: 0, connectTo: "R1M0" }], // 上側にシード
@@ -79,8 +77,8 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 4,
     totalMatches: 3,
     rounds: [
-      { name: "準決勝", matchCount: 2, positions: [0, 1] },
-      { name: "決勝", matchCount: 1, positions: [0.5] },
+      { matchCount: 2, positions: [0, 1] },
+      { matchCount: 1, positions: [0.5] },
     ],
     columnCount: 2,
   },
@@ -89,9 +87,9 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 5,
     totalMatches: 4,
     rounds: [
-      { name: "1回戦", matchCount: 1, positions: [2] },
-      { name: "準決勝", matchCount: 2, positions: [0.25, 1.75] }, // SF1, SF2を入力の中央に
-      { name: "決勝", matchCount: 1, positions: [1] }, // SFの中間に配置
+      { matchCount: 1, positions: [2] },
+      { matchCount: 2, positions: [0.25, 1.75] }, // SF1, SF2を入力の中央に
+      { matchCount: 1, positions: [1] }, // SFの中間に配置
     ],
     columnCount: 3,
     seedSlots: [
@@ -105,9 +103,9 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 6,
     totalMatches: 5,
     rounds: [
-      { name: "1回戦", matchCount: 2, positions: [1, 2] }, // 上と下
-      { name: "準決勝", matchCount: 2, positions: [0.5, 1.5] },
-      { name: "決勝", matchCount: 1, positions: [1] },
+      { matchCount: 2, positions: [1, 2] }, // 上と下
+      { matchCount: 2, positions: [0.5, 1.5] },
+      { matchCount: 1, positions: [1] },
     ],
     columnCount: 3,
     seedSlots: [
@@ -120,9 +118,9 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 7,
     totalMatches: 6,
     rounds: [
-      { name: "1回戦", matchCount: 3, positions: [1, 2, 3] },
-      { name: "準決勝", matchCount: 2, positions: [0.5, 2.5] },
-      { name: "決勝", matchCount: 1, positions: [1.5] },
+      { matchCount: 3, positions: [1, 2, 3] },
+      { matchCount: 2, positions: [0.5, 2.5] },
+      { matchCount: 1, positions: [1.5] },
     ],
     columnCount: 3,
     seedSlots: [{ position: 0, connectTo: "R1M0" }], // 最上部にシード（準決勝1へ）
@@ -132,9 +130,9 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 8,
     totalMatches: 7,
     rounds: [
-      { name: "準々決勝", matchCount: 4, positions: [0, 1, 2, 3] },
-      { name: "準決勝", matchCount: 2, positions: [0.5, 2.5] },
-      { name: "決勝", matchCount: 1, positions: [1.5] },
+      { matchCount: 4, positions: [0, 1, 2, 3] },
+      { matchCount: 2, positions: [0.5, 2.5] },
+      { matchCount: 1, positions: [1.5] },
     ],
     columnCount: 3,
   },

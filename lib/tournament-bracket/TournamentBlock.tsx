@@ -15,12 +15,12 @@ import type { BracketMatch, SportScoreConfig } from "./types";
 interface TournamentBlockProps {
   /** ブロック識別子（例: "A", "B", "FINAL"） */
   blockId: string;
-  /** 試合データ（0-7試合） */
-  matches: BracketMatch[];
   /** ブロックタイトル */
   title?: string;
+  /** 試合データ（0-7試合） */
+  matches: BracketMatch[];
   /** ラウンドラベル（例: ["準々決勝", "準決勝", "決勝"]） */
-  roundLabels?: string[];
+  roundLabels: string[];
   /** シードチーム名（パターンに応じて1回戦の空き枠に表示） */
   seedTeams?: string[];
   /** 勝者チーム名（P1パターン用） */
@@ -36,12 +36,12 @@ interface TournamentBlockProps {
  */
 export function TournamentBlock({
   blockId,
-  matches,
-  sportConfig,
   title,
-  winnerName,
-  seedTeams = [],
+  matches,
   roundLabels,
+  seedTeams = [],
+  winnerName,
+  sportConfig,
 }: TournamentBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -237,12 +237,11 @@ export function TournamentBlock({
         {/* ラウンドごとにカラムを描画 */}
         {config.rounds.map((round, roundIndex) => {
           const roundMatches = matchesByRound[roundIndex] || [];
-          // カスタムラベルがあればそれを使用、なければデフォルト
-          const label = roundLabels?.[roundIndex] ?? round.name;
+          const label = roundLabels[roundIndex];
 
           return (
             <div
-              key={round.name}
+              key={roundIndex}
               className="relative"
               style={{
                 width: columnWidthCalc,

@@ -7,16 +7,22 @@ interface BlockData {
   /** ブロック識別子（例: "A", "B", "C", "D"） */
   blockId: string;
   /** ブロックタイトル */
-  title?: string;
+  title: string;
   /** ブロック内の試合データ（0-7試合） */
   matches: BracketMatch[];
+  /** ラウンドラベル */
+  roundLabels: string[];
 }
 
 interface MultiBlockBracketProps {
   /** 各ブロックのデータ（2, 4, 8ブロック） */
   blocks: BlockData[];
+  /** 決勝ブロックのタイトル */
+  finalBlockTitle?: string;
   /** 決勝ブロックの試合データ（ブロック勝者同士の対戦） */
   finalBlockMatches?: BracketMatch[];
+  /** 決勝ブロックのラウンドラベル */
+  finalBlockRoundLabels?: string[];
   /** スポーツ設定 */
   sportConfig?: SportScoreConfig;
 }
@@ -32,27 +38,15 @@ interface MultiBlockBracketProps {
  */
 export function MultiBlockBracket({
   blocks,
+  finalBlockTitle = "決勝トーナメント",
   finalBlockMatches = [],
+  finalBlockRoundLabels = [],
   sportConfig,
 }: MultiBlockBracketProps) {
   // ブロック数のバリデーション
   if (blocks.length < 2) {
     throw new Error("MultiBlockBracket requires at least 2 blocks");
   }
-
-  // 決勝ブロックのタイトルを決定
-  const getFinalBlockTitle = (): string => {
-    switch (blocks.length) {
-      case 2:
-        return "決勝";
-      case 4:
-        return "準決勝・決勝";
-      case 8:
-        return "準々決勝・準決勝・決勝";
-      default:
-        return "決勝トーナメント";
-    }
-  };
 
   return (
     <div className="space-y-8">
@@ -64,8 +58,9 @@ export function MultiBlockBracket({
         >
           <TournamentBlock
             blockId={block.blockId}
-            title={block.title || `ブロック${block.blockId}`}
+            title={block.title}
             matches={block.matches}
+            roundLabels={block.roundLabels}
             sportConfig={sportConfig}
           />
           {/* 次のブロックへの矢印（最後のブロック以外） */}
@@ -86,8 +81,9 @@ export function MultiBlockBracket({
           <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50/30">
             <TournamentBlock
               blockId="FINAL"
-              title={getFinalBlockTitle()}
+              title={finalBlockTitle}
               matches={finalBlockMatches}
+              roundLabels={finalBlockRoundLabels}
               sportConfig={sportConfig}
             />
           </div>

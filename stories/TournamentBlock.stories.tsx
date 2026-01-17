@@ -82,9 +82,10 @@ const p2Matches: BracketMatch[] = [
 export const P2_TwoTeams: Story = {
   args: {
     blockId: "p2",
-    matches: p2Matches,
-    sportConfig: defaultSportConfig,
     title: "P2: 2チーム",
+    matches: p2Matches,
+    roundLabels: ["決勝"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -104,10 +105,11 @@ const p3Matches: BracketMatch[] = [
 export const P3_ThreeTeams: Story = {
   args: {
     blockId: "p3",
-    matches: p3Matches,
-    sportConfig: defaultSportConfig,
     title: "P3: 3チーム",
+    matches: p3Matches,
+    roundLabels: ["1回戦", "決勝"],
     seedTeams: ["FCバルセロナ"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -127,9 +129,10 @@ const p4Matches: BracketMatch[] = [
 export const P4_FourTeams: Story = {
   args: {
     blockId: "p4",
-    matches: p4Matches,
-    sportConfig: defaultSportConfig,
     title: "P4: 4チーム",
+    matches: p4Matches,
+    roundLabels: ["準決勝", "決勝"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -153,10 +156,11 @@ const p5Matches: BracketMatch[] = [
 export const P5_FiveTeams: Story = {
   args: {
     blockId: "p5",
-    matches: p5Matches,
-    sportConfig: defaultSportConfig,
     title: "P5: 5チーム",
+    matches: p5Matches,
+    roundLabels: ["1回戦", "準決勝", "決勝"],
     seedTeams: ["FCバルセロナ", "レアル・マドリード", "バイエルン"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -179,10 +183,11 @@ const p6Matches: BracketMatch[] = [
 export const P6_SixTeams: Story = {
   args: {
     blockId: "p6",
-    matches: p6Matches,
-    sportConfig: defaultSportConfig,
     title: "P6: 6チーム",
+    matches: p6Matches,
+    roundLabels: ["1回戦", "準決勝", "決勝"],
     seedTeams: ["FCバルセロナ", "バイエルン"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -206,10 +211,11 @@ const p7Matches: BracketMatch[] = [
 export const P7_SevenTeams: Story = {
   args: {
     blockId: "p7",
-    matches: p7Matches,
-    sportConfig: defaultSportConfig,
     title: "P7: 7チーム",
+    matches: p7Matches,
+    roundLabels: ["1回戦", "準決勝", "決勝"],
     seedTeams: ["FCバルセロナ"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -233,9 +239,10 @@ const p8Matches: BracketMatch[] = [
 export const P8_EightTeams: Story = {
   args: {
     blockId: "p8",
-    matches: p8Matches,
-    sportConfig: defaultSportConfig,
     title: "P8: 8チーム",
+    matches: p8Matches,
+    roundLabels: ["準々決勝", "準決勝", "決勝"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -269,9 +276,10 @@ const p4NotStartedMatches: BracketMatch[] = [
 export const P4_NotStarted: Story = {
   args: {
     blockId: "p4-notstarted",
-    matches: p4NotStartedMatches,
-    sportConfig: defaultSportConfig,
     title: "P4: 未開始",
+    matches: p4NotStartedMatches,
+    roundLabels: ["準決勝", "決勝"],
+    sportConfig: defaultSportConfig,
   },
 };
 
@@ -316,10 +324,11 @@ export const TwoBlocks_16Teams: StoryObj<typeof MultiBlockBracket> = {
   render: () => (
     <MultiBlockBracket
       blocks={[
-        { blockId: "A", title: "ブロックA", matches: blockAMatches },
-        { blockId: "B", title: "ブロックB", matches: blockBMatches },
+        { blockId: "A", title: "ブロックA", matches: blockAMatches, roundLabels: ["準々決勝", "準決勝", "決勝"] },
+        { blockId: "B", title: "ブロックB", matches: blockBMatches, roundLabels: ["準々決勝", "準決勝", "決勝"] },
       ]}
       finalBlockMatches={finalMatches}
+      finalBlockRoundLabels={["決勝"]}
       sportConfig={defaultSportConfig}
     />
   ),
@@ -353,10 +362,11 @@ export const TwoBlocks_8Teams: StoryObj<typeof MultiBlockBracket> = {
   render: () => (
     <MultiBlockBracket
       blocks={[
-        { blockId: "C", title: "ブロックA", matches: blockCMatches },
-        { blockId: "D", title: "ブロックB", matches: blockDMatches },
+        { blockId: "C", title: "ブロックA", matches: blockCMatches, roundLabels: ["準決勝", "決勝"] },
+        { blockId: "D", title: "ブロックB", matches: blockDMatches, roundLabels: ["準決勝", "決勝"] },
       ]}
       finalBlockMatches={finalMatchesSmall}
+      finalBlockRoundLabels={["決勝"]}
       sportConfig={defaultSportConfig}
     />
   ),
