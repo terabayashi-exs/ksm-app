@@ -143,10 +143,10 @@ const response = await fetch(
             page-break-inside: avoid !important;
           }
 
-          /* 3位決定戦セクションは常に新しいページから開始 */
+          /* 3位決定戦セクション - 内部での分割を避ける */
           .third-place-section {
-            break-before: page !important;
-            page-break-before: always !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
         }
       `}</style>
