@@ -51,7 +51,7 @@ export function MultiBlockBracket({
   return (
     <div className="space-y-8">
       {/* 各ブロックを縦に配置 */}
-      {blocks.map((block, index) => (
+      {blocks.map((block) => (
         <div
           key={block.blockId}
           className="border border-border rounded-lg p-4 bg-card"
@@ -63,31 +63,20 @@ export function MultiBlockBracket({
             roundLabels={block.roundLabels}
             sportConfig={sportConfig}
           />
-          {/* 次のブロックへの矢印（最後のブロック以外） */}
-          {index < blocks.length - 1 && (
-            <div className="flex justify-center mt-4">
-              <div className="text-muted-foreground text-2xl">↓</div>
-            </div>
-          )}
         </div>
       ))}
 
       {/* 決勝ブロック */}
       {finalBlockMatches.length > 0 && (
-        <>
-          <div className="flex justify-center">
-            <div className="text-muted-foreground text-2xl">↓</div>
-          </div>
-          <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50/30">
-            <TournamentBlock
-              blockId="FINAL"
-              title={finalBlockTitle}
-              matches={finalBlockMatches}
-              roundLabels={finalBlockRoundLabels}
-              sportConfig={sportConfig}
-            />
-          </div>
-        </>
+        <div className="border border-border rounded-lg p-4 bg-card">
+          <TournamentBlock
+            blockId="FINAL"
+            title={finalBlockTitle}
+            matches={finalBlockMatches}
+            roundLabels={finalBlockRoundLabels}
+            sportConfig={sportConfig}
+          />
+        </div>
       )}
     </div>
   );
