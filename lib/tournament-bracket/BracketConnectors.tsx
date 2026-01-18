@@ -10,9 +10,9 @@ const TEAM1_CENTER_OFFSET = 28; // p-3 (12px) + h-8/2 (16px)
 const TEAM2_CENTER_OFFSET = 68; // p-3 (12px) + h-8 (32px) + mb-2 (8px) + h-8/2 (16px)
 const SEED_CENTER_OFFSET = 28;  // SeedCardも同じ
 
-// 色定義
-const WINNER_COLOR = "#dc2626";
-const DEFAULT_COLOR = "#9ca3af";
+// 色定義（Tailwindカラーに合わせる）
+const WINNER_COLOR = "#22c55e"; // green-500: MatchCardの勝者色と統一
+const DEFAULT_COLOR = "#9ca3af"; // gray-400
 
 // ============================================================
 // 型定義
