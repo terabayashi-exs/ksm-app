@@ -176,18 +176,45 @@ const p6Matches: BracketMatch[] = [
 ];
 
 /**
- * P6パターン: 6チーム
+ * P6パターン: 6チーム（デフォルト: シード分散配置）
  * - 1回戦（2試合）+ 準決勝（2試合）+ 決勝（1試合）= 5試合
  * - 2チームはシード（準決勝へ直接）
+ * - Seed1 → SF1, Seed2 → SF2
  */
 export const P6_SixTeams: Story = {
   args: {
     blockId: "p6",
-    title: "P6: 6チーム",
+    title: "P6: 6チーム（シード分散）",
     matches: p6Matches,
     roundLabels: ["1回戦", "準決勝", "決勝"],
     seedTeams: ["FCバルセロナ", "バイエルン"],
     sportConfig: defaultSportConfig,
+  },
+};
+
+// P6隣接配置用のマッチデータ（シード同士がSF1で対戦）
+const p6AdjacentMatches: BracketMatch[] = [
+  createMatch(1, "レアル・マドリード", "アトレティコ", 2, 1), // 1回戦1
+  createMatch(2, "ドルトムント", "ライプツィヒ", 3, 2), // 1回戦2
+  createMatch(3, "FCバルセロナ", "バイエルン", 3, 1), // 準決勝1（Seed1 vs Seed2）
+  createMatch(4, "レアル・マドリード", "ドルトムント", 2, 0), // 準決勝2（M1勝者 vs M2勝者）
+  createMatch(5, "FCバルセロナ", "レアル・マドリード", 1, 0), // 決勝
+];
+
+/**
+ * P6パターン: 6チーム（シード隣接配置）
+ * - シード同士がSF1で対戦し、1回戦勝者同士がSF2で対戦
+ * - Seed1 vs Seed2 → SF1, M1勝者 vs M2勝者 → SF2
+ */
+export const P6_SixTeams_Adjacent: Story = {
+  args: {
+    blockId: "p6-adjacent",
+    title: "P6: 6チーム（シード隣接）",
+    matches: p6AdjacentMatches,
+    roundLabels: ["1回戦", "準決勝", "決勝"],
+    seedTeams: ["FCバルセロナ", "バイエルン"],
+    sportConfig: defaultSportConfig,
+    seedLayout: "adjacent",
   },
 };
 

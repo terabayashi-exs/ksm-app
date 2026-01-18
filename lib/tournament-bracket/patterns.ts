@@ -6,6 +6,9 @@
 
 export type PatternType = "P1" | "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P8";
 
+/** P6のシード配置パターン */
+export type P6SeedLayout = "dispersed" | "adjacent";
+
 export interface RoundConfig {
   /** ラウンド内の試合数 */
   matchCount: number;
@@ -139,6 +142,35 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
 };
 
 /**
+ * P6隣接シード配置パターン
+ * シード同士がSF1で対戦し、1回戦勝者同士がSF2で対戦する構成
+ *
+ * 構造:
+ * 位置0     Seed1 ──────┐
+ *                        ├─ SF1 (M3: Seed1 vs Seed2) ──┐
+ * 位置0.5   Seed2 ──────┘                              │
+ *                                                       ├─ Final (M5)
+ * 位置1.5   M1 ──────────┐                              │
+ *                        ├─ SF2 (M4: M1勝者 vs M2勝者) ─┘
+ * 位置2.5   M2 ──────────┘
+ */
+export const P6_ADJACENT_CONFIG: PatternConfig = {
+  type: "P6",
+  teamCount: 6,
+  totalMatches: 5,
+  rounds: [
+    { matchCount: 2, positions: [1.5, 2.5] }, // M1, M2（下側に配置）
+    { matchCount: 2, positions: [0.25, 2] },  // SF1（シード間）, SF2（試合間）
+    { matchCount: 1, positions: [1.125] },    // Final
+  ],
+  columnCount: 3,
+  seedSlots: [
+    { position: 0, connectTo: "R1M0" },    // Seed1 → SF1
+    { position: 0.5, connectTo: "R1M0" },  // Seed2 → SF1
+  ],
+};
+
+/**
  * 試合数からパターンを判定
  */
 export function getPatternByMatchCount(matchCount: number): PatternType {
@@ -185,6 +217,13 @@ export function getPatternByTeamCount(teamCount: number): PatternType {
  */
 export function getPatternConfig(pattern: PatternType): PatternConfig {
   return PATTERNS[pattern];
+}
+
+/**
+ * P6パターン設定を取得（シード配置オプション付き）
+ */
+export function getP6PatternConfig(seedLayout: P6SeedLayout = "dispersed"): PatternConfig {
+  return seedLayout === "adjacent" ? P6_ADJACENT_CONFIG : PATTERNS.P6;
 }
 
 /**

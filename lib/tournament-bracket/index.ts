@@ -44,12 +44,14 @@ export type { ConnectionDef } from "./BracketConnectors";
 // パターン定義
 export {
   PATTERNS,
+  P6_ADJACENT_CONFIG,
   getPatternByMatchCount,
   getPatternByTeamCount,
   getPatternConfig,
+  getP6PatternConfig,
   getRoundColor,
 } from "./patterns";
-export type { PatternType, PatternConfig, RoundConfig, SeedSlot } from "./patterns";
+export type { PatternType, PatternConfig, RoundConfig, SeedSlot, P6SeedLayout } from "./patterns";
 
 // ユーティリティ
 export { organizeBracket, organizeMatchesByMatchType } from "./utils";

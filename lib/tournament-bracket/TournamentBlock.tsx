@@ -8,8 +8,10 @@ import { CARD_HEIGHT, CARD_GAP, HEADER_HEIGHT, PADDING_BOTTOM } from "./constant
 import {
   getPatternByMatchCount,
   getPatternConfig,
+  getP6PatternConfig,
   getRoundColor,
   type PatternType,
+  type P6SeedLayout,
 } from "./patterns";
 import type { BracketMatch, SportScoreConfig } from "./types";
 
@@ -28,6 +30,8 @@ interface TournamentBlockProps {
   winnerName?: string;
   /** スポーツ設定 */
   sportConfig?: SportScoreConfig;
+  /** P6シード配置パターン（P6のみ有効） */
+  seedLayout?: P6SeedLayout;
 }
 
 /**
@@ -43,12 +47,14 @@ export function TournamentBlock({
   seedTeams = [],
   winnerName,
   sportConfig,
+  seedLayout = "dispersed",
 }: TournamentBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 試合数からパターンを判定
   const pattern = getPatternByMatchCount(matches.length);
-  const config = getPatternConfig(pattern);
+  // P6パターンの場合、seedLayoutに応じて設定を切り替え
+  const config = pattern === "P6" ? getP6PatternConfig(seedLayout) : getPatternConfig(pattern);
 
   // ステージ間のギャップ
   const stageGap = 64; // gap-16 = 64px（線を引くスペース確保）

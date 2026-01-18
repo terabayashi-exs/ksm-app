@@ -335,7 +335,14 @@ export function getConnectionsForPattern(pattern: PatternType, config: PatternCo
     P8: [{ from: [0, 1], to: [1, 0] }, { from: [2, 3], to: [1, 1] }, { from: [0, 1], to: [2, 0] }],
   };
 
-  const conns = patternConnections[pattern];
+  // P6隣接配置: 両シードが同じ試合（SF1）に接続する場合、M1とM2は両方SF2に接続
+  const isP6Adjacent = pattern === "P6" &&
+    config.seedSlots?.length === 2 &&
+    config.seedSlots[0].connectTo === config.seedSlots[1].connectTo;
+
+  const conns = isP6Adjacent
+    ? [{ from: [0, 1], to: [1, 1] }, { from: [0, 1], to: [2, 0] }]  // M1, M2 → SF2; SF1, SF2 → Final
+    : patternConnections[pattern];
   if (conns) {
     conns.forEach(({ from, to }) => {
       // P5-P8の後半の接続はfromRound=1
