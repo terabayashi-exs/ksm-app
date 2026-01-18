@@ -85,4 +85,14 @@ body {
   .no-print {
     display: none !important;
   }
+
+  /* トーナメントブラケット接続線（SVG） */
+  .bracket-line {
+    stroke-width: 1.5px !important;
+  }
+
+  /* トーナメントブロック - 印刷時のレイアウト維持 */
+  .tournament-block {
+    page-break-inside: avoid;
+  }
 }

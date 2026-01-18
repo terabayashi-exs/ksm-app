@@ -101,7 +101,7 @@ const response = await fetch(
 
   return (
     <>
-      {/* 印刷用スタイル */}
+      {/* 印刷用スタイル - レイアウトに影響するCSSは最小限に */}
       <style jsx>{`
         @page {
           size: A4 landscape;
@@ -117,22 +117,12 @@ const response = await fetch(
             background: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            font-size: 12px !important;
           }
 
           .print-container {
             overflow: visible !important;
             box-shadow: none !important;
             border: none !important;
-            transform: none !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 8px !important;
-          }
-
-          * {
-            line-height: 1.2 !important;
-            font-weight: 500 !important;
           }
 
           [data-match] {
@@ -142,37 +132,9 @@ const response = await fetch(
             background: white !important;
           }
 
-          [data-match] .text-sm {
-            font-size: 10px !important;
-            font-weight: 600 !important;
-          }
-
-          [data-match] .text-xs {
-            font-size: 9px !important;
-            font-weight: 700 !important;
-          }
-
           svg path {
             stroke: #333 !important;
             stroke-width: 2px !important;
-          }
-
-          .absolute {
-            transform: translateZ(0);
-          }
-
-          h3 {
-            font-size: 11px !important;
-            font-weight: 700 !important;
-            margin-bottom: 6px !important;
-          }
-
-          .space-y-6 > * + * {
-            margin-top: 18px !important;
-          }
-
-          .gap-10 {
-            gap: 32px !important;
           }
 
           /* トーナメントブロックの改ページ制御 */
@@ -185,7 +147,6 @@ const response = await fetch(
           .third-place-section {
             break-before: page !important;
             page-break-before: always !important;
-            padding-top: 36px !important; /* 1ページ目の上部余白と同等 */
           }
         }
       `}</style>
