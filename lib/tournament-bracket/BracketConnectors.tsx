@@ -178,19 +178,34 @@ function createConnector(
     }
   });
 
-  // マージ縦線（全outputYsとtargetYを繋ぐ）
-  const allYs = [...outputYs, targetY];
-  const minY = Math.min(...allYs);
-  const maxY = Math.max(...allYs);
-
-  if (maxY - minY > 1) {
-    const hasWinner = sources.some(s => s.type === "seed" || s.winnerIndex !== null);
-    paths.push(vLine(mergeX, minY, maxY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-merge` : undefined));
-  }
-
-  // ターゲットへの水平線
+  // マージ縦線（全outputYsを繋ぐ）
   const hasWinner = sources.some(s => s.type === "seed" || s.winnerIndex !== null);
-  paths.push(hLine(mergeX, targetX, targetY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-target` : undefined));
+  const allSeeds = sources.every(s => s.type === "seed");
+
+  if (allSeeds && outputYs.length >= 2) {
+    // 全ソースがシードの場合: シード間のマージ縦線を描画し、その中心から水平線を出す
+    const seedMinY = Math.min(...outputYs);
+    const seedMaxY = Math.max(...outputYs);
+    const mergeCenter = (seedMinY + seedMaxY) / 2;
+
+    // マージ縦線（シード間のみ）
+    paths.push(vLine(mergeX, seedMinY, seedMaxY, WINNER_COLOR, debugPrefix ? `${debugPrefix}-merge` : undefined));
+
+    // マージ中心からターゲットへの水平線
+    paths.push(hLine(mergeX, targetX, mergeCenter, WINNER_COLOR, debugPrefix ? `${debugPrefix}-target` : undefined));
+  } else {
+    // 通常パターン: 全outputYsとtargetYを繋ぐ
+    const allYs = [...outputYs, targetY];
+    const minY = Math.min(...allYs);
+    const maxY = Math.max(...allYs);
+
+    if (maxY - minY > 1) {
+      paths.push(vLine(mergeX, minY, maxY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-merge` : undefined));
+    }
+
+    // ターゲットへの水平線
+    paths.push(hLine(mergeX, targetX, targetY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-target` : undefined));
+  }
 
   return paths;
 }
