@@ -35,6 +35,11 @@ export { MatchCard } from "./MatchCard";
 export { SeedCard } from "./SeedCard";
 export { TournamentBlock } from "./TournamentBlock";
 export { MultiBlockBracket } from "./MultiBlockBracket";
+export {
+  ConnectionLayer,
+  getConnectionsForPattern,
+} from "./BracketConnectors";
+export type { ConnectionDef } from "./BracketConnectors";
 
 // パターン定義
 export {

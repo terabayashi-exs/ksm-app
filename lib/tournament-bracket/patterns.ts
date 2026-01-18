@@ -103,9 +103,9 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 6,
     totalMatches: 5,
     rounds: [
-      { matchCount: 2, positions: [1, 2] }, // 上と下
-      { matchCount: 2, positions: [0.5, 1.5] },
-      { matchCount: 1, positions: [1] },
+      { matchCount: 2, positions: [1, 2] }, // M1, M2
+      { matchCount: 2, positions: [0.5, 2.5] }, // M3, M4（M4はSeed1とM2の中央に配置）
+      { matchCount: 1, positions: [1.5] }, // M5（M3とM4の中央に配置）
     ],
     columnCount: 3,
     seedSlots: [
@@ -118,12 +118,12 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
     teamCount: 7,
     totalMatches: 6,
     rounds: [
-      { matchCount: 3, positions: [1, 2, 3] },
-      { matchCount: 2, positions: [0.5, 2.5] },
-      { matchCount: 1, positions: [1.5] },
+      { matchCount: 3, positions: [1, 2, 3] }, // M1, M2, M3
+      { matchCount: 2, positions: [0.75, 2.5] }, // M4（Seed=0.5とM1=1の中央）, M5
+      { matchCount: 1, positions: [1.625] }, // M6（M4=0.75とM5=2.5の中央）
     ],
     columnCount: 3,
-    seedSlots: [{ position: 0, connectTo: "R1M0" }], // 最上部にシード（準決勝1へ）
+    seedSlots: [{ position: 0.5, connectTo: "R1M0" }],
   },
   P8: {
     type: "P8",

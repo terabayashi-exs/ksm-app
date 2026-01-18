@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef } from "react";
 import { MatchCard } from "./MatchCard";
 import { SeedCard } from "./SeedCard";
+import { ConnectionLayer, getConnectionsForPattern } from "./BracketConnectors";
 import { CARD_HEIGHT, CARD_GAP, HEADER_HEIGHT, PADDING_BOTTOM } from "./constants";
 import {
   getPatternByMatchCount,
@@ -44,17 +45,18 @@ export function TournamentBlock({
   sportConfig,
 }: TournamentBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
 
   // 試合数からパターンを判定
   const pattern = getPatternByMatchCount(matches.length);
   const config = getPatternConfig(pattern);
 
   // ステージ間のギャップ
-  const stageGap = 48; // gap-12 = 48px
-  // カラム幅: 常に3カラム分で計算 (containerWidth - 2 * gap) / 3
-  // CSS calc()で動的に計算
-  const columnWidthCalc = `calc((100% - ${stageGap * 2}px) / 3)`;
+  const stageGap = 64; // gap-16 = 64px（線を引くスペース確保）
+  // カラム幅: 常に3カラム分で計算（実際のカラム数に関わらず固定）
+  // ※BracketConnectorsの座標計算と整合性を取るため
+  const fixedColumnCount = 3;
+  const totalGap = stageGap * (fixedColumnCount - 1);
+  const columnWidthCalc = `calc((100% - ${totalGap}px) / ${fixedColumnCount})`;
 
   // 試合をラウンドごとに分配
   const matchesByRound = distributeMatchesToRounds(matches, config);
@@ -62,142 +64,8 @@ export function TournamentBlock({
   // ブロック全体の高さを計算
   const blockHeight = calculateBlockHeight(pattern);
 
-  // SVG接続線を描画
-  const drawLines = useCallback(() => {
-    if (!containerRef.current || !svgRef.current) return;
-
-    const svg = svgRef.current;
-    const container = containerRef.current;
-
-    // 既存のpathをクリア
-    while (svg.firstChild) {
-      svg.removeChild(svg.firstChild);
-    }
-
-    const containerRect = container.getBoundingClientRect();
-
-    // 要素の中央右端を取得
-    const midRight = (el: HTMLElement) => {
-      const rect = el.getBoundingClientRect();
-      return {
-        x: rect.right - containerRect.left,
-        y: rect.top - containerRect.top + rect.height / 2,
-      };
-    };
-
-    // 要素の中央左端を取得
-    const midLeft = (el: HTMLElement) => {
-      const rect = el.getBoundingClientRect();
-      return {
-        x: rect.left - containerRect.left,
-        y: rect.top - containerRect.top + rect.height / 2,
-      };
-    };
-
-    // 接続情報を収集
-    const connections: { fromId: string; toId: string }[] = [];
-    const addPath = (fromId: string, toId: string) => {
-      connections.push({ fromId, toId });
-    };
-
-    // パターンに応じた接続線を収集
-    drawConnectionsByPattern(pattern, blockId, addPath, config);
-
-    // 宛先ごとにグループ化
-    const groupedByDest = connections.reduce((acc, conn) => {
-      if (!acc[conn.toId]) acc[conn.toId] = [];
-      acc[conn.toId].push(conn.fromId);
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    // SVGパスを作成するヘルパー
-    const createPath = (d: string) => {
-      const path = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "path"
-      );
-      path.setAttribute("d", d);
-      path.setAttribute("stroke", "hsl(var(--muted-foreground))");
-      path.setAttribute("stroke-width", "2");
-      path.setAttribute("fill", "transparent");
-      svg.appendChild(path);
-    };
-
-    // グループごとに接続線を描画
-    Object.entries(groupedByDest).forEach(([toId, fromIds]) => {
-      const toEl = container.querySelector(
-        `[data-match="${toId}"]`
-      ) as HTMLElement;
-      if (!toEl) return;
-
-      const dest = midLeft(toEl);
-
-      // ソース要素の座標を取得
-      const sources = fromIds
-        .map((fromId) => {
-          const fromEl = container.querySelector(
-            `[data-match="${fromId}"]`
-          ) as HTMLElement;
-          if (!fromEl) return null;
-          return midRight(fromEl);
-        })
-        .filter((p): p is { x: number; y: number } => p !== null);
-
-      if (sources.length === 0) return;
-
-      if (sources.length === 1) {
-        // 単一ソースの場合は従来通り
-        const p1 = sources[0];
-        const midX = p1.x + (dest.x - p1.x) * 0.5;
-        createPath(
-          `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${dest.y} L ${dest.x} ${dest.y}`
-        );
-      } else {
-        // 複数ソースの場合：縦線の中心から横線を引く
-        const minY = Math.min(...sources.map((s) => s.y));
-        const maxY = Math.max(...sources.map((s) => s.y));
-        const centerY = (minY + maxY) / 2;
-        const midX =
-          Math.max(...sources.map((s) => s.x)) +
-          (dest.x - Math.max(...sources.map((s) => s.x))) * 0.5;
-
-        // 各ソースから縦線位置まで横線を引く
-        sources.forEach((p1) => {
-          createPath(`M ${p1.x} ${p1.y} L ${midX} ${p1.y}`);
-        });
-
-        // 縦線を引く
-        createPath(`M ${midX} ${minY} L ${midX} ${maxY}`);
-
-        // 縦線の中心から宛先へ横線を引く
-        createPath(`M ${midX} ${centerY} L ${dest.x} ${centerY}`);
-
-        // 宛先への最後の接続（宛先のY位置が中心と異なる場合）
-        if (Math.abs(centerY - dest.y) > 1) {
-          createPath(`M ${dest.x} ${centerY} L ${dest.x} ${dest.y}`);
-        }
-      }
-    });
-
-    // SVGサイズ設定
-    svg.setAttribute("width", Math.ceil(containerRect.width).toString());
-    svg.setAttribute("height", Math.ceil(containerRect.height).toString());
-    svg.setAttribute(
-      "viewBox",
-      `0 0 ${Math.ceil(containerRect.width)} ${Math.ceil(containerRect.height)}`
-    );
-  }, [blockId, pattern, config]);
-
-  // リサイズ時に線を再描画
-  useEffect(() => {
-    const handleResize = () => drawLines();
-    window.addEventListener("resize", handleResize);
-
-    // 初回描画
-    setTimeout(drawLines, 100);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, [drawLines, matches]);
+  // 接続定義を取得
+  const connections = getConnectionsForPattern(pattern, config);
 
   // P1パターン（1チーム、試合なし）
   if (pattern === "P1") {
@@ -222,27 +90,46 @@ export function TournamentBlock({
 
       <div
         ref={containerRef}
-        className="relative flex gap-12 w-full"
+        className="relative flex gap-16 w-full"
         style={{
           height: `${blockHeight}px`,
         }}
       >
         {/* SVG接続線 */}
-        <svg
-          ref={svgRef}
-          className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 1 }}
+        <ConnectionLayer
+          pattern={pattern}
+          config={config}
+          connections={connections}
+          blockHeight={blockHeight}
+          stageGap={stageGap}
+          matches={matches}
+          matchesByRound={matchesByRound}
         />
 
-        {/* ラウンドごとにカラムを描画 */}
-        {config.rounds.map((round, roundIndex) => {
-          const roundMatches = matchesByRound[roundIndex] || [];
-          const label = roundLabels[roundIndex];
+        {/* 常に3カラムを描画（接続線の座標計算と整合性を取るため） */}
+        {[0, 1, 2].map((columnIndex) => {
+          const round = config.rounds[columnIndex];
+          const roundMatches = matchesByRound[columnIndex] || [];
+          const label = roundLabels[columnIndex];
+
+          // このカラムにラウンドがない場合は空のカラムを描画
+          if (!round) {
+            return (
+              <div
+                key={columnIndex}
+                className="relative shrink-0"
+                style={{
+                  width: columnWidthCalc,
+                  zIndex: 2,
+                }}
+              />
+            );
+          }
 
           return (
             <div
-              key={roundIndex}
-              className="relative"
+              key={columnIndex}
+              className="relative shrink-0"
               style={{
                 width: columnWidthCalc,
                 zIndex: 2,
@@ -250,14 +137,14 @@ export function TournamentBlock({
             >
               <div
                 className={`text-sm font-medium text-center mb-2 px-3 py-1 rounded-full ${getRoundColor(
-                  roundIndex,
+                  columnIndex,
                   config.rounds.length
                 )}`}
               >
                 {label}
               </div>
               {/* シードカード（1回戦のみ） */}
-              {roundIndex === 0 &&
+              {columnIndex === 0 &&
                 config.seedSlots?.map((seedSlot, seedIndex) => {
                   const seedTeamName = seedTeams[seedIndex] || "シード選手";
                   const top = seedSlot.position * (CARD_HEIGHT + CARD_GAP) + HEADER_HEIGHT;
@@ -287,7 +174,7 @@ export function TournamentBlock({
                     <MatchCard
                       match={match}
                       sportConfig={sportConfig}
-                      data-match={`${blockId}-R${roundIndex}M${matchIndex}`}
+                      data-match={`${blockId}-R${columnIndex}M${matchIndex}`}
                     />
                   </div>
                 );
@@ -338,70 +225,4 @@ function calculateBlockHeight(pattern: PatternType): number {
     P8: 4 * CARD_HEIGHT + 3 * CARD_GAP + verticalPadding,
   };
   return heights[pattern];
-}
-
-/**
- * パターンに応じた接続線を描画
- */
-function drawConnectionsByPattern(
-  pattern: PatternType,
-  blockId: string,
-  addPath: (from: string, to: string) => void,
-  config: ReturnType<typeof getPatternConfig>
-): void {
-  // シードカードの接続線を描画
-  config.seedSlots?.forEach((seedSlot, seedIndex) => {
-    addPath(`${blockId}-SEED${seedIndex}`, `${blockId}-${seedSlot.connectTo}`);
-  });
-
-  switch (pattern) {
-    case "P2":
-      // 決勝のみ、接続線なし
-      break;
-
-    case "P3":
-      // 1回戦 → 決勝
-      addPath(`${blockId}-R0M0`, `${blockId}-R1M0`);
-      break;
-
-    case "P4":
-      // 準決勝 → 決勝
-      addPath(`${blockId}-R0M0`, `${blockId}-R1M0`);
-      addPath(`${blockId}-R0M1`, `${blockId}-R1M0`);
-      break;
-
-    case "P5":
-      // 1回戦 → 準決勝、準決勝 → 決勝
-      addPath(`${blockId}-R0M0`, `${blockId}-R1M1`);
-      addPath(`${blockId}-R1M0`, `${blockId}-R2M0`);
-      addPath(`${blockId}-R1M1`, `${blockId}-R2M0`);
-      break;
-
-    case "P6":
-      // 1回戦 → 準決勝、準決勝 → 決勝
-      addPath(`${blockId}-R0M0`, `${blockId}-R1M0`);
-      addPath(`${blockId}-R0M1`, `${blockId}-R1M1`);
-      addPath(`${blockId}-R1M0`, `${blockId}-R2M0`);
-      addPath(`${blockId}-R1M1`, `${blockId}-R2M0`);
-      break;
-
-    case "P7":
-      // 1回戦 → 準決勝、準決勝 → 決勝
-      addPath(`${blockId}-R0M0`, `${blockId}-R1M0`);
-      addPath(`${blockId}-R0M1`, `${blockId}-R1M1`);
-      addPath(`${blockId}-R0M2`, `${blockId}-R1M1`);
-      addPath(`${blockId}-R1M0`, `${blockId}-R2M0`);
-      addPath(`${blockId}-R1M1`, `${blockId}-R2M0`);
-      break;
-
-    case "P8":
-      // 準々決勝 → 準決勝、準決勝 → 決勝
-      addPath(`${blockId}-R0M0`, `${blockId}-R1M0`);
-      addPath(`${blockId}-R0M1`, `${blockId}-R1M0`);
-      addPath(`${blockId}-R0M2`, `${blockId}-R1M1`);
-      addPath(`${blockId}-R0M3`, `${blockId}-R1M1`);
-      addPath(`${blockId}-R1M0`, `${blockId}-R2M0`);
-      addPath(`${blockId}-R1M1`, `${blockId}-R2M0`);
-      break;
-  }
 }
