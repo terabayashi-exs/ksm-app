@@ -21,6 +21,8 @@ const DEFAULT_COLOR = "#9ca3af";
 interface PathData {
   d: string;
   color: string;
+  /** デバッグ用識別子（SVG path の id 属性に使用） */
+  id?: string;
 }
 
 export interface ConnectionDef {
@@ -63,13 +65,13 @@ interface XCoords {
 // ============================================================
 
 /** 水平線 */
-function hLine(x1: number, x2: number, y: number, color: string): PathData {
-  return { d: `M ${x1} ${y} H ${x2}`, color };
+function hLine(x1: number, x2: number, y: number, color: string, id?: string): PathData {
+  return { d: `M ${x1} ${y} H ${x2}`, color, id };
 }
 
 /** 縦線 */
-function vLine(x: number, y1: number, y2: number, color: string): PathData {
-  return { d: `M ${x} ${y1} V ${y2}`, color };
+function vLine(x: number, y1: number, y2: number, color: string, id?: string): PathData {
+  return { d: `M ${x} ${y1} V ${y2}`, color, id };
 }
 
 /** ブラケット（勝者色分け付き縦線） */
@@ -77,12 +79,13 @@ function bracket(
   x: number,
   team1Y: number,
   team2Y: number,
-  winnerIndex: number | null
+  winnerIndex: number | null,
+  idPrefix?: string
 ): PathData[] {
   const centerY = (team1Y + team2Y) / 2;
   return [
-    vLine(x, team1Y, centerY, winnerIndex === 0 ? WINNER_COLOR : DEFAULT_COLOR),
-    vLine(x, centerY, team2Y, winnerIndex === 1 ? WINNER_COLOR : DEFAULT_COLOR),
+    vLine(x, team1Y, centerY, winnerIndex === 0 ? WINNER_COLOR : DEFAULT_COLOR, idPrefix ? `${idPrefix}-top` : undefined),
+    vLine(x, centerY, team2Y, winnerIndex === 1 ? WINNER_COLOR : DEFAULT_COLOR, idPrefix ? `${idPrefix}-btm` : undefined),
   ];
 }
 
@@ -137,21 +140,25 @@ function getWinnerIndex(match: BracketMatch): number | null {
  * sources: シードまたは試合の配列
  * targetY: ターゲットカードの接続Y座標
  * xCoords: X座標群
+ * debugPrefix: デバッグ用ID接頭辞（例: "R0M0-R1M0"）
  */
 function createConnector(
   sources: SourceInfo[],
   targetY: number,
-  xCoords: XCoords
+  xCoords: XCoords,
+  debugPrefix?: string
 ): PathData[] {
   const { sourceX, midX, mergeX, targetX } = xCoords;
   const paths: PathData[] = [];
   const outputYs: number[] = [];
 
   // 各ソースを処理
-  sources.forEach((src) => {
+  sources.forEach((src, srcIdx) => {
+    const srcPrefix = debugPrefix ? `${debugPrefix}-src${srcIdx}` : undefined;
+
     if (src.type === "seed" && src.y !== undefined) {
       // シード: 水平線をmergeXまで
-      paths.push(hLine(sourceX, mergeX, src.y, WINNER_COLOR));
+      paths.push(hLine(sourceX, mergeX, src.y, WINNER_COLOR, srcPrefix ? `${srcPrefix}-h` : undefined));
       outputYs.push(src.y);
     } else if (src.type === "match" && src.team1Y !== undefined && src.team2Y !== undefined) {
       const centerY = (src.team1Y + src.team2Y) / 2;
@@ -159,14 +166,14 @@ function createConnector(
       const winColor = winner !== null ? WINNER_COLOR : DEFAULT_COLOR;
 
       // team1, team2 水平線
-      paths.push(hLine(sourceX, midX, src.team1Y, winner === 0 ? WINNER_COLOR : DEFAULT_COLOR));
-      paths.push(hLine(sourceX, midX, src.team2Y, winner === 1 ? WINNER_COLOR : DEFAULT_COLOR));
+      paths.push(hLine(sourceX, midX, src.team1Y, winner === 0 ? WINNER_COLOR : DEFAULT_COLOR, srcPrefix ? `${srcPrefix}-t1` : undefined));
+      paths.push(hLine(sourceX, midX, src.team2Y, winner === 1 ? WINNER_COLOR : DEFAULT_COLOR, srcPrefix ? `${srcPrefix}-t2` : undefined));
 
       // ブラケット縦線
-      paths.push(...bracket(midX, src.team1Y, src.team2Y, winner ?? null));
+      paths.push(...bracket(midX, src.team1Y, src.team2Y, winner ?? null, srcPrefix ? `${srcPrefix}-bkt` : undefined));
 
       // 中央からmergeXへの水平線
-      paths.push(hLine(midX, mergeX, centerY, winColor));
+      paths.push(hLine(midX, mergeX, centerY, winColor, srcPrefix ? `${srcPrefix}-out` : undefined));
       outputYs.push(centerY);
     }
   });
@@ -178,12 +185,12 @@ function createConnector(
 
   if (maxY - minY > 1) {
     const hasWinner = sources.some(s => s.type === "seed" || s.winnerIndex !== null);
-    paths.push(vLine(mergeX, minY, maxY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR));
+    paths.push(vLine(mergeX, minY, maxY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-merge` : undefined));
   }
 
   // ターゲットへの水平線
   const hasWinner = sources.some(s => s.type === "seed" || s.winnerIndex !== null);
-  paths.push(hLine(mergeX, targetX, targetY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR));
+  paths.push(hLine(mergeX, targetX, targetY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-target` : undefined));
 
   return paths;
 }
@@ -281,7 +288,9 @@ export function ConnectionLayer({
         });
       });
 
-      paths.push(...createConnector(sources, targetCenterY, xCoords));
+      // デバッグ用ID: ターゲット位置を示す（例: "toR1M0", "toR2M0"）
+      const debugPrefix = `toR${targetRound}M${firstConn.toPosition}`;
+      paths.push(...createConnector(sources, targetCenterY, xCoords, debugPrefix));
     });
 
     return paths;
@@ -296,7 +305,7 @@ export function ConnectionLayer({
       style={{ width: "100%", height: "100%", zIndex: 1 }}
     >
       {allPaths.map((p, i) => (
-        <path key={i} d={p.d} stroke={p.color} strokeWidth="2" fill="none" className="bracket-line" />
+        <path key={p.id ?? i} id={p.id} d={p.d} stroke={p.color} strokeWidth="2" fill="none" className="bracket-line" />
       ))}
     </svg>
   );
