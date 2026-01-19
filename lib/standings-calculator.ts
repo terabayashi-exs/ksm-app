@@ -145,13 +145,22 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
           console.log(`[getTournamentStandings] ${phase}トーナメントの順位を計算`);
           teams = await calculateFinalTournamentStandings(tournamentId);
         } else {
-          // リーグ形式の場合は参加チーム一覧を取得
-          console.log(`[getTournamentStandings] ${phase}リーグの参加チーム一覧を取得`);
-          const participatingTeams = await getParticipatingTeamsForBlock(
-            block.match_block_id as number,
-            tournamentId
-          );
-          teams = participatingTeams;
+          // リーグ形式の場合は試合結果から順位を計算
+          console.log(`[getTournamentStandings] ${phase}リーグの順位を計算（team_rankings未保存）`);
+          try {
+            teams = await calculateBlockStandings(
+              block.match_block_id as number,
+              tournamentId
+            );
+          } catch (calcError) {
+            // 計算エラーの場合は参加チーム一覧のみ取得
+            console.error(`[getTournamentStandings] 順位計算エラー:`, calcError);
+            const participatingTeams = await getParticipatingTeamsForBlock(
+              block.match_block_id as number,
+              tournamentId
+            );
+            teams = participatingTeams;
+          }
         }
       }
 
@@ -754,90 +763,214 @@ export async function calculateBlockStandings(
       return standing;
     });
 
-    // 順位を決定（正しい順序: 1.試合実施数 > 2.勝点 > 3.得失点差 > 4.総得点 > 5.直接対決 > 6.抽選）
-    teamStandings.sort((a, b) => {
-      // 1. 試合実施数の多い順（試合を実施したチームを優先）
-      if (a.matches_played !== b.matches_played) {
-        return b.matches_played - a.matches_played;
-      }
+    // カスタム順位決定ルールの適用を試行
+    let finalStandings = [...teamStandings];
+    let tieBreakingApplied = false;
 
-      // 2. 勝点の多い順
-      if (a.points !== b.points) {
-        return b.points - a.points;
-      }
+    try {
+      // 競技種別を取得
+      const sportCode = await getTournamentSportCode(tournamentId);
 
-      // 3. 得失点差の良い順
-      if (a.goal_difference !== b.goal_difference) {
-        return b.goal_difference - a.goal_difference;
-      }
+      // カスタム順位決定ルールを取得
+      const customRules = await getTournamentTieBreakingRules(tournamentId, blockPhase as 'preliminary' | 'final');
 
-      // 4. 総得点の多い順
-      if (a.goals_for !== b.goals_for) {
-        return b.goals_for - a.goals_for;
-      }
+      if (customRules.length > 0) {
+        console.log(`[STANDINGS] カスタム順位決定ルール適用開始: ${customRules.length}個のルール`);
 
-      // 5. 直接対決の結果
-      const headToHead = calculateHeadToHead(a.team_id, b.team_id, matches);
+        // まず試合数でグループ分け（試合数0のチームのみ最下位扱い）
+        const teamsWithMatches = teamStandings.filter(t => t.matches_played > 0);
+        const teamsWithoutMatches = teamStandings.filter(t => t.matches_played === 0);
 
-      // 直接対決の勝点を計算（PK選手権では延長戦により引き分けなし）
-      let teamAHeadToHeadPoints = 0;
-      let teamBHeadToHeadPoints = 0;
+        // 基本的な順位付け（試合実施チームのみ）
+        const basicSorted = [...teamsWithMatches].sort((a, b) => {
+          // 1. 勝点の多い順
+          if (a.points !== b.points) return b.points - a.points;
+          // 2. 得失点差の良い順
+          if (a.goal_difference !== b.goal_difference) return b.goal_difference - a.goal_difference;
+          // 3. 総得点の多い順
+          if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
+          // 4. チーム名の辞書順
+          return a.team_name.localeCompare(b.team_name);
+        });
 
-      teamAHeadToHeadPoints += headToHead.teamAWins * winPoints;
-      teamAHeadToHeadPoints += headToHead.draws * drawPoints;
-
-      teamBHeadToHeadPoints += headToHead.teamBWins * winPoints;
-      teamBHeadToHeadPoints += headToHead.draws * drawPoints;
-
-      if (teamAHeadToHeadPoints !== teamBHeadToHeadPoints) {
-        return teamBHeadToHeadPoints - teamAHeadToHeadPoints;
-      }
-
-      // 6. 抽選（チーム名の辞書順で代用）
-      return a.team_name.localeCompare(b.team_name, 'ja');
-    });
-
-    // TODO: カスタム順位決定ルール対応は将来実装
-    // 現在はデフォルトの順位決定ロジックを使用
-    const finalStandings = [...teamStandings];
-
-    // 同着対応の順位を設定
-    let currentPosition = 1;
-    for (let i = 0; i < finalStandings.length; i++) {
-      if (i === 0) {
-        // 1位は必ず1
-        finalStandings[i].position = 1;
-      } else {
-        const currentTeam = finalStandings[i];
-        const previousTeam = finalStandings[i - 1];
-
-        // 新レギュレーション: 勝点、得失点差、総得点がすべて同じ場合のみ同順位
-        const isTied = currentTeam.points === previousTeam.points &&
-                      currentTeam.goal_difference === previousTeam.goal_difference &&
-                      currentTeam.goals_for === previousTeam.goals_for;
-
-        if (isTied) {
-          // 直接対決の結果を確認
-          const headToHead = calculateHeadToHead(currentTeam.team_id, previousTeam.team_id, matches);
-
-          // 直接対決も同じ（引き分けまたは対戦なし）なら同着
-          const sameHeadToHead = headToHead.teamAWins === headToHead.teamBWins &&
-                                headToHead.teamAGoals === headToHead.teamBGoals;
-
-          if (sameHeadToHead) {
-            // 同着なので前のチームと同じ順位
-            finalStandings[i].position = previousTeam.position;
+        // 基本順位を設定
+        let currentPosition = 1;
+        for (let i = 0; i < basicSorted.length; i++) {
+          if (i === 0) {
+            basicSorted[i].position = 1;
           } else {
-            // 直接対決で順位が決まる場合は、これまでの同着も含めた実際の順位
-            currentPosition = i + 1;
-            finalStandings[i].position = currentPosition;
+            const current = basicSorted[i];
+            const previous = basicSorted[i - 1];
+
+            // 勝点、得失点差、総得点がすべて同じ場合のみ同順位とする
+            const isTied = current.points === previous.points &&
+                          current.goal_difference === previous.goal_difference &&
+                          current.goals_for === previous.goals_for;
+            if (isTied) {
+              basicSorted[i].position = previous.position;
+            } else {
+              currentPosition = i + 1;
+              basicSorted[i].position = currentPosition;
+            }
           }
+        }
+
+        // カスタム順位決定ルールエンジンを初期化
+        const engine = new TieBreakingEngine(sportCode);
+
+        // 確定済み試合データを取得
+        const confirmedMatches = matches.map(match => ({
+          match_id: match.match_id,
+          team1_id: match.team1_id || '',
+          team2_id: match.team2_id || '',
+          team1_goals: parseScore(match.team1_goals),
+          team2_goals: parseScore(match.team2_goals),
+          winner_team_id: match.winner_team_id || '',
+          is_draw: match.is_draw,
+          is_confirmed: true
+        } as MatchData));
+
+        // TieBreakingContextを構築
+        const context: TieBreakingContext = {
+          teams: basicSorted.map(team => ({
+            team_id: team.team_id,
+            team_name: team.team_name,
+            team_omission: team.team_omission,
+            position: team.position,
+            points: team.points,
+            matches_played: team.matches_played,
+            wins: team.wins,
+            draws: team.draws,
+            losses: team.losses,
+            goals_for: team.goals_for,
+            goals_against: team.goals_against,
+            goal_difference: team.goal_difference
+          } as TeamStandingData)),
+          matches: confirmedMatches,
+          sportCode,
+          rules: customRules,
+          tournamentId,
+          matchBlockId
+        };
+
+        // カスタム順位決定を実行
+        const result = await engine.calculateTieBreaking(context);
+
+        // 結果を元の形式に変換
+        const rankedTeams = result.teams.map(team => {
+          const original = teamStandings.find(t => t.team_id === team.team_id);
+          return original ? { ...original, position: team.position } : original;
+        }).filter(Boolean) as TeamStanding[];
+
+        // 試合数0のチームを最下位に追加
+        const lastPosition = rankedTeams.length > 0 ? rankedTeams[rankedTeams.length - 1].position : 0;
+        teamsWithoutMatches.forEach((team, index) => {
+          team.position = lastPosition + index + 1;
+        });
+
+        finalStandings = [...rankedTeams, ...teamsWithoutMatches];
+        tieBreakingApplied = result.tieBreakingApplied;
+
+        // 手動順位設定が必要な場合のログ出力
+        if (requiresManualRanking(result)) {
+          console.log(`[STANDINGS] 手動順位設定が必要（抽選などが必要）`);
+        }
+
+        console.log(`[STANDINGS] カスタム順位決定完了: 適用=${tieBreakingApplied}, 手動設定必要=${requiresManualRanking(result)}`);
+      }
+    } catch (error) {
+      console.error(`[STANDINGS] カスタム順位決定エラー:`, error);
+      // エラーの場合はデフォルトロジックにフォールバック
+    }
+
+    // カスタムルールが適用されなかった場合はデフォルトロジック
+    if (!tieBreakingApplied) {
+      console.log(`[STANDINGS] デフォルト順位決定ロジックを使用`);
+
+      // 試合数でグループ分け（試合数0のチームのみ最下位扱い）
+      const teamsWithMatches = teamStandings.filter(t => t.matches_played > 0);
+      const teamsWithoutMatches = teamStandings.filter(t => t.matches_played === 0);
+
+      // 試合実施チームを順位付け
+      const sortedWithMatches = [...teamsWithMatches].sort((a, b) => {
+        // 1. 勝点の多い順
+        if (a.points !== b.points) {
+          return b.points - a.points;
+        }
+
+        // 2. 得失点差の良い順
+        if (a.goal_difference !== b.goal_difference) {
+          return b.goal_difference - a.goal_difference;
+        }
+
+        // 3. 総得点の多い順
+        if (a.goals_for !== b.goals_for) {
+          return b.goals_for - a.goals_for;
+        }
+
+        // 4. 直接対決の結果
+        const headToHead = calculateHeadToHead(a.team_id, b.team_id, matches);
+
+        // 直接対決の勝点を計算
+        let teamAHeadToHeadPoints = 0;
+        let teamBHeadToHeadPoints = 0;
+
+        teamAHeadToHeadPoints += headToHead.teamAWins * winPoints;
+        teamAHeadToHeadPoints += headToHead.draws * drawPoints;
+
+        teamBHeadToHeadPoints += headToHead.teamBWins * winPoints;
+        teamBHeadToHeadPoints += headToHead.draws * drawPoints;
+
+        if (teamAHeadToHeadPoints !== teamBHeadToHeadPoints) {
+          return teamBHeadToHeadPoints - teamAHeadToHeadPoints;
+        }
+
+        // 5. 抽選（チーム名の辞書順で代用）
+        return a.team_name.localeCompare(b.team_name, 'ja');
+      });
+
+      // 同着対応の順位を設定
+      let currentPosition = 1;
+      for (let i = 0; i < sortedWithMatches.length; i++) {
+        if (i === 0) {
+          sortedWithMatches[i].position = 1;
         } else {
-          // 順位が変わる場合は、これまでの同着も含めた実際の順位
-          currentPosition = i + 1;
-          finalStandings[i].position = currentPosition;
+          const currentTeam = sortedWithMatches[i];
+          const previousTeam = sortedWithMatches[i - 1];
+
+          // 勝点、得失点差、総得点がすべて同じ場合のみ同順位
+          const isTied = currentTeam.points === previousTeam.points &&
+                        currentTeam.goal_difference === previousTeam.goal_difference &&
+                        currentTeam.goals_for === previousTeam.goals_for;
+
+          if (isTied) {
+            // 直接対決の結果を確認
+            const headToHead = calculateHeadToHead(currentTeam.team_id, previousTeam.team_id, matches);
+
+            // 直接対決も同じ（引き分けまたは対戦なし）なら同着
+            const sameHeadToHead = headToHead.teamAWins === headToHead.teamBWins &&
+                                  headToHead.teamAGoals === headToHead.teamBGoals;
+
+            if (sameHeadToHead) {
+              sortedWithMatches[i].position = previousTeam.position;
+            } else {
+              currentPosition = i + 1;
+              sortedWithMatches[i].position = currentPosition;
+            }
+          } else {
+            currentPosition = i + 1;
+            sortedWithMatches[i].position = currentPosition;
+          }
         }
       }
+
+      // 試合数0のチームを最下位に追加
+      const lastPosition = sortedWithMatches.length > 0 ? sortedWithMatches[sortedWithMatches.length - 1].position : 0;
+      teamsWithoutMatches.forEach((team, index) => {
+        team.position = lastPosition + index + 1;
+      });
+
+      finalStandings = [...sortedWithMatches, ...teamsWithoutMatches];
     }
 
     return finalStandings;
@@ -2366,18 +2499,20 @@ export async function calculateMultiSportBlockStandings(
         
         if (customRules.length > 0) {
           console.log(`[TIE_BREAKING] カスタム順位決定ルール適用開始: ${customRules.length}個のルール`);
-          
-          // まず基本的な順位付け（デフォルトロジック）
-          const basicSorted = [...teamStandings].sort((a, b) => {
-            // 1. 試合実施数の多い順（試合を実施したチームを優先）
-            if (a.matches_played !== b.matches_played) return b.matches_played - a.matches_played;
-            // 2. 勝点の多い順
+
+          // 試合数でグループ分け（試合数0のチームのみ最下位扱い）
+          const teamsWithMatches = teamStandings.filter(t => t.matches_played > 0);
+          const teamsWithoutMatches = teamStandings.filter(t => t.matches_played === 0);
+
+          // 基本的な順位付け（試合実施チームのみ）
+          const basicSorted = [...teamsWithMatches].sort((a, b) => {
+            // 1. 勝点の多い順
             if (a.points !== b.points) return b.points - a.points;
-            // 3. 得失点差の良い順
+            // 2. 得失点差の良い順
             if (a.score_difference !== b.score_difference) return b.score_difference - a.score_difference;
-            // 4. 総得点の多い順
+            // 3. 総得点の多い順
             if (a.scores_for !== b.scores_for) return b.scores_for - a.scores_for;
-            // 5. チーム名の辞書順
+            // 4. チーム名の辞書順
             return a.team_name.localeCompare(b.team_name);
           });
 
@@ -2447,13 +2582,20 @@ export async function calculateMultiSportBlockStandings(
 
           // カスタム順位決定を実行
           const result = await engine.calculateTieBreaking(context);
-          
+
           // 結果を元の形式に変換
-          finalStandings = result.teams.map(team => {
+          const rankedTeams = result.teams.map(team => {
             const original = teamStandings.find(t => t.team_id === team.team_id);
             return original ? { ...original, position: team.position } : original;
           }).filter(Boolean) as MultiSportTeamStanding[];
 
+          // 試合数0のチームを最下位に追加
+          const lastPosition = rankedTeams.length > 0 ? rankedTeams[rankedTeams.length - 1].position : 0;
+          teamsWithoutMatches.forEach((team, index) => {
+            team.position = lastPosition + index + 1;
+          });
+
+          finalStandings = [...rankedTeams, ...teamsWithoutMatches];
           tieBreakingApplied = result.tieBreakingApplied;
 
           // 手動順位設定が必要な場合のログ出力
@@ -2472,43 +2614,53 @@ export async function calculateMultiSportBlockStandings(
 
     // カスタムルールが適用されなかった場合はデフォルトロジック
     if (!tieBreakingApplied) {
-      const sortedStandings = [...teamStandings].sort((a, b) => {
-        // 1. 試合実施数の多い順（試合を実施したチームを優先）
-        if (a.matches_played !== b.matches_played) return b.matches_played - a.matches_played;
-        // 2. 勝点の多い順
+      console.log(`[MULTI_SPORT_STANDINGS] デフォルト順位決定ロジックを使用`);
+
+      // 試合数でグループ分け（試合数0のチームのみ最下位扱い）
+      const teamsWithMatches = teamStandings.filter(t => t.matches_played > 0);
+      const teamsWithoutMatches = teamStandings.filter(t => t.matches_played === 0);
+
+      // 試合実施チームを順位付け
+      const sortedWithMatches = [...teamsWithMatches].sort((a, b) => {
+        // 1. 勝点の多い順
         if (a.points !== b.points) return b.points - a.points;
-        // 3. 得失点差の良い順
+        // 2. 得失点差の良い順
         if (a.score_difference !== b.score_difference) return b.score_difference - a.score_difference;
-        // 4. 総得点の多い順
+        // 3. 総得点の多い順
         if (a.scores_for !== b.scores_for) return b.scores_for - a.scores_for;
-        // 5. チーム名の辞書順
+        // 4. チーム名の辞書順
         return a.team_name.localeCompare(b.team_name);
       });
 
       // 順位を設定（同着処理含む）
       let currentPosition = 1;
-      for (let i = 0; i < sortedStandings.length; i++) {
+      for (let i = 0; i < sortedWithMatches.length; i++) {
         if (i === 0) {
-          sortedStandings[i].position = 1;
+          sortedWithMatches[i].position = 1;
         } else {
-          const current = sortedStandings[i];
-          const previous = sortedStandings[i - 1];
-          
-          // タイブレーキングルールに従った同着判定
+          const current = sortedWithMatches[i];
+          const previous = sortedWithMatches[i - 1];
+
           // 勝点、得失点差、総得点がすべて同じ場合のみ同順位とする
           const isTied = current.points === previous.points &&
                         current.score_difference === previous.score_difference &&
                         current.scores_for === previous.scores_for;
           if (isTied) {
-            sortedStandings[i].position = previous.position;
+            sortedWithMatches[i].position = previous.position;
           } else {
             currentPosition = i + 1;
-            sortedStandings[i].position = currentPosition;
+            sortedWithMatches[i].position = currentPosition;
           }
         }
       }
-      
-      finalStandings = sortedStandings;
+
+      // 試合数0のチームを最下位に追加
+      const lastPosition = sortedWithMatches.length > 0 ? sortedWithMatches[sortedWithMatches.length - 1].position : 0;
+      teamsWithoutMatches.forEach((team, index) => {
+        team.position = lastPosition + index + 1;
+      });
+
+      finalStandings = [...sortedWithMatches, ...teamsWithoutMatches];
     }
 
     console.log(`[MULTI_SPORT_STANDINGS] 多競技対応順位計算完了: ${finalStandings.length}チーム`);

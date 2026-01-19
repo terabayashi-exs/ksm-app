@@ -731,35 +731,29 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                 <table className="w-full border-collapse border border-border min-w-[800px] md:min-w-0">
                   <thead>
                     <tr>
-                      <th className="border border-border p-2 md:p-3 bg-muted text-sm md:text-base font-medium text-muted-foreground min-w-[70px] md:min-w-[90px]">
+                      <th className="border border-border p-2 md:p-3 bg-muted text-sm md:text-base font-medium text-muted-foreground whitespace-nowrap">
                         チーム
                       </th>
                       {/* 対戦結果の列ヘッダー（チーム略称を縦書き表示） */}
                       {block.teams.map((opponent, opponentIndex) => (
                         <th
                           key={`${block.block_name}-header-${opponent.team_id}-${opponentIndex}`}
-                          className="border border-border p-1 md:p-2 bg-green-50 dark:bg-green-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
+                          className="border border-border p-1 md:p-2 bg-green-50 dark:bg-green-950/20 text-xs md:text-base font-medium text-muted-foreground"
                         >
-                          <div 
-                            className="flex flex-col items-center justify-center h-16 md:h-20 overflow-hidden"
-                            style={{ 
+                          <div
+                            className="flex flex-col items-center justify-center overflow-visible"
+                            style={{
                               fontSize: '12px',
                               fontWeight: '500',
-                              lineHeight: '1.0'
+                              lineHeight: '1.2',
+                              minHeight: '80px'
                             }}
                             title={opponent.team_name}
                           >
-                            {/* モバイルでは略称を短縮、デスクトップでは通常表示 */}
-                            <div className="md:hidden">
-                              {(opponent.team_omission || opponent.team_name).substring(0, 3).split('').map((char, index) => (
-                                <span key={index} className="block leading-tight">{char}</span>
-                              ))}
-                            </div>
-                            <div className="hidden md:flex md:flex-col md:items-center">
-                              {(opponent.team_omission || opponent.team_name).split('').map((char, index) => (
-                                <span key={index} className="block leading-tight">{char}</span>
-                              ))}
-                            </div>
+                            {/* 全デバイスで全文表示（縦書き） */}
+                            {(opponent.team_omission || opponent.team_name).split('').map((char, index) => (
+                              <span key={index} className="block">{char}</span>
+                            ))}
                           </div>
                         </th>
                       ))}
@@ -810,18 +804,9 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                       return (
                         <tr key={`${block.block_name}-row-${team.team_id}-${teamIndex}`}>
                           {/* チーム名（略称優先） */}
-                          <td className="border border-border p-2 md:p-3 bg-muted font-medium text-sm md:text-base">
-                            <div 
-                              className="truncate max-w-[60px] md:max-w-[80px]" 
-                              title={team.team_name}
-                            >
-                              {/* モバイルでは短縮表示 */}
-                              <span className="md:hidden">
-                                {(team.team_omission || team.team_name).substring(0, 4)}
-                              </span>
-                              <span className="hidden md:inline">
-                                {team.team_omission || team.team_name}
-                              </span>
+                          <td className="border border-border p-2 md:p-3 bg-muted font-medium text-sm md:text-base whitespace-nowrap">
+                            <div title={team.team_name}>
+                              {team.team_omission || team.team_name}
                             </div>
                           </td>
                           
