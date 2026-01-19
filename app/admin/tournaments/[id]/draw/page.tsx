@@ -42,9 +42,14 @@ interface Match {
   team2_name?: string;
   team1_id?: string;
   team2_id?: string;
+  team1_tournament_team_id?: number;
+  team2_tournament_team_id?: number;
+  team1_source?: string;
+  team2_source?: string;
   tournament_date: string;
   start_time?: string;
   court_number?: number;
+  is_bye_match?: number;
 }
 
 interface Block {
@@ -140,12 +145,133 @@ export default function TournamentDrawPage() {
         // 試合情報を取得
         const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches`);
         const matchesData = await matchesResponse.json();
-        
+
         if (!matchesResponse.ok || !matchesData.success) {
           throw new Error(matchesData.error || '試合情報の取得に失敗しました');
         }
-        
-        setMatches(matchesData.data);
+
+        const allMatches = matchesData.data;
+
+        console.log(`[Draw] 全試合数: ${allMatches.length}`);
+        console.log('[Draw] 最初の3試合のデータ:', allMatches.slice(0, 3).map((m: Match) => ({
+          match_code: m.match_code,
+          is_bye_match: m.is_bye_match,
+          team1_display_name: m.team1_display_name,
+          team2_display_name: m.team2_display_name,
+          team1_source: m.team1_source,
+          team2_source: m.team2_source
+        })));
+
+        // ブロック割り当て情報を取得
+        let teamBlockAssignments: Record<string, string> = {};
+        try {
+          const assignmentsResponse = await fetch(`/api/tournaments/${tournamentId}/teams`);
+          const assignmentsData = await assignmentsResponse.json();
+          if (assignmentsResponse.ok && assignmentsData.success) {
+            const teams = Array.isArray(assignmentsData.data) ? assignmentsData.data : (assignmentsData.data.teams || []);
+            teams.forEach((team: any) => {
+              if (team.assigned_block && team.block_position) {
+                const key = `${team.assigned_block}${team.block_position}チーム`;
+                teamBlockAssignments[key] = team.team_name;
+              }
+            });
+            console.log('[Draw] ブロック割り当てマップ:', teamBlockAssignments);
+          }
+        } catch (err) {
+          console.error('[Draw] ブロック割り当て情報取得失敗:', err);
+        }
+
+        // プレースホルダー（A1チーム形式）を実際のチーム名に解決する関数
+        const resolveTeamPlaceholder = (displayName: string): string => {
+          const resolved = teamBlockAssignments[displayName];
+          if (resolved) {
+            console.log(`[Draw] プレースホルダー解決: ${displayName} → ${resolved}`);
+            return resolved;
+          }
+          return displayName;
+        };
+
+        // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
+        const byeMatchWinners: Record<string, string> = {};
+        allMatches.forEach((m: Match) => {
+          console.log(`[Draw] 試合 ${m.match_code}: is_bye_match=${m.is_bye_match} (type: ${typeof m.is_bye_match})`);
+          if (m.is_bye_match === 1) {
+            // 不戦勝試合の勝者を特定（空でない方のチーム）
+            let winner = m.team1_display_name || m.team2_display_name;
+            // プレースホルダーを実際のチーム名に解決
+            winner = resolveTeamPlaceholder(winner);
+            if (winner && m.match_code) {
+              byeMatchWinners[`${m.match_code}_winner`] = winner;
+              console.log(`[Draw] 不戦勝試合検出: ${m.match_code} → 勝者: ${winner}`);
+            }
+          }
+        });
+        console.log('[Draw] 不戦勝マップ:', byeMatchWinners);
+
+        // 不戦勝試合を除外
+        let filteredMatches = allMatches.filter((m: Match) => m.is_bye_match !== 1);
+        console.log(`[Draw] フィルタリング後の試合数: ${filteredMatches.length}`);
+
+        // 次の試合のteam1_display_name/team2_display_nameを解決
+        filteredMatches = filteredMatches.map((m: Match, idx: number) => {
+          let resolvedTeam1DisplayName = m.team1_display_name;
+          let resolvedTeam2DisplayName = m.team2_display_name;
+
+          // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
+          if (m.team1_source && byeMatchWinners[m.team1_source]) {
+            console.log(`[Draw] Match ${m.match_code}: team1_source=${m.team1_source} → ${byeMatchWinners[m.team1_source]}`);
+            resolvedTeam1DisplayName = byeMatchWinners[m.team1_source];
+          }
+          if (m.team2_source && byeMatchWinners[m.team2_source]) {
+            console.log(`[Draw] Match ${m.match_code}: team2_source=${m.team2_source} → ${byeMatchWinners[m.team2_source]}`);
+            resolvedTeam2DisplayName = byeMatchWinners[m.team2_source];
+          }
+
+          if (idx < 3) {
+            console.log(`[Draw] Match ${m.match_code}:`, {
+              team1_source: m.team1_source,
+              team2_source: m.team2_source,
+              original_team1: m.team1_display_name,
+              original_team2: m.team2_display_name,
+              resolved_team1: resolvedTeam1DisplayName,
+              resolved_team2: resolvedTeam2DisplayName
+            });
+          }
+
+          // 表示では team1_name が優先されるため、適切な値を設定
+          // team1_tournament_team_id/team2_tournament_team_id が存在しない場合（実際のチームが未割り当て）は解決済みの名前を使用
+          // team1_tournament_team_id/team2_tournament_team_id が存在する場合（実際のチームが割り当て済み）はそのまま使用
+          const newTeam1Name = !m.team1_tournament_team_id
+            ? (resolvedTeam1DisplayName !== m.team1_display_name ? resolvedTeam1DisplayName : m.team1_name)
+            : m.team1_name;
+          const newTeam2Name = !m.team2_tournament_team_id
+            ? (resolvedTeam2DisplayName !== m.team2_display_name ? resolvedTeam2DisplayName : m.team2_name)
+            : m.team2_name;
+
+          if (idx < 3) {
+            console.log(`[Draw] Match ${m.match_code} FINAL:`, {
+              team1_tournament_team_id: m.team1_tournament_team_id,
+              team2_tournament_team_id: m.team2_tournament_team_id,
+              original_team1_name: m.team1_name,
+              original_team2_name: m.team2_name,
+              new_team1_name: newTeam1Name,
+              new_team2_name: newTeam2Name,
+              resolved_team1_display: resolvedTeam1DisplayName,
+              resolved_team2_display: resolvedTeam2DisplayName
+            });
+          }
+
+          return {
+            ...m,
+            team1_display_name: resolvedTeam1DisplayName,
+            team2_display_name: resolvedTeam2DisplayName,
+            // team1_name が未設定（プレースホルダーのまま）の場合、解決済みの名前を設定
+            team1_name: newTeam1Name,
+            team2_name: newTeam2Name
+          };
+        });
+
+        setMatches(filteredMatches);
 
         // ブロック別の想定チーム数を取得
         const blockCountsResponse = await fetch(`/api/tournaments/${tournamentId}/block-team-counts`);
