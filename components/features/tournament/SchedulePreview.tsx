@@ -275,14 +275,14 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         // Actual matches loaded for display
 
         // ブロック割り当て情報を取得してプレースホルダーを実チーム名に解決
-        let teamBlockAssignments: Record<string, string> = {};
+        const teamBlockAssignments: Record<string, string> = {};
         if (tournamentId) {
           try {
             const assignmentsResponse = await fetch(`/api/tournaments/${tournamentId}/teams`);
             const assignmentsData = await assignmentsResponse.json();
             if (assignmentsResponse.ok && assignmentsData.success) {
               const teams = Array.isArray(assignmentsData.data) ? assignmentsData.data : (assignmentsData.data.teams || []);
-              teams.forEach((team: { assigned_block: string; block_position: number; team_name: string }) => {
+              teams.forEach((team: { assigned_block?: string; block_position?: number; team_name: string }) => {
                 if (team.assigned_block && team.block_position) {
                   const key = `${team.assigned_block}${team.block_position}チーム`;
                   teamBlockAssignments[key] = team.team_name;
@@ -499,7 +499,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     };
 
     processMatches();
-  }, [actualMatches, editMode, formatId, settings, tournamentId, initialSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [actualMatches, editMode, formatId, settings, tournamentId, initialSchedule]);
 
   // 初期データ通知用のuseEffect（無限ループ対策）
   useEffect(() => {
