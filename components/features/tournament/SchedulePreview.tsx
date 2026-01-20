@@ -269,197 +269,237 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   useEffect(() => {
     if (!editMode || actualMatches.length === 0) return;
 
-    try {
-      // Processing actual matches for schedule display
-      // Actual matches loaded for display
+    const processMatches = async () => {
+      try {
+        // Processing actual matches for schedule display
+        // Actual matches loaded for display
 
-      // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
-      const byeMatchWinners: Record<string, string> = {};
-      actualMatches.forEach((m) => {
-        if (m.is_bye_match === 1) {
-          // 不戦勝試合の勝者を特定（空でない方のチーム）
-          const winner = m.team1_display_name || m.team2_display_name;
-          if (winner && m.match_code) {
-            byeMatchWinners[`${m.match_code}_winner`] = winner;
+        // ブロック割り当て情報を取得してプレースホルダーを実チーム名に解決
+        let teamBlockAssignments: Record<string, string> = {};
+        if (tournamentId) {
+          try {
+            const assignmentsResponse = await fetch(`/api/tournaments/${tournamentId}/teams`);
+            const assignmentsData = await assignmentsResponse.json();
+            if (assignmentsResponse.ok && assignmentsData.success) {
+              const teams = Array.isArray(assignmentsData.data) ? assignmentsData.data : (assignmentsData.data.teams || []);
+              teams.forEach((team: { assigned_block: string; block_position: number; team_name: string }) => {
+                if (team.assigned_block && team.block_position) {
+                  const key = `${team.assigned_block}${team.block_position}チーム`;
+                  teamBlockAssignments[key] = team.team_name;
+                }
+              });
+              console.log('[SchedulePreview] ブロック割り当てマップ:', teamBlockAssignments);
+            }
+          } catch (err) {
+            console.error('[SchedulePreview] ブロック割り当て情報取得失敗:', err);
           }
         }
-      });
 
-      // 不戦勝試合を除外
-      let filteredMatches = actualMatches.filter(match => match.is_bye_match !== 1);
-
-      // 次の試合のteam1_display_name/team2_display_nameを解決
-      filteredMatches = filteredMatches.map((m) => {
-        const team1 = m.team1_display_name;
-        const team2 = m.team2_display_name;
-
-        // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
-        let resolvedTeam1 = team1;
-        let resolvedTeam2 = team2;
-
-        if (m.team1_source && byeMatchWinners[m.team1_source]) {
-          resolvedTeam1 = byeMatchWinners[m.team1_source];
-        }
-        if (m.team2_source && byeMatchWinners[m.team2_source]) {
-          resolvedTeam2 = byeMatchWinners[m.team2_source];
-        }
-
-        return {
-          ...m,
-          team1_display_name: resolvedTeam1,
-          team2_display_name: resolvedTeam2
+        // プレースホルダー解決関数
+        const resolveTeamPlaceholder = (displayName: string): string => {
+          const resolved = teamBlockAssignments[displayName];
+          if (resolved) {
+            console.log(`[SchedulePreview] プレースホルダー解決: ${displayName} → ${resolved}`);
+            return resolved;
+          }
+          return displayName;
         };
-      });
 
-      // デバッグ: 最初の3試合のday_number確認
-      console.log('[SchedulePreview] Debug: First 3 matches with day_number:');
-      filteredMatches.slice(0, 3).forEach((match, idx) => {
-        const dayNum = (match as Record<string, unknown>).day_number;
-        console.log(`  Match ${idx}: code=${match.match_code}, block=${match.block_name}, day_number=${dayNum}, tournament_date=${match.tournament_date}`);
-      });
-      console.log('[SchedulePreview] settings.tournamentDates:', settings.tournamentDates);
-
-      // settings.tournamentDatesに基づいて日付の枠を作成し、
-      // テンプレートのday_numberを使って試合を適切な日付に配置
-      const days = (settings.tournamentDates || []).map((tournamentDate) => {
-        const dayNumber = tournamentDate.dayNumber;
-        const date = tournamentDate.date;
-
-        console.log(`[SchedulePreview] Processing day ${dayNumber} (${date})`);
-
-        // このday_numberに該当する試合を抽出
-        // APIから取得したday_number、または既存のtournament_dateから判定
-        const matchesForDay = filteredMatches.filter(match => {
-          // APIから取得したday_numberを優先的に使用
-          const matchDayNumber = (match as Record<string, unknown>).day_number as number | undefined;
-          if (matchDayNumber) {
-            return matchDayNumber === dayNumber;
+        // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
+        const byeMatchWinners: Record<string, string> = {};
+        actualMatches.forEach((m) => {
+          if (m.is_bye_match === 1) {
+            // 不戦勝試合の勝者を特定（空でない方のチーム）
+            let winner = m.team1_display_name || m.team2_display_name;
+            // プレースホルダーを実チーム名に解決
+            winner = resolveTeamPlaceholder(winner);
+            if (winner && m.match_code) {
+              byeMatchWinners[`${m.match_code}_winner`] = winner;
+              console.log(`[SchedulePreview] 不戦勝勝者: ${m.match_code}_winner = ${winner}`);
+            }
           }
-          // day_numberがない場合は、tournament_dateで判定（後方互換性）
-          return match.tournament_date === date;
         });
 
-        console.log(`[SchedulePreview] Day ${dayNumber}: Found ${matchesForDay.length} matches`);
+        console.log('[SchedulePreview] 不戦勝マップ:', byeMatchWinners);
 
-        const sortedMatches = matchesForDay.sort((a, b) => a.match_number - b.match_number);
+        // 不戦勝試合を除外
+        let filteredMatches = actualMatches.filter(match => match.is_bye_match !== 1);
 
-        const scheduleMatches = sortedMatches.map(match => {
-          const startTime = match.scheduled_time || '--:--';
-          const endTime = match.scheduled_time ?
-            minutesToTime(timeToMinutes(match.scheduled_time) + settings.matchDurationMinutes) :
-            '--:--';
+        // 次の試合のteam1_display_name/team2_display_nameを解決
+        filteredMatches = filteredMatches.map((m) => {
+          const team1 = m.team1_display_name;
+          const team2 = m.team2_display_name;
 
-          // Processing match schedule data
+          // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
+          let resolvedTeam1 = team1;
+          let resolvedTeam2 = team2;
+
+          if (m.team1_source && byeMatchWinners[m.team1_source]) {
+            resolvedTeam1 = byeMatchWinners[m.team1_source];
+          }
+          if (m.team2_source && byeMatchWinners[m.team2_source]) {
+            resolvedTeam2 = byeMatchWinners[m.team2_source];
+          }
 
           return {
-            template: {
-              template_id: match.match_number,
-              format_id: formatId || 0,
-              match_number: match.match_number,
-              match_code: match.match_code,
-              match_type: match.match_type,
-              phase: match.phase,
-              round_name: match.display_round_name,
-              block_name: match.block_name || undefined,
-              team1_source: match.team1_id || undefined,
-              team2_source: match.team2_id || undefined,
-              // 解決済みのteam1_display_name/team2_display_nameを優先（不戦勝対応）
-              // team1_idが存在する（実チーム割り当て済み） → team1_name（t_tournament_teams.team_name）を使用
-              // team1_idが存在しない（未割当） → 解決済みのteam1_display_name（不戦勝解決済みまたはプレースホルダー）を使用
-              team1_display_name: (match.team1_id && match.team1_name && match.team1_name.trim() !== '')
-                ? match.team1_name
-                : match.team1_display_name,
-              team2_display_name: (match.team2_id && match.team2_name && match.team2_name.trim() !== '')
-                ? match.team2_name
-                : match.team2_display_name,
-              day_number: dayNumber,
-              execution_priority: match.match_number,
-              court_number: match.court_number || undefined,
-              suggested_start_time: match.scheduled_time || undefined,
-              period_count: undefined,
-              is_bye_match: match.is_bye_match || 0,
-              created_at: '',
-              updated_at: undefined
-            },
-            date: date,
-            startTime: startTime,
-            endTime: endTime,
-            courtNumber: match.court_number || 1,
-            timeSlot: match.match_number
+            ...m,
+            team1_display_name: resolvedTeam1,
+            team2_display_name: resolvedTeam2
           };
         });
 
-        // その日の総所要時間を計算
-        const dayStartTime = scheduleMatches.length > 0
-          ? Math.min(...scheduleMatches.map(m => timeToMinutes(m.startTime)))
-          : timeToMinutes(settings.startTime);
-        const dayEndTime = scheduleMatches.length > 0
-          ? Math.max(...scheduleMatches.map(m => timeToMinutes(m.endTime)))
-          : timeToMinutes(settings.startTime);
-        const dayDuration = minutesToTime(dayEndTime - dayStartTime);
+        // デバッグ: 最初の3試合のday_number確認
+        console.log('[SchedulePreview] Debug: First 3 matches with day_number:');
+        filteredMatches.slice(0, 3).forEach((match, idx) => {
+          const dayNum = (match as Record<string, unknown>).day_number;
+          console.log(`  Match ${idx}: code=${match.match_code}, block=${match.block_name}, day_number=${dayNum}, tournament_date=${match.tournament_date}`);
+        });
+        console.log('[SchedulePreview] settings.tournamentDates:', settings.tournamentDates);
 
-        return {
-          date: date,
-          dayNumber: dayNumber,
-          matches: scheduleMatches,
-          totalDuration: dayDuration,
-          requiredCourts: scheduleMatches.length > 0 ? Math.max(...scheduleMatches.map(m => m.courtNumber)) : 1,
-          timeSlots: scheduleMatches.length
+        // settings.tournamentDatesに基づいて日付の枠を作成し、
+        // テンプレートのday_numberを使って試合を適切な日付に配置
+        const days = (settings.tournamentDates || []).map((tournamentDate) => {
+          const dayNumber = tournamentDate.dayNumber;
+          const date = tournamentDate.date;
+
+          console.log(`[SchedulePreview] Processing day ${dayNumber} (${date})`);
+
+          // このday_numberに該当する試合を抽出
+          // APIから取得したday_number、または既存のtournament_dateから判定
+          const matchesForDay = filteredMatches.filter(match => {
+            // APIから取得したday_numberを優先的に使用
+            const matchDayNumber = (match as Record<string, unknown>).day_number as number | undefined;
+            if (matchDayNumber) {
+              return matchDayNumber === dayNumber;
+            }
+            // day_numberがない場合は、tournament_dateで判定（後方互換性）
+            return match.tournament_date === date;
+          });
+
+          console.log(`[SchedulePreview] Day ${dayNumber}: Found ${matchesForDay.length} matches`);
+
+          const sortedMatches = matchesForDay.sort((a, b) => a.match_number - b.match_number);
+
+          const scheduleMatches = sortedMatches.map(match => {
+            const startTime = match.scheduled_time || '--:--';
+            const endTime = match.scheduled_time ?
+              minutesToTime(timeToMinutes(match.scheduled_time) + settings.matchDurationMinutes) :
+              '--:--';
+
+            // Processing match schedule data
+
+            return {
+              template: {
+                template_id: match.match_number,
+                format_id: formatId || 0,
+                match_number: match.match_number,
+                match_code: match.match_code,
+                match_type: match.match_type,
+                phase: match.phase,
+                round_name: match.display_round_name,
+                block_name: match.block_name || undefined,
+                team1_source: match.team1_id || undefined,
+                team2_source: match.team2_id || undefined,
+                // 解決済みのteam1_display_name/team2_display_nameを優先（不戦勝対応）
+                // team1_idが存在する（実チーム割り当て済み） → team1_name（t_tournament_teams.team_name）を使用
+                // team1_idが存在しない（未割当） → 解決済みのteam1_display_name（不戦勝解決済みまたはプレースホルダー）を使用
+                team1_display_name: (match.team1_id && match.team1_name && match.team1_name.trim() !== '')
+                  ? match.team1_name
+                  : match.team1_display_name,
+                team2_display_name: (match.team2_id && match.team2_name && match.team2_name.trim() !== '')
+                  ? match.team2_name
+                  : match.team2_display_name,
+                day_number: dayNumber,
+                execution_priority: match.match_number,
+                court_number: match.court_number || undefined,
+                suggested_start_time: match.scheduled_time || undefined,
+                period_count: undefined,
+                is_bye_match: match.is_bye_match || 0,
+                created_at: '',
+                updated_at: undefined
+              },
+              date: date,
+              startTime: startTime,
+              endTime: endTime,
+              courtNumber: match.court_number || 1,
+              timeSlot: match.match_number
+            };
+          });
+
+          // その日の総所要時間を計算
+          const dayStartTime = scheduleMatches.length > 0
+            ? Math.min(...scheduleMatches.map(m => timeToMinutes(m.startTime)))
+            : timeToMinutes(settings.startTime);
+          const dayEndTime = scheduleMatches.length > 0
+            ? Math.max(...scheduleMatches.map(m => timeToMinutes(m.endTime)))
+            : timeToMinutes(settings.startTime);
+          const dayDuration = minutesToTime(dayEndTime - dayStartTime);
+
+          return {
+            date: date,
+            dayNumber: dayNumber,
+            matches: scheduleMatches,
+            totalDuration: dayDuration,
+            requiredCourts: scheduleMatches.length > 0 ? Math.max(...scheduleMatches.map(m => m.courtNumber)) : 1,
+            timeSlots: scheduleMatches.length
+          };
+        });
+
+        // 全体の総所要時間を計算（すべての日の最早開始時刻から最遅終了時刻まで）
+        let overallStartTime = Infinity;
+        let overallEndTime = 0;
+
+        for (const day of days) {
+          if (day.matches.length > 0) {
+            const dayStart = Math.min(...day.matches.map(m => timeToMinutes(m.startTime)));
+            const dayEnd = Math.max(...day.matches.map(m => timeToMinutes(m.endTime)));
+            overallStartTime = Math.min(overallStartTime, dayStart);
+            overallEndTime = Math.max(overallEndTime, dayEnd);
+          }
+        }
+
+        const totalDurationMinutes = overallEndTime - overallStartTime;
+        const overallTotalDuration = totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00';
+
+        const editSchedule = {
+          days: days,
+          totalMatches: actualMatches.length,
+          totalDuration: overallTotalDuration,
+          warnings: [],
+          feasible: true,
+          timeConflicts: []
         };
-      });
 
-      // 全体の総所要時間を計算（すべての日の最早開始時刻から最遅終了時刻まで）
-      let overallStartTime = Infinity;
-      let overallEndTime = 0;
-      
-      for (const day of days) {
-        if (day.matches.length > 0) {
-          const dayStart = Math.min(...day.matches.map(m => timeToMinutes(m.startTime)));
-          const dayEnd = Math.max(...day.matches.map(m => timeToMinutes(m.endTime)));
-          overallStartTime = Math.min(overallStartTime, dayStart);
-          overallEndTime = Math.max(overallEndTime, dayEnd);
+        setSchedule(editSchedule);
+
+        // 初期スケジュールを保存（リセット用）- 深いコピーで保存
+        if (!initialSchedule) {
+          const deepCopySchedule = JSON.parse(JSON.stringify(editSchedule));
+          setInitialSchedule(deepCopySchedule);
         }
-      }
-      
-      const totalDurationMinutes = overallEndTime - overallStartTime;
-      const overallTotalDuration = totalDurationMinutes > 0 ? minutesToTime(totalDurationMinutes) : '0:00';
 
-      const editSchedule = {
-        days: days,
-        totalMatches: actualMatches.length,
-        totalDuration: overallTotalDuration,
-        warnings: [],
-        feasible: true,
-        timeConflicts: []
-      };
+        // カスタムスケジュールが未設定の場合のみ、実際の試合データで初期化
+        // 既にカスタムスケジュールがある場合は保持する
+        setCustomSchedule(prev => {
+          if (!prev) {
+            // Initializing custom schedule with actual match data
+            // First match loaded for edit schedule
+            return editSchedule;
+          }
+          // Preserving existing custom schedule in edit mode
+          // Using existing custom schedule data
+          return prev;
+        });
 
-      setSchedule(editSchedule);
-      
-      // 初期スケジュールを保存（リセット用）- 深いコピーで保存
-      if (!initialSchedule) {
-        const deepCopySchedule = JSON.parse(JSON.stringify(editSchedule));
-        setInitialSchedule(deepCopySchedule);
+        // ここではonScheduleChangeを呼び出さない（別のuseEffectで処理）
+      } catch (err) {
+        setError('試合データの処理エラー');
+        console.error('試合データ処理エラー:', err);
       }
-      
-      // カスタムスケジュールが未設定の場合のみ、実際の試合データで初期化
-      // 既にカスタムスケジュールがある場合は保持する
-      setCustomSchedule(prev => {
-        if (!prev) {
-          // Initializing custom schedule with actual match data
-          // First match loaded for edit schedule
-          return editSchedule;
-        }
-        // Preserving existing custom schedule in edit mode
-        // Using existing custom schedule data
-        return prev;
-      });
-      
-      // ここではonScheduleChangeを呼び出さない（別のuseEffectで処理）
-    } catch (err) {
-      setError('試合データの処理エラー');
-      console.error('試合データ処理エラー:', err);
-    }
-  }, [actualMatches, editMode, formatId, settings]); // eslint-disable-line react-hooks/exhaustive-deps
+    };
+
+    processMatches();
+  }, [actualMatches, editMode, formatId, settings, tournamentId, initialSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 初期データ通知用のuseEffect（無限ループ対策）
   useEffect(() => {
