@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
+import TournamentBracketEditor from '@/components/features/tournament/TournamentBracketEditor';
 
 interface Team {
   tournament_team_id: number;
@@ -27,6 +28,7 @@ interface Tournament {
   team_count: number;
   tournament_dates: string;
   tournament_period: string;
+  preliminary_format_type?: string;
 }
 
 interface Match {
@@ -36,6 +38,7 @@ interface Match {
   phase: string;
   block_name: string;
   round_name: string;
+  match_type: string;
   team1_display_name: string;
   team2_display_name: string;
   team1_name?: string;
@@ -64,6 +67,23 @@ interface BlockTeamCount {
   match_count: number;
 }
 
+interface FirstRoundSlot {
+  match_code: string;
+  match_id: number;
+  is_bye_match: boolean;
+  team1: {
+    tournament_team_id?: number;
+    team_name: string;
+    position: string;
+  } | null;
+  team2: {
+    tournament_team_id?: number;
+    team_name: string;
+    position: string;
+  } | null;
+  isDraggable: boolean;
+}
+
 export default function TournamentDrawPage() {
   const router = useRouter();
   const params = useParams();
@@ -72,6 +92,7 @@ export default function TournamentDrawPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [registeredTeams, setRegisteredTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [initialMatches, setInitialMatches] = useState<Match[]>([]); // リセット用の初期データ
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [blockTeamCounts, setBlockTeamCounts] = useState<BlockTeamCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,14 +229,21 @@ export default function TournamentDrawPage() {
         });
         console.log('[Draw] 不戦勝マップ:', byeMatchWinners);
 
-        // 不戦勝試合を除外
-        let filteredMatches = allMatches.filter((m: Match) => m.is_bye_match !== 1);
-        console.log(`[Draw] フィルタリング後の試合数: ${filteredMatches.length}`);
-
+        // 全試合を処理（不戦勝試合も含む）
         // 次の試合のteam1_display_name/team2_display_nameを解決
-        filteredMatches = filteredMatches.map((m: Match, idx: number) => {
+        const processedMatches = allMatches.map((m: Match, idx: number) => {
           let resolvedTeam1DisplayName = m.team1_display_name;
           let resolvedTeam2DisplayName = m.team2_display_name;
+
+          // 不戦勝試合の場合、プレースホルダーを実際のチーム名に置き換え
+          if (m.is_bye_match === 1) {
+            if (m.team1_display_name) {
+              resolvedTeam1DisplayName = resolveTeamPlaceholder(m.team1_display_name);
+            }
+            if (m.team2_display_name) {
+              resolvedTeam2DisplayName = resolveTeamPlaceholder(m.team2_display_name);
+            }
+          }
 
           // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
           if (m.team1_source && byeMatchWinners[m.team1_source]) {
@@ -239,14 +267,19 @@ export default function TournamentDrawPage() {
           }
 
           // 表示では team1_name が優先されるため、適切な値を設定
+          // 不戦勝試合の場合: 解決済みの名前を使用
           // team1_tournament_team_id/team2_tournament_team_id が存在しない場合（実際のチームが未割り当て）は解決済みの名前を使用
           // team1_tournament_team_id/team2_tournament_team_id が存在する場合（実際のチームが割り当て済み）はそのまま使用
-          const newTeam1Name = !m.team1_tournament_team_id
-            ? (resolvedTeam1DisplayName !== m.team1_display_name ? resolvedTeam1DisplayName : m.team1_name)
-            : m.team1_name;
-          const newTeam2Name = !m.team2_tournament_team_id
-            ? (resolvedTeam2DisplayName !== m.team2_display_name ? resolvedTeam2DisplayName : m.team2_name)
-            : m.team2_name;
+          const newTeam1Name = m.is_bye_match === 1 && resolvedTeam1DisplayName !== m.team1_display_name
+            ? resolvedTeam1DisplayName
+            : (!m.team1_tournament_team_id
+                ? (resolvedTeam1DisplayName !== m.team1_display_name ? resolvedTeam1DisplayName : m.team1_name)
+                : m.team1_name);
+          const newTeam2Name = m.is_bye_match === 1 && resolvedTeam2DisplayName !== m.team2_display_name
+            ? resolvedTeam2DisplayName
+            : (!m.team2_tournament_team_id
+                ? (resolvedTeam2DisplayName !== m.team2_display_name ? resolvedTeam2DisplayName : m.team2_name)
+                : m.team2_name);
 
           if (idx < 3) {
             console.log(`[Draw] Match ${m.match_code} FINAL:`, {
@@ -271,7 +304,18 @@ export default function TournamentDrawPage() {
           };
         });
 
-        setMatches(filteredMatches);
+        setMatches(processedMatches);
+
+        // リセット用に初期データを保存（割り当て前の状態）
+        // allMatchesから保存することで、元のプレースホルダー状態を保持
+        const initialMatchesData = allMatches.map((m: Match) => ({
+          ...m,
+          team1_name: undefined,
+          team2_name: undefined,
+          team1_tournament_team_id: undefined,
+          team2_tournament_team_id: undefined
+        }));
+        setInitialMatches(initialMatchesData);
 
         // ブロック別の想定チーム数を取得
         const blockCountsResponse = await fetch(`/api/tournaments/${tournamentId}/block-team-counts`);
@@ -301,7 +345,7 @@ export default function TournamentDrawPage() {
   }, [tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ブロック構造の初期化
-  const initializeBlocks = useCallback(async (teams: Team[], matches: Match[]) => {
+  const initializeBlocks = useCallback(async (_teams: Team[], matches: Match[]) => {
     // 予選ブロックを抽出
     const preliminaryBlocks = new Set<string>();
     matches.forEach(match => {
@@ -418,6 +462,75 @@ export default function TournamentDrawPage() {
     return blockCount ? blockCount.expected_team_count : null;
   };
 
+  // 予選形式がトーナメントかどうかを判定
+  const isTournamentFormat = (): boolean => {
+    return tournament?.preliminary_format_type === 'tournament';
+  };
+
+  // 第1ラウンドのスロット情報を取得
+  const getFirstRoundSlots = (blockName: string): FirstRoundSlot[] => {
+    // 第1ラウンドの試合（team1_sourceとteam2_sourceが空）を抽出
+    const firstRoundMatches = matches.filter(
+      m =>
+        m.phase === 'preliminary' &&
+        m.block_name === blockName &&
+        (!m.team1_source || m.team1_source === '') &&
+        (!m.team2_source || m.team2_source === '')
+    );
+
+    // スロット情報に変換
+    return firstRoundMatches.map(m => ({
+      match_code: m.match_code,
+      match_id: m.match_id,
+      is_bye_match: m.is_bye_match === 1,
+      team1: m.team1_display_name
+        ? {
+            tournament_team_id: m.team1_tournament_team_id,
+            team_name: m.team1_name || m.team1_display_name,
+            position: m.team1_display_name
+          }
+        : null,
+      team2: m.team2_display_name
+        ? {
+            tournament_team_id: m.team2_tournament_team_id,
+            team_name: m.team2_name || m.team2_display_name,
+            position: m.team2_display_name
+          }
+        : null,
+      isDraggable: m.is_bye_match !== 1
+    }));
+  };
+
+  // チームソースを解決して実際のチーム名を取得
+  const resolveTeamSource = (source: string | null | undefined): string | null => {
+    if (!source) return null;
+
+    // ソース形式: "A1_winner", "Ep1_winner", "A2_loser" など
+    // match_codeと勝者/敗者を抽出
+    const matchResult = source.match(/^([A-Za-z0-9]+)_(winner|loser)$/);
+    if (!matchResult) return null;
+
+    const matchCode = matchResult[1];
+
+    // 該当する試合を探す
+    const sourceMatch = matches.find(m => m.match_code === matchCode);
+    if (!sourceMatch) {
+      console.log(`[resolveTeamSource] Match not found for code: ${matchCode}`);
+      return null;
+    }
+
+    // 不戦勝試合の場合、team1が自動的に勝者
+    if (sourceMatch.is_bye_match === 1) {
+      const resolvedName = sourceMatch.team1_name || null;
+      console.log(`[resolveTeamSource] Bye match ${matchCode}: team1_name="${resolvedName}"`);
+      return resolvedName;
+    }
+
+    // 通常試合の場合、まだ結果が確定していないのでnullを返す
+    // (試合結果入力後に勝者/敗者が決まる)
+    return null;
+  };
+
   // ブロックのステータスを判定（緑/黄/赤）
   const getBlockStatus = (block: Block): 'match' | 'insufficient' | 'excess' | 'unknown' => {
     const currentCount = block.teams.filter(team => team && team.team_id).length;
@@ -444,6 +557,84 @@ export default function TournamentDrawPage() {
     }
   };
 
+  // リセット実行
+  const handleReset = () => {
+    const isTournament = isTournamentFormat();
+
+    if (isTournament) {
+      // トーナメント形式の場合: 初期データに戻す
+      if (initialMatches.length > 0) {
+        // 初期データのディープコピーを作成
+        const resetMatches = initialMatches.map(m => ({
+          ...m,
+          // チーム割り当てを完全にクリア
+          team1_tournament_team_id: undefined,
+          team2_tournament_team_id: undefined,
+          team1_name: undefined,
+          team2_name: undefined
+        }));
+
+        // 不戦勝試合の勝者を次のラウンドの試合のdisplay_nameに反映
+        const byeMatchWinners: Record<string, string> = {};
+        resetMatches.forEach(m => {
+          if (m.is_bye_match === 1) {
+            // 不戦勝試合の勝者を特定（team1_display_nameまたはteam2_display_name）
+            const winner = m.team1_display_name || m.team2_display_name || '';
+            if (winner && m.match_code) {
+              byeMatchWinners[`${m.match_code}_winner`] = winner;
+              console.log(`[Reset] 不戦勝試合 ${m.match_code}: 勝者プレースホルダー = ${winner}`);
+            }
+          }
+        });
+
+        // 次のラウンドの試合のteam1_display_name/team2_display_nameを解決
+        resetMatches.forEach(m => {
+          if (m.team1_source && byeMatchWinners[m.team1_source]) {
+            m.team1_display_name = byeMatchWinners[m.team1_source];
+            console.log(`[Reset] ${m.match_code}: team1_source=${m.team1_source} → ${m.team1_display_name}`);
+          }
+          if (m.team2_source && byeMatchWinners[m.team2_source]) {
+            m.team2_display_name = byeMatchWinners[m.team2_source];
+            console.log(`[Reset] ${m.match_code}: team2_source=${m.team2_source} → ${m.team2_display_name}`);
+          }
+        });
+
+        setMatches(resetMatches);
+      } else {
+        // フォールバック: matchesのチーム割り当てをクリア
+        const newMatches = matches.map(m => {
+          // 第1ラウンドの試合: チームIDと名前をクリア
+          if (m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
+            return {
+              ...m,
+              team1_tournament_team_id: undefined,
+              team1_name: undefined,
+              team2_tournament_team_id: undefined,
+              team2_name: undefined
+            };
+          }
+          // 次のラウンド以降の試合: team1_name/team2_nameのみクリア（ソースから解決された名前を削除）
+          if (m.phase === 'preliminary' && (m.team1_source || m.team2_source)) {
+            return {
+              ...m,
+              team1_name: undefined,
+              team2_name: undefined
+            };
+          }
+          return m;
+        });
+        setMatches(newMatches);
+      }
+    }
+
+    // blocksをリセット
+    const newBlocks = blocks.map(block => ({
+      ...block,
+      teams: [] as Team[]
+    }));
+    setBlocks(newBlocks);
+  };
+
   // ランダム振付実行
   const handleRandomDraw = () => {
     if (blocks.length === 0) return;
@@ -452,39 +643,127 @@ export default function TournamentDrawPage() {
     const validTeams = registeredTeams.filter(team => team && team.team_id && team.team_name);
     const shuffledTeams = [...validTeams].sort(() => Math.random() - 0.5);
 
-    // 想定チーム数が取得できている場合はそれに従って振分
-    if (blockTeamCounts.length > 0) {
+    const isTournament = isTournamentFormat();
+
+    if (isTournament) {
+      // トーナメント形式の場合
+      const newMatches = [...matches];
       const newBlocks: Block[] = blocks.map(block => ({
         ...block,
         teams: [] as Team[]
       }));
 
       let teamIndex = 0;
-      blocks.forEach((block, blockIndex) => {
-        const expectedCount = getExpectedTeamCount(block.block_name);
-        const count = expectedCount !== null ? expectedCount : Math.ceil(shuffledTeams.length / blocks.length);
 
-        for (let i = 0; i < count && teamIndex < shuffledTeams.length; i++) {
-          newBlocks[blockIndex].teams.push(shuffledTeams[teamIndex]);
-          teamIndex++;
+      blocks.forEach((block, blockIndex) => {
+        // 第1ラウンドの試合を直接取得（割り当て前の状態）
+        const firstRoundMatches = newMatches.filter(
+          m =>
+            m.phase === 'preliminary' &&
+            m.block_name === block.block_name &&
+            (!m.team1_source || m.team1_source === '') &&
+            (!m.team2_source || m.team2_source === '')
+        );
+
+        // 各試合について、割り当て可能な位置にチームを配置
+        firstRoundMatches.forEach(match => {
+          const isByeMatch = match.is_bye_match === 1;
+
+          // 不戦勝試合の場合、team1にチームを割り当て、team2はクリア
+          if (isByeMatch) {
+            if (teamIndex < shuffledTeams.length) {
+              const team = shuffledTeams[teamIndex];
+              match.team1_tournament_team_id = team.tournament_team_id;
+              match.team1_name = team.team_name;
+              match.team2_tournament_team_id = undefined;
+              match.team2_name = undefined;
+              newBlocks[blockIndex].teams.push(team);
+              teamIndex++;
+            }
+          } else {
+            // 通常試合の場合、両方のチーム位置に割り当て
+            if (teamIndex < shuffledTeams.length) {
+              const team1 = shuffledTeams[teamIndex];
+              match.team1_tournament_team_id = team1.tournament_team_id;
+              match.team1_name = team1.team_name;
+              newBlocks[blockIndex].teams.push(team1);
+              teamIndex++;
+            } else {
+              match.team1_tournament_team_id = undefined;
+              match.team1_name = undefined;
+            }
+            if (teamIndex < shuffledTeams.length) {
+              const team2 = shuffledTeams[teamIndex];
+              match.team2_tournament_team_id = team2.tournament_team_id;
+              match.team2_name = team2.team_name;
+              newBlocks[blockIndex].teams.push(team2);
+              teamIndex++;
+            } else {
+              match.team2_tournament_team_id = undefined;
+              match.team2_name = undefined;
+            }
+          }
+        });
+      });
+
+      // 不戦勝試合の勝者を次のラウンドの試合に反映
+      const byeMatchWinners: Record<string, string> = {};
+      newMatches.forEach(m => {
+        if (m.is_bye_match === 1 && m.team1_name) {
+          byeMatchWinners[`${m.match_code}_winner`] = m.team1_name;
+          console.log(`[RandomDraw] 不戦勝試合 ${m.match_code}: 勝者 = ${m.team1_name}`);
         }
       });
 
-      setBlocks(newBlocks);
-    } else {
-      // 想定チーム数が取得できない場合は均等に振分
-      const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
-
-      const newBlocks = blocks.map((block, index) => {
-        const startIndex = index * teamsPerBlock;
-        const endIndex = Math.min(startIndex + teamsPerBlock, shuffledTeams.length);
-        return {
-          ...block,
-          teams: shuffledTeams.slice(startIndex, endIndex)
-        };
+      // 次のラウンドの試合のteam1_name/team2_nameを解決
+      newMatches.forEach(m => {
+        if (m.team1_source && byeMatchWinners[m.team1_source]) {
+          m.team1_name = byeMatchWinners[m.team1_source];
+          console.log(`[RandomDraw] ${m.match_code}: team1_source=${m.team1_source} → ${m.team1_name}`);
+        }
+        if (m.team2_source && byeMatchWinners[m.team2_source]) {
+          m.team2_name = byeMatchWinners[m.team2_source];
+          console.log(`[RandomDraw] ${m.match_code}: team2_source=${m.team2_source} → ${m.team2_name}`);
+        }
       });
 
+      setMatches(newMatches);
       setBlocks(newBlocks);
+    } else {
+      // リーグ形式の場合（既存のロジック）
+      if (blockTeamCounts.length > 0) {
+        const newBlocks: Block[] = blocks.map(block => ({
+          ...block,
+          teams: [] as Team[]
+        }));
+
+        let teamIndex = 0;
+        blocks.forEach((block, blockIndex) => {
+          const expectedCount = getExpectedTeamCount(block.block_name);
+          const count = expectedCount !== null ? expectedCount : Math.ceil(shuffledTeams.length / blocks.length);
+
+          for (let i = 0; i < count && teamIndex < shuffledTeams.length; i++) {
+            newBlocks[blockIndex].teams.push(shuffledTeams[teamIndex]);
+            teamIndex++;
+          }
+        });
+
+        setBlocks(newBlocks);
+      } else {
+        // 想定チーム数が取得できない場合は均等に振分
+        const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
+
+        const newBlocks = blocks.map((block, index) => {
+          const startIndex = index * teamsPerBlock;
+          const endIndex = Math.min(startIndex + teamsPerBlock, shuffledTeams.length);
+          return {
+            ...block,
+            teams: shuffledTeams.slice(startIndex, endIndex)
+          };
+        });
+
+        setBlocks(newBlocks);
+      }
     }
   };
 
@@ -515,24 +794,113 @@ export default function TournamentDrawPage() {
   const moveTeamWithinBlock = (blockIndex: number, teamIndex: number, direction: 'up' | 'down') => {
     const newBlocks = [...blocks];
     const block = newBlocks[blockIndex];
-    
+
     if (direction === 'up' && teamIndex === 0) return; // 既に先頭
     if (direction === 'down' && teamIndex === block.teams.length - 1) return; // 既に末尾
 
     const targetIndex = direction === 'up' ? teamIndex - 1 : teamIndex + 1;
-    
+
     // チームの位置を入れ替え（安全性チェック付き）
     const currentTeam = block.teams[teamIndex];
     const targetTeam = block.teams[targetIndex];
-    
+
     if (currentTeam && targetTeam && currentTeam.team_id && targetTeam.team_id) {
       [block.teams[teamIndex], block.teams[targetIndex]] = [targetTeam, currentTeam];
     } else {
       console.error('Invalid team data during position swap:', { currentTeam, targetTeam });
       return;
     }
-    
+
     setBlocks(newBlocks);
+  };
+
+  // トーナメント形式: チーム単位で移動
+  const handleTournamentMoveTeam = (fromBlockIndex: number) => (
+    fromSlotIndex: number,
+    fromTeamPosition: 'team1' | 'team2',
+    toBlockIndex: number,
+    toSlotIndex: number,
+    toTeamPosition: 'team1' | 'team2'
+  ) => {
+    const fromBlock = blocks[fromBlockIndex];
+    const toBlock = blocks[toBlockIndex];
+
+    const fromSlots = getFirstRoundSlots(fromBlock.block_name);
+    const toSlots = getFirstRoundSlots(toBlock.block_name);
+
+    if (!fromSlots[fromSlotIndex] || !toSlots[toSlotIndex]) return;
+
+    const fromSlot = fromSlots[fromSlotIndex];
+    const toSlot = toSlots[toSlotIndex];
+
+    // matchesを更新
+    const newMatches = [...matches];
+
+    const fromMatchIndex = newMatches.findIndex(m => m.match_code === fromSlot.match_code);
+    const toMatchIndex = newMatches.findIndex(m => m.match_code === toSlot.match_code);
+
+    if (fromMatchIndex === -1 || toMatchIndex === -1) return;
+
+    const fromMatch = newMatches[fromMatchIndex];
+    const toMatch = newMatches[toMatchIndex];
+
+    // 移動元のチーム情報を取得
+    const fromTeamId = fromTeamPosition === 'team1' ? fromMatch.team1_tournament_team_id : fromMatch.team2_tournament_team_id;
+    const fromTeamName = fromTeamPosition === 'team1' ? fromMatch.team1_name : fromMatch.team2_name;
+
+    // 移動先のチーム情報を取得
+    const toTeamId = toTeamPosition === 'team1' ? toMatch.team1_tournament_team_id : toMatch.team2_tournament_team_id;
+    const toTeamName = toTeamPosition === 'team1' ? toMatch.team1_name : toMatch.team2_name;
+
+    // チームを入れ替え
+    if (fromTeamPosition === 'team1') {
+      fromMatch.team1_tournament_team_id = toTeamId;
+      fromMatch.team1_name = toTeamName;
+    } else {
+      fromMatch.team2_tournament_team_id = toTeamId;
+      fromMatch.team2_name = toTeamName;
+    }
+
+    if (toTeamPosition === 'team1') {
+      toMatch.team1_tournament_team_id = fromTeamId;
+      toMatch.team1_name = fromTeamName;
+    } else {
+      toMatch.team2_tournament_team_id = fromTeamId;
+      toMatch.team2_name = fromTeamName;
+    }
+
+    // 不戦勝試合の勝者を次のラウンドの試合に反映
+    const byeMatchWinners: Record<string, string> = {};
+    newMatches.forEach(m => {
+      if (m.is_bye_match === 1 && m.team1_name) {
+        byeMatchWinners[`${m.match_code}_winner`] = m.team1_name;
+      }
+    });
+
+    // 次のラウンドの試合のteam1_name/team2_nameを解決
+    newMatches.forEach(m => {
+      if (m.team1_source && byeMatchWinners[m.team1_source]) {
+        m.team1_name = byeMatchWinners[m.team1_source];
+      }
+      if (m.team2_source && byeMatchWinners[m.team2_source]) {
+        m.team2_name = byeMatchWinners[m.team2_source];
+      }
+    });
+
+    setMatches(newMatches);
+
+    // blocksも更新（チームが存在する場合のみ）
+    const newBlocks = [...blocks];
+    if (fromTeamId && toTeamId) {
+      // 両方にチームがいる場合は特に更新不要（matchesの更新で反映される）
+      setBlocks(newBlocks);
+    } else if (fromTeamId && !toTeamId) {
+      // 移動のみの場合も特に更新不要
+      setBlocks(newBlocks);
+    } else if (!fromTeamId && toTeamId) {
+      // 移動のみの場合も特に更新不要
+      setBlocks(newBlocks);
+    }
   };
 
   // 振分結果を保存
@@ -596,11 +964,6 @@ export default function TournamentDrawPage() {
     }
   };
 
-  // リセット
-  const handleReset = () => {
-    const resetBlocks = blocks.map(block => ({ ...block, teams: [] }));
-    setBlocks(resetBlocks);
-  };
 
   if (loading) {
     return (
@@ -798,6 +1161,9 @@ export default function TournamentDrawPage() {
               const status = getBlockStatus(block);
               const headerClass = getBlockHeaderClass(status);
 
+              // トーナメント形式かどうかを判定
+              const isTournament = isTournamentFormat();
+
               return (
                 <Card key={block.block_name}>
                   <CardHeader className={headerClass}>
@@ -806,7 +1172,17 @@ export default function TournamentDrawPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                  {block.teams.filter(team => team && team.team_id).length === 0 ? (
+                  {isTournament ? (
+                    /* トーナメント形式の表示 */
+                    <TournamentBracketEditor
+                      blockName={block.block_name}
+                      slots={getFirstRoundSlots(block.block_name)}
+                      allSlots={blocks.map(b => getFirstRoundSlots(b.block_name))}
+                      blockNames={blocks.map(b => b.block_name)}
+                      currentBlockIndex={blockIndex}
+                      onMoveTeam={handleTournamentMoveTeam(blockIndex)}
+                    />
+                  ) : block.teams.filter(team => team && team.team_id).length === 0 ? (
                     <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
                       <p className="text-muted-foreground">チームが振り分けられていません</p>
                     </div>
@@ -913,16 +1289,11 @@ export default function TournamentDrawPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {matches.map((match, index) => {
-                      // デバッグ用ログ
-                      if (index === 0) {
-                        console.log('First match data:', match);
-                        console.log('All matches length:', matches.length);
-                        console.log('Team names from API:', { team1_name: match.team1_name, team2_name: match.team2_name });
-                      }
-                      
+                    {matches
+                      .filter(match => match.is_bye_match !== 1) // 不戦勝試合を除外
+                      .map((match, index, filteredMatches) => {
                       // ラウンド名の境界線を表示するかチェック
-                      const showRoundHeader = index === 0 || matches[index - 1].round_name !== match.round_name;
+                      const showRoundHeader = index === 0 || filteredMatches[index - 1].round_name !== match.round_name;
 
                       const rows = [];
 
@@ -953,11 +1324,23 @@ export default function TournamentDrawPage() {
                           <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
                               <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
-                                {match.team1_name || match.team1_display_name}
+                                {(() => {
+                                  const team1 = match.team1_name || resolveTeamSource(match.team1_source) || match.team1_display_name;
+                                  if (match.match_code === 'A3') {
+                                    console.log(`[Preview A3] team1: name="${match.team1_name}", source="${match.team1_source}", display="${match.team1_display_name}", resolved="${team1}"`);
+                                  }
+                                  return team1;
+                                })()}
                               </span>
                               <span className="text-muted-foreground font-bold">vs</span>
                               <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
-                                {match.team2_name || match.team2_display_name}
+                                {(() => {
+                                  const team2 = match.team2_name || resolveTeamSource(match.team2_source) || match.team2_display_name;
+                                  if (match.match_code === 'A3') {
+                                    console.log(`[Preview A3] team2: name="${match.team2_name}", source="${match.team2_source}", display="${match.team2_display_name}", resolved="${team2}"`);
+                                  }
+                                  return team2;
+                                })()}
                               </span>
                             </div>
                           </td>
@@ -980,12 +1363,12 @@ export default function TournamentDrawPage() {
                   </tbody>
                 </table>
                 <div className="mt-4 text-sm text-muted-foreground text-center">
-                  全 {matches.length} 試合
+                  全 {matches.filter(m => m.is_bye_match !== 1).length} 試合
                   <span className="ml-4">
-                    予選: {matches.filter(m => m.phase === 'preliminary').length}試合
+                    予選: {matches.filter(m => m.phase === 'preliminary' && m.is_bye_match !== 1).length}試合
                   </span>
                   <span className="ml-4">
-                    決勝: {matches.filter(m => m.phase === 'final').length}試合
+                    決勝: {matches.filter(m => m.phase === 'final' && m.is_bye_match !== 1).length}試合
                   </span>
                 </div>
               </div>
