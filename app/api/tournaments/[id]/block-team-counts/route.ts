@@ -11,18 +11,8 @@ interface BlockTeamCount {
   match_count: number;
 }
 
-/**
- * リーグ戦の試合数からチーム数を逆算
- * 公式: 試合数 = n(n-1)/2
- * 逆算: n = (1 + √(1 + 8×試合数)) / 2
- */
-function calculateTeamCountFromMatches(matchCount: number): number {
-  const n = (1 + Math.sqrt(1 + 8 * matchCount)) / 2;
-  return Math.round(n);
-}
-
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -62,28 +52,66 @@ export async function GET(
 
     const formatId = tournamentResult.rows[0].format_id;
 
-    // 試合テンプレートから予選ブロック別の試合数を取得
-    const templatesResult = await db.execute(`
+    // 第1ラウンド（元チームのみ）の試合を取得して想定チーム数を計算
+    const firstRoundResult = await db.execute(`
+      SELECT
+        block_name,
+        team1_display_name,
+        team2_display_name
+      FROM m_match_templates
+      WHERE format_id = ?
+        AND phase = 'preliminary'
+        AND block_name IS NOT NULL
+        AND (team1_source IS NULL OR team1_source = '')
+        AND (team2_source IS NULL OR team2_source = '')
+      ORDER BY block_name, match_number
+    `, [formatId]);
+
+    // ブロック別の総試合数も取得（表示用）
+    const matchCountResult = await db.execute(`
       SELECT
         block_name,
         COUNT(*) as match_count
       FROM m_match_templates
       WHERE format_id = ? AND phase = 'preliminary' AND block_name IS NOT NULL
       GROUP BY block_name
-      ORDER BY block_name
     `, [formatId]);
 
-    // 各ブロックの想定チーム数を計算
-    const blockTeamCounts: BlockTeamCount[] = templatesResult.rows.map(row => {
-      const matchCount = Number(row.match_count);
-      const expectedTeamCount = calculateTeamCountFromMatches(matchCount);
+    // ブロック別のチームプレースホルダーを集計
+    const blockTeamSets = new Map<string, Set<string>>();
+    const blockMatchCounts = new Map<string, number>();
 
-      return {
-        block_name: String(row.block_name),
-        expected_team_count: expectedTeamCount,
-        match_count: matchCount
-      };
+    // 試合数を設定
+    matchCountResult.rows.forEach(row => {
+      blockMatchCounts.set(String(row.block_name), Number(row.match_count));
     });
+
+    // 第1ラウンドの試合からプレースホルダーを収集
+    firstRoundResult.rows.forEach(row => {
+      const blockName = String(row.block_name);
+      if (!blockTeamSets.has(blockName)) {
+        blockTeamSets.set(blockName, new Set());
+      }
+      const teamSet = blockTeamSets.get(blockName)!;
+
+      // team1_display_nameを追加（空文字列でない場合）
+      if (row.team1_display_name && String(row.team1_display_name).trim() !== '') {
+        teamSet.add(String(row.team1_display_name));
+      }
+      // team2_display_nameを追加（空文字列でない場合）
+      if (row.team2_display_name && String(row.team2_display_name).trim() !== '') {
+        teamSet.add(String(row.team2_display_name));
+      }
+    });
+
+    // 各ブロックの想定チーム数を計算
+    const blockTeamCounts: BlockTeamCount[] = Array.from(blockTeamSets.entries())
+      .map(([blockName, teamSet]) => ({
+        block_name: blockName,
+        expected_team_count: teamSet.size,
+        match_count: blockMatchCounts.get(blockName) || 0
+      }))
+      .sort((a, b) => a.block_name.localeCompare(b.block_name));
 
     return NextResponse.json({
       success: true,
