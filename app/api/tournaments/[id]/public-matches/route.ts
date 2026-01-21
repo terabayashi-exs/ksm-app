@@ -50,10 +50,10 @@ export async function GET(
       );
     }
 
-    // まず大会の存在確認（visibility条件なし）
+    // まず大会の存在確認（visibility条件なし）とformat_idを取得
     console.log('Checking tournament existence for ID:', tournamentId);
     const allTournamentsResult = await db.execute(`
-      SELECT tournament_id, tournament_name, visibility, status FROM t_tournaments 
+      SELECT tournament_id, tournament_name, visibility, status, format_id FROM t_tournaments
       WHERE tournament_id = ?
     `, [tournamentId]);
 
@@ -67,9 +67,11 @@ export async function GET(
       );
     }
 
-    // visibility値の確認
+    // visibility値の確認とformat_idの取得
     const tournament = allTournamentsResult.rows[0];
+    const formatId = tournament.format_id ? Number(tournament.format_id) : null;
     console.log('Tournament visibility value:', tournament.visibility, 'type:', typeof tournament.visibility);
+    console.log('Tournament format_id:', formatId);
 
     // 大会の公開状態チェック（暫定的に緩和）
     // TODO: 本番環境では visibility = 1 の条件を復活させる
@@ -140,22 +142,6 @@ export async function GET(
       throw simpleError;
     }
     
-    // 組み合わせ作成状況を判定
-    console.log('Checking team assignment status...');
-    const teamAssignmentResult = await db.execute(`
-      SELECT COUNT(*) as total_matches,
-             COUNT(CASE WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 1 END) as assigned_matches
-      FROM t_matches_live ml
-      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      WHERE mb.tournament_id = ?
-    `, [tournamentId]);
-    
-    const teamAssignment = teamAssignmentResult.rows[0] as unknown as { total_matches: number; assigned_matches: number };
-    const isTeamAssignmentComplete = teamAssignment.assigned_matches > 0;
-    
-    console.log(`Team assignment status: ${teamAssignment.assigned_matches}/${teamAssignment.total_matches} matches assigned`);
-    console.log(`Is assignment complete: ${isTeamAssignmentComplete}`);
-
     // 成功した場合、より詳細なクエリを実行
     try {
       console.log('Executing full query...');
@@ -214,8 +200,6 @@ export async function GET(
             console.log('Missing columns in t_matches_final:', missingColumns);
             console.log('Using t_matches_live data only due to missing columns');
             // 必要な列が存在しない場合は、t_matches_liveのデータのみを使用
-            // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
-            const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
               SELECT
                 ml.match_id,
@@ -251,9 +235,13 @@ export async function GET(
                 ml.remarks,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
                 COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
-                ml.cancellation_type
+                ml.cancellation_type,
+                mt.is_bye_match,
+                mt.team1_source,
+                mt.team2_source
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
@@ -261,14 +249,11 @@ export async function GET(
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
-              ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
-            `, [tournamentId]);
+            `, [formatId, tournamentId]);
           } else {
             // すべての必要な列が存在する場合はJOINクエリを実行
             console.log('All required columns exist, using JOIN query');
-            // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
-            const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
             matchesResult = await db.execute(`
               SELECT
                 ml.match_id,
@@ -304,9 +289,13 @@ export async function GET(
                 COALESCE(mf.remarks, ml.remarks) as remarks,
                 mf.updated_at as confirmed_at,
                 COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
-                ml.cancellation_type
+                ml.cancellation_type,
+                mt.is_bye_match,
+                mt.team1_source,
+                mt.team2_source
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -315,9 +304,8 @@ export async function GET(
               LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
               LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
               WHERE mb.tournament_id = ?
-              ${teamFilter}
               ORDER BY mb.block_order ASC, ml.match_number ASC
-            `, [tournamentId]);
+            `, [formatId, tournamentId]);
           }
         }
       } catch (tableCheckError) {
@@ -468,9 +456,13 @@ export async function GET(
           result_status: row.confirmed_at ? 'confirmed' : ((row.team1_goals !== null && row.team1_goals !== undefined) ? 'pending' : 'none'),
           remarks: row.remarks ? String(row.remarks) : null,
           has_result: (row.team1_goals !== null && row.team1_goals !== undefined) && (row.team2_goals !== null && row.team2_goals !== undefined),
-          cancellation_type: row.cancellation_type ? String(row.cancellation_type) : null
+          cancellation_type: row.cancellation_type ? String(row.cancellation_type) : null,
+          // 不戦勝関連フィールド
+          is_bye_match: row.is_bye_match ? Number(row.is_bye_match) : 0,
+          team1_source: row.team1_source ? String(row.team1_source) : null,
+          team2_source: row.team2_source ? String(row.team2_source) : null
         };
-        
+
         matches.push(processedMatch);
         
       } catch (mapError) {
@@ -482,10 +474,53 @@ export async function GET(
     }
 
     console.log('Successfully processed matches:', matches.length);
-    
+
+    // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
+    const byeMatchWinners: Record<string, string> = {};
+    matches.forEach((m) => {
+      if (m.is_bye_match === 1) {
+        // 不戦勝試合の勝者を特定（空でない方のチーム）
+        const winner = m.team1_display_name || m.team2_display_name;
+        if (winner && m.match_code) {
+          byeMatchWinners[`${m.match_code}_winner`] = winner;
+          console.log(`[public-matches] 不戦勝勝者: ${m.match_code}_winner = ${winner}`);
+        }
+      }
+    });
+
+    console.log('[public-matches] 不戦勝マップ:', byeMatchWinners);
+
+    // 不戦勝試合を除外
+    let filteredMatches = matches.filter(match => match.is_bye_match !== 1);
+
+    // 次の試合のteam1_display_name/team2_display_nameを解決
+    filteredMatches = filteredMatches.map((m) => {
+      const team1 = m.team1_display_name;
+      const team2 = m.team2_display_name;
+
+      // team1_sourceやteam2_sourceに基づいて、不戦勝の勝者を反映
+      let resolvedTeam1 = team1;
+      let resolvedTeam2 = team2;
+
+      if (m.team1_source && byeMatchWinners[m.team1_source]) {
+        resolvedTeam1 = byeMatchWinners[m.team1_source];
+      }
+      if (m.team2_source && byeMatchWinners[m.team2_source]) {
+        resolvedTeam2 = byeMatchWinners[m.team2_source];
+      }
+
+      return {
+        ...m,
+        team1_display_name: resolvedTeam1,
+        team2_display_name: resolvedTeam2
+      };
+    });
+
+    console.log('Filtered matches (excluding bye matches):', filteredMatches.length);
+
     return NextResponse.json({
       success: true,
-      data: matches
+      data: filteredMatches
     });
 
   } catch (error) {

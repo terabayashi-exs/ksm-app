@@ -71,6 +71,7 @@ export async function POST(
         const team1Data = await getTeamDataByPosition(tournamentId, blockName, team1DisplayName);
         const team2Data = await getTeamDataByPosition(tournamentId, blockName, team2DisplayName);
 
+        // 両方のチームが存在する場合
         if (team1Data && team2Data) {
           // display_nameはプレースホルダー形式のまま維持
           // UIではtournament_team_idを使って実際のチーム名を表示する
@@ -85,6 +86,36 @@ export async function POST(
             team1Data.team_id,
             team2Data.team_id,
             team1Data.tournament_team_id,
+            team2Data.tournament_team_id,
+            match.match_id
+          ]);
+        }
+        // 不戦勝試合：team1のみ存在する場合
+        else if (team1Data && !team2Data) {
+          await db.execute(`
+            UPDATE t_matches_live
+            SET team1_id = ?,
+                team1_tournament_team_id = ?,
+                team2_id = NULL,
+                team2_tournament_team_id = NULL
+            WHERE match_id = ?
+          `, [
+            team1Data.team_id,
+            team1Data.tournament_team_id,
+            match.match_id
+          ]);
+        }
+        // 不戦勝試合：team2のみ存在する場合
+        else if (!team1Data && team2Data) {
+          await db.execute(`
+            UPDATE t_matches_live
+            SET team1_id = NULL,
+                team1_tournament_team_id = NULL,
+                team2_id = ?,
+                team2_tournament_team_id = ?
+            WHERE match_id = ?
+          `, [
+            team2Data.team_id,
             team2Data.tournament_team_id,
             match.match_id
           ]);
