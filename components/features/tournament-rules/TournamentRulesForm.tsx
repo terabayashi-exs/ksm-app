@@ -26,7 +26,9 @@ interface TournamentInfo {
   sport_type_id: number;
   sport_name: string;
   sport_code: string;
-  format_id: number;
+  format_id: number | null;
+  preliminary_format_type: string | null;
+  final_format_type: string | null;
 }
 
 interface TournamentRulesFormProps {
@@ -102,6 +104,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   const supportsPointSystem = ['soccer', 'pk_championship', 'futsal'].includes(sportCode);
   const supportsDraws = ['soccer', 'pk_championship', 'futsal', 'handball'].includes(sportCode);
   const rankingMethod = sportCode === 'baseball' ? 'win_rate' : 'points';
+
+  // 決勝フェーズの有無（final_format_typeがnullまたは空文字列なら決勝なし）
+  const hasFinalPhase = tournament?.final_format_type != null && tournament.final_format_type !== '';
 
   // データ取得
   useEffect(() => {
@@ -564,9 +569,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
       </div>
 
       {/* ルール設定フォーム */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 ${hasFinalPhase ? 'lg:grid-cols-2' : ''} gap-6`}>
         {renderPhaseRules('preliminary', '予選')}
-        {renderPhaseRules('final', '決勝')}
+        {hasFinalPhase && renderPhaseRules('final', '決勝')}
       </div>
 
       {/* 順位決定ルール設定 */}
