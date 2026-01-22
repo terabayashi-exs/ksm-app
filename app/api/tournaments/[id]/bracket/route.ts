@@ -18,6 +18,18 @@ export async function GET(
       );
     }
 
+    // クエリパラメータからphaseを取得（デフォルトは'final'）
+    const { searchParams } = new URL(request.url);
+    const phase = searchParams.get('phase') || 'final';
+
+    // phaseのバリデーション
+    if (phase !== 'preliminary' && phase !== 'final') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid phase parameter' },
+        { status: 400 }
+      );
+    }
+
     // 多競技対応：スポーツ設定を取得
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
@@ -57,13 +69,13 @@ export async function GET(
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
       LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
       WHERE mb.tournament_id = ?
-        AND mb.phase = 'final'
+        AND mb.phase = ?
       ORDER BY ml.match_number, ml.match_code
     `;
 
     // execution_groupは現在のスキーマでは利用不可
 
-    const matches = await db.execute(query, [tournamentId]);
+    const matches = await db.execute(query, [tournamentId, phase]);
 
     // トーナメント試合が存在しない場合は404を返す
     if (!matches.rows || matches.rows.length === 0) {

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const tournamentId = parseInt(resolvedParams.id);
     
-    // 大会情報を取得（競技種別を含む）
+    // 大会情報を取得（競技種別とフォーマットを含む）
     const tournamentResult = await db.execute(`
       SELECT
         t.tournament_id,
@@ -36,9 +36,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         st.sport_code,
         st.supports_point_system,
         st.supports_draws,
-        st.ranking_method
+        st.ranking_method,
+        f.preliminary_format_type,
+        f.final_format_type
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
     
@@ -116,7 +119,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         sport_code: String(tournament.sport_code),
         supports_point_system: Boolean(tournament.supports_point_system),
         supports_draws: Boolean(tournament.supports_draws),
-        ranking_method: String(tournament.ranking_method)
+        ranking_method: String(tournament.ranking_method),
+        format_id: tournament.format_id ? Number(tournament.format_id) : null,
+        preliminary_format_type: tournament.preliminary_format_type ? String(tournament.preliminary_format_type) : null,
+        final_format_type: tournament.final_format_type ? String(tournament.final_format_type) : null
       },
       rules,
       sport_config: sportConfig

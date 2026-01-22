@@ -53,7 +53,11 @@ export function validateMatchTeams(
   }
 
   // 不戦勝試合かどうかを判定
-  const isByeMatch = team1 === '不戦勝' || team2 === '不戦勝';
+  // 1. 明示的に「不戦勝」という文字列が指定されている場合
+  // 2. 片方のチーム名が空文字列で、もう片方が空でない場合
+  const team1Empty = !team1 || team1.trim() === '';
+  const team2Empty = !team2 || team2.trim() === '';
+  const isByeMatch = team1 === '不戦勝' || team2 === '不戦勝' || (team1Empty !== team2Empty);
 
   return {
     valid: true,

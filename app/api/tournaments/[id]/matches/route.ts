@@ -75,8 +75,8 @@ export async function GET(
 
     // 試合データを取得（試合状態と確定結果も含む）
     console.log(`Fetching matches for tournament ${tournamentId}...`);
-    // 組み合わせ作成後は予選リーグのみフィルタリング（決勝トーナメントは常に表示）
-    const teamFilter = isTeamAssignmentComplete ? 'AND (mb.phase = "final" OR (ml.team1_id IS NOT NULL AND ml.team2_id IS NOT NULL))' : '';
+    // 全ての試合を取得（不戦勝試合のフィルタリングはフロントエンド側で実施）
+    const teamFilter = '';
     const matchesResult = await db.execute(`
       SELECT
         ml.match_id,
@@ -86,6 +86,8 @@ export async function GET(
         ml.match_code,
         ml.team1_id,
         ml.team2_id,
+        ml.team1_tournament_team_id,
+        ml.team2_tournament_team_id,
         ml.team1_display_name,
         ml.team2_display_name,
         ml.court_number,
@@ -171,6 +173,8 @@ export async function GET(
         match_code: String(row.match_code),
         team1_id: row.team1_id ? String(row.team1_id) : null,
         team2_id: row.team2_id ? String(row.team2_id) : null,
+        team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
+        team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
         team1_name: String(row.team1_real_name || row.team1_display_name), // 実チーム名を優先、なければプレースホルダー
         team2_name: String(row.team2_real_name || row.team2_display_name), // 実チーム名を優先、なければプレースホルダー
         court_number: row.court_number ? Number(row.court_number) : null,

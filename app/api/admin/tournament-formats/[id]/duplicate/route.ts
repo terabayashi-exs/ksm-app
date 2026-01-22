@@ -47,11 +47,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     for (const template of templatesResult.rows) {
       await db.execute(`
         INSERT INTO m_match_templates (
-          format_id, match_number, match_code, match_type, phase, round_name, 
+          format_id, match_number, match_code, match_type, phase, round_name,
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
-          day_number, execution_priority, court_number, suggested_start_time, created_at, updated_at
+          day_number, execution_priority, court_number, suggested_start_time,
+          loser_position_start, loser_position_end, winner_position, position_note,
+          is_bye_match, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         newFormatId,
         template.match_number,
@@ -67,7 +69,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         template.day_number,
         template.execution_priority,
         template.court_number,
-        template.suggested_start_time
+        template.suggested_start_time,
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.winner_position || null,
+        template.position_note || null,
+        template.is_bye_match || 0
       ]);
     }
 
