@@ -143,7 +143,7 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
         // トーナメント形式の場合のみ専用計算ロジックを使用
         if (currentFormatType === 'tournament') {
           console.log(`[getTournamentStandings] ${phase}トーナメントの順位を計算`);
-          teams = await calculateFinalTournamentStandings(tournamentId);
+          teams = await calculateFinalTournamentStandings(tournamentId, phase);
         } else {
           // リーグ形式の場合は試合結果から順位を計算
           console.log(`[getTournamentStandings] ${phase}リーグの順位を計算（team_rankings未保存）`);
@@ -1376,37 +1376,37 @@ function determineTournamentPosition(teamId: string, finalMatches: Array<{
 /**
  * 決勝トーナメントの順位表を計算する
  */
-async function calculateFinalTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+async function calculateFinalTournamentStandings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
     // テンプレートベース順位計算を実行
-    return await calculateTemplateBasedTournamentStandings(tournamentId);
+    return await calculateTemplateBasedTournamentStandings(tournamentId, phase);
   } catch (error) {
     console.error('テンプレートベース順位計算に失敗、フォールバック実行:', error);
-    return await calculateLegacyTournamentStandings(tournamentId);
+    return await calculateLegacyTournamentStandings(tournamentId, phase);
   }
 }
 
 /**
  * テンプレートベースの決勝トーナメント順位計算
  */
-async function calculateTemplateBasedTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+async function calculateTemplateBasedTournamentStandings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
     // 大会のフォーマットIDを取得
     const tournamentResult = await db.execute({
       sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
       args: [tournamentId]
     });
-    
+
     if (!tournamentResult.rows.length) {
       throw new Error('大会が見つかりません');
     }
-    
+
     const formatId = tournamentResult.rows[0].format_id as number;
 
-    // 決勝トーナメントの試合情報とテンプレート情報を取得
+    // トーナメントの試合情報とテンプレート情報を取得（phaseに応じて）
     const finalMatchesResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_code,
           ml.team1_id,
@@ -1431,12 +1431,12 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number): 
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
         LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = 'final'
-        WHERE mb.tournament_id = ? 
-          AND mb.phase = 'final'
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = ?
+        WHERE mb.tournament_id = ?
+          AND mb.phase = ?
         ORDER BY ml.match_number, ml.match_code
       `,
-      args: [formatId, tournamentId]
+      args: [formatId, phase, tournamentId, phase]
     });
 
     const finalMatches = finalMatchesResult.rows.map(row => ({
@@ -1474,7 +1474,7 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number): 
           LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
           LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-          WHERE mb.tournament_id = ? AND mb.phase = 'final'
+          WHERE mb.tournament_id = ? AND mb.phase = ?
             AND ml.team1_id IS NOT NULL
 
           UNION
@@ -1488,13 +1488,13 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number): 
           LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
           LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
-          WHERE mb.tournament_id = ? AND mb.phase = 'final'
+          WHERE mb.tournament_id = ? AND mb.phase = ?
             AND ml.team2_id IS NOT NULL
         ) all_teams
         WHERE team_id IS NOT NULL
         ORDER BY team_name
       `,
-      args: [tournamentId, tournamentId]
+      args: [tournamentId, phase, tournamentId, phase]
     });
 
     const allTeams = new Map<string, { tournament_team_id: number | null; team_name: string; team_omission: string }>();
@@ -1608,9 +1608,9 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number): 
 /**
  * レガシーの決勝トーナメント順位計算（フォールバック用）
  */
-async function calculateLegacyTournamentStandings(tournamentId: number): Promise<TeamStanding[]> {
+async function calculateLegacyTournamentStandings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    // 決勝トーナメントの試合情報を取得
+    // トーナメントの試合情報を取得（phaseに応じて）
     const finalMatchesResult = await db.execute({
       sql: `
         SELECT
@@ -1637,10 +1637,10 @@ async function calculateLegacyTournamentStandings(tournamentId: number): Promise
         LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
         LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
         WHERE mb.tournament_id = ?
-          AND mb.phase = 'final'
+          AND mb.phase = ?
         ORDER BY ml.match_number, ml.match_code
       `,
-      args: [tournamentId]
+      args: [tournamentId, phase]
     });
 
     const finalMatches = finalMatchesResult.rows.map(row => ({

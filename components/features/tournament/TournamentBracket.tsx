@@ -299,7 +299,7 @@ function MatchCard({
 }
 
 // メインコンポーネント
-export default function TournamentBracket({ tournamentId, phase: _phase = 'final' }: BracketProps) {
+export default function TournamentBracket({ tournamentId, phase = 'final' }: BracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>([]);
   const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -413,8 +413,8 @@ export default function TournamentBracket({ tournamentId, phase: _phase = 'final
     const fetchMatches = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/tournaments/${tournamentId}/bracket`);
-        
+        const response = await fetch(`/api/tournaments/${tournamentId}/bracket?phase=${phase}`);
+
         if (!response.ok) {
           if (response.status === 404) {
             setError('この大会にはトーナメント戦がありません');
@@ -442,7 +442,7 @@ export default function TournamentBracket({ tournamentId, phase: _phase = 'final
     };
 
     fetchMatches();
-  }, [tournamentId]);
+  }, [tournamentId, phase]);
 
   // SVG線を描画する関数
   const drawLines = useCallback(() => {
