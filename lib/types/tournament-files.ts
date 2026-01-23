@@ -1,13 +1,17 @@
 // lib/types/tournament-files.ts
 // 大会ファイル管理の型定義
 
+export type LinkType = 'upload' | 'external';
+
 export interface TournamentFile {
   file_id: number;
   tournament_id: number;
+  link_type: LinkType;         // 'upload': ファイルアップロード, 'external': 外部URLリンク
   file_title: string;
   file_description?: string;
   original_filename: string;
   blob_url: string;
+  external_url?: string;       // 外部URLリンク用
   file_size: number;
   mime_type: string;
   upload_order: number;

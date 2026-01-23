@@ -42,7 +42,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<FileUploadResponse>> {
   console.log('🚀 ファイルアップロードAPI開始');
-  
+
   try {
     // 認証チェック
     console.log('🔐 認証チェック開始');
@@ -62,7 +62,7 @@ export async function POST(
     const { id } = await params;
     const tournamentId = parseInt(id);
     console.log('🏆 大会ID:', tournamentId);
-    
+
     if (isNaN(tournamentId)) {
       console.log('❌ 無効な大会ID:', id);
       return NextResponse.json(
@@ -91,26 +91,98 @@ export async function POST(
     const title = formData.get('title') as string;
     const description = formData.get('description') as string | null;
     const uploadOrder = parseInt(formData.get('upload_order') as string) || 0;
+    const linkType = formData.get('link_type') as string || 'upload';
+    const externalUrl = formData.get('external_url') as string | null;
     
     console.log('📂 ファイル情報:', {
       filename: file?.name,
       size: file?.size,
       type: file?.type,
       title,
-      description: description ? '設定あり' : 'なし'
+      description: description ? '設定あり' : 'なし',
+      linkType,
+      externalUrl: externalUrl ? '設定あり' : 'なし'
     });
 
     // バリデーション
-    if (!file) {
+    if (!title || title.trim() === '') {
       return NextResponse.json(
-        { success: false, error: 'ファイルが選択されていません' },
+        { success: false, error: 'ファイルタイトルは必須です' },
         { status: 400 }
       );
     }
 
-    if (!title || title.trim() === '') {
+    // 外部URLリンクの場合
+    if (linkType === 'external') {
+      if (!externalUrl || externalUrl.trim() === '') {
+        return NextResponse.json(
+          { success: false, error: '外部URLは必須です' },
+          { status: 400 }
+        );
+      }
+
+      // URL形式のバリデーション
+      try {
+        new URL(externalUrl);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: '有効なURL形式で入力してください' },
+          { status: 400 }
+        );
+      }
+
+      // データベースに保存（外部URLリンク）
+      const insertResult = await db.execute(`
+        INSERT INTO t_tournament_files (
+          tournament_id,
+          link_type,
+          file_title,
+          file_description,
+          external_url,
+          original_filename,
+          blob_url,
+          file_size,
+          mime_type,
+          upload_order,
+          uploaded_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        tournamentId,
+        'external',
+        title.trim(),
+        description?.trim() || null,
+        externalUrl.trim(),
+        'external-link',
+        externalUrl.trim(),
+        0,
+        'text/uri-list',
+        uploadOrder,
+        session.user.id
+      ]);
+
+      // 大会のファイル数を更新
+      await db.execute(
+        'UPDATE t_tournaments SET files_count = files_count + 1 WHERE tournament_id = ?',
+        [tournamentId]
+      );
+
+      console.log('✅ 外部URLリンク保存完了');
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          file_id: Number(insertResult.lastInsertRowid),
+          file_title: title.trim(),
+          blob_url: externalUrl.trim(),
+          file_size: 0
+        }
+      });
+    }
+
+    // ファイルアップロードの場合
+    if (!file) {
       return NextResponse.json(
-        { success: false, error: 'ファイルタイトルは必須です' },
+        { success: false, error: 'ファイルが選択されていません' },
         { status: 400 }
       );
     }
@@ -221,6 +293,7 @@ export async function POST(
     const insertResult = await db.execute(`
       INSERT INTO t_tournament_files (
         tournament_id,
+        link_type,
         file_title,
         file_description,
         original_filename,
@@ -229,9 +302,10 @@ export async function POST(
         mime_type,
         upload_order,
         uploaded_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       tournamentId,
+      'upload',
       title.trim(),
       description?.trim() || null,
       file.name,

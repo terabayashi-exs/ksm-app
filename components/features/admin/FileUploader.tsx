@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { FILE_VALIDATION } from '@/lib/types/tournament-files';
+import { Upload, File, X, CheckCircle, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { FILE_VALIDATION, type LinkType } from '@/lib/types/tournament-files';
 
 interface FileUploaderProps {
   tournamentId: number;
@@ -19,9 +19,11 @@ interface FileUploaderProps {
 }
 
 interface UploadState {
+  linkType: LinkType;
   file: File | null;
   title: string;
   description: string;
+  externalUrl: string;
   uploading: boolean;
   progress: number;
   error: string | null;
@@ -39,9 +41,11 @@ function formatFileSize(bytes: number): string {
 
 export default function FileUploader({ tournamentId, onUploadSuccess }: FileUploaderProps) {
   const [state, setState] = useState<UploadState>({
+    linkType: 'upload',
     file: null,
     title: '',
     description: '',
+    externalUrl: '',
     uploading: false,
     progress: 0,
     error: null,
@@ -105,12 +109,29 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
     }));
   };
 
-  // ファイルアップロード実行
+  // ファイルアップロード/外部URL登録実行
   const handleUpload = async () => {
-    if (!state.file || !state.title.trim()) {
+    // バリデーション
+    if (!state.title.trim()) {
       setState(prev => ({
         ...prev,
-        error: 'ファイルとタイトルは必須です'
+        error: 'タイトルは必須です'
+      }));
+      return;
+    }
+
+    if (state.linkType === 'upload' && !state.file) {
+      setState(prev => ({
+        ...prev,
+        error: 'ファイルを選択してください'
+      }));
+      return;
+    }
+
+    if (state.linkType === 'external' && !state.externalUrl.trim()) {
+      setState(prev => ({
+        ...prev,
+        error: '外部URLを入力してください'
       }));
       return;
     }
@@ -125,12 +146,18 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
 
     try {
       const formData = new FormData();
-      formData.append('file', state.file);
+      formData.append('link_type', state.linkType);
       formData.append('title', state.title.trim());
       if (state.description.trim()) {
         formData.append('description', state.description.trim());
       }
       formData.append('upload_order', '0');
+
+      if (state.linkType === 'upload' && state.file) {
+        formData.append('file', state.file);
+      } else if (state.linkType === 'external') {
+        formData.append('external_url', state.externalUrl.trim());
+      }
 
       // プログレス更新のシミュレーション
       const progressInterval = setInterval(() => {
@@ -160,7 +187,8 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
         success: true,
         file: null,
         title: '',
-        description: ''
+        description: '',
+        externalUrl: ''
       }));
 
       // 成功コールバック（即座に呼び出し）
@@ -189,15 +217,38 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
 
   return (
     <div className="space-y-6">
-      {/* ドラッグ&ドロップエリア */}
-      <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-          ${state.file ? 'bg-green-50 border-green-300' : ''}
-        `}
-      >
+      {/* リンクタイプ選択 */}
+      <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+        <Button
+          type="button"
+          variant={state.linkType === 'upload' ? 'default' : 'outline'}
+          onClick={() => setState(prev => ({ ...prev, linkType: 'upload', externalUrl: '', error: null }))}
+          className="flex-1"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          ファイルアップロード
+        </Button>
+        <Button
+          type="button"
+          variant={state.linkType === 'external' ? 'default' : 'outline'}
+          onClick={() => setState(prev => ({ ...prev, linkType: 'external', file: null, error: null }))}
+          className="flex-1"
+        >
+          <LinkIcon className="h-4 w-4 mr-2" />
+          外部URLリンク
+        </Button>
+      </div>
+
+      {/* ファイルアップロードモード */}
+      {state.linkType === 'upload' && (
+        <div
+          {...getRootProps()}
+          className={`
+            border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+            ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            ${state.file ? 'bg-green-50 border-green-300' : ''}
+          `}
+        >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center space-y-4">
           {state.file ? (
@@ -235,29 +286,50 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
             </>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
-      {/* ファイル情報入力 */}
-      {state.file && (
+      {/* 外部URLリンクモード */}
+      {state.linkType === 'external' && (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="file-title">ファイルタイトル *</Label>
+            <Label htmlFor="external-url">外部URL *</Label>
+            <Input
+              id="external-url"
+              type="url"
+              value={state.externalUrl}
+              onChange={(e) => setState(prev => ({ ...prev, externalUrl: e.target.value }))}
+              placeholder="https://example.com/photos"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              写真アルバムや外部資料のURLを入力してください
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* タイトル・説明入力（共通） */}
+      {(state.file || state.linkType === 'external') && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="file-title">タイトル *</Label>
             <Input
               id="file-title"
               value={state.title}
               onChange={(e) => setState(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="例: 駐車場案内、会場マップ"
+              placeholder="例: 大会写真アルバム、駐車場案内"
               className="mt-1"
             />
           </div>
 
           <div>
-            <Label htmlFor="file-description">ファイル説明（オプション）</Label>
+            <Label htmlFor="file-description">説明（オプション）</Label>
             <Textarea
               id="file-description"
               value={state.description}
               onChange={(e) => setState(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="ファイルの内容や注意事項を記載してください"
+              placeholder="内容や注意事項を記載してください"
               className="mt-1"
               rows={3}
             />
@@ -288,20 +360,31 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
       {state.success && (
         <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
           <CheckCircle className="h-5 w-5 text-green-600" />
-          <span className="text-sm text-green-800">ファイルのアップロードが完了しました</span>
+          <span className="text-sm text-green-800">
+            {state.linkType === 'upload' ? 'ファイルのアップロードが完了しました' : '外部URLリンクの登録が完了しました'}
+          </span>
         </div>
       )}
 
-      {/* アップロードボタン */}
-      {state.file && !state.uploading && !state.success && (
+      {/* 登録ボタン */}
+      {((state.linkType === 'upload' && state.file) || (state.linkType === 'external' && state.externalUrl.trim())) && !state.uploading && !state.success && (
         <Button
           onClick={handleUpload}
           disabled={!state.title.trim()}
           className="w-full"
           size="lg"
         >
-          <Upload className="h-4 w-4 mr-2" />
-          ファイルをアップロード
+          {state.linkType === 'upload' ? (
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              ファイルをアップロード
+            </>
+          ) : (
+            <>
+              <LinkIcon className="h-4 w-4 mr-2" />
+              外部URLを登録
+            </>
+          )}
         </Button>
       )}
     </div>

@@ -36,13 +36,14 @@ export async function DELETE(
 
     // ファイル情報を取得
     const fileResult = await db.execute(`
-      SELECT 
+      SELECT
         file_id,
         tournament_id,
+        link_type,
         file_title,
         blob_url,
         original_filename
-      FROM t_tournament_files 
+      FROM t_tournament_files
       WHERE file_id = ? AND tournament_id = ?
     `, [fileId, tournamentId]);
 
@@ -54,26 +55,31 @@ export async function DELETE(
     }
 
     const file = fileResult.rows[0];
+    const linkType = String(file.link_type || 'upload');
     const blobUrl = String(file.blob_url);
     const fileName = String(file.file_title);
 
-    console.log(`🗑️  ファイル削除開始: ${fileName} (ID: ${fileId})`);
+    console.log(`🗑️  ファイル削除開始: ${fileName} (ID: ${fileId}, Type: ${linkType})`);
 
-    // Vercel Blob Storageから削除
-    try {
-      // データURLの場合はBlobストレージ削除をスキップ
-      if (blobUrl.startsWith('data:')) {
-        console.log('🔄 データURL形式のため、Blob削除をスキップ');
-      } else {
-        const blobToken = getBlobToken();
-        await del(blobUrl, {
-          token: blobToken
-        });
-        console.log('✅ Blob Storage から削除完了');
+    // Vercel Blob Storageから削除（アップロードファイルの場合のみ）
+    if (linkType === 'upload') {
+      try {
+        // データURLの場合はBlobストレージ削除をスキップ
+        if (blobUrl.startsWith('data:')) {
+          console.log('🔄 データURL形式のため、Blob削除をスキップ');
+        } else {
+          const blobToken = getBlobToken();
+          await del(blobUrl, {
+            token: blobToken
+          });
+          console.log('✅ Blob Storage から削除完了');
+        }
+      } catch (blobError) {
+        console.warn('⚠️  Blob Storage削除エラー (続行):', blobError);
+        // Blob削除が失敗してもデータベースからは削除する
       }
-    } catch (blobError) {
-      console.warn('⚠️  Blob Storage削除エラー (続行):', blobError);
-      // Blob削除が失敗してもデータベースからは削除する
+    } else {
+      console.log('🔗 外部URLリンクのため、Blob削除をスキップ');
     }
 
     // データベースから削除
@@ -131,13 +137,15 @@ export async function GET(
 
     // ファイル情報を取得
     const fileResult = await db.execute(`
-      SELECT 
+      SELECT
         file_id,
         tournament_id,
+        link_type,
         file_title,
         file_description,
         original_filename,
         blob_url,
+        external_url,
         file_size,
         mime_type,
         upload_order,
@@ -145,7 +153,7 @@ export async function GET(
         uploaded_by,
         uploaded_at,
         updated_at
-      FROM t_tournament_files 
+      FROM t_tournament_files
       WHERE file_id = ? AND tournament_id = ?
     `, [fileId, tournamentId]);
 
@@ -160,10 +168,12 @@ export async function GET(
     const file = {
       file_id: Number(row.file_id),
       tournament_id: Number(row.tournament_id),
+      link_type: (row.link_type as 'upload' | 'external') || 'upload',
       file_title: String(row.file_title),
       file_description: row.file_description ? String(row.file_description) : undefined,
       original_filename: String(row.original_filename),
       blob_url: String(row.blob_url),
+      external_url: row.external_url ? String(row.external_url) : undefined,
       file_size: Number(row.file_size),
       mime_type: String(row.mime_type),
       upload_order: Number(row.upload_order),

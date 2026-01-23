@@ -12,10 +12,12 @@ interface RouteContext {
 
 interface PublicFile {
   file_id: number;
+  link_type: 'upload' | 'external';
   file_title: string;
   file_description?: string;
   original_filename: string;
   blob_url: string;
+  external_url?: string;
   file_size: number;
   upload_order: number;
   uploaded_at: string;
@@ -72,16 +74,18 @@ export async function GET(
 
     // 公開ファイル一覧取得
     const filesResult = await db.execute(`
-      SELECT 
+      SELECT
         file_id,
+        link_type,
         file_title,
         file_description,
         original_filename,
         blob_url,
+        external_url,
         file_size,
         upload_order,
         uploaded_at
-      FROM t_tournament_files 
+      FROM t_tournament_files
       WHERE tournament_id = ? AND is_public = 1
       ORDER BY upload_order ASC, uploaded_at ASC
     `, [tournamentId]);
@@ -89,10 +93,12 @@ export async function GET(
     // データ変換
     const files: PublicFile[] = filesResult.rows.map(row => ({
       file_id: Number(row.file_id),
+      link_type: (row.link_type as 'upload' | 'external') || 'upload',
       file_title: String(row.file_title),
       file_description: row.file_description ? String(row.file_description) : undefined,
       original_filename: String(row.original_filename),
       blob_url: String(row.blob_url),
+      external_url: row.external_url ? String(row.external_url) : undefined,
       file_size: Number(row.file_size),
       upload_order: Number(row.upload_order),
       uploaded_at: String(row.uploaded_at)
