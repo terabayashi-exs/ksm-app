@@ -6,14 +6,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, Calendar, ExternalLink, RefreshCw } from 'lucide-react';
+import { FileText, Download, Calendar, ExternalLink, RefreshCw, Link as LinkIcon } from 'lucide-react';
+import type { LinkType } from '@/lib/types/tournament-files';
 
 interface PublicFile {
   file_id: number;
+  link_type: LinkType;
   file_title: string;
   file_description?: string;
   original_filename: string;
   blob_url: string;
+  external_url?: string;
   file_size: number;
   upload_order: number;
   uploaded_at: string;
@@ -152,7 +155,11 @@ export default function PublicFilesList({
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-start justify-between">
                   <div className="flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
+                    {file.link_type === 'external' ? (
+                      <LinkIcon className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
+                    ) : (
+                      <FileText className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
+                    )}
                     <span className="line-clamp-2">{file.file_title}</span>
                   </div>
                 </CardTitle>
@@ -163,47 +170,79 @@ export default function PublicFilesList({
                     {file.file_description}
                   </p>
                 )}
-                
+
                 <div className="text-xs text-muted-foreground space-y-1 mb-4">
-                  <div>📄 {file.original_filename}</div>
-                  <div>📏 {formatFileSize(file.file_size)}</div>
-                  <div className="flex items-center">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {formatDate(file.uploaded_at)}
-                  </div>
+                  {file.link_type === 'external' ? (
+                    <>
+                      <div className="flex items-center">
+                        <LinkIcon className="h-3 w-3 mr-1" />
+                        外部リンク
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {formatDate(file.uploaded_at)}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>📄 {file.original_filename}</div>
+                      <div>📏 {formatFileSize(file.file_size)}</div>
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {formatDate(file.uploaded_at)}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="flex gap-2">
+                {file.link_type === 'external' ? (
                   <Button
                     asChild
                     size="sm"
-                    className="flex-1"
+                    className="w-full"
                   >
                     <a
-                      href={file.blob_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={file.original_filename}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      ダウンロード
-                    </a>
-                  </Button>
-                  
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                  >
-                    <a
-                      href={file.blob_url}
+                      href={file.external_url || file.blob_url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      リンクを開く
                     </a>
                   </Button>
-                </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <a
+                        href={file.blob_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={file.original_filename}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        ダウンロード
+                      </a>
+                    </Button>
+
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                    >
+                      <a
+                        href={file.blob_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -236,11 +275,18 @@ export default function PublicFilesList({
             className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
-              <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              {file.link_type === 'external' ? (
+                <LinkIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              ) : (
+                <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{file.file_title}</div>
                 <div className="text-sm text-muted-foreground">
-                  {formatFileSize(file.file_size)} • {formatDate(file.uploaded_at)}
+                  {file.link_type === 'external'
+                    ? `外部リンク • ${formatDate(file.uploaded_at)}`
+                    : `${formatFileSize(file.file_size)} • ${formatDate(file.uploaded_at)}`
+                  }
                 </div>
                 {file.file_description && (
                   <div className="text-sm text-muted-foreground truncate">
@@ -249,37 +295,53 @@ export default function PublicFilesList({
                 )}
               </div>
             </div>
-            
-            <div className="flex gap-2 flex-shrink-0">
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-              >
-                <a
-                  href={file.blob_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
-              
+
+            {file.link_type === 'external' ? (
               <Button
                 asChild
                 size="sm"
               >
                 <a
-                  href={file.blob_url}
+                  href={file.external_url || file.blob_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  download={file.original_filename}
                 >
-                  <Download className="h-4 w-4 mr-1" />
-                  ダウンロード
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  開く
                 </a>
               </Button>
-            </div>
+            ) : (
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                >
+                  <a
+                    href={file.blob_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+
+                <Button
+                  asChild
+                  size="sm"
+                >
+                  <a
+                    href={file.blob_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={file.original_filename}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    ダウンロード
+                  </a>
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -50,18 +50,20 @@ export async function GET(
 
     // 公開ファイルのみを取得
     const filesResult = await db.execute(`
-      SELECT 
+      SELECT
         file_id,
         tournament_id,
+        link_type,
         file_title,
         file_description,
         original_filename,
         blob_url,
+        external_url,
         file_size,
         mime_type,
         upload_order,
         uploaded_at
-      FROM t_tournament_files 
+      FROM t_tournament_files
       WHERE tournament_id = ? AND is_public = 1
       ORDER BY upload_order ASC, uploaded_at DESC
     `, [tournamentId]);
@@ -69,10 +71,12 @@ export async function GET(
     const files: Omit<TournamentFile, 'is_public' | 'uploaded_by' | 'updated_at'>[] = filesResult.rows.map(row => ({
       file_id: Number(row.file_id),
       tournament_id: Number(row.tournament_id),
+      link_type: (row.link_type as 'upload' | 'external') || 'upload',
       file_title: String(row.file_title),
       file_description: row.file_description ? String(row.file_description) : undefined,
       original_filename: String(row.original_filename),
       blob_url: String(row.blob_url),
+      external_url: row.external_url ? String(row.external_url) : undefined,
       file_size: Number(row.file_size),
       mime_type: String(row.mime_type),
       upload_order: Number(row.upload_order),

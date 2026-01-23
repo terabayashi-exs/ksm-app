@@ -26,15 +26,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { 
-  Download, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
+import {
+  Download,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
   ExternalLink,
   FileText,
-  RefreshCw
+  RefreshCw,
+  Link as LinkIcon,
+  Upload
 } from 'lucide-react';
 import { type TournamentFile } from '@/lib/types/tournament-files';
 
@@ -254,9 +256,9 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
     return (
       <div className="text-center py-8">
         <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">まだファイルがアップロードされていません</p>
+        <p className="text-muted-foreground">まだファイル・リンクが登録されていません</p>
         <p className="text-sm text-muted-foreground mt-2">
-          上記のアップロードエリアを使用してファイルを追加してください
+          上記のフォームを使用してファイルのアップロードまたは外部URLリンクを追加してください
         </p>
       </div>
     );
@@ -290,19 +292,37 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
               <TableRow key={file.file_id}>
                 <TableCell>
                   <div>
-                    <div className="font-medium">{file.file_title}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {file.original_filename}
+                    <div className="flex items-center gap-2">
+                      <span title={file.link_type === 'external' ? '外部URLリンク' : 'アップロードファイル'}>
+                        {file.link_type === 'external' ? (
+                          <LinkIcon className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <Upload className="h-4 w-4 text-gray-600" />
+                        )}
+                      </span>
+                      <span className="font-medium">{file.file_title}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground ml-6">
+                      {file.link_type === 'external' ? (
+                        <a href={file.external_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                          {file.external_url}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        file.original_filename
+                      )}
                     </div>
                     {file.file_description && (
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-sm text-muted-foreground mt-1 ml-6">
                         {file.file_description}
                       </div>
                     )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm">{formatFileSize(file.file_size)}</span>
+                  <span className="text-sm">
+                    {file.link_type === 'external' ? '-' : formatFileSize(file.file_size)}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">

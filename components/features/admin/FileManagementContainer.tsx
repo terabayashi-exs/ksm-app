@@ -24,17 +24,17 @@ export default function FileManagementContainer({ tournamentId }: FileManagement
 
   return (
     <>
-      {/* ファイルアップロード */}
+      {/* ファイルアップロード/外部URLリンク追加 */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Upload className="h-5 w-5 mr-2" />
-            新しいファイルをアップロード
+            ファイル・リンクの追加
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <FileUploader 
-            tournamentId={tournamentId} 
+          <FileUploader
+            tournamentId={tournamentId}
             onUploadSuccess={handleUploadSuccess}
           />
         </CardContent>
@@ -45,7 +45,7 @@ export default function FileManagementContainer({ tournamentId }: FileManagement
         <CardHeader>
           <CardTitle className="flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            アップロード済みファイル
+            登録済みファイル・リンク
           </CardTitle>
         </CardHeader>
         <CardContent>
