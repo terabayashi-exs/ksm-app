@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
           file_size,
           display_position,
           target_tab,
+          banner_size,
           display_order,
           is_active,
           start_date,
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
           updated_at
         FROM t_sponsor_banners
         WHERE tournament_id = ?
-        ORDER BY display_position, display_order, banner_id
+        ORDER BY display_position, banner_size DESC, display_order, banner_id
       `,
       args: [tournamentId],
     });
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       file_size,
       display_position,
       target_tab = 'all',
+      banner_size = 'large',
       display_order = 0,
       is_active = 1,
       start_date,
@@ -100,6 +102,22 @@ export async function POST(request: NextRequest) {
     if (!['top', 'bottom', 'sidebar'].includes(display_position)) {
       return NextResponse.json(
         { error: '無効なdisplay_positionです' },
+        { status: 400 }
+      );
+    }
+
+    // banner_sizeの値チェック
+    if (!['large', 'small'].includes(banner_size)) {
+      return NextResponse.json(
+        { error: '無効なbanner_sizeです' },
+        { status: 400 }
+      );
+    }
+
+    // 小バナーがサイドバーに配置されていないかチェック
+    if (banner_size === 'small' && display_position === 'sidebar') {
+      return NextResponse.json(
+        { error: '小バナーはサイドバーに配置できません' },
         { status: 400 }
       );
     }
@@ -125,11 +143,12 @@ export async function POST(request: NextRequest) {
           file_size,
           display_position,
           target_tab,
+          banner_size,
           display_order,
           is_active,
           start_date,
           end_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         tournament_id,
@@ -140,6 +159,7 @@ export async function POST(request: NextRequest) {
         file_size || null,
         display_position,
         target_tab,
+        banner_size,
         display_order,
         is_active,
         start_date || null,

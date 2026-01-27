@@ -21,31 +21,45 @@ export default function TabContentWithSidebar({
   // サイドバーバナーの有無を判定
   const { hasBanners, loading } = useSidebarBanners(tournamentId, targetTab);
 
-  // ローディング中は2カラムレイアウト（ちらつき防止）
-  const showSidebar = loading || hasBanners;
+  // バナーが確定している場合のみサイドバー幅を確保
+  // 読み込み中やバナーなしの場合は幅0（レイアウトシフト防止）
+  const sidebarWidth = !loading && hasBanners ? '200px' : '0px';
 
   return (
     <>
       {/* タブ上部バナー */}
-      <SponsorBanners tournamentId={tournamentId} position="top" targetTab={targetTab} />
+      <div className="space-y-4">
+        {/* 大バナー */}
+        <SponsorBanners tournamentId={tournamentId} position="top" targetTab={targetTab} size="large" />
+        {/* 小バナー */}
+        <SponsorBanners tournamentId={tournamentId} position="top" targetTab={targetTab} size="small" />
+      </div>
 
-      {/* メインコンテンツとサイドバー */}
-      <div className={showSidebar ? 'grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6' : ''}>
+      {/* メインコンテンツとサイドバー（常に2カラムレイアウト） */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
         {/* メインコンテンツ */}
         <div className="min-w-0">
           {children}
         </div>
 
-        {/* サイドバー（バナーがある場合のみ表示） */}
-        {showSidebar && (
-          <aside className="hidden lg:block space-y-4">
-            <SponsorBanners tournamentId={tournamentId} position="sidebar" targetTab={targetTab} />
-          </aside>
-        )}
+        {/* サイドバー（バナーがある場合のみ幅200px、大バナーのみ） */}
+        <aside
+          className="hidden lg:block space-y-4 transition-all duration-300"
+          style={{ width: sidebarWidth }}
+        >
+          {hasBanners && !loading && (
+            <SponsorBanners tournamentId={tournamentId} position="sidebar" targetTab={targetTab} size="large" />
+          )}
+        </aside>
       </div>
 
       {/* タブ下部バナー */}
-      <SponsorBanners tournamentId={tournamentId} position="bottom" targetTab={targetTab} />
+      <div className="space-y-4">
+        {/* 大バナー */}
+        <SponsorBanners tournamentId={tournamentId} position="bottom" targetTab={targetTab} size="large" />
+        {/* 小バナー */}
+        <SponsorBanners tournamentId={tournamentId} position="bottom" targetTab={targetTab} size="small" />
+      </div>
     </>
   );
 }

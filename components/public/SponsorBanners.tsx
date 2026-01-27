@@ -5,7 +5,9 @@ import Image from 'next/image';
 import {
   type SponsorBanner,
   type BannerPosition,
+  type BannerSize,
   type TargetTab,
+  BANNER_SIZES,
   isBannerDisplayable,
   sortBannersByDisplayOrder,
 } from '@/lib/sponsor-banner-specs';
@@ -14,16 +16,21 @@ interface SponsorBannersProps {
   tournamentId: number;
   position: BannerPosition;
   targetTab: TargetTab;
+  size?: BannerSize; // 大バナーor小バナー（未指定の場合は全て取得）
 }
 
-export default function SponsorBanners({ tournamentId, position, targetTab }: SponsorBannersProps) {
+export default function SponsorBanners({ tournamentId, position, targetTab, size }: SponsorBannersProps) {
   const [banners, setBanners] = useState<SponsorBanner[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await fetch(`/api/public/sponsor-banners?tournament_id=${tournamentId}&position=${position}&tab=${targetTab}`);
+        let url = `/api/public/sponsor-banners?tournament_id=${tournamentId}&position=${position}&tab=${targetTab}`;
+        if (size) {
+          url += `&size=${size}`;
+        }
+        const response = await fetch(url);
 
         if (!response.ok) {
           throw new Error('バナーの取得に失敗しました');
@@ -46,7 +53,7 @@ export default function SponsorBanners({ tournamentId, position, targetTab }: Sp
     };
 
     fetchBanners();
-  }, [tournamentId, position, targetTab]);
+  }, [tournamentId, position, targetTab, size]);
 
   // バナークリック時の処理
   const handleBannerClick = async (banner: SponsorBanner) => {
@@ -93,10 +100,13 @@ export default function SponsorBanners({ tournamentId, position, targetTab }: Sp
     }
   };
 
+  // 小バナーかどうか
+  const isSmallBanner = size === BANNER_SIZES.SMALL;
+
   return (
     <div className={getContainerClass()}>
       {position === 'sidebar' ? (
-        // サイドバー: 縦に並べる
+        // サイドバー: 縦に並べる（大バナーのみ）
         <div className="space-y-4">
           {banners.map((banner) => (
             <div
@@ -111,7 +121,7 @@ export default function SponsorBanners({ tournamentId, position, targetTab }: Sp
                 }
               }}
             >
-              <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div className="relative w-full bg-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative w-full" style={{ paddingBottom: '200%' }}>
                   <Image
                     src={banner.image_blob_url}
@@ -125,8 +135,39 @@ export default function SponsorBanners({ tournamentId, position, targetTab }: Sp
             </div>
           ))}
         </div>
+      ) : isSmallBanner ? (
+        // 小バナー: グリッド表示（画面幅に応じて可変）
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {banners.map((banner) => (
+            <div
+              key={banner.banner_id}
+              className={`${banner.banner_url ? 'cursor-pointer' : ''}`}
+              onClick={() => handleBannerClick(banner)}
+              role={banner.banner_url ? 'button' : undefined}
+              tabIndex={banner.banner_url ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (banner.banner_url && (e.key === 'Enter' || e.key === ' ')) {
+                  handleBannerClick(banner);
+                }
+              }}
+            >
+              <div className="relative w-full bg-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="relative w-full" style={{ paddingBottom: '25.6%' }}>
+                  {/* 250:64 = 1:0.256 */}
+                  <Image
+                    src={banner.image_blob_url}
+                    alt={banner.banner_name}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16.6vw"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        // トップ・ボトム: 横スクロールまたはグリッド
+        // 大バナー: 縦に並べる
         <div className="flex flex-col gap-4">
           {banners.map((banner) => (
             <div
@@ -141,7 +182,7 @@ export default function SponsorBanners({ tournamentId, position, targetTab }: Sp
                 }
               }}
             >
-              <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div className="relative w-full bg-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="relative w-full" style={{ paddingBottom: '16.67%' }}>
                   <Image
                     src={banner.image_blob_url}
