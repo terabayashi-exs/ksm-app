@@ -58,3 +58,14 @@ data/ksm.db
 
 # test files
 test-*.js
+
+# storybook
+*storybook.log
+storybook-static
+
+# claude code
+.claude/settings.local.json
+
+# MCP/Serena settings
+.mcp.json
+.serena/

@@ -43,7 +43,9 @@
     "blob:migrate:verify": "node scripts/blob-migration.js -- --verify",
     "blob:test": "curl -X PUT http://localhost:3000/api/test/blob",
     "reset-test-tournaments": "node scripts/reset-test-tournaments.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -85,18 +87,37 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@chromatic-com/storybook": "^4.1.3",
     "@eslint/eslintrc": "^3",
+    "@storybook/addon-a11y": "^10.1.10",
+    "@storybook/addon-docs": "^10.1.10",
+    "@storybook/addon-onboarding": "^10.1.10",
+    "@storybook/addon-vitest": "^10.1.10",
+    "@storybook/nextjs-vite": "^10.1.10",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/browser-playwright": "^4.0.16",
     "cross-env": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
+    "eslint-plugin-storybook": "^10.1.10",
+    "msw": "^2.12.4",
+    "msw-storybook-addon": "^2.0.6",
+    "playwright": "^1.57.0",
+    "storybook": "^10.1.10",
     "tailwindcss": "^4",
     "tsx": "^4.20.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^7.3.0",
+    "vitest": "^4.0.16"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

@@ -59,7 +59,10 @@ export async function GET(
         CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
         ml.match_number as execution_priority,
         ml.start_time,
-        ml.court_number
+        ml.court_number,
+        mb.match_type,
+        mb.block_name,
+        mb.display_round_name
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -115,6 +118,9 @@ export async function GET(
         start_time: row.start_time as string | null,
         court_number: row.court_number as number | null,
         execution_group: executionGroupMap.get(row.match_code as string) || null,
+        match_type: row.match_type as string,
+        block_name: row.block_name as string,
+        display_round_name: row.display_round_name as string | undefined,
       };
 
       // 多競技対応の拡張データを追加
