@@ -82,6 +82,25 @@ export async function PATCH(
       updateFields.push('target_tab = ?');
       updateValues.push(body.target_tab);
     }
+    if (body.banner_size !== undefined) {
+      if (!['large', 'small'].includes(body.banner_size)) {
+        return NextResponse.json(
+          { error: '無効なbanner_sizeです' },
+          { status: 400 }
+        );
+      }
+      // 小バナーがサイドバーに配置されていないかチェック
+      const existingBannerData = existingBanner.rows[0] as unknown as { display_position: string };
+      const currentPosition = body.display_position || existingBannerData.display_position;
+      if (body.banner_size === 'small' && currentPosition === 'sidebar') {
+        return NextResponse.json(
+          { error: '小バナーはサイドバーに配置できません' },
+          { status: 400 }
+        );
+      }
+      updateFields.push('banner_size = ?');
+      updateValues.push(body.banner_size);
+    }
     if (body.display_order !== undefined) {
       updateFields.push('display_order = ?');
       updateValues.push(body.display_order);

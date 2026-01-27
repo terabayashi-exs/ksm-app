@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const tournamentId = searchParams.get('tournament_id');
     const position = searchParams.get('position');
     const tab = searchParams.get('tab');
+    const size = searchParams.get('size'); // 'large' or 'small'
 
     if (!tournamentId) {
       return NextResponse.json(
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
         image_blob_url,
         display_position,
         target_tab,
+        banner_size,
         display_order,
         is_active,
         start_date,
@@ -45,6 +47,12 @@ export async function GET(request: NextRequest) {
     if (position) {
       sql += ' AND display_position = ?';
       args.push(position);
+    }
+
+    // バナーサイズでフィルタリング
+    if (size) {
+      sql += ' AND banner_size = ?';
+      args.push(size);
     }
 
     // ターゲットタブでフィルタリング

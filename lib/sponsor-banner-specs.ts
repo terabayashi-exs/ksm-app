@@ -40,26 +40,56 @@ export const TARGET_TABS = {
 export type TargetTab = (typeof TARGET_TABS)[keyof typeof TARGET_TABS];
 
 /**
+ * バナーサイズ種別
+ * - large: 大バナー（1200×200px）- タブ上部・サイドバー・タブ下部
+ * - small: 小バナー（250×64px）- タブ上部・タブ下部のみ
+ */
+export const BANNER_SIZES = {
+  LARGE: 'large',
+  SMALL: 'small',
+} as const;
+
+export type BannerSize = (typeof BANNER_SIZES)[keyof typeof BANNER_SIZES];
+
+/**
  * 推奨バナーサイズ（IAB標準準拠）
  */
 export const BANNER_SIZE_SPECS = {
-  [BANNER_POSITIONS.TOP]: {
-    width: 1200,
-    height: 200,
-    aspectRatio: '6:1',
-    description: 'レスポンシブバナー（トップ用）',
+  // 大バナー
+  large: {
+    [BANNER_POSITIONS.TOP]: {
+      width: 1200,
+      height: 200,
+      aspectRatio: '6:1',
+      description: '大バナー（タブ上部用）',
+    },
+    [BANNER_POSITIONS.BOTTOM]: {
+      width: 1200,
+      height: 200,
+      aspectRatio: '6:1',
+      description: '大バナー（ページ下部用）',
+    },
+    [BANNER_POSITIONS.SIDEBAR]: {
+      width: 300,
+      height: 600,
+      aspectRatio: '1:2',
+      description: '大バナー（サイドバー用）',
+    },
   },
-  [BANNER_POSITIONS.BOTTOM]: {
-    width: 1200,
-    height: 200,
-    aspectRatio: '6:1',
-    description: 'レスポンシブバナー（ボトム用）',
-  },
-  [BANNER_POSITIONS.SIDEBAR]: {
-    width: 300,
-    height: 600,
-    aspectRatio: '1:2',
-    description: 'ワイドスカイスクレイパー（サイドバー用）',
+  // 小バナー
+  small: {
+    [BANNER_POSITIONS.TOP]: {
+      width: 250,
+      height: 64,
+      aspectRatio: '3.9:1',
+      description: '小バナー（タブ上部用）',
+    },
+    [BANNER_POSITIONS.BOTTOM]: {
+      width: 250,
+      height: 64,
+      aspectRatio: '3.9:1',
+      description: '小バナー（ページ下部用）',
+    },
   },
 } as const;
 
@@ -86,6 +116,7 @@ export interface SponsorBanner {
   file_size: number | null;
   display_position: BannerPosition;
   target_tab: TargetTab;
+  banner_size: BannerSize;
   display_order: number;
   is_active: 0 | 1;
   start_date: string | null;
@@ -107,6 +138,7 @@ export interface CreateSponsorBannerInput {
   file_size?: number;
   display_position: BannerPosition;
   target_tab?: TargetTab;
+  banner_size?: BannerSize;
   display_order?: number;
   is_active?: 0 | 1;
   start_date?: string;
@@ -124,6 +156,7 @@ export interface UpdateSponsorBannerInput {
   file_size?: number;
   display_position?: BannerPosition;
   target_tab?: TargetTab;
+  banner_size?: BannerSize;
   display_order?: number;
   is_active?: 0 | 1;
   start_date?: string;
@@ -137,6 +170,7 @@ export interface BannerDisplayFilter {
   tournament_id: number;
   target_tab: TargetTab;
   display_position: BannerPosition;
+  banner_size?: BannerSize;
   current_date?: string; // ISO 8601形式（YYYY-MM-DD）
 }
 
@@ -203,4 +237,39 @@ export function getTargetTabLabel(tab: TargetTab): string {
     teams: '参加チーム',
   };
   return labels[tab];
+}
+
+/**
+ * バナーサイズのラベルを取得
+ */
+export function getBannerSizeLabel(size: BannerSize): string {
+  const labels: Record<BannerSize, string> = {
+    large: '大バナー',
+    small: '小バナー',
+  };
+  return labels[size];
+}
+
+/**
+ * バナーサイズに応じた推奨サイズテキストを取得
+ */
+export function getRecommendedSizeText(size: BannerSize, position: BannerPosition): string | null {
+  const sizeSpecs = BANNER_SIZE_SPECS[size];
+  if (!sizeSpecs) return null;
+
+  const specs = sizeSpecs[position as keyof typeof sizeSpecs];
+  if (!specs) return null;
+
+  return `${specs.width}×${specs.height}px`;
+}
+
+/**
+ * 小バナーが指定位置に配置可能かチェック
+ * 小バナーはサイドバーに配置できない
+ */
+export function isPositionValidForSize(size: BannerSize, position: BannerPosition): boolean {
+  if (size === BANNER_SIZES.SMALL && position === BANNER_POSITIONS.SIDEBAR) {
+    return false;
+  }
+  return true;
 }

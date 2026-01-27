@@ -11,9 +11,11 @@ import {
   type SponsorBanner,
   getPositionLabel,
   getTargetTabLabel,
+  getBannerSizeLabel,
+  getRecommendedSizeText,
   isBannerDisplayable,
   sortBannersByDisplayOrder,
-  BANNER_SIZE_SPECS,
+  BANNER_SIZES,
 } from '@/lib/sponsor-banner-specs';
 
 export default function SponsorBannersPage() {
@@ -163,20 +165,19 @@ export default function SponsorBannersPage() {
           <CardTitle>推奨バナーサイズ</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            {Object.entries(BANNER_SIZE_SPECS).map(([position, spec]) => (
-              <div key={position} className="border rounded p-3">
-                <div className="font-semibold mb-1">
-                  {getPositionLabel(position as 'top' | 'bottom' | 'sidebar')}
-                </div>
-                <div className="text-muted-foreground">
-                  {spec.width} × {spec.height}px
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  アスペクト比: {spec.aspectRatio}
-                </div>
-              </div>
-            ))}
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">大バナー（1200×200px）</div>
+              <p className="text-sm text-muted-foreground">
+                全ての表示位置（タブ上部・サイドバー・タブ下部）に配置可能。1枚ずつ縦に表示されます。
+              </p>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">小バナー（250×64px）</div>
+              <p className="text-sm text-muted-foreground">
+                タブ上部・タブ下部のみ配置可能。画面幅に応じて複数列で横に並びます。
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -243,6 +244,9 @@ export default function SponsorBannersPage() {
                                   )}
                                 </div>
                                 <div className="flex gap-2">
+                                  <Badge variant={banner.banner_size === BANNER_SIZES.LARGE ? 'default' : 'secondary'}>
+                                    {getBannerSizeLabel(banner.banner_size)}
+                                  </Badge>
                                   <Badge variant={banner.is_active ? 'default' : 'secondary'}>
                                     {banner.is_active ? '有効' : '無効'}
                                   </Badge>
@@ -255,6 +259,7 @@ export default function SponsorBannersPage() {
                               </div>
 
                               <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
+                                <div>サイズ: {getRecommendedSizeText(banner.banner_size, banner.display_position)}</div>
                                 <div>表示タブ: {getTargetTabLabel(banner.target_tab)}</div>
                                 <div>表示順序: {banner.display_order}</div>
                                 {banner.start_date && (

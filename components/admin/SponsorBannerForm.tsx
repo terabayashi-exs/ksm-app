@@ -12,11 +12,15 @@ import {
   type SponsorBanner,
   type CreateSponsorBannerInput,
   BANNER_POSITIONS,
+  BANNER_SIZES,
   TARGET_TABS,
   getPositionLabel,
   getTargetTabLabel,
-  BANNER_SIZE_SPECS,
+  getBannerSizeLabel,
+  getRecommendedSizeText,
+  isPositionValidForSize,
   MAX_FILE_SIZE,
+  type BannerSize,
 } from '@/lib/sponsor-banner-specs';
 
 interface SponsorBannerFormProps {
@@ -34,6 +38,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
     banner_url: banner?.banner_url || '',
     display_position: banner?.display_position || BANNER_POSITIONS.TOP,
     target_tab: banner?.target_tab || TARGET_TABS.ALL,
+    banner_size: (banner?.banner_size || BANNER_SIZES.LARGE) as BannerSize,
     display_order: banner?.display_order?.toString() || '0',
     is_active: banner?.is_active === 0 ? '0' : '1',
     start_date: banner?.start_date || '',
@@ -130,6 +135,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
         file_size: imageFile?.size || banner?.file_size || undefined,
         display_position: formData.display_position,
         target_tab: formData.target_tab,
+        banner_size: formData.banner_size,
         display_order: parseInt(formData.display_order) || 0,
         is_active: parseInt(formData.is_active) as 0 | 1,
         start_date: formData.start_date || undefined,
@@ -173,7 +179,19 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
     }
   };
 
-  const recommendedSize = BANNER_SIZE_SPECS[formData.display_position];
+  // バナーサイズ変更時の処理（小バナーでサイドバーが選択されている場合はtopに変更）
+  const handleBannerSizeChange = (size: BannerSize) => {
+    const newFormData = { ...formData, banner_size: size };
+
+    // 小バナーでサイドバーが選択されている場合、タブ上部に変更
+    if (size === BANNER_SIZES.SMALL && formData.display_position === BANNER_POSITIONS.SIDEBAR) {
+      newFormData.display_position = BANNER_POSITIONS.TOP;
+    }
+
+    setFormData(newFormData);
+  };
+
+  const recommendedSizeText = getRecommendedSizeText(formData.banner_size, formData.display_position);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -222,6 +240,42 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
           <CardTitle>表示設定</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* バナーサイズ選択 */}
+          <div>
+            <Label htmlFor="banner_size">バナーサイズ *</Label>
+            <Select
+              value={formData.banner_size}
+              onValueChange={(value) => handleBannerSizeChange(value as BannerSize)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={BANNER_SIZES.LARGE}>
+                  {getBannerSizeLabel(BANNER_SIZES.LARGE)}（1200×200px）- 全位置対応
+                </SelectItem>
+                <SelectItem value={BANNER_SIZES.SMALL}>
+                  {getBannerSizeLabel(BANNER_SIZES.SMALL)}（250×64px）- タブ上部・タブ下部のみ
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                {formData.banner_size === BANNER_SIZES.LARGE ? (
+                  <>
+                    <span className="font-semibold">大バナー：</span>
+                    1枚ずつ縦に表示されます。全ての表示位置（タブ上部・サイドバー・タブ下部）に配置可能です。
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold">小バナー：</span>
+                    画面幅に応じて複数列で横に並びます。タブ上部とタブ下部のみ配置可能です（サイドバーには配置できません）。
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="display_position">表示位置 *</Label>
@@ -235,16 +289,24 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(BANNER_POSITIONS).map((position) => (
-                    <SelectItem key={position} value={position}>
-                      {getPositionLabel(position)}
-                    </SelectItem>
-                  ))}
+                  {Object.values(BANNER_POSITIONS).map((position) => {
+                    const isDisabled = !isPositionValidForSize(formData.banner_size, position);
+                    return (
+                      <SelectItem
+                        key={position}
+                        value={position}
+                        disabled={isDisabled}
+                      >
+                        {getPositionLabel(position)}
+                        {isDisabled && ' (小バナーは選択不可)'}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
-              {recommendedSize && (
+              {recommendedSizeText && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  推奨サイズ: {recommendedSize.width} × {recommendedSize.height}px
+                  推奨サイズ: {recommendedSizeText}
                 </p>
               )}
               {formData.display_position === 'sidebar' && (
