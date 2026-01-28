@@ -41,7 +41,7 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    --border: 215 20% 40%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
   }
@@ -69,5 +69,30 @@ body {
 @media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
   body {
     font-feature-settings: normal;
+  }
+}
+
+/* 印刷用スタイル */
+@media print {
+  /* ヘッダー・フッター・ナビゲーション非表示 */
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+
+  /* 共通の印刷除外クラス */
+  .no-print {
+    display: none !important;
+  }
+
+  /* トーナメントブラケット接続線（SVG） */
+  .bracket-line {
+    stroke-width: 1.5px !important;
+  }
+
+  /* トーナメントブロック - 印刷時のレイアウト維持 */
+  .tournament-block {
+    page-break-inside: avoid;
   }
 }

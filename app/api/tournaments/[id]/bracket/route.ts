@@ -34,6 +34,21 @@ export async function GET(
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
 
+    // 大会のformat_idを取得
+    const tournamentResult = await db.execute(
+      'SELECT format_id FROM t_tournaments WHERE tournament_id = ?',
+      [tournamentId]
+    );
+
+    if (!tournamentResult.rows || tournamentResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: '大会が見つかりません' },
+        { status: 404 }
+      );
+    }
+
+    const formatId = tournamentResult.rows[0].format_id as number;
+
     // まず基本的なクエリでデータを取得（多競技対応データ含む）
     const query = `
       SELECT DISTINCT
@@ -59,7 +74,11 @@ export async function GET(
         CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
         ml.match_number as execution_priority,
         ml.start_time,
-        ml.court_number
+        ml.court_number,
+        mb.match_type,
+        mb.block_name,
+        mb.display_round_name,
+        mt.position_note
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -68,6 +87,7 @@ export async function GET(
       LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
       LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = ?
       WHERE mb.tournament_id = ?
         AND mb.phase = ?
       ORDER BY ml.match_number, ml.match_code
@@ -75,7 +95,7 @@ export async function GET(
 
     // execution_groupは現在のスキーマでは利用不可
 
-    const matches = await db.execute(query, [tournamentId, phase]);
+    const matches = await db.execute(query, [formatId, phase, tournamentId, phase]);
 
     // トーナメント試合が存在しない場合は404を返す
     if (!matches.rows || matches.rows.length === 0) {
@@ -115,6 +135,10 @@ export async function GET(
         start_time: row.start_time as string | null,
         court_number: row.court_number as number | null,
         execution_group: executionGroupMap.get(row.match_code as string) || null,
+        match_type: row.match_type as string,
+        block_name: row.block_name as string,
+        display_round_name: row.display_round_name as string | undefined,
+        position_note: row.position_note as string | undefined,
       };
 
       // 多競技対応の拡張データを追加
