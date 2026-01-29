@@ -69,7 +69,7 @@ export async function GET(
         mf.winner_team_id,
         mf.winner_tournament_team_id,
         COALESCE(mf.is_draw, 0) as is_draw,
-        COALESCE(mf.is_walkover, 0) as is_walkover,
+        COALESCE(mf.is_walkover, mt.is_bye_match, 0) as is_walkover,
         ml.match_status,
         CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
         ml.match_number as execution_priority,
@@ -108,11 +108,43 @@ export async function GET(
     // execution_groupは現在のスキーマでは利用不可のため、nullに設定
     const executionGroupMap = new Map<string, number>();
 
+    // BYE試合の勝者を解決するためのマップを作成
+    const byeMatchWinners: Record<string, string> = {};
+
+    matches.rows.forEach(row => {
+      if (row.is_walkover) {
+        // BYE試合の勝者を特定（空でない方のチーム）
+        const winner = row.team1_display_name || row.team2_display_name;
+        if (winner && row.match_code) {
+          byeMatchWinners[`【${row.match_code}】勝`] = String(winner);
+          console.log(`[bracket] BYE試合勝者マップ: 【${row.match_code}】勝 → ${winner}`);
+        }
+      }
+    });
+
+    console.log('[bracket] BYE試合勝者マップ全体:', byeMatchWinners);
+
     // データを整形（多競技対応）
     const bracketData = matches.rows.map(row => {
       // スコアデータをパース（確定済みスコアを優先）
       const team1GoalsData = row.team1_goals as string | null;
       const team2GoalsData = row.team2_goals as string | null;
+
+      const isWalkover = Boolean(row.is_walkover);
+
+      // チーム名の解決（BYE試合の勝者を実名に置き換え）
+      let team1DisplayName = row.team1_display_name as string;
+      let team2DisplayName = row.team2_display_name as string;
+
+      // 【S1】勝のような表記をBYE試合の勝者名に置き換え
+      if (byeMatchWinners[team1DisplayName]) {
+        team1DisplayName = byeMatchWinners[team1DisplayName];
+        console.log(`[bracket] ${row.match_code}: team1 ${row.team1_display_name} → ${team1DisplayName}`);
+      }
+      if (byeMatchWinners[team2DisplayName]) {
+        team2DisplayName = byeMatchWinners[team2DisplayName];
+        console.log(`[bracket] ${row.match_code}: team2 ${row.team2_display_name} → ${team2DisplayName}`);
+      }
 
       const baseData = {
         match_id: row.match_id as number,
@@ -121,14 +153,14 @@ export async function GET(
         team2_id: row.team2_id as string | undefined,
         team1_tournament_team_id: row.team1_tournament_team_id as number | null,
         team2_tournament_team_id: row.team2_tournament_team_id as number | null,
-        team1_display_name: row.team1_display_name as string,
-        team2_display_name: row.team2_display_name as string,
+        team1_display_name: team1DisplayName,
+        team2_display_name: team2DisplayName,
         team1_goals: team1GoalsData ? parseTotalScore(team1GoalsData) : 0,
         team2_goals: team2GoalsData ? parseTotalScore(team2GoalsData) : 0,
         winner_team_id: row.winner_team_id as string | null,
         winner_tournament_team_id: row.winner_tournament_team_id as number | null,
         is_draw: Boolean(row.is_draw),
-        is_walkover: Boolean(row.is_walkover),
+        is_walkover: isWalkover,
         match_status: row.match_status as 'scheduled' | 'ongoing' | 'completed' | 'cancelled',
         is_confirmed: Boolean(row.is_confirmed),
         execution_priority: row.execution_priority as number,
@@ -140,6 +172,11 @@ export async function GET(
         display_round_name: row.display_round_name as string | undefined,
         position_note: row.position_note as string | undefined,
       };
+
+      // デバッグログ
+      if (isWalkover) {
+        console.log(`[bracket] Bye match detected: ${row.match_code as string} - winner: ${row.team1_display_name || row.team2_display_name}`);
+      }
 
       // 多競技対応の拡張データを追加
       try {

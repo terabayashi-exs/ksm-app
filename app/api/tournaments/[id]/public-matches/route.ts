@@ -209,16 +209,18 @@ export async function GET(
                 ml.match_code,
                 ml.team1_id,
                 ml.team2_id,
-                CASE
-                  WHEN ml.team1_tournament_team_id IS NOT NULL THEN COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name)
-                  WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
-                  ELSE ml.team1_display_name
-                END as team1_display_name,
-                CASE
-                  WHEN ml.team2_tournament_team_id IS NOT NULL THEN COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name)
-                  WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
-                  ELSE ml.team2_display_name
-                END as team2_display_name,
+                ml.team1_tournament_team_id,
+                ml.team2_tournament_team_id,
+                ml.team1_display_name as team1_display_name_raw,
+                ml.team2_display_name as team2_display_name_raw,
+                tt1.team_name as team1_real_name,
+                tt1.team_omission as team1_real_omission,
+                tt2.team_name as team2_real_name,
+                tt2.team_omission as team2_real_omission,
+                t1.team_name as team1_master_name,
+                t1.team_omission as team1_master_omission,
+                t2.team_name as team2_master_name,
+                t2.team_omission as team2_master_omission,
                 ml.court_number,
                 tc.court_name,
                 ml.start_time,
@@ -263,16 +265,18 @@ export async function GET(
                 ml.match_code,
                 ml.team1_id,
                 ml.team2_id,
-                CASE
-                  WHEN ml.team1_tournament_team_id IS NOT NULL THEN COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name)
-                  WHEN mb.phase = 'final' AND ml.team1_id IS NOT NULL THEN COALESCE(t1.team_omission, t1.team_name, ml.team1_display_name)
-                  ELSE ml.team1_display_name
-                END as team1_display_name,
-                CASE
-                  WHEN ml.team2_tournament_team_id IS NOT NULL THEN COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name)
-                  WHEN mb.phase = 'final' AND ml.team2_id IS NOT NULL THEN COALESCE(t2.team_omission, t2.team_name, ml.team2_display_name)
-                  ELSE ml.team2_display_name
-                END as team2_display_name,
+                ml.team1_tournament_team_id,
+                ml.team2_tournament_team_id,
+                ml.team1_display_name as team1_display_name_raw,
+                ml.team2_display_name as team2_display_name_raw,
+                tt1.team_name as team1_real_name,
+                tt1.team_omission as team1_real_omission,
+                tt2.team_name as team2_real_name,
+                tt2.team_omission as team2_real_omission,
+                t1.team_name as team1_master_name,
+                t1.team_omission as team1_master_omission,
+                t2.team_name as team2_master_name,
+                t2.team_omission as team2_master_omission,
                 ml.court_number,
                 tc.court_name,
                 ml.start_time,
@@ -357,7 +361,38 @@ export async function GET(
     }
 
     console.log('Processing match data, total rows:', matchesResult.rows.length);
-    
+
+    // BYE試合のためのチーム名解決マップを作成（マッチ処理前に準備）
+    // ブロック名 + ポジション番号 → 実チーム名 のマップ（例: T-1 → ExsA）
+    const blockPositionToTeamMap: Record<string, { block_name: string; team_name: string }> = {};
+
+    // assigned_blockとblock_positionから実チーム名を取得してマップ化
+    const teamBlockAssignments = await db.execute(`
+      SELECT
+        assigned_block,
+        block_position,
+        COALESCE(team_omission, team_name) as team_name
+      FROM t_tournament_teams
+      WHERE tournament_id = ? AND assigned_block IS NOT NULL AND block_position IS NOT NULL
+    `, [tournamentId]);
+
+    teamBlockAssignments.rows.forEach((row) => {
+      const key = `${row.assigned_block}-${row.block_position}`;
+      blockPositionToTeamMap[key] = {
+        block_name: String(row.assigned_block),
+        team_name: String(row.team_name)
+      };
+    });
+
+    console.log('[public-matches] Block position to team map:', blockPositionToTeamMap);
+
+    // プレースホルダー（例: "S1チーム"）からポジション番号を抽出
+    const extractPosition = (displayName: string): number | null => {
+      // "S1チーム", "T2チーム" などからポジション番号を抽出
+      const match = displayName.match(/([A-Za-z]+)(\d+)チーム$/);
+      return match ? parseInt(match[2]) : null;
+    };
+
     // 競技設定を取得（PK戦考慮のため）
     let sportConfig = null;
     try {
@@ -418,6 +453,45 @@ export async function GET(
           continue;
         }
         
+        // チーム名の決定（略称を優先、なければ正式名称、なければプレースホルダーから解決）
+        let team1DisplayName = String(
+          row.team1_real_omission || row.team1_real_name ||
+          row.team1_master_omission || row.team1_master_name ||
+          row.team1_display_name_raw || 'チーム1'
+        );
+        let team2DisplayName = String(
+          row.team2_real_omission || row.team2_real_name ||
+          row.team2_master_omission || row.team2_master_name ||
+          row.team2_display_name_raw || 'チーム2'
+        );
+
+        // プレースホルダーの場合、実チーム名に解決
+        const blockName = row.block_name ? String(row.block_name) : null;
+
+        if (!row.team1_real_name && !row.team1_master_name && row.team1_display_name_raw && blockName) {
+          const position = extractPosition(String(row.team1_display_name_raw));
+          if (position !== null) {
+            const key = `${blockName}-${position}`;
+            const teamData = blockPositionToTeamMap[key];
+            if (teamData) {
+              team1DisplayName = teamData.team_name;
+              console.log(`[public-matches] Resolved team1: ${row.team1_display_name_raw} (block=${blockName}, pos=${position}) → ${teamData.team_name}`);
+            }
+          }
+        }
+
+        if (!row.team2_real_name && !row.team2_master_name && row.team2_display_name_raw && blockName) {
+          const position = extractPosition(String(row.team2_display_name_raw));
+          if (position !== null) {
+            const key = `${blockName}-${position}`;
+            const teamData = blockPositionToTeamMap[key];
+            if (teamData) {
+              team2DisplayName = teamData.team_name;
+              console.log(`[public-matches] Resolved team2: ${row.team2_display_name_raw} (block=${blockName}, pos=${position}) → ${teamData.team_name}`);
+            }
+          }
+        }
+
         const processedMatch = {
           match_id: Number(row.match_id),
           match_block_id: Number(row.match_block_id || 0),
@@ -426,8 +500,8 @@ export async function GET(
           match_code: String(row.match_code || `M${i + 1}`),
           team1_id: row.team1_id ? String(row.team1_id) : null,
           team2_id: row.team2_id ? String(row.team2_id) : null,
-          team1_display_name: String(row.team1_display_name || 'チーム1'),
-          team2_display_name: String(row.team2_display_name || 'チーム2'),
+          team1_display_name: team1DisplayName,
+          team2_display_name: team2DisplayName,
           court_number: row.court_number ? Number(row.court_number) : 1,
           court_name: row.court_name ? String(row.court_name) : null,
           start_time: row.start_time ? String(row.start_time) : null,
@@ -476,11 +550,14 @@ export async function GET(
     console.log('Successfully processed matches:', matches.length);
 
     // 不戦勝試合から勝者を抽出（match_code → 勝者チーム名のマップを作成）
+    // この時点で既にチーム名は実名に解決されているので、そのまま使用
     const byeMatchWinners: Record<string, string> = {};
     matches.forEach((m) => {
       if (m.is_bye_match === 1) {
         // 不戦勝試合の勝者を特定（空でない方のチーム）
+        // 既に実チーム名に解決されている
         const winner = m.team1_display_name || m.team2_display_name;
+
         if (winner && m.match_code) {
           byeMatchWinners[`${m.match_code}_winner`] = winner;
           console.log(`[public-matches] 不戦勝勝者: ${m.match_code}_winner = ${winner}`);

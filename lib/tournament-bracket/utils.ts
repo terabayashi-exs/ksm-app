@@ -151,8 +151,10 @@ export function organizeMatchesByMatchType(matches: BracketMatch[]): {
     !THIRD_PLACE_CODES.includes(m.match_code)
   );
 
-  // ラウンドラベルを生成（ハードコード）
+  // ラウンドラベルを生成
   const roundLabels: string[] = [];
+
+  // 試合コードベースで判定
   const hasQuarterFinal = mainMatches.some(m => QUARTER_FINAL_CODES.includes(m.match_code));
   const hasSemiFinal = mainMatches.some(m => SEMI_FINAL_CODES.includes(m.match_code));
   const hasFinal = mainMatches.some(m => FINAL_CODES.includes(m.match_code));

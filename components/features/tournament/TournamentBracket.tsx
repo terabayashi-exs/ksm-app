@@ -100,6 +100,47 @@ const response = await fetch(
     );
   }
 
+  // 不戦勝試合と実際の対戦試合を分離
+  const separateByeMatches = (matches: BracketMatch[]) => {
+    const actualMatches: BracketMatch[] = [];
+    const seedTeams: string[] = [];
+
+    matches.forEach((match) => {
+      if (match.is_walkover) {
+        // 不戦勝試合：勝者チーム名をシードとして抽出
+        // 1. winner_team_idが設定されている場合はそれを使用
+        // 2. なければ、team1_idまたはteam2_idが設定されている方を使用
+        // 3. どちらもなければdisplay_nameを使用
+        let winnerName = "シード";
+
+        if (match.winner_team_id) {
+          // winner_team_idが設定されている場合
+          winnerName = match.winner_team_id === match.team1_id
+            ? match.team1_display_name
+            : match.team2_display_name;
+        } else if (match.team1_id && !match.team2_id) {
+          // team1のみ設定されている（team1が勝者）
+          winnerName = match.team1_display_name;
+        } else if (match.team2_id && !match.team1_id) {
+          // team2のみ設定されている（team2が勝者）
+          winnerName = match.team2_display_name;
+        } else if (match.team1_display_name && match.team1_display_name !== "") {
+          // display_nameを使用（テンプレート名の可能性）
+          winnerName = match.team1_display_name;
+        } else if (match.team2_display_name && match.team2_display_name !== "") {
+          winnerName = match.team2_display_name;
+        }
+
+        seedTeams.push(winnerName);
+      } else {
+        // 実際の対戦試合
+        actualMatches.push(match);
+      }
+    });
+
+    return { actualMatches, seedTeams };
+  };
+
   // block_nameでグループ化（試合数に関わらず実行）
   const blockMap = new Map<string, BracketMatch[]>();
   mainMatches.forEach((match) => {
@@ -112,11 +153,14 @@ const response = await fetch(
 
   // ブロックデータを作成
   const blockData = Array.from(blockMap.entries()).map(([blockName, matches]) => {
+    // 不戦勝試合を分離
+    const { actualMatches, seedTeams } = separateByeMatches(matches);
+
     // ブロック内のラウンドラベルを生成
     const blockRoundLabels: string[] = [];
-    const hasQuarterFinal = matches.some(m => m.match_code.startsWith("M3") || m.match_code.startsWith("T3"));
-    const hasSemiFinal = matches.some(m => m.match_code.startsWith("M5") || m.match_code.startsWith("T5"));
-    const hasFinal = matches.some(m => m.match_code.startsWith("M6") || m.match_code.startsWith("T6"));
+    const hasQuarterFinal = actualMatches.some(m => m.match_code.startsWith("M3") || m.match_code.startsWith("T3"));
+    const hasSemiFinal = actualMatches.some(m => m.match_code.startsWith("M5") || m.match_code.startsWith("T5"));
+    const hasFinal = actualMatches.some(m => m.match_code.startsWith("M6") || m.match_code.startsWith("T6"));
 
     if (hasQuarterFinal) blockRoundLabels.push("準々決勝");
     if (hasSemiFinal) blockRoundLabels.push("準決勝");
@@ -125,7 +169,8 @@ const response = await fetch(
     return {
       blockId: blockName,
       title: blockName === "main" ? "メイントーナメント" : blockName,
-      matches: matches.sort((a, b) => a.match_code.localeCompare(b.match_code)),
+      matches: actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code)),
+      seedTeams,
       roundLabels: blockRoundLabels,
     };
   });
@@ -198,12 +243,18 @@ const response = await fetch(
             />
           ) : (
             // 7試合以下: TournamentBlock使用
-            <TournamentBlock
-              blockId="main"
-              matches={mainMatches}
-              sportConfig={sportConfig || undefined}
-              roundLabels={roundLabels}
-            />
+            (() => {
+              const { actualMatches, seedTeams } = separateByeMatches(mainMatches);
+              return (
+                <TournamentBlock
+                  blockId="main"
+                  matches={actualMatches}
+                  seedTeams={seedTeams}
+                  sportConfig={sportConfig || undefined}
+                  roundLabels={roundLabels}
+                />
+              );
+            })()
           )}
 
           {/* 3位決定戦ブロック */}

@@ -146,24 +146,87 @@ export async function GET(
 
     console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);
 
+    // BYE試合のためのチーム名解決マップを作成
+    // ブロック名 + ポジション番号 → 実チーム名 のマップ（例: T1 → ExsA）
+    const blockPositionToTeamMap: Record<string, { block_name: string; team_name: string }> = {};
+
+    // assigned_blockとblock_positionから実チーム名を取得してマップ化
+    const teamBlockAssignments = await db.execute(`
+      SELECT
+        assigned_block,
+        block_position,
+        COALESCE(team_omission, team_name) as team_name
+      FROM t_tournament_teams
+      WHERE tournament_id = ? AND assigned_block IS NOT NULL AND block_position IS NOT NULL
+    `, [tournamentId]);
+
+    teamBlockAssignments.rows.forEach((row) => {
+      const key = `${row.assigned_block}-${row.block_position}`;
+      blockPositionToTeamMap[key] = {
+        block_name: String(row.assigned_block),
+        team_name: String(row.team_name)
+      };
+    });
+
+    console.log('[Matches API] Block position to team map:', blockPositionToTeamMap);
+
     const matches = matchesResult.rows.map(row => {
       // 試合状態の決定（t_match_statusを優先、なければt_matches_liveから）
       const matchStatus = row.match_status || row.live_match_status || 'scheduled';
-      
+
       // 現在のピリオド（t_match_statusを優先）
       const currentPeriod = row.status_current_period || 1;
-      
+
       // 実際の開始・終了時刻（t_match_statusを優先）
       const actualStartTime = row.status_actual_start_time;
       const actualEndTime = row.status_actual_end_time;
-      
+
       // 確定済みかどうかの判定
       // t_matches_finalにレコードが存在する場合のみ確定扱い
       const isConfirmed = !!row.confirmed_at;
-      
+
       // スコア情報（確定済みなら最終結果、そうでなければライブスコア）
       const team1ScoresStr = isConfirmed ? row.final_team1_scores : row.team1_scores;
       const team2ScoresStr = isConfirmed ? row.final_team2_scores : row.team2_scores;
+
+      // BYE試合でチーム名が取得できない場合、プレースホルダーから実チーム名を解決
+      let resolvedTeam1Name = String(row.team1_real_name || row.team1_display_name || '');
+      let resolvedTeam2Name = String(row.team2_real_name || row.team2_display_name || '');
+
+      if (row.is_bye_match === 1) {
+        // プレースホルダー（例: "S1チーム"）からポジション番号を抽出
+        const extractPosition = (displayName: string): number | null => {
+          // "S1チーム", "T2チーム" などからポジション番号を抽出
+          const match = displayName.match(/([A-Za-z]+)(\d+)チーム$/);
+          return match ? parseInt(match[2]) : null;
+        };
+
+        // team1_display_name がプレースホルダーの場合、実チーム名に変換
+        if (!row.team1_real_name && row.team1_display_name && row.block_name) {
+          const position = extractPosition(String(row.team1_display_name));
+          if (position !== null) {
+            const key = `${row.block_name}-${position}`;
+            const teamData = blockPositionToTeamMap[key];
+            if (teamData) {
+              resolvedTeam1Name = teamData.team_name;
+              console.log(`[BYE Match] Resolved team1: ${row.team1_display_name} (block=${row.block_name}, pos=${position}) → ${teamData.team_name}`);
+            }
+          }
+        }
+
+        // team2_display_name がプレースホルダーの場合、実チーム名に変換
+        if (!row.team2_real_name && row.team2_display_name && row.block_name) {
+          const position = extractPosition(String(row.team2_display_name));
+          if (position !== null) {
+            const key = `${row.block_name}-${position}`;
+            const teamData = blockPositionToTeamMap[key];
+            if (teamData) {
+              resolvedTeam2Name = teamData.team_name;
+              console.log(`[BYE Match] Resolved team2: ${row.team2_display_name} (block=${row.block_name}, pos=${position}) → ${teamData.team_name}`);
+            }
+          }
+        }
+      }
       
       return {
         match_id: Number(row.match_id),
@@ -175,8 +238,8 @@ export async function GET(
         team2_id: row.team2_id ? String(row.team2_id) : null,
         team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
         team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
-        team1_name: String(row.team1_real_name || row.team1_display_name), // 実チーム名を優先、なければプレースホルダー
-        team2_name: String(row.team2_real_name || row.team2_display_name), // 実チーム名を優先、なければプレースホルダー
+        team1_name: resolvedTeam1Name, // BYE試合対応：プレースホルダーから実チーム名に解決
+        team2_name: resolvedTeam2Name, // BYE試合対応：プレースホルダーから実チーム名に解決
         court_number: row.court_number ? Number(row.court_number) : null,
         court_name: row.court_name ? String(row.court_name) : null,
         scheduled_time: row.start_time ? String(row.start_time) : null, // scheduled_timeに統一
@@ -214,9 +277,44 @@ export async function GET(
       };
     });
 
+    // 不戦勝試合の勝者をマップに保存
+    const byeMatchWinners: Record<string, string> = {};
+    matches.forEach((m) => {
+      if (m.is_bye_match === 1) {
+        // 不戦勝試合の勝者を特定（空でない方のチーム）
+        // team1_name/team2_nameには実チーム名が入っている
+        const winner = m.team1_name || m.team2_name;
+        if (winner && m.match_code) {
+          byeMatchWinners[`${m.match_code}_winner`] = winner;
+        }
+      }
+    });
+
+    // team1_source/team2_sourceに基づいて、不戦勝の勝者を反映
+    const resolvedMatches = matches.map((m) => {
+      let resolvedTeam1 = m.team1_name;
+      let resolvedTeam2 = m.team2_name;
+
+      if (m.team1_source && byeMatchWinners[m.team1_source]) {
+        resolvedTeam1 = byeMatchWinners[m.team1_source];
+      }
+      if (m.team2_source && byeMatchWinners[m.team2_source]) {
+        resolvedTeam2 = byeMatchWinners[m.team2_source];
+      }
+
+      return {
+        ...m,
+        team1_name: resolvedTeam1,
+        team2_name: resolvedTeam2,
+        // display_nameも同期（後方互換性のため）
+        team1_display_name: resolvedTeam1,
+        team2_display_name: resolvedTeam2
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: matches
+      data: resolvedMatches
     });
 
   } catch (error) {

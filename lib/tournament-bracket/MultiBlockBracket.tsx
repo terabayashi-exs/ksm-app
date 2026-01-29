@@ -12,6 +12,8 @@ interface BlockData {
   matches: BracketMatch[];
   /** ラウンドラベル */
   roundLabels: string[];
+  /** シードチーム名（不戦勝試合から抽出） */
+  seedTeams?: string[];
 }
 
 interface MultiBlockBracketProps {
@@ -61,6 +63,7 @@ export function MultiBlockBracket({
             title={block.title}
             matches={block.matches}
             roundLabels={block.roundLabels}
+            seedTeams={block.seedTeams}
             sportConfig={sportConfig}
           />
         </div>
