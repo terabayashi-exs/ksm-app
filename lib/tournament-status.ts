@@ -302,21 +302,34 @@ async function checkTournamentHasOngoingMatches(tournamentId: number): Promise<b
   try {
     const { db } = await import('@/lib/db');
 
-    // t_match_statusテーブルから scheduled 以外の試合をカウント
+    // 大会のフォーマットIDを取得
+    const formatResult = await db.execute(`
+      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+    `, [tournamentId]);
+
+    if (formatResult.rows.length === 0) {
+      return false;
+    }
+
+    const formatId = formatResult.rows[0].format_id as number;
+
+    // t_match_statusテーブルから scheduled 以外の試合をカウント（BYE試合を除外）
     const result = await db.execute(`
       SELECT COUNT(*) as started_count
       FROM t_match_status ms
       INNER JOIN t_matches_live ml ON ms.match_id = ml.match_id
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
         AND ms.match_status != 'scheduled'
         AND ml.team1_id IS NOT NULL
         AND ml.team2_id IS NOT NULL
-    `, [tournamentId]);
+        AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+    `, [formatId, tournamentId]);
 
     const startedCount = result.rows[0]?.started_count as number || 0;
 
-    console.log(`Tournament ${tournamentId}: ${startedCount} matches have started (not scheduled)`);
+    console.log(`Tournament ${tournamentId}: ${startedCount} matches have started (not scheduled, excluding BYE matches)`);
 
     return startedCount > 0;
   } catch (error) {
@@ -332,15 +345,28 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
   try {
     const { db } = await import('@/lib/db');
 
-    // 全試合数を取得
+    // 大会のフォーマットIDを取得
+    const formatResult = await db.execute(`
+      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+    `, [tournamentId]);
+
+    if (formatResult.rows.length === 0) {
+      return false;
+    }
+
+    const formatId = formatResult.rows[0].format_id as number;
+
+    // 全試合数を取得（BYE試合を除外）
     const totalResult = await db.execute(`
       SELECT COUNT(*) as total_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
         AND ml.team1_id IS NOT NULL
         AND ml.team2_id IS NOT NULL
-    `, [tournamentId]);
+        AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+    `, [formatId, tournamentId]);
 
     const totalMatches = totalResult.rows[0]?.total_matches as number || 0;
 
@@ -350,7 +376,7 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       return true;
     }
 
-    // 完了済み試合数を取得
+    // 完了済み試合数を取得（BYE試合を除外）
     // 完了条件: t_matches_finalに登録 OR match_status='cancelled'
     // 中止試合は確定処理をしなくても「完了」とみなす（インフルエンザ等でチーム不参加の場合）
     const completedResult = await db.execute(`
@@ -358,15 +384,17 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
         AND ml.team1_id IS NOT NULL
         AND ml.team2_id IS NOT NULL
+        AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
         AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
-    `, [tournamentId]);
+    `, [formatId, tournamentId]);
 
     const completedMatches = completedResult.rows[0]?.completed_matches as number || 0;
 
-    console.log(`Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`);
+    console.log(`Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled, excluding BYE matches)`);
 
     return completedMatches === totalMatches;
   } catch (error) {

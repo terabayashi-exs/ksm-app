@@ -389,12 +389,12 @@ export class TournamentBlobArchiver {
 
       // 5. 戦績表データ
       const resultsResult = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_code,
           ml.team1_id,
           ml.team2_id,
-          COALESCE(t1.team_name, ml.team1_display_name) as team1_name,
-          COALESCE(t2.team_name, ml.team2_display_name) as team2_name,
+          COALESCE(tt1.team_name, ml.team1_display_name) as team1_name,
+          COALESCE(tt2.team_name, ml.team2_display_name) as team2_name,
           mf.team1_scores,
           mf.team2_scores,
           mf.winner_team_id,
@@ -403,8 +403,8 @@ export class TournamentBlobArchiver {
           mb.block_name
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-        LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ? AND mf.match_id IS NOT NULL
         ORDER BY ml.match_code

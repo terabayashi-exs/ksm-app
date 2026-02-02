@@ -163,8 +163,8 @@ export default function TournamentDrawPage() {
           teamCount: formattedTeams.length
         });
 
-        // 試合情報を取得
-        const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches`);
+        // 試合情報を取得（BYE試合も含める）
+        const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches?includeBye=true`);
         const matchesData = await matchesResponse.json();
 
         if (!matchesResponse.ok || !matchesData.success) {
@@ -469,14 +469,27 @@ export default function TournamentDrawPage() {
 
   // 第1ラウンドのスロット情報を取得
   const getFirstRoundSlots = (blockName: string): FirstRoundSlot[] => {
-    // 第1ラウンドの試合（team1_sourceとteam2_sourceが空）を抽出
+    // 第1ラウンドの試合を抽出
+    // - BYE試合（is_bye_match = 1）は常に第1ラウンド（シード枠）
+    // - team1_sourceとteam2_sourceが空の試合も第1ラウンド
     const firstRoundMatches = matches.filter(
       m =>
         m.phase === 'preliminary' &&
         m.block_name === blockName &&
-        (!m.team1_source || m.team1_source === '') &&
-        (!m.team2_source || m.team2_source === '')
+        (
+          m.is_bye_match === 1 || // BYE試合（シード枠）は常に含める
+          ((!m.team1_source || m.team1_source === '') &&
+           (!m.team2_source || m.team2_source === ''))
+        )
     );
+
+    console.log(`[getFirstRoundSlots] Block ${blockName}:`, {
+      totalMatches: matches.length,
+      preliminaryMatches: matches.filter(m => m.phase === 'preliminary' && m.block_name === blockName).length,
+      firstRoundMatches: firstRoundMatches.length,
+      firstRoundMatchCodes: firstRoundMatches.map(m => m.match_code),
+      byeMatches: firstRoundMatches.filter(m => m.is_bye_match === 1).map(m => m.match_code)
+    });
 
     // スロット情報に変換
     return firstRoundMatches.map(m => ({

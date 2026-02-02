@@ -212,11 +212,6 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${teamStatus.statusColor}`}>
                             {teamStatus.statusText}
                           </span>
-                          {team.block_position && (
-                            <span className="text-sm text-muted-foreground">
-                              #{team.block_position}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>

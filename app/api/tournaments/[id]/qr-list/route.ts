@@ -20,7 +20,21 @@ export async function GET(
       ? "ml.match_status IN ('scheduled', 'ongoing', 'completed')"
       : "ml.match_status IN ('scheduled', 'ongoing')";
 
-    // 試合一覧を取得
+    // 大会のformat_idを取得
+    const tournamentResult = await db.execute(`
+      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+    `, [tournamentId]);
+
+    if (tournamentResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: '大会が見つかりません' },
+        { status: 404 }
+      );
+    }
+
+    const formatId = tournamentResult.rows[0].format_id;
+
+    // 試合一覧を取得（BYE試合を除外）
     const matchesResult = await db.execute(`
       SELECT
         ml.match_id,
@@ -29,23 +43,28 @@ export async function GET(
         ml.start_time,
         ml.tournament_date,
         ml.match_status,
+        ml.team1_display_name,
+        ml.team2_display_name,
         mb.match_block_id,
         mb.block_name,
         mb.phase,
-        COALESCE(tt1.team_name, ml.team1_display_name) as team1_name,
-        COALESCE(tt2.team_name, ml.team2_display_name) as team2_name,
-        COALESCE(tt1.team_omission, ml.team1_display_name) as team1_omission,
-        COALESCE(tt2.team_omission, ml.team2_display_name) as team2_omission
+        tt1.team_name as team1_real_name,
+        tt2.team_name as team2_real_name,
+        tt1.team_omission as team1_real_omission,
+        tt2.team_omission as team2_real_omission,
+        mt.is_bye_match,
+        mt.team1_source,
+        mt.team2_source
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
       AND ${statusCondition}
-      AND ml.team1_id IS NOT NULL
-      AND ml.team2_id IS NOT NULL
+      AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
       ORDER BY mb.match_block_id, ml.tournament_date, ml.start_time, ml.match_code
-    `, [tournamentId]);
+    `, [formatId, tournamentId]);
 
     // コート番号の一覧を取得
     const courtNumbers = Array.from(
@@ -55,12 +74,158 @@ export async function GET(
     // コート表示名を一括取得
     const courtDisplayNames = await getCourtDisplayNames(tournamentId, courtNumbers);
 
+    // BYE試合でチーム名が取得できない場合、プレースホルダーから実チーム名を解決するためのマップを作成
+    const blockPositionToTeamMap: Record<string, { block_name: string; team_name: string; team_omission: string }> = {};
+
+    // assigned_blockとblock_positionから実チーム名を取得してマップ化
+    const teamBlockAssignments = await db.execute(`
+      SELECT
+        assigned_block,
+        block_position,
+        team_name,
+        COALESCE(team_omission, team_name) as team_omission
+      FROM t_tournament_teams
+      WHERE tournament_id = ? AND assigned_block IS NOT NULL AND block_position IS NOT NULL
+    `, [tournamentId]);
+
+    teamBlockAssignments.rows.forEach((row) => {
+      const key = `${row.assigned_block}-${row.block_position}`;
+      blockPositionToTeamMap[key] = {
+        block_name: String(row.assigned_block),
+        team_name: String(row.team_name),
+        team_omission: String(row.team_omission)
+      };
+    });
+
+    console.log('[QR-List API] Block position to team map:', blockPositionToTeamMap);
+
+    // プレースホルダー（例: "S1チーム"）からポジション番号を抽出
+    const extractPosition = (displayName: string): number | null => {
+      const match = String(displayName || '').match(/([A-Za-z]+)(\d+)チーム$/);
+      return match ? parseInt(match[2]) : null;
+    };
+
+    // BYE試合の勝者をマップに保存
+    const byeMatchWinners: Record<string, { name: string; omission: string }> = {};
+
+    // まずBYE試合を処理（is_bye_match=1の試合は既にフィルタで除外されているが、念のため別途取得）
+    const byeMatchesResult = await db.execute(`
+      SELECT
+        ml.match_code,
+        ml.team1_display_name,
+        ml.team2_display_name,
+        mb.block_name,
+        tt1.team_name as team1_real_name,
+        tt2.team_name as team2_real_name,
+        tt1.team_omission as team1_real_omission,
+        tt2.team_omission as team2_real_omission,
+        mt.team1_source,
+        mt.team2_source
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+      LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+      WHERE mb.tournament_id = ? AND mt.is_bye_match = 1
+    `, [formatId, tournamentId]);
+
+    byeMatchesResult.rows.forEach((m) => {
+      // BYE試合の勝者を特定（空でない方のチーム）
+      let winnerName = '';
+      let winnerOmission = '';
+
+      if (m.team1_real_name) {
+        winnerName = String(m.team1_real_name);
+        winnerOmission = String(m.team1_real_omission || m.team1_real_name);
+      } else if (m.team2_real_name) {
+        winnerName = String(m.team2_real_name);
+        winnerOmission = String(m.team2_real_omission || m.team2_real_name);
+      } else {
+        // tournament_team_idがない場合、display_nameから解決
+        const team1Position = m.team1_display_name ? extractPosition(String(m.team1_display_name)) : null;
+        const team2Position = m.team2_display_name ? extractPosition(String(m.team2_display_name)) : null;
+
+        if (team1Position !== null && m.block_name) {
+          const key = `${m.block_name}-${team1Position}`;
+          const teamData = blockPositionToTeamMap[key];
+          if (teamData) {
+            winnerName = teamData.team_name;
+            winnerOmission = teamData.team_omission;
+          }
+        } else if (team2Position !== null && m.block_name) {
+          const key = `${m.block_name}-${team2Position}`;
+          const teamData = blockPositionToTeamMap[key];
+          if (teamData) {
+            winnerName = teamData.team_name;
+            winnerOmission = teamData.team_omission;
+          }
+        }
+      }
+
+      if (winnerName && m.match_code) {
+        byeMatchWinners[`${m.match_code}_winner`] = { name: winnerName, omission: winnerOmission };
+        console.log(`[QR-List] BYE match winner: ${m.match_code} → ${winnerOmission}`);
+      }
+    });
+
     // 各試合のQRコード用トークンとURLを生成
     const now = new Date();
     const validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 1時間前から有効
     const validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48時間後まで有効
 
     const matches = matchesResult.rows.map((match) => {
+      // team1の解決
+      let resolvedTeam1Name = String(match.team1_real_name || match.team1_display_name || '');
+      let resolvedTeam1Omission = String(match.team1_real_omission || match.team1_display_name || '');
+
+      // team1_real_nameがない場合、プレースホルダーから実チーム名に変換
+      if (!match.team1_real_name && match.team1_display_name && match.block_name) {
+        const position = extractPosition(String(match.team1_display_name));
+        if (position !== null) {
+          const key = `${match.block_name}-${position}`;
+          const teamData = blockPositionToTeamMap[key];
+          if (teamData) {
+            resolvedTeam1Name = teamData.team_name;
+            resolvedTeam1Omission = teamData.team_omission;
+            console.log(`[QR-List] Resolved team1: ${match.team1_display_name} (block=${match.block_name}, pos=${position}) → ${teamData.team_omission}`);
+          }
+        }
+      }
+
+      // team1_sourceに基づいてBYE試合の勝者を反映
+      const team1Source = match.team1_source as string | null;
+      if (team1Source && byeMatchWinners[team1Source]) {
+        resolvedTeam1Name = byeMatchWinners[team1Source].name;
+        resolvedTeam1Omission = byeMatchWinners[team1Source].omission;
+        console.log(`[QR-List] Resolved team1 from BYE: ${team1Source} → ${resolvedTeam1Omission}`);
+      }
+
+      // team2の解決
+      let resolvedTeam2Name = String(match.team2_real_name || match.team2_display_name || '');
+      let resolvedTeam2Omission = String(match.team2_real_omission || match.team2_display_name || '');
+
+      // team2_real_nameがない場合、プレースホルダーから実チーム名に変換
+      if (!match.team2_real_name && match.team2_display_name && match.block_name) {
+        const position = extractPosition(String(match.team2_display_name));
+        if (position !== null) {
+          const key = `${match.block_name}-${position}`;
+          const teamData = blockPositionToTeamMap[key];
+          if (teamData) {
+            resolvedTeam2Name = teamData.team_name;
+            resolvedTeam2Omission = teamData.team_omission;
+            console.log(`[QR-List] Resolved team2: ${match.team2_display_name} (block=${match.block_name}, pos=${position}) → ${teamData.team_omission}`);
+          }
+        }
+      }
+
+      // team2_sourceに基づいてBYE試合の勝者を反映
+      const team2Source = match.team2_source as string | null;
+      if (team2Source && byeMatchWinners[team2Source]) {
+        resolvedTeam2Name = byeMatchWinners[team2Source].name;
+        resolvedTeam2Omission = byeMatchWinners[team2Source].omission;
+        console.log(`[QR-List] Resolved team2 from BYE: ${team2Source} → ${resolvedTeam2Omission}`);
+      }
+
       // JWTトークン生成
       const payload = {
         match_id: match.match_id,
@@ -99,10 +264,10 @@ export async function GET(
         match_status: match.match_status,
         block_name: match.block_name,
         phase: match.phase,
-        team1_name: match.team1_name,
-        team2_name: match.team2_name,
-        team1_omission: match.team1_omission,
-        team2_omission: match.team2_omission,
+        team1_name: resolvedTeam1Name,
+        team2_name: resolvedTeam2Name,
+        team1_omission: resolvedTeam1Omission,
+        team2_omission: resolvedTeam2Omission,
         referee_url: refereeUrl,
         qr_image_url: qrImageUrl,
       };

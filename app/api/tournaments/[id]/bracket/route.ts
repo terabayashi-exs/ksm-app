@@ -58,8 +58,8 @@ export async function GET(
         ml.team2_id,
         ml.team1_tournament_team_id,
         ml.team2_tournament_team_id,
-        COALESCE(tt1.team_omission, t1.team_omission, tt1.team_name, t1.team_name, ml.team1_display_name) as team1_display_name,
-        COALESCE(tt2.team_omission, t2.team_omission, tt2.team_name, t2.team_name, ml.team2_display_name) as team2_display_name,
+        COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
+        COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name) as team2_display_name,
         COALESCE(mf.team1_scores, '0') as team1_goals,
         COALESCE(mf.team2_scores, '0') as team2_goals,
         -- 多競技対応の拡張データ
@@ -84,9 +84,7 @@ export async function GET(
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_rules tr ON mb.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
-      LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = ?
       WHERE mb.tournament_id = ?
         AND mb.phase = ?

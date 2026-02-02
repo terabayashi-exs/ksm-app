@@ -3,6 +3,114 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 
+/**
+ * 不戦勝試合（片方のチームのみ設定）を自動確定する
+ * 組合せ作成時に実行
+ */
+async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
+  try {
+    console.log(`[AUTO_CONFIRM_WALKOVER] Checking for walkover matches in tournament ${tournamentId}`);
+
+    // 不戦勝試合を検索（team1_id XOR team2_id が設定されている試合、かつ未確定）
+    const walkoverMatchesResult = await db.execute(`
+      SELECT
+        ml.match_id,
+        ml.match_code,
+        ml.match_number,
+        ml.match_block_id,
+        ml.team1_id,
+        ml.team2_id,
+        ml.team1_tournament_team_id,
+        ml.team2_tournament_team_id,
+        ml.team1_display_name,
+        ml.team2_display_name,
+        ml.court_number,
+        ml.start_time,
+        ml.tournament_date
+      FROM t_matches_live ml
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+      WHERE mb.tournament_id = ?
+        AND mf.match_id IS NULL
+        AND (
+          (ml.team1_id IS NOT NULL AND ml.team2_id IS NULL)
+          OR (ml.team1_id IS NULL AND ml.team2_id IS NOT NULL)
+        )
+    `, [tournamentId]);
+
+    if (walkoverMatchesResult.rows.length === 0) {
+      console.log(`[AUTO_CONFIRM_WALKOVER] No walkover matches found`);
+      return;
+    }
+
+    console.log(`[AUTO_CONFIRM_WALKOVER] Found ${walkoverMatchesResult.rows.length} walkover matches to auto-confirm`);
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+    for (const match of walkoverMatchesResult.rows) {
+      const matchId = match.match_id as number;
+      const matchCode = match.match_code as string;
+      const team1Id = match.team1_id as string | null;
+      const team2Id = match.team2_id as string | null;
+
+      // 勝者を決定（設定されているチーム）
+      const winnerId = team1Id || team2Id;
+      const winnerTournamentTeamId = (team1Id ? match.team1_tournament_team_id : match.team2_tournament_team_id) as number | null;
+
+      // t_matches_finalに登録
+      await db.execute(`
+        INSERT INTO t_matches_final (
+          match_id, match_block_id, tournament_date, match_number, match_code,
+          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_display_name, team2_display_name,
+          court_number, start_time, team1_scores, team2_scores, winner_team_id, winner_tournament_team_id,
+          is_draw, is_walkover, remarks, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        matchId,
+        match.match_block_id,
+        match.tournament_date,
+        match.match_number,
+        matchCode,
+        team1Id,
+        team2Id,
+        match.team1_tournament_team_id,
+        match.team2_tournament_team_id,
+        match.team1_display_name,
+        match.team2_display_name,
+        match.court_number,
+        match.start_time,
+        '0', // team1_scores
+        '0', // team2_scores
+        winnerId,
+        winnerTournamentTeamId,
+        0, // is_draw
+        1, // is_walkover
+        '不戦勝により自動確定', // remarks
+        now,
+        now
+      ]);
+
+      console.log(`[AUTO_CONFIRM_WALKOVER] ✅ Auto-confirmed walkover match ${matchCode} (ID: ${matchId}), winner: ${winnerId}`);
+
+      // 不戦勝試合の進出処理も実行
+      try {
+        const { updateTournamentProgression } = await import('@/lib/tournament-progression');
+        await updateTournamentProgression(matchCode, winnerId, null, tournamentId, winnerTournamentTeamId, null);
+        console.log(`[AUTO_CONFIRM_WALKOVER] ✅ Processed progression for walkover match ${matchCode}`);
+      } catch (progressionError) {
+        console.error(`[AUTO_CONFIRM_WALKOVER] Failed to process progression for ${matchCode}:`, progressionError);
+      }
+    }
+
+    console.log(`[AUTO_CONFIRM_WALKOVER] ✅ Completed auto-confirmation of ${walkoverMatchesResult.rows.length} walkover matches`);
+
+  } catch (error) {
+    console.error(`[AUTO_CONFIRM_WALKOVER] Error auto-confirming walkover matches:`, error);
+    // エラーが発生してもメインの処理は継続（組合せ保存は成功扱い）
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -33,10 +141,22 @@ export async function POST(
     console.log('[Draw Save API] Received matches:', frontendMatches?.length || 0, 'matches');
 
     try {
+      // 既存の不戦勝確定データを削除（振分け直しに対応）
+      await db.execute(`
+        DELETE FROM t_matches_final
+        WHERE match_id IN (
+          SELECT mf.match_id
+          FROM t_matches_final mf
+          INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+          WHERE mb.tournament_id = ? AND mf.is_walkover = 1
+        )
+      `, [tournamentId]);
+      console.log('[Draw Save API] Cleared existing walkover confirmations');
+
       // 既存の振分情報をクリア
       await db.execute(`
-        UPDATE t_tournament_teams 
-        SET assigned_block = NULL, block_position = NULL 
+        UPDATE t_tournament_teams
+        SET assigned_block = NULL, block_position = NULL
         WHERE tournament_id = ?
       `, [tournamentId]);
 
@@ -55,7 +175,7 @@ export async function POST(
         }
       }
 
-      // フロントエンドからmatches情報が送信されている場合は、それを使用
+      // フロントエンドからmatches情報を使用してチーム割当を更新
       if (frontendMatches && Array.isArray(frontendMatches) && frontendMatches.length > 0) {
         console.log('[Draw Save API] Using frontend matches data');
 
@@ -110,84 +230,10 @@ export async function POST(
             ]);
           }
         }
-      } else {
-        // 従来の方法（リーグ形式など）
-        console.log('[Draw Save API] Using traditional method (team position lookup)');
-
-        // 試合データを更新（team1_id, team2_idに実際のチームIDを設定）
-        const matchesResult = await db.execute(`
-          SELECT ml.match_id, ml.team1_display_name, ml.team2_display_name, ml.match_block_id,
-                 mb.block_name, mb.phase
-          FROM t_matches_live ml
-          JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-          WHERE mb.tournament_id = ? AND mb.phase = 'preliminary'
-        `, [tournamentId]);
-
-        // 各試合について、表示名に対応する実際のチームIDと実際のチーム名を設定
-        for (const match of matchesResult.rows) {
-          const blockName = match.block_name as string;
-          const team1DisplayName = match.team1_display_name as string;
-          const team2DisplayName = match.team2_display_name as string;
-
-          console.log(`[Draw Save] Processing match ${match.match_id}: team1="${team1DisplayName}", team2="${team2DisplayName}", block="${blockName}"`);
-
-          // "A1チーム" -> ブロックA、1番目のチーム
-          const team1Data = await getTeamDataByPosition(tournamentId, blockName, team1DisplayName);
-          const team2Data = await getTeamDataByPosition(tournamentId, blockName, team2DisplayName);
-
-          console.log(`[Draw Save] Resolved: team1=${team1Data?.team_name || 'null'} (id=${team1Data?.tournament_team_id}), team2=${team2Data?.team_name || 'null'} (id=${team2Data?.tournament_team_id})`);
-
-          // 両方のチームが存在する場合
-          if (team1Data && team2Data) {
-            // display_nameはプレースホルダー形式のまま維持
-            // UIではtournament_team_idを使って実際のチーム名を表示する
-            await db.execute(`
-              UPDATE t_matches_live
-              SET team1_id = ?,
-                  team2_id = ?,
-                  team1_tournament_team_id = ?,
-                  team2_tournament_team_id = ?
-              WHERE match_id = ?
-            `, [
-              team1Data.team_id,
-              team2Data.team_id,
-              team1Data.tournament_team_id,
-              team2Data.tournament_team_id,
-              match.match_id
-            ]);
-          }
-          // 不戦勝試合：team1のみ存在する場合
-          else if (team1Data && !team2Data) {
-            await db.execute(`
-              UPDATE t_matches_live
-              SET team1_id = ?,
-                  team1_tournament_team_id = ?,
-                  team2_id = NULL,
-                  team2_tournament_team_id = NULL
-              WHERE match_id = ?
-            `, [
-              team1Data.team_id,
-              team1Data.tournament_team_id,
-              match.match_id
-            ]);
-          }
-          // 不戦勝試合：team2のみ存在する場合
-          else if (!team1Data && team2Data) {
-            await db.execute(`
-              UPDATE t_matches_live
-              SET team1_id = NULL,
-                  team1_tournament_team_id = NULL,
-                  team2_id = ?,
-                  team2_tournament_team_id = ?
-              WHERE match_id = ?
-            `, [
-              team2Data.team_id,
-              team2Data.tournament_team_id,
-              match.match_id
-            ]);
-          }
-        }
       }
+
+      // 不戦勝試合を自動確定
+      await autoConfirmWalkoverMatches(tournamentId);
 
       return NextResponse.json({
         success: true,
@@ -210,65 +256,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
-
-// 表示名からチームデータ（team_id, tournament_team_id, team_name）を取得する関数
-async function getTeamDataByPosition(
-  tournamentId: number,
-  blockName: string,
-  displayName: string
-): Promise<{ team_id: string; tournament_team_id: number; team_name: string } | null> {
-  // "A1チーム", "S1チーム", "Ep1チーム" などから位置番号を抽出
-  // 末尾の「チーム」を除去
-  if (!displayName.endsWith('チーム')) return null;
-
-  const withoutSuffix = displayName.slice(0, -2); // "チーム"を除去
-
-  // ブロック名のプレフィックスを除去して位置番号を抽出
-  // 例: blockName="T", displayName="S1チーム" -> "S1" -> ブロック名を除去 -> "1"
-  // 例: blockName="T", displayName="T1チーム" -> "T1" -> ブロック名を除去 -> "1"
-  // 例: blockName="A", displayName="A1チーム" -> "A1" -> ブロック名を除去 -> "1"
-
-  // パターン1: ブロック名 + 数字（例: "T1", "A1"）
-  const pattern1 = new RegExp(`^${blockName}(\\d+)$`);
-  const match1 = withoutSuffix.match(pattern1);
-  if (match1) {
-    const positionNum = parseInt(match1[1]);
-    return await fetchTeamByPosition(tournamentId, blockName, positionNum);
-  }
-
-  // パターン2: 任意の文字列 + 数字（例: "S1", "Ep1"）
-  // ブロック名と一致しない場合も、最後の数字を位置として扱う
-  const pattern2 = /^[A-Za-z]+(\d+)$/;
-  const match2 = withoutSuffix.match(pattern2);
-  if (match2) {
-    const positionNum = parseInt(match2[1]);
-    return await fetchTeamByPosition(tournamentId, blockName, positionNum);
-  }
-
-  return null;
-}
-
-// 実際にデータベースからチームデータを取得するヘルパー関数
-async function fetchTeamByPosition(
-  tournamentId: number,
-  blockName: string,
-  positionNum: number
-): Promise<{ team_id: string; tournament_team_id: number; team_name: string } | null> {
-  const result = await db.execute(`
-    SELECT
-      team_id,
-      tournament_team_id,
-      COALESCE(team_omission, team_name) as team_name
-    FROM t_tournament_teams
-    WHERE tournament_id = ? AND assigned_block = ? AND block_position = ?
-  `, [tournamentId, blockName, positionNum]);
-
-  if (result.rows.length === 0) return null;
-
-  return {
-    team_id: result.rows[0].team_id as string,
-    tournament_team_id: result.rows[0].tournament_team_id as number,
-    team_name: result.rows[0].team_name as string
-  };
 }

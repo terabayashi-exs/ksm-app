@@ -43,6 +43,10 @@ export async function GET(
       );
     }
 
+    // クエリパラメータからincludeByeフラグを取得（組合せ作成画面用）
+    const { searchParams } = new URL(request.url);
+    const includeBye = searchParams.get('includeBye') === 'true';
+
     // 大会の存在確認とformat_id取得
     const tournamentResult = await db.execute(`
       SELECT tournament_id, format_id FROM t_tournaments WHERE tournament_id = ?
@@ -194,9 +198,10 @@ export async function GET(
       let resolvedTeam2Name = String(row.team2_real_name || row.team2_display_name || '');
 
       if (row.is_bye_match === 1) {
-        // プレースホルダー（例: "S1チーム"）からポジション番号を抽出
+        // プレースホルダー（例: "A1チーム", "A2チーム", "B1チーム"）からポジション番号を抽出
         const extractPosition = (displayName: string): number | null => {
-          // "S1チーム", "T2チーム" などからポジション番号を抽出
+          // "A1チーム", "A2チーム", "B1チーム" などからポジション番号を抽出
+          // 正規表現: 任意のアルファベット + 数字 + "チーム"
           const match = displayName.match(/([A-Za-z]+)(\d+)チーム$/);
           return match ? parseInt(match[2]) : null;
         };
@@ -312,9 +317,12 @@ export async function GET(
       };
     });
 
+    // BYE試合（is_bye_match=1）を除外（組合せ作成画面ではincludeBye=trueで含める）
+    const finalMatches = includeBye ? resolvedMatches : resolvedMatches.filter(m => m.is_bye_match !== 1);
+
     return NextResponse.json({
       success: true,
-      data: resolvedMatches
+      data: finalMatches
     });
 
   } catch (error) {

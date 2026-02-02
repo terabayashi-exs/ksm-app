@@ -170,7 +170,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           contact_phone: team.contact_phone,
           registration_type: team.registration_method || 'self_registered',
           withdrawal_status: team.withdrawal_status || 'active',
-          joined_at: team.joined_at,
+          created_at: team.joined_at,
           player_count: team.player_count || 0,
           players: playersResult.rows.map((playerRow) => {
             const player = playerRow as unknown as {

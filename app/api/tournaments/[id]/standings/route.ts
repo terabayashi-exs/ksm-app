@@ -23,9 +23,10 @@ export async function GET(
 
     // 戦績表と同じロジックで統計情報を計算
     // 参加チーム数を計算（全ブロックのチーム数合計）
+    // tournament_team_idを使用（同じマスターチームから複数エントリーがある場合に対応）
     const totalTeamsResult = await db.execute({
       sql: `
-        SELECT COUNT(DISTINCT tt.team_id) as total_teams
+        SELECT COUNT(DISTINCT tt.tournament_team_id) as total_teams
         FROM t_tournament_teams tt
         WHERE tt.tournament_id = ?
         AND tt.withdrawal_status = 'active'

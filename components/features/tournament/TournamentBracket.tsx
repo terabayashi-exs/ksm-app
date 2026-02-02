@@ -6,6 +6,8 @@ import {
   TournamentBlock,
   MultiBlockBracket,
   organizeMatchesByMatchType,
+  getPatternByMatchCount,
+  getPatternConfig,
 } from "@/lib/tournament-bracket";
 import type {
   BracketMatch,
@@ -86,7 +88,7 @@ const response = await fetch(
     );
   }
 
-  const { mainMatches, thirdPlaceMatch, roundLabels } = organizeMatchesByMatchType(matches);
+  const { mainMatches, thirdPlaceMatch } = organizeMatchesByMatchType(matches);
 
   // 試合がない場合
   if (mainMatches.length === 0) {
@@ -156,20 +158,57 @@ const response = await fetch(
     // 不戦勝試合を分離
     const { actualMatches, seedTeams } = separateByeMatches(matches);
 
-    // ブロック内のラウンドラベルを生成
-    const blockRoundLabels: string[] = [];
-    const hasQuarterFinal = actualMatches.some(m => m.match_code.startsWith("M3") || m.match_code.startsWith("T3"));
-    const hasSemiFinal = actualMatches.some(m => m.match_code.startsWith("M5") || m.match_code.startsWith("T5"));
-    const hasFinal = actualMatches.some(m => m.match_code.startsWith("M6") || m.match_code.startsWith("T6"));
+    // 試合をmatch_codeでソート
+    const sortedMatches = actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code));
 
-    if (hasQuarterFinal) blockRoundLabels.push("準々決勝");
-    if (hasSemiFinal) blockRoundLabels.push("準決勝");
-    if (hasFinal) blockRoundLabels.push("決勝");
+    // ブロック内のラウンドラベルを生成（position_noteベース）
+    const blockRoundLabels: string[] = [];
+
+    // 試合数からパターンを判定
+    const pattern = getPatternByMatchCount(sortedMatches.length);
+    const config = getPatternConfig(pattern);
+
+    // position_noteの優先度定義（数値が小さいほど優先）
+    const labelPriority: Record<string, number> = {
+      '決勝戦': 1,
+      '決勝': 1,
+      '3位決定戦': 2,
+      '3位決定': 2,
+      '準決勝': 3,
+      '準々決勝': 4,
+      '1回戦': 5,
+    };
+
+    let matchIndex = 0;
+    // 各ラウンド（カラム）の最も優先度の高いposition_noteを取得
+    for (const round of config.rounds) {
+      const roundMatches = sortedMatches.slice(matchIndex, matchIndex + round.matchCount);
+
+      // このラウンドの試合からposition_noteを収集
+      const positionNotes = roundMatches
+        .map(m => m.position_note)
+        .filter((note): note is string => note !== null && note !== undefined && note !== '');
+
+      if (positionNotes.length > 0) {
+        // 優先度でソートして最も優先度の高いラベルを選択
+        const bestLabel = positionNotes.sort((a, b) =>
+          (labelPriority[a] || 99) - (labelPriority[b] || 99)
+        )[0];
+
+        // 末尾の「戦」を除去
+        blockRoundLabels.push(bestLabel.replace(/戦$/, ''));
+      } else {
+        // position_noteがない場合は空文字
+        blockRoundLabels.push('');
+      }
+
+      matchIndex += round.matchCount;
+    }
 
     return {
       blockId: blockName,
       title: blockName === "main" ? "メイントーナメント" : blockName,
-      matches: actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code)),
+      matches: sortedMatches,
       seedTeams,
       roundLabels: blockRoundLabels,
     };
@@ -245,13 +284,50 @@ const response = await fetch(
             // 7試合以下: TournamentBlock使用
             (() => {
               const { actualMatches, seedTeams } = separateByeMatches(mainMatches);
+
+              // ラウンドラベルを生成（position_noteベース）
+              const sortedMatches = actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code));
+              const pattern = getPatternByMatchCount(sortedMatches.length);
+              const config = getPatternConfig(pattern);
+
+              const labelPriority: Record<string, number> = {
+                '決勝戦': 1,
+                '決勝': 1,
+                '3位決定戦': 2,
+                '3位決定': 2,
+                '準決勝': 3,
+                '準々決勝': 4,
+                '1回戦': 5,
+              };
+
+              const singleBlockRoundLabels: string[] = [];
+              let matchIndex = 0;
+
+              for (const round of config.rounds) {
+                const roundMatches = sortedMatches.slice(matchIndex, matchIndex + round.matchCount);
+                const positionNotes = roundMatches
+                  .map(m => m.position_note)
+                  .filter((note): note is string => note !== null && note !== undefined && note !== '');
+
+                if (positionNotes.length > 0) {
+                  const bestLabel = positionNotes.sort((a, b) =>
+                    (labelPriority[a] || 99) - (labelPriority[b] || 99)
+                  )[0];
+                  singleBlockRoundLabels.push(bestLabel.replace(/戦$/, ''));
+                } else {
+                  singleBlockRoundLabels.push('');
+                }
+
+                matchIndex += round.matchCount;
+              }
+
               return (
                 <TournamentBlock
                   blockId="main"
-                  matches={actualMatches}
+                  matches={sortedMatches}
                   seedTeams={seedTeams}
                   sportConfig={sportConfig || undefined}
-                  roundLabels={roundLabels}
+                  roundLabels={singleBlockRoundLabels}
                 />
               );
             })()
