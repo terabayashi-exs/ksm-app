@@ -69,3 +69,6 @@ storybook-static
 # MCP/Serena settings
 .mcp.json
 .serena/
+
+# 調査用ドキュメント（ローカル参照用）
+TEAM_ID_MIGRATION_ANALYSIS.md
