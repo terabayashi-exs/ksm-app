@@ -35,14 +35,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
           ml.match_code,
           ml.team1_id,
           ml.team2_id,
-          CASE
-            WHEN ml.team1_tournament_team_id IS NOT NULL THEN COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name)
-            ELSE COALESCE(t1.team_name, ml.team1_display_name)
-          END as team1_display_name,
-          CASE
-            WHEN ml.team2_tournament_team_id IS NOT NULL THEN COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name)
-            ELSE COALESCE(t2.team_name, ml.team2_display_name)
-          END as team2_display_name,
+          COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
+          COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name) as team2_display_name,
           ml.court_number,
           tc.court_name,
           ml.start_time,
@@ -59,6 +53,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           COALESCE(mf.team1_scores, ml.team1_scores) as final_team1_scores,
           COALESCE(mf.team2_scores, ml.team2_scores) as final_team2_scores,
           COALESCE(mf.winner_team_id, ml.winner_team_id) as final_winner_team_id,
+          COALESCE(mf.winner_tournament_team_id, ml.winner_tournament_team_id) as final_winner_tournament_team_id,
           COALESCE(mf.is_draw, ml.is_draw) as final_is_draw,
           COALESCE(mf.is_walkover, ml.is_walkover) as final_is_walkover,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as has_result
@@ -66,8 +61,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-        LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-        LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         WHERE mb.tournament_id = ?
@@ -153,8 +146,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         team2_goals: team2Goals,
         score_display: scoreDisplay, // PK戦を考慮したスコア表示
         winner_team_id: row.final_winner_team_id ? String(row.final_winner_team_id) : null,
+        winner_tournament_team_id: row.final_winner_tournament_team_id ? Number(row.final_winner_tournament_team_id) : null,
         team1_id: row.team1_id ? String(row.team1_id) : null,
         team2_id: row.team2_id ? String(row.team2_id) : null,
+        team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
+        team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
         is_draw: Boolean(row.final_is_draw || false),
         is_walkover: Boolean(row.final_is_walkover || false),
         match_status: String(row.match_status),

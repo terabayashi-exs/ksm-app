@@ -163,8 +163,8 @@ export default function TournamentDrawPage() {
           teamCount: formattedTeams.length
         });
 
-        // 試合情報を取得
-        const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches`);
+        // 試合情報を取得（BYE試合も含める）
+        const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches?includeBye=true`);
         const matchesData = await matchesResponse.json();
 
         if (!matchesResponse.ok || !matchesData.success) {
@@ -469,14 +469,27 @@ export default function TournamentDrawPage() {
 
   // 第1ラウンドのスロット情報を取得
   const getFirstRoundSlots = (blockName: string): FirstRoundSlot[] => {
-    // 第1ラウンドの試合（team1_sourceとteam2_sourceが空）を抽出
+    // 第1ラウンドの試合を抽出
+    // - BYE試合（is_bye_match = 1）は常に第1ラウンド（シード枠）
+    // - team1_sourceとteam2_sourceが空の試合も第1ラウンド
     const firstRoundMatches = matches.filter(
       m =>
         m.phase === 'preliminary' &&
         m.block_name === blockName &&
-        (!m.team1_source || m.team1_source === '') &&
-        (!m.team2_source || m.team2_source === '')
+        (
+          m.is_bye_match === 1 || // BYE試合（シード枠）は常に含める
+          ((!m.team1_source || m.team1_source === '') &&
+           (!m.team2_source || m.team2_source === ''))
+        )
     );
+
+    console.log(`[getFirstRoundSlots] Block ${blockName}:`, {
+      totalMatches: matches.length,
+      preliminaryMatches: matches.filter(m => m.phase === 'preliminary' && m.block_name === blockName).length,
+      firstRoundMatches: firstRoundMatches.length,
+      firstRoundMatchCodes: firstRoundMatches.map(m => m.match_code),
+      byeMatches: firstRoundMatches.filter(m => m.is_bye_match === 1).map(m => m.match_code)
+    });
 
     // スロット情報に変換
     return firstRoundMatches.map(m => ({
@@ -929,21 +942,92 @@ export default function TournamentDrawPage() {
         }
       }
 
-      const drawData = blocks.map(block => ({
-        block_name: block.block_name,
-        teams: block.teams
-          .filter(team => team && team.team_id)
-          .map((team, index) => ({
-            tournament_team_id: team.tournament_team_id,
-            team_id: team.team_id,
-            block_position: index + 1
-          }))
-      }));
+      // トーナメント形式の場合、matchesから直接チーム割り当て情報を抽出
+      let drawData;
+      if (isTournamentFormat()) {
+        // 第1ラウンドの試合からチーム位置を特定
+        const teamPositionMap = new Map<number, number>(); // tournament_team_id → block_position
+
+        blocks.forEach(block => {
+          const firstRoundMatches = matches.filter(
+            m =>
+              m.phase === 'preliminary' &&
+              m.block_name === block.block_name &&
+              (!m.team1_source || m.team1_source === '') &&
+              (!m.team2_source || m.team2_source === '')
+          );
+
+          firstRoundMatches.forEach(match => {
+            // team1_display_name（例：T1チーム）から位置番号を抽出
+            const extractPosition = (displayName: string): number | null => {
+              const m = displayName.match(/([A-Za-z]+)(\d+)チーム$/);
+              return m ? parseInt(m[2]) : null;
+            };
+
+            if (match.team1_tournament_team_id) {
+              const position = extractPosition(match.team1_display_name);
+              if (position !== null) {
+                teamPositionMap.set(match.team1_tournament_team_id, position);
+              }
+            }
+
+            if (match.team2_tournament_team_id) {
+              const position = extractPosition(match.team2_display_name);
+              if (position !== null) {
+                teamPositionMap.set(match.team2_tournament_team_id, position);
+              }
+            }
+          });
+        });
+
+        console.log('[Draw Save] Team position map:', Object.fromEntries(teamPositionMap));
+
+        // teamPositionMapを使ってdrawDataを作成
+        drawData = blocks.map(block => ({
+          block_name: block.block_name,
+          teams: block.teams
+            .filter(team => team && team.team_id)
+            .map(team => ({
+              tournament_team_id: team.tournament_team_id,
+              team_id: team.team_id,
+              block_position: teamPositionMap.get(team.tournament_team_id) || 0
+            }))
+            .filter(team => team.block_position > 0) // 位置が特定できたチームのみ
+        }));
+      } else {
+        // リーグ形式の場合は従来通り
+        drawData = blocks.map(block => ({
+          block_name: block.block_name,
+          teams: block.teams
+            .filter(team => team && team.team_id)
+            .map((team, index) => ({
+              tournament_team_id: team.tournament_team_id,
+              team_id: team.team_id,
+              block_position: index + 1
+            }))
+        }));
+      }
+
+      // トーナメント形式の場合、matches情報も送信
+      const requestBody = isTournamentFormat()
+        ? {
+            blocks: drawData,
+            matches: matches
+              .filter(m => m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
+              .map(m => ({
+                match_id: m.match_id,
+                team1_tournament_team_id: m.team1_tournament_team_id,
+                team2_tournament_team_id: m.team2_tournament_team_id,
+                team1_id: m.team1_id,
+                team2_id: m.team2_id
+              }))
+          }
+        : { blocks: drawData };
 
       const response = await fetch(`/api/tournaments/${tournamentId}/draw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocks: drawData })
+        body: JSON.stringify(requestBody)
       });
 
       const result = await response.json();
@@ -1155,7 +1239,12 @@ export default function TournamentDrawPage() {
 
           {/* ブロック振分結果 */}
           <div className="space-y-4">
-            {blocks.map((block, blockIndex) => {
+            {blocks.filter(block => {
+              const expectedCount = getExpectedTeamCount(block.block_name);
+              // 割り当てる枠が0のブロック（team1_source/team2_sourceのみのブロック）を除外
+              // expectedCountがnullの場合、blockTeamCountsにデータがない=第1ラウンド試合がない=表示不要
+              return expectedCount !== null && expectedCount > 0;
+            }).map((block, blockIndex) => {
               const currentCount = block.teams.filter(team => team && team.team_id).length;
               const expectedCount = getExpectedTeamCount(block.block_name);
               const status = getBlockStatus(block);

@@ -192,10 +192,10 @@ export async function GET(request: NextRequest) {
 
     // ブロック別影響統計
     const blocksQuery = `
-      SELECT 
+      SELECT
         tt.assigned_block as block_name,
         COUNT(*) as affected_teams,
-        (SELECT COUNT(*) FROM t_matches_live ml WHERE ml.tournament_id = tt.tournament_id AND (ml.team1_id = tt.team_id OR ml.team2_id = tt.team_id)) as affected_matches
+        (SELECT COUNT(*) FROM t_matches_live ml WHERE ml.tournament_id = tt.tournament_id AND (ml.team1_tournament_team_id = tt.tournament_team_id OR ml.team2_tournament_team_id = tt.tournament_team_id)) as affected_matches
       FROM t_tournament_teams tt
       WHERE tt.withdrawal_status IN ('withdrawal_approved')
       AND tt.assigned_block IS NOT NULL

@@ -500,7 +500,7 @@ async function generateMatchesFromTemplate(
         ? Number(template.period_count) 
         : 1;
 
-      await db.execute(`
+      const matchResult = await db.execute(`
         INSERT INTO t_matches_live (
           match_block_id,
           tournament_date,
@@ -541,7 +541,136 @@ async function generateMatchesFromTemplate(
         null, // winner_tournament_team_id は結果確定時に設定
         null  // remarks
       ]);
+
+      // BYE試合の場合、t_matches_finalにも自動登録
+      if (template.is_bye_match === 1) {
+        const matchId = Number(matchResult.lastInsertRowid);
+        const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+        // BYE試合の勝者を特定（team1またはteam2のうち、設定されている方）
+        const hasTeam1 = template.team1_display_name && template.team1_display_name.trim() !== '';
+        const hasTeam2 = template.team2_display_name && template.team2_display_name.trim() !== '';
+
+        // どちらか一方のみが設定されている場合のみBYE試合として処理
+        if ((hasTeam1 && !hasTeam2) || (!hasTeam1 && hasTeam2)) {
+          const winnerDisplayName = hasTeam1 ? template.team1_display_name : template.team2_display_name;
+
+          console.log(`[TOURNAMENT_CREATE] Auto-confirming BYE match ${template.match_code}: winner="${winnerDisplayName}"`);
+
+          await db.execute(`
+            INSERT INTO t_matches_final (
+              match_id,
+              match_block_id,
+              tournament_date,
+              match_number,
+              match_code,
+              team1_id,
+              team2_id,
+              team1_tournament_team_id,
+              team2_tournament_team_id,
+              team1_display_name,
+              team2_display_name,
+              court_number,
+              start_time,
+              team1_scores,
+              team2_scores,
+              winner_team_id,
+              winner_tournament_team_id,
+              is_draw,
+              is_walkover,
+              remarks,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            matchId,
+            blockId,
+            tournamentDate,
+            template.match_number,
+            template.match_code,
+            template.team1_source || null,
+            template.team2_source || null,
+            null, // team1_tournament_team_id
+            null, // team2_tournament_team_id
+            template.team1_display_name,
+            template.team2_display_name,
+            courtNumber,
+            startTime,
+            '0', // team1_scores（BYE試合なのでスコアなし）
+            '0', // team2_scores（BYE試合なのでスコアなし）
+            null, // winner_team_id（まだチームIDが確定していない）
+            null, // winner_tournament_team_id（まだチームIDが確定していない）
+            0,    // is_draw（不戦勝なので引き分けではない）
+            1,    // is_walkover（不戦勝）
+            'BYE試合（自動確定）',
+            now,
+            now
+          ]);
+
+          console.log(`[TOURNAMENT_CREATE] BYE match ${template.match_code} auto-confirmed in t_matches_final`);
+        }
+      }
     }
+
+    // BYE試合の勝者を後続試合に反映
+    console.log('[TOURNAMENT_CREATE] Processing BYE match winners propagation...');
+
+    for (const template of templates) {
+      if (template.is_bye_match === 1) {
+        const hasTeam1 = template.team1_display_name && template.team1_display_name.trim() !== '';
+        const hasTeam2 = template.team2_display_name && template.team2_display_name.trim() !== '';
+
+        if ((hasTeam1 && !hasTeam2) || (!hasTeam1 && hasTeam2)) {
+          const winnerDisplayName = hasTeam1 ? template.team1_display_name : template.team2_display_name;
+          const winnerPattern = `${template.match_code}_winner`;
+
+          console.log(`[TOURNAMENT_CREATE] Propagating BYE match ${template.match_code} winner "${winnerDisplayName}" (pattern: ${winnerPattern})`);
+
+          // このBYE試合の勝者を参照している試合を更新
+          const dependentMatches = templates.filter(t =>
+            t.team1_source === winnerPattern || t.team2_source === winnerPattern
+          );
+
+          for (const depMatch of dependentMatches) {
+            // 該当試合のmatch_idを取得
+            const matchResult = await db.execute(`
+              SELECT ml.match_id
+              FROM t_matches_live ml
+              INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              WHERE mb.tournament_id = ? AND ml.match_code = ?
+            `, [tournamentId, depMatch.match_code]);
+
+            if (matchResult.rows.length > 0) {
+              const matchId = matchResult.rows[0].match_id as number;
+
+              // team1_sourceが一致する場合はteam1を更新
+              if (depMatch.team1_source === winnerPattern) {
+                await db.execute(`
+                  UPDATE t_matches_live
+                  SET team1_display_name = ?, updated_at = datetime('now', '+9 hours')
+                  WHERE match_id = ?
+                `, [winnerDisplayName, matchId]);
+
+                console.log(`[TOURNAMENT_CREATE] Updated ${depMatch.match_code} team1 to "${winnerDisplayName}"`);
+              }
+
+              // team2_sourceが一致する場合はteam2を更新
+              if (depMatch.team2_source === winnerPattern) {
+                await db.execute(`
+                  UPDATE t_matches_live
+                  SET team2_display_name = ?, updated_at = datetime('now', '+9 hours')
+                  WHERE match_id = ?
+                `, [winnerDisplayName, matchId]);
+
+                console.log(`[TOURNAMENT_CREATE] Updated ${depMatch.match_code} team2 to "${winnerDisplayName}"`);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    console.log('[TOURNAMENT_CREATE] BYE match winners propagation completed');
 
     // Tournament matches and blocks generated successfully
 

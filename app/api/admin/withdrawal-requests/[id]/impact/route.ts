@@ -61,7 +61,7 @@ export async function GET(
 
     // 関連する試合の詳細情報を取得
     const relatedMatches = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
         ml.team1_display_name,
@@ -72,10 +72,11 @@ export async function GET(
         mf.match_id as is_confirmed
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-      WHERE ml.tournament_id = ? 
-        AND (ml.team1_id = ? OR ml.team2_id = ?)
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND (ml.team1_tournament_team_id = ? OR ml.team2_tournament_team_id = ?)
       ORDER BY ml.tournament_date, ml.start_time
-    `, [withdrawal.tournament_id, withdrawal.team_id, withdrawal.team_id]);
+    `, [withdrawal.tournament_id, tournamentTeamId, tournamentTeamId]);
 
     // 同じブロックの他のチーム情報を取得
     const blockTeams = withdrawal.assigned_block ? await db.execute(`

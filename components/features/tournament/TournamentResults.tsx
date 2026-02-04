@@ -48,6 +48,11 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
   // ブロック分類関数（TournamentSchedule.tsxと同じロジック）
   const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
     if (phase === 'preliminary') {
+      // 統合トーナメントブロック
+      if (blockName === 'preliminary_unified') {
+        return '予選トーナメント';
+      }
+      // 通常のリーグブロック（A, B, C...）
       if (blockName) {
         return `予選${blockName}ブロック`;
       }
@@ -60,13 +65,13 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
       }
       return '予選リーグ';
     } else if (phase === 'final') {
-      // block_nameを優先的に使用（1位リーグ、2位リーグなどが入っている）
+      // 統合トーナメントブロック
+      if (blockName === 'final_unified') {
+        return '決勝トーナメント';
+      }
+      // 決勝リーグブロック（1位リーグ、2位リーグなど）
       if (blockName && blockName !== 'final' && blockName !== 'default') {
         return blockName;
-      }
-      // フォールバック1: display_round_name
-      if (displayRoundName && displayRoundName !== 'final') {
-        return displayRoundName;
       }
       // 最終フォールバック
       return '決勝トーナメント';

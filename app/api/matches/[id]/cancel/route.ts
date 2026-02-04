@@ -165,29 +165,36 @@ export async function POST(
 
       console.log(`[MATCH_CANCEL] Checking if tournament ${tournamentId} is complete...`);
 
-      // 大会の全試合数を取得（team1_id/team2_idが設定されている試合のみ）
+      // 大会のフォーマットIDを取得
+      const tournamentFormatResult = await db.execute(`
+        SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      `, [tournamentId]);
+
+      const formatId = tournamentFormatResult.rows[0]?.format_id as number;
+
+      // 大会の全試合数を取得（BYE試合のみ除外、チーム割当の有無は関係なし）
       const totalMatchesResult = await db.execute(`
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
         WHERE mb.tournament_id = ?
-          AND ml.team1_id IS NOT NULL
-          AND ml.team2_id IS NOT NULL
-      `, [tournamentId]);
+          AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+      `, [formatId, tournamentId]);
 
       const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
 
-      // 完了済み試合数を取得（確定済み OR 中止）
+      // 完了済み試合数を取得（確定済み OR 中止、BYE試合を除外）
       const completedMatchesResult = await db.execute(`
         SELECT COUNT(*) as completed_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
         WHERE mb.tournament_id = ?
-          AND ml.team1_id IS NOT NULL
-          AND ml.team2_id IS NOT NULL
+          AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
           AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
-      `, [tournamentId]);
+      `, [formatId, tournamentId]);
 
       const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
 

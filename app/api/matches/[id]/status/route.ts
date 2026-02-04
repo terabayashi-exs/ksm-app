@@ -24,11 +24,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     // 試合状態と基本情報を取得（実チーム名も含む）
     const result = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
         ml.team1_id,
         ml.team2_id,
+        ml.team1_tournament_team_id,
+        ml.team2_tournament_team_id,
         ml.team1_display_name,
         ml.team2_display_name,
         ml.court_number,
@@ -37,6 +39,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         ml.team2_scores,
         ml.period_count,
         ml.winner_team_id,
+        ml.winner_tournament_team_id,
         ml.remarks,
         ms.match_status,
         ms.current_period,
@@ -76,6 +79,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         match_code: match.match_code,
         team1_id: match.team1_id,
         team2_id: match.team2_id,
+        team1_tournament_team_id: match.team1_tournament_team_id,
+        team2_tournament_team_id: match.team2_tournament_team_id,
         team1_name: match.team1_real_name || match.team1_display_name, // 実チーム名を優先
         team2_name: match.team2_real_name || match.team2_display_name, // 実チーム名を優先
         team1_omission: match.team1_omission,
@@ -90,6 +95,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         team1_scores: match.team1_scores ? parseScoreArray(match.team1_scores) : null,
         team2_scores: match.team2_scores ? parseScoreArray(match.team2_scores) : null,
         winner_team_id: match.winner_team_id,
+        winner_tournament_team_id: match.winner_tournament_team_id,
         remarks: match.remarks,
         updated_by: match.updated_by,
         updated_at: match.updated_at

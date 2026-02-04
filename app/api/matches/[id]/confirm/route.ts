@@ -54,7 +54,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const liveMatch = liveResult.rows[0];
-    
+
     // 既に確定済みかチェック
     const finalResult = await db.execute(`
       SELECT match_id FROM t_matches_final WHERE match_id = ?
@@ -70,6 +70,31 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // t_matches_finalにデータを移行
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     const confirmedBy = session.user.id || session.user.email;
+
+    // スコアから勝者を自動判定（winner_team_idがNULLの場合）
+    let finalWinnerId = liveMatch.winner_team_id;
+    let finalWinnerTournamentTeamId = liveMatch.winner_tournament_team_id;
+    let isDraw = !liveMatch.winner_team_id;
+
+    if (!finalWinnerId && liveMatch.team1_scores && liveMatch.team2_scores) {
+      const team1Total = parseTotalScore(liveMatch.team1_scores);
+      const team2Total = parseTotalScore(liveMatch.team2_scores);
+
+      if (team1Total > team2Total) {
+        finalWinnerId = liveMatch.team1_id;
+        finalWinnerTournamentTeamId = liveMatch.team1_tournament_team_id;
+        isDraw = false;
+        console.log(`[MATCH_CONFIRM] Auto-detected winner from scores: team1 (${team1Total}-${team2Total})`);
+      } else if (team2Total > team1Total) {
+        finalWinnerId = liveMatch.team2_id;
+        finalWinnerTournamentTeamId = liveMatch.team2_tournament_team_id;
+        isDraw = false;
+        console.log(`[MATCH_CONFIRM] Auto-detected winner from scores: team2 (${team1Total}-${team2Total})`);
+      } else {
+        isDraw = true;
+        console.log(`[MATCH_CONFIRM] Scores are equal, marking as draw (${team1Total}-${team2Total})`);
+      }
+    }
 
     await db.execute(`
       INSERT INTO t_matches_final (
@@ -96,9 +121,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // スコアをそのまま保存（カンマ区切り形式を維持）
       liveMatch.team1_scores || '0',
       liveMatch.team2_scores || '0',
-      liveMatch.winner_team_id,
-      liveMatch.winner_tournament_team_id,
-      liveMatch.winner_team_id ? 0 : 1, // is_draw: 勝者がいない場合は引き分け
+      finalWinnerId,
+      finalWinnerTournamentTeamId,
+      isDraw ? 1 : 0, // is_draw: スコアから自動判定
       0, // is_walkover: 通常は0
       liveMatch.remarks,
       now,
@@ -126,11 +151,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const matchCode = liveMatch.match_code as string;
       const team1Id = liveMatch.team1_id as string | null;
       const team2Id = liveMatch.team2_id as string | null;
-      const winnerId = liveMatch.winner_team_id as string | null;
-      const isDraw = liveMatch.winner_team_id === null;
-      
+      const team1TournamentTeamId = liveMatch.team1_tournament_team_id as number | null;
+      const team2TournamentTeamId = liveMatch.team2_tournament_team_id as number | null;
+      const winnerId = finalWinnerId as string | null;
+      const winnerTournamentTeamId = finalWinnerTournamentTeamId as number | null;
+      const isDrawForProgression = isDraw;
+
       console.log(`[MATCH_CONFIRM] Processing tournament progression for match ${matchCode}`);
-      await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
+      await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDrawForProgression, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
       console.log(`[MATCH_CONFIRM] ✅ Tournament progression processed for match ${matchCode}`);
     } catch (progressionError) {
       console.error(`[MATCH_CONFIRM] ❌ Failed to process tournament progression for match ${matchId}:`, progressionError);
@@ -161,32 +189,39 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // 全試合が確定されたかチェックして、大会を完了に変更
     try {
       const tournamentId = liveResult.rows[0].tournament_id as number;
-      
+
       console.log(`[MATCH_CONFIRM] Checking if tournament ${tournamentId} is complete...`);
-      
-      // 大会の全試合数を取得（team1_id/team2_idが設定されている試合のみ）
+
+      // 大会のフォーマットIDを取得
+      const tournamentFormatResult = await db.execute(`
+        SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      `, [tournamentId]);
+
+      const formatId = tournamentFormatResult.rows[0]?.format_id as number;
+
+      // 大会の全試合数を取得（BYE試合のみ除外、チーム割当の有無は関係なし）
       const totalMatchesResult = await db.execute(`
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
         WHERE mb.tournament_id = ?
-          AND ml.team1_id IS NOT NULL
-          AND ml.team2_id IS NOT NULL
-      `, [tournamentId]);
+          AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+      `, [formatId, tournamentId]);
 
       const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
 
-      // 完了済み試合数を取得（確定済み OR 中止）
+      // 完了済み試合数を取得（確定済み OR 中止、BYE試合を除外）
       const completedMatchesResult = await db.execute(`
         SELECT COUNT(*) as completed_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
         WHERE mb.tournament_id = ?
-          AND ml.team1_id IS NOT NULL
-          AND ml.team2_id IS NOT NULL
+          AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
           AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
-      `, [tournamentId]);
+      `, [formatId, tournamentId]);
 
       const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
 

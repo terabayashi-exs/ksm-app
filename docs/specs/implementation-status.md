@@ -119,6 +119,59 @@
 - **画像最適化**: アイコン・UI素材の最適化
 - **バンドルサイズ**: 適切なcode splittingによる軽量化
 
+### ✅ **Phase 8: トーナメント表示・通知システム改善（2026-02-04完了）**
+
+19. **統合ブロック対応とトーナメント表示修正**
+    - **統合ブロックの個別表示**
+      - `preliminary_unified`ブロックをA, B, Cブロックに分割表示
+      - `match_code`プレフィックス（A1, B1など）からブロック名を抽出
+      - MultiBlockBracket使用条件の最適化（2ブロック以上 OR 8試合以上）
+
+    - **重複ブロック作成防止**
+      - 統合ブロックキー自体を`blockMap`に登録
+      - トーナメント作成時の重複生成を防止
+      - 大会ID 129で確認された3重複問題を解決
+
+    - **順位表の形式別表示**
+      - トーナメント形式: 試合数チェックをスキップ
+      - リーグ形式: 従来通り試合数0のチームは"-"表示
+      - 順位表が正しく表示されない問題（全チーム"-"表示）を解決
+
+    - **手動順位設定画面のブロック名**
+      - `preliminary_unified` → "予選トーナメント"
+      - 個別ブロック（A, B, C） → "予選Aブロック"など
+      - 冗長な表示（"予選preliminary_unifiedブロック"）を解消
+
+20. **「要調整」タグの動的判定システム**
+    - **決勝進出条件の動的取得**
+      - `m_match_templates`から`team1_source`/`team2_source`を取得
+      - `t_tournament_match_overrides`による変更を考慮（COALESCE使用）
+      - 例: A_1, A_2, B_1, B_2, C_3など可変の進出順位に対応
+
+    - **形式別の自動判定**
+      - トーナメント形式: 「要調整」タグと通知を表示しない
+      - リーグ形式: 決勝進出に影響する順位のみチェック
+      - 不要な順位（例: 4位同着で3位まで進出）では通知しない
+
+    - **通知生成ロジックの改善**（lib/standings-calculator.ts）
+      - `getRequiredPromotionPositions`: 必要順位を動的取得
+      - `analyzePromotionEligibility`: 固定の1位・2位チェックを廃止
+      - `createTieNotificationIfNeeded`: 必要順位のみで通知作成
+
+    - **影響範囲**
+      - 手動順位設定画面: 黄色のカード枠＋パルスアニメーション
+      - 試合結果入力画面: NotificationBanner警告表示
+      - 管理ダッシュボード: 「試合結果入力」ボタンの赤いバッジ
+
+    - **修正ファイル（15件）**
+      - 順位計算: `lib/standings-calculator.ts`
+      - 手動順位設定: `ManualRankingsEditor.tsx`, `manual-rankings/page.tsx`
+      - トーナメント表示: `TournamentBracket.tsx`, `MultiBlockBracket.tsx`, `TournamentBlock.tsx`
+      - 順位表: `TournamentStandings.tsx`
+      - 試合管理: `bracket/route.ts`, `draw/route.ts`, `matches/route.ts`
+      - 大会作成: `create-new/route.ts`
+      - その他: `TournamentResults.tsx`, `TournamentSchedule.tsx`, `types.ts`
+
 
 
 ## 🔮 拡張可能性・将来機能

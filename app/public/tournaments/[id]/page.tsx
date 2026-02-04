@@ -364,7 +364,7 @@ async function TournamentDetailContent({ params }: PageProps) {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* パンくずリスト */}
-          <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
+          <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 no-print">
             <Link href="/" className="hover:text-foreground flex items-center">
               <Home className="h-4 w-4" />
             </Link>
@@ -385,7 +385,7 @@ async function TournamentDetailContent({ params }: PageProps) {
           </nav>
 
           {/* ナビゲーションボタン */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-6 no-print">
             <BackButton />
             {group && (
               <Button variant="outline" asChild>
@@ -406,7 +406,7 @@ async function TournamentDetailContent({ params }: PageProps) {
           </div>
 
           {/* ページヘッダー */}
-          <div className="mb-8">
+          <div className="mb-8 no-print">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-foreground mb-2">{tournament.tournament_name}</h1>
@@ -425,7 +425,7 @@ async function TournamentDetailContent({ params }: PageProps) {
 
           {/* タブナビゲーション */}
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-6 sm:grid-rows-1">
+            <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-6 sm:grid-rows-1 no-print">
               <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
                 <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden xs:inline sm:inline">大会</span>概要

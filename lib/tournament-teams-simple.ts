@@ -232,43 +232,8 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
         });
       }
 
-      // ソート: 決勝進出チームは動的順序、それ以外は予選ブロック順
+      // ソート: チーム名の昇順（日本語対応）
       teams.sort((a, b) => {
-        const aFinalOrderInfo = finalTeamOrderMap.get(a.team_id);
-        const bFinalOrderInfo = finalTeamOrderMap.get(b.team_id);
-
-        // 両方とも決勝進出チームの場合
-        if (aFinalOrderInfo !== undefined && bFinalOrderInfo !== undefined) {
-          const result = aFinalOrderInfo.order - bFinalOrderInfo.order;
-          console.log(`[SORT] ${a.display_name} (${aFinalOrderInfo.order}) vs ${b.display_name} (${bFinalOrderInfo.order}) = ${result}`);
-          return result;
-        }
-
-        // aのみ決勝進出チームの場合（決勝チームを前に）
-        if (aFinalOrderInfo !== undefined) {
-          return -1;
-        }
-
-        // bのみ決勝進出チームの場合（決勝チームを前に）
-        if (bFinalOrderInfo !== undefined) {
-          return 1;
-        }
-
-        // 両方とも予選のみのチームの場合、assigned_blockとblock_positionでソート
-        const aBlock = a.assigned_block || '';
-        const bBlock = b.assigned_block || '';
-
-        if (aBlock !== bBlock) {
-          return aBlock.localeCompare(bBlock);
-        }
-
-        const aPos = a.block_position || 999;
-        const bPos = b.block_position || 999;
-
-        if (aPos !== bPos) {
-          return aPos - bPos;
-        }
-
         return a.team_name.localeCompare(b.team_name, 'ja');
       });
 

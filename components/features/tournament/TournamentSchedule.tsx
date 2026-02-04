@@ -88,22 +88,28 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
   // ブロック分類関数
   const getBlockKey = (match: MatchData): string => {
     if (match.phase === 'preliminary') {
+      // 統合トーナメントブロック
+      if (match.block_name === 'preliminary_unified') {
+        return '予選トーナメント';
+      }
+      // 通常のリーグブロック（A, B, C...）
       if (match.block_name) {
         return `予選${match.block_name}ブロック`;
       }
+      // match_codeから推測（フォールバック）
       const blockMatch = match.match_code.match(/([ABCD])\d+/);
       if (blockMatch) {
         return `予選${blockMatch[1]}ブロック`;
       }
       return '予選リーグ';
     } else if (match.phase === 'final') {
-      // block_nameを優先的に使用（1位リーグ、2位リーグなどが入っている）
+      // 統合トーナメントブロック
+      if (match.block_name === 'final_unified') {
+        return '決勝トーナメント';
+      }
+      // 決勝リーグブロック（1位リーグ、2位リーグなど）
       if (match.block_name && match.block_name !== 'final' && match.block_name !== 'default') {
         return match.block_name;
-      }
-      // フォールバック1: display_round_name
-      if (match.display_round_name && match.display_round_name !== 'final') {
-        return match.display_round_name;
       }
       // 最終フォールバック
       return '決勝トーナメント';
