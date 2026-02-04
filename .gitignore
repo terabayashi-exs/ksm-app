@@ -81,5 +81,6 @@ drizzle/relations.ts
 # 初回pullのスナップショット（実際のマイグレーションではない）
 drizzle/0000_*.sql
 drizzle/meta/0000_*.json
+drizzle/meta/_journal.json
 
-# Note: 0001以降のマイグレーションファイル（db:generateで生成）はコミット対象
+# Note: 0001以降のマイグレーションファイル（db:generateで生成）とその時のジャーナルはコミット対象
