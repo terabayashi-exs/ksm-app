@@ -106,7 +106,7 @@ export async function GET(
         ml.confirmed_by,
         mb.phase,
         mb.display_round_name,
-        mb.block_name,
+        COALESCE(mt.block_name, mb.block_name) as block_name,
         mb.match_type,
         mb.block_order,
         -- m_match_templatesからround_name、day_number、team1_source、team2_source、is_bye_matchを取得

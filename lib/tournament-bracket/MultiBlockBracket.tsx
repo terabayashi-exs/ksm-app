@@ -2,6 +2,7 @@
 
 import { TournamentBlock } from "./TournamentBlock";
 import type { BracketMatch, SportScoreConfig } from "./types";
+import type { PatternType, P6SeedLayout } from "./patterns";
 
 interface BlockData {
   /** ブロック識別子（例: "A", "B", "C", "D"） */
@@ -14,6 +15,10 @@ interface BlockData {
   roundLabels: string[];
   /** シードチーム名（不戦勝試合から抽出） */
   seedTeams?: string[];
+  /** パターン（P1-P8） */
+  pattern?: PatternType;
+  /** P6シード配置パターン */
+  seedLayout?: P6SeedLayout;
 }
 
 interface MultiBlockBracketProps {
@@ -65,6 +70,8 @@ export function MultiBlockBracket({
             roundLabels={block.roundLabels}
             seedTeams={block.seedTeams}
             sportConfig={sportConfig}
+            pattern={block.pattern}
+            seedLayout={block.seedLayout}
           />
         </div>
       ))}

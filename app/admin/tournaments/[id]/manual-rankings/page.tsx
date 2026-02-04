@@ -58,27 +58,33 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     final_format_type: tournamentResult.rows[0].final_format_type as string
   };
 
-  // ブロック情報と順位表を取得（予選・決勝両方、round_nameも取得）
+  // ブロック情報と順位表を取得
+  // トーナメント形式：統合ブロック（block_name = 'preliminary_unified' or 'final_unified'）
+  // リーグ形式：個別ブロック（block_name != '*_unified'）
   const blocksResult = await db.execute({
     sql: `
-      SELECT DISTINCT
+      SELECT
         mb.match_block_id,
         mb.phase,
         mb.display_round_name,
         mb.block_name,
+        mb.match_type,
         mb.team_rankings,
-        mb.remarks,
-        COALESCE(mt.round_name, mb.display_round_name, mb.block_name) as actual_round_name
+        mb.remarks
       FROM t_match_blocks mb
-      LEFT JOIN t_matches_live ml ON mb.match_block_id = ml.match_block_id
-      LEFT JOIN m_match_templates mt ON ml.match_number = mt.match_number AND mt.format_id = ?
       WHERE mb.tournament_id = ?
+        AND (
+          (mb.phase = 'preliminary' AND ? = 'tournament' AND mb.block_name = 'preliminary_unified')
+          OR (mb.phase = 'preliminary' AND ? = 'league' AND mb.block_name != 'preliminary_unified')
+          OR (mb.phase = 'final' AND ? = 'tournament' AND mb.block_name = 'final_unified')
+          OR (mb.phase = 'final' AND ? = 'league' AND mb.block_name != 'final_unified')
+        )
       ORDER BY
         CASE mb.phase WHEN 'preliminary' THEN 1 WHEN 'final' THEN 2 ELSE 3 END,
         mb.block_order,
         mb.match_block_id
     `,
-    args: [tournament.format_id, tournamentId]
+    args: [tournamentId, tournament.preliminary_format_type, tournament.preliminary_format_type, tournament.final_format_type, tournament.final_format_type]
   });
 
   const blocks = blocksResult.rows.map(row => ({
@@ -162,9 +168,34 @@ export default async function ManualRankingsPage({ params }: PageProps) {
       team_rankings: finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [],
       remarks: finalBlock.remarks as string | null
     };
-    
+
     console.log(`[MANUAL_RANKINGS_PAGE] 決勝トーナメント順位取得: ${finalRankings.team_rankings.length}チーム`);
   }
+
+  // 決勝進出条件を取得（team1_source, team2_sourceから必要な順位を判定）
+  // テンプレートとオーバーライドの両方を考慮
+  const promotionRequirementsResult = await db.execute({
+    sql: `
+      SELECT DISTINCT
+        COALESCE(tmo.team1_source_override, mt.team1_source) as team1_source,
+        COALESCE(tmo.team2_source_override, mt.team2_source) as team2_source
+      FROM m_match_templates mt
+      LEFT JOIN t_tournament_match_overrides tmo
+        ON mt.match_code = tmo.match_code
+        AND tmo.tournament_id = ?
+      WHERE mt.format_id = ?
+        AND mt.phase = 'final'
+        AND (mt.team1_source IS NOT NULL OR mt.team2_source IS NOT NULL)
+    `,
+    args: [tournamentId, tournament.format_id]
+  });
+
+  const promotionRequirements = promotionRequirementsResult.rows.flatMap(row => {
+    const sources = [];
+    if (row.team1_source) sources.push(String(row.team1_source));
+    if (row.team2_source) sources.push(String(row.team2_source));
+    return sources;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,9 +219,11 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         <ManualRankingsEditor
           tournamentId={tournamentId}
           blocks={blocks}
+          preliminaryFormatType={tournament.preliminary_format_type}
           finalFormatType={tournament.final_format_type}
           finalMatches={finalMatches}
           finalRankings={finalRankings}
+          promotionRequirements={promotionRequirements}
         />
       </div>
     </div>

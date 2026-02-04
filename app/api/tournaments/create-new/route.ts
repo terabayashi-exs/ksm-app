@@ -148,9 +148,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 選択されたフォーマットの情報を取得
+    const formatResult = await db.execute(`
+      SELECT
+        format_id,
+        format_name,
+        preliminary_format_type,
+        final_format_type
+      FROM m_tournament_formats
+      WHERE format_id = ?
+    `, [format_id]);
+
+    if (formatResult.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "選択されたフォーマットが見つかりません" },
+        { status: 400 }
+      );
+    }
+
+    const formatInfo = formatResult.rows[0];
+    const preliminaryFormatType = formatInfo.preliminary_format_type;
+    const finalFormatType = formatInfo.final_format_type;
+
     // 選択されたフォーマットの試合テンプレートを取得
     const templatesResult = await db.execute(`
-      SELECT 
+      SELECT
         template_id,
         match_number,
         match_code,
@@ -166,8 +188,8 @@ export async function POST(request: NextRequest) {
         execution_priority,
         court_number,
         suggested_start_time
-      FROM m_match_templates 
-      WHERE format_id = ? 
+      FROM m_match_templates
+      WHERE format_id = ?
       ORDER BY match_number
     `, [format_id]);
 
@@ -188,25 +210,72 @@ export async function POST(request: NextRequest) {
       uniqueBlocks.add(blockKey);
     });
 
+    // フェーズごとのフォーマットタイプを確認
+    const phaseFormats = new Map<string, string>();
+    if (preliminaryFormatType) {
+      phaseFormats.set('preliminary', String(preliminaryFormatType));
+    }
+    if (finalFormatType) {
+      phaseFormats.set('final', String(finalFormatType));
+    }
+
     // ブロックテーブルに登録
     for (const blockKey of uniqueBlocks) {
       const [phase, blockName] = blockKey.split('_');
-      const displayName = blockName === 'default' ? phase : blockName;
-      
-      const blockResult = await db.execute(`
-        INSERT INTO t_match_blocks (
-          tournament_id,
-          phase,
-          display_round_name,
-          block_name,
-          match_type,
-          block_order,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [tournamentId, phase, phase, displayName]);
-      
-      blockMap.set(blockKey, Number(blockResult.lastInsertRowid));
+      const formatType = phaseFormats.get(phase);
+
+      // トーナメント形式の場合：統合ブロック1つのみ作成
+      // リーグ形式の場合：各ブロック（A, B, C...）を作成
+      if (formatType === 'tournament') {
+        // 統合ブロックが未作成の場合のみ作成
+        const unifiedBlockKey = `${phase}_unified`;
+        if (!blockMap.has(unifiedBlockKey)) {
+          const blockResult = await db.execute(`
+            INSERT INTO t_match_blocks (
+              tournament_id,
+              phase,
+              display_round_name,
+              block_name,
+              match_type,
+              block_order,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          `, [tournamentId, phase, phase, unifiedBlockKey]);
+
+          const unifiedBlockId = Number(blockResult.lastInsertRowid);
+
+          // 統合ブロックキー自体をblockMapに登録（重複作成防止）
+          blockMap.set(unifiedBlockKey, unifiedBlockId);
+
+          // 同じフェーズの全ブロックを統合ブロックにマッピング
+          Array.from(uniqueBlocks)
+            .filter(key => key.startsWith(`${phase}_`))
+            .forEach(key => {
+              blockMap.set(key, unifiedBlockId);
+            });
+
+          console.log(`✅ ${phase}フェーズの統合ブロック作成: ${unifiedBlockKey} (ID: ${unifiedBlockId})`);
+        }
+      } else {
+        // リーグ形式：個別ブロックを作成
+        const displayName = blockName === 'default' ? phase : blockName;
+
+        const blockResult = await db.execute(`
+          INSERT INTO t_match_blocks (
+            tournament_id,
+            phase,
+            display_round_name,
+            block_name,
+            match_type,
+            block_order,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [tournamentId, phase, phase, displayName]);
+
+        blockMap.set(blockKey, Number(blockResult.lastInsertRowid));
+      }
     }
 
     // 試合スケジュールの生成

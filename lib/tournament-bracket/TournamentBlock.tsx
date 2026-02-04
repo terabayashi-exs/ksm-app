@@ -32,6 +32,8 @@ interface TournamentBlockProps {
   sportConfig?: SportScoreConfig;
   /** P6シード配置パターン（P6のみ有効） */
   seedLayout?: P6SeedLayout;
+  /** パターン（指定された場合は試合数から自動判定しない） */
+  pattern?: PatternType;
 }
 
 /**
@@ -48,11 +50,12 @@ export function TournamentBlock({
   winnerName,
   sportConfig,
   seedLayout = "dispersed",
+  pattern: patternProp,
 }: TournamentBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 試合数からパターンを判定
-  const pattern = getPatternByMatchCount(matches.length);
+  // パターンを判定（propsで指定されている場合はそれを使用、なければ試合数から判定）
+  const pattern = patternProp || getPatternByMatchCount(matches.length);
   // P6パターンの場合、seedLayoutに応じて設定を切り替え
   const config = pattern === "P6" ? getP6PatternConfig(seedLayout) : getPatternConfig(pattern);
 

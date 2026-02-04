@@ -32,6 +32,10 @@ export interface BracketMatch {
   block_name: string;
   display_round_name?: string;
   position_note?: string;
+  // テンプレート情報（m_match_templates からJOIN）
+  team1_source?: string;
+  team2_source?: string;
+  is_bye_match?: boolean;
   // サッカー専用データ（該当する場合のみ）
   soccer_data?: {
     regular_goals_for: number;

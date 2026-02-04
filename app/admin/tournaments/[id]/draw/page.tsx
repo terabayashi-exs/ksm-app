@@ -1239,7 +1239,12 @@ export default function TournamentDrawPage() {
 
           {/* ブロック振分結果 */}
           <div className="space-y-4">
-            {blocks.map((block, blockIndex) => {
+            {blocks.filter(block => {
+              const expectedCount = getExpectedTeamCount(block.block_name);
+              // 割り当てる枠が0のブロック（team1_source/team2_sourceのみのブロック）を除外
+              // expectedCountがnullの場合、blockTeamCountsにデータがない=第1ラウンド試合がない=表示不要
+              return expectedCount !== null && expectedCount > 0;
+            }).map((block, blockIndex) => {
               const currentCount = block.teams.filter(team => team && team.team_id).length;
               const expectedCount = getExpectedTeamCount(block.block_name);
               const status = getBlockStatus(block);

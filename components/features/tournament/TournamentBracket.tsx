@@ -7,12 +7,16 @@ import {
   MultiBlockBracket,
   organizeMatchesByMatchType,
   getPatternByMatchCount,
+  getPatternByTeamCount,
   getPatternConfig,
+  getP6PatternConfig,
 } from "@/lib/tournament-bracket";
 import type {
   BracketMatch,
   BracketProps,
   SportScoreConfig,
+  PatternType,
+  PatternConfig,
 } from "@/lib/tournament-bracket";
 
 /**
@@ -144,9 +148,19 @@ const response = await fetch(
   };
 
   // block_nameでグループ化（試合数に関わらず実行）
+  // 統合ブロック（preliminary_unified, final_unified）の場合は、match_codeからブロック名を抽出
   const blockMap = new Map<string, BracketMatch[]>();
   mainMatches.forEach((match) => {
-    const blockName = match.block_name || "main";
+    let blockName = match.block_name || "main";
+
+    // 統合ブロックの場合は、match_codeの先頭文字（A、B、Cなど）をブロック名として使用
+    if (blockName === 'preliminary_unified' || blockName === 'final_unified') {
+      const matchCodePrefix = match.match_code.match(/^([A-Z])/);
+      if (matchCodePrefix) {
+        blockName = matchCodePrefix[1];
+      }
+    }
+
     if (!blockMap.has(blockName)) {
       blockMap.set(blockName, []);
     }
@@ -158,15 +172,95 @@ const response = await fetch(
     // 不戦勝試合を分離
     const { actualMatches, seedTeams } = separateByeMatches(matches);
 
-    // 試合をmatch_codeでソート
+    // 試合をmatch_codeでソート（BYE試合除外後）
     const sortedMatches = actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code));
+
+    console.log(`[${blockName}] sortedMatches (BYE除外後):`, sortedMatches.map(m =>
+      `${m.match_code}(${m.position_note}): ${m.team1_source || 'initial'} vs ${m.team2_source || 'initial'}`
+    ));
+    console.log(`[${blockName}] seedTeams:`, seedTeams);
 
     // ブロック内のラウンドラベルを生成（position_noteベース）
     const blockRoundLabels: string[] = [];
 
-    // 試合数からパターンを判定
-    const pattern = getPatternByMatchCount(sortedMatches.length);
-    const config = getPatternConfig(pattern);
+    // チーム数からパターンを判定
+    let pattern: PatternType;
+    let config: PatternConfig;
+    let seedLayout: "dispersed" | "adjacent" = "dispersed";
+
+    // ブロック内のチーム数を計算
+    // 方法1: 第1ラウンド試合（team1_source/team2_sourceがない）からチーム数を算出
+    const firstRoundMatches = matches.filter(m =>
+      (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')
+    );
+
+    // 各第1ラウンド試合のチーム数をカウント
+    let blockTeamCount = 0;
+    firstRoundMatches.forEach(m => {
+      if (m.is_bye_match) {
+        // BYE試合は1チーム（シード）
+        blockTeamCount += 1;
+      } else {
+        // 通常試合は2チーム
+        blockTeamCount += 2;
+      }
+    });
+
+    console.log(`[${blockName}] チーム数計算: 第1ラウンド試合=${firstRoundMatches.length}件 (BYE=${matches.filter(m => m.is_bye_match).length}) → 合計${blockTeamCount}チーム`);
+
+    if (blockTeamCount >= 2 && blockTeamCount <= 8) {
+      // ブロック内のチーム数を使用
+      pattern = getPatternByTeamCount(blockTeamCount);
+
+      // 6チームの場合のみ、シード同士の対戦有無でパターンを選択
+      if (blockTeamCount === 6) {
+        // BYE試合のmatch_codeリストを作成
+        const byeMatchCodes = new Set<string>();
+        matches.forEach((match) => {
+          if (match.is_bye_match) {
+            byeMatchCodes.add(match.match_code);
+            console.log(`[P6判定] BYE試合検出: ${match.match_code}`);
+          }
+        });
+
+        console.log(`[P6判定] BYE試合リスト:`, Array.from(byeMatchCodes));
+
+        // シード同士が対戦する試合があるかチェック
+        const hasSeedVsSeed = sortedMatches.some((match) => {
+          const team1Source = match.team1_source || "";
+          const team2Source = match.team2_source || "";
+
+          // "A1_winner" のような形式から試合コードを抽出
+          const team1SourceMatch = team1Source.match(/^([A-Z]\d+)_winner$/);
+          const team2SourceMatch = team2Source.match(/^([A-Z]\d+)_winner$/);
+
+          // 両方とも _winner 形式で、かつその試合がBYE試合の場合
+          const team1IsSeed = team1SourceMatch && byeMatchCodes.has(team1SourceMatch[1]);
+          const team2IsSeed = team2SourceMatch && byeMatchCodes.has(team2SourceMatch[1]);
+
+          if (team1IsSeed || team2IsSeed) {
+            console.log(`[P6判定] ${match.match_code}: team1=${team1Source}(${team1IsSeed}), team2=${team2Source}(${team2IsSeed})`);
+          }
+
+          return team1IsSeed && team2IsSeed;
+        });
+
+        console.log(`[P6判定] hasSeedVsSeed: ${hasSeedVsSeed}`);
+        console.log(`[P6判定] 選択パターン: ${hasSeedVsSeed ? "adjacent" : "dispersed"}`);
+
+        // シード同士が対戦する場合はP6_ADJACENT、しない場合はP6（分散）
+        seedLayout = hasSeedVsSeed ? "adjacent" : "dispersed";
+        config = getP6PatternConfig(seedLayout);
+
+        console.log(`[P6判定] seedLayout: ${seedLayout}`);
+      } else {
+        config = getPatternConfig(pattern);
+      }
+    } else {
+      // フォールバック: 試合数から判定（従来の動作）
+      pattern = getPatternByMatchCount(sortedMatches.length);
+      config = getPatternConfig(pattern);
+    }
 
     // position_noteの優先度定義（数値が小さいほど優先）
     const labelPriority: Record<string, number> = {
@@ -211,13 +305,17 @@ const response = await fetch(
       matches: sortedMatches,
       seedTeams,
       roundLabels: blockRoundLabels,
+      seedLayout,
+      pattern, // 計算したパターンを渡す
     };
   });
 
   // 表示方法を判定
   // - ブロック数が2以上: MultiBlockBracket使用
-  // - それ以外: TournamentBlock使用（試合数に関わらず）
-  const shouldUseMultiBlock = blockData.length >= 2;
+  // - いずれかのブロックの試合数が8以上: MultiBlockBracket使用（大規模トーナメント対応）
+  // - それ以外: TournamentBlock使用
+  const hasLargeBlock = blockData.some(block => block.matches.length >= 8);
+  const shouldUseMultiBlock = blockData.length >= 2 || hasLargeBlock;
 
   return (
     <>
@@ -328,6 +426,7 @@ const response = await fetch(
                   seedTeams={seedTeams}
                   sportConfig={sportConfig || undefined}
                   roundLabels={singleBlockRoundLabels}
+                  seedLayout={blockData[0]?.seedLayout}
                 />
               );
             })()

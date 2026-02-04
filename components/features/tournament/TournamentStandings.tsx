@@ -402,8 +402,71 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
         </CardContent>
       </Card>
 
-      {/* ブロック別順位表 */}
-      {standings.map((block) => (
+      {/* ブロック別順位表 / トーナメント形式の場合はフェーズ統合順位表 */}
+      {(() => {
+        // トーナメント形式の場合、フェーズごとに統合
+        const standingsToDisplay: BlockStanding[] = [];
+
+        // フェーズごとにグループ化
+        const phaseGroups = new Map<string, BlockStanding[]>();
+        standings.forEach(block => {
+          if (!phaseGroups.has(block.phase)) {
+            phaseGroups.set(block.phase, []);
+          }
+          phaseGroups.get(block.phase)!.push(block);
+        });
+
+        // 各フェーズを処理
+        phaseGroups.forEach((blocks, phase) => {
+          if (isTournamentFormat(phase)) {
+            // トーナメント形式：フェーズ内の全ブロックを統合
+            // 1. 全チームを収集
+            const teamMap = new Map<number, TeamStanding>();
+
+            blocks.forEach(block => {
+              block.teams.forEach(team => {
+                const existingTeam = teamMap.get(team.tournament_team_id);
+
+                if (!existingTeam) {
+                  // 初めて見るチーム：そのまま登録
+                  teamMap.set(team.tournament_team_id, team);
+                } else {
+                  // 既存チーム：より有効な順位を選択
+                  // 順位が設定されている（position > 0）方を優先
+                  // 両方設定されている場合は、より小さい順位（上位）を優先
+                  if (team.position > 0 && (existingTeam.position === 0 || team.position < existingTeam.position)) {
+                    teamMap.set(team.tournament_team_id, team);
+                  }
+                }
+              });
+            });
+
+            // 2. 順位でソート
+            const sortedTeams = Array.from(teamMap.values()).sort((a, b) => {
+              // position=0は未確定扱いで最後に
+              if (a.position === 0 && b.position === 0) return 0;
+              if (a.position === 0) return 1;
+              if (b.position === 0) return -1;
+              return a.position - b.position;
+            });
+
+            // 統合された順位表を作成
+            standingsToDisplay.push({
+              match_block_id: blocks[0].match_block_id, // 代表ID
+              phase: phase,
+              display_round_name: phase === 'preliminary' ? '予選トーナメント' : '決勝トーナメント',
+              block_name: '', // 統合のためブロック名なし
+              teams: sortedTeams,
+              remarks: blocks[0].remarks,
+            });
+          } else {
+            // リーグ形式：従来通りブロック別に表示
+            standingsToDisplay.push(...blocks);
+          }
+        });
+
+        return standingsToDisplay;
+      })().map((block) => (
         <Card key={block.match_block_id}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -490,9 +553,21 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
                       <td className="py-2 md:py-3 px-2 md:px-3">
                         <div className="flex items-center">
                           <span className="hidden md:inline-block mr-2">
-                            {team.matches_played === 0 ? <span className="text-gray-400">-</span> : team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />}
+                            {/* トーナメント形式ではmatches_playedに関わらず順位を表示 */}
+                            {isTournamentFormat(block.phase) ? (
+                              team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              team.matches_played === 0 ? <span className="text-gray-400">-</span> : team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />
+                            )}
                           </span>
-                          <span className="font-bold text-base md:text-lg">{team.matches_played === 0 ? '-' : team.position}</span>
+                          <span className="font-bold text-base md:text-lg">
+                            {/* トーナメント形式ではmatches_playedに関わらず順位を表示 */}
+                            {isTournamentFormat(block.phase) ? (
+                              team.position > 0 ? team.position : '-'
+                            ) : (
+                              team.matches_played === 0 ? '-' : team.position
+                            )}
+                          </span>
                         </div>
                       </td>
                       <td className="py-2 md:py-3 px-2 md:px-3">

@@ -162,7 +162,23 @@ export async function POST(
 
       // 新しい振分情報を保存（tournament_team_idを使用して特定のエントリーのみ更新）
       for (const block of blocks) {
+        // 重複チェック用のSet
+        const usedPositions = new Set<number>();
+
         for (const team of block.teams) {
+          // block_positionの重複チェック
+          if (usedPositions.has(team.block_position)) {
+            console.error(`[Draw Save API] ⚠️ Duplicate block_position detected: ${block.block_name} position ${team.block_position}`);
+            return NextResponse.json(
+              {
+                success: false,
+                error: `${block.block_name}ブロックの位置${team.block_position}に複数のチームが割り当てられています。組合せを確認してください。`
+              },
+              { status: 400 }
+            );
+          }
+          usedPositions.add(team.block_position);
+
           await db.execute(`
             UPDATE t_tournament_teams
             SET assigned_block = ?, block_position = ?

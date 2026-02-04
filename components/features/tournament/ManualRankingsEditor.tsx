@@ -76,6 +76,7 @@ interface FinalTournamentBlock {
 interface ManualRankingsEditorProps {
   tournamentId: number;
   blocks: Block[];
+  preliminaryFormatType?: string; // 'league' or 'tournament'
   finalFormatType?: string; // 'league' or 'tournament'
   finalMatches?: FinalMatch[];
   finalRankings?: {
@@ -83,9 +84,10 @@ interface ManualRankingsEditorProps {
     team_rankings: FinalRanking[];
     remarks: string | null;
   } | null;
+  promotionRequirements?: string[]; // e.g., ["A_1", "A_2", "B_1", "B_2"]
 }
 
-export default function ManualRankingsEditor({ tournamentId, blocks, finalFormatType = 'tournament', finalMatches = [], finalRankings = null }: ManualRankingsEditorProps) {
+export default function ManualRankingsEditor({ tournamentId, blocks, preliminaryFormatType = 'league', finalFormatType = 'tournament', finalMatches = [], finalRankings = null, promotionRequirements = [] }: ManualRankingsEditorProps) {
   // タブの状態管理（予選/決勝）
   const [activeTab, setActiveTab] = useState<'preliminary' | 'final'>('preliminary');
 
@@ -294,15 +296,56 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
     }
   };
 
-  // 手動調整が必要なブロックかチェック（同順位が存在するか）
-  const hasManualAdjustmentNeeded = (teamRankings: TeamRanking[]): boolean => {
+  // 手動調整が必要なブロックかチェック（決勝進出に影響する順位で同順位が存在するか）
+  const hasManualAdjustmentNeeded = (teamRankings: TeamRanking[], block: Block): boolean => {
     if (teamRankings.length === 0) return false;
 
-    const positions = teamRankings.map(team => team.position);
-    const uniquePositions = new Set(positions);
+    // トーナメント形式の場合は「要調整」タグを表示しない
+    if (block.phase === 'preliminary' && preliminaryFormatType === 'tournament') {
+      return false;
+    }
+    if (block.phase === 'final' && finalFormatType === 'tournament') {
+      return false;
+    }
 
-    // 同じ順位が複数存在する場合、手動調整が必要
-    return positions.length !== uniquePositions.size;
+    // 予選ブロックでない場合は従来のロジック（全順位で同順位チェック）
+    if (block.phase !== 'preliminary') {
+      const positions = teamRankings.map(team => team.position);
+      const uniquePositions = new Set(positions);
+      return positions.length !== uniquePositions.size;
+    }
+
+    // 予選ブロックの場合：決勝進出に必要な順位のみチェック
+    // promotionRequirements から当該ブロックの必要順位を抽出
+    // 例: block_name = "A" の場合、"A_1", "A_2", "A_3" などから順位を抽出
+    const blockPrefix = block.block_name;
+    const requiredPositions = new Set<number>();
+
+    promotionRequirements.forEach(requirement => {
+      // "A_1", "B_2", "C_3" などの形式を想定
+      const match = requirement.match(/^([A-Z]+)_(\d+)$/);
+      if (match) {
+        const [, reqBlock, posStr] = match;
+        if (reqBlock === blockPrefix) {
+          requiredPositions.add(parseInt(posStr, 10));
+        }
+      }
+    });
+
+    // 必要な順位が指定されていない場合は、従来のロジック（全順位で同順位チェック）
+    if (requiredPositions.size === 0) {
+      const positions = teamRankings.map(team => team.position);
+      const uniquePositions = new Set(positions);
+      return positions.length !== uniquePositions.size;
+    }
+
+    // 決勝進出に必要な順位のみチェック
+    const teamsInRequiredPositions = teamRankings.filter(team => requiredPositions.has(team.position));
+    const positionsInRequired = teamsInRequiredPositions.map(team => team.position);
+    const uniquePositionsInRequired = new Set(positionsInRequired);
+
+    // 必要順位内で同じ順位が複数存在する場合、手動調整が必要
+    return positionsInRequired.length !== uniquePositionsInRequired.size;
   };
 
 
@@ -597,14 +640,20 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
               .filter(block => block.phase === 'preliminary')
               .map((block) => {
                 const blockIndex = editedBlocks.findIndex(b => b.match_block_id === block.match_block_id);
-                const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings);
+                const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings, block);
                 return (
           <Card key={block.match_block_id} className={`h-fit ${needsAdjustment ? 'border-2 border-yellow-400 shadow-lg' : ''}`}>
             <CardHeader className={needsAdjustment ? 'bg-yellow-50' : ''}>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
-                    {block.phase === 'preliminary' ? `予選${block.block_name}ブロック` : block.display_round_name}
+                    {(() => {
+                      if (block.phase === 'preliminary') {
+                        // 統合ブロックの場合は「予選トーナメント」、それ以外は「予選Aブロック」など
+                        return block.block_name === 'preliminary_unified' ? '予選トーナメント' : `予選${block.block_name}ブロック`;
+                      }
+                      return block.display_round_name;
+                    })()}
                   </div>
                   <Trophy className="w-4 h-4" />
                   {needsAdjustment && (
@@ -654,10 +703,19 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-sm">{team.team_name}</div>
-                        <div className="text-xs text-gray-600">
-                          {team.points}pt ({team.wins}W {team.draws}D {team.losses}L) 
-                          得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
-                        </div>
+                        {/* リーグ戦の場合のみ戦績情報を表示 */}
+                        {block.phase === 'preliminary' && preliminaryFormatType === 'league' && (
+                          <div className="text-xs text-gray-600">
+                            {team.points}pt ({team.wins}W {team.draws}D {team.losses}L)
+                            得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
+                          </div>
+                        )}
+                        {block.phase === 'final' && finalFormatType === 'league' && (
+                          <div className="text-xs text-gray-600">
+                            {team.points}pt ({team.wins}W {team.draws}D {team.losses}L)
+                            得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -701,14 +759,21 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
                 .filter(block => block.phase === 'final')
                 .map((block) => {
                   const blockIndex = editedBlocks.findIndex(b => b.match_block_id === block.match_block_id);
-                  const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings);
+                  const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings, block);
                   return (
                     <Card key={block.match_block_id} className={`h-fit ${needsAdjustment ? 'border-2 border-yellow-400 shadow-lg' : ''}`}>
                       <CardHeader className={needsAdjustment ? 'bg-yellow-50' : ''}>
                         <CardTitle className="flex items-center justify-between">
                           <div className="flex items-center">
                             <div className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(block.block_name)}`}>
-                              {block.display_round_name || block.block_name}
+                              {(() => {
+                                if (block.phase === 'preliminary') {
+                                  return block.block_name === 'preliminary_unified' ? '予選トーナメント' : `予選${block.block_name}ブロック`;
+                                } else if (block.phase === 'final') {
+                                  return block.block_name === 'final_unified' ? '決勝トーナメント' : (block.display_round_name || block.block_name);
+                                }
+                                return block.display_round_name || block.block_name;
+                              })()}
                             </div>
                             <Trophy className="w-4 h-4" />
                             {needsAdjustment && (
@@ -758,10 +823,19 @@ export default function ManualRankingsEditor({ tournamentId, blocks, finalFormat
                                   </div>
                                   <div className="flex-1">
                                     <div className="font-medium text-sm">{team.team_name}</div>
-                                    <div className="text-xs text-gray-600">
-                                      {team.points}pt ({team.wins}W {team.draws}D {team.losses}L)
-                                      得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
-                                    </div>
+                                    {/* リーグ戦の場合のみ戦績情報を表示 */}
+                                    {block.phase === 'preliminary' && preliminaryFormatType === 'league' && (
+                                      <div className="text-xs text-gray-600">
+                                        {team.points}pt ({team.wins}W {team.draws}D {team.losses}L)
+                                        得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
+                                      </div>
+                                    )}
+                                    {block.phase === 'final' && finalFormatType === 'league' && (
+                                      <div className="text-xs text-gray-600">
+                                        {team.points}pt ({team.wins}W {team.draws}D {team.losses}L)
+                                        得失点差: {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}

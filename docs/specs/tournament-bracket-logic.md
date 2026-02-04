@@ -239,6 +239,110 @@
 
 ---
 
+## 統合ブロック対応（2026年2月実装）
+
+### 概要
+
+トーナメント形式の大会では、複数の予選ブロック（A, B, C, D）を`preliminary_unified`という統合ブロックで管理する。
+しかし、画面表示では各ブロックを個別に表示する必要がある。
+
+### 問題と解決策
+
+#### 問題
+- データベースでは全ブロックが1つの`match_block_id`にまとめられている
+- 試合の`match_code`は`A1`, `A2`, `B1`, `B2`のようにブロックプレフィックス付き
+- 従来のコードは単一ブロックのみ想定していた
+
+#### 解決策（TournamentBracket.tsx）
+
+```typescript
+// 1. match_codeからブロック名を抽出
+const blockMap = new Map<string, BracketMatch[]>();
+mainMatches.forEach((match) => {
+  let blockName = match.block_name || "main";
+
+  // 統合ブロックの場合は、match_codeの先頭文字をブロック名として使用
+  if (blockName === 'preliminary_unified' || blockName === 'final_unified') {
+    const matchCodePrefix = match.match_code.match(/^([A-Z])/);
+    if (matchCodePrefix) {
+      blockName = matchCodePrefix[1]; // "A", "B", "C", etc.
+    }
+  }
+
+  if (!blockMap.has(blockName)) {
+    blockMap.set(blockName, []);
+  }
+  blockMap.get(blockName)!.push(match);
+});
+
+// 2. MultiBlockBracketの使用条件
+const hasLargeBlock = blockData.some(block => block.matches.length >= 8);
+const shouldUseMultiBlock = blockData.length >= 2 || hasLargeBlock;
+```
+
+### 重複ブロック作成の防止（create-new/route.ts）
+
+#### 問題
+統合ブロックの作成時、`blockMap`に統合ブロックキー自体を登録していなかったため、
+ループ内で重複して作成されていた。
+
+#### 解決策
+
+```typescript
+const unifiedBlockId = Number(blockResult.lastInsertRowid);
+
+// 統合ブロックキー自体をblockMapに登録（重複作成防止）
+blockMap.set(unifiedBlockKey, unifiedBlockId);
+
+// 同じフェーズの全ブロックを統合ブロックにマッピング
+Array.from(uniqueBlocks)
+  .filter(key => key.startsWith(`${phase}_`))
+  .forEach(key => {
+    blockMap.set(key, unifiedBlockId);
+  });
+```
+
+### 順位表の形式別表示（TournamentStandings.tsx）
+
+#### トーナメント形式の特徴
+- 試合数（matches_played）がカウントされない
+- 順位は試合結果から自動計算
+
+#### 修正内容
+
+```typescript
+// トーナメント形式では試合数チェックをスキップ
+<span className="font-bold text-base md:text-lg">
+  {isTournamentFormat(block.phase) ? (
+    team.position > 0 ? team.position : '-'
+  ) : (
+    team.matches_played === 0 ? '-' : team.position
+  )}
+</span>
+```
+
+### 手動順位設定画面のブロック名表示
+
+#### 修正前
+- `preliminary_unified` → "予選preliminary_unifiedブロック"（冗長）
+
+#### 修正後
+- `preliminary_unified` → "予選トーナメント"
+- `A`, `B`, `C` → "予選Aブロック", "予選Bブロック", ...
+
+```typescript
+{(() => {
+  if (block.phase === 'preliminary') {
+    return block.block_name === 'preliminary_unified'
+      ? '予選トーナメント'
+      : `予選${block.block_name}ブロック`;
+  }
+  return block.display_round_name;
+})()}
+```
+
+---
+
 ## 描画仕様
 
 ### レイアウト
@@ -247,4 +351,3 @@
 - 各ラウンドは1カラム
 - カード間の接続線はSVGで描画
 - 後続ラウンドのカードは、前ラウンドの対応するカード群の**中央**に配置する
-

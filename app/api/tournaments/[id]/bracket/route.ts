@@ -34,9 +34,12 @@ export async function GET(
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
 
-    // 大会のformat_idを取得
+    // 大会のformat_idとtarget_team_countを取得
     const tournamentResult = await db.execute(
-      'SELECT format_id FROM t_tournaments WHERE tournament_id = ?',
+      `SELECT t.format_id, f.target_team_count
+       FROM t_tournaments t
+       JOIN m_tournament_formats f ON t.format_id = f.format_id
+       WHERE t.tournament_id = ?`,
       [tournamentId]
     );
 
@@ -48,6 +51,7 @@ export async function GET(
     }
 
     const formatId = tournamentResult.rows[0].format_id as number;
+    const targetTeamCount = tournamentResult.rows[0].target_team_count as number;
 
     // まず基本的なクエリでデータを取得（多競技対応データ含む）
     const query = `
@@ -78,7 +82,10 @@ export async function GET(
         mb.match_type,
         mb.block_name,
         mb.display_round_name,
-        mt.position_note
+        mt.position_note,
+        mt.team1_source,
+        mt.team2_source,
+        mt.is_bye_match
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -169,6 +176,9 @@ export async function GET(
         block_name: row.block_name as string,
         display_round_name: row.display_round_name as string | undefined,
         position_note: row.position_note as string | undefined,
+        team1_source: row.team1_source as string | undefined,
+        team2_source: row.team2_source as string | undefined,
+        is_bye_match: Boolean(row.is_bye_match || 0),
       };
 
       // デバッグログ
@@ -224,7 +234,9 @@ export async function GET(
       success: true,
       data: bracketData,
       // 多競技対応：スポーツ設定を追加
-      sport_config: sportConfig
+      sport_config: sportConfig,
+      // パターン判定用のチーム数
+      target_team_count: targetTeamCount
     });
 
   } catch (error) {
