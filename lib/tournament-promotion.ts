@@ -139,8 +139,8 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_block_id = ?
-        AND ml.team1_id IS NOT NULL 
-        AND ml.team2_id IS NOT NULL
+        AND ml.team1_tournament_team_id IS NOT NULL
+        AND ml.team2_tournament_team_id IS NOT NULL
       `,
       args: [matchBlockId]
     });

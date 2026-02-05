@@ -65,7 +65,7 @@ export async function GET(
     console.log('Checking team assignment status...');
     const teamAssignmentResult = await db.execute(`
       SELECT COUNT(*) as total_matches,
-             COUNT(CASE WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 1 END) as assigned_matches
+             COUNT(CASE WHEN team1_tournament_team_id IS NOT NULL AND team2_tournament_team_id IS NOT NULL THEN 1 END) as assigned_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
@@ -106,7 +106,7 @@ export async function GET(
         ml.confirmed_by,
         mb.phase,
         mb.display_round_name,
-        COALESCE(mt.block_name, mb.block_name) as block_name,
+        COALESCE(NULLIF(mt.block_name, ''), mb.block_name) as block_name,
         mb.match_type,
         mb.block_order,
         -- m_match_templatesからround_name、day_number、team1_source、team2_source、is_bye_matchを取得

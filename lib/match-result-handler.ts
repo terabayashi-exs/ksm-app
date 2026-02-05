@@ -154,28 +154,76 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         // エラーが発生しても試合確定処理は成功とする
       }
 
-      // 決勝トーナメントの場合は決勝順位も更新
-      const blockPhaseResult = await db.execute({
-        sql: 'SELECT phase FROM t_match_blocks WHERE match_block_id = ?',
+      // トーナメント形式の場合は順位設定を実行（予選・決勝両方対応）
+      // MIGRATION NOTE: preliminary_format_type='tournament'と final_format_type='tournament'の両方に対応
+      const blockInfoResult = await db.execute({
+        sql: `
+          SELECT
+            mb.phase,
+            CASE
+              WHEN mb.phase = 'preliminary' THEN f.preliminary_format_type
+              WHEN mb.phase = 'final' THEN f.final_format_type
+              ELSE NULL
+            END as format_type
+          FROM t_match_blocks mb
+          JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
+          JOIN m_tournament_formats f ON t.format_id = f.format_id
+          WHERE mb.match_block_id = ?
+        `,
         args: [matchBlockId]
       });
-      
-      if (blockPhaseResult.rows.length > 0 && blockPhaseResult.rows[0].phase === 'final') {
-        // テンプレートベースの順位設定を実行
-        try {
-          const winnerId = match.winner_team_id as string | null;
-          const loserId = match.team1_id === winnerId ? match.team2_id as string : match.team1_id as string;
-          
-          if (winnerId && loserId) {
-            await handleTemplateBasedPositions(matchId, winnerId, loserId, tournamentId);
+
+      if (blockInfoResult.rows.length > 0) {
+        const blockInfo = blockInfoResult.rows[0];
+        const phase = blockInfo.phase as string;
+        const formatType = blockInfo.format_type as string | null;
+
+        // トーナメント形式の場合のみ順位設定を実行
+        if (formatType === 'tournament') {
+          console.log(`[MATCH_CONFIRM] トーナメント形式（${phase}）の順位設定を実行`);
+
+          // テンプレートベースの順位設定を実行
+          // MIGRATION NOTE: tournament_team_idベースに変更
+          try {
+            const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
+            const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+            const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
+
+            // 敗者のtournament_team_idを特定
+            let loserTournamentTeamId: number | null = null;
+            if (winnerTournamentTeamId && team1TournamentTeamId && team2TournamentTeamId) {
+              loserTournamentTeamId = winnerTournamentTeamId === team1TournamentTeamId
+                ? team2TournamentTeamId
+                : team1TournamentTeamId;
+            }
+
+            // team_idベースのフォールバック（将来削除予定）
+            const winnerId = match.winner_team_id as string | null;
+            const loserId = match.team1_id === winnerId ? match.team2_id as string : match.team1_id as string;
+
+            if ((winnerTournamentTeamId && loserTournamentTeamId) || (winnerId && loserId)) {
+              console.log(`[MATCH_CONFIRM] テンプレートベース順位設定: winner_tournament_team_id=${winnerTournamentTeamId}, loser_tournament_team_id=${loserTournamentTeamId}`);
+              await handleTemplateBasedPositions(
+                matchId,
+                winnerId,
+                loserId,
+                tournamentId,
+                winnerTournamentTeamId,
+                loserTournamentTeamId
+              );
+            } else {
+              console.log(`[MATCH_CONFIRM] 勝者・敗者の特定ができないため、順位設定をスキップ`);
+            }
+          } catch (templateError) {
+            console.error(`[MATCH_CONFIRM] テンプレートベース順位設定エラー:`, templateError);
+            // エラーでも処理は継続
           }
-        } catch (templateError) {
-          console.error(`[MATCH_CONFIRM] テンプレートベース順位設定エラー:`, templateError);
-          // エラーでも処理は継続
+
+          // 決勝の場合は従来の順位計算も実行（フォールバック）
+          if (phase === 'final') {
+            await updateFinalTournamentRankings(tournamentId);
+          }
         }
-        
-        // 従来の決勝順位計算も実行（フォールバック）
-        await updateFinalTournamentRankings(tournamentId);
       }
       
       // 大会完了チェック

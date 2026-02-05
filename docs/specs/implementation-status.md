@@ -172,7 +172,42 @@
       - 大会作成: `create-new/route.ts`
       - その他: `TournamentResults.tsx`, `TournamentSchedule.tsx`, `types.ts`
 
+### ✅ **Phase 9: 複数エントリーチーム対応完了（2026-02-05完了）**
 
+23. **team_id → tournament_team_id 移行完了**
+    - 同一マスターチームからの複数エントリー参加に完全対応
+    - データベース設計の変更とアプリケーション全体の移行完了
+
+    - **主な変更内容**
+      - 主キーを `team_id` (マスターチームID) から `tournament_team_id` (大会参加エントリーID) に変更
+      - 後方互換性のため `team_id` フィールドは保持
+      - 全20ファイルの移行完了（試合結果、順位表、戦績表、辞退処理など）
+
+    - **修正対象テーブル**
+      - `t_matches_live`: `team1_tournament_team_id`, `team2_tournament_team_id` 使用
+      - `t_matches_final`: `winner_tournament_team_id` 追加
+      - `t_match_blocks`: `team_rankings` JSON内で `tournament_team_id` 使用
+
+    - **修正ファイル（20件）**
+      - 試合結果: `lib/match-results-calculator.ts`, `lib/match-result-handler.ts`
+      - 順位表計算: `lib/standings-calculator.ts`, `lib/sport-standings-calculator.ts`
+      - トーナメント進行: `lib/tournament-progression.ts`, `lib/tournament-promotion.ts`
+      - 辞退処理: `lib/withdrawal-processor.ts`
+      - ステータス管理: `lib/tournament-status.ts`, `lib/notifications.ts`
+      - 型定義: `lib/types.ts`, `lib/tournament-bracket/types.ts`
+      - テンプレート処理: `lib/template-position-handler.ts`
+      - API層: `app/api/matches/[id]/confirm/route.ts`, `app/api/matches/[id]/cancel/route.ts`
+      - 試合管理: `app/api/tournaments/[id]/matches/route.ts`, `app/api/tournaments/[id]/draw/route.ts`
+      - 組合せ画面: `app/admin/tournaments/[id]/draw/page.tsx`
+      - 試合入力画面: `app/admin/tournaments/[id]/matches/page.tsx`
+      - 大会複製: `app/api/admin/tournaments/duplicate/route.ts`
+
+    - **実装の特徴**
+      - `tournament_team_id` を第一優先、`team_id` をフォールバックとする設計
+      - SQL の `NULLIF()` を使用した空文字列のnull変換対応
+      - リーグ戦の組合せ作成時のブロックポジションからの自動割当
+      - 戦績表・順位表での正しいチーム名解決
+      - 決勝トーナメントブロックの表示名変換（`final_unified` → `決勝トーナメント`）
 
 ## 🔮 拡張可能性・将来機能
 

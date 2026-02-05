@@ -924,12 +924,23 @@ export default function AdminMatchesPage() {
   const getBlockColor = (blockName: string) => {
     const colors: { [key: string]: string } = {
       'A': 'bg-blue-600 text-white',
-      'B': 'bg-green-600 text-white', 
+      'B': 'bg-green-600 text-white',
       'C': 'bg-yellow-600 text-white',
       'D': 'bg-purple-600 text-white',
       '決勝トーナメント': 'bg-red-600 text-white',
+      'final_unified': 'bg-red-600 text-white',
+      'preliminary_unified': 'bg-orange-600 text-white',
     };
     return colors[blockName] || 'bg-secondary text-secondary-foreground';
+  };
+
+  // ブロック名を表示用に変換
+  const getBlockDisplayName = (blockName: string) => {
+    const displayNames: { [key: string]: string } = {
+      'final_unified': '決勝トーナメント',
+      'preliminary_unified': '予選トーナメント',
+    };
+    return displayNames[blockName] || blockName;
   };
 
   if (loading) {
@@ -1076,7 +1087,7 @@ export default function AdminMatchesPage() {
                   className="flex items-center space-x-2"
                 >
                   <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBlockColor(blockName)}`}>
-                    {blockName}
+                    {getBlockDisplayName(blockName)}
                   </span>
                   <span className="text-sm">
                     ({matches.filter(m => m.block_name === blockName).length})
@@ -1123,7 +1134,8 @@ export default function AdminMatchesPage() {
                   block.block_name === 'B' ? 'border-l-green-500' :
                   block.block_name === 'C' ? 'border-l-yellow-500' :
                   block.block_name === 'D' ? 'border-l-purple-500' :
-                  block.block_name === '決勝トーナメント' ? 'border-l-red-500' :
+                  block.block_name === '決勝トーナメント' || block.block_name === 'final_unified' ? 'border-l-red-500' :
+                  block.block_name === 'preliminary_unified' ? 'border-l-orange-500' :
                   'border-l-gray-500'
                 }`}>
                   <CardHeader className="pb-4">

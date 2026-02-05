@@ -1,3 +1,4 @@
+// MIGRATION NOTE: team_id → tournament_team_id 移行済み (2026-02-04)
 /**
  * トーナメントブラケット用の型定義
  */
@@ -5,8 +6,10 @@
 export interface BracketMatch {
   match_id: number;
   match_code: string;
+  // MIGRATION NOTE: マスターチームID（後方互換性のため残す）
   team1_id?: string;
   team2_id?: string;
+  // MIGRATION NOTE: 大会内固有のチームID（複数エントリー対応）
   team1_tournament_team_id?: number | null;
   team2_tournament_team_id?: number | null;
   team1_display_name: string;
@@ -17,7 +20,9 @@ export interface BracketMatch {
   team1_scores?: number[];
   team2_scores?: number[];
   active_periods?: number[];
+  // MIGRATION NOTE: 勝者ID（後方互換性のため残す）
   winner_team_id?: string;
+  // MIGRATION NOTE: 大会内固有の勝者ID（複数エントリー対応）
   winner_tournament_team_id?: number | null;
   is_draw: boolean;
   is_walkover: boolean;

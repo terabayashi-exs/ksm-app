@@ -1,4 +1,6 @@
 // app/api/tournaments/[id]/draw/route.ts
+// MIGRATION NOTE: team_id → tournament_team_id 移行済み (2026-02-04)
+// 組み合わせ抽選時にはteam1_id/team2_idを設定せず、tournament_team_idのみを使用
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
@@ -11,7 +13,8 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
   try {
     console.log(`[AUTO_CONFIRM_WALKOVER] Checking for walkover matches in tournament ${tournamentId}`);
 
-    // 不戦勝試合を検索（team1_id XOR team2_id が設定されている試合、かつ未確定）
+    // 不戦勝試合を検索（tournament_team_id XOR が設定されている試合、かつ未確定）
+    // MIGRATION NOTE: team_id条件からtournament_team_id条件に変更
     const walkoverMatchesResult = await db.execute(`
       SELECT
         ml.match_id,
@@ -33,8 +36,8 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
       WHERE mb.tournament_id = ?
         AND mf.match_id IS NULL
         AND (
-          (ml.team1_id IS NOT NULL AND ml.team2_id IS NULL)
-          OR (ml.team1_id IS NULL AND ml.team2_id IS NOT NULL)
+          (ml.team1_tournament_team_id IS NOT NULL AND ml.team2_tournament_team_id IS NULL)
+          OR (ml.team1_tournament_team_id IS NULL AND ml.team2_tournament_team_id IS NOT NULL)
         )
     `, [tournamentId]);
 
@@ -52,10 +55,13 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
       const matchCode = match.match_code as string;
       const team1Id = match.team1_id as string | null;
       const team2Id = match.team2_id as string | null;
+      const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+      const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
 
       // 勝者を決定（設定されているチーム）
+      // MIGRATION NOTE: tournament_team_idベースで判定、team_idはフォールバック
+      const winnerTournamentTeamId = team1TournamentTeamId || team2TournamentTeamId;
       const winnerId = team1Id || team2Id;
-      const winnerTournamentTeamId = (team1Id ? match.team1_tournament_team_id : match.team2_tournament_team_id) as number | null;
 
       // t_matches_finalに登録
       await db.execute(`
@@ -196,54 +202,116 @@ export async function POST(
         console.log('[Draw Save API] Using frontend matches data');
 
         for (const match of frontendMatches) {
-          console.log(`[Draw Save API] Updating match ${match.match_id}: team1_id=${match.team1_tournament_team_id}, team2_id=${match.team2_tournament_team_id}`);
+          console.log(`[Draw Save API] Updating match ${match.match_id}: team1_tt_id=${match.team1_tournament_team_id}, team2_tt_id=${match.team2_tournament_team_id}`);
 
           // team1とteam2の両方が存在する場合
+          // MIGRATION NOTE: team_id系フィールドは設定しない（tournament_team_idのみ使用）
           if (match.team1_tournament_team_id && match.team2_tournament_team_id) {
             await db.execute(`
               UPDATE t_matches_live
-              SET team1_id = (SELECT team_id FROM t_tournament_teams WHERE tournament_team_id = ?),
-                  team2_id = (SELECT team_id FROM t_tournament_teams WHERE tournament_team_id = ?),
-                  team1_tournament_team_id = ?,
+              SET team1_tournament_team_id = ?,
                   team2_tournament_team_id = ?
               WHERE match_id = ?
             `, [
-              match.team1_tournament_team_id,
-              match.team2_tournament_team_id,
               match.team1_tournament_team_id,
               match.team2_tournament_team_id,
               match.match_id
             ]);
           }
           // BYE試合：team1のみ
+          // MIGRATION NOTE: team_id系フィールドは設定しない（tournament_team_idのみ使用）
           else if (match.team1_tournament_team_id && !match.team2_tournament_team_id) {
             await db.execute(`
               UPDATE t_matches_live
-              SET team1_id = (SELECT team_id FROM t_tournament_teams WHERE tournament_team_id = ?),
-                  team1_tournament_team_id = ?,
-                  team2_id = NULL,
+              SET team1_tournament_team_id = ?,
                   team2_tournament_team_id = NULL
               WHERE match_id = ?
             `, [
-              match.team1_tournament_team_id,
               match.team1_tournament_team_id,
               match.match_id
             ]);
           }
           // BYE試合：team2のみ
+          // MIGRATION NOTE: team_id系フィールドは設定しない（tournament_team_idのみ使用）
           else if (!match.team1_tournament_team_id && match.team2_tournament_team_id) {
             await db.execute(`
               UPDATE t_matches_live
-              SET team1_id = NULL,
-                  team1_tournament_team_id = NULL,
-                  team2_id = (SELECT team_id FROM t_tournament_teams WHERE tournament_team_id = ?),
+              SET team1_tournament_team_id = NULL,
                   team2_tournament_team_id = ?
               WHERE match_id = ?
             `, [
               match.team2_tournament_team_id,
-              match.team2_tournament_team_id,
               match.match_id
             ]);
+          }
+        }
+      }
+
+      // リーグ戦の場合：blocks情報からtournament_team_idを試合に割り当て
+      // team1_display_name/team2_display_nameのポジション番号とブロック名から
+      // assigned_block/block_positionが一致するtournament_team_idを探して更新
+      console.log('[Draw Save API] Updating league match assignments from block positions');
+
+      // 全試合を取得
+      const allMatchesResult = await db.execute(`
+        SELECT
+          ml.match_id,
+          ml.match_code,
+          ml.team1_display_name,
+          ml.team2_display_name,
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id,
+          mb.block_name,
+          mb.phase
+        FROM t_matches_live ml
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ? AND mb.phase = 'preliminary'
+      `, [tournamentId]);
+
+      // block_name + block_position から tournament_team_id へのマッピングを作成
+      const blockPositionMap = new Map<string, number>();
+      for (const block of blocks) {
+        block.teams.forEach((team: { tournament_team_id: number; block_position: number }, index: number) => {
+          const key = `${block.block_name}-${team.block_position || index + 1}`;
+          blockPositionMap.set(key, team.tournament_team_id);
+        });
+      }
+
+      console.log(`[Draw Save API] Block position map:`, Object.fromEntries(blockPositionMap));
+
+      // team1_display_name/team2_display_nameから position を抽出する関数
+      const extractPosition = (displayName: string): number | null => {
+        // "A1チーム", "A2チーム" などから数字を抽出
+        const match = displayName?.match(/([A-Za-z]+)(\d+)チーム$/);
+        return match ? parseInt(match[2]) : null;
+      };
+
+      // 各試合のtournament_team_idを更新
+      for (const match of allMatchesResult.rows) {
+        const matchId = match.match_id as number;
+        const blockName = match.block_name as string;
+        const team1Display = match.team1_display_name as string;
+        const team2Display = match.team2_display_name as string;
+
+        const team1Pos = extractPosition(team1Display);
+        const team2Pos = extractPosition(team2Display);
+
+        if (team1Pos !== null && team2Pos !== null) {
+          const team1Key = `${blockName}-${team1Pos}`;
+          const team2Key = `${blockName}-${team2Pos}`;
+
+          const team1TournamentTeamId = blockPositionMap.get(team1Key);
+          const team2TournamentTeamId = blockPositionMap.get(team2Key);
+
+          if (team1TournamentTeamId && team2TournamentTeamId) {
+            await db.execute(`
+              UPDATE t_matches_live
+              SET team1_tournament_team_id = ?,
+                  team2_tournament_team_id = ?
+              WHERE match_id = ?
+            `, [team1TournamentTeamId, team2TournamentTeamId, matchId]);
+
+            console.log(`[Draw Save API] Updated match ${matchId}: ${team1Display}(tt_id:${team1TournamentTeamId}) vs ${team2Display}(tt_id:${team2TournamentTeamId})`);
           }
         }
       }

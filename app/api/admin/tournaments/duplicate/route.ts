@@ -565,7 +565,7 @@ async function duplicateTeamAssignments(
   const matchesResult = await db.execute(`
     SELECT * FROM t_matches_live ml
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-    WHERE mb.tournament_id = ? AND ml.team1_id IS NOT NULL
+    WHERE mb.tournament_id = ? AND ml.team1_tournament_team_id IS NOT NULL
   `, [sourceTournamentId]);
 
   for (const match of matchesResult.rows) {

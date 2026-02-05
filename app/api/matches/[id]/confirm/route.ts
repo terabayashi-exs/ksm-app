@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { parseTotalScore } from '@/lib/score-parser';
+import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -165,12 +166,79 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // トーナメント進出処理エラーでも試合確定は成功とする（ログのみ）
     }
 
+    // トーナメント形式の順位設定（予選・決勝両方に対応）
+    try {
+      const tournamentId = liveResult.rows[0].tournament_id as number;
+      const matchBlockId = liveMatch.match_block_id as number;
+
+      // ブロック情報とフォーマットタイプを取得
+      const blockInfoResult = await db.execute(`
+        SELECT
+          mb.phase,
+          CASE
+            WHEN mb.phase = 'preliminary' THEN f.preliminary_format_type
+            WHEN mb.phase = 'final' THEN f.final_format_type
+            ELSE NULL
+          END as format_type
+        FROM t_match_blocks mb
+        JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
+        JOIN m_tournament_formats f ON t.format_id = f.format_id
+        WHERE mb.match_block_id = ?
+      `, [matchBlockId]);
+
+      if (blockInfoResult.rows.length > 0) {
+        const blockInfo = blockInfoResult.rows[0];
+        const phase = blockInfo.phase as string;
+        const formatType = blockInfo.format_type as string | null;
+
+        // トーナメント形式の場合のみ順位設定を実行
+        if (formatType === 'tournament') {
+          console.log(`[MATCH_CONFIRM] トーナメント形式（${phase}）の順位設定を実行`);
+
+          const winnerTournamentTeamId = finalWinnerTournamentTeamId as number | null;
+          const team1TournamentTeamId = liveMatch.team1_tournament_team_id as number | null;
+          const team2TournamentTeamId = liveMatch.team2_tournament_team_id as number | null;
+
+          // 敗者のtournament_team_idを特定
+          let loserTournamentTeamId: number | null = null;
+          if (winnerTournamentTeamId && team1TournamentTeamId && team2TournamentTeamId) {
+            loserTournamentTeamId = winnerTournamentTeamId === team1TournamentTeamId
+              ? team2TournamentTeamId
+              : team1TournamentTeamId;
+          }
+
+          // team_idベースのフォールバック（将来削除予定）
+          const winnerId = finalWinnerId as string | null;
+          const loserId = liveMatch.team1_id === winnerId
+            ? liveMatch.team2_id as string
+            : liveMatch.team1_id as string;
+
+          if ((winnerTournamentTeamId && loserTournamentTeamId) || (winnerId && loserId)) {
+            console.log(`[MATCH_CONFIRM] テンプレートベース順位設定: winner_tournament_team_id=${winnerTournamentTeamId}, loser_tournament_team_id=${loserTournamentTeamId}`);
+            await handleTemplateBasedPositions(
+              matchId,
+              winnerId,
+              loserId,
+              tournamentId,
+              winnerTournamentTeamId,
+              loserTournamentTeamId
+            );
+          } else {
+            console.log(`[MATCH_CONFIRM] 勝者・敗者の特定ができないため、順位設定をスキップ`);
+          }
+        }
+      }
+    } catch (templateError) {
+      console.error(`[MATCH_CONFIRM] テンプレートベース順位設定エラー:`, templateError);
+      // エラーでも処理は継続
+    }
+
     // 順位表を更新
     try {
       // tournament_idはJOINで取得済み
       const tournamentId = liveResult.rows[0].tournament_id as number;
       const matchBlockId = liveMatch.match_block_id as number;
-      
+
       console.log(`[MATCH_CONFIRM] Starting standings update for block ${matchBlockId}, tournament ${tournamentId}`);
       await updateBlockRankingsOnMatchConfirm(matchBlockId, tournamentId);
       console.log(`[MATCH_CONFIRM] ✅ Block ${matchBlockId} standings updated successfully after match ${matchId} confirmation`);
