@@ -47,6 +47,7 @@ scripts/dump-database.js
 scripts/apply-to-*.js
 scripts/test-*.js
 scripts/fix-*.js
+# Note: scripts/*-migration*.mjs などのマイグレーションスクリプトはコミット対象
 
 # development server files
 dev-server.log
