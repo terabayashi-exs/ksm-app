@@ -294,57 +294,65 @@ async function extractTopTeamsDynamic(
         sql: `
           SELECT
             mf.match_code,
-            mf.winner_team_id,
             mf.winner_tournament_team_id,
-            mf.team1_id,
-            mf.team2_id,
             mf.team1_tournament_team_id,
             mf.team2_tournament_team_id,
-            mf.team1_display_name,
-            mf.team2_display_name
+            ml.team1_display_name,
+            ml.team2_display_name,
+            tt1.team_id as team1_team_id,
+            tt2.team_id as team2_team_id
           FROM t_matches_final mf
           JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
+          LEFT JOIN t_matches_live ml ON mf.match_id = ml.match_id
+          LEFT JOIN t_tournament_teams tt1 ON mf.team1_tournament_team_id = tt1.tournament_team_id
+          LEFT JOIN t_tournament_teams tt2 ON mf.team2_tournament_team_id = tt2.tournament_team_id
           WHERE mb.tournament_id = ?
             AND mb.phase = 'final'
-            AND mf.winner_team_id IS NOT NULL
+            AND mf.winner_tournament_team_id IS NOT NULL
         `,
         args: [tournamentId]
       });
 
       matchWinnersResult.rows.forEach(row => {
         const matchCode = row.match_code as string;
-        const winnerTeamId = row.winner_team_id as string;
-        const team1Id = row.team1_id as string;
-        const team2Id = row.team2_id as string;
+        const winnerTournamentTeamId = row.winner_tournament_team_id as number;
         const team1TournamentTeamId = row.team1_tournament_team_id as number | null;
         const team2TournamentTeamId = row.team2_tournament_team_id as number | null;
         const team1DisplayName = row.team1_display_name as string;
         const team2DisplayName = row.team2_display_name as string;
+        const team1TeamId = row.team1_team_id as string | null;
+        const team2TeamId = row.team2_team_id as string | null;
+
+        if (!team1TournamentTeamId || !team2TournamentTeamId) {
+          console.warn(`[PROMOTION] ${matchCode}: tournament_team_id が見つかりません`);
+          return;
+        }
 
         // 勝者を追加
         const winnerKey = `${matchCode}_winner`;
-        const winnerName = winnerTeamId === team1Id ? team1DisplayName : team2DisplayName;
-        const winnerTournamentTeam = winnerTeamId === team1Id ? team1TournamentTeamId : team2TournamentTeamId;
+        const isTeam1Winner = winnerTournamentTeamId === team1TournamentTeamId;
+        const winnerName = isTeam1Winner ? team1DisplayName : team2DisplayName;
+        const winnerTeamId = isTeam1Winner ? team1TeamId : team2TeamId;
 
         promotions[winnerKey] = {
-          tournament_team_id: winnerTournamentTeam || undefined,
-          team_id: winnerTeamId,
+          tournament_team_id: winnerTournamentTeamId,
+          team_id: winnerTeamId || `unknown_${winnerTournamentTeamId}`,
           team_name: winnerName
         };
-        console.log(`[PROMOTION] ${matchCode}の勝者: ${winnerName}(team_id:${winnerTeamId}, tournament_team_id:${winnerTournamentTeam})`);
+        console.log(`[PROMOTION] ${matchCode}の勝者: ${winnerName}(tournament_team_id:${winnerTournamentTeamId})`);
 
         // 敗者を追加
         const loserKey = `${matchCode}_loser`;
-        const loserTeamId = winnerTeamId === team1Id ? team2Id : team1Id;
-        const loserName = winnerTeamId === team1Id ? team2DisplayName : team1DisplayName;
-        const loserTournamentTeam = winnerTeamId === team1Id ? team2TournamentTeamId : team1TournamentTeamId;
+        const loserTournamentTeamId = isTeam1Winner ? team2TournamentTeamId : team1TournamentTeamId;
+        const loserName = isTeam1Winner ? team2DisplayName : team1DisplayName;
+        const loserTeamId = isTeam1Winner ? team2TeamId : team1TeamId;
 
         promotions[loserKey] = {
-          tournament_team_id: loserTournamentTeam || undefined,
-          team_id: loserTeamId,
+          tournament_team_id: loserTournamentTeamId,
+          team_id: loserTeamId || `unknown_${loserTournamentTeamId}`,
           team_name: loserName
         };
-        console.log(`[PROMOTION] ${matchCode}の敗者: ${loserName}(team_id:${loserTeamId}, tournament_team_id:${loserTournamentTeam})`);
+        console.log(`[PROMOTION] ${matchCode}の敗者: ${loserName}(tournament_team_id:${loserTournamentTeamId})`);
       });
     } catch (matchError) {
       console.error(`[PROMOTION] 試合勝者・敗者取得エラー:`, matchError);
@@ -440,8 +448,6 @@ async function updateFinalTournamentMatches(
         SELECT
           ml.match_id,
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
           ml.team1_tournament_team_id,
           ml.team2_tournament_team_id,
           ml.team1_display_name,
@@ -525,10 +531,8 @@ async function updateFinalTournamentMatches(
     for (const match of matchesResult.rows) {
       const matchId = match.match_id as number;
       const matchCode = match.match_code as string;
-      const currentTeam1Id = match.team1_id as string | null;
-      const currentTeam2Id = match.team2_id as string | null;
-      const currentTeam1TournamentTeamId = match.team1_tournament_team_id as number | null; // 複数エントリーチーム対応
-      const currentTeam2TournamentTeamId = match.team2_tournament_team_id as number | null; // 複数エントリーチーム対応
+      const currentTeam1TournamentTeamId = match.team1_tournament_team_id as number | null;
+      const currentTeam2TournamentTeamId = match.team2_tournament_team_id as number | null;
       const currentTeam1Name = match.team1_display_name as string;
       const currentTeam2Name = match.team2_display_name as string;
       const isConfirmed = Boolean(match.is_confirmed);
@@ -539,10 +543,8 @@ async function updateFinalTournamentMatches(
         continue;
       }
 
-      let newTeam1Id = currentTeam1Id;
-      let newTeam2Id = currentTeam2Id;
-      let newTeam1TournamentTeamId: number | null = currentTeam1TournamentTeamId; // 現在の値で初期化
-      let newTeam2TournamentTeamId: number | null = currentTeam2TournamentTeamId; // 現在の値で初期化
+      let newTeam1TournamentTeamId: number | null = currentTeam1TournamentTeamId;
+      let newTeam2TournamentTeamId: number | null = currentTeam2TournamentTeamId;
       let newTeam1Name = currentTeam1Name;
       let newTeam2Name = currentTeam2Name;
       let hasUpdate = false;
@@ -553,32 +555,28 @@ async function updateFinalTournamentMatches(
       // team1_sourceから進出チームを取得
       if (template.team1_source && promotions[template.team1_source]) {
         const newTeam1 = promotions[template.team1_source];
-        // 複数エントリーチーム対応: tournament_team_idも比較
         const team1TournamentTeamIdChanged = newTeam1.tournament_team_id !== currentTeam1TournamentTeamId;
-        const team1Changed = newTeam1.team_id !== currentTeam1Id || newTeam1.team_name !== currentTeam1Name || team1TournamentTeamIdChanged;
+        const team1Changed = newTeam1.team_name !== currentTeam1Name || team1TournamentTeamIdChanged;
 
         if (team1Changed) {
-          newTeam1Id = newTeam1.team_id;
           newTeam1TournamentTeamId = newTeam1.tournament_team_id || null;
           newTeam1Name = newTeam1.team_name;
           hasUpdate = true;
-          console.log(`[PROMOTION] ${matchCode} team1 更新: "${currentTeam1Name}"(team_id:${currentTeam1Id}, tournament_team_id:${currentTeam1TournamentTeamId}) → "${newTeam1.team_name}"(team_id:${newTeam1.team_id}, tournament_team_id:${newTeam1.tournament_team_id})`);
+          console.log(`[PROMOTION] ${matchCode} team1 更新: "${currentTeam1Name}"(tournament_team_id:${currentTeam1TournamentTeamId}) → "${newTeam1.team_name}"(tournament_team_id:${newTeam1.tournament_team_id})`);
         }
       }
 
       // team2_sourceから進出チームを取得
       if (template.team2_source && promotions[template.team2_source]) {
         const newTeam2 = promotions[template.team2_source];
-        // 複数エントリーチーム対応: tournament_team_idも比較
         const team2TournamentTeamIdChanged = newTeam2.tournament_team_id !== currentTeam2TournamentTeamId;
-        const team2Changed = newTeam2.team_id !== currentTeam2Id || newTeam2.team_name !== currentTeam2Name || team2TournamentTeamIdChanged;
+        const team2Changed = newTeam2.team_name !== currentTeam2Name || team2TournamentTeamIdChanged;
 
         if (team2Changed) {
-          newTeam2Id = newTeam2.team_id;
           newTeam2TournamentTeamId = newTeam2.tournament_team_id || null;
           newTeam2Name = newTeam2.team_name;
           hasUpdate = true;
-          console.log(`[PROMOTION] ${matchCode} team2 更新: "${currentTeam2Name}"(team_id:${currentTeam2Id}, tournament_team_id:${currentTeam2TournamentTeamId}) → "${newTeam2.team_name}"(team_id:${newTeam2.team_id}, tournament_team_id:${newTeam2.tournament_team_id})`);
+          console.log(`[PROMOTION] ${matchCode} team2 更新: "${currentTeam2Name}"(tournament_team_id:${currentTeam2TournamentTeamId}) → "${newTeam2.team_name}"(tournament_team_id:${newTeam2.tournament_team_id})`);
         }
       }
 
@@ -591,16 +589,14 @@ async function updateFinalTournamentMatches(
         await db.execute({
           sql: `
             UPDATE t_matches_live
-            SET team1_id = ?,
-                team2_id = ?,
-                team1_tournament_team_id = ?,
+            SET team1_tournament_team_id = ?,
                 team2_tournament_team_id = ?,
                 team1_display_name = ?,
                 team2_display_name = ?,
                 updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
           `,
-          args: [newTeam1Id, newTeam2Id, newTeam1TournamentTeamId, newTeam2TournamentTeamId, newTeam1Name, newTeam2Name, matchId]
+          args: [newTeam1TournamentTeamId, newTeam2TournamentTeamId, newTeam1Name, newTeam2Name, matchId]
         });
 
         console.log(`[PROMOTION] ✅ ${matchCode} 更新完了: [${currentTeam1Name} vs ${currentTeam2Name}] → [${newTeam1Name} vs ${newTeam2Name}]`);
@@ -671,7 +667,6 @@ export interface PromotionValidationIssue {
   expected_team_id: string | null;
   expected_tournament_team_id: number | null;  // 複数エントリーチーム対応
   expected_team_name: string | null;
-  current_team_id: string | null;
   current_tournament_team_id: number | null;   // 複数エントリーチーム対応
   current_team_name: string | null;
   is_placeholder: boolean;  // プレースホルダー表記（"C3位"など）のまま
@@ -725,8 +720,6 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
         SELECT
           ml.match_id,
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
           ml.team1_tournament_team_id,
           ml.team2_tournament_team_id,
           ml.team1_display_name,
@@ -741,6 +734,8 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ?
         LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = ?
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ? AND mb.phase = 'final'
         ORDER BY ml.match_code
       `,
@@ -753,8 +748,6 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
     for (const match of matchesResult.rows) {
       const matchId = match.match_id as number;
       const matchCode = match.match_code as string;
-      const team1Id = match.team1_id as string | null;
-      const team2Id = match.team2_id as string | null;
       const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
       const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
       const team1DisplayName = match.team1_display_name as string;
@@ -770,10 +763,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
         const expectedTeam = promotions[team1Source];
 
         if (expectedTeam) {
-          // tournament_team_idを優先的に比較、なければteam_idで比較（複数エントリーチーム対応）
-          const isMismatch = expectedTeam.tournament_team_id
-            ? team1TournamentTeamId !== expectedTeam.tournament_team_id
-            : team1Id !== expectedTeam.team_id;
+          const isMismatch = team1TournamentTeamId !== expectedTeam.tournament_team_id;
 
           if (isMismatch) {
             const isPlaceholder = team1DisplayName === templateTeam1Display;
@@ -786,7 +776,6 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
               expected_team_id: expectedTeam.team_id,
               expected_tournament_team_id: expectedTeam.tournament_team_id || null,
               expected_team_name: expectedTeam.team_name,
-              current_team_id: team1Id,
               current_tournament_team_id: team1TournamentTeamId,
               current_team_name: team1DisplayName,
               is_placeholder: isPlaceholder,
@@ -809,10 +798,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
         const expectedTeam = promotions[team2Source];
 
         if (expectedTeam) {
-          // tournament_team_idを優先的に比較、なければteam_idで比較（複数エントリーチーム対応）
-          const isMismatch = expectedTeam.tournament_team_id
-            ? team2TournamentTeamId !== expectedTeam.tournament_team_id
-            : team2Id !== expectedTeam.team_id;
+          const isMismatch = team2TournamentTeamId !== expectedTeam.tournament_team_id;
 
           if (isMismatch) {
             const isPlaceholder = team2DisplayName === templateTeam2Display;
@@ -825,7 +811,6 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
               expected_team_id: expectedTeam.team_id,
               expected_tournament_team_id: expectedTeam.tournament_team_id || null,
               expected_team_name: expectedTeam.team_name,
-              current_team_id: team2Id,
               current_tournament_team_id: team2TournamentTeamId,
               current_team_name: team2DisplayName,
               is_placeholder: isPlaceholder,
@@ -904,14 +889,12 @@ export async function autoFixPromotionIssues(_tournamentId: number, issues: Prom
         await db.execute({
           sql: `
             UPDATE t_matches_live
-            SET ${field}_id = ?,
-                ${field}_tournament_team_id = ?,
+            SET ${field}_tournament_team_id = ?,
                 ${field}_display_name = ?,
                 updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
           `,
           args: [
-            issue.expected_team_id,
             issue.expected_tournament_team_id,
             issue.expected_team_name,
             issue.match_id

@@ -337,14 +337,12 @@ export class TournamentBlobArchiver {
 
       // 3. 試合データ
       const matchesResult = await db.execute(`
-        SELECT 
+        SELECT
           ml.match_id,
           ml.match_block_id,
           ml.tournament_date,
           ml.match_number,
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
@@ -356,7 +354,6 @@ export class TournamentBlobArchiver {
           mb.block_order,
           mf.team1_scores,
           mf.team2_scores,
-          mf.winner_team_id,
           COALESCE(mf.is_draw, 0) as is_draw,
           COALESCE(mf.is_walkover, 0) as is_walkover,
           ml.match_status,
@@ -391,13 +388,10 @@ export class TournamentBlobArchiver {
       const resultsResult = await db.execute(`
         SELECT
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
           COALESCE(tt1.team_name, ml.team1_display_name) as team1_name,
           COALESCE(tt2.team_name, ml.team2_display_name) as team2_name,
           mf.team1_scores,
           mf.team2_scores,
-          mf.winner_team_id,
           mf.is_draw,
           mf.is_walkover,
           mb.block_name

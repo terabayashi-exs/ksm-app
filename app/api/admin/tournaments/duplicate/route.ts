@@ -581,13 +581,10 @@ async function duplicateTeamAssignments(
 
       await db.execute(`
         UPDATE t_matches_live
-        SET team1_id = ?, team2_id = ?,
-            team1_tournament_team_id = ?, team2_tournament_team_id = ?,
+        SET team1_tournament_team_id = ?, team2_tournament_team_id = ?,
             team1_display_name = ?, team2_display_name = ?
         WHERE match_id = ?
       `, [
-        matchData.team1_id,
-        matchData.team2_id,
         newTeam1TournamentTeamId,
         newTeam2TournamentTeamId,
         matchData.team1_display_name,
@@ -650,13 +647,13 @@ async function duplicateMatchProgress(
 
     // t_matches_live の進行データを更新
     await db.execute(`
-      UPDATE t_matches_live 
-      SET team1_scores = ?, team2_scores = ?, winner_team_id = ?
+      UPDATE t_matches_live
+      SET team1_scores = ?, team2_scores = ?, winner_tournament_team_id = ?
       WHERE match_id = ?
     `, [
       matchData.team1_scores || '[0]',
       matchData.team2_scores || '[0]',
-      matchData.winner_team_id,
+      matchData.winner_tournament_team_id,
       newMatchId
     ]);
   }
@@ -736,20 +733,18 @@ async function duplicateMatchProgress(
       await db.execute(`
         INSERT INTO t_matches_final (
           match_id, match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_tournament_team_id, team2_tournament_team_id,
           team1_display_name, team2_display_name,
           court_number, start_time, team1_scores, team2_scores, period_count,
-          winner_team_id, winner_tournament_team_id, is_draw, is_walkover, match_status, result_status,
+          winner_tournament_team_id, is_draw, is_walkover, match_status, result_status,
           remarks, created_at, updated_at, cancellation_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newMatchId,
         blockMapping.get(Number(matchData.match_block_id)), // 新しいブロックID
         matchData.tournament_date,
         matchData.match_number,
         matchData.match_code,
-        matchData.team1_id,
-        matchData.team2_id,
         newTeam1TournamentTeamId, // マッピング済みの新しいID
         newTeam2TournamentTeamId, // マッピング済みの新しいID
         matchData.team1_display_name,
@@ -759,7 +754,6 @@ async function duplicateMatchProgress(
         matchData.team1_scores,
         matchData.team2_scores,
         matchData.period_count || 1,
-        matchData.winner_team_id,
         newWinnerTournamentTeamId, // マッピング済みの新しいID
         matchData.is_draw || 0,
         matchData.is_walkover || 0,

@@ -102,31 +102,38 @@ export function getSportScoreConfig(sportCode: string): SportScoreConfig {
 
 /**
  * スコアデータからサッカー専用データを抽出
+ * @param team1Scores チーム1のスコア配列
+ * @param team2Scores チーム2のスコア配列
+ * @param tournamentTeamId 対象チームのtournament_team_id
+ * @param team1TournamentTeamId チーム1のtournament_team_id
+ * @param team2TournamentTeamId チーム2のtournament_team_id
+ * @param winnerTournamentTeamId 勝者のtournament_team_id
+ * @param activePeriods アクティブな期間
  */
 export function extractSoccerScoreData(
-  team1Scores: number[], 
-  team2Scores: number[], 
-  teamId: string, 
-  team1Id: string, 
-  team2Id: string,
-  winnerTeamId: string | null,
+  team1Scores: number[],
+  team2Scores: number[],
+  tournamentTeamId: number,
+  team1TournamentTeamId: number,
+  team2TournamentTeamId: number,
+  winnerTournamentTeamId: number | null,
   activePeriods: number[]
 ): SoccerScoreData {
-  const isTeam1 = teamId === team1Id;
+  const isTeam1 = tournamentTeamId === team1TournamentTeamId;
   const teamScores = isTeam1 ? team1Scores : team2Scores;
   const opponentScores = isTeam1 ? team2Scores : team1Scores;
-  
+
   // 前半・後半・延長戦（PKを除く）の合計
   let regularGoalsFor = 0;
   let regularGoalsAgainst = 0;
   let pkGoalsFor = 0;
   let pkGoalsAgainst = 0;
   let isPkGame = false;
-  
+
   activePeriods.forEach((period, index) => {
     const teamScore = teamScores[index] || 0;
     const opponentScore = opponentScores[index] || 0;
-    
+
     // 5期目以降をPK戦として扱う（サッカー設定に依存）
     if (period >= 5) {
       isPkGame = true;
@@ -139,13 +146,13 @@ export function extractSoccerScoreData(
       console.log(`[SOCCER_REGULAR] Period ${period}: Regular goals ${teamScore}-${opponentScore}`);
     }
   });
-  
+
   // PK戦勝利判定
   let pkWinner: boolean | undefined = undefined;
-  if (isPkGame && winnerTeamId) {
-    pkWinner = winnerTeamId === teamId;
+  if (isPkGame && winnerTournamentTeamId !== null) {
+    pkWinner = winnerTournamentTeamId === tournamentTeamId;
   }
-  
+
   return {
     regular_goals_for: regularGoalsFor,
     regular_goals_against: regularGoalsAgainst,
@@ -208,15 +215,12 @@ export async function getMultiSportMatchResults(matchBlockId: number, tournament
         mf.match_id,
         mf.match_code,
         mf.match_block_id,
-        mf.team1_id,
-        mf.team2_id,
         mf.team1_tournament_team_id,
         mf.team2_tournament_team_id,
         mf.team1_display_name,
         mf.team2_display_name,
         mf.team1_scores,
         mf.team2_scores,
-        mf.winner_team_id,
         mf.winner_tournament_team_id,
         mf.is_draw,
         mf.is_walkover,
@@ -225,13 +229,18 @@ export async function getMultiSportMatchResults(matchBlockId: number, tournament
         -- 大会ルール情報
         tr.active_periods,
         -- 競技種別
-        st.sport_code
+        st.sport_code,
+        -- team_idを取得（JOINで取得）
+        tt1.team_id as team1_id,
+        tt2.team_id as team2_id
       FROM t_matches_final mf
       INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
       INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
       INNER JOIN m_sport_types st ON tour.sport_type_id = st.sport_type_id
       LEFT JOIN t_tournament_rules tr ON tour.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       LEFT JOIN t_matches_live ml ON mf.match_id = ml.match_id
+      LEFT JOIN t_tournament_teams tt1 ON mf.team1_tournament_team_id = tt1.tournament_team_id
+      LEFT JOIN t_tournament_teams tt2 ON mf.team2_tournament_team_id = tt2.tournament_team_id
       WHERE mf.match_block_id = ?
         AND mb.tournament_id = ?
         AND (mf.team1_tournament_team_id IS NOT NULL AND mf.team2_tournament_team_id IS NOT NULL)

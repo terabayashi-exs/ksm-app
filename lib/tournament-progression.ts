@@ -127,7 +127,7 @@ export async function updateTournamentProgression(
   loserTournamentTeamId?: number | null
 ): Promise<void> {
   try {
-    console.log(`[TOURNAMENT_PROGRESSION] Processing match ${matchCode}, winner: ${winnerTeamId} (tournament_team_id: ${winnerTournamentTeamId}), loser: ${loserTeamId} (tournament_team_id: ${loserTournamentTeamId})`);
+    console.log(`[TOURNAMENT_PROGRESSION] Processing match ${matchCode}, winner_tournament_team_id: ${winnerTournamentTeamId}, loser_tournament_team_id: ${loserTournamentTeamId}`);
 
     // m_match_templatesから進出ルールを動的に取得
     const rules = await getTournamentProgressionRules(matchCode, tournamentId);
@@ -137,24 +137,17 @@ export async function updateTournamentProgression(
       return;
     }
 
-    // MIGRATION NOTE: tournament_team_idを優先、team_idはフォールバック
     let winnerTeamName: string | null = null;
     let loserTeamName: string | null = null;
 
-    // 勝者のチーム名を取得（tournament_team_idを優先）
+    // 勝者のチーム名を取得
     if (winnerTournamentTeamId) {
       winnerTeamName = await getTeamDisplayNameByTournamentTeamId(winnerTournamentTeamId);
     }
-    if (!winnerTeamName && winnerTeamId) {
-      winnerTeamName = await getTeamDisplayName(winnerTeamId, tournamentId);
-    }
 
-    // 敗者のチーム名を取得（tournament_team_idを優先）
+    // 敗者のチーム名を取得
     if (loserTournamentTeamId) {
       loserTeamName = await getTeamDisplayNameByTournamentTeamId(loserTournamentTeamId);
-    }
-    if (!loserTeamName && loserTeamId) {
-      loserTeamName = await getTeamDisplayName(loserTeamId, tournamentId);
     }
 
     console.log(`[TOURNAMENT_PROGRESSION] Winner team name: ${winnerTeamName}, Loser team name: ${loserTeamName}`);
@@ -165,11 +158,10 @@ export async function updateTournamentProgression(
         await updateMatchTeamName(
           target.match_code,
           target.position,
-          winnerTeamId,
           winnerTeamName,
           target.source_pattern,
           tournamentId,
-          winnerTournamentTeamId || undefined
+          winnerTournamentTeamId || null
         );
       }
     }
@@ -180,11 +172,10 @@ export async function updateTournamentProgression(
         await updateMatchTeamName(
           target.match_code,
           target.position,
-          loserTeamId,
           loserTeamName,
           target.source_pattern,
           tournamentId,
-          loserTournamentTeamId || undefined
+          loserTournamentTeamId || null
         );
       }
     }
@@ -199,23 +190,21 @@ export async function updateTournamentProgression(
 
 /**
  * 特定の試合のチーム名を更新
- * MIGRATION NOTE: tournament_team_idを優先使用
  */
 async function updateMatchTeamName(
   targetMatchCode: string,
   position: 'team1' | 'team2',
-  teamId: string | null,
   teamDisplayName: string,
   sourcePattern: string,
   tournamentId: number,
-  tournamentTeamId?: number
+  tournamentTeamId: number | null
 ): Promise<void> {
   try {
-    console.log(`[TOURNAMENT_PROGRESSION] Updating ${targetMatchCode} ${position} (source: ${sourcePattern}) to "${teamDisplayName}" (team_id: ${teamId}, tournament_team_id: ${tournamentTeamId})`);
+    console.log(`[TOURNAMENT_PROGRESSION] Updating ${targetMatchCode} ${position} (source: ${sourcePattern}) to "${teamDisplayName}" (tournament_team_id: ${tournamentTeamId})`);
 
     // 該当する試合を t_matches_live から検索
     const matchResult = await db.execute(`
-      SELECT ml.match_id, ml.${position}_display_name, ml.${position}_id
+      SELECT ml.match_id, ml.${position}_display_name, ml.${position}_tournament_team_id
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ? AND ml.match_code = ?
@@ -228,27 +217,9 @@ async function updateMatchTeamName(
 
     const match = matchResult.rows[0];
     const currentDisplayName = match[`${position}_display_name`] as string;
-    const currentTeamId = match[`${position}_id`] as string | null;
+    const currentTournamentTeamId = match[`${position}_tournament_team_id`] as number | null;
 
-    console.log(`[TOURNAMENT_PROGRESSION] Current ${targetMatchCode} ${position}: display_name="${currentDisplayName}", team_id="${currentTeamId}"`);
-
-    // tournament_team_id が渡されていない場合のみ取得（後方互換性のため）
-    let finalTournamentTeamId: number | null = tournamentTeamId || null;
-    if (!finalTournamentTeamId && teamId) {
-      const tournamentTeamResult = await db.execute(`
-        SELECT tournament_team_id
-        FROM t_tournament_teams
-        WHERE tournament_id = ? AND team_id = ?
-        LIMIT 1
-      `, [tournamentId, teamId]);
-
-      if (tournamentTeamResult.rows.length > 0) {
-        finalTournamentTeamId = tournamentTeamResult.rows[0].tournament_team_id as number;
-        console.log(`[TOURNAMENT_PROGRESSION] Found tournament_team_id: ${finalTournamentTeamId} for team_id: ${teamId}`);
-      } else {
-        console.warn(`[TOURNAMENT_PROGRESSION] tournament_team_id not found for team_id: ${teamId} in tournament ${tournamentId}`);
-      }
-    }
+    console.log(`[TOURNAMENT_PROGRESSION] Current ${targetMatchCode} ${position}: display_name="${currentDisplayName}", tournament_team_id="${currentTournamentTeamId}"`);
 
     // まず、m_match_templatesから期待されるプレースホルダーテキストを取得
     const templateResult = await db.execute(`
@@ -279,17 +250,16 @@ async function updateMatchTeamName(
     console.log(`[TOURNAMENT_PROGRESSION] Expected placeholder: "${expectedPlaceholder}", Current: "${currentDisplayName}"`);
 
     // プレースホルダーテキストと一致する場合、または同じsource_patternを持つ場合に更新
-    // MIGRATION NOTE: tournament_team_idを設定
-    if (currentDisplayName === expectedPlaceholder || currentTeamId === null) {
+    if (currentDisplayName === expectedPlaceholder || currentTournamentTeamId === null) {
       const updateQuery = `
         UPDATE t_matches_live
-        SET ${position}_id = ?, ${position}_tournament_team_id = ?, ${position}_display_name = ?, updated_at = datetime('now', '+9 hours')
+        SET ${position}_tournament_team_id = ?, ${position}_display_name = ?, updated_at = datetime('now', '+9 hours')
         WHERE match_id = ?
       `;
 
-      await db.execute(updateQuery, [teamId, finalTournamentTeamId, teamDisplayName, match.match_id]);
+      await db.execute(updateQuery, [tournamentTeamId, teamDisplayName, match.match_id]);
 
-      console.log(`[TOURNAMENT_PROGRESSION] ✅ Updated ${targetMatchCode} ${position}: "${currentDisplayName}" → "${teamDisplayName}" (team_id: ${teamId}, tournament_team_id: ${finalTournamentTeamId})`);
+      console.log(`[TOURNAMENT_PROGRESSION] ✅ Updated ${targetMatchCode} ${position}: "${currentDisplayName}" → "${teamDisplayName}" (tournament_team_id: ${tournamentTeamId})`);
     } else {
       console.log(`[TOURNAMENT_PROGRESSION] Skip update for ${targetMatchCode} ${position}: current="${currentDisplayName}", expected="${expectedPlaceholder}"`);
     }
@@ -297,50 +267,6 @@ async function updateMatchTeamName(
   } catch (error) {
     console.error(`[TOURNAMENT_PROGRESSION] Error updating match ${targetMatchCode} ${position}:`, error);
     throw error;
-  }
-}
-
-/**
- * チームIDから表示用チーム名を取得（大会参加チーム情報から取得）
- * MIGRATION NOTE: team_idから表示名を取得（後方互換性のため維持）
- */
-async function getTeamDisplayName(teamId: string | null, tournamentId?: number): Promise<string | null> {
-  if (!teamId) return null;
-
-  try {
-    // 大会IDがある場合は大会参加チーム情報から取得（略称を優先）
-    if (tournamentId) {
-      const tournamentTeamResult = await db.execute(`
-        SELECT
-          COALESCE(tt.team_omission, tt.team_name) as display_name
-        FROM t_tournament_teams tt
-        WHERE tt.team_id = ? AND tt.tournament_id = ?
-        LIMIT 1
-      `, [teamId, tournamentId]);
-
-      if (tournamentTeamResult.rows.length > 0) {
-        return tournamentTeamResult.rows[0].display_name as string;
-      }
-    }
-
-    // フォールバック: マスターチーム情報から取得
-    const teamResult = await db.execute(`
-      SELECT
-        COALESCE(t.team_omission, t.team_name) as display_name
-      FROM m_teams t
-      WHERE t.team_id = ?
-    `, [teamId]);
-
-    if (teamResult.rows.length > 0) {
-      return teamResult.rows[0].display_name as string;
-    }
-
-    console.warn(`[TOURNAMENT_PROGRESSION] Team not found: ${teamId}`);
-    return null;
-
-  } catch (error) {
-    console.error(`[TOURNAMENT_PROGRESSION] Error getting team display name for ${teamId}:`, error);
-    return null;
   }
 }
 
@@ -386,11 +312,8 @@ export async function recalculateAllTournamentProgression(tournamentId: number):
       SELECT
         mf.match_id,
         mf.match_code,
-        mf.team1_id,
-        mf.team2_id,
         mf.team1_tournament_team_id,
         mf.team2_tournament_team_id,
-        mf.winner_team_id,
         mf.winner_tournament_team_id,
         mf.is_draw,
         mb.phase,
@@ -408,23 +331,19 @@ export async function recalculateAllTournamentProgression(tournamentId: number):
     // 各確定済み試合について進出処理を実行
     for (const match of confirmedMatches.rows) {
       const matchCode = match.match_code as string;
-      const team1Id = match.team1_id as string | null;
-      const team2Id = match.team2_id as string | null;
       const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
       const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
-      const winnerTeamId = match.winner_team_id as string | null;
       const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
       const isDraw = Boolean(match.is_draw);
 
-      if (!isDraw && winnerTeamId) {
-        // MIGRATION NOTE: team_idとtournament_team_idの両方から敗者を特定
-        const loserTeamId = team1Id && team2Id ? (winnerTeamId === team1Id ? team2Id : team1Id) : null;
+      if (!isDraw && winnerTournamentTeamId) {
+        // tournament_team_idから敗者を特定
         const loserTournamentTeamId = team1TournamentTeamId && team2TournamentTeamId
           ? (winnerTournamentTeamId === team1TournamentTeamId ? team2TournamentTeamId : team1TournamentTeamId)
           : null;
 
-        console.log(`[TOURNAMENT_PROGRESSION] Recalculating progression for ${matchCode}: winner=${winnerTeamId}(${winnerTournamentTeamId}), loser=${loserTeamId}(${loserTournamentTeamId})`);
-        await updateTournamentProgression(matchCode, winnerTeamId, loserTeamId, tournamentId, winnerTournamentTeamId, loserTournamentTeamId);
+        console.log(`[TOURNAMENT_PROGRESSION] Recalculating progression for ${matchCode}: winner_tournament_team_id=${winnerTournamentTeamId}, loser_tournament_team_id=${loserTournamentTeamId}`);
+        await updateTournamentProgression(matchCode, null, null, tournamentId, winnerTournamentTeamId, loserTournamentTeamId);
       }
     }
 
@@ -438,19 +357,16 @@ export async function recalculateAllTournamentProgression(tournamentId: number):
 
 /**
  * 確定された試合から勝者・敗者を判定してトーナメント進出を処理
- * MIGRATION NOTE: tournament_team_idベースのパラメータに変更
+ * MIGRATION NOTE: tournament_team_idベースに変更完了
  */
 export async function processTournamentProgression(
   matchId: number,
   matchCode: string,
-  team1Id: string | null,
-  team2Id: string | null,
-  winnerTeamId: string | null,
   isDraw: boolean,
   tournamentId: number,
-  team1TournamentTeamId?: number | null,
-  team2TournamentTeamId?: number | null,
-  winnerTournamentTeamId?: number | null
+  team1TournamentTeamId: number | null,
+  team2TournamentTeamId: number | null,
+  winnerTournamentTeamId: number | null
 ): Promise<void> {
   try {
     // 引き分けの場合は進出処理をスキップ
@@ -459,29 +375,23 @@ export async function processTournamentProgression(
       return;
     }
 
-    // MIGRATION NOTE: winnerTournamentTeamIdのみを使用（winnerTeamIdは将来削除予定）
     if (!winnerTournamentTeamId) {
       console.log(`[TOURNAMENT_PROGRESSION] Skipping progression for match ${matchCode}: no winner_tournament_team_id`);
       return;
     }
 
-    // 勝者・敗者を特定
-    // MIGRATION NOTE: tournament_team_idのみで判定（team_idは将来削除予定）
-    let loserTeamId: string | null = null;
+    // 敗者を特定
     let loserTournamentTeamId: number | null = null;
 
-    // tournament_team_idで敗者を特定
     if (team1TournamentTeamId && team2TournamentTeamId) {
       loserTournamentTeamId = winnerTournamentTeamId === team1TournamentTeamId ? team2TournamentTeamId : team1TournamentTeamId;
-      // team_idも取得（表示名取得のフォールバック用、将来削除予定）
-      loserTeamId = winnerTournamentTeamId === team1TournamentTeamId ? team2Id : team1Id;
     }
 
     console.log(`[TOURNAMENT_PROGRESSION] Processing match ${matchCode} (ID: ${matchId})`);
-    console.log(`[TOURNAMENT_PROGRESSION] Winner: tournament_team_id=${winnerTournamentTeamId} (team_id=${winnerTeamId}), Loser: tournament_team_id=${loserTournamentTeamId} (team_id=${loserTeamId})`);
+    console.log(`[TOURNAMENT_PROGRESSION] Winner: tournament_team_id=${winnerTournamentTeamId}, Loser: tournament_team_id=${loserTournamentTeamId}`);
 
     // トーナメント進出処理を実行
-    await updateTournamentProgression(matchCode, winnerTeamId, loserTeamId, tournamentId, winnerTournamentTeamId, loserTournamentTeamId);
+    await updateTournamentProgression(matchCode, null, null, tournamentId, winnerTournamentTeamId, loserTournamentTeamId);
 
   } catch (error) {
     console.error(`[TOURNAMENT_PROGRESSION] Error processing tournament progression for match ${matchId}:`, error);

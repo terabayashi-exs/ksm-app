@@ -85,7 +85,7 @@ export async function GET(
         (SELECT COUNT(*) FROM t_matches_final mf
          INNER JOIN t_matches_live ml ON mf.match_id = ml.match_id
          INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-         WHERE (ml.team1_id = tt.team_id OR ml.team2_id = tt.team_id)
+         WHERE (ml.team1_tournament_team_id = tt.tournament_team_id OR ml.team2_tournament_team_id = tt.tournament_team_id)
          AND mb.tournament_id = tt.tournament_id) as completed_matches
       FROM t_tournament_teams tt
       LEFT JOIN m_teams m ON tt.team_id = m.team_id

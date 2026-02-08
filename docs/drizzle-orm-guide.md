@@ -259,6 +259,183 @@ npx drizzle-kit studio
 }
 ```
 
+### ⚠️ Turso/LibSQL使用時の注意事項と解決方法
+
+#### 問題の概要
+
+Drizzle Kitが生成するマイグレーションファイルには`--> statement-breakpoint`という構文が含まれますが、TursoのSQL Parserはこれを解釈できず、エラーが発生する場合があります。
+
+```bash
+# デフォルト設定でのマイグレーション実行時にエラー
+npm run db:migrate
+# → LibsqlError: SQL_PARSE_ERROR:
+#    non-terminated block comment at (3, 1)
+```
+
+**原因:**
+- Drizzle Kitは全データベース共通で`--> statement-breakpoint`をマーカーとして使用
+- PostgreSQL/MySQLは寛容に無視するが、Tursoは厳密でエラーを返す
+
+#### ✅ 解決方法：`breakpoints: false` の設定（推奨）
+
+**`drizzle.config.ts`に`breakpoints: false`を追加することで、この問題を完全に解決できます。**
+
+```typescript
+// drizzle.config.ts
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  schema: './src/db/schema.ts',
+  out: './drizzle',
+  dialect: 'turso',
+  breakpoints: false, // ← この1行を追加
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+    authToken: process.env.DATABASE_AUTH_TOKEN,
+  },
+});
+```
+
+**効果:**
+- ✅ `--> statement-breakpoint`が生成されなくなる
+- ✅ 純粋な標準SQLのみが生成される
+- ✅ Tursoで問題なく実行できる
+- ✅ マイグレーション履歴も正常に管理される
+- ✅ `npm run db:migrate`が正常に動作する
+
+**検証結果:**
+```sql
+-- breakpoints: false の場合
+ALTER TABLE `t_matches_final` ADD `test_field` text;
+
+-- breakpoints: true の場合（デフォルト）
+ALTER TABLE `t_matches_final` ADD `test_field` text;--> statement-breakpoint
+```
+
+この設定により、**Tursoでも標準的なDrizzle Kitマイグレーションフローが使用可能**になります。
+
+#### 代替手段（breakpoints: false が使えない場合）
+
+**`breakpoints: false`の設定で解決できない場合**、以下の代替手段があります：
+
+**方法1: 開発環境で`db:push`を使用（履歴なし）**
+
+```bash
+# スキーマを直接データベースに反映
+npm run db:push:dev
+
+# メリット: 素早く、Tursoで確実に動作
+# デメリット: マイグレーション履歴が残らない
+```
+
+**方法2: 本番環境で手動マイグレーションスクリプトを作成**
+
+```javascript
+// scripts/migration-xxx.mjs
+import { createClient } from '@libsql/client';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
+
+const client = createClient({
+  url: process.env.DATABASE_URL,
+  authToken: process.env.DATABASE_AUTH_TOKEN,
+});
+
+async function migrate() {
+  console.log('🔧 Starting migration...');
+
+  try {
+    // 外部キー制約を一時無効化
+    await client.execute('PRAGMA foreign_keys=OFF');
+
+    // 標準的なSQLのみ記述（Turso互換）
+    await client.execute(`
+      CREATE TABLE new_table (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
+      )
+    `);
+
+    // データ移行
+    await client.execute(`
+      INSERT INTO new_table SELECT * FROM old_table
+    `);
+
+    // 古いテーブル削除
+    await client.execute('DROP TABLE old_table');
+
+    // リネーム
+    await client.execute('ALTER TABLE new_table RENAME TO old_table');
+
+    // 外部キー制約を再有効化
+    await client.execute('PRAGMA foreign_keys=ON');
+
+    console.log('✅ Migration completed successfully!');
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    process.exit(1);
+  } finally {
+    client.close();
+  }
+}
+
+migrate();
+```
+
+**実行方法:**
+
+```bash
+# dev環境
+node scripts/migration-xxx.mjs
+
+# stag環境
+DATABASE_URL=$DATABASE_URL_STAG \
+DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN_STAG \
+node scripts/migration-xxx.mjs
+
+# main環境
+DATABASE_URL=$DATABASE_URL_MAIN \
+DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN_MAIN \
+node scripts/migration-xxx.mjs
+```
+
+**メリット:**
+- ✅ 完全なコントロールが可能
+- ✅ Turso固有の問題を回避できる
+- ✅ Gitで履歴管理できる
+- ✅ 環境別に実行できる
+- ✅ 詳細なログ出力・エラーハンドリングが可能
+
+**参考実装:** `scripts/remove-team-id-columns.mjs`
+
+#### 推奨される運用方針
+
+**`breakpoints: false`を設定した場合（推奨）:**
+
+```
+全環境共通
+  └─ 標準的なDrizzle Kitマイグレーションフロー
+      1. src/db/schema.ts を編集
+      2. npm run db:generate でマイグレーションファイル生成
+      3. npm run db:migrate:dev / :stag / :main で適用
+      4. MIGRATION_HISTORY.md に記録
+```
+
+**`breakpoints: false`を使わない場合（非推奨）:**
+
+```
+開発環境（dev）
+  ├─ 日常的な変更: npm run db:push:dev
+  └─ 重要な変更: 手動スクリプト
+
+ステージング環境（stag）
+  └─ 手動スクリプト（devでテスト済み）
+
+本番環境（main）
+  └─ 手動スクリプト（stagで検証済み）
+```
+
 ---
 
 ## CRUD操作

@@ -21,8 +21,6 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
         ml.match_code,
         ml.match_number,
         ml.match_block_id,
-        ml.team1_id,
-        ml.team2_id,
         ml.team1_tournament_team_id,
         ml.team2_tournament_team_id,
         ml.team1_display_name,
@@ -53,33 +51,28 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
     for (const match of walkoverMatchesResult.rows) {
       const matchId = match.match_id as number;
       const matchCode = match.match_code as string;
-      const team1Id = match.team1_id as string | null;
-      const team2Id = match.team2_id as string | null;
       const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
       const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
 
       // 勝者を決定（設定されているチーム）
-      // MIGRATION NOTE: tournament_team_idベースで判定、team_idはフォールバック
+      // MIGRATION NOTE: tournament_team_idベースで判定
       const winnerTournamentTeamId = team1TournamentTeamId || team2TournamentTeamId;
-      const winnerId = team1Id || team2Id;
 
       // t_matches_finalに登録
       await db.execute(`
         INSERT INTO t_matches_final (
           match_id, match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_tournament_team_id, team2_tournament_team_id,
           team1_display_name, team2_display_name,
-          court_number, start_time, team1_scores, team2_scores, winner_team_id, winner_tournament_team_id,
+          court_number, start_time, team1_scores, team2_scores, winner_tournament_team_id,
           is_draw, is_walkover, remarks, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         matchId,
         match.match_block_id,
         match.tournament_date,
         match.match_number,
         matchCode,
-        team1Id,
-        team2Id,
         match.team1_tournament_team_id,
         match.team2_tournament_team_id,
         match.team1_display_name,
@@ -88,7 +81,6 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
         match.start_time,
         '0', // team1_scores
         '0', // team2_scores
-        winnerId,
         winnerTournamentTeamId,
         0, // is_draw
         1, // is_walkover
@@ -97,12 +89,12 @@ async function autoConfirmWalkoverMatches(tournamentId: number): Promise<void> {
         now
       ]);
 
-      console.log(`[AUTO_CONFIRM_WALKOVER] ✅ Auto-confirmed walkover match ${matchCode} (ID: ${matchId}), winner: ${winnerId}`);
+      console.log(`[AUTO_CONFIRM_WALKOVER] ✅ Auto-confirmed walkover match ${matchCode} (ID: ${matchId}), winner_tt_id: ${winnerTournamentTeamId}`);
 
       // 不戦勝試合の進出処理も実行
       try {
         const { updateTournamentProgression } = await import('@/lib/tournament-progression');
-        await updateTournamentProgression(matchCode, winnerId, null, tournamentId, winnerTournamentTeamId, null);
+        await updateTournamentProgression(matchCode, null, null, tournamentId, winnerTournamentTeamId, null);
         console.log(`[AUTO_CONFIRM_WALKOVER] ✅ Processed progression for walkover match ${matchCode}`);
       } catch (progressionError) {
         console.error(`[AUTO_CONFIRM_WALKOVER] Failed to process progression for ${matchCode}:`, progressionError);

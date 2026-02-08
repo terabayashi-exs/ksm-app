@@ -2,21 +2,6 @@ import { relations } from "drizzle-orm/relations";
 import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentCourts, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners } from "./schema";
 
 export const tMatchesFinalRelations = relations(tMatchesFinal, ({one}) => ({
-	mTeam_winnerTeamId: one(mTeams, {
-		fields: [tMatchesFinal.winnerTeamId],
-		references: [mTeams.teamId],
-		relationName: "tMatchesFinal_winnerTeamId_mTeams_teamId"
-	}),
-	mTeam_team2Id: one(mTeams, {
-		fields: [tMatchesFinal.team2Id],
-		references: [mTeams.teamId],
-		relationName: "tMatchesFinal_team2Id_mTeams_teamId"
-	}),
-	mTeam_team1Id: one(mTeams, {
-		fields: [tMatchesFinal.team1Id],
-		references: [mTeams.teamId],
-		relationName: "tMatchesFinal_team1Id_mTeams_teamId"
-	}),
 	tMatchBlock: one(tMatchBlocks, {
 		fields: [tMatchesFinal.matchBlockId],
 		references: [tMatchBlocks.matchBlockId]
@@ -24,15 +9,6 @@ export const tMatchesFinalRelations = relations(tMatchesFinal, ({one}) => ({
 }));
 
 export const mTeamsRelations = relations(mTeams, ({many}) => ({
-	tMatchesFinals_winnerTeamId: many(tMatchesFinal, {
-		relationName: "tMatchesFinal_winnerTeamId_mTeams_teamId"
-	}),
-	tMatchesFinals_team2Id: many(tMatchesFinal, {
-		relationName: "tMatchesFinal_team2Id_mTeams_teamId"
-	}),
-	tMatchesFinals_team1Id: many(tMatchesFinal, {
-		relationName: "tMatchesFinal_team1Id_mTeams_teamId"
-	}),
 	tTournamentPlayers: many(tTournamentPlayers),
 	tTournamentTeams: many(tTournamentTeams),
 	mPlayers: many(mPlayers),

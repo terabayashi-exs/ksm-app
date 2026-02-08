@@ -99,16 +99,16 @@ export default async function ManualRankingsPage({ params }: PageProps) {
   // 決勝トーナメントの試合情報を取得
   const finalTournamentResult = await db.execute({
     sql: `
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
-        ml.team1_id,
-        ml.team2_id,
-        COALESCE(t1.team_name, ml.team1_display_name) as team1_display_name,
-        COALESCE(t2.team_name, ml.team2_display_name) as team2_display_name,
+        ml.team1_tournament_team_id,
+        ml.team2_tournament_team_id,
+        COALESCE(tt1.team_name, ml.team1_display_name) as team1_display_name,
+        COALESCE(tt2.team_name, ml.team2_display_name) as team2_display_name,
         mf.team1_scores,
         mf.team2_scores,
-        mf.winner_team_id,
+        mf.winner_tournament_team_id,
         mf.is_draw,
         mf.is_walkover,
         CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
@@ -118,9 +118,9 @@ export default async function ManualRankingsPage({ params }: PageProps) {
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-      LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
-      WHERE mb.tournament_id = ? 
+      LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+      LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
+      WHERE mb.tournament_id = ?
         AND mb.phase = 'final'
       ORDER BY ml.match_number, ml.match_code
     `,
@@ -130,13 +130,13 @@ export default async function ManualRankingsPage({ params }: PageProps) {
   const finalMatches = finalTournamentResult.rows.map(row => ({
     match_id: row.match_id as number,
     match_code: row.match_code as string,
-    team1_id: row.team1_id as string | null,
-    team2_id: row.team2_id as string | null,
+    team1_tournament_team_id: row.team1_tournament_team_id as number | null,
+    team2_tournament_team_id: row.team2_tournament_team_id as number | null,
     team1_display_name: row.team1_display_name as string,
     team2_display_name: row.team2_display_name as string,
     team1_scores: row.team1_scores as number | null,
     team2_scores: row.team2_scores as number | null,
-    winner_team_id: row.winner_team_id as string | null,
+    winner_tournament_team_id: row.winner_tournament_team_id as number | null,
     is_draw: Boolean(row.is_draw),
     is_walkover: Boolean(row.is_walkover),
     is_confirmed: Boolean(row.is_confirmed),

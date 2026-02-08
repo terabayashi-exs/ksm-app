@@ -8,6 +8,7 @@ export default defineConfig({
   schema: './src/db/schema.ts',
   out: './drizzle',
   dialect: 'turso',
+  breakpoints: false, // Tursoのパーサー問題を回避
   dbCredentials: {
     url: process.env.DATABASE_URL!,
     authToken: process.env.DATABASE_AUTH_TOKEN,

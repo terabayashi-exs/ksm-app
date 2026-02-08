@@ -71,8 +71,8 @@ interface MatchData {
   tournament_date: string;
   match_number: number;
   match_code: string;
-  team1_id?: string;
-  team2_id?: string;
+  team1_tournament_team_id?: number;
+  team2_tournament_team_id?: number;
   team1_display_name: string;
   team2_display_name: string;
   court_number?: number;
@@ -84,7 +84,7 @@ interface MatchData {
   block_order?: number;
   team1_goals: number;
   team2_goals: number;
-  winner_team_id?: string;
+  winner_tournament_team_id?: number;
   is_draw: number;
   is_walkover: number;
   match_status: string;
@@ -95,13 +95,13 @@ interface MatchData {
 
 interface ResultData {
   match_code: string;
-  team1_id?: string;
-  team2_id?: string;
+  team1_tournament_team_id?: number;
+  team2_tournament_team_id?: number;
   team1_name: string;
   team2_name: string;
   team1_goals?: number;
   team2_goals?: number;
-  winner_team_id?: string;
+  winner_tournament_team_id?: number;
   is_draw?: number;
   is_walkover?: number;
   block_name: string;
@@ -146,9 +146,10 @@ function ArchivedTournamentSchedule({ matches, teams }: { matches: MatchData[], 
     return `${Math.floor(team1Goals)} - ${Math.floor(team2Goals)}`;
   };
 
-  const getTeamDisplayName = (teamId: string | undefined | null, displayName: string) => {
+  const getTeamDisplayName = (teamId: number | undefined | null, displayName: string) => {
     if (!teamId) return displayName;
-    const team = teamMap.get(teamId);
+    const teamIdStr = String(teamId);
+    const team = teamMap.get(teamIdStr);
     return team ? team.team_name : displayName;
   };
 
@@ -201,7 +202,7 @@ function ArchivedTournamentSchedule({ matches, teams }: { matches: MatchData[], 
                         </span>
                       </td>
                       <td className="py-3 px-4 font-medium">
-                        {getTeamDisplayName(match.team1_id, match.team1_display_name)} vs {getTeamDisplayName(match.team2_id, match.team2_display_name)}
+                        {getTeamDisplayName(match.team1_tournament_team_id, match.team1_display_name)} vs {getTeamDisplayName(match.team2_tournament_team_id, match.team2_display_name)}
                       </td>
                       <td className="py-3 px-4">
                         <div>
@@ -270,11 +271,15 @@ function ArchivedTournamentResults({ results, teams }: { results: ResultData[], 
 
     // 確定した試合結果を設定
     blockResults.forEach(match => {
-      if (match.team1_id && match.team2_id) {
+      if (match.team1_tournament_team_id && match.team2_tournament_team_id) {
+        const team1Id = String(match.team1_tournament_team_id);
+        const team2Id = String(match.team2_tournament_team_id);
+        const winnerId = match.winner_tournament_team_id ? String(match.winner_tournament_team_id) : null;
+
         let result1, result2, score;
-        
+
         if (match.is_walkover) {
-          if (match.winner_team_id === match.team1_id) {
+          if (winnerId === team1Id) {
             result1 = 'walkover_win';
             result2 = 'walkover_loss';
             score = '不戦勝';
@@ -287,7 +292,7 @@ function ArchivedTournamentResults({ results, teams }: { results: ResultData[], 
           result1 = result2 = 'draw';
           score = `引き分け\n${Math.floor(match.team1_goals || 0)}-${Math.floor(match.team2_goals || 0)}`;
         } else {
-          if (match.winner_team_id === match.team1_id) {
+          if (winnerId === team1Id) {
             result1 = 'win';
             result2 = 'loss';
             score = `〇\n${Math.floor(match.team1_goals || 0)}-${Math.floor(match.team2_goals || 0)}`;
@@ -298,8 +303,8 @@ function ArchivedTournamentResults({ results, teams }: { results: ResultData[], 
           }
         }
 
-        matrix[match.team1_id][match.team2_id] = { result: result1, score };
-        matrix[match.team2_id][match.team1_id] = { result: result2, score: score.replace('〇', '●').replace('●', '〇') };
+        matrix[team1Id][team2Id] = { result: result1, score };
+        matrix[team2Id][team1Id] = { result: result2, score: score.replace('〇', '●').replace('●', '〇') };
       }
     });
 

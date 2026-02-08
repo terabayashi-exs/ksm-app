@@ -33,8 +33,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         SELECT
           ml.match_id,
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id,
           COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
           COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name) as team2_display_name,
           ml.court_number,
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           ml.updated_at,
           ml.team1_scores,
           ml.team2_scores,
-          ml.winner_team_id,
+          ml.winner_tournament_team_id,
           ml.is_draw,
           ml.is_walkover,
           mb.phase,
@@ -52,7 +52,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
           -- 確定済み結果があればそちらを優先
           COALESCE(mf.team1_scores, ml.team1_scores) as final_team1_scores,
           COALESCE(mf.team2_scores, ml.team2_scores) as final_team2_scores,
-          COALESCE(mf.winner_team_id, ml.winner_team_id) as final_winner_team_id,
           COALESCE(mf.winner_tournament_team_id, ml.winner_tournament_team_id) as final_winner_tournament_team_id,
           COALESCE(mf.is_draw, ml.is_draw) as final_is_draw,
           COALESCE(mf.is_walkover, ml.is_walkover) as final_is_walkover,
@@ -145,10 +144,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         team1_goals: team1Goals,
         team2_goals: team2Goals,
         score_display: scoreDisplay, // PK戦を考慮したスコア表示
-        winner_team_id: row.final_winner_team_id ? String(row.final_winner_team_id) : null,
         winner_tournament_team_id: row.final_winner_tournament_team_id ? Number(row.final_winner_tournament_team_id) : null,
-        team1_id: row.team1_id ? String(row.team1_id) : null,
-        team2_id: row.team2_id ? String(row.team2_id) : null,
         team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
         team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
         is_draw: Boolean(row.final_is_draw || false),

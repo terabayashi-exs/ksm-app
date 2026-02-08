@@ -72,22 +72,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     const confirmedBy = session.user.id || session.user.email;
 
-    // スコアから勝者を自動判定（winner_team_idがNULLの場合）
-    let finalWinnerId = liveMatch.winner_team_id;
+    // スコアから勝者を自動判定（winner_tournament_team_idがNULLの場合）
     let finalWinnerTournamentTeamId = liveMatch.winner_tournament_team_id;
-    let isDraw = !liveMatch.winner_team_id;
+    let isDraw = !liveMatch.winner_tournament_team_id;
 
-    if (!finalWinnerId && liveMatch.team1_scores && liveMatch.team2_scores) {
+    if (!finalWinnerTournamentTeamId && liveMatch.team1_scores && liveMatch.team2_scores) {
       const team1Total = parseTotalScore(liveMatch.team1_scores);
       const team2Total = parseTotalScore(liveMatch.team2_scores);
 
       if (team1Total > team2Total) {
-        finalWinnerId = liveMatch.team1_id;
         finalWinnerTournamentTeamId = liveMatch.team1_tournament_team_id;
         isDraw = false;
         console.log(`[MATCH_CONFIRM] Auto-detected winner from scores: team1 (${team1Total}-${team2Total})`);
       } else if (team2Total > team1Total) {
-        finalWinnerId = liveMatch.team2_id;
         finalWinnerTournamentTeamId = liveMatch.team2_tournament_team_id;
         isDraw = false;
         console.log(`[MATCH_CONFIRM] Auto-detected winner from scores: team2 (${team1Total}-${team2Total})`);
@@ -100,19 +97,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     await db.execute(`
       INSERT INTO t_matches_final (
         match_id, match_block_id, tournament_date, match_number, match_code,
-        team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+        team1_tournament_team_id, team2_tournament_team_id,
         team1_display_name, team2_display_name,
-        court_number, start_time, team1_scores, team2_scores, winner_team_id, winner_tournament_team_id,
+        court_number, start_time, team1_scores, team2_scores, winner_tournament_team_id,
         is_draw, is_walkover, remarks, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       liveMatch.match_id,
       liveMatch.match_block_id,
       liveMatch.tournament_date,
       liveMatch.match_number,
       liveMatch.match_code,
-      liveMatch.team1_id,
-      liveMatch.team2_id,
       liveMatch.team1_tournament_team_id,
       liveMatch.team2_tournament_team_id,
       liveMatch.team1_display_name,
@@ -122,7 +117,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // スコアをそのまま保存（カンマ区切り形式を維持）
       liveMatch.team1_scores || '0',
       liveMatch.team2_scores || '0',
-      finalWinnerId,
       finalWinnerTournamentTeamId,
       isDraw ? 1 : 0, // is_draw: スコアから自動判定
       0, // is_walkover: 通常は0
@@ -144,22 +138,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const team2Total = parseTotalScore(liveMatch.team2_scores);
     
     console.log(`[MATCH_CONFIRM] Calculated totals: ${team1Total}-${team2Total}`);
-    console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_id} vs ${liveMatch.team2_id} (${team1Total}-${team2Total})`);
+    console.log(`[MATCH_CONFIRM] Match details: ${liveMatch.match_code} - ${liveMatch.team1_display_name} vs ${liveMatch.team2_display_name} (${team1Total}-${team2Total})`);
 
     // トーナメント進出処理（決勝トーナメントの場合）
     try {
       const tournamentId = liveResult.rows[0].tournament_id as number;
       const matchCode = liveMatch.match_code as string;
-      const team1Id = liveMatch.team1_id as string | null;
-      const team2Id = liveMatch.team2_id as string | null;
       const team1TournamentTeamId = liveMatch.team1_tournament_team_id as number | null;
       const team2TournamentTeamId = liveMatch.team2_tournament_team_id as number | null;
-      const winnerId = finalWinnerId as string | null;
       const winnerTournamentTeamId = finalWinnerTournamentTeamId as number | null;
       const isDrawForProgression = isDraw;
 
       console.log(`[MATCH_CONFIRM] Processing tournament progression for match ${matchCode}`);
-      await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDrawForProgression, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
+      await processTournamentProgression(matchId, matchCode, isDrawForProgression, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
       console.log(`[MATCH_CONFIRM] ✅ Tournament progression processed for match ${matchCode}`);
     } catch (progressionError) {
       console.error(`[MATCH_CONFIRM] ❌ Failed to process tournament progression for match ${matchId}:`, progressionError);
@@ -168,7 +159,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // トーナメント形式の順位設定（予選・決勝両方に対応）
     try {
-      const tournamentId = liveResult.rows[0].tournament_id as number;
       const matchBlockId = liveMatch.match_block_id as number;
 
       // ブロック情報とフォーマットタイプを取得
@@ -207,19 +197,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
               : team1TournamentTeamId;
           }
 
-          // team_idベースのフォールバック（将来削除予定）
-          const winnerId = finalWinnerId as string | null;
-          const loserId = liveMatch.team1_id === winnerId
-            ? liveMatch.team2_id as string
-            : liveMatch.team1_id as string;
-
-          if ((winnerTournamentTeamId && loserTournamentTeamId) || (winnerId && loserId)) {
+          if (winnerTournamentTeamId && loserTournamentTeamId) {
             console.log(`[MATCH_CONFIRM] テンプレートベース順位設定: winner_tournament_team_id=${winnerTournamentTeamId}, loser_tournament_team_id=${loserTournamentTeamId}`);
             await handleTemplateBasedPositions(
               matchId,
-              winnerId,
-              loserId,
-              tournamentId,
               winnerTournamentTeamId,
               loserTournamentTeamId
             );
