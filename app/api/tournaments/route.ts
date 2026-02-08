@@ -564,8 +564,6 @@ async function generateMatchesFromTemplate(
               tournament_date,
               match_number,
               match_code,
-              team1_id,
-              team2_id,
               team1_tournament_team_id,
               team2_tournament_team_id,
               team1_display_name,
@@ -574,22 +572,19 @@ async function generateMatchesFromTemplate(
               start_time,
               team1_scores,
               team2_scores,
-              winner_team_id,
               winner_tournament_team_id,
               is_draw,
               is_walkover,
               remarks,
               created_at,
               updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             matchId,
             blockId,
             tournamentDate,
             template.match_number,
             template.match_code,
-            template.team1_source || null,
-            template.team2_source || null,
             null, // team1_tournament_team_id
             null, // team2_tournament_team_id
             template.team1_display_name,
@@ -598,7 +593,6 @@ async function generateMatchesFromTemplate(
             startTime,
             '0', // team1_scores（BYE試合なのでスコアなし）
             '0', // team2_scores（BYE試合なのでスコアなし）
-            null, // winner_team_id（まだチームIDが確定していない）
             null, // winner_tournament_team_id（まだチームIDが確定していない）
             0,    // is_draw（不戦勝なので引き分けではない）
             1,    // is_walkover（不戦勝）

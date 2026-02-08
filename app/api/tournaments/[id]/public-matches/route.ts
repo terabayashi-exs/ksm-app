@@ -162,8 +162,8 @@ export async function GET(
               ml.tournament_date,
               ml.match_number,
               ml.match_code,
-              ml.team1_id,
-              ml.team2_id,
+              ml.team1_tournament_team_id,
+              ml.team2_tournament_team_id,
               ml.team1_display_name,
               ml.team2_display_name,
               ml.court_number,
@@ -176,7 +176,7 @@ export async function GET(
               mb.block_order,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
-              CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_team_id ELSE NULL END as winner_team_id,
+              CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
               ml.remarks,
@@ -193,7 +193,7 @@ export async function GET(
           console.log('Available columns in t_matches_final:', columnNames);
           
           // 必要な列が存在するかチェック
-          const requiredColumns = ['team1_scores', 'team2_scores', 'winner_team_id', 'is_draw', 'is_walkover'];
+          const requiredColumns = ['team1_scores', 'team2_scores', 'winner_tournament_team_id', 'is_draw', 'is_walkover'];
           const missingColumns = requiredColumns.filter(col => !columnNames.includes(col));
           
           if (missingColumns.length > 0) {
@@ -207,8 +207,6 @@ export async function GET(
                 ml.tournament_date,
                 ml.match_number,
                 ml.match_code,
-                ml.team1_id,
-                ml.team2_id,
                 ml.team1_tournament_team_id,
                 ml.team2_tournament_team_id,
                 ml.team1_display_name as team1_display_name_raw,
@@ -217,10 +215,10 @@ export async function GET(
                 tt1.team_omission as team1_real_omission,
                 tt2.team_name as team2_real_name,
                 tt2.team_omission as team2_real_omission,
-                t1.team_name as team1_master_name,
-                t1.team_omission as team1_master_omission,
-                t2.team_name as team2_master_name,
-                t2.team_omission as team2_master_omission,
+                mt1.team_name as team1_master_name,
+                mt1.team_omission as team1_master_omission,
+                mt2.team_name as team2_master_name,
+                mt2.team_omission as team2_master_omission,
                 ml.court_number,
                 tc.court_name,
                 ml.start_time,
@@ -231,7 +229,7 @@ export async function GET(
                 mb.block_order,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
-                CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_team_id ELSE NULL END as winner_team_id,
+                CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
                 ml.remarks,
@@ -248,8 +246,8 @@ export async function GET(
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
               LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-              LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-              LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+              LEFT JOIN m_teams mt1 ON tt1.team_id = mt1.team_id
+              LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
               WHERE mb.tournament_id = ?
               ORDER BY mb.block_order ASC, ml.match_number ASC
             `, [formatId, tournamentId]);
@@ -263,8 +261,6 @@ export async function GET(
                 ml.tournament_date,
                 ml.match_number,
                 ml.match_code,
-                ml.team1_id,
-                ml.team2_id,
                 ml.team1_tournament_team_id,
                 ml.team2_tournament_team_id,
                 ml.team1_display_name as team1_display_name_raw,
@@ -273,10 +269,10 @@ export async function GET(
                 tt1.team_omission as team1_real_omission,
                 tt2.team_name as team2_real_name,
                 tt2.team_omission as team2_real_omission,
-                t1.team_name as team1_master_name,
-                t1.team_omission as team1_master_omission,
-                t2.team_name as team2_master_name,
-                t2.team_omission as team2_master_omission,
+                mt1.team_name as team1_master_name,
+                mt1.team_omission as team1_master_omission,
+                mt2.team_name as team2_master_name,
+                mt2.team_omission as team2_master_omission,
                 ml.court_number,
                 tc.court_name,
                 ml.start_time,
@@ -287,7 +283,6 @@ export async function GET(
                 mb.block_order,
                 mf.team1_scores as team1_goals,
                 mf.team2_scores as team2_goals,
-                mf.winner_team_id,
                 mf.winner_tournament_team_id,
                 mf.is_draw,
                 mf.is_walkover,
@@ -306,8 +301,8 @@ export async function GET(
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
               LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-              LEFT JOIN m_teams t1 ON ml.team1_id = t1.team_id
-              LEFT JOIN m_teams t2 ON ml.team2_id = t2.team_id
+              LEFT JOIN m_teams mt1 ON tt1.team_id = mt1.team_id
+              LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
               WHERE mb.tournament_id = ?
               ORDER BY mb.block_order ASC, ml.match_number ASC
             `, [formatId, tournamentId]);
@@ -324,8 +319,8 @@ export async function GET(
             ml.tournament_date,
             ml.match_number,
             ml.match_code,
-            ml.team1_id,
-            ml.team2_id,
+            ml.team1_tournament_team_id,
+            ml.team2_tournament_team_id,
             ml.team1_display_name,
             ml.team2_display_name,
             ml.court_number,
@@ -338,7 +333,7 @@ export async function GET(
             mb.block_order,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
-            CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_team_id ELSE NULL END as winner_team_id,
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
             ml.remarks,
@@ -499,8 +494,6 @@ export async function GET(
           tournament_date: String(row.tournament_date || '2024-01-01'),
           match_number: Number(row.match_number || 0),
           match_code: String(row.match_code || `M${i + 1}`),
-          team1_id: row.team1_id ? String(row.team1_id) : null,
-          team2_id: row.team2_id ? String(row.team2_id) : null,
           team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
           team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
           team1_display_name: team1DisplayName,
@@ -518,7 +511,7 @@ export async function GET(
           ...(function() {
             const team1Score = calculateDisplayScore(row.team1_goals);
             const team2Score = calculateDisplayScore(row.team2_goals);
-            
+
             return {
               team1_goals: team1Score.goals,
               team2_goals: team2Score.goals,
@@ -526,7 +519,6 @@ export async function GET(
               team2_pk_goals: team2Score.pkGoals
             };
           })(),
-          winner_team_id: row.winner_team_id ? String(row.winner_team_id) : null,
           winner_tournament_team_id: row.winner_tournament_team_id ? Number(row.winner_tournament_team_id) : null,
           is_draw: Boolean(row.is_draw),
           is_walkover: Boolean(row.is_walkover),

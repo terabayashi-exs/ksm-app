@@ -47,6 +47,7 @@ scripts/dump-database.js
 scripts/apply-to-*.js
 scripts/test-*.js
 scripts/fix-*.js
+# Note: scripts/*-migration*.mjs などのマイグレーションスクリプトはコミット対象
 
 # development server files
 dev-server.log
@@ -72,3 +73,17 @@ storybook-static
 
 # 調査用ドキュメント（ローカル参照用）
 TEAM_ID_MIGRATION_ANALYSIS.md
+
+# Drizzle ORM
+# pullで生成されたスキーマ（src/db/を使用するため除外）
+drizzle/schema.ts
+drizzle/relations.ts
+
+# 初回pullのスナップショット（実際のマイグレーションではない）
+drizzle/0000_*.sql
+drizzle/meta/0000_*.json
+
+# Note: 0001以降のマイグレーションファイル（db:generateで生成）とジャーナル・スナップショットはコミット対象
+# - drizzle/0001_*.sql, 0002_*.sql, ...
+# - drizzle/meta/0001_*.json, 0002_*.json, ...
+# - drizzle/meta/_journal.json

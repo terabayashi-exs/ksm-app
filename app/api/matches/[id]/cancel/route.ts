@@ -1,3 +1,4 @@
+// MIGRATION NOTE: team_id → tournament_team_id 移行済み (2026-02-04)
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -36,13 +37,14 @@ export async function POST(
     }
 
     // まず試合情報を取得
+    // MIGRATION NOTE: team1_tournament_team_id, team2_tournament_team_id を追加取得
     const matchResult = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
         ml.match_block_id,
-        ml.team1_id,
-        ml.team2_id,
+        ml.team1_tournament_team_id,
+        ml.team2_tournament_team_id,
         ml.team1_display_name,
         ml.team2_display_name,
         ml.match_status,
@@ -58,12 +60,13 @@ export async function POST(
       return NextResponse.json({ error: '試合が見つかりません' }, { status: 404 });
     }
 
+    // MIGRATION NOTE: team1_tournament_team_id, team2_tournament_team_id を型定義に追加
     const match = matchResult.rows[0] as unknown as {
       match_id: number;
       match_code: string;
       match_block_id: number;
-      team1_id: string | null;
-      team2_id: string | null;
+      team1_tournament_team_id: number | null;
+      team2_tournament_team_id: number | null;
       team1_display_name: string;
       team2_display_name: string;
       match_status: string;
@@ -106,27 +109,32 @@ export async function POST(
       const walkoverWinnerGoals = walkoverSettings.winner_goals;
       const walkoverLoserGoals = walkoverSettings.loser_goals;
 
+      // MIGRATION NOTE: tournament_team_id を calculateCancelResult に渡すように変更
       const cancelResult = calculateCancelResult(
         cancellation_type,
-        match.team1_id,
-        match.team2_id,
+        match.team1_tournament_team_id,
+        match.team2_tournament_team_id,
         walkoverWinnerGoals,
         walkoverLoserGoals
       );
 
+      // MIGRATION NOTE: tournament_team_id フィールドをINSERT文に追加
       await db.execute(`
         INSERT INTO t_matches_final (
           match_id, match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_display_name, team2_display_name,
+          team1_tournament_team_id, team2_tournament_team_id,
+          team1_display_name, team2_display_name,
           court_number, start_time, team1_scores, team2_scores, period_count,
-          winner_team_id, is_draw, is_walkover, match_status, result_status,
+          winner_tournament_team_id, is_draw, is_walkover,
+          match_status, result_status,
           cancellation_type, remarks, created_at, updated_at
         )
         SELECT
           match_id, match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_display_name, team2_display_name,
+          team1_tournament_team_id, team2_tournament_team_id,
+          team1_display_name, team2_display_name,
           court_number, start_time, ? as team1_scores, ? as team2_scores,
-          period_count, ? as winner_team_id, ? as is_draw,
+          period_count, ? as winner_tournament_team_id, ? as is_draw,
           1 as is_walkover, 'cancelled' as match_status, 'confirmed' as result_status,
           ? as cancellation_type,
           '試合中止' as remarks,
@@ -137,7 +145,7 @@ export async function POST(
       `, [
         cancelResult.team1_scores,
         cancelResult.team2_scores,
-        cancelResult.winner_team_id,
+        cancelResult.winner_tournament_team_id,
         cancelResult.is_draw ? 1 : 0,
         cancellation_type,
         matchId
@@ -238,11 +246,12 @@ export async function POST(
   }
 }
 
+// MIGRATION NOTE: tournament_team_id パラメータを追加
 // 中止結果計算関数（大会設定の不戦勝得点を使用）
 function calculateCancelResult(
   cancellation_type: string,
-  team1Id: string | null,
-  team2Id: string | null,
+  team1TournamentTeamId: number | null,
+  team2TournamentTeamId: number | null,
   walkoverWinnerGoals: number,
   walkoverLoserGoals: number
 ) {
@@ -251,21 +260,21 @@ function calculateCancelResult(
       return {
         team1_scores: '0',      // TEXT型、カンマ区切り対応
         team2_scores: '0',
-        winner_team_id: null,   // 勝者なし
+        winner_tournament_team_id: null,  // MIGRATION NOTE: 追加
         is_draw: true           // 0-0引き分け扱い（FIFA/JFA規定に準拠）
       };
     case 'no_show_team1':
       return {
         team1_scores: String(walkoverLoserGoals),   // 不参加チーム（不戦敗）
         team2_scores: String(walkoverWinnerGoals),  // 不戦勝チーム
-        winner_team_id: team2Id,
+        winner_tournament_team_id: team2TournamentTeamId,  // MIGRATION NOTE: 追加
         is_draw: false
       };
     case 'no_show_team2':
       return {
         team1_scores: String(walkoverWinnerGoals),  // 不戦勝チーム
         team2_scores: String(walkoverLoserGoals),   // 不参加チーム（不戦敗）
-        winner_team_id: team1Id,
+        winner_tournament_team_id: team1TournamentTeamId,  // MIGRATION NOTE: 追加
         is_draw: false
       };
     default:

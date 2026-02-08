@@ -15,7 +15,7 @@ interface PeriodScore {
 
 interface ExtendedScoreUpdate {
   period_scores: PeriodScore[];
-  winner_team_id?: string;
+  winner_tournament_team_id?: number;
   is_draw?: boolean;
   remarks?: string;
   updated_by: string;
@@ -40,11 +40,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 現在のスコアデータを取得
     const result = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.team1_scores,
         ml.team2_scores,
-        ml.winner_team_id,
+        ml.winner_tournament_team_id,
         ml.period_count,
         ms.current_period,
         -- 確定済みかチェック
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           team1: team1Scores.reduce((sum, score) => sum + (Number(score) || 0), 0),
           team2: team2Scores.reduce((sum, score) => sum + (Number(score) || 0), 0)
         },
-        winner_team_id: match.winner_team_id
+        winner_tournament_team_id: match.winner_tournament_team_id
       }
     });
 
@@ -231,24 +231,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       });
     }
 
-    // winner_tournament_team_idを取得
-    let winnerTournamentTeamId: number | null = null;
-    if (updateData.winner_team_id) {
-      const winnerResult = await db.execute(`
-        SELECT team1_tournament_team_id, team2_tournament_team_id, team1_id, team2_id
-        FROM t_matches_live
-        WHERE match_id = ?
-      `, [matchId]);
-
-      if (winnerResult.rows.length > 0) {
-        const matchRow = winnerResult.rows[0];
-        if (matchRow.team1_id === updateData.winner_team_id) {
-          winnerTournamentTeamId = matchRow.team1_tournament_team_id as number | null;
-        } else if (matchRow.team2_id === updateData.winner_team_id) {
-          winnerTournamentTeamId = matchRow.team2_tournament_team_id as number | null;
-        }
-      }
-    }
+    // winner_tournament_team_idはリクエストから直接使用
+    const winnerTournamentTeamId = updateData.winner_tournament_team_id || null;
 
     // データベース更新
     await db.execute(`
@@ -256,7 +240,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       SET
         team1_scores = ?,
         team2_scores = ?,
-        winner_team_id = ?,
         winner_tournament_team_id = ?,
         remarks = ?,
         updated_at = datetime('now', '+9 hours')
@@ -264,7 +247,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     `, [
       JSON.stringify(team1Scores),
       JSON.stringify(team2Scores),
-      updateData.winner_team_id || null,
       winnerTournamentTeamId,
       finalRemarks,
       matchId
@@ -274,7 +256,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       match_id: number;
       period_scores: PeriodScore[];
       total_scores: { team1: number; team2: number };
-      winner_team_id?: string;
+      winner_tournament_team_id?: number;
       pk_data?: {
         pk_mode: boolean;
         regular_scores?: { team1: number; team2: number };
@@ -288,7 +270,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         team1: team1Scores.reduce((sum, score) => sum + score, 0),
         team2: team2Scores.reduce((sum, score) => sum + score, 0)
       },
-      winner_team_id: updateData.winner_team_id
+      winner_tournament_team_id: updateData.winner_tournament_team_id
     };
 
     // PK戦データをレスポンスに含める

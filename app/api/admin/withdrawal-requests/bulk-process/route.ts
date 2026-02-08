@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
 
     // 対象チームの情報と影響範囲を取得
     const teamsInfo = await db.execute(`
-      SELECT 
+      SELECT
         tt.tournament_team_id,
         tt.team_name,
         tt.tournament_id,
@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
         tt.withdrawal_status,
         tt.assigned_block,
         t.tournament_name,
-        (SELECT COUNT(*) FROM t_matches_live ml WHERE ml.tournament_id = tt.tournament_id AND (ml.team1_id = tt.team_id OR ml.team2_id = tt.team_id)) as affected_matches
+        (SELECT COUNT(*) FROM t_matches_live ml WHERE ml.tournament_id = tt.tournament_id AND (ml.team1_tournament_team_id = tt.tournament_team_id OR ml.team2_tournament_team_id = tt.tournament_team_id)) as affected_matches
       FROM t_tournament_teams tt
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
       WHERE tt.tournament_team_id IN (${tournament_team_ids.map(() => '?').join(',')})

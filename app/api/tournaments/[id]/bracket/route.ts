@@ -58,8 +58,6 @@ export async function GET(
       SELECT DISTINCT
         ml.match_id,
         ml.match_code,
-        ml.team1_id,
-        ml.team2_id,
         ml.team1_tournament_team_id,
         ml.team2_tournament_team_id,
         COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
@@ -70,7 +68,6 @@ export async function GET(
         ml.team1_scores as live_team1_scores,
         ml.team2_scores as live_team2_scores,
         ml.period_count as live_period_count,
-        mf.winner_team_id,
         mf.winner_tournament_team_id,
         COALESCE(mf.is_draw, 0) as is_draw,
         COALESCE(mf.is_walkover, mt.is_bye_match, 0) as is_walkover,
@@ -154,15 +151,12 @@ export async function GET(
       const baseData = {
         match_id: row.match_id as number,
         match_code: row.match_code as string,
-        team1_id: row.team1_id as string | undefined,
-        team2_id: row.team2_id as string | undefined,
         team1_tournament_team_id: row.team1_tournament_team_id as number | null,
         team2_tournament_team_id: row.team2_tournament_team_id as number | null,
         team1_display_name: team1DisplayName,
         team2_display_name: team2DisplayName,
         team1_goals: team1GoalsData ? parseTotalScore(team1GoalsData) : 0,
         team2_goals: team2GoalsData ? parseTotalScore(team2GoalsData) : 0,
-        winner_team_id: row.winner_team_id as string | null,
         winner_tournament_team_id: row.winner_tournament_team_id as number | null,
         is_draw: Boolean(row.is_draw),
         is_walkover: isWalkover,
@@ -210,13 +204,17 @@ export async function GET(
           });
 
           // サッカーの場合はPKデータを抽出
-          if (sportCode === 'soccer' && baseData.is_confirmed && baseData.team1_id && baseData.team2_id) {
+          if (sportCode === 'soccer' && baseData.is_confirmed && baseData.team1_tournament_team_id && baseData.team2_tournament_team_id) {
             const team1SoccerData = extractSoccerScoreData(
-              team1Scores, team2Scores, baseData.team1_id,
-              baseData.team1_id, baseData.team2_id,
-              baseData.winner_team_id, activePeriods
+              team1Scores,
+              team2Scores,
+              baseData.team1_tournament_team_id,
+              baseData.team1_tournament_team_id,
+              baseData.team2_tournament_team_id,
+              baseData.winner_tournament_team_id,
+              activePeriods
             );
-            
+
             Object.assign(baseData, {
               soccer_data: team1SoccerData
             });

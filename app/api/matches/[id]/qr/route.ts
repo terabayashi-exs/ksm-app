@@ -158,8 +158,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         SELECT
           ml.match_id,
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
           ml.team1_tournament_team_id,
           ml.team2_tournament_team_id,
           ml.team1_display_name,
@@ -170,7 +168,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.period_count,
           ml.team1_scores,
           ml.team2_scores,
-          ml.winner_team_id,
           ml.winner_tournament_team_id,
           ml.remarks,
           ms.match_status,
@@ -182,7 +179,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           mf.match_id as is_confirmed,
           mf.team1_scores as final_team1_scores,
           mf.team2_scores as final_team2_scores,
-          mf.winner_team_id as final_winner_team_id,
           mf.winner_tournament_team_id as final_winner_tournament_team_id,
           -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
           t1.team_name as team1_real_name,
@@ -237,8 +233,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         data: {
           match_id: match.match_id,
           match_code: match.match_code,
-          team1_id: match.team1_id,
-          team2_id: match.team2_id,
           team1_tournament_team_id: match.team1_tournament_team_id,
           team2_tournament_team_id: match.team2_tournament_team_id,
           team1_name: resolvedTeam1Name,
@@ -257,7 +251,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           team2_scores: match.is_confirmed
             ? (match.final_team2_scores ? parseScoreArray(match.final_team2_scores) : null)
             : (match.team2_scores ? parseScoreArray(match.team2_scores) : null),
-          winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
           winner_tournament_team_id: match.is_confirmed ? match.final_winner_tournament_team_id : match.winner_tournament_team_id,
           is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,
@@ -290,8 +283,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         SELECT
           ml.match_id,
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id,
           ml.team1_tournament_team_id,
           ml.team2_tournament_team_id,
           ml.team1_display_name,
@@ -302,7 +293,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.period_count,
           ml.team1_scores,
           ml.team2_scores,
-          ml.winner_team_id,
           ml.winner_tournament_team_id,
           ml.remarks,
           ms.match_status,
@@ -314,7 +304,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           mf.match_id as is_confirmed,
           mf.team1_scores as final_team1_scores,
           mf.team2_scores as final_team2_scores,
-          mf.winner_team_id as final_winner_team_id,
           mf.winner_tournament_team_id as final_winner_tournament_team_id,
           -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
           t1.team_name as team1_real_name,
@@ -369,8 +358,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         data: {
           match_id: match.match_id,
           match_code: match.match_code,
-          team1_id: match.team1_id,
-          team2_id: match.team2_id,
           team1_tournament_team_id: match.team1_tournament_team_id,
           team2_tournament_team_id: match.team2_tournament_team_id,
           team1_name: resolvedTeam1Name,
@@ -389,7 +376,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           team2_scores: match.is_confirmed
             ? (match.final_team2_scores ? parseScoreArray(match.final_team2_scores) : null)
             : (match.team2_scores ? parseScoreArray(match.team2_scores) : null),
-          winner_team_id: match.is_confirmed ? match.final_winner_team_id : match.winner_team_id,
           winner_tournament_team_id: match.is_confirmed ? match.final_winner_tournament_team_id : match.winner_tournament_team_id,
           is_confirmed: !!match.is_confirmed,
           remarks: match.remarks,

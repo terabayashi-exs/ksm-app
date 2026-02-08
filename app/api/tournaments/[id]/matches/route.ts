@@ -65,7 +65,7 @@ export async function GET(
     console.log('Checking team assignment status...');
     const teamAssignmentResult = await db.execute(`
       SELECT COUNT(*) as total_matches,
-             COUNT(CASE WHEN team1_id IS NOT NULL AND team2_id IS NOT NULL THEN 1 END) as assigned_matches
+             COUNT(CASE WHEN team1_tournament_team_id IS NOT NULL AND team2_tournament_team_id IS NOT NULL THEN 1 END) as assigned_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
@@ -88,8 +88,6 @@ export async function GET(
         ml.tournament_date,
         ml.match_number,
         ml.match_code,
-        ml.team1_id,
-        ml.team2_id,
         ml.team1_tournament_team_id,
         ml.team2_tournament_team_id,
         ml.team1_display_name,
@@ -100,13 +98,12 @@ export async function GET(
         ml.team1_scores,
         ml.team2_scores,
         ml.period_count,
-        ml.winner_team_id,
         ml.match_status as live_match_status,
         ml.remarks,
         ml.confirmed_by,
         mb.phase,
         mb.display_round_name,
-        COALESCE(mt.block_name, mb.block_name) as block_name,
+        COALESCE(NULLIF(mt.block_name, ''), mb.block_name) as block_name,
         mb.match_type,
         mb.block_order,
         -- m_match_templatesからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
@@ -126,12 +123,13 @@ export async function GET(
         ms.updated_by,
         ms.updated_at,
         -- 確定結果テーブルから情報取得
+        mf.match_id as final_match_id,
         mf.team1_scores as final_team1_scores,
         mf.team2_scores as final_team2_scores,
-        mf.winner_team_id as final_winner_team_id,
+        mf.winner_tournament_team_id as final_winner_tournament_team_id,
         mf.is_draw as final_is_draw,
         mf.is_walkover as final_is_walkover,
-        mf.updated_at as confirmed_at
+        mf.updated_at as final_updated_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
@@ -187,7 +185,7 @@ export async function GET(
 
       // 確定済みかどうかの判定
       // t_matches_finalにレコードが存在する場合のみ確定扱い
-      const isConfirmed = !!row.confirmed_at;
+      const isConfirmed = !!row.final_match_id;
 
       // スコア情報（確定済みなら最終結果、そうでなければライブスコア）
       const team1ScoresStr = isConfirmed ? row.final_team1_scores : row.team1_scores;
@@ -239,8 +237,6 @@ export async function GET(
         tournament_date: String(row.tournament_date || ''),
         match_number: Number(row.match_number),
         match_code: String(row.match_code),
-        team1_id: row.team1_id ? String(row.team1_id) : null,
-        team2_id: row.team2_id ? String(row.team2_id) : null,
         team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
         team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
         team1_name: resolvedTeam1Name, // BYE試合対応：プレースホルダーから実チーム名に解決
@@ -260,7 +256,7 @@ export async function GET(
         team2_scores: team2ScoresStr,
         final_team1_scores: row.final_team1_scores,
         final_team2_scores: row.final_team2_scores,
-        winner_team_id: row.final_winner_team_id || row.winner_team_id,
+        winner_tournament_team_id: row.final_winner_tournament_team_id,
         is_confirmed: isConfirmed,
         is_draw: row.final_is_draw ? Boolean(row.final_is_draw) : false,
         is_walkover: row.final_is_walkover ? Boolean(row.final_is_walkover) : false,

@@ -322,8 +322,8 @@ async function checkTournamentHasOngoingMatches(tournamentId: number): Promise<b
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
         AND ms.match_status != 'scheduled'
-        AND ml.team1_id IS NOT NULL
-        AND ml.team2_id IS NOT NULL
+        AND ml.team1_tournament_team_id IS NOT NULL
+        AND ml.team2_tournament_team_id IS NOT NULL
         AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
     `, [formatId, tournamentId]);
 
@@ -363,8 +363,8 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
-        AND ml.team1_id IS NOT NULL
-        AND ml.team2_id IS NOT NULL
+        AND ml.team1_tournament_team_id IS NOT NULL
+        AND ml.team2_tournament_team_id IS NOT NULL
         AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
     `, [formatId, tournamentId]);
 
@@ -386,8 +386,8 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
       WHERE mb.tournament_id = ?
-        AND ml.team1_id IS NOT NULL
-        AND ml.team2_id IS NOT NULL
+        AND ml.team1_tournament_team_id IS NOT NULL
+        AND ml.team2_tournament_team_id IS NOT NULL
         AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
         AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
     `, [formatId, tournamentId]);

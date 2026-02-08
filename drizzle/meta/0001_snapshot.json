@@ -1,0 +1,4895 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "1adb97cb-5303-4bd9-9ed5-6b1fdae23193",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "m_administrators": {
+      "name": "m_administrators",
+      "columns": {
+        "administrator_id": {
+          "name": "administrator_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "admin_login_id": {
+          "name": "admin_login_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "logo_blob_url": {
+          "name": "logo_blob_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "logo_filename": {
+          "name": "logo_filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "organization_name": {
+          "name": "organization_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_plan_id": {
+          "name": "current_plan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "subscription_status": {
+          "name": "subscription_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'free'"
+        },
+        "trial_start_date": {
+          "name": "trial_start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "trial_end_date": {
+          "name": "trial_end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "square_customer_id": {
+          "name": "square_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "free_trial_end_date": {
+          "name": "free_trial_end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "plan_changed_at": {
+          "name": "plan_changed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_admin_sub_status": {
+          "name": "idx_admin_sub_status",
+          "columns": [
+            "subscription_status"
+          ],
+          "isUnique": false
+        },
+        "idx_admin_plan": {
+          "name": "idx_admin_plan",
+          "columns": [
+            "current_plan_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "m_administrators_current_plan_id_m_subscription_plans_plan_id_fk": {
+          "name": "m_administrators_current_plan_id_m_subscription_plans_plan_id_fk",
+          "tableFrom": "m_administrators",
+          "tableTo": "m_subscription_plans",
+          "columnsFrom": [
+            "current_plan_id"
+          ],
+          "columnsTo": [
+            "plan_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_match_templates": {
+      "name": "m_match_templates",
+      "columns": {
+        "template_id": {
+          "name": "template_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "format_id": {
+          "name": "format_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_number": {
+          "name": "match_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_code": {
+          "name": "match_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_type": {
+          "name": "match_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "round_name": {
+          "name": "round_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "block_name": {
+          "name": "block_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team1_source": {
+          "name": "team1_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team2_source": {
+          "name": "team2_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team1_display_name": {
+          "name": "team1_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team2_display_name": {
+          "name": "team2_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "day_number": {
+          "name": "day_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "execution_priority": {
+          "name": "execution_priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "court_number": {
+          "name": "court_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "suggested_start_time": {
+          "name": "suggested_start_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "loser_position_start": {
+          "name": "loser_position_start",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "loser_position_end": {
+          "name": "loser_position_end",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "position_note": {
+          "name": "position_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "winner_position": {
+          "name": "winner_position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_bye_match": {
+          "name": "is_bye_match",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "m_match_templates_format_id_m_tournament_formats_format_id_fk": {
+          "name": "m_match_templates_format_id_m_tournament_formats_format_id_fk",
+          "tableFrom": "m_match_templates",
+          "tableTo": "m_tournament_formats",
+          "columnsFrom": [
+            "format_id"
+          ],
+          "columnsTo": [
+            "format_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_players": {
+      "name": "m_players",
+      "columns": {
+        "player_id": {
+          "name": "player_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "player_name": {
+          "name": "player_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "jersey_number": {
+          "name": "jersey_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_team_id": {
+          "name": "current_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "m_players_current_team_id_m_teams_team_id_fk": {
+          "name": "m_players_current_team_id_m_teams_team_id_fk",
+          "tableFrom": "m_players",
+          "tableTo": "m_teams",
+          "columnsFrom": [
+            "current_team_id"
+          ],
+          "columnsTo": [
+            "team_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_sport_types": {
+      "name": "m_sport_types",
+      "columns": {
+        "sport_type_id": {
+          "name": "sport_type_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "sport_name": {
+          "name": "sport_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sport_code": {
+          "name": "sport_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "max_period_count": {
+          "name": "max_period_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "regular_period_count": {
+          "name": "regular_period_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "score_type": {
+          "name": "score_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'numeric'"
+        },
+        "default_match_duration": {
+          "name": "default_match_duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "score_unit": {
+          "name": "score_unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'ゴール'"
+        },
+        "period_definitions": {
+          "name": "period_definitions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_format": {
+          "name": "result_format",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'score'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "supports_point_system": {
+          "name": "supports_point_system",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "supports_draws": {
+          "name": "supports_draws",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "ranking_method": {
+          "name": "ranking_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'points'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_subscription_plans": {
+      "name": "m_subscription_plans",
+      "columns": {
+        "plan_id": {
+          "name": "plan_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "plan_name": {
+          "name": "plan_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "plan_description": {
+          "name": "plan_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "monthly_price": {
+          "name": "monthly_price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yearly_price": {
+          "name": "yearly_price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'JPY'"
+        },
+        "max_tournaments": {
+          "name": "max_tournaments",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "max_divisions_per_tournament": {
+          "name": "max_divisions_per_tournament",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "total_max_divisions": {
+          "name": "total_max_divisions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "max_teams_per_tournament": {
+          "name": "max_teams_per_tournament",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "allow_csv_import": {
+          "name": "allow_csv_import",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "allow_advanced_stats": {
+          "name": "allow_advanced_stats",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "allow_custom_branding": {
+          "name": "allow_custom_branding",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "display_order": {
+          "name": "display_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "is_visible": {
+          "name": "is_visible",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_teams": {
+      "name": "m_teams",
+      "columns": {
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_name": {
+          "name": "team_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_omission": {
+          "name": "team_omission",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contact_person": {
+          "name": "contact_person",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_phone": {
+          "name": "contact_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "representative_player_id": {
+          "name": "representative_player_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "registration_type": {
+          "name": "registration_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'self_registered'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_tournament_formats": {
+      "name": "m_tournament_formats",
+      "columns": {
+        "format_id": {
+          "name": "format_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "format_name": {
+          "name": "format_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_team_count": {
+          "name": "target_team_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_description": {
+          "name": "format_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "sport_type_id": {
+          "name": "sport_type_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "preliminary_format_type": {
+          "name": "preliminary_format_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "final_format_type": {
+          "name": "final_format_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "m_venues": {
+      "name": "m_venues",
+      "columns": {
+        "venue_id": {
+          "name": "venue_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "venue_name": {
+          "name": "venue_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "available_courts": {
+          "name": "available_courts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 4
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_administrator_subscriptions": {
+      "name": "t_administrator_subscriptions",
+      "columns": {
+        "subscription_id": {
+          "name": "subscription_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "admin_login_id": {
+          "name": "admin_login_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subscription_status": {
+          "name": "subscription_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "trial_end_date": {
+          "name": "trial_end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "changed_from_plan_id": {
+          "name": "changed_from_plan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "change_reason": {
+          "name": "change_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {
+        "idx_subscription_status": {
+          "name": "idx_subscription_status",
+          "columns": [
+            "subscription_status"
+          ],
+          "isUnique": false
+        },
+        "idx_subscription_admin": {
+          "name": "idx_subscription_admin",
+          "columns": [
+            "admin_login_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_administrator_subscriptions_admin_login_id_m_administrators_admin_login_id_fk": {
+          "name": "t_administrator_subscriptions_admin_login_id_m_administrators_admin_login_id_fk",
+          "tableFrom": "t_administrator_subscriptions",
+          "tableTo": "m_administrators",
+          "columnsFrom": [
+            "admin_login_id"
+          ],
+          "columnsTo": [
+            "admin_login_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "t_administrator_subscriptions_plan_id_m_subscription_plans_plan_id_fk": {
+          "name": "t_administrator_subscriptions_plan_id_m_subscription_plans_plan_id_fk",
+          "tableFrom": "t_administrator_subscriptions",
+          "tableTo": "m_subscription_plans",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "plan_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_announcements": {
+      "name": "t_announcements",
+      "columns": {
+        "announcement_id": {
+          "name": "announcement_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "display_order": {
+          "name": "display_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {
+        "idx_announcements_display": {
+          "name": "idx_announcements_display",
+          "columns": [
+            "status",
+            "display_order",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_announcements_created_by_m_administrators_admin_login_id_fk": {
+          "name": "t_announcements_created_by_m_administrators_admin_login_id_fk",
+          "tableFrom": "t_announcements",
+          "tableTo": "m_administrators",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "admin_login_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_archived_tournament_json": {
+      "name": "t_archived_tournament_json",
+      "columns": {
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tournament_name": {
+          "name": "tournament_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tournament_data": {
+          "name": "tournament_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "teams_data": {
+          "name": "teams_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "matches_data": {
+          "name": "matches_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "standings_data": {
+          "name": "standings_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "results_data": {
+          "name": "results_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pdf_info_data": {
+          "name": "pdf_info_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "archive_version": {
+          "name": "archive_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'v1_json'"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "archived_by": {
+          "name": "archived_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_accessed": {
+          "name": "last_accessed",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_archived_json_version": {
+          "name": "idx_archived_json_version",
+          "columns": [
+            "archive_version"
+          ],
+          "isUnique": false
+        },
+        "idx_archived_json_date": {
+          "name": "idx_archived_json_date",
+          "columns": [
+            "archived_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_email_send_history": {
+      "name": "t_email_send_history",
+      "columns": {
+        "history_id": {
+          "name": "history_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tournament_team_id": {
+          "name": "tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "sent_by": {
+          "name": "sent_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {
+        "idx_email_history_sent_at": {
+          "name": "idx_email_history_sent_at",
+          "columns": [
+            "sent_at"
+          ],
+          "isUnique": false
+        },
+        "idx_email_history_tournament_team": {
+          "name": "idx_email_history_tournament_team",
+          "columns": [
+            "tournament_id",
+            "tournament_team_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_email_send_history_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_email_send_history_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_email_send_history",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_email_send_history_tournament_team_id_t_tournament_teams_tournament_team_id_fk": {
+          "name": "t_email_send_history_tournament_team_id_t_tournament_teams_tournament_team_id_fk",
+          "tableFrom": "t_email_send_history",
+          "tableTo": "t_tournament_teams",
+          "columnsFrom": [
+            "tournament_team_id"
+          ],
+          "columnsTo": [
+            "tournament_team_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_email_verification_tokens": {
+      "name": "t_email_verification_tokens",
+      "columns": {
+        "token_id": {
+          "name": "token_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used": {
+          "name": "used",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_email_verification_expires": {
+          "name": "idx_email_verification_expires",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        },
+        "idx_email_verification_email": {
+          "name": "idx_email_verification_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        },
+        "idx_email_verification_token": {
+          "name": "idx_email_verification_token",
+          "columns": [
+            "token"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_match_blocks": {
+      "name": "t_match_blocks",
+      "columns": {
+        "match_block_id": {
+          "name": "match_block_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_round_name": {
+          "name": "display_round_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "block_name": {
+          "name": "block_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_type": {
+          "name": "match_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "block_order": {
+          "name": "block_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "team_rankings": {
+          "name": "team_rankings",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "t_match_blocks_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_match_blocks_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_match_blocks",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_match_status": {
+      "name": "t_match_status",
+      "columns": {
+        "match_id": {
+          "name": "match_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_block_id": {
+          "name": "match_block_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_status": {
+          "name": "match_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'scheduled'"
+        },
+        "actual_start_time": {
+          "name": "actual_start_time",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "actual_end_time": {
+          "name": "actual_end_time",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_period": {
+          "name": "current_period",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "t_match_status_match_block_id_t_match_blocks_match_block_id_fk": {
+          "name": "t_match_status_match_block_id_t_match_blocks_match_block_id_fk",
+          "tableFrom": "t_match_status",
+          "tableTo": "t_match_blocks",
+          "columnsFrom": [
+            "match_block_id"
+          ],
+          "columnsTo": [
+            "match_block_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_matches_final": {
+      "name": "t_matches_final",
+      "columns": {
+        "match_id": {
+          "name": "match_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "match_block_id": {
+          "name": "match_block_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tournament_date": {
+          "name": "tournament_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_number": {
+          "name": "match_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_code": {
+          "name": "match_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team1_display_name": {
+          "name": "team1_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team2_display_name": {
+          "name": "team2_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "court_number": {
+          "name": "court_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team1_scores": {
+          "name": "team1_scores",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team2_scores": {
+          "name": "team2_scores",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "period_count": {
+          "name": "period_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "is_draw": {
+          "name": "is_draw",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_walkover": {
+          "name": "is_walkover",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "match_status": {
+          "name": "match_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'completed'"
+        },
+        "result_status": {
+          "name": "result_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'confirmed'"
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "cancellation_type": {
+          "name": "cancellation_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team1_tournament_team_id": {
+          "name": "team1_tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team2_tournament_team_id": {
+          "name": "team2_tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "winner_tournament_team_id": {
+          "name": "winner_tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_matches_final_winner_tournament": {
+          "name": "idx_matches_final_winner_tournament",
+          "columns": [
+            "winner_tournament_team_id"
+          ],
+          "isUnique": false
+        },
+        "idx_matches_final_team2_tournament": {
+          "name": "idx_matches_final_team2_tournament",
+          "columns": [
+            "team2_tournament_team_id"
+          ],
+          "isUnique": false
+        },
+        "idx_matches_final_team1_tournament": {
+          "name": "idx_matches_final_team1_tournament",
+          "columns": [
+            "team1_tournament_team_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_matches_final_match_block_id_t_match_blocks_match_block_id_fk": {
+          "name": "t_matches_final_match_block_id_t_match_blocks_match_block_id_fk",
+          "tableFrom": "t_matches_final",
+          "tableTo": "t_match_blocks",
+          "columnsFrom": [
+            "match_block_id"
+          ],
+          "columnsTo": [
+            "match_block_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_matches_live": {
+      "name": "t_matches_live",
+      "columns": {
+        "match_id": {
+          "name": "match_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "match_block_id": {
+          "name": "match_block_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tournament_date": {
+          "name": "tournament_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_number": {
+          "name": "match_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_code": {
+          "name": "match_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team1_display_name": {
+          "name": "team1_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team2_display_name": {
+          "name": "team2_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "court_number": {
+          "name": "court_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team1_scores": {
+          "name": "team1_scores",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team2_scores": {
+          "name": "team2_scores",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "period_count": {
+          "name": "period_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "is_draw": {
+          "name": "is_draw",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_walkover": {
+          "name": "is_walkover",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "match_status": {
+          "name": "match_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'scheduled'"
+        },
+        "result_status": {
+          "name": "result_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'none'"
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirmed_by": {
+          "name": "confirmed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "cancellation_type": {
+          "name": "cancellation_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team1_tournament_team_id": {
+          "name": "team1_tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team2_tournament_team_id": {
+          "name": "team2_tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "winner_tournament_team_id": {
+          "name": "winner_tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_matches_live_team1_tournament": {
+          "name": "idx_matches_live_team1_tournament",
+          "columns": [
+            "team1_tournament_team_id"
+          ],
+          "isUnique": false
+        },
+        "idx_matches_live_winner_tournament": {
+          "name": "idx_matches_live_winner_tournament",
+          "columns": [
+            "winner_tournament_team_id"
+          ],
+          "isUnique": false
+        },
+        "idx_matches_live_team2_tournament": {
+          "name": "idx_matches_live_team2_tournament",
+          "columns": [
+            "team2_tournament_team_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_password_reset_tokens": {
+      "name": "t_password_reset_tokens",
+      "columns": {
+        "token_id": {
+          "name": "token_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reset_token": {
+          "name": "reset_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {
+        "idx_expires_at": {
+          "name": "idx_expires_at",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        },
+        "idx_team_reset_tokens": {
+          "name": "idx_team_reset_tokens",
+          "columns": [
+            "team_id"
+          ],
+          "isUnique": false
+        },
+        "idx_reset_token": {
+          "name": "idx_reset_token",
+          "columns": [
+            "reset_token"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_password_reset_tokens_team_id_m_teams_team_id_fk": {
+          "name": "t_password_reset_tokens_team_id_m_teams_team_id_fk",
+          "tableFrom": "t_password_reset_tokens",
+          "tableTo": "m_teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "team_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_payment_history": {
+      "name": "t_payment_history",
+      "columns": {
+        "payment_id": {
+          "name": "payment_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "subscription_id": {
+          "name": "subscription_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "admin_login_id": {
+          "name": "admin_login_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "square_payment_id": {
+          "name": "square_payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {
+        "idx_payment_admin": {
+          "name": "idx_payment_admin",
+          "columns": [
+            "admin_login_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_payment_history_admin_login_id_m_administrators_admin_login_id_fk": {
+          "name": "t_payment_history_admin_login_id_m_administrators_admin_login_id_fk",
+          "tableFrom": "t_payment_history",
+          "tableTo": "m_administrators",
+          "columnsFrom": [
+            "admin_login_id"
+          ],
+          "columnsTo": [
+            "admin_login_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "t_payment_history_plan_id_m_subscription_plans_plan_id_fk": {
+          "name": "t_payment_history_plan_id_m_subscription_plans_plan_id_fk",
+          "tableFrom": "t_payment_history",
+          "tableTo": "m_subscription_plans",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "plan_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_sponsor_banners": {
+      "name": "t_sponsor_banners",
+      "columns": {
+        "banner_id": {
+          "name": "banner_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "banner_name": {
+          "name": "banner_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "banner_url": {
+          "name": "banner_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "image_blob_url": {
+          "name": "image_blob_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "image_filename": {
+          "name": "image_filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "file_size": {
+          "name": "file_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "display_position": {
+          "name": "display_position",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_tab": {
+          "name": "target_tab",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'all'"
+        },
+        "display_order": {
+          "name": "display_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "click_count": {
+          "name": "click_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "banner_size": {
+          "name": "banner_size",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'large'"
+        }
+      },
+      "indexes": {
+        "idx_sponsor_banners_dates": {
+          "name": "idx_sponsor_banners_dates",
+          "columns": [
+            "start_date",
+            "end_date"
+          ],
+          "isUnique": false
+        },
+        "idx_sponsor_banners_active": {
+          "name": "idx_sponsor_banners_active",
+          "columns": [
+            "tournament_id",
+            "is_active"
+          ],
+          "isUnique": false
+        },
+        "idx_sponsor_banners_display": {
+          "name": "idx_sponsor_banners_display",
+          "columns": [
+            "tournament_id",
+            "target_tab",
+            "display_position",
+            "display_order"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_sponsor_banners_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_sponsor_banners_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_sponsor_banners",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_subscription_usage": {
+      "name": "t_subscription_usage",
+      "columns": {
+        "usage_id": {
+          "name": "usage_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "admin_login_id": {
+          "name": "admin_login_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "current_tournament_groups_count": {
+          "name": "current_tournament_groups_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "current_tournaments_count": {
+          "name": "current_tournaments_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_calculated_at": {
+          "name": "last_calculated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {
+        "idx_usage_admin": {
+          "name": "idx_usage_admin",
+          "columns": [
+            "admin_login_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_subscription_usage_admin_login_id_m_administrators_admin_login_id_fk": {
+          "name": "t_subscription_usage_admin_login_id_m_administrators_admin_login_id_fk",
+          "tableFrom": "t_subscription_usage",
+          "tableTo": "m_administrators",
+          "columnsFrom": [
+            "admin_login_id"
+          ],
+          "columnsTo": [
+            "admin_login_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_courts": {
+      "name": "t_tournament_courts",
+      "columns": {
+        "tournament_court_id": {
+          "name": "tournament_court_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "court_number": {
+          "name": "court_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "court_name": {
+          "name": "court_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_order": {
+          "name": "display_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {
+        "idx_tournament_courts_active": {
+          "name": "idx_tournament_courts_active",
+          "columns": [
+            "tournament_id",
+            "is_active"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_courts_tournament": {
+          "name": "idx_tournament_courts_tournament",
+          "columns": [
+            "tournament_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_tournament_courts_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_courts_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_courts",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_files": {
+      "name": "t_tournament_files",
+      "columns": {
+        "file_id": {
+          "name": "file_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_title": {
+          "name": "file_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_description": {
+          "name": "file_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "original_filename": {
+          "name": "original_filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "blob_url": {
+          "name": "blob_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_size": {
+          "name": "file_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'application/pdf'"
+        },
+        "upload_order": {
+          "name": "upload_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_public": {
+          "name": "is_public",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'1'"
+        },
+        "uploaded_by": {
+          "name": "uploaded_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "uploaded_at": {
+          "name": "uploaded_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "external_url": {
+          "name": "external_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link_type": {
+          "name": "link_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'upload'"
+        }
+      },
+      "indexes": {
+        "idx_tournament_files_order": {
+          "name": "idx_tournament_files_order",
+          "columns": [
+            "tournament_id",
+            "upload_order"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_files_public": {
+          "name": "idx_tournament_files_public",
+          "columns": [
+            "tournament_id",
+            "is_public"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_files_tournament_id": {
+          "name": "idx_tournament_files_tournament_id",
+          "columns": [
+            "tournament_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_tournament_files_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_files_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_files",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_groups": {
+      "name": "t_tournament_groups",
+      "columns": {
+        "group_id": {
+          "name": "group_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "group_name": {
+          "name": "group_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organizer": {
+          "name": "organizer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "venue_id": {
+          "name": "venue_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "event_start_date": {
+          "name": "event_start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "event_end_date": {
+          "name": "event_end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recruitment_start_date": {
+          "name": "recruitment_start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recruitment_end_date": {
+          "name": "recruitment_end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'open'"
+        },
+        "event_description": {
+          "name": "event_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "admin_login_id": {
+          "name": "admin_login_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_tournament_groups_admin": {
+          "name": "idx_tournament_groups_admin",
+          "columns": [
+            "admin_login_id"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_groups_venue": {
+          "name": "idx_tournament_groups_venue",
+          "columns": [
+            "venue_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_tournament_groups_venue_id_m_venues_venue_id_fk": {
+          "name": "t_tournament_groups_venue_id_m_venues_venue_id_fk",
+          "tableFrom": "t_tournament_groups",
+          "tableTo": "m_venues",
+          "columnsFrom": [
+            "venue_id"
+          ],
+          "columnsTo": [
+            "venue_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_tournament_groups_admin_login_id_m_administrators_admin_login_id_fk": {
+          "name": "t_tournament_groups_admin_login_id_m_administrators_admin_login_id_fk",
+          "tableFrom": "t_tournament_groups",
+          "tableTo": "m_administrators",
+          "columnsFrom": [
+            "admin_login_id"
+          ],
+          "columnsTo": [
+            "admin_login_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_match_overrides": {
+      "name": "t_tournament_match_overrides",
+      "columns": {
+        "override_id": {
+          "name": "override_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_code": {
+          "name": "match_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team1_source_override": {
+          "name": "team1_source_override",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team2_source_override": {
+          "name": "team2_source_override",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "override_reason": {
+          "name": "override_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "overridden_by": {
+          "name": "overridden_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "overridden_at": {
+          "name": "overridden_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {
+        "idx_tournament_match_overrides_match_code": {
+          "name": "idx_tournament_match_overrides_match_code",
+          "columns": [
+            "match_code"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_match_overrides_tournament": {
+          "name": "idx_tournament_match_overrides_tournament",
+          "columns": [
+            "tournament_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_tournament_match_overrides_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_match_overrides_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_match_overrides",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_notifications": {
+      "name": "t_tournament_notifications",
+      "columns": {
+        "notification_id": {
+          "name": "notification_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "notification_type": {
+          "name": "notification_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "severity": {
+          "name": "severity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'info'"
+        },
+        "is_resolved": {
+          "name": "is_resolved",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "t_tournament_notifications_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_notifications_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_notifications",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_players": {
+      "name": "t_tournament_players",
+      "columns": {
+        "tournament_player_id": {
+          "name": "tournament_player_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_id": {
+          "name": "player_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_name": {
+          "name": "player_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "jersey_number": {
+          "name": "jersey_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "player_status": {
+          "name": "player_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "registration_date": {
+          "name": "registration_date",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "withdrawal_date": {
+          "name": "withdrawal_date",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "player_omission": {
+          "name": "player_omission",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tournament_team_id": {
+          "name": "tournament_team_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_tournament_players_tournament_team_id": {
+          "name": "idx_tournament_players_tournament_team_id",
+          "columns": [
+            "tournament_team_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_tournament_players_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_players_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_players",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_tournament_players_team_id_m_teams_team_id_fk": {
+          "name": "t_tournament_players_team_id_m_teams_team_id_fk",
+          "tableFrom": "t_tournament_players",
+          "tableTo": "m_teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "team_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_tournament_players_player_id_m_players_player_id_fk": {
+          "name": "t_tournament_players_player_id_m_players_player_id_fk",
+          "tableFrom": "t_tournament_players",
+          "tableTo": "m_players",
+          "columnsFrom": [
+            "player_id"
+          ],
+          "columnsTo": [
+            "player_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_rules": {
+      "name": "t_tournament_rules",
+      "columns": {
+        "tournament_rule_id": {
+          "name": "tournament_rule_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "use_extra_time": {
+          "name": "use_extra_time",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "use_penalty": {
+          "name": "use_penalty",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "active_periods": {
+          "name": "active_periods",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'[\"1\"]'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "point_system": {
+          "name": "point_system",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "walkover_settings": {
+          "name": "walkover_settings",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tie_breaking_rules": {
+          "name": "tie_breaking_rules",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tie_breaking_enabled": {
+          "name": "tie_breaking_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'sql`(datetime(''now'', ''+9 hours''))`'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "t_tournament_rules_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_rules_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_rules",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournament_teams": {
+      "name": "t_tournament_teams",
+      "columns": {
+        "tournament_team_id": {
+          "name": "tournament_team_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_name": {
+          "name": "team_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "team_omission": {
+          "name": "team_omission",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "assigned_block": {
+          "name": "assigned_block",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "block_position": {
+          "name": "block_position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "withdrawal_status": {
+          "name": "withdrawal_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "withdrawal_reason": {
+          "name": "withdrawal_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "withdrawal_requested_at": {
+          "name": "withdrawal_requested_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "withdrawal_processed_at": {
+          "name": "withdrawal_processed_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "withdrawal_processed_by": {
+          "name": "withdrawal_processed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "withdrawal_admin_comment": {
+          "name": "withdrawal_admin_comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "registration_method": {
+          "name": "registration_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "participation_status": {
+          "name": "participation_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'confirmed'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "t_tournament_teams_tournament_id_t_tournaments_tournament_id_fk": {
+          "name": "t_tournament_teams_tournament_id_t_tournaments_tournament_id_fk",
+          "tableFrom": "t_tournament_teams",
+          "tableTo": "t_tournaments",
+          "columnsFrom": [
+            "tournament_id"
+          ],
+          "columnsTo": [
+            "tournament_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_tournament_teams_team_id_m_teams_team_id_fk": {
+          "name": "t_tournament_teams_team_id_m_teams_team_id_fk",
+          "tableFrom": "t_tournament_teams",
+          "tableTo": "m_teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "team_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    },
+    "t_tournaments": {
+      "name": "t_tournaments",
+      "columns": {
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tournament_name": {
+          "name": "tournament_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_id": {
+          "name": "format_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "venue_id": {
+          "name": "venue_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team_count": {
+          "name": "team_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "court_count": {
+          "name": "court_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tournament_dates": {
+          "name": "tournament_dates",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_duration_minutes": {
+          "name": "match_duration_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "break_duration_minutes": {
+          "name": "break_duration_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'planning'"
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "public_start_date": {
+          "name": "public_start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recruitment_start_date": {
+          "name": "recruitment_start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recruitment_end_date": {
+          "name": "recruitment_end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sport_type_id": {
+          "name": "sport_type_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "archive_ui_version": {
+          "name": "archive_ui_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_archived": {
+          "name": "is_archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "archived_by": {
+          "name": "archived_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(datetime('now', '+9 hours'))"
+        },
+        "files_count": {
+          "name": "files_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "group_order": {
+          "name": "group_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category_name": {
+          "name": "category_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "show_players_public": {
+          "name": "show_players_public",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "idx_tournaments_status": {
+          "name": "idx_tournaments_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_group": {
+          "name": "idx_tournament_group",
+          "columns": [
+            "group_id"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_status": {
+          "name": "idx_tournament_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_creator": {
+          "name": "idx_tournament_creator",
+          "columns": [
+            "created_by"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_venue": {
+          "name": "idx_tournament_venue",
+          "columns": [
+            "venue_id"
+          ],
+          "isUnique": false
+        },
+        "idx_tournament_format": {
+          "name": "idx_tournament_format",
+          "columns": [
+            "format_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "t_tournaments_format_id_m_tournament_formats_format_id_fk": {
+          "name": "t_tournaments_format_id_m_tournament_formats_format_id_fk",
+          "tableFrom": "t_tournaments",
+          "tableTo": "m_tournament_formats",
+          "columnsFrom": [
+            "format_id"
+          ],
+          "columnsTo": [
+            "format_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_tournaments_venue_id_m_venues_venue_id_fk": {
+          "name": "t_tournaments_venue_id_m_venues_venue_id_fk",
+          "tableFrom": "t_tournaments",
+          "tableTo": "m_venues",
+          "columnsFrom": [
+            "venue_id"
+          ],
+          "columnsTo": [
+            "venue_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "t_tournaments_group_id_t_tournament_groups_group_id_fk": {
+          "name": "t_tournaments_group_id_t_tournament_groups_group_id_fk",
+          "tableFrom": "t_tournaments",
+          "tableTo": "t_tournament_groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "group_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "t_match_status_check_1": {
+          "name": "t_match_status_check_1",
+          "value": "match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'"
+        },
+        "t_tournament_teams_check_2": {
+          "name": "t_tournament_teams_check_2",
+          "value": "participation_status IN ('confirmed', 'waitlisted', 'cancelled'"
+        },
+        "t_tournament_rules_check_3": {
+          "name": "t_tournament_rules_check_3",
+          "value": "phase IN ('preliminary', 'final'"
+        },
+        "t_email_verification_tokens_check_4": {
+          "name": "t_email_verification_tokens_check_4",
+          "value": "purpose IN ('registration', 'password_reset'"
+        },
+        "t_sponsor_banners_check_5": {
+          "name": "t_sponsor_banners_check_5",
+          "value": "display_position IN ('top', 'bottom', 'sidebar'"
+        },
+        "t_sponsor_banners_check_6": {
+          "name": "t_sponsor_banners_check_6",
+          "value": "target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'"
+        },
+        "t_sponsor_banners_check_7": {
+          "name": "t_sponsor_banners_check_7",
+          "value": "is_active IN (0, 1"
+        },
+        "t_sponsor_banners_check_8": {
+          "name": "t_sponsor_banners_check_8",
+          "value": "banner_size IN ('large', 'small'"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

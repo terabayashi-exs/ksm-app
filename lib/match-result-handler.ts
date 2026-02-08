@@ -83,20 +83,18 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       sql: `
         INSERT INTO t_matches_final (
           match_block_id, tournament_date, match_number, match_code,
-          team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+          team1_tournament_team_id, team2_tournament_team_id,
           team1_display_name, team2_display_name,
           court_number, start_time, team1_scores, team2_scores,
-          winner_team_id, winner_tournament_team_id, is_draw, is_walkover, remarks,
+          winner_tournament_team_id, is_draw, is_walkover, remarks,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `,
       args: [
         match.match_block_id,
         match.tournament_date,
         match.match_number,
         match.match_code,
-        match.team1_id,
-        match.team2_id,
         match.team1_tournament_team_id,
         match.team2_tournament_team_id,
         match.team1_display_name,
@@ -105,7 +103,6 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         match.start_time,
         Math.floor(Number(match.team1_scores) || 0),
         Math.floor(Number(match.team2_scores) || 0),
-        match.winner_team_id,
         match.winner_tournament_team_id,
         match.is_draw,
         match.is_walkover,
@@ -131,12 +128,12 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       // トーナメント進出処理（決勝トーナメントの場合）
       try {
         const matchCode = match.match_code as string;
-        const team1Id = match.team1_id as string | null;
-        const team2Id = match.team2_id as string | null;
-        const winnerId = match.winner_team_id as string | null;
+        const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+        const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
+        const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
         const isDraw = Boolean(match.is_draw);
-        
-        await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
+
+        await processTournamentProgression(matchId, matchCode, isDraw, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
       } catch (progressionError) {
         console.error('トーナメント進出処理エラー:', progressionError);
         // トーナメント進出処理エラーでも処理を継続
@@ -154,28 +151,69 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         // エラーが発生しても試合確定処理は成功とする
       }
 
-      // 決勝トーナメントの場合は決勝順位も更新
-      const blockPhaseResult = await db.execute({
-        sql: 'SELECT phase FROM t_match_blocks WHERE match_block_id = ?',
+      // トーナメント形式の場合は順位設定を実行（予選・決勝両方対応）
+      // MIGRATION NOTE: preliminary_format_type='tournament'と final_format_type='tournament'の両方に対応
+      const blockInfoResult = await db.execute({
+        sql: `
+          SELECT
+            mb.phase,
+            CASE
+              WHEN mb.phase = 'preliminary' THEN f.preliminary_format_type
+              WHEN mb.phase = 'final' THEN f.final_format_type
+              ELSE NULL
+            END as format_type
+          FROM t_match_blocks mb
+          JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
+          JOIN m_tournament_formats f ON t.format_id = f.format_id
+          WHERE mb.match_block_id = ?
+        `,
         args: [matchBlockId]
       });
-      
-      if (blockPhaseResult.rows.length > 0 && blockPhaseResult.rows[0].phase === 'final') {
-        // テンプレートベースの順位設定を実行
-        try {
-          const winnerId = match.winner_team_id as string | null;
-          const loserId = match.team1_id === winnerId ? match.team2_id as string : match.team1_id as string;
-          
-          if (winnerId && loserId) {
-            await handleTemplateBasedPositions(matchId, winnerId, loserId, tournamentId);
+
+      if (blockInfoResult.rows.length > 0) {
+        const blockInfo = blockInfoResult.rows[0];
+        const phase = blockInfo.phase as string;
+        const formatType = blockInfo.format_type as string | null;
+
+        // トーナメント形式の場合のみ順位設定を実行
+        if (formatType === 'tournament') {
+          console.log(`[MATCH_CONFIRM] トーナメント形式（${phase}）の順位設定を実行`);
+
+          // テンプレートベースの順位設定を実行
+          // MIGRATION NOTE: tournament_team_idベースに変更
+          try {
+            const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
+            const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+            const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
+
+            // 敗者のtournament_team_idを特定
+            let loserTournamentTeamId: number | null = null;
+            if (winnerTournamentTeamId && team1TournamentTeamId && team2TournamentTeamId) {
+              loserTournamentTeamId = winnerTournamentTeamId === team1TournamentTeamId
+                ? team2TournamentTeamId
+                : team1TournamentTeamId;
+            }
+
+            if (winnerTournamentTeamId && loserTournamentTeamId) {
+              console.log(`[MATCH_CONFIRM] テンプレートベース順位設定: winner_tournament_team_id=${winnerTournamentTeamId}, loser_tournament_team_id=${loserTournamentTeamId}`);
+              await handleTemplateBasedPositions(
+                matchId,
+                winnerTournamentTeamId,
+                loserTournamentTeamId
+              );
+            } else {
+              console.log(`[MATCH_CONFIRM] 勝者・敗者の特定ができないため、順位設定をスキップ`);
+            }
+          } catch (templateError) {
+            console.error(`[MATCH_CONFIRM] テンプレートベース順位設定エラー:`, templateError);
+            // エラーでも処理は継続
           }
-        } catch (templateError) {
-          console.error(`[MATCH_CONFIRM] テンプレートベース順位設定エラー:`, templateError);
-          // エラーでも処理は継続
+
+          // 決勝の場合は従来の順位計算も実行（フォールバック）
+          if (phase === 'final') {
+            await updateFinalTournamentRankings(tournamentId);
+          }
         }
-        
-        // 従来の決勝順位計算も実行（フォールバック）
-        await updateFinalTournamentRankings(tournamentId);
       }
       
       // 大会完了チェック
@@ -225,20 +263,18 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
         sql: `
           INSERT INTO t_matches_final (
             match_block_id, tournament_date, match_number, match_code,
-            team1_id, team2_id, team1_tournament_team_id, team2_tournament_team_id,
+            team1_tournament_team_id, team2_tournament_team_id,
             team1_display_name, team2_display_name,
             court_number, start_time, team1_scores, team2_scores,
-            winner_team_id, winner_tournament_team_id, is_draw, is_walkover, remarks,
+            winner_tournament_team_id, is_draw, is_walkover, remarks,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `,
         args: [
           match.match_block_id,
           match.tournament_date,
           match.match_number,
           match.match_code,
-          match.team1_id,
-          match.team2_id,
           match.team1_tournament_team_id,
           match.team2_tournament_team_id,
           match.team1_display_name,
@@ -247,7 +283,6 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           match.start_time,
           Math.floor(Number(match.team1_scores) || 0),
           Math.floor(Number(match.team2_scores) || 0),
-          match.winner_team_id,
           match.winner_tournament_team_id,
           match.is_draw,
           match.is_walkover,
@@ -261,16 +296,16 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
           args: [match.match_block_id]
         });
-        
+
         if (blockResult.rows && blockResult.rows.length > 0) {
           const tournamentId = blockResult.rows[0].tournament_id as number;
           const matchCode = match.match_code as string;
-          const team1Id = match.team1_id as string | null;
-          const team2Id = match.team2_id as string | null;
-          const winnerId = match.winner_team_id as string | null;
+          const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+          const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
+          const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
           const isDraw = Boolean(match.is_draw);
-          
-          await processTournamentProgression(matchId, matchCode, team1Id, team2Id, winnerId, isDraw, tournamentId);
+
+          await processTournamentProgression(matchId, matchCode, isDraw, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
           console.log(`一括確定でトーナメント進出処理完了: ${matchCode}`);
         }
       } catch (progressionError) {
@@ -320,17 +355,17 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
             // 該当ブロックの確定済み試合でテンプレート処理
             const confirmedMatchesResult = await db.execute({
               sql: `
-                SELECT 
+                SELECT
                   ml.match_id,
                   ml.match_code,
-                  ml.team1_id,
-                  ml.team2_id,
-                  mf.winner_team_id
+                  ml.team1_tournament_team_id,
+                  ml.team2_tournament_team_id,
+                  mf.winner_tournament_team_id
                 FROM t_matches_live ml
                 LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
                 WHERE ml.match_block_id = ?
                   AND mf.match_id IS NOT NULL
-                  AND mf.winner_team_id IS NOT NULL
+                  AND mf.winner_tournament_team_id IS NOT NULL
                 ORDER BY ml.match_code DESC
                 LIMIT 1
               `,
@@ -339,11 +374,13 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
             
             if (confirmedMatchesResult.rows.length > 0) {
               const latestMatch = confirmedMatchesResult.rows[0];
-              const winnerId = latestMatch.winner_team_id as string;
-              const loserId = latestMatch.team1_id === winnerId ? latestMatch.team2_id as string : latestMatch.team1_id as string;
-              
-              console.log(`[BULK_CONFIRM] テンプレートベース順位設定 (${latestMatch.match_code}): 勝者=${winnerId}, 敗者=${loserId}`);
-              await handleTemplateBasedPositions(latestMatch.match_id as number, winnerId, loserId, tournamentId);
+              const winnerTournamentTeamId = latestMatch.winner_tournament_team_id as number;
+              const team1TournamentTeamId = latestMatch.team1_tournament_team_id as number;
+              const team2TournamentTeamId = latestMatch.team2_tournament_team_id as number;
+              const loserTournamentTeamId = winnerTournamentTeamId === team1TournamentTeamId ? team2TournamentTeamId : team1TournamentTeamId;
+
+              console.log(`[BULK_CONFIRM] テンプレートベース順位設定 (${latestMatch.match_code}): winner_tournament_team_id=${winnerTournamentTeamId}, loser_tournament_team_id=${loserTournamentTeamId}`);
+              await handleTemplateBasedPositions(latestMatch.match_id as number, winnerTournamentTeamId, loserTournamentTeamId);
             }
           } catch (templateError) {
             console.error(`[BULK_CONFIRM] テンプレートベース順位設定エラー (Block ${matchBlockId}):`, templateError);

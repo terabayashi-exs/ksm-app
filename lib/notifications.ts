@@ -176,16 +176,10 @@ export async function checkFinalTournamentPromotionCompleted(tournamentId: numbe
     // プレースホルダー（T1_winner, T2_winnerなど）ではなく実際のチームIDが設定されているかチェック
     const matchesResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           COUNT(*) as total_matches,
-          COUNT(CASE WHEN 
-            team1_id IS NOT NULL AND team2_id IS NOT NULL 
-            AND team1_id NOT LIKE '%\\_winner' ESCAPE '\\'
-            AND team1_id NOT LIKE '%\\_loser' ESCAPE '\\'
-            AND team2_id NOT LIKE '%\\_winner' ESCAPE '\\'
-            AND team2_id NOT LIKE '%\\_loser' ESCAPE '\\'
-            AND team1_id NOT LIKE 'T%の勝者'
-            AND team2_id NOT LIKE 'T%の勝者'
+          COUNT(CASE WHEN
+            team1_tournament_team_id IS NOT NULL AND team2_tournament_team_id IS NOT NULL
             THEN 1 END) as real_team_matches
         FROM t_matches_live
         WHERE match_block_id = ?

@@ -1008,21 +1008,18 @@ export default function TournamentDrawPage() {
         }));
       }
 
-      // トーナメント形式の場合、matches情報も送信
-      const requestBody = isTournamentFormat()
-        ? {
-            blocks: drawData,
-            matches: matches
-              .filter(m => m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
-              .map(m => ({
-                match_id: m.match_id,
-                team1_tournament_team_id: m.team1_tournament_team_id,
-                team2_tournament_team_id: m.team2_tournament_team_id,
-                team1_id: m.team1_id,
-                team2_id: m.team2_id
-              }))
-          }
-        : { blocks: drawData };
+      // matches情報を送信（トーナメント形式・リーグ戦共通）
+      // MIGRATION NOTE: team_id系フィールドは送信しない（tournament_team_idのみ使用）
+      const requestBody = {
+        blocks: drawData,
+        matches: matches
+          .filter(m => m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
+          .map(m => ({
+            match_id: m.match_id,
+            team1_tournament_team_id: m.team1_tournament_team_id,
+            team2_tournament_team_id: m.team2_tournament_team_id
+          }))
+      };
 
       const response = await fetch(`/api/tournaments/${tournamentId}/draw`, {
         method: 'POST',

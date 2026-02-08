@@ -99,10 +99,12 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
       sql: `
         SELECT DISTINCT
           ml.match_code,
-          ml.team1_id,
-          ml.team2_id
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ? AND mb.phase = 'final'
       `,
       args: [tournamentId]
@@ -114,25 +116,25 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
       if (template) {
         const team1Source = template.team1_source as string;
         const team2Source = template.team2_source as string;
-        const team1Id = match.team1_id as string | null;
-        const team2Id = match.team2_id as string | null;
+        const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+        const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
 
-        if (team1Id && team1Source && sourceOrderMap.has(team1Source)) {
+        if (team1TournamentTeamId && team1Source && sourceOrderMap.has(team1Source)) {
           const order = sourceOrderMap.get(team1Source)!;
           // ラウンド別 + 位置別の順序（出現順序に基づく汎用的な計算）
           const roundOrder = roundOrderMap.get(order.round) || 0;
           const roundBase = (roundOrder + 1) * 1000;
           const leagueName = order.round; // round_nameをそのまま使用
-          teamOrderMap.set(team1Id, { order: roundBase + order.position, leagueName });
+          teamOrderMap.set(String(team1TournamentTeamId), { order: roundBase + order.position, leagueName });
         }
 
-        if (team2Id && team2Source && sourceOrderMap.has(team2Source)) {
+        if (team2TournamentTeamId && team2Source && sourceOrderMap.has(team2Source)) {
           const order = sourceOrderMap.get(team2Source)!;
           // ラウンド別 + 位置別の順序（出現順序に基づく汎用的な計算）
           const roundOrder = roundOrderMap.get(order.round) || 0;
           const roundBase = (roundOrder + 1) * 1000;
           const leagueName = order.round; // round_nameをそのまま使用
-          teamOrderMap.set(team2Id, { order: roundBase + order.position, leagueName });
+          teamOrderMap.set(String(team2TournamentTeamId), { order: roundBase + order.position, leagueName });
         }
       }
     }

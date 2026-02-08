@@ -27,8 +27,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       SELECT
         ml.match_id,
         ml.match_code,
-        ml.team1_id,
-        ml.team2_id,
         ml.team1_tournament_team_id,
         ml.team2_tournament_team_id,
         ml.team1_display_name,
@@ -38,7 +36,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         ml.team1_scores,
         ml.team2_scores,
         ml.period_count,
-        ml.winner_team_id,
         ml.winner_tournament_team_id,
         ml.remarks,
         ms.match_status,
@@ -77,8 +74,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       data: {
         match_id: match.match_id,
         match_code: match.match_code,
-        team1_id: match.team1_id,
-        team2_id: match.team2_id,
         team1_tournament_team_id: match.team1_tournament_team_id,
         team2_tournament_team_id: match.team2_tournament_team_id,
         team1_name: match.team1_real_name || match.team1_display_name, // 実チーム名を優先
@@ -94,7 +89,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         actual_end_time: match.actual_end_time,
         team1_scores: match.team1_scores ? parseScoreArray(match.team1_scores) : null,
         team2_scores: match.team2_scores ? parseScoreArray(match.team2_scores) : null,
-        winner_team_id: match.winner_team_id,
         winner_tournament_team_id: match.winner_tournament_team_id,
         remarks: match.remarks,
         updated_by: match.updated_by,
@@ -217,21 +211,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           if (winner_team_id) {
             const matchResult = await db.execute(`
               SELECT
-                team1_id,
-                team2_id,
                 team1_tournament_team_id,
                 team2_tournament_team_id
               FROM t_matches_live
               WHERE match_id = ?
             `, [matchId]);
 
-            if (matchResult.rows.length > 0) {
-              const matchData = matchResult.rows[0];
-              if (winner_team_id === matchData.team1_id) {
-                winnerTournamentTeamId = matchData.team1_tournament_team_id as number | null;
-              } else if (winner_team_id === matchData.team2_id) {
-                winnerTournamentTeamId = matchData.team2_tournament_team_id as number | null;
-              }
+            if (matchResult.rows.length > 0 && winner_team_id) {
+              // winner_team_idは既にtournament_team_idとして渡されているはずなので、そのまま使用
+              winnerTournamentTeamId = winner_team_id as number;
             }
           }
 
@@ -248,9 +236,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
           await db.execute(`
             UPDATE t_matches_live
-            SET team1_scores = ?, team2_scores = ?, winner_team_id = ?, winner_tournament_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
+            SET team1_scores = ?, team2_scores = ?, winner_tournament_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
-          `, [team1ScoresStr, team2ScoresStr, winner_team_id, winnerTournamentTeamId, remarks, matchId]);
+          `, [team1ScoresStr, team2ScoresStr, winnerTournamentTeamId, remarks, matchId]);
         }
         break;
 

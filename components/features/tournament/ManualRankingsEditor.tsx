@@ -37,13 +37,13 @@ interface Block {
 interface FinalMatch {
   match_id: number;
   match_code: string;
-  team1_id: string | null;
-  team2_id: string | null;
+  team1_tournament_team_id: number | null;
+  team2_tournament_team_id: number | null;
   team1_display_name: string;
   team2_display_name: string;
   team1_scores: number | null;
   team2_scores: number | null;
-  winner_team_id: string | null;
+  winner_tournament_team_id: number | null;
   is_draw: boolean;
   is_walkover: boolean;
   is_confirmed: boolean;
@@ -103,14 +103,20 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
   const calculateFinalRankings = (): FinalRanking[] => {
     const rankings: FinalRanking[] = [];
     const teamSet = new Set<string>();
-    
-    // 全てのチームを収集
+
+    // 全てのチームを収集（tournament_team_idを文字列として扱う）
     finalMatches.forEach(match => {
-      if (match.team1_id && !match.team1_id.includes('_winner') && !match.team1_id.includes('_loser')) {
-        teamSet.add(match.team1_id);
+      if (match.team1_tournament_team_id) {
+        const team1IdStr = String(match.team1_tournament_team_id);
+        if (!team1IdStr.includes('_winner') && !team1IdStr.includes('_loser')) {
+          teamSet.add(team1IdStr);
+        }
       }
-      if (match.team2_id && !match.team2_id.includes('_winner') && !match.team2_id.includes('_loser')) {
-        teamSet.add(match.team2_id);
+      if (match.team2_tournament_team_id) {
+        const team2IdStr = String(match.team2_tournament_team_id);
+        if (!team2IdStr.includes('_winner') && !team2IdStr.includes('_loser')) {
+          teamSet.add(team2IdStr);
+        }
       }
     });
 
@@ -121,23 +127,25 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
     const quarterFinalMatches = finalMatches.filter(m => ['T1', 'T2', 'T3', 'T4'].includes(m.match_code));
 
     // 1位・2位（決勝戦）
-    if (finalMatch?.is_confirmed && finalMatch.winner_team_id) {
-      const winnerId = finalMatch.winner_team_id;
-      const loserId = finalMatch.team1_id === winnerId ? finalMatch.team2_id : finalMatch.team1_id;
-      
+    if (finalMatch?.is_confirmed && finalMatch.winner_tournament_team_id) {
+      const winnerId = String(finalMatch.winner_tournament_team_id);
+      const team1IdStr = finalMatch.team1_tournament_team_id ? String(finalMatch.team1_tournament_team_id) : null;
+      const team2IdStr = finalMatch.team2_tournament_team_id ? String(finalMatch.team2_tournament_team_id) : null;
+      const loserId = team1IdStr === winnerId ? team2IdStr : team1IdStr;
+
       if (winnerId) {
         rankings.push({
           team_id: winnerId,
-          team_name: finalMatch.team1_id === winnerId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
+          team_name: team1IdStr === winnerId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
           position: 1,
           is_confirmed: true
         });
       }
-      
+
       if (loserId) {
         rankings.push({
           team_id: loserId,
-          team_name: finalMatch.team1_id === loserId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
+          team_name: team1IdStr === loserId ? finalMatch.team1_display_name : finalMatch.team2_display_name,
           position: 2,
           is_confirmed: true
         });
@@ -145,23 +153,25 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
     }
 
     // 3位・4位（3位決定戦）
-    if (thirdPlaceMatch?.is_confirmed && thirdPlaceMatch.winner_team_id) {
-      const winnerId = thirdPlaceMatch.winner_team_id;
-      const loserId = thirdPlaceMatch.team1_id === winnerId ? thirdPlaceMatch.team2_id : thirdPlaceMatch.team1_id;
-      
+    if (thirdPlaceMatch?.is_confirmed && thirdPlaceMatch.winner_tournament_team_id) {
+      const winnerId = String(thirdPlaceMatch.winner_tournament_team_id);
+      const team1IdStr = thirdPlaceMatch.team1_tournament_team_id ? String(thirdPlaceMatch.team1_tournament_team_id) : null;
+      const team2IdStr = thirdPlaceMatch.team2_tournament_team_id ? String(thirdPlaceMatch.team2_tournament_team_id) : null;
+      const loserId = team1IdStr === winnerId ? team2IdStr : team1IdStr;
+
       if (winnerId) {
         rankings.push({
           team_id: winnerId,
-          team_name: thirdPlaceMatch.team1_id === winnerId ? thirdPlaceMatch.team1_display_name : thirdPlaceMatch.team2_display_name,
+          team_name: team1IdStr === winnerId ? thirdPlaceMatch.team1_display_name : thirdPlaceMatch.team2_display_name,
           position: 3,
           is_confirmed: true
         });
       }
-      
+
       if (loserId) {
         rankings.push({
           team_id: loserId,
-          team_name: thirdPlaceMatch.team1_id === loserId ? thirdPlaceMatch.team1_display_name : thirdPlaceMatch.team2_display_name,
+          team_name: team1IdStr === loserId ? thirdPlaceMatch.team1_display_name : thirdPlaceMatch.team2_display_name,
           position: 4,
           is_confirmed: true
         });
@@ -170,28 +180,34 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
 
     // 5位（準々決勝敗者は全て5位、準決勝敗者は5位または3位決定戦に応じて）
     const rankedTeamIds = new Set(rankings.map(r => r.team_id));
-    
+
     // 準決勝敗者（3位決定戦がない場合は3位、ある場合は後で5位）
     const semiFinalLosers: string[] = [];
     semiFinalMatches.forEach(match => {
-      if (match.is_confirmed && match.winner_team_id) {
-        const loserId = match.team1_id === match.winner_team_id ? match.team2_id : match.team1_id;
+      if (match.is_confirmed && match.winner_tournament_team_id) {
+        const winnerIdStr = String(match.winner_tournament_team_id);
+        const team1IdStr = match.team1_tournament_team_id ? String(match.team1_tournament_team_id) : null;
+        const team2IdStr = match.team2_tournament_team_id ? String(match.team2_tournament_team_id) : null;
+        const loserId = team1IdStr === winnerIdStr ? team2IdStr : team1IdStr;
         if (loserId && !rankedTeamIds.has(loserId)) {
           semiFinalLosers.push(loserId);
         }
       }
     });
-    
+
     // 3位決定戦がない場合、準決勝敗者は同着3位
     if (!thirdPlaceMatch?.is_confirmed && semiFinalLosers.length > 0) {
       semiFinalLosers.forEach(loserId => {
-        const match = semiFinalMatches.find(m => 
-          (m.team1_id === loserId || m.team2_id === loserId) && m.winner_team_id
-        );
+        const match = semiFinalMatches.find(m => {
+          const team1IdStr = m.team1_tournament_team_id ? String(m.team1_tournament_team_id) : null;
+          const team2IdStr = m.team2_tournament_team_id ? String(m.team2_tournament_team_id) : null;
+          return (team1IdStr === loserId || team2IdStr === loserId) && m.winner_tournament_team_id;
+        });
         if (match) {
+          const team1IdStr = match.team1_tournament_team_id ? String(match.team1_tournament_team_id) : null;
           rankings.push({
             team_id: loserId,
-            team_name: match.team1_id === loserId ? match.team1_display_name : match.team2_display_name,
+            team_name: team1IdStr === loserId ? match.team1_display_name : match.team2_display_name,
             position: 3, // 同着3位
             is_confirmed: true
           });
@@ -201,13 +217,16 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
     } else if (thirdPlaceMatch?.is_confirmed && semiFinalLosers.length > 0) {
       // 3位決定戦がある場合、敗者は5位
       semiFinalLosers.forEach(loserId => {
-        const match = semiFinalMatches.find(m => 
-          (m.team1_id === loserId || m.team2_id === loserId) && m.winner_team_id
-        );
+        const match = semiFinalMatches.find(m => {
+          const team1IdStr = m.team1_tournament_team_id ? String(m.team1_tournament_team_id) : null;
+          const team2IdStr = m.team2_tournament_team_id ? String(m.team2_tournament_team_id) : null;
+          return (team1IdStr === loserId || team2IdStr === loserId) && m.winner_tournament_team_id;
+        });
         if (match && !rankedTeamIds.has(loserId)) {
+          const team1IdStr = match.team1_tournament_team_id ? String(match.team1_tournament_team_id) : null;
           rankings.push({
             team_id: loserId,
-            team_name: match.team1_id === loserId ? match.team1_display_name : match.team2_display_name,
+            team_name: team1IdStr === loserId ? match.team1_display_name : match.team2_display_name,
             position: 5, // 5位
             is_confirmed: true
           });
@@ -218,12 +237,15 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
 
     // 準々決勝敗者（全て5位）
     quarterFinalMatches.forEach(match => {
-      if (match.is_confirmed && match.winner_team_id) {
-        const loserId = match.team1_id === match.winner_team_id ? match.team2_id : match.team1_id;
+      if (match.is_confirmed && match.winner_tournament_team_id) {
+        const winnerIdStr = String(match.winner_tournament_team_id);
+        const team1IdStr = match.team1_tournament_team_id ? String(match.team1_tournament_team_id) : null;
+        const team2IdStr = match.team2_tournament_team_id ? String(match.team2_tournament_team_id) : null;
+        const loserId = team1IdStr === winnerIdStr ? team2IdStr : team1IdStr;
         if (loserId && !rankedTeamIds.has(loserId)) {
           rankings.push({
             team_id: loserId,
-            team_name: match.team1_id === loserId ? match.team1_display_name : match.team2_display_name,
+            team_name: team1IdStr === loserId ? match.team1_display_name : match.team2_display_name,
             position: 5, // 全て5位
             is_confirmed: true
           });
@@ -235,22 +257,41 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
     // 未確定のチーム（決勝・準決勝の未確定チームは適切な順位、それ以外は5位）
     teamSet.forEach(teamId => {
       if (!rankedTeamIds.has(teamId)) {
-        const teamMatch = finalMatches.find(m => 
-          (m.team1_id === teamId || m.team2_id === teamId)
-        );
-        const displayName = teamMatch?.team1_id === teamId ? teamMatch.team1_display_name : teamMatch?.team2_display_name;
-        
+        const teamMatch = finalMatches.find(m => {
+          const team1IdStr = m.team1_tournament_team_id ? String(m.team1_tournament_team_id) : null;
+          const team2IdStr = m.team2_tournament_team_id ? String(m.team2_tournament_team_id) : null;
+          return team1IdStr === teamId || team2IdStr === teamId;
+        });
+        const team1IdStr = teamMatch?.team1_tournament_team_id ? String(teamMatch.team1_tournament_team_id) : null;
+        const displayName = teamMatch ? (team1IdStr === teamId ? teamMatch.team1_display_name : teamMatch.team2_display_name) : '未確定';
+
         // どの試合に参加しているかで順位を決定
         let defaultPosition = 5; // デフォルトは5位
-        
-        if (finalMatch && (finalMatch.team1_id === teamId || finalMatch.team2_id === teamId)) {
-          defaultPosition = 1; // 決勝参加者は1位から
-        } else if (thirdPlaceMatch && (thirdPlaceMatch.team1_id === teamId || thirdPlaceMatch.team2_id === teamId)) {
-          defaultPosition = 3; // 3位決定戦参加者は3位から
-        } else if (semiFinalMatches.some(m => m.team1_id === teamId || m.team2_id === teamId)) {
+
+        if (finalMatch) {
+          const finalTeam1IdStr = finalMatch.team1_tournament_team_id ? String(finalMatch.team1_tournament_team_id) : null;
+          const finalTeam2IdStr = finalMatch.team2_tournament_team_id ? String(finalMatch.team2_tournament_team_id) : null;
+          if (finalTeam1IdStr === teamId || finalTeam2IdStr === teamId) {
+            defaultPosition = 1; // 決勝参加者は1位から
+          }
+        }
+
+        if (defaultPosition === 5 && thirdPlaceMatch) {
+          const thirdTeam1IdStr = thirdPlaceMatch.team1_tournament_team_id ? String(thirdPlaceMatch.team1_tournament_team_id) : null;
+          const thirdTeam2IdStr = thirdPlaceMatch.team2_tournament_team_id ? String(thirdPlaceMatch.team2_tournament_team_id) : null;
+          if (thirdTeam1IdStr === teamId || thirdTeam2IdStr === teamId) {
+            defaultPosition = 3; // 3位決定戦参加者は3位から
+          }
+        }
+
+        if (defaultPosition === 5 && semiFinalMatches.some(m => {
+          const team1IdStr = m.team1_tournament_team_id ? String(m.team1_tournament_team_id) : null;
+          const team2IdStr = m.team2_tournament_team_id ? String(m.team2_tournament_team_id) : null;
+          return team1IdStr === teamId || team2IdStr === teamId;
+        })) {
           defaultPosition = 3; // 準決勝参加者は3位から
         }
-        
+
         rankings.push({
           team_id: teamId,
           team_name: displayName || '未確定',

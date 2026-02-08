@@ -54,9 +54,10 @@ export async function GET(
     }
 
     // 影響分析を実行
+    // MIGRATION NOTE: Phase 3で関数シグネチャが変更 - tournamentTeamId (number) を渡す
     const impact = await analyzeWithdrawalImpact(
       Number(withdrawal.tournament_id),
-      String(withdrawal.team_id)
+      tournamentTeamId  // tournament_team_id を直接渡す
     );
 
     // 関連する試合の詳細情報を取得

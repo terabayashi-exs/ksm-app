@@ -24,8 +24,8 @@ import {
 interface MatchData {
   match_id: number;
   match_code: string;
-  team1_id?: string;
-  team2_id?: string;
+  team1_tournament_team_id?: number;
+  team2_tournament_team_id?: number;
   team1_name: string;
   team2_name: string;
   team1_omission?: string;
@@ -38,7 +38,7 @@ interface MatchData {
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   team1_scores: number[];
   team2_scores: number[];
-  winner_team_id?: string;
+  winner_tournament_team_id?: number;
   actual_start_time?: string;
   actual_end_time?: string;
   referee_access: boolean;
@@ -116,21 +116,21 @@ export default function RefereeMatchPage() {
           }
           
           // 既存の勝者情報を復元
-          if (result.data.winner_team_id) {
+          if (result.data.winner_tournament_team_id) {
             console.log('Initial winner restoration:', {
-              winner_team_id: result.data.winner_team_id,
-              team1_id: result.data.team1_id,
-              team2_id: result.data.team2_id
+              winner_tournament_team_id: result.data.winner_tournament_team_id,
+              team1_tournament_team_id: result.data.team1_tournament_team_id,
+              team2_tournament_team_id: result.data.team2_tournament_team_id
             });
-            if (result.data.winner_team_id === result.data.team1_id) {
+            if (result.data.winner_tournament_team_id === result.data.team1_tournament_team_id) {
               setWinnerTeam('team1');
               console.log('Initial set winner to team1');
-            } else if (result.data.winner_team_id === result.data.team2_id) {
+            } else if (result.data.winner_tournament_team_id === result.data.team2_tournament_team_id) {
               setWinnerTeam('team2');
               console.log('Initial set winner to team2');
             }
           } else {
-            console.log('No initial winner_team_id found');
+            console.log('No initial winner_tournament_team_id found');
             setWinnerTeam(null);
           }
           
@@ -216,10 +216,10 @@ export default function RefereeMatchPage() {
           }
 
           // 勝者情報を復元（状態取得時も実行）
-          if (result.data.winner_team_id) {
-            if (result.data.winner_team_id === result.data.team1_id) {
+          if (result.data.winner_tournament_team_id) {
+            if (result.data.winner_tournament_team_id === result.data.team1_tournament_team_id) {
               setWinnerTeam('team1');
-            } else if (result.data.winner_team_id === result.data.team2_id) {
+            } else if (result.data.winner_tournament_team_id === result.data.team2_tournament_team_id) {
               setWinnerTeam('team2');
             }
           } else {
@@ -304,18 +304,18 @@ export default function RefereeMatchPage() {
       }
     }
 
-    // 勝者IDを決定
+    // 勝者IDを決定（tournament_team_idを使用）
     let winner_team_id = null;
-    if (winnerTeam === 'team1' && match?.team1_id) {
-      winner_team_id = match.team1_id;
-    } else if (winnerTeam === 'team2' && match?.team2_id) {
-      winner_team_id = match.team2_id;
+    if (winnerTeam === 'team1' && match?.team1_tournament_team_id) {
+      winner_team_id = match.team1_tournament_team_id;
+    } else if (winnerTeam === 'team2' && match?.team2_tournament_team_id) {
+      winner_team_id = match.team2_tournament_team_id;
     }
 
     await updateMatchStatus('update_scores', {
       team1_scores: scores.team1,
       team2_scores: scores.team2,
-      winner_team_id: winner_team_id,
+      winner_team_id: winner_team_id, // これはwinner_tournament_team_idとしてAPIに送信される
       remarks: matchRemarks.trim() || null
     });
     

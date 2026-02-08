@@ -394,8 +394,6 @@ export async function POST(request: NextRequest) {
           tournament_date,
           match_number,
           match_code,
-          team1_id,
-          team2_id,
           team1_tournament_team_id,
           team2_tournament_team_id,
           team1_display_name,
@@ -404,16 +402,13 @@ export async function POST(request: NextRequest) {
           start_time,
           team1_scores,
           team2_scores,
-          winner_team_id,
           winner_tournament_team_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         matchBlockId,
         tournamentDate,
         template.match_number,
         template.match_code,
-        null, // team1_id - 後でチーム参加時に設定
-        null, // team2_id
         null, // team1_tournament_team_id - 組合せ確定時に設定
         null, // team2_tournament_team_id - 組合せ確定時に設定
         template.team1_display_name,
@@ -422,7 +417,6 @@ export async function POST(request: NextRequest) {
         assignedStartTime,
         '[0]', // team1_scores をJSON文字列で初期化
         '[0]', // team2_scores をJSON文字列で初期化
-        null, // winner_team_id は結果確定時に設定
         null  // winner_tournament_team_id は結果確定時に設定
       ]);
 

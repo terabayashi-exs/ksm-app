@@ -1,3 +1,4 @@
+// MIGRATION NOTE: team_id → tournament_team_id 移行済み (2026-02-04)
 // lib/types.ts
 /**
  * 用語マッピング:
@@ -195,15 +196,22 @@ export interface Match {
   tournament_date: string;
   match_number: number;
   match_code: string;
+  // MIGRATION NOTE: team_id → tournament_team_id 移行 (2026-02-04)
+  // マスターチームIDは後方互換性のため残す（t_tournament_teams.team_id外部キー）
   team1_id?: string;
   team2_id?: string;
+  // 新規フィールド: 大会内固有のチームID（複数エントリー対応）
+  team1_tournament_team_id?: number;
+  team2_tournament_team_id?: number;
   team1_display_name: string;
   team2_display_name: string;
   court_number?: number;
   start_time?: string;
   team1_goals: number;
   team2_goals: number;
-  winner_team_id?: string;
+  // MIGRATION NOTE: winner_team_id → winner_tournament_team_id 移行 (2026-02-04)
+  winner_team_id?: string; // 後方互換性のため残す
+  winner_tournament_team_id?: number; // 新規フィールド: 大会内固有の勝者ID
   is_draw: boolean;
   is_walkover: boolean;
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';

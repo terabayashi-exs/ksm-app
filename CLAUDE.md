@@ -1,9 +1,10 @@
 # KSM-App プロジェクト仕様書
 ## PK選手権大会運営システム - 完全実装ガイド
 
-> **最終更新**: 2026年1月13日
+> **最終更新**: 2026年2月5日
 > **実装完成度**: 97%（プロダクションレディ）
 > **運用実績**: 富山県PK選手権大会2025（16チーム・160+選手）
+> **最新の変更**: team_id → tournament_team_id 移行完了（複数エントリーチーム対応）
 
 ## 🎯 プロジェクトの目的
 
@@ -44,8 +45,8 @@ npm install
 
 ### 3. データベースの初期化
 ```bash
-npm run db:generate  # DDL生成
-npm run db:migrate   # テーブル作成
+npm run db:generate  # Drizzleマイグレーション生成
+npm run db:migrate   # マイグレーション適用
 npm run db:seed-master  # マスターデータ投入
 ```
 
@@ -53,6 +54,199 @@ npm run db:seed-master  # マスターデータ投入
 ```bash
 npm run dev
 ```
+
+## 🗄️ データベース管理（Drizzle ORM）
+
+### 概要
+このプロジェクトではDrizzle ORMを使用してデータベーススキーマとマイグレーションを管理しています。
+
+### ⚠️ 重要：Turso環境での設定
+
+**`drizzle.config.ts`に`breakpoints: false`を設定しています。**
+
+```typescript
+// drizzle.config.ts
+export default defineConfig({
+  schema: './src/db/schema.ts',
+  out: './drizzle',
+  dialect: 'turso',
+  breakpoints: false, // Tursoで標準マイグレーションを使用可能にする
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+    authToken: process.env.DATABASE_AUTH_TOKEN,
+  },
+});
+```
+
+この設定により：
+- ✅ `--> statement-breakpoint`が生成されない
+- ✅ Tursoで`npm run db:migrate`が正常に動作する
+- ✅ 標準的なDrizzle Kitマイグレーションフローが使用可能
+
+詳細は[Drizzle ORM Guide](./docs/drizzle-orm-guide.md#⚠️-tursolibsql使用時の注意事項と解決方法)を参照してください。
+
+### ディレクトリ構成
+```
+src/db/
+├── schema.ts      # テーブル定義（30テーブル）
+├── relations.ts   # テーブル間のリレーション定義
+└── index.ts       # データベース接続クライアント
+
+drizzle/
+├── schema.ts      # 生成されたスキーマ（pullコマンドで更新）
+├── relations.ts   # 生成されたリレーション定義
+└── 0000_*.sql     # マイグレーションファイル
+```
+
+### 環境別コマンド
+
+プロジェクトでは3つの環境（dev / stag / main）をサポートしており、コマンドで環境を指定できます。
+
+#### Dev環境（デフォルト）
+```bash
+npm run db:pull         # dev環境からスキーマを取得
+npm run db:push         # dev環境にスキーマを直接適用（開発用）
+npm run db:generate     # マイグレーションファイルを生成
+npm run db:migrate      # マイグレーションを適用
+npm run db:studio       # Drizzle Studio（GUI）を起動
+```
+
+#### Stag環境
+```bash
+npm run db:pull:stag    # stag環境からスキーマを取得
+npm run db:push:stag    # stag環境にスキーマを適用
+npm run db:generate:stag
+npm run db:migrate:stag
+npm run db:studio:stag
+```
+
+#### Main環境（本番）
+```bash
+npm run db:pull:main    # main環境からスキーマを取得
+npm run db:push:main    # main環境にスキーマを適用
+npm run db:generate:main
+npm run db:migrate:main
+npm run db:studio:main
+```
+
+### 実際の開発フロー
+
+#### 標準的なマイグレーション管理（推奨）
+
+**`breakpoints: false`設定により、標準的なDrizzle Kitマイグレーションが使用可能です。**
+
+```bash
+# 1. src/db/schema.ts を編集してフィールドを追加/削除
+
+# 2. マイグレーションファイルを生成
+npm run db:generate
+
+# 3. Dev環境で適用とテスト
+npm run db:migrate:dev
+
+# 4. Stag環境で検証
+npm run db:migrate:stag
+
+# 5. 本番環境に適用
+npm run db:migrate:main
+
+# 6. 【重要】MIGRATION_HISTORY.md を更新
+# - テンプレートをコピーして変更内容を記録
+# - 変更したファイル、理由、影響範囲を明記
+# - 必ずコミットに含める
+```
+
+#### クイックプロトタイピング（開発時のみ）
+
+迅速な開発時には`db:push`も使用可能ですが、マイグレーション履歴が残らないため、**本番環境では非推奨**です。
+
+```bash
+# 1. src/db/schema.ts を編集
+
+# 2. Dev環境で即座に反映
+npm run db:push:dev
+
+# 注意：履歴が残らないため、後で正式なマイグレーションを生成することを推奨
+```
+
+### ⚠️ マイグレーション実行時の必須ルール
+
+**ClaudeCodeへの指示:** データベーススキーマを変更した場合、以下を**必ず実行**してください：
+
+1. **マイグレーション方法の選択**
+   - **通常は標準マイグレーション**を使用（`npm run db:generate` → `npm run db:migrate`）
+   - `breakpoints: false`設定により、Tursoでも問題なく動作します
+   - 迅速な開発時のみ`npm run db:push`を使用（ただし履歴は残らない）
+
+2. **MIGRATION_HISTORY.md を更新**
+   - `MIGRATION_HISTORY.md` の最上部に新しいエントリを追加
+   - ファイル内のテンプレートを使用して記録
+   - 以下の情報を必ず含める：
+     - 日付、環境（dev/stag/main）
+     - 変更内容（テーブル名、カラム名、型）
+     - 変更理由（なぜこの変更が必要か）
+     - 影響を受けたファイルのリスト
+     - 実行したコマンド（`db:generate` + `db:migrate` または `db:push`）
+
+3. **コミット時の注意**
+   - `MIGRATION_HISTORY.md` を必ずコミットに含める
+   - スキーマ変更とマイグレーション履歴は同じコミットにする
+   - マイグレーションファイル（`drizzle/XXXX_*.sql`）もコミット対象
+   - コミットメッセージに `migration:` プレフィックスを付ける
+
+**例（標準マイグレーション）:**
+```bash
+git add MIGRATION_HISTORY.md src/db/schema.ts drizzle/000X_*.sql drizzle/meta/
+git commit -m "migration: フィールドXXXを追加"
+```
+
+**例（db:push使用時）:**
+```bash
+git add MIGRATION_HISTORY.md src/db/schema.ts
+git commit -m "migration: フィールドXXXを追加（db:push使用）"
+```
+
+### 環境変数設定
+
+`.env.local` には以下の環境別変数が設定されています：
+
+```bash
+# デフォルト接続先（dev環境）
+DATABASE_URL="libsql://ksm-dev-..."
+DATABASE_AUTH_TOKEN="eyJ..."
+
+# 環境別接続情報
+DATABASE_URL_DEV="libsql://ksm-dev-..."
+DATABASE_AUTH_TOKEN_DEV="eyJ..."
+
+DATABASE_URL_STAG="libsql://ksm-stag-..."
+DATABASE_AUTH_TOKEN_STAG="eyJ..."
+
+DATABASE_URL_MAIN="libsql://ksm-main-..."
+DATABASE_AUTH_TOKEN_MAIN="eyJ..."
+```
+
+**注意**: Vercel上の環境変数は別途Vercel Dashboardで設定する必要があります。`.env.local` はローカル開発とDrizzle Kitコマンド実行時のみ使用されます。
+
+### よくあるコマンド
+
+```bash
+# データベースのGUIツールを起動（ブラウザで開く）
+npm run db:studio
+
+# 既存データベースからスキーマを取得（初回セットアップ時）
+npm run db:pull
+
+# スキーマ変更を直接適用（マイグレーション履歴なし・開発用）
+npm run db:push
+
+# テストスクリプト実行
+npx tsx scripts/test-drizzle.ts
+```
+
+### 参考ドキュメント
+- [Drizzle ORM 入門ガイド](./docs/drizzle-orm-guide.md)
+- [Drizzle Seeder ガイド](./docs/drizzle-seeder-guide.md)
 
 ## 📊 プロジェクト概要
 
@@ -142,6 +336,7 @@ npm run dev
 - **言語**: TypeScript 5.x（型安全性100%）
 - **UI**: Tailwind CSS 4.x + shadcn/ui
 - **データベース**: Turso (libSQL)
+- **ORM**: Drizzle ORM 0.45.1 + Drizzle Kit 0.31.8
 - **認証**: NextAuth.js 4.24.11
 - **メール配信**: nodemailer 6.10.1 (Gmail SMTP)
 - **デプロイ**: Vercel
