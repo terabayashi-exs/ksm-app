@@ -1,7 +1,11 @@
 // lib/email-templates.ts
 // メールテンプレート定義
 
-import { EmailTemplate } from './email-service';
+export interface EmailTemplate {
+  subject: string;
+  htmlBody: string;
+  textBody: string;
+}
 
 export interface WithdrawalEmailVariables {
   teamName: string;
