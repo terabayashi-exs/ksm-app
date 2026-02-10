@@ -198,7 +198,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mmt ON mmt.format_id = tour.format_id AND mmt.match_code = ml.match_code
+        LEFT JOIN m_match_templates mmt ON mmt.format_id = tour.format_id AND mmt.match_code = ml.match_code AND mmt.phase = mb.phase
         WHERE ml.match_id = ?
       `, [matchId]);
 
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mmt ON mmt.format_id = tour.format_id AND mmt.match_code = ml.match_code
+        LEFT JOIN m_match_templates mmt ON mmt.format_id = tour.format_id AND mmt.match_code = ml.match_code AND mmt.phase = mb.phase
         WHERE ml.match_id = ?
       `, [matchId]);
 
@@ -509,7 +509,7 @@ async function resolveByeMatchWinners(
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
     LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
     LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-    LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+    LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
     WHERE mb.tournament_id = ? AND mt.is_bye_match = 1
   `, [formatId, tournamentId]);
 

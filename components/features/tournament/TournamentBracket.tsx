@@ -189,10 +189,26 @@ const response = await fetch(
     let seedLayout: "dispersed" | "adjacent" = "dispersed";
 
     // ブロック内のチーム数を計算
-    // 方法1: 第1ラウンド試合（team1_source/team2_sourceがない）からチーム数を算出
-    const firstRoundMatches = matches.filter(m =>
-      (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')
-    );
+    // 第1ラウンド試合の判定:
+    // 1. team1_source/team2_sourceが空の試合
+    // 2. または、予選ブロックの順位参照（例: "A_1", "B_2"）の試合
+    const isFirstRoundMatch = (m: BracketMatch) => {
+      // sourceが空の場合は第1ラウンド
+      if ((!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
+        return true;
+      }
+
+      // sourceが予選ブロックの順位参照（"A_1", "B_2" など）の場合も第1ラウンド
+      // パターン: アルファベット大文字 + "_" + 数字
+      const isLeagueReference = (source: string | undefined | null) => {
+        if (!source) return false;
+        return /^[A-Z]_\d+$/.test(source);
+      };
+
+      return isLeagueReference(m.team1_source) && isLeagueReference(m.team2_source);
+    };
+
+    const firstRoundMatches = matches.filter(isFirstRoundMatch);
 
     // 各第1ラウンド試合のチーム数をカウント
     let blockTeamCount = 0;

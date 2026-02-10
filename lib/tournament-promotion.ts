@@ -732,7 +732,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ?
+        LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ? AND mt.phase = mb.phase
         LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = ?
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id

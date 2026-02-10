@@ -89,7 +89,7 @@ export async function GET(
       LEFT JOIN t_tournament_rules tr ON mb.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = ?
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
         AND mb.phase = ?
       ORDER BY ml.match_number, ml.match_code
@@ -97,7 +97,7 @@ export async function GET(
 
     // execution_groupは現在のスキーマでは利用不可
 
-    const matches = await db.execute(query, [formatId, phase, tournamentId, phase]);
+    const matches = await db.execute(query, [formatId, tournamentId, phase]);
 
     // トーナメント試合が存在しない場合は404を返す
     if (!matches.rows || matches.rows.length === 0) {

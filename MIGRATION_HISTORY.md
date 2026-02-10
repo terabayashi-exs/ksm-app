@@ -16,6 +16,121 @@
 
 ---
 
+## 0003: m_tournament_formatsにphasesフィールド追加（2026-02-09）
+
+### 基本情報
+- **日付**: 2026年2月9日
+- **環境**: dev
+- **方法**: 手動スクリプト（drizzle-kit migrateがSQLパースエラーのため）
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0003_rapid_stephen_strange.sql`
+
+### 変更内容
+
+#### テーブル変更
+**m_tournament_formats:**
+- `phases` TEXT (JSON形式) カラムを追加
+- 既存の`preliminary_format_type`と`final_format_type`は維持（後方互換性）
+
+#### データ変換
+既存の16フォーマット全てで、`preliminary_format_type`と`final_format_type`から新しいJSON形式のphasesフィールドにデータを変換しました。
+
+**変換例:**
+```
+Before:
+  preliminary_format_type: "league"
+  final_format_type: "tournament"
+
+After:
+  phases: {
+    "phases": [
+      {"id": "preliminary", "order": 1, "name": "予選", "format_type": "league"},
+      {"id": "final", "order": 2, "name": "決勝トーナメント", "format_type": "tournament"}
+    ]
+  }
+```
+
+### 変更理由
+- 現在の2フェーズ固定構造（予選・決勝）から、柔軟な複数フェーズ構造への移行
+- 将来的に「1次予選→2次予選→3次予選→決勝」のような複雑な大会構成に対応
+- テンプレート変更が既存大会に影響を与えないスナップショット方式の導入準備（Stage 1/3）
+
+### 実行コマンド
+```bash
+# 1. スキーマ更新
+npm run db:generate
+
+# 2. マイグレーションSQL適用
+npx tsx scripts/apply-phases-migration.mts
+
+# 3. データ変換
+npx tsx scripts/migrate-phases-field.mts
+
+# 4. 検証
+npx tsx scripts/verify-phases-migration.mts
+```
+
+### 実行結果
+- ✅ phasesカラム追加成功
+- ✅ 全16フォーマットのデータ変換成功
+- ✅ 全16フォーマットの検証成功
+- ✅ 既存フィールドとの整合性確認完了
+
+### 影響を受けたファイル
+
+#### 新規作成
+- `lib/types/tournament-phases.ts` - TypeScript型定義
+- `lib/tournament-phases.ts` - ヘルパー関数（11関数）
+- `__tests__/lib/tournament-phases.test.ts` - ユニットテスト（53ケース）
+- `scripts/apply-phases-migration.mts` - マイグレーション実行スクリプト
+- `scripts/migrate-phases-field.mts` - データ変換スクリプト
+- `scripts/verify-phases-migration.mts` - 検証スクリプト
+- `drizzle/0003_rapid_stephen_strange.sql` - マイグレーションSQL
+
+#### 更新
+- `src/db/schema.ts` (Line 128-148) - phasesフィールド追加
+- `package.json` - testスクリプト追加
+- `vitest.config.ts` - ユニットテストプロジェクト追加
+- `drizzle/0001_thankful_selene.sql` - SQLパースエラー対策のプレースホルダー追加
+- `drizzle/meta/0002_snapshot.json` - IDとprevID修正
+- `drizzle/meta/_journal.json` - 0003エントリ追加
+
+### 後方互換性
+- ✅ 既存の`preliminary_format_type`と`final_format_type`フィールドは維持
+- ✅ 既存コードはそのまま動作
+- ✅ 新しいコードは`phases`フィールドを優先し、なければ既存フィールドにフォールバック
+- ✅ `getPhasesWithFallback()`関数で自動フォールバック対応
+
+### 注意事項
+- この変更は**Stage 1/3**です
+- Stage 2で`t_tournaments`にphasesフィールドを追加予定（スナップショット実装）
+- Stage 3で`t_matches_live`/`t_matches_final`に試合詳細フィールドを追加予定
+- 現時点では既存フィールドを参照している既存コードは変更不要
+
+### テスト結果
+**ユニットテスト:**
+- 53 tests passed (19ms)
+- 全ヘルパー関数のテストカバレッジ: 100%
+
+**データ変換:**
+- Total formats: 16
+- ✅ Migrated: 16
+- ⏭️ Skipped: 0
+- ❌ Errors: 0
+
+**検証:**
+- Total formats: 16
+- ✅ Valid: 16
+- ❌ Errors: 0
+
+### 今後の予定
+1. **Stage 2**: `t_tournaments`にphasesフィールド追加（スナップショット実装）
+2. **Stage 3**: `t_matches_live`/`t_matches_final`に試合詳細フィールド追加
+3. 動的UIタブ生成の実装
+4. 既存コードの段階的移行
+
+---
+
 ## 0002: マイグレーション管理体制の整備（2026-02-05）
 
 ### 基本情報

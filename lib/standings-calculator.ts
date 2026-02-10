@@ -2001,7 +2001,7 @@ async function calculateDetailedFinalTournamentStandings(tournamentId: number, p
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         LEFT JOIN m_teams t1 ON tt1.team_id = t1.team_id
         LEFT JOIN m_teams t2 ON tt2.team_id = t2.team_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
         WHERE mb.tournament_id = ?
           AND mb.phase = ?
           AND ml.team1_tournament_team_id IS NOT NULL
@@ -2950,7 +2950,7 @@ async function calculateDetailedBlockTournamentStandings(matchBlockId: number, t
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         LEFT JOIN m_teams t1 ON tt1.team_id = t1.team_id
         LEFT JOIN m_teams t2 ON tt2.team_id = t2.team_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
         WHERE ml.match_block_id = ?
           AND ml.team1_tournament_team_id IS NOT NULL
         ORDER BY ml.match_code

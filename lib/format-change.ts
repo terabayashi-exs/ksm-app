@@ -108,22 +108,3 @@ export async function changeFormat(
   }
 }
 
-/**
- * エラー理由を日本語で取得
- */
-export function getFormatChangeErrorMessage(
-  response: FormatChangeResponse
-): string {
-  if (response.success) return '';
-
-  if (response.details?.reason === 'MATCH_RESULTS_EXIST') {
-    return `試合結果が既に入力されているため、フォーマット変更できません。\n完了試合: ${response.details.completedCount}試合、確定試合: ${response.details.confirmedCount}試合`;
-  }
-
-  if (response.details?.reason === 'INVALID_TOURNAMENT_STATUS') {
-    const statusText = response.details.current_status === 'ongoing' ? '進行中' : '完了済み';
-    return `大会が${statusText}のため、フォーマット変更できません。`;
-  }
-
-  return response.error || 'フォーマット変更に失敗しました';
-}

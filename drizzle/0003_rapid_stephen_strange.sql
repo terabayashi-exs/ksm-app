@@ -1,0 +1,1 @@
+ALTER TABLE `m_tournament_formats` ADD `phases` text;

@@ -34,3 +34,6 @@
 
 -- ⚠️ DO NOT EXECUTE THIS FILE
 -- The migration has already been applied to the database.
+-- This migration was manually executed. See: scripts/remove-team-id-columns-dev.mjs
+-- No additional SQL needed.
+SELECT 1; -- Placeholder for Drizzle migration tracking

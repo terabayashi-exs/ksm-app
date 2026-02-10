@@ -10,10 +10,20 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+// 時間を HH:MM 形式にフォーマット（8:45 → 08:45）
+function formatTimeToHHMM(time: string | null | undefined): string {
+  if (!time) return "";
+  const parts = time.split(":");
+  if (parts.length !== 2) return time;
+  const hours = parts[0].padStart(2, "0");
+  const minutes = parts[1].padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
 export default async function EditTournamentFormatPage({ params }: Props) {
   const resolvedParams = await params;
   const session = await auth();
-  
+
   if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
     redirect("/auth/login");
   }
@@ -74,7 +84,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             target_team_count: Number(format.target_team_count),
             format_description: String(format.format_description || ""),
             preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
-            final_format_type: format.final_format_type ? String(format.final_format_type) : null
+            final_format_type: format.final_format_type ? String(format.final_format_type) : null,
+            phases: format.phases ? JSON.parse(format.phases as string) : undefined
           }}
           templates={templatesResult.rows.map(t => ({
             match_number: Number(t.match_number),
@@ -90,7 +101,7 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             day_number: Number(t.day_number || 1),
             execution_priority: Number(t.execution_priority || 1),
             court_number: t.court_number ? Number(t.court_number) : undefined,
-            suggested_start_time: String(t.suggested_start_time || ""),
+            suggested_start_time: formatTimeToHHMM(String(t.suggested_start_time || "")),
             // 新しい順位設定フィールド
             loser_position_start: t.loser_position_start ? Number(t.loser_position_start) : undefined,
             loser_position_end: t.loser_position_end ? Number(t.loser_position_end) : undefined,

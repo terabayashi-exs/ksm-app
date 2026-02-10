@@ -1,5 +1,6 @@
 import { sqliteTable, index, check, integer, text, numeric } from "drizzle-orm/sqlite-core"
   import { sql } from "drizzle-orm"
+  import type { TournamentPhases } from "../../lib/types/tournament-phases"
 
 export const tMatchesFinal = sqliteTable("t_matches_final", {
 	matchId: integer("match_id").primaryKey({ autoIncrement: true }),
@@ -133,8 +134,11 @@ export const mTournamentFormats = sqliteTable("m_tournament_formats", {
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 	sportTypeId: integer("sport_type_id").default(1),
+	// 既存フィールド（後方互換性のため維持）
 	preliminaryFormatType: text("preliminary_format_type"),
 	finalFormatType: text("final_format_type"),
+	// 新規フィールド: 柔軟なフェーズ構成をJSON形式で保存
+	phases: text("phases", { mode: 'json' }).$type<TournamentPhases>(),
 },
 (_table) => [
 	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),

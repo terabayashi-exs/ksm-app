@@ -281,7 +281,7 @@ export async function PUT(
           SELECT ml.match_id, ml.match_code, mt.day_number
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-          LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+          LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
           WHERE mb.tournament_id = ?
         `, [formatId, tournamentId]);
 
