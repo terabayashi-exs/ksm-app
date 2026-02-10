@@ -12,16 +12,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Settings, 
-  Calendar, 
-  Plus, 
-  Trash2, 
+import {
+  Settings,
+  Calendar,
+  Plus,
+  Trash2,
   Copy,
   AlertTriangle,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Layers
 } from "lucide-react";
+import type { TournamentPhases } from "@/lib/types/tournament-phases";
+import { generatePhasesFromLegacy, validatePhases } from "@/lib/tournament-phases";
+import { PhaseConfigurationSection } from "./PhaseConfigurationSection";
 
 // Simple interfaces for now
 interface SportType {
@@ -66,6 +70,7 @@ interface TournamentFormatFormData {
   format_description: string;
   preliminary_format_type: string | null;
   final_format_type: string | null;
+  phases?: TournamentPhases;
   templates: MatchTemplate[];
 }
 
@@ -104,6 +109,13 @@ export default function TournamentFormatCreateForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sportTypes, setSportTypes] = useState<SportType[]>([]);
   const [sportTypesLoading, setSportTypesLoading] = useState(true);
+  const [useAdvancedPhases, setUseAdvancedPhases] = useState(false);
+  const [phases, setPhases] = useState<TournamentPhases>({
+    phases: [
+      { id: "preliminary", order: 1, name: "予選", format_type: "league" },
+      { id: "final", order: 2, name: "決勝トーナメント", format_type: "tournament" }
+    ]
+  });
 
   const {
     register,
@@ -234,9 +246,42 @@ export default function TournamentFormatCreateForm() {
     setIsSubmitting(true);
 
     try {
+      // フェーズ設定を準備
+      let phasesToSave: TournamentPhases;
+      let preliminaryType: string | null = null;
+      let finalType: string | null = null;
+
+      if (!useAdvancedPhases) {
+        // シンプルモード: 既存の2フェーズから自動生成
+        preliminaryType = data.preliminary_format_type;
+        finalType = data.final_format_type;
+        phasesToSave = generatePhasesFromLegacy(preliminaryType, finalType);
+      } else {
+        // 詳細モード: phasesをそのまま使用
+        phasesToSave = phases;
+
+        // 後方互換性のため、legacy fieldsも自動設定
+        const prelimPhase = phases.phases.find(p => p.id === 'preliminary');
+        const finalPhase = phases.phases.find(p => p.id === 'final');
+
+        preliminaryType = prelimPhase ? prelimPhase.format_type : null;
+        finalType = finalPhase ? finalPhase.format_type : null;
+      }
+
+      // バリデーション
+      const validation = validatePhases(phasesToSave);
+      if (!validation.valid) {
+        alert(`フェーズ設定エラー:\n${validation.errors.join('\n')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       // 前後の空白をトリミング（不戦勝試合は空文字列のまま）
       const processedData = {
         ...data,
+        preliminary_format_type: preliminaryType,
+        final_format_type: finalType,
+        phases: phasesToSave,
         templates: data.templates.map(template => ({
           ...template,
           team1_display_name: template.team1_display_name?.trim() || "",
@@ -348,8 +393,21 @@ export default function TournamentFormatCreateForm() {
 
           {/* 試合形式選択 */}
           <div className="border-t pt-4 mt-4">
-            <h3 className="text-sm font-semibold mb-3 text-gray-700">試合形式設定</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">試合形式設定</h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setUseAdvancedPhases(!useAdvancedPhases)}
+              >
+                <Layers className="h-4 w-4 mr-1" />
+                {useAdvancedPhases ? "シンプル設定に戻る" : "詳細フェーズ設定"}
+              </Button>
+            </div>
+
+            {!useAdvancedPhases ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* 予選試合形式 */}
               <div className="space-y-2">
                 <Label htmlFor="preliminary_format_type">
@@ -426,6 +484,13 @@ export default function TournamentFormatCreateForm() {
                 )}
               </div>
             </div>
+            ) : (
+              /* 詳細フェーズ設定モード */
+              <PhaseConfigurationSection
+                phases={phases}
+                onPhasesChange={setPhases}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -557,8 +622,20 @@ export default function TournamentFormatCreateForm() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="preliminary">予選</SelectItem>
-                          <SelectItem value="final">決勝</SelectItem>
+                          {!useAdvancedPhases ? (
+                            /* レガシーモード: 固定2フェーズ */
+                            <>
+                              <SelectItem value="preliminary">予選</SelectItem>
+                              <SelectItem value="final">決勝</SelectItem>
+                            </>
+                          ) : (
+                            /* 詳細モード: phasesから動的生成 */
+                            phases.phases.map((phase) => (
+                              <SelectItem key={phase.id} value={phase.id}>
+                                {phase.display_name || phase.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </td>

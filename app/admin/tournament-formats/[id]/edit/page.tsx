@@ -74,7 +74,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             target_team_count: Number(format.target_team_count),
             format_description: String(format.format_description || ""),
             preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
-            final_format_type: format.final_format_type ? String(format.final_format_type) : null
+            final_format_type: format.final_format_type ? String(format.final_format_type) : null,
+            phases: format.phases ? JSON.parse(format.phases as string) : undefined
           }}
           templates={templatesResult.rows.map(t => ({
             match_number: Number(t.match_number),
