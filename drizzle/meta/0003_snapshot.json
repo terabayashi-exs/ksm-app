@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0362345a-9a5f-4c63-8438-c188632255d9",
-  "prevId": "1adb97cb-5303-4bd9-9ed5-6b1fdae23193",
+  "id": "cac0a3a8-459a-499f-bb31-16616d308783",
+  "prevId": "0362345a-9a5f-4c63-8438-c188632255d9",
   "tables": {
     "m_administrators": {
       "name": "m_administrators",
@@ -1064,6 +1064,13 @@
         },
         "final_format_type": {
           "name": "final_format_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "phases": {
+          "name": "phases",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
