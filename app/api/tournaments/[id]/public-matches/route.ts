@@ -241,7 +241,7 @@ export async function GET(
                 mt.team2_source
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
@@ -295,7 +295,7 @@ export async function GET(
                 mt.team2_source
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1

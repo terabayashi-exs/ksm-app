@@ -319,7 +319,7 @@ async function checkTournamentHasOngoingMatches(tournamentId: number): Promise<b
       FROM t_match_status ms
       INNER JOIN t_matches_live ml ON ms.match_id = ml.match_id
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
         AND ms.match_status != 'scheduled'
         AND ml.team1_tournament_team_id IS NOT NULL
@@ -361,7 +361,7 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       SELECT COUNT(*) as total_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
         AND ml.team1_tournament_team_id IS NOT NULL
         AND ml.team2_tournament_team_id IS NOT NULL
@@ -384,7 +384,7 @@ async function checkAllMatchesCompleted(tournamentId: number): Promise<boolean> 
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
         AND ml.team1_tournament_team_id IS NOT NULL
         AND ml.team2_tournament_team_id IS NOT NULL

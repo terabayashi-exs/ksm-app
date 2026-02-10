@@ -185,7 +185,8 @@ async function getBlockResults(
             (
               SELECT COALESCE(mt.team1_display_name, ml.team1_display_name)
               FROM t_matches_live ml
-              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ? AND mt.phase = mb.phase
               WHERE ml.team1_tournament_team_id = tt.tournament_team_id
                 AND ml.match_block_id = ?
               LIMIT 1
@@ -193,7 +194,8 @@ async function getBlockResults(
             (
               SELECT COALESCE(mt.team2_display_name, ml.team2_display_name)
               FROM t_matches_live ml
-              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ? AND mt.phase = mb.phase
               WHERE ml.team2_tournament_team_id = tt.tournament_team_id
                 AND ml.match_block_id = ?
               LIMIT 1
@@ -203,7 +205,8 @@ async function getBlockResults(
             (
               SELECT COALESCE(mt.team1_display_name, ml.team1_display_name)
               FROM t_matches_live ml
-              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ? AND mt.phase = mb.phase
               WHERE ml.team1_tournament_team_id = tt.tournament_team_id
                 AND ml.match_block_id = ?
               LIMIT 1
@@ -211,7 +214,8 @@ async function getBlockResults(
             (
               SELECT COALESCE(mt.team2_display_name, ml.team2_display_name)
               FROM t_matches_live ml
-              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+              INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ? AND mt.phase = mb.phase
               WHERE ml.team2_tournament_team_id = tt.tournament_team_id
                 AND ml.match_block_id = ?
               LIMIT 1
@@ -254,7 +258,8 @@ async function getBlockResults(
               tt.team_name,
               tt.team_omission
             FROM t_matches_live ml
-            LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+            INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ? AND mt.phase = mb.phase
             LEFT JOIN t_tournament_teams tt ON ml.team1_tournament_team_id = tt.tournament_team_id
             WHERE ml.match_block_id = ?
             AND ml.team1_display_name IS NOT NULL
@@ -267,7 +272,8 @@ async function getBlockResults(
               tt.team_name,
               tt.team_omission
             FROM t_matches_live ml
-            LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ?
+            INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+              LEFT JOIN m_match_templates mt ON ml.match_code = mt.match_code AND mt.format_id = ? AND mt.phase = mb.phase
             LEFT JOIN t_tournament_teams tt ON ml.team2_tournament_team_id = tt.tournament_team_id
             WHERE ml.match_block_id = ?
             AND ml.team2_display_name IS NOT NULL

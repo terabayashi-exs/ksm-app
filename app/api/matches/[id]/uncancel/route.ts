@@ -112,7 +112,7 @@ export async function POST(
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
         WHERE mb.tournament_id = ?
           AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
       `, [formatId, tournamentId]);
@@ -125,7 +125,7 @@ export async function POST(
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code
+        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
         WHERE mb.tournament_id = ?
           AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
           AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
