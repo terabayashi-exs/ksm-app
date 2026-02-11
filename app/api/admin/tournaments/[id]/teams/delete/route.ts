@@ -66,7 +66,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     const teamInfo = teamInfoResult.rows[0];
-    const teamId = String(teamInfo.team_id);
 
     // 管理者代行登録チームのみ削除可能
     if (teamInfo.registration_type !== 'admin_proxy') {
@@ -83,22 +82,22 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     console.log('Starting team deletion transaction...');
 
     // 1. このチームが参加している試合を確認して削除（外部キー制約対応）
-    // 1-1. t_matches_liveから削除（team1_id, team2_id, winner_team_idを参照）
+    // 1-1. t_matches_liveから削除（tournament_team_idを参照）
     await db.execute(`
       DELETE FROM t_matches_live
       WHERE match_block_id IN (
         SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
-      ) AND (team1_id = ? OR team2_id = ? OR winner_team_id = ?)
-    `, [tournamentId, teamId, teamId, teamId]);
+      ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ? OR winner_tournament_team_id = ?)
+    `, [tournamentId, tournamentTeamId, tournamentTeamId, tournamentTeamId]);
     console.log('Deleted live matches');
 
-    // 1-2. t_matches_finalから削除（team1_id, team2_id, winner_team_idを参照）
+    // 1-2. t_matches_finalから削除（tournament_team_idを参照）
     await db.execute(`
       DELETE FROM t_matches_final
       WHERE match_block_id IN (
         SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
-      ) AND (team1_id = ? OR team2_id = ? OR winner_team_id = ?)
-    `, [tournamentId, teamId, teamId, teamId]);
+      ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ? OR winner_tournament_team_id = ?)
+    `, [tournamentId, tournamentTeamId, tournamentTeamId, tournamentTeamId]);
     console.log('Deleted final matches');
 
     // 2. 大会参加選手を削除（tournament_team_idを使用して特定のエントリーのみ削除）

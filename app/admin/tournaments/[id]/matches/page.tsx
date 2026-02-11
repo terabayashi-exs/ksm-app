@@ -245,7 +245,7 @@ export default function AdminMatchesPage() {
             block.matches.sort((a, b) => a.match_code.localeCompare(b.match_code, undefined, { numeric: true }));
           });
           
-          const blocks = Array.from(blocksMap.values())
+          let blocks = Array.from(blocksMap.values())
             .sort((a, b) => {
               // 予選を先に、決勝を後に配置
               if (a.phase === 'preliminary' && b.phase === 'final') return -1;
@@ -253,7 +253,37 @@ export default function AdminMatchesPage() {
               // 同じフェーズ内ではblock_orderでソート
               return a.block_order - b.block_order;
             });
-          
+
+          // 決勝フェーズのブロックを統合
+          const finalBlocks = blocks.filter(b => b.phase === 'final');
+          const otherBlocks = blocks.filter(b => b.phase !== 'final');
+
+          if (finalBlocks.length > 0) {
+            // 決勝ブロックを1つに統合
+            const firstFinalBlock = finalBlocks[0];
+            const unifiedFinalBlock: MatchBlock = {
+              match_block_id: firstFinalBlock.match_block_id,
+              phase: 'final',
+              display_round_name: '決勝トーナメント',
+              block_name: 'final_unified',
+              match_type: firstFinalBlock.match_type,
+              block_order: firstFinalBlock.block_order,
+              matches: []
+            };
+
+            // 全決勝ブロックの試合を統合
+            finalBlocks.forEach(block => {
+              unifiedFinalBlock.matches.push(...block.matches);
+            });
+
+            // ソートして結合
+            blocks = [...otherBlocks, unifiedFinalBlock].sort((a, b) => {
+              if (a.phase === 'preliminary' && b.phase === 'final') return -1;
+              if (a.phase === 'final' && b.phase === 'preliminary') return 1;
+              return a.block_order - b.block_order;
+            });
+          }
+
           setMatchBlocks(blocks);
         } else {
           console.error('Failed to fetch matches:', matchesResult.error);
@@ -914,33 +944,76 @@ export default function AdminMatchesPage() {
     }
   };
 
-  // 利用可能なブロック一覧を取得（matchBlocksの順序を使用）
-  const getAvailableBlocks = () => {
-    // matchBlocksが既にphaseとblock_orderでソート済みなので、その順序を使用
-    return matchBlocks.map(block => block.block_name);
-  };
-
-  // ブロック色を取得
+  // ブロック色を取得（全ブロックに異なる色を割り当て）
   const getBlockColor = (blockName: string) => {
-    const colors: { [key: string]: string } = {
-      'A': 'bg-blue-600 text-white',
-      'B': 'bg-green-600 text-white',
-      'C': 'bg-yellow-600 text-white',
-      'D': 'bg-purple-600 text-white',
-      '決勝トーナメント': 'bg-red-600 text-white',
-      'final_unified': 'bg-red-600 text-white',
-      'preliminary_unified': 'bg-orange-600 text-white',
-    };
-    return colors[blockName] || 'bg-secondary text-secondary-foreground';
+    // 統合ブロック用の色
+    if (blockName === 'final_unified') return 'bg-red-600 text-white';
+    if (blockName === 'preliminary_unified') return 'bg-orange-600 text-white';
+
+    // 通常ブロック用の色パレット
+    const colorPalette = [
+      'bg-blue-600 text-white',      // A
+      'bg-green-600 text-white',     // B
+      'bg-yellow-600 text-white',    // C
+      'bg-purple-600 text-white',    // D
+      'bg-pink-600 text-white',      // E
+      'bg-indigo-600 text-white',    // F
+      'bg-teal-600 text-white',      // G
+      'bg-cyan-600 text-white',      // H
+      'bg-amber-600 text-white',     // I
+      'bg-lime-600 text-white',      // J
+      'bg-emerald-600 text-white',   // K
+      'bg-violet-600 text-white',    // L
+      'bg-fuchsia-600 text-white',   // M
+      'bg-rose-600 text-white',      // N
+      'bg-sky-600 text-white',       // O
+      'bg-orange-600 text-white',    // P
+    ];
+
+    // ブロック名がA-Zの場合、インデックスに応じた色を返す
+    if (blockName.length === 1 && blockName >= 'A' && blockName <= 'Z') {
+      const index = blockName.charCodeAt(0) - 'A'.charCodeAt(0);
+      return colorPalette[index % colorPalette.length];
+    }
+
+    // その他のブロック名の場合はデフォルト色
+    return 'bg-gray-600 text-white';
   };
 
-  // ブロック名を表示用に変換
-  const getBlockDisplayName = (blockName: string) => {
-    const displayNames: { [key: string]: string } = {
-      'final_unified': '決勝トーナメント',
-      'preliminary_unified': '予選トーナメント',
-    };
-    return displayNames[blockName] || blockName;
+  // ブロック境界線の色を取得
+  const getBlockBorderColor = (blockName: string) => {
+    // 統合ブロック用の境界線色
+    if (blockName === 'final_unified') return 'border-l-red-500';
+    if (blockName === 'preliminary_unified') return 'border-l-orange-500';
+
+    // 通常ブロック用の境界線色パレット
+    const borderColorPalette = [
+      'border-l-blue-500',      // A
+      'border-l-green-500',     // B
+      'border-l-yellow-500',    // C
+      'border-l-purple-500',    // D
+      'border-l-pink-500',      // E
+      'border-l-indigo-500',    // F
+      'border-l-teal-500',      // G
+      'border-l-cyan-500',      // H
+      'border-l-amber-500',     // I
+      'border-l-lime-500',      // J
+      'border-l-emerald-500',   // K
+      'border-l-violet-500',    // L
+      'border-l-fuchsia-500',   // M
+      'border-l-rose-500',      // N
+      'border-l-sky-500',       // O
+      'border-l-orange-500',    // P
+    ];
+
+    // ブロック名がA-Zの場合、インデックスに応じた色を返す
+    if (blockName.length === 1 && blockName >= 'A' && blockName <= 'Z') {
+      const index = blockName.charCodeAt(0) - 'A'.charCodeAt(0);
+      return borderColorPalette[index % borderColorPalette.length];
+    }
+
+    // その他のブロック名の場合はデフォルト色
+    return 'border-l-gray-500';
   };
 
   if (loading) {
@@ -1078,19 +1151,19 @@ export default function AdminMatchesPage() {
               >
                 全ブロック
               </Button>
-              {getAvailableBlocks().map(blockName => (
+              {matchBlocks.map((block) => (
                 <Button
-                  key={blockName}
-                  variant={blockFilter === blockName ? 'default' : 'outline'}
+                  key={`${block.phase}-${block.block_name}`}
+                  variant={blockFilter === block.block_name ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setBlockFilter(blockName)}
+                  onClick={() => setBlockFilter(block.block_name)}
                   className="flex items-center space-x-2"
                 >
-                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBlockColor(blockName)}`}>
-                    {getBlockDisplayName(blockName)}
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBlockColor(block.block_name)}`}>
+                    {block.display_round_name}
                   </span>
                   <span className="text-sm">
-                    ({matches.filter(m => m.block_name === blockName).length})
+                    ({block.matches.length})
                   </span>
                 </Button>
               ))}
@@ -1129,15 +1202,7 @@ export default function AdminMatchesPage() {
               if (blockMatches.length === 0) return null;
               
               return (
-                <Card key={block.match_block_id} className={`border-l-4 ${
-                  block.block_name === 'A' ? 'border-l-blue-500' :
-                  block.block_name === 'B' ? 'border-l-green-500' :
-                  block.block_name === 'C' ? 'border-l-yellow-500' :
-                  block.block_name === 'D' ? 'border-l-purple-500' :
-                  block.block_name === '決勝トーナメント' || block.block_name === 'final_unified' ? 'border-l-red-500' :
-                  block.block_name === 'preliminary_unified' ? 'border-l-orange-500' :
-                  'border-l-gray-500'
-                }`}>
+                <Card key={`${block.phase}-${block.block_name}`} className={`border-l-4 ${getBlockBorderColor(block.block_name)}`}>
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
