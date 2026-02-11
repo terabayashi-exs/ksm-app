@@ -118,13 +118,14 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
 
     // ブロック情報を取得してトーナメント進出処理と順位表を更新
     const blockResult = await db.execute({
-      sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
+      sql: 'SELECT tournament_id, phase FROM t_match_blocks WHERE match_block_id = ?',
       args: [matchBlockId]
     });
 
     if (blockResult.rows && blockResult.rows.length > 0) {
       const tournamentId = blockResult.rows[0].tournament_id as number;
-      
+      const phase = blockResult.rows[0].phase as string;
+
       // トーナメント進出処理（決勝トーナメントの場合）
       try {
         const matchCode = match.match_code as string;
@@ -133,7 +134,7 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
         const isDraw = Boolean(match.is_draw);
 
-        await processTournamentProgression(matchId, matchCode, isDraw, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
+        await processTournamentProgression(matchId, matchCode, isDraw, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId, phase);
       } catch (progressionError) {
         console.error('トーナメント進出処理エラー:', progressionError);
         // トーナメント進出処理エラーでも処理を継続
@@ -293,19 +294,20 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
       // トーナメント進出処理（各試合ごと）
       try {
         const blockResult = await db.execute({
-          sql: 'SELECT tournament_id FROM t_match_blocks WHERE match_block_id = ?',
+          sql: 'SELECT tournament_id, phase FROM t_match_blocks WHERE match_block_id = ?',
           args: [match.match_block_id]
         });
 
         if (blockResult.rows && blockResult.rows.length > 0) {
           const tournamentId = blockResult.rows[0].tournament_id as number;
+          const phase = blockResult.rows[0].phase as string;
           const matchCode = match.match_code as string;
           const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
           const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
           const winnerTournamentTeamId = match.winner_tournament_team_id as number | null;
           const isDraw = Boolean(match.is_draw);
 
-          await processTournamentProgression(matchId, matchCode, isDraw, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
+          await processTournamentProgression(matchId, matchCode, isDraw, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId, phase);
           console.log(`一括確定でトーナメント進出処理完了: ${matchCode}`);
         }
       } catch (progressionError) {

@@ -149,8 +149,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const winnerTournamentTeamId = finalWinnerTournamentTeamId as number | null;
       const isDrawForProgression = isDraw;
 
-      console.log(`[MATCH_CONFIRM] Processing tournament progression for match ${matchCode}`);
-      await processTournamentProgression(matchId, matchCode, isDrawForProgression, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId);
+      // phaseを取得
+      const phaseResult = await db.execute(`
+        SELECT phase FROM t_match_blocks WHERE match_block_id = ?
+      `, [liveMatch.match_block_id]);
+      const phase = phaseResult.rows[0]?.phase as string;
+
+      console.log(`[MATCH_CONFIRM] Processing tournament progression for match ${matchCode} (phase=${phase})`);
+      await processTournamentProgression(matchId, matchCode, isDrawForProgression, tournamentId, team1TournamentTeamId, team2TournamentTeamId, winnerTournamentTeamId, phase);
       console.log(`[MATCH_CONFIRM] ✅ Tournament progression processed for match ${matchCode}`);
     } catch (progressionError) {
       console.error(`[MATCH_CONFIRM] ❌ Failed to process tournament progression for match ${matchId}:`, progressionError);

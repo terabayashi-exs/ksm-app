@@ -85,13 +85,22 @@ export async function POST(
       console.log(`✓ 試合${match.match_code}の中止結果をt_matches_finalから削除しました`);
     }
 
-    // 3. 順位表の再計算（中止解除では実行しない）
-    // 中止解除により試合が未確定状態に戻るだけなので、
-    // 手動設定した順位を保持するため、順位表の再計算は行わない
-    console.log(`ℹ 中止解除のため、順位表の再計算をスキップしました（手動設定順位を保持）`);
-
-    // 将来的に、中止解除後に自動で順位計算が必要な場合は、
-    // ここでupdateBlockRankingsOnMatchConfirmを呼び出すことができます
+    // 3. 順位表の再計算
+    // cancellation_typeが'no_count'でなかった場合（順位に影響していた場合）のみ再計算
+    // 中止解除により試合が未確定状態に戻るため、順位表から不戦勝結果を除外する必要がある
+    if (match.cancellation_type && match.cancellation_type !== 'no_count') {
+      try {
+        console.log(`✓ ブロック ${match.match_block_id} の順位表を再計算します（中止解除による更新）`);
+        const { updateBlockRankingsOnMatchConfirm } = await import('@/lib/standings-calculator');
+        await updateBlockRankingsOnMatchConfirm(match.match_block_id, match.tournament_id);
+        console.log(`✓ ブロック ${match.match_block_id} の順位表を再計算しました`);
+      } catch (error) {
+        console.error('順位表再計算エラー:', error);
+        // 順位表の再計算に失敗しても、中止解除処理は成功として扱う
+      }
+    } else {
+      console.log(`ℹ cancellation_type='no_count'のため、順位表の再計算をスキップしました`);
+    }
 
     // 4. 大会ステータスの更新チェック
     // 全試合が完了していない場合、大会ステータスをongoingに戻す
