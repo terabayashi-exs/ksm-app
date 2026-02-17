@@ -11,7 +11,7 @@ interface PageProps {
 export default async function ManualRankingsPage({ params }: PageProps) {
   const session = await auth();
   
-  if (!session || session.user.role !== "admin") {
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
     redirect("/auth/login");
   }
 

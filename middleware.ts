@@ -32,7 +32,7 @@ export default async function middleware(req: NextRequest) {
 
   // 既にログイン済みの場合、認証ページにアクセスしようとしたらリダイレクト
   if (isLoggedIn && isAuthRoute) {
-    if (userRole === "admin") {
+    if (userRole === "admin" || userRole === "operator") {
       return NextResponse.redirect(new URL("/admin", nextUrl));
     } else if (userRole === "team") {
       return NextResponse.redirect(new URL("/team", nextUrl));
@@ -40,14 +40,14 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", nextUrl));
   }
 
-  // 管理者ルートの保護
+  // 管理者・運営者ルートの保護
   if (isAdminRoute) {
     if (!isLoggedIn) {
       return NextResponse.redirect(
         new URL(`/auth/admin/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
       );
     }
-    if (userRole !== "admin") {
+    if (userRole !== "admin" && userRole !== "operator") {
       return NextResponse.redirect(new URL("/auth/admin/login", nextUrl));
     }
   }

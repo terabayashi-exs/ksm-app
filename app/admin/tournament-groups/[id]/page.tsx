@@ -148,12 +148,14 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                 )}
               </div>
             </div>
-            <Button variant="outline" asChild>
-              <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
-                <Edit className="w-4 h-4 mr-2" />
-                大会情報を編集
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  大会情報を編集
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

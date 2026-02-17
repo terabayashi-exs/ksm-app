@@ -24,8 +24,8 @@ export async function GET(
       userRole: session?.user?.role,
       userId: session?.user?.id
     });
-    
-    if (!session || session.user.role !== 'admin') {
+
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       console.log('Authentication failed:', { session: !!session, role: session?.user?.role });
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },

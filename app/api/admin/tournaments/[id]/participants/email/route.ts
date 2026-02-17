@@ -23,7 +23,7 @@ export async function POST(
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 });
     }
 

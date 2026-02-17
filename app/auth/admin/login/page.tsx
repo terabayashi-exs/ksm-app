@@ -24,23 +24,36 @@ function AdminLoginForm() {
     setError("");
 
     const formData = new FormData(e.currentTarget);
+    const loginId = formData.get("loginId") as string;
+    const password = formData.get("password") as string;
 
     try {
-      const result = await signIn("admin", {
+      // まず管理者としてログイン試行
+      let result = await signIn("admin", {
         redirect: false,
-        loginId: formData.get("loginId") as string,
-        password: formData.get("password") as string,
+        loginId,
+        password,
       });
+
+      // 管理者ログインが失敗したら運営者として試行
+      if (result?.error) {
+        result = await signIn("operator", {
+          redirect: false,
+          loginId,
+          password,
+        });
+      }
 
       if (result?.error) {
         setError("ログインに失敗しました。認証情報を確認してください。");
       } else if (result?.ok) {
         // セッション情報を取得してリダイレクト
         const session = await getSession();
-        if (session?.user?.role === "admin") {
+        if (session?.user?.role === "admin" || session?.user?.role === "operator") {
           router.push(callbackUrl);
+          router.refresh();
         } else {
-          setError("管理者権限がありません。");
+          setError("権限がありません。");
         }
       }
     } catch (error) {
@@ -61,10 +74,10 @@ function AdminLoginForm() {
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
-            管理者ログイン
+            管理者・運営者ログイン
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            管理者専用ログインページ
+            管理者・運営者専用ログインページ
           </p>
         </div>
 
@@ -82,7 +95,7 @@ function AdminLoginForm() {
                   name="loginId"
                   type="text"
                   required
-                  placeholder="管理者ログインID"
+                  placeholder="ログインID"
                   disabled={loading}
                   autoComplete="username"
                 />

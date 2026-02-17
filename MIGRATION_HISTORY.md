@@ -16,6 +16,147 @@
 
 ---
 
+## 0004: 大会運営者管理システム（部門単位アクセス制御）（2026-02-16）
+
+
+### 基本情報
+- **日付**: 2026年2月16日
+- **環境**: dev
+- **方法**: 手動マイグレーション（`drizzle/0004_familiar_cable.sql`）
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0004_familiar_cable.sql`
+
+### 変更の背景と目的
+
+**設計目標:**
+- 管理者が運営者を登録し、部門単位でアクセス権と操作権限を付与できるシステム
+- 部門ごとに異なる操作権限を設定可能（例: 部門Aは参加チーム管理のみ、部門Bは試合結果入力のみ）
+
+**具体例:**
+```
+運営者A:
+  - 部門100（一般）: 参加チーム管理のみON
+  - 部門101（小学生）: 試合結果入力のみON
+```
+
+### 変更内容
+
+#### テーブル追加
+
+**m_operators（運営者マスター）:**
+- `operator_id` INTEGER PRIMARY KEY AUTOINCREMENT
+- `operator_login_id` TEXT UNIQUE NOT NULL - 運営者ログインID
+- `password_hash` TEXT NOT NULL - パスワードハッシュ
+- `operator_name` TEXT NOT NULL - 運営者名
+- `administrator_id` INTEGER NOT NULL - 管理者ID（FK: m_administrators）
+- `is_active` INTEGER DEFAULT 1 NOT NULL - 有効/無効
+- `created_at` NUMERIC DEFAULT (datetime('now', '+9 hours'))
+- `updated_at` NUMERIC DEFAULT (datetime('now', '+9 hours'))
+
+**インデックス:**
+- UNIQUE INDEX: `m_operators_operator_login_id_unique` (operator_login_id)
+- INDEX: `idx_operators_admin` (administrator_id)
+- INDEX: `idx_operators_login` (operator_login_id)
+
+**t_operator_tournament_access（運営者部門アクセス権限）:**
+- `access_id` INTEGER PRIMARY KEY AUTOINCREMENT
+- `operator_id` INTEGER NOT NULL - 運営者ID（FK: m_operators, CASCADE DELETE）
+- `tournament_id` INTEGER NOT NULL - 部門ID（FK: t_tournaments, CASCADE DELETE）
+- `permissions` TEXT NOT NULL - 部門ごとの操作権限（JSON形式）
+- `created_at` NUMERIC DEFAULT (datetime('now', '+9 hours'))
+- `updated_at` NUMERIC DEFAULT (datetime('now', '+9 hours'))
+
+**インデックス:**
+- INDEX: `idx_operator_access_operator` (operator_id)
+- INDEX: `idx_operator_access_tournament` (tournament_id)
+
+### 影響範囲
+
+#### データベーススキーマ
+- `src/db/schema.ts`: テーブル定義更新
+
+#### 型定義
+- `lib/types/operator.ts`: 部門単位アクセス権限の型定義
+
+#### APIエンドポイント
+- `app/api/admin/operators/route.ts`: 運営者CRUD（新規作成）
+- `app/api/admin/operators/[id]/route.ts`: 運営者詳細・更新・削除（新規作成）
+- `app/api/admin/operators/[id]/toggle-active/route.ts`: 有効/無効切り替え（新規作成）
+- `app/api/admin/tournaments/all/route.ts`: 全部門取得API（新規作成）
+
+#### UIコンポーネント
+- `components/admin/operators/operator-form.tsx`: 運営者登録フォーム（新規作成）
+- `components/admin/operators/operator-list.tsx`: 運営者一覧（新規作成）
+- `components/admin/operators/permission-editor.tsx`: 権限編集UI（新規作成）
+- `components/admin/operators/tournament-access-selector.tsx`: 部門選択UI（新規作成）
+
+#### ページ
+- `app/admin/operators/page.tsx`: 運営者管理画面（新規作成）
+- `app/admin/operators/new/page.tsx`: 運営者新規登録（新規作成）
+- `app/admin/operators/[id]/edit/page.tsx`: 運営者編集（新規作成）
+
+### 実行コマンド
+```bash
+# 1. 旧テーブルとマイグレーション履歴を削除
+npx tsx scripts/drop-operator-tables.ts
+
+# 2. 0004マイグレーションファイルを部門単位構造で書き直し済み
+
+# 3. カスタムマイグレーター実行（Turso対応）
+npm run db:migrate
+```
+
+### 実行結果
+- ✅ m_operatorsテーブル作成成功
+- ✅ t_operator_tournament_accessテーブル作成成功（部門単位アクセス）
+- ✅ 全インデックス作成成功
+- ✅ 外部キー制約設定完了
+- ✅ __drizzle_migrationsに履歴記録完了
+
+### 🎉 Turso対応カスタムマイグレーター導入
+このマイグレーションから、Turso専用のカスタムマイグレーター（`scripts/migrate-turso.ts`）を使用開始。
+標準の`drizzle-kit migrate`はTursoで以下の問題があったため：
+- ブロックコメント（`/* */`）のパースエラー
+- 複数SQL文の一括実行不可（Turso HTTPプロトコルの制限）
+
+カスタムマイグレーターの特徴：
+- ✅ ブロックコメントを自動削除
+- ✅ SQL文を1つずつ実行（Turso対応）
+- ✅ 既存テーブル/カラムのエラーを自動スキップ
+- ✅ 環境別実行対応（dev/stag/main）
+- ✅ 冪等性保証（何度実行しても安全）
+
+### 影響を受けたファイル
+
+#### 新規作成
+- `src/lib/types/operator.ts` - TypeScript型定義（OperatorPermissions, Operator, OperatorFormDataなど）
+- `drizzle/0004_familiar_cable.sql` - マイグレーションSQL
+- `scripts/add-operator-tables.ts` - テーブル作成スクリプト
+
+#### 更新
+- `src/db/schema.ts` (Line 828-854) - 2テーブル追加
+
+### 権限設計
+運営者権限はJSON形式で以下の項目を管理：
+- **matches**: 試合管理（組み合わせ作成、日程編集、結果入力、結果確定、結果編集）
+- **publication**: 結果公開（結果公開、順位表管理）
+- **communication**: コミュニケーション（メール送信、お知らせ管理）
+- **others**: その他（統計閲覧、データエクスポート）
+
+デフォルト権限（新規作成時）:
+- 試合結果入力: ON
+- 統計閲覧: ON
+- その他: すべてOFF
+
+### 今後の実装予定
+- [ ] 運営者ログイン機能（NextAuth.js拡張）
+- [ ] 運営者管理UI（大会詳細画面に「大会運営者の管理」ボタン追加）
+- [ ] 運営者登録・編集フォーム
+- [ ] 権限チェックミドルウェア
+- [ ] アクセス制御の実装
+
+---
+
 ## 0003: m_tournament_formatsにphasesフィールド追加（2026-02-09）
 
 ### 基本情報

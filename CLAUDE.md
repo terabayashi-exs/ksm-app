@@ -60,28 +60,28 @@ npm run dev
 ### 概要
 このプロジェクトではDrizzle ORMを使用してデータベーススキーマとマイグレーションを管理しています。
 
-### ⚠️ 重要：Turso環境での設定
+### ⚠️ 重要：Turso環境での設定とカスタムマイグレーター
 
-**`drizzle.config.ts`に`breakpoints: false`を設定しています。**
+**このプロジェクトでは、Turso専用のカスタムマイグレーター（`scripts/migrate-turso.ts`）を使用しています。**
+
+標準の`drizzle-kit migrate`はTursoで以下の問題があるため：
+- ❌ ブロックコメント（`/* */`）のパースエラー
+- ❌ 複数SQL文の一括実行不可（Turso HTTPプロトコルの制限）
+
+カスタムマイグレーターの特徴：
+- ✅ ブロックコメントを自動削除
+- ✅ SQL文を1つずつ実行（Turso対応）
+- ✅ 既存テーブル/カラムのエラーを自動スキップ
+- ✅ 環境別実行対応（dev/stag/main）
+- ✅ 冪等性保証（何度実行しても安全）
+- ✅ `__drizzle_migrations`テーブルで履歴管理
 
 ```typescript
-// drizzle.config.ts
-export default defineConfig({
-  schema: './src/db/schema.ts',
-  out: './drizzle',
-  dialect: 'turso',
-  breakpoints: false, // Tursoで標準マイグレーションを使用可能にする
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
-  },
-});
+// 使用方法
+npm run db:migrate      // dev環境
+npm run db:migrate:stag // stag環境
+npm run db:migrate:main // main環境
 ```
-
-この設定により：
-- ✅ `--> statement-breakpoint`が生成されない
-- ✅ Tursoで`npm run db:migrate`が正常に動作する
-- ✅ 標準的なDrizzle Kitマイグレーションフローが使用可能
 
 詳細は[Drizzle ORM Guide](./docs/drizzle-orm-guide.md#⚠️-tursolibsql使用時の注意事項と解決方法)を参照してください。
 
@@ -133,7 +133,7 @@ npm run db:studio:main
 
 #### 標準的なマイグレーション管理（推奨）
 
-**`breakpoints: false`設定により、標準的なDrizzle Kitマイグレーションが使用可能です。**
+**Turso対応カスタムマイグレーターを使用します。**
 
 ```bash
 # 1. src/db/schema.ts を編集してフィールドを追加/削除
@@ -141,8 +141,8 @@ npm run db:studio:main
 # 2. マイグレーションファイルを生成
 npm run db:generate
 
-# 3. Dev環境で適用とテスト
-npm run db:migrate:dev
+# 3. Dev環境で適用とテスト（カスタムマイグレーター使用）
+npm run db:migrate
 
 # 4. Stag環境で検証
 npm run db:migrate:stag

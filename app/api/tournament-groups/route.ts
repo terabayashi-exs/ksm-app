@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { canCreateTournamentGroup } from '@/lib/subscription/plan-checker';
 import { recalculateUsage, checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
+import { calculateTournamentStatus } from '@/lib/tournament-status';
 
 // 大会一覧取得
 export async function GET(request: NextRequest) {
@@ -53,10 +54,6 @@ export async function GET(request: NextRequest) {
       params.push(userId);
     }
 
-    if (!includeInactive) {
-      query += ` AND tg.visibility = 'open'`;
-    }
-
     query += `
       GROUP BY tg.group_id
       ORDER BY tg.event_start_date DESC, tg.created_at DESC
@@ -64,9 +61,60 @@ export async function GET(request: NextRequest) {
 
     const result = await db.execute(query, params);
 
+    // include_inactive=falseの場合、全部門が完了している大会を除外
+    let filteredRows = result.rows;
+    if (!includeInactive) {
+      // 各大会グループの部門ステータスを確認
+      const rowsWithStatus = await Promise.all(result.rows.map(async (row) => {
+        // このグループに属する部門（tournaments）を取得
+        const divisionsResult = await db.execute(`
+          SELECT
+            tournament_id,
+            status,
+            tournament_dates,
+            recruitment_start_date,
+            recruitment_end_date,
+            public_start_date
+          FROM t_tournaments
+          WHERE group_id = ?
+        `, [row.group_id]);
+
+        const divisions = divisionsResult.rows;
+
+        // 部門が存在しない場合は除外（作成中）
+        if (divisions.length === 0) {
+          return { ...row, shouldInclude: false };
+        }
+
+        // 各部門の動的ステータスを計算（管理者ダッシュボードと同じロジック）
+        const calculatedStatuses = await Promise.all(
+          divisions.map(async (division) => {
+            return await calculateTournamentStatus({
+              status: division.status as string,
+              tournament_dates: division.tournament_dates as string,
+              recruitment_start_date: division.recruitment_start_date as string | null,
+              recruitment_end_date: division.recruitment_end_date as string | null,
+              public_start_date: division.public_start_date as string | null,
+            }, Number(division.tournament_id));
+          })
+        );
+
+        // 全ての部門が'completed'かどうかをチェック
+        const allCompleted = calculatedStatuses.every(status => status === 'completed');
+
+        return { ...row, shouldInclude: !allCompleted };
+      }));
+
+      // shouldInclude=trueのもののみフィルタ
+      filteredRows = rowsWithStatus
+        .filter(row => row.shouldInclude)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .map(({ shouldInclude, ...rest }) => rest);
+    }
+
     return NextResponse.json({
       success: true,
-      data: result.rows
+      data: filteredRows
     });
   } catch (error) {
     console.error('大会一覧取得エラー:', error);

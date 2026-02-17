@@ -115,7 +115,7 @@ export default function AdminMatchesPage() {
         return;
       }
       
-      if (!session || session.user.role !== 'admin') {
+      if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
         console.log('Not authenticated or not admin, redirecting');
         router.push('/auth/login');
         return;

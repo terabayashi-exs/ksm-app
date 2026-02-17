@@ -19,7 +19,7 @@ interface PageProps {
 export default async function ParticipantsPage({ params }: PageProps) {
   const session = await auth();
 
-  if (!session || session.user.role !== 'admin') {
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
     redirect('/auth/login');
   }
 

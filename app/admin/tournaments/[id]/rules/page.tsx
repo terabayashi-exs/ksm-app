@@ -13,7 +13,7 @@ export default async function TournamentRulesPage({ params }: Props) {
   const resolvedParams = await params;
   const session = await auth();
   
-  if (!session || session.user.role !== "admin") {
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
     redirect("/auth/login");
   }
 

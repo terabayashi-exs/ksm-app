@@ -78,15 +78,15 @@ export default async function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {session?.user ? (
               <>
-                {session.user.role === "admin" ? (
+                {session.user.role === "admin" || session.user.role === "operator" ? (
                   <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
                     <Link href="/admin">管理者ダッシュボード</Link>
                   </Button>
-                ) : (
+                ) : session.user.role === "team" ? (
                   <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
                     <Link href="/team">チームダッシュボード</Link>
                   </Button>
-                )}
+                ) : null}
               </>
             ) : (
               <>

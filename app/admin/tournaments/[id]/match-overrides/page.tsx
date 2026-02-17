@@ -69,11 +69,12 @@ export default function MatchOverridesPage() {
       const templatesData = await templatesResponse.json();
 
       if (templatesData.success && templatesData.data && templatesData.data.templates && Array.isArray(templatesData.data.templates)) {
-        // 決勝トーナメントの試合のみフィルタリング（phase基準 - 試合コードに依存しない）
-        const finalMatches = templatesData.data.templates.filter(
-          (t: MatchTemplate) => t.phase === 'final'
+        // 選出条件が設定されている試合のみフィルタリング（team1_source または team2_source が存在する試合）
+        // 予選トーナメント・決勝トーナメント両方に対応
+        const matchesWithSource = templatesData.data.templates.filter(
+          (t: MatchTemplate) => t.team1_source || t.team2_source
         );
-        setTemplates(finalMatches);
+        setTemplates(matchesWithSource);
       } else {
         console.error('テンプレートデータの取得に失敗:', templatesData);
         setTemplates([]);
@@ -143,7 +144,7 @@ export default function MatchOverridesPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">試合進出条件の設定</h1>
             <p className="text-gray-600">
-              決勝トーナメントの各試合について、進出元チームを個別に設定できます。
+              トーナメント形式の各試合について、進出元チームを個別に設定できます。
             </p>
           </div>
           <Button
@@ -170,7 +171,7 @@ export default function MatchOverridesPage() {
             <li>オーバーライドが設定されていない場合は、元のテンプレート条件が使用されます</li>
             <li>変更を削除すると元の条件に戻ります</li>
             <li>
-              変更後は、「チーム進出処理」を実行して決勝トーナメント試合にチームを割り当ててください
+              変更後は、「チーム進出処理」を実行してトーナメント試合にチームを割り当ててください
             </li>
           </ul>
         </CardContent>
@@ -179,7 +180,7 @@ export default function MatchOverridesPage() {
       {templates.length === 0 ? (
         <Card>
           <CardContent className="py-8">
-            <p className="text-center text-gray-500">決勝トーナメントの試合が見つかりません</p>
+            <p className="text-center text-gray-500">選出条件が設定された試合が見つかりません</p>
           </CardContent>
         </Card>
       ) : (

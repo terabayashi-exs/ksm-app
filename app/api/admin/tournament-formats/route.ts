@@ -12,7 +12,7 @@ export async function GET() {
     const session = await auth();
 
     // admin roleを持つユーザー（システム管理者または大会運営者）のみアクセス可能
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 

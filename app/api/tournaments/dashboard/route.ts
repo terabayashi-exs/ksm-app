@@ -9,7 +9,7 @@ export async function GET() {
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -18,6 +18,7 @@ export async function GET() {
 
     const userId = session.user.id;
     const isAdmin = userId === 'admin';
+    const isOperator = session.user.role === 'operator';
 
     // 現在日時（JST）で1年前の日付を計算
     const now = new Date();
@@ -69,7 +70,16 @@ export async function GET() {
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status != 'completed'
-        AND (t.created_by = ? OR ? = 1)
+        AND (
+          t.created_by = ? OR ? = 1
+          ${isOperator ? `OR EXISTS (
+            SELECT 1 FROM t_operator_tournament_access ota
+            JOIN m_operators o ON ota.operator_id = o.operator_id
+            WHERE ota.tournament_id = t.tournament_id
+              AND o.operator_login_id = ?
+              AND o.is_active = 1
+          )` : ''}
+        )
       ORDER BY
         CASE t.status
           WHEN 'ongoing' THEN 1
@@ -78,7 +88,7 @@ export async function GET() {
         END,
         t.group_order,
         t.created_at DESC
-    `, [userId, isAdmin ? 1 : 0]);
+    `, isOperator ? [userId, isAdmin ? 1 : 0, userId] : [userId, isAdmin ? 1 : 0]);
 
     // 完了した大会を取得（開催日から1年以内）
     const completedResult = await db.execute(`
@@ -123,9 +133,18 @@ export async function GET() {
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status = 'completed'
-        AND (t.created_by = ? OR ? = 1)
+        AND (
+          t.created_by = ? OR ? = 1
+          ${isOperator ? `OR EXISTS (
+            SELECT 1 FROM t_operator_tournament_access ota
+            JOIN m_operators o ON ota.operator_id = o.operator_id
+            WHERE ota.tournament_id = t.tournament_id
+              AND o.operator_login_id = ?
+              AND o.is_active = 1
+          )` : ''}
+        )
       ORDER BY t.group_order, t.created_at DESC
-    `, [userId, isAdmin ? 1 : 0]);
+    `, isOperator ? [userId, isAdmin ? 1 : 0, userId] : [userId, isAdmin ? 1 : 0]);
 
     // 完了した大会から開催日から1年経過したものを除外
     const filteredCompletedRows = completedResult.rows.filter(row => {

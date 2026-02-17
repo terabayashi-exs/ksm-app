@@ -8,7 +8,7 @@ import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, UserCog } from 'lucide-react';
 import { getStatusLabel } from '@/lib/tournament-status';
 import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from '@/lib/format-change';
 import { FormatChangeDialog } from './FormatChangeDialog';
@@ -52,9 +52,15 @@ interface ApiResponse {
 
 interface TournamentDashboardListProps {
   isTrialExpired?: boolean;
+  accessibleTournamentIds?: number[];
+  operatorPermissions?: Record<number, Record<string, boolean>>;
 }
 
-export default function TournamentDashboardList({ isTrialExpired = false }: TournamentDashboardListProps) {
+export default function TournamentDashboardList({
+  isTrialExpired = false,
+  accessibleTournamentIds,
+  operatorPermissions
+}: TournamentDashboardListProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentDashboardData>({
@@ -93,6 +99,52 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
   // "admin"ユーザーかどうかを判定
   const isAdminUser = session?.user?.id === 'admin';
 
+  // デバッグ用：運営者権限データをログ出力
+  useEffect(() => {
+    if (operatorPermissions) {
+      console.log('[Operator Permissions Loaded]', operatorPermissions);
+    }
+  }, [operatorPermissions]);
+
+  // 運営者の権限チェックヘルパー関数
+  // 権限がない場合はfalseを返す（管理者は常にtrue）
+  const hasPermission = (tournamentId: number, permission: string): boolean => {
+    // 管理者は全権限あり
+    if (!operatorPermissions) {
+      console.log(`[Permission Check] Admin mode - always true for ${permission}`);
+      return true;
+    }
+
+    // 運営者の場合、該当部門の権限をチェック
+    const permissions = operatorPermissions[tournamentId];
+    console.log(`[Permission Check] Tournament ${tournamentId}, Permission: ${permission}`, {
+      tournamentPermissions: permissions,
+      hasPermission: permissions?.[permission],
+      allPermissions: operatorPermissions
+    });
+
+    if (!permissions) return false;
+
+    return permissions[permission] === true;
+  };
+
+  // ボタンの無効化状態とツールチップを返すヘルパー関数
+  // 権限チェック → トライアル期限チェック の順で判定
+  const getButtonState = (tournamentId: number, permission: string, isTrialCheck: boolean = true) => {
+    const hasPerms = hasPermission(tournamentId, permission);
+    const trialExpired = isTrialCheck && isTrialExpired;
+
+    return {
+      disabled: !hasPerms || trialExpired,
+      title: !hasPerms
+        ? "この操作の権限がありません"
+        : trialExpired
+        ? "トライアル期間終了のため編集できません"
+        : "",
+      showLock: !hasPerms || trialExpired
+    };
+  };
+
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
@@ -100,27 +152,76 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
         const result: ApiResponse = await response.json();
 
         if (result.success && result.data) {
-          setTournaments(result.data);
+          // 運営者の場合はアクセス可能な部門のみにフィルタリング
+          let filteredData = result.data;
+          if (accessibleTournamentIds && accessibleTournamentIds.length > 0) {
+            const filterTournaments = (tournaments: Tournament[]) =>
+              tournaments.filter(t => accessibleTournamentIds.includes(t.tournament_id));
 
-          // 各大会グループの部門追加可否をチェック
-          const uniqueGroupIds = new Set<number>();
-          Object.values(result.data.grouped).forEach((statusGroup) => {
-            Object.values(statusGroup.grouped).forEach(({ group }) => {
-              uniqueGroupIds.add(group.group_id);
-            });
-          });
+            const filterGrouped = (groupedData: GroupedTournamentData): GroupedTournamentData => {
+              const filteredGrouped: Record<string, typeof groupedData.grouped[string]> = {};
+              Object.entries(groupedData.grouped).forEach(([key, value]) => {
+                const filteredTournaments = filterTournaments(value.tournaments);
+                if (filteredTournaments.length > 0) {
+                  filteredGrouped[key] = {
+                    ...value,
+                    tournaments: filteredTournaments
+                  };
+                }
+              });
+              return {
+                grouped: filteredGrouped,
+                ungrouped: filterTournaments(groupedData.ungrouped)
+              };
+            };
 
-          const checks: Record<number, { allowed: boolean; reason?: string; current: number; limit: number }> = {};
-          for (const groupId of uniqueGroupIds) {
-            try {
-              const checkRes = await fetch(`/api/admin/subscription/can-add-division?group_id=${groupId}`);
-              const checkData = await checkRes.json();
-              checks[groupId] = checkData;
-            } catch (err) {
-              console.error(`部門追加可否チェックエラー (group_id=${groupId}):`, err);
-            }
+            filteredData = {
+              planning: filterTournaments(result.data.planning),
+              recruiting: filterTournaments(result.data.recruiting),
+              before_event: filterTournaments(result.data.before_event),
+              ongoing: filterTournaments(result.data.ongoing),
+              completed: filterTournaments(result.data.completed),
+              total: 0, // 再計算
+              grouped: {
+                planning: filterGrouped(result.data.grouped.planning),
+                recruiting: filterGrouped(result.data.grouped.recruiting),
+                before_event: filterGrouped(result.data.grouped.before_event),
+                ongoing: filterGrouped(result.data.grouped.ongoing),
+                completed: filterGrouped(result.data.grouped.completed)
+              }
+            };
+            // 合計を再計算
+            filteredData.total =
+              filteredData.planning.length +
+              filteredData.recruiting.length +
+              filteredData.before_event.length +
+              filteredData.ongoing.length +
+              filteredData.completed.length;
           }
-          setDivisionChecks(checks);
+
+          setTournaments(filteredData);
+
+          // 各大会グループの部門追加可否をチェック（運営者の場合はスキップ）
+          if (!accessibleTournamentIds) {
+            const uniqueGroupIds = new Set<number>();
+            Object.values(filteredData.grouped).forEach((statusGroup) => {
+              Object.values(statusGroup.grouped).forEach(({ group }) => {
+                uniqueGroupIds.add(group.group_id);
+              });
+            });
+
+            const checks: Record<number, { allowed: boolean; reason?: string; current: number; limit: number }> = {};
+            for (const groupId of uniqueGroupIds) {
+              try {
+                const checkRes = await fetch(`/api/admin/subscription/can-add-division?group_id=${groupId}`);
+                const checkData = await checkRes.json();
+                checks[groupId] = checkData;
+              } catch (err) {
+                console.error(`部門追加可否チェックエラー (group_id=${groupId}):`, err);
+              }
+            }
+            setDivisionChecks(checks);
+          }
           setDivisionChecksLoading(false);
         } else {
           setError(result.error || '大会データの取得に失敗しました');
@@ -134,6 +235,11 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
     };
 
     const fetchNotificationCounts = async () => {
+      // 運営者の場合は辞退申請通知機能を使用しないのでスキップ
+      if (accessibleTournamentIds) {
+        return;
+      }
+
       try {
         const response = await fetch('/api/admin/notifications/counts');
         const result = await response.json();
@@ -148,7 +254,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
 
     fetchTournaments();
     fetchNotificationCounts();
-  }, []);
+  }, [accessibleTournamentIds]);
 
   // フォーマット一覧を取得
   useEffect(() => {
@@ -650,67 +756,76 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
           {!tournament.is_archived ? (
             <>
               {/* 部門編集ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  部門編集
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                    <FileEdit className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canEditTournament');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     部門編集
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                      <FileEdit className="w-4 h-4 mr-1" />
+                      部門編集
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* コート名設定ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  コート名設定
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
-                    <MapPin className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageCourts');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     コート名設定
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
+                      <MapPin className="w-4 h-4 mr-1" />
+                      コート名設定
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* ルール設定ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  ルール設定
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
-                    <FileText className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageRules');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     ルール設定
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                      <FileText className="w-4 h-4 mr-1" />
+                      ルール設定
+                    </Link>
+                  </Button>
+                );
+              })()}
             </>
           ) : (
             // アーカイブ済み大会の場合は削除ボタンのみ表示（adminユーザーのみ）
@@ -739,7 +854,18 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
           {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') && !tournament.is_archived && (
             <>
               {/* チーム登録ボタン */}
-              {isTrialExpired ? (
+              {!hasPermission(tournament.tournament_id, 'canRegisterTeams') ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="text-sm cursor-not-allowed opacity-50"
+                  title="この操作の権限がありません"
+                >
+                  <Lock className="w-4 h-4 mr-1" />
+                  チーム登録
+                </Button>
+              ) : isTrialExpired ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -764,179 +890,208 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 size="sm"
                 variant="outline"
                 onClick={() => handleDrawClick(tournament)}
-                disabled={isTrialExpired}
-                className={`text-sm ${isTrialExpired ? 'cursor-not-allowed opacity-50' : 'hover:border-blue-300 hover:bg-blue-50'}`}
-                title={isTrialExpired ? "トライアル期間終了のため編集できません" : ""}
+                disabled={!hasPermission(tournament.tournament_id, 'canCreateDraws') || isTrialExpired}
+                className={`text-sm ${(!hasPermission(tournament.tournament_id, 'canCreateDraws') || isTrialExpired) ? 'cursor-not-allowed opacity-50' : 'hover:border-blue-300 hover:bg-blue-50'}`}
+                title={!hasPermission(tournament.tournament_id, 'canCreateDraws') ? "この操作の権限がありません" : isTrialExpired ? "トライアル期間終了のため編集できません" : ""}
               >
-                {isTrialExpired ? <Lock className="w-4 h-4 mr-1" /> : <Shuffle className="w-4 h-4 mr-1" />}
+                {(!hasPermission(tournament.tournament_id, 'canCreateDraws') || isTrialExpired) ? <Lock className="w-4 h-4 mr-1" /> : <Shuffle className="w-4 h-4 mr-1" />}
                 組合せ作成・編集
               </Button>
 
               {/* フォーマット変更ボタン */}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleFormatChangeClick(tournament)}
-                disabled={isTrialExpired || (isFormatChanging && selectedTournamentId === tournament.tournament_id)}
-                className={`text-sm ${isTrialExpired ? 'cursor-not-allowed opacity-50' : 'border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700'}`}
-                title={isTrialExpired ? "トライアル期間終了のため編集できません" : "部門のフォーマットを変更（試合データは削除されます）"}
-              >
-                {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
-                    確認中...
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    {isTrialExpired ? <Lock className="w-4 h-4 mr-2" /> : <Settings className="w-4 h-4 mr-2" />}
-                    フォーマット変更
-                  </div>
-                )}
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canChangeFormat');
+                const isChanging = isFormatChanging && selectedTournamentId === tournament.tournament_id;
+                const disabled = btnState.disabled || isChanging;
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleFormatChangeClick(tournament)}
+                    disabled={disabled}
+                    className={`text-sm ${disabled ? 'cursor-not-allowed opacity-50' : 'border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700'}`}
+                    title={btnState.title || (isChanging ? "" : "部門のフォーマットを変更（試合データは削除されます）")}
+                  >
+                    {isChanging ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                        確認中...
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        {disabled ? <Lock className="w-4 h-4 mr-2" /> : <Settings className="w-4 h-4 mr-2" />}
+                        フォーマット変更
+                      </div>
+                    )}
+                  </Button>
+                );
+              })()}
 
               {/* 参加チーム管理ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  参加チーム管理
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
-                    <Users className="w-4 h-4 mr-2" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageParticipants');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     参加チーム管理
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                      <Users className="w-4 h-4 mr-2" />
+                      参加チーム管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
-              {/* 試合結果入力ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  試合結果入力
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  size="sm"
-                  variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                  className={`text-sm ${hasNotifications(tournament.tournament_id)
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "hover:border-blue-300 hover:bg-blue-50"
-                  }`}
-                >
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                    <ClipboardList className="w-4 h-4 mr-1" />
+              {/* 試合結果入力ボタン（canInputResults OR canConfirmResults） */}
+              {(() => {
+                const hasInputPerm = hasPermission(tournament.tournament_id, 'canInputResults');
+                const hasConfirmPerm = hasPermission(tournament.tournament_id, 'canConfirmResults');
+                const hasAnyPerm = hasInputPerm || hasConfirmPerm;
+                const disabled = !hasAnyPerm || isTrialExpired;
+
+                return disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={!hasAnyPerm ? "この操作の権限がありません" : "トライアル期間終了のため編集できません"}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     試合結果入力
-                    {hasNotifications(tournament.tournament_id) && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
-                        {getNotificationCount(tournament.tournament_id)}
-                      </span>
-                    )}
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                    className={`text-sm ${hasNotifications(tournament.tournament_id)
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "hover:border-blue-300 hover:bg-blue-50"
+                    }`}
+                  >
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                      <ClipboardList className="w-4 h-4 mr-1" />
+                      試合結果入力
+                      {hasNotifications(tournament.tournament_id) && (
+                        <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
+                          {getNotificationCount(tournament.tournament_id)}
+                        </span>
+                      )}
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 順位設定ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  順位設定
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                    <Trophy className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canSetManualRankings');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     順位設定
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                      <Trophy className="w-4 h-4 mr-1" />
+                      順位設定
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 選出条件変更ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  選出条件変更
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
-                    <Target className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canChangePromotionRules');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     選出条件変更
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                      <Target className="w-4 h-4 mr-1" />
+                      選出条件変更
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* ファイル管理ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  ファイル管理
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                    <FileText className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageFiles');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     ファイル管理
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                      <FileText className="w-4 h-4 mr-1" />
+                      ファイル管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* スポンサー管理ボタン */}
-              {isTrialExpired ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="text-sm cursor-not-allowed opacity-50"
-                  title="トライアル期間終了のため編集できません"
-                >
-                  <Lock className="w-4 h-4 mr-1" />
-                  スポンサー管理
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
-                    <Star className="w-4 h-4 mr-1" />
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageSponsors');
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
                     スポンサー管理
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                      <Star className="w-4 h-4 mr-1" />
+                      スポンサー管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* アーカイブボタン（無効化） */}
               {isAdminUser && (
@@ -983,7 +1138,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 variant="outline"
                 disabled
                 className="text-sm cursor-not-allowed opacity-50"
-                title="開催中のため変更できません"
+                title={!hasPermission(tournament.tournament_id, 'canRegisterTeams') ? "この操作の権限がありません" : "開催中のため変更できません"}
               >
                 <Lock className="w-4 h-4 mr-1" />
                 チーム登録
@@ -995,7 +1150,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 variant="outline"
                 disabled
                 className="text-sm cursor-not-allowed opacity-50"
-                title="開催中のため変更できません"
+                title={!hasPermission(tournament.tournament_id, 'canCreateDraws') ? "この操作の権限がありません" : "開催中のため変更できません"}
               >
                 <Lock className="w-4 h-4 mr-1" />
                 組合せ作成・編集
@@ -1007,77 +1162,177 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 variant="outline"
                 disabled
                 className="text-sm cursor-not-allowed opacity-50"
-                title="開催中のため変更できません"
+                title={!hasPermission(tournament.tournament_id, 'canChangeFormat') ? "この操作の権限がありません" : "開催中のため変更できません"}
               >
                 <Lock className="w-4 h-4 mr-1" />
                 フォーマット変更
               </Button>
 
               {/* 参加チーム管理ボタン */}
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-              >
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
-                  <Users className="w-4 h-4 mr-2" />
-                  参加チーム管理
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageParticipants', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    参加チーム管理
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                      <Users className="w-4 h-4 mr-2" />
+                      参加チーム管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 試合結果入力ボタン */}
-              <Button
-                asChild
-                size="sm"
-                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                className={hasNotifications(tournament.tournament_id)
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'hover:border-blue-300 hover:bg-blue-50'
-                }
-              >
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                  <ClipboardList className="w-4 h-4 mr-1" />
-                  試合結果入力
-                  {hasNotifications(tournament.tournament_id) && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
-                      {getNotificationCount(tournament.tournament_id)}
-                    </span>
-                  )}
-                </Link>
-              </Button>
+              {(() => {
+                const hasInputPerm = hasPermission(tournament.tournament_id, 'canInputResults');
+                const hasConfirmPerm = hasPermission(tournament.tournament_id, 'canConfirmResults');
+                const hasAnyPerm = hasInputPerm || hasConfirmPerm;
+                const disabled = !hasAnyPerm;
+
+                return disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title="この操作の権限がありません"
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    試合結果入力
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                    className={hasNotifications(tournament.tournament_id)
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'hover:border-blue-300 hover:bg-blue-50'
+                    }
+                  >
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                      <ClipboardList className="w-4 h-4 mr-1" />
+                      試合結果入力
+                      {hasNotifications(tournament.tournament_id) && (
+                        <span className="ml-2 px-2 py-1 text-xs bg-red-200 text-red-800 rounded-full">
+                          {getNotificationCount(tournament.tournament_id)}
+                        </span>
+                      )}
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 順位設定ボタン */}
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                  <Trophy className="w-4 h-4 mr-1" />
-                  順位設定
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canSetManualRankings', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    順位設定
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                      <Trophy className="w-4 h-4 mr-1" />
+                      順位設定
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 選出条件変更ボタン */}
-              <Button asChild size="sm" variant="outline" className="hover:border-orange-300 hover:bg-orange-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
-                  <Target className="w-4 h-4 mr-1" />
-                  選出条件変更
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canChangePromotionRules', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    選出条件変更
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="hover:border-orange-300 hover:bg-orange-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                      <Target className="w-4 h-4 mr-1" />
+                      選出条件変更
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* ファイル管理ボタン */}
-              <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                  <FileText className="w-4 h-4 mr-1" />
-                  ファイル管理
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageFiles', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    ファイル管理
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                      <FileText className="w-4 h-4 mr-1" />
+                      ファイル管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* スポンサー管理ボタン */}
-              <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
-                  <Star className="w-4 h-4 mr-1" />
-                  スポンサー管理
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageSponsors', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    スポンサー管理
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                      <Star className="w-4 h-4 mr-1" />
+                      スポンサー管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* アーカイブボタン（無効化） */}
               {isAdminUser && (
@@ -1124,7 +1379,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 variant="outline"
                 disabled
                 className="text-sm cursor-not-allowed opacity-50"
-                title="大会終了済みのため変更できません"
+                title={!hasPermission(tournament.tournament_id, 'canRegisterTeams') ? "この操作の権限がありません" : "大会終了済みのため変更できません"}
               >
                 <Lock className="w-4 h-4 mr-1" />
                 チーム登録
@@ -1136,7 +1391,7 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 variant="outline"
                 disabled
                 className="text-sm cursor-not-allowed opacity-50"
-                title="大会終了済みのため変更できません"
+                title={!hasPermission(tournament.tournament_id, 'canCreateDraws') ? "この操作の権限がありません" : "大会終了済みのため変更できません"}
               >
                 <Lock className="w-4 h-4 mr-1" />
                 組合せ作成・編集
@@ -1148,77 +1403,177 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                 variant="outline"
                 disabled
                 className="text-sm cursor-not-allowed opacity-50"
-                title="大会終了済みのため変更できません"
+                title={!hasPermission(tournament.tournament_id, 'canChangeFormat') ? "この操作の権限がありません" : "大会終了済みのため変更できません"}
               >
                 <Lock className="w-4 h-4 mr-1" />
                 フォーマット変更
               </Button>
 
               {/* 参加チーム管理ボタン */}
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-              >
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
-                  <Users className="w-4 h-4 mr-2" />
-                  参加チーム管理
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageParticipants', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    参加チーム管理
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                      <Users className="w-4 h-4 mr-2" />
+                      参加チーム管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 試合結果入力ボタン */}
-              <Button
-                asChild
-                size="sm"
-                variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
-                className={`text-sm ${hasNotifications(tournament.tournament_id)
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "hover:border-blue-300 hover:bg-blue-50"
-                }`}
-              >
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
-                  <ClipboardList className="w-4 h-4 mr-1" />
-                  試合結果入力
-                  {hasNotifications(tournament.tournament_id) && (
-                    <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
-                      {getNotificationCount(tournament.tournament_id)}
-                    </span>
-                  )}
-                </Link>
-              </Button>
+              {(() => {
+                const hasInputPerm = hasPermission(tournament.tournament_id, 'canInputResults');
+                const hasConfirmPerm = hasPermission(tournament.tournament_id, 'canConfirmResults');
+                const hasAnyPerm = hasInputPerm || hasConfirmPerm;
+                const disabled = !hasAnyPerm;
+
+                return disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title="この操作の権限がありません"
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    試合結果入力
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant={hasNotifications(tournament.tournament_id) ? "default" : "outline"}
+                    className={`text-sm ${hasNotifications(tournament.tournament_id)
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "hover:border-blue-300 hover:bg-blue-50"
+                    }`}
+                  >
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                      <ClipboardList className="w-4 h-4 mr-1" />
+                      試合結果入力
+                      {hasNotifications(tournament.tournament_id) && (
+                        <span className="ml-2 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">
+                          {getNotificationCount(tournament.tournament_id)}
+                        </span>
+                      )}
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 順位設定ボタン */}
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
-                  <Trophy className="w-4 h-4 mr-1" />
-                  順位設定
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canSetManualRankings', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    順位設定
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                      <Trophy className="w-4 h-4 mr-1" />
+                      順位設定
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* 選出条件変更ボタン */}
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
-                  <Target className="w-4 h-4 mr-1" />
-                  選出条件変更
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canChangePromotionRules', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    選出条件変更
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                      <Target className="w-4 h-4 mr-1" />
+                      選出条件変更
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* ファイル管理ボタン */}
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
-                  <FileText className="w-4 h-4 mr-1" />
-                  ファイル管理
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageFiles', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    ファイル管理
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                      <FileText className="w-4 h-4 mr-1" />
+                      ファイル管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {/* スポンサー管理ボタン */}
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
-                  <Star className="w-4 h-4 mr-1" />
-                  スポンサー管理
-                </Link>
-              </Button>
+              {(() => {
+                const btnState = getButtonState(tournament.tournament_id, 'canManageSponsors', false);
+                return btnState.disabled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="text-sm cursor-not-allowed opacity-50"
+                    title={btnState.title}
+                  >
+                    <Lock className="w-4 h-4 mr-1" />
+                    スポンサー管理
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                      <Star className="w-4 h-4 mr-1" />
+                      スポンサー管理
+                    </Link>
+                  </Button>
+                );
+              })()}
 
               {!tournament.is_archived && isAdminUser && (
                 <Button
@@ -1294,7 +1649,24 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                     {divisions.length}部門
                   </div>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex gap-2">
+                  {/* 運営者管理ボタン（管理者のみ） */}
+                  {!accessibleTournamentIds && (
+                    <Button
+                      asChild
+                      size="sm"
+                      className="text-sm bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-600"
+                    >
+                      <Link href={`/admin/operators?group_id=${group.group_id}`}>
+                        <UserCog className="w-4 h-4 mr-2" />
+                        運営者管理
+                      </Link>
+                    </Button>
+                  )}
+
+                  {/* 部門作成ボタン（管理者のみ） */}
+                  {!accessibleTournamentIds && (
+                  <>
                   {divisionChecksLoading ? (
                     <Button
                       disabled
@@ -1338,6 +1710,8 @@ export default function TournamentDashboardList({ isTrialExpired = false }: Tour
                         </Link>
                       </Button>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               </div>

@@ -815,13 +815,32 @@ export const tSponsorBanners = sqliteTable("t_sponsor_banners", {
 	index("idx_sponsor_banners_dates").on(_table.startDate, _table.endDate),
 	index("idx_sponsor_banners_active").on(_table.tournamentId, _table.isActive),
 	index("idx_sponsor_banners_display").on(_table.tournamentId, _table.targetTab, _table.displayPosition, _table.displayOrder),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
 ]);
 
+export const mOperators = sqliteTable("m_operators", {
+	operatorId: integer("operator_id").primaryKey({ autoIncrement: true }),
+	operatorLoginId: text("operator_login_id").unique().notNull(),
+	passwordHash: text("password_hash").notNull(),
+	operatorName: text("operator_name").notNull(),
+	administratorId: integer("administrator_id").notNull().references(() => mAdministrators.administratorId),
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_operators_admin").on(_table.administratorId),
+	index("idx_operators_login").on(_table.operatorLoginId),
+]);
+
+export const tOperatorTournamentAccess = sqliteTable("t_operator_tournament_access", {
+	accessId: integer("access_id").primaryKey({ autoIncrement: true }),
+	operatorId: integer("operator_id").notNull().references(() => mOperators.operatorId, { onDelete: "cascade" }),
+	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+	permissions: text("permissions").notNull(),
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_operator_access_operator").on(_table.operatorId),
+	index("idx_operator_access_tournament").on(_table.tournamentId),
+]);

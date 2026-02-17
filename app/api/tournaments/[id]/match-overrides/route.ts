@@ -21,7 +21,7 @@ export async function GET(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -117,7 +117,7 @@ export async function POST(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -152,17 +152,18 @@ export async function POST(
       );
     }
 
-    // 試合テンプレート存在確認
+    // 試合テンプレート存在確認（選出条件が設定されている試合のみ対象）
     const templateCheck = await db.execute(`
       SELECT mt.match_code
       FROM m_match_templates mt
       INNER JOIN t_tournaments t ON t.format_id = mt.format_id
-      WHERE t.tournament_id = ? AND mt.match_code = ? AND mt.phase = 'final'
+      WHERE t.tournament_id = ? AND mt.match_code = ?
+        AND (mt.team1_source IS NOT NULL OR mt.team2_source IS NOT NULL)
     `, [tournamentId, match_code]);
 
     if (templateCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: '指定された試合コードが見つかりません' },
+        { success: false, error: '指定された試合コードが見つかりません、または選出条件が設定されていません' },
         { status: 404 }
       );
     }
@@ -233,7 +234,7 @@ export async function DELETE(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }

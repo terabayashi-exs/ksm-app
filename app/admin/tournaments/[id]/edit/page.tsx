@@ -81,9 +81,9 @@ export const revalidate = 0;
 
 export default async function EditTournamentPage({ params }: EditTournamentPageProps) {
   const session = await auth();
-  
-  if (!session || session.user.role !== 'admin') {
-    redirect('/auth/login');
+
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+    redirect('/auth/admin/login');
   }
 
   const resolvedParams = await params;

@@ -10,9 +10,11 @@ import type { User } from "next-auth";
 export interface ExtendedUser extends User {
   id: string;
   email: string;
-  role: "admin" | "team";
+  role: "admin" | "team" | "operator";
   teamId?: string;
   administratorId?: string;
+  operatorId?: string;
+  accessibleTournaments?: number[]; // 運営者がアクセス可能な部門ID
 }
 
 const authConfig: NextAuthOptions = {
@@ -64,6 +66,63 @@ const authConfig: NextAuthOptions = {
       }
     }),
     CredentialsProvider({
+      id: "operator",
+      name: "運営者ログイン",
+      credentials: {
+        loginId: { label: "ログインID", type: "text" },
+        password: { label: "パスワード", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.loginId || !credentials?.password) {
+          return null;
+        }
+
+        try {
+          // 運営者テーブルから認証情報を取得
+          const result = await db.execute({
+            sql: `SELECT operator_id, operator_login_id, password_hash, operator_name, is_active
+                  FROM m_operators
+                  WHERE operator_login_id = ? AND is_active = 1`,
+            args: [credentials.loginId as string]
+          });
+
+          if (result.rows.length === 0) {
+            return null;
+          }
+
+          const operator = result.rows[0];
+          const isValidPassword = await bcrypt.compare(
+            credentials.password as string,
+            operator.password_hash as string
+          );
+
+          if (!isValidPassword) {
+            return null;
+          }
+
+          // アクセス可能な部門IDを取得
+          const accessResult = await db.execute({
+            sql: `SELECT tournament_id FROM t_operator_tournament_access WHERE operator_id = ?`,
+            args: [operator.operator_id]
+          });
+
+          const accessibleTournaments = accessResult.rows.map(row => Number(row.tournament_id));
+
+          return {
+            id: operator.operator_login_id as string,
+            email: `${operator.operator_login_id}@operator.local`,
+            name: operator.operator_name as string,
+            role: "operator" as const,
+            operatorId: String(operator.operator_id),
+            accessibleTournaments
+          };
+        } catch (error) {
+          console.error("Operator authentication error:", error);
+          return null;
+        }
+      }
+    }),
+    CredentialsProvider({
       id: "team",
       name: "チーム代表者ログイン",
       credentials: {
@@ -78,8 +137,8 @@ const authConfig: NextAuthOptions = {
         try {
           // チームテーブルから認証情報を取得
           const result = await db.execute(
-            `SELECT team_id, team_name, contact_email, password_hash, is_active 
-             FROM m_teams 
+            `SELECT team_id, team_name, contact_email, password_hash, is_active
+             FROM m_teams
              WHERE team_id = ? AND is_active = 1`,
             [credentials.teamId as string]
           );
@@ -118,14 +177,18 @@ const authConfig: NextAuthOptions = {
         token.role = (user as ExtendedUser).role;
         token.teamId = (user as ExtendedUser).teamId;
         token.administratorId = (user as ExtendedUser).administratorId;
+        token.operatorId = (user as ExtendedUser).operatorId;
+        token.accessibleTournaments = (user as ExtendedUser).accessibleTournaments;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        (session.user as ExtendedUser).role = token.role as "admin" | "team";
+        (session.user as ExtendedUser).role = token.role as "admin" | "team" | "operator";
         (session.user as ExtendedUser).teamId = token.teamId as string | undefined;
         (session.user as ExtendedUser).administratorId = token.administratorId as string | undefined;
+        (session.user as ExtendedUser).operatorId = token.operatorId as string | undefined;
+        (session.user as ExtendedUser).accessibleTournaments = token.accessibleTournaments as number[] | undefined;
         (session.user as ExtendedUser).id = token.sub as string;
       }
       return session;
@@ -153,6 +216,7 @@ const authConfig: NextAuthOptions = {
 const handler = NextAuth(authConfig);
 
 export { handler as GET, handler as POST };
+export { authConfig as authOptions };
 
 // v4 では getServerSession を使用  
 export async function auth() {
