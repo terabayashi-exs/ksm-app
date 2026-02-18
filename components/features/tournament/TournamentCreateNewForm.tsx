@@ -406,8 +406,8 @@ export default function TournamentCreateNewForm() {
       const result = await response.json();
 
       if (result.success) {
-        // 作成後は管理者ダッシュボードにリダイレクト
-        router.push('/admin');
+        // 作成後はマイダッシュボードにリダイレクト
+        router.push('/my');
       } else {
         alert(`エラー: ${result.error}`);
       }

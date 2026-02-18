@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TournamentCreateNewForm from "@/components/features/tournament/TournamentCreateNewForm";
@@ -32,19 +32,16 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
       <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/admin" className="flex items-center text-muted-foreground hover:text-foreground">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  管理者ダッシュボードに戻る
-                </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">部門作成</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                大会に属する部門（カテゴリー）を作成します
+              </p>
+            </div>
+            <div>
+              <Button asChild variant="outline">
+                <Link href="/my">ダッシュボードに戻る</Link>
               </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">部門作成</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  大会に属する部門（カテゴリー）を作成します
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -75,8 +72,8 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
                   </Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href="/admin">
-                    管理者ダッシュボードに戻る
+                  <Link href="/my">
+                    ダッシュボードに戻る
                   </Link>
                 </Button>
               </div>

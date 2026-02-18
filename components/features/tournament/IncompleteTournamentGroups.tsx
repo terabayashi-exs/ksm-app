@@ -23,7 +23,11 @@ interface DivisionCheckResult {
   limit: number;
 }
 
-export default function IncompleteTournamentGroups() {
+interface IncompleteTournamentGroupsProps {
+  onCountChange?: (count: number) => void;
+}
+
+export default function IncompleteTournamentGroups({ onCountChange }: IncompleteTournamentGroupsProps = {}) {
   const [incompleteGroups, setIncompleteGroups] = useState<IncompleteTournamentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -36,6 +40,7 @@ export default function IncompleteTournamentGroups() {
 
       if (result.success && result.data) {
         setIncompleteGroups(result.data);
+        onCountChange?.(result.data.length);
 
         // 各大会の部門追加可否をチェック
         const checks: Record<number, DivisionCheckResult> = {};

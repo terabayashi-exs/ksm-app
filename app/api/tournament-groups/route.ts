@@ -50,8 +50,20 @@ export async function GET(request: NextRequest) {
 
     // 作成者フィルタリング（adminユーザー以外は自分が作成した大会のみ）
     if (!isAdmin) {
-      query += ` AND tg.admin_login_id = ?`;
-      params.push(userId);
+      const parsedUserId = Number(userId);
+      if (!isNaN(parsedUserId) && parsedUserId > 0) {
+        // 新プロバイダー: login_user_id で絞り込み
+        query += ` AND (tg.login_user_id = ? OR (tg.login_user_id IS NULL AND tg.admin_login_id = (
+          SELECT a.admin_login_id FROM m_administrators a
+          INNER JOIN m_login_users u ON a.email = u.email
+          WHERE u.login_user_id = ? LIMIT 1
+        )))`;
+        params.push(parsedUserId, parsedUserId);
+      } else {
+        // 旧プロバイダー: admin_login_id で絞り込み
+        query += ` AND tg.admin_login_id = ?`;
+        params.push(userId);
+      }
     }
 
     query += `
@@ -175,8 +187,8 @@ export async function POST(request: NextRequest) {
     }
 
     // プラン制限チェック
-    const adminLoginId = session.user.id;
-    const planCheck = await canCreateTournamentGroup(adminLoginId);
+    const sessionId = session.user.id;
+    const planCheck = await canCreateTournamentGroup(sessionId);
 
     if (!planCheck.allowed) {
       return NextResponse.json(
@@ -188,6 +200,40 @@ export async function POST(request: NextRequest) {
         },
         { status: 403 }
       );
+    }
+
+    // login_user_id を解決
+    // 新プロバイダー: session.user.id が数値文字列 → そのまま使用
+    // 旧プロバイダー: admin_login_id 文字列 → m_administrators のメールで m_login_users を検索
+    let resolvedLoginUserId: number | null = null;
+    let resolvedAdminLoginId: string | null = null;
+
+    const parsedId = Number(sessionId);
+    if (!isNaN(parsedId) && parsedId > 0) {
+      // 新プロバイダー
+      resolvedLoginUserId = parsedId;
+      // admin_login_id も可能なら埋める（後方互換）
+      const adminResult = await db.execute(
+        `SELECT a.admin_login_id FROM m_administrators a
+         INNER JOIN m_login_users u ON a.email = u.email
+         WHERE u.login_user_id = ? LIMIT 1`,
+        [parsedId]
+      );
+      resolvedAdminLoginId = adminResult.rows.length > 0
+        ? String(adminResult.rows[0].admin_login_id)
+        : null;
+    } else {
+      // 旧プロバイダー: admin_login_id から m_login_users を検索
+      resolvedAdminLoginId = sessionId;
+      const userResult = await db.execute(
+        `SELECT u.login_user_id FROM m_login_users u
+         INNER JOIN m_administrators a ON a.email = u.email
+         WHERE a.admin_login_id = ? LIMIT 1`,
+        [sessionId]
+      );
+      resolvedLoginUserId = userResult.rows.length > 0
+        ? Number(userResult.rows[0].login_user_id)
+        : null;
     }
 
     // 大会作成
@@ -203,9 +249,10 @@ export async function POST(request: NextRequest) {
         visibility,
         event_description,
         admin_login_id,
+        login_user_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       group_name,
       organizer || null,
@@ -216,13 +263,14 @@ export async function POST(request: NextRequest) {
       recruitment_end_date || null,
       visibility,
       event_description || null,
-      adminLoginId
+      resolvedAdminLoginId,
+      resolvedLoginUserId,
     ]);
 
     const groupId = Number(result.lastInsertRowid);
 
     // 使用状況を更新
-    await recalculateUsage(adminLoginId);
+    await recalculateUsage(sessionId);
 
     // 作成した大会を取得
     const createdGroup = await db.execute(`

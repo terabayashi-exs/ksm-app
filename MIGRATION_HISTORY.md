@@ -16,6 +16,155 @@
 
 ---
 
+## 0007: t_tournament_groups に login_user_id を追加（2026-02-17）
+
+### 基本情報
+- **日付**: 2026年2月17日
+- **環境**: dev
+- **方法**: 直接 ALTER TABLE + マイグレーションファイル手動作成
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0007_add_login_user_id_to_tournament_groups.sql`
+
+### 変更の背景と目的
+
+`t_tournament_groups.admin_login_id` は `m_administrators` テーブルへの外部キー制約があり、新プロバイダー（`m_login_users` ベース）でログインしたユーザーが大会を作成すると `FOREIGN KEY constraint failed` エラーが発生していた。
+
+将来的に `m_administrators` テーブルを廃止するにあたり、`m_login_users` を直接参照する `login_user_id` カラムを追加。新プロバイダーでのユーザーは `login_user_id` ベースでフィルタリング・カウントを行う。
+
+### 変更内容
+
+**`t_tournament_groups` テーブル（カラム追加）**
+```sql
+ALTER TABLE t_tournament_groups ADD COLUMN login_user_id INTEGER REFERENCES m_login_users(login_user_id);
+```
+
+**既存データのバックフィル（3件）**
+- `m_administrators.email` と `m_login_users.email` のマッチで `login_user_id` を埋めた
+
+### 影響を受けたファイル
+
+- `src/db/schema.ts` - tTournamentGroups に loginUserId フィールドを追加
+- `drizzle/0007_add_login_user_id_to_tournament_groups.sql` - マイグレーションSQL
+- `drizzle/meta/_journal.json` - ジャーナルにエントリ追加
+- `app/api/tournament-groups/route.ts` - GET/POST の両方を新・旧プロバイダー両対応に修正
+- `lib/subscription/subscription-service.ts` - `recalculateUsage()` / `checkTrialExpiredPermission()` を login_user_id ベースに修正
+- `lib/subscription/plan-checker.ts` - `canEditTournamentGroup()` / `canChangePlan()` のクエリを login_user_id ベースに修正
+
+---
+
+## 0006: m_login_users に current_plan_id を追加（2026-02-17）
+
+### 基本情報
+- **日付**: 2026年2月17日
+- **環境**: dev
+- **方法**: 直接 ALTER TABLE + マイグレーションファイル手動作成
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0006_add_current_plan_id_to_login_users.sql`
+
+### 変更の背景と目的
+
+マイダッシュボードでプラン情報を表示するため、`m_login_users` テーブルにサブスクリプションプランの参照フィールドを追加。
+現時点では全ユーザーがフリープラン（plan_id=1）となるため、管理者権限付与時に自動的にフリープランを設定する。
+将来的に `m_administrators` テーブルを廃止する際の移行先として機能する。
+
+### 変更内容
+
+**`m_login_users` テーブル（カラム追加）**
+```sql
+ALTER TABLE m_login_users ADD COLUMN current_plan_id INTEGER REFERENCES m_subscription_plans(plan_id);
+```
+
+### 影響を受けたファイル
+
+- `src/db/schema.ts` - mLoginUsers に currentPlanId フィールドを追加
+- `drizzle/0006_add_current_plan_id_to_login_users.sql` - マイグレーションSQL
+- `drizzle/meta/_journal.json` - ジャーナルにエントリ追加
+- `app/api/administrators/route.ts` - 新規ユーザー作成時にフリープラン（plan_id=1）を設定
+- `app/api/administrators/add-role/route.ts` - 既存ユーザーへのロール付与時にフリープランを設定（未設定の場合のみ）
+
+---
+
+## 0005: 統合ログインユーザー管理テーブル追加（2026-02-17）
+
+### 基本情報
+- **日付**: 2026年2月17日
+- **環境**: dev
+- **方法**: 手動マイグレーション（`drizzle/0005_add_login_users.sql`）+ 直接CREATE TABLE
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0005_add_login_users.sql`
+
+### 変更の背景と目的
+
+**設計目標:**
+- ロールごとに分かれていたログイン（m_administrators / m_operators / m_teams）を1つに統合
+- メールアドレスを単一のログイン識別子とする
+- 複数ロールの兼任を許容（例：admin兼operator）
+- チーム代表者を複数人（主担当・副担当）で管理できる設計
+
+**解決する問題:**
+- 管理者がチーム代表者も兼任する場合、ログアウト→再ログインが不要になる
+- 将来的なロール追加に対応できる拡張性
+
+### 変更内容
+
+#### テーブル追加（4テーブル）
+
+**m_login_users（統合ログインユーザー）:**
+- `login_user_id` INTEGER PRIMARY KEY AUTOINCREMENT
+- `email` TEXT UNIQUE NOT NULL - ログイン識別子
+- `password_hash` TEXT NOT NULL
+- `display_name` TEXT NOT NULL
+- `is_superadmin` INTEGER DEFAULT 0 - 開発者専用スーパーユーザーフラグ
+- `is_active` INTEGER DEFAULT 1
+- `created_at` / `updated_at`
+
+**m_login_user_roles（ユーザーロール）:**
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT
+- `login_user_id` INTEGER FK → m_login_users (cascade)
+- `role` TEXT - "admin" | "operator" | "team"
+- `created_at`
+
+**m_login_user_authority（大会スコープ権限）:**
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT
+- `login_user_id` INTEGER FK → m_login_users (cascade)
+- `tournament_id` INTEGER FK → t_tournaments (cascade)
+- `permissions` TEXT (JSON: 既存OperatorPermissions 12項目と同じ形式)
+- `created_at` / `updated_at`
+
+**m_team_members（チーム担当者紐付け）:**
+- `id` INTEGER PRIMARY KEY AUTOINCREMENT
+- `team_id` TEXT FK → m_teams (cascade)
+- `login_user_id` INTEGER FK → m_login_users (cascade)
+- `member_role` TEXT DEFAULT 'primary' - "primary" | "secondary"
+- `is_active` INTEGER DEFAULT 1
+- `created_at` / `updated_at`
+
+### 認証フロー変更
+
+- NextAuth に新 CredentialsProvider `"login"` を追加（email + password）
+- 既存Provider（admin/operator/team）は段階的移行のため維持
+- `lib/auth.ts` で `roles[]` 配列と `isSuperadmin` フラグをセッションに格納
+- `middleware.ts` を `roles[]` 配列対応に更新（後方互換維持）
+- `types/next-auth.d.ts` の型定義を更新
+
+### データ移行
+
+- `scripts/migrate-admin-to-login-users.mjs` を作成・実行
+- m_administrators の9件を m_login_users + m_login_user_roles に移行済み（dev環境）
+- password_hash はそのまま流用（bcrypt形式で互換性あり）
+
+### 影響ファイル
+- `src/db/schema.ts` - 新テーブル4つ追加
+- `drizzle/0005_add_login_users.sql` - マイグレーションSQL
+- `drizzle/meta/_journal.json` - ジャーナル更新
+- `lib/auth.ts` - NextAuth統合Provider追加
+- `types/next-auth.d.ts` - 型定義更新
+- `middleware.ts` - roles[]対応
+- `app/auth/login/page.tsx` - 統合ログイン画面（新設）
+- `scripts/migrate-admin-to-login-users.mjs` - データ移行スクリプト（新設）
+
+---
+
 ## 0004: 大会運営者管理システム（部門単位アクセス制御）（2026-02-16）
 
 

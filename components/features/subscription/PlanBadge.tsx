@@ -24,7 +24,11 @@ interface CurrentSubscriptionInfo {
   remainingDays: number | null;
 }
 
-export default function PlanBadge() {
+interface PlanBadgeProps {
+  apiUrl?: string;
+}
+
+export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }: PlanBadgeProps) {
   const router = useRouter();
   const [subscriptionInfo, setSubscriptionInfo] = useState<CurrentSubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +39,7 @@ export default function PlanBadge() {
 
   const fetchSubscriptionInfo = async () => {
     try {
-      const res = await fetch("/api/admin/subscription/current");
+      const res = await fetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
         setSubscriptionInfo(data);

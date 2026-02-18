@@ -25,7 +25,7 @@ export default async function AdministratorPage() {
             </div>
             <div>
               <Button asChild variant="outline">
-                <Link href="/admin">ダッシュボードに戻る</Link>
+                <Link href="/my">ダッシュボードに戻る</Link>
               </Button>
             </div>
           </div>

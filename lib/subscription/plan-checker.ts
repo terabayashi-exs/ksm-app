@@ -25,6 +25,34 @@ export interface PlanCheckResult {
 }
 
 /**
+ * adminLoginId から free_trial_end_date を取得（m_administrators → m_login_users フォールバック）
+ */
+async function getFreeTrialEndDate(adminLoginId: string): Promise<string | null> {
+  const adminResult = await db.execute(
+    `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
+    [adminLoginId]
+  );
+  if (adminResult.rows.length > 0) {
+    return adminResult.rows[0]?.free_trial_end_date as string | null;
+  }
+  // m_login_users フォールバック
+  const loginUserId = Number(adminLoginId);
+  if (!isNaN(loginUserId) && loginUserId > 0) {
+    const result = await db.execute(
+      `SELECT a.free_trial_end_date
+       FROM m_administrators a
+       INNER JOIN m_login_users u ON a.email = u.email
+       WHERE u.login_user_id = ?`,
+      [loginUserId]
+    );
+    if (result.rows.length > 0) {
+      return result.rows[0]?.free_trial_end_date as string | null;
+    }
+  }
+  return null;
+}
+
+/**
  * 大会グループ作成可能かチェック
  */
 export async function canCreateTournamentGroup(adminLoginId: string): Promise<PlanCheckResult> {
@@ -41,11 +69,7 @@ export async function canCreateTournamentGroup(adminLoginId: string): Promise<Pl
 
   // 無料プラン期限チェック
   if (plan.plan_code === 'free') {
-    const adminResult = await db.execute(
-      `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-      [adminLoginId]
-    );
-    const trialEndDate = adminResult.rows[0]?.free_trial_end_date as string | null;
+    const trialEndDate = await getFreeTrialEndDate(adminLoginId);
 
     if (isTrialExpired(trialEndDate)) {
       return {
@@ -117,11 +141,7 @@ export async function canAddDivision(
 
   // 無料プラン期限チェック
   if (plan.plan_code === 'free') {
-    const adminResult = await db.execute(
-      `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-      [adminLoginId]
-    );
-    const trialEndDate = adminResult.rows[0]?.free_trial_end_date as string | null;
+    const trialEndDate = await getFreeTrialEndDate(adminLoginId);
 
     if (isTrialExpired(trialEndDate)) {
       return {
@@ -181,12 +201,7 @@ export async function canEditTournamentGroup(
 
   // 無料プラン期限チェック
   if (plan.plan_code === 'free') {
-    const adminResult = await db.execute(
-      `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-      [adminLoginId]
-    );
-    const trialEndDate = adminResult.rows[0]?.free_trial_end_date as string | null;
-
+    const trialEndDate = await getFreeTrialEndDate(adminLoginId);
     if (isTrialExpired(trialEndDate)) {
       return false; // 期限切れは編集不可
     }
@@ -196,13 +211,35 @@ export async function canEditTournamentGroup(
   if (plan.max_tournaments === -1) return true;
 
   // プラン上限内の大会のみ編集可能（作成日時が古い順にlimit件）
-  const editableGroupsResult = await db.execute(
-    `SELECT group_id FROM t_tournament_groups
-     WHERE admin_login_id = ?
-     ORDER BY created_at ASC
-     LIMIT ?`,
-    [adminLoginId, plan.max_tournaments]
-  );
+  // 新プロバイダー（数値文字列）の場合は login_user_id でも検索
+  const loginUserId = Number(adminLoginId);
+  const isNewProvider = !isNaN(loginUserId) && loginUserId > 0;
+
+  let editableGroupsResult;
+  if (isNewProvider) {
+    editableGroupsResult = await db.execute(
+      `SELECT group_id FROM t_tournament_groups
+       WHERE (
+         login_user_id = ?
+         OR (login_user_id IS NULL AND admin_login_id = (
+           SELECT a.admin_login_id FROM m_administrators a
+           INNER JOIN m_login_users u ON a.email = u.email
+           WHERE u.login_user_id = ? LIMIT 1
+         ))
+       )
+       ORDER BY created_at ASC
+       LIMIT ?`,
+      [loginUserId, loginUserId, plan.max_tournaments]
+    );
+  } else {
+    editableGroupsResult = await db.execute(
+      `SELECT group_id FROM t_tournament_groups
+       WHERE admin_login_id = ?
+       ORDER BY created_at ASC
+       LIMIT ?`,
+      [adminLoginId, plan.max_tournaments]
+    );
+  }
 
   const editableGroupIds = editableGroupsResult.rows.map((row) => row.group_id);
 
@@ -222,12 +259,7 @@ export async function canEditDivision(
 
   // 無料プラン期限チェック
   if (plan.plan_code === 'free') {
-    const adminResult = await db.execute(
-      `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-      [adminLoginId]
-    );
-    const trialEndDate = adminResult.rows[0]?.free_trial_end_date as string | null;
-
+    const trialEndDate = await getFreeTrialEndDate(adminLoginId);
     if (isTrialExpired(trialEndDate)) {
       return false;
     }
@@ -278,30 +310,75 @@ export async function canChangePlan(
     max_divisions_per_tournament: number;
   };
 
+  // 新プロバイダー（数値文字列）の場合は login_user_id でも検索
+  const loginUserId = Number(adminLoginId);
+  const isNewProvider = !isNaN(loginUserId) && loginUserId > 0;
+
   // アクティブな大会数を取得（アーカイブされていない部門が1つでもある大会）
-  const activeGroupsResult = await db.execute(
-    `SELECT COUNT(DISTINCT tg.group_id) as count
-     FROM t_tournament_groups tg
-     WHERE tg.admin_login_id = ?
-     AND EXISTS (
-       SELECT 1 FROM t_tournaments t
-       WHERE t.group_id = tg.group_id
-       AND (t.is_archived IS NULL OR t.is_archived = 0)
-     )`,
-    [adminLoginId]
-  );
+  let activeGroupsResult;
+  if (isNewProvider) {
+    activeGroupsResult = await db.execute(
+      `SELECT COUNT(DISTINCT tg.group_id) as count
+       FROM t_tournament_groups tg
+       WHERE (
+         tg.login_user_id = ?
+         OR (tg.login_user_id IS NULL AND tg.admin_login_id = (
+           SELECT a.admin_login_id FROM m_administrators a
+           INNER JOIN m_login_users u ON a.email = u.email
+           WHERE u.login_user_id = ? LIMIT 1
+         ))
+       )
+       AND EXISTS (
+         SELECT 1 FROM t_tournaments t
+         WHERE t.group_id = tg.group_id
+         AND (t.is_archived IS NULL OR t.is_archived = 0)
+       )`,
+      [loginUserId, loginUserId]
+    );
+  } else {
+    activeGroupsResult = await db.execute(
+      `SELECT COUNT(DISTINCT tg.group_id) as count
+       FROM t_tournament_groups tg
+       WHERE tg.admin_login_id = ?
+       AND EXISTS (
+         SELECT 1 FROM t_tournaments t
+         WHERE t.group_id = tg.group_id
+         AND (t.is_archived IS NULL OR t.is_archived = 0)
+       )`,
+      [adminLoginId]
+    );
+  }
 
   const activeGroups = Number(activeGroupsResult.rows[0]?.count || 0);
 
   // アクティブな部門総数を取得
-  const activeDivisionsResult = await db.execute(
-    `SELECT COUNT(*) as count
-     FROM t_tournaments t
-     INNER JOIN t_tournament_groups tg ON t.group_id = tg.group_id
-     WHERE tg.admin_login_id = ?
-     AND (t.is_archived IS NULL OR t.is_archived = 0)`,
-    [adminLoginId]
-  );
+  let activeDivisionsResult;
+  if (isNewProvider) {
+    activeDivisionsResult = await db.execute(
+      `SELECT COUNT(*) as count
+       FROM t_tournaments t
+       INNER JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+       WHERE (
+         tg.login_user_id = ?
+         OR (tg.login_user_id IS NULL AND tg.admin_login_id = (
+           SELECT a.admin_login_id FROM m_administrators a
+           INNER JOIN m_login_users u ON a.email = u.email
+           WHERE u.login_user_id = ? LIMIT 1
+         ))
+       )
+       AND (t.is_archived IS NULL OR t.is_archived = 0)`,
+      [loginUserId, loginUserId]
+    );
+  } else {
+    activeDivisionsResult = await db.execute(
+      `SELECT COUNT(*) as count
+       FROM t_tournaments t
+       INNER JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+       WHERE tg.admin_login_id = ?
+       AND (t.is_archived IS NULL OR t.is_archived = 0)`,
+      [adminLoginId]
+    );
+  }
 
   const activeDivisions = Number(activeDivisionsResult.rows[0]?.count || 0);
 
@@ -323,16 +400,37 @@ export async function canChangePlan(
 
   // 各大会の部門数チェック
   if (newPlan.max_divisions_per_tournament !== -1) {
-    const divisionsResult = await db.execute(
-      `SELECT tg.group_id, tg.group_name, COUNT(t.tournament_id) as division_count
-       FROM t_tournament_groups tg
-       LEFT JOIN t_tournaments t ON tg.group_id = t.group_id
-         AND (t.is_archived IS NULL OR t.is_archived = 0)
-       WHERE tg.admin_login_id = ?
-       GROUP BY tg.group_id, tg.group_name
-       HAVING division_count > ?`,
-      [adminLoginId, newPlan.max_divisions_per_tournament]
-    );
+    let divisionsResult;
+    if (isNewProvider) {
+      divisionsResult = await db.execute(
+        `SELECT tg.group_id, tg.group_name, COUNT(t.tournament_id) as division_count
+         FROM t_tournament_groups tg
+         LEFT JOIN t_tournaments t ON tg.group_id = t.group_id
+           AND (t.is_archived IS NULL OR t.is_archived = 0)
+         WHERE (
+           tg.login_user_id = ?
+           OR (tg.login_user_id IS NULL AND tg.admin_login_id = (
+             SELECT a.admin_login_id FROM m_administrators a
+             INNER JOIN m_login_users u ON a.email = u.email
+             WHERE u.login_user_id = ? LIMIT 1
+           ))
+         )
+         GROUP BY tg.group_id, tg.group_name
+         HAVING division_count > ?`,
+        [loginUserId, loginUserId, newPlan.max_divisions_per_tournament]
+      );
+    } else {
+      divisionsResult = await db.execute(
+        `SELECT tg.group_id, tg.group_name, COUNT(t.tournament_id) as division_count
+         FROM t_tournament_groups tg
+         LEFT JOIN t_tournaments t ON tg.group_id = t.group_id
+           AND (t.is_archived IS NULL OR t.is_archived = 0)
+         WHERE tg.admin_login_id = ?
+         GROUP BY tg.group_id, tg.group_name
+         HAVING division_count > ?`,
+        [adminLoginId, newPlan.max_divisions_per_tournament]
+      );
+    }
 
     if (divisionsResult.rows.length > 0) {
       return {

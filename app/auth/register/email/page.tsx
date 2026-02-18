@@ -145,7 +145,7 @@ export default function RegisterEmailPage() {
               <p className="text-sm text-muted-foreground">
                 既にアカウントをお持ちの方は{" "}
                 <Link
-                  href="/auth/team/login"
+                  href="/auth/login"
                   className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   こちらからログイン

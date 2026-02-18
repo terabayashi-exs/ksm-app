@@ -126,11 +126,11 @@ export default function TournamentGroupsList() {
             <div className="flex space-x-3">
               <Button
                 variant="outline"
-                onClick={() => router.push('/admin')}
+                onClick={() => router.push('/my')}
               >
                 ダッシュボードに戻る
               </Button>
-              <Button asChild>
+              <Button variant="outline" asChild>
                 <Link href="/admin/tournament-groups/create">
                   <Plus className="w-4 h-4 mr-2" />
                   大会作成

@@ -36,6 +36,27 @@
       "when": 1770872552731,
       "tag": "0004_familiar_cable",
       "breakpoints": false
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1771200000000,
+      "tag": "0005_add_login_users",
+      "breakpoints": false
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1771286400000,
+      "tag": "0006_add_current_plan_id_to_login_users",
+      "breakpoints": false
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1771372800000,
+      "tag": "0007_add_login_user_id_to_tournament_groups",
+      "breakpoints": false
     }
   ]
 }

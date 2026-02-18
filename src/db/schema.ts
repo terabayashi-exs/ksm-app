@@ -388,6 +388,7 @@ export const tTournamentGroups = sqliteTable("t_tournament_groups", {
 	createdAt: numeric("created_at").notNull(),
 	updatedAt: numeric("updated_at").notNull(),
 	adminLoginId: text("admin_login_id").references(() => mAdministrators.adminLoginId),
+	loginUserId: integer("login_user_id").references(() => mLoginUsers.loginUserId),
 },
 (_table) => [
 	index("idx_tournament_groups_admin").on(_table.adminLoginId),
@@ -843,4 +844,63 @@ export const tOperatorTournamentAccess = sqliteTable("t_operator_tournament_acce
 (_table) => [
 	index("idx_operator_access_operator").on(_table.operatorId),
 	index("idx_operator_access_tournament").on(_table.tournamentId),
+]);
+
+// ==========================================
+// 統合ログインユーザー管理テーブル（新設）
+// ==========================================
+
+export const mLoginUsers = sqliteTable("m_login_users", {
+	loginUserId: integer("login_user_id").primaryKey({ autoIncrement: true }),
+	email: text("email").unique().notNull(),
+	passwordHash: text("password_hash").notNull(),
+	displayName: text("display_name").notNull(),
+	isSuperadmin: integer("is_superadmin").default(0).notNull(),
+	isActive: integer("is_active").default(1).notNull(),
+	currentPlanId: integer("current_plan_id").references(() => mSubscriptionPlans.planId),
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_login_users_email").on(_table.email),
+	index("idx_login_users_active").on(_table.isActive),
+]);
+
+export const mLoginUserRoles = sqliteTable("m_login_user_roles", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+	role: text("role").notNull(), // "admin" | "operator" | "team"
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_login_user_roles_user").on(_table.loginUserId),
+	index("idx_login_user_roles_role").on(_table.role),
+]);
+
+export const mLoginUserAuthority = sqliteTable("m_login_user_authority", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+	permissions: text("permissions").notNull(), // JSON: 既存の OperatorPermissions 12項目と同じ形式
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_login_user_authority_user").on(_table.loginUserId),
+	index("idx_login_user_authority_tournament").on(_table.tournamentId),
+]);
+
+export const mTeamMembers = sqliteTable("m_team_members", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	teamId: text("team_id").notNull().references(() => mTeams.teamId, { onDelete: "cascade" }),
+	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+	memberRole: text("member_role").notNull().default("primary"), // "primary" | "secondary"
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_team_members_team").on(_table.teamId),
+	index("idx_team_members_user").on(_table.loginUserId),
+	index("idx_team_members_active").on(_table.teamId, _table.isActive),
 ]);

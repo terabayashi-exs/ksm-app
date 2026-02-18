@@ -308,7 +308,7 @@ export default function TournamentGroupCreateForm() {
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" variant="outline" disabled={isSubmitting}>
           {isSubmitting ? '作成中...' : '🏆 大会を作成'}
         </Button>
       </div>

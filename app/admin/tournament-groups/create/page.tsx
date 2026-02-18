@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TournamentGroupCreateForm from "@/components/features/tournament/TournamentGroupCreateForm";
@@ -23,19 +23,16 @@ export default async function CreateTournamentGroupPage() {
       <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/admin" className="flex items-center text-muted-foreground hover:text-foreground">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  管理者ダッシュボードに戻る
-                </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">大会作成</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                新しい大会を作成します。作成後、部門を追加できます。
+              </p>
+            </div>
+            <div>
+              <Button asChild variant="outline">
+                <Link href="/my">ダッシュボードに戻る</Link>
               </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">大会作成</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  新しい大会を作成します。作成後、部門を追加できます。
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -57,7 +54,7 @@ export default async function CreateTournamentGroupPage() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href="/admin">
+                  <Link href="/my">
                     ダッシュボードに戻る
                   </Link>
                 </Button>

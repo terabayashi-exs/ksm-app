@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -60,9 +60,6 @@ export default function Header() {
                     <span className="hidden sm:inline">
                       {session.user.name}
                     </span>
-                    <span className="text-xs text-muted-foreground hidden sm:inline">
-                      ({session.user.role === "admin" ? "管理者" : "チーム"})
-                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -70,24 +67,15 @@ export default function Header() {
                     <p className="font-medium text-foreground">{session.user.name}</p>
                     <p className="text-sm text-muted-foreground">{session.user.email}</p>
                   </div>
-                  
-                  {session.user.role === "admin" ? (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
-                        管理者ダッシュボード
-                      </Link>
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem asChild>
-                      <Link href="/team" className="flex items-center">
-                        <User className="mr-2 h-4 w-4" />
-                        チームダッシュボード
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  
-                  <DropdownMenuItem 
+
+                  <DropdownMenuItem asChild>
+                    <Link href="/my" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      マイダッシュボード
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
                     onClick={() => signOut({ redirect: false }).then(() => window.location.href = '/')}
                     className="text-red-600 cursor-pointer"
                   >
@@ -97,28 +85,12 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <User className="mr-2 h-4 w-4" />
-                    ログイン
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link href="/auth/admin/login" className="flex items-center cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      管理者ログイン
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/auth/team/login" className="flex items-center cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      チーム代表者ログイン
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button asChild variant="outline">
+                <Link href="/auth/login" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  ログイン
+                </Link>
+              </Button>
             )}
 
           </div>

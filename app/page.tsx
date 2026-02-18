@@ -77,27 +77,16 @@ export default async function Home() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {session?.user ? (
-              <>
-                {session.user.role === "admin" || session.user.role === "operator" ? (
-                  <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                    <Link href="/admin">管理者ダッシュボード</Link>
-                  </Button>
-                ) : session.user.role === "team" ? (
-                  <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                    <Link href="/team">チームダッシュボード</Link>
-                  </Button>
-                ) : null}
-              </>
+              <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                <Link href="/my">マイダッシュボード</Link>
+              </Button>
             ) : (
               <>
                 <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                  <Link href="/auth/admin/login">管理者ログイン</Link>
-                </Button>
-                <Button asChild size="lg" className="bg-green-600 text-white hover:bg-green-700">
-                  <Link href="/auth/team/login">チーム代表者ログイン</Link>
+                  <Link href="/auth/login">ログイン</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                  <Link href="/auth/register/email">チーム登録</Link>
+                  <Link href="/auth/register">新規ユーザー登録</Link>
                 </Button>
               </>
             )}

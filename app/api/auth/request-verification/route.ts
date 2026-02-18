@@ -15,12 +15,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // メールアドレスの重複チェック
-    const existingTeam = await db.execute(`
-      SELECT team_id FROM m_teams WHERE contact_email = ?
+    // メールアドレスの重複チェック（m_login_users）
+    const existingLoginUser = await db.execute(`
+      SELECT login_user_id FROM m_login_users WHERE email = ?
     `, [email]);
 
-    if (existingTeam.rows.length > 0) {
+    if (existingLoginUser.rows.length > 0) {
       return NextResponse.json(
         { success: false, error: 'このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。' },
         { status: 400 }
@@ -51,18 +51,18 @@ export async function POST(request: NextRequest) {
     // メール送信
     const htmlContent = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">チーム登録のご案内</h2>
-        <p>楽勝 GOへのチーム登録ありがとうございます。</p>
-        <p>以下のリンクをクリックして、チーム登録を完了してください。</p>
+        <h2 style="color: #2563eb;">アカウント登録のご案内</h2>
+        <p>楽勝 GOへのアカウント登録申請ありがとうございます。</p>
+        <p>以下のリンクをクリックして、アカウント登録を完了してください。</p>
         <p style="margin: 30px 0;">
           <a href="${verificationUrl}"
              style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            チーム登録を完了する
+            アカウント登録を完了する
           </a>
         </p>
         <p style="color: #666; font-size: 14px;">
           このリンクは10分間有効です。<br>
-          有効期限が切れた場合は、再度チーム登録申請を行ってください。
+          有効期限が切れた場合は、再度アカウント登録申請を行ってください。
         </p>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
         <p style="color: #999; font-size: 12px;">
@@ -72,22 +72,22 @@ export async function POST(request: NextRequest) {
     `;
 
     const textContent = `
-楽勝 GO - チーム登録のご案内
+楽勝 GO - アカウント登録のご案内
 
-楽勝 GOへのチーム登録ありがとうございます。
+楽勝 GOへのアカウント登録申請ありがとうございます。
 
-以下のリンクをクリックして、チーム登録を完了してください。
+以下のリンクをクリックして、アカウント登録を完了してください。
 ${verificationUrl}
 
 このリンクは10分間有効です。
-有効期限が切れた場合は、再度チーム登録申請を行ってください。
+有効期限が切れた場合は、再度アカウント登録申請を行ってください。
 
 このメールに心当たりがない場合は、削除してください。
     `;
 
     await sendEmail({
       to: email,
-      subject: '【楽勝 GO】チーム登録のご案内',
+      subject: '【楽勝 GO】アカウント登録のご案内',
       text: textContent,
       html: htmlContent,
     });
