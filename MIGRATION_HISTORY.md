@@ -16,6 +16,136 @@
 
 ---
 
+## 0010: 都道府県マスタと会場地域機能の追加（2026-02-19）
+
+### 基本情報
+- **日付**: 2026年2月19日
+- **環境**: dev
+- **方法**: 手動SQLファイル作成 + カスタムマイグレーター
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0010_add_prefectures_and_venue_prefecture.sql`
+
+### 変更の背景と目的
+
+大会検索機能の実装に向けて、会場ベースの地域フィルタリングを可能にするため、
+都道府県マスタテーブルを新設し、会場テーブルに地域情報を追加。
+将来的にマイダッシュボードやTOP画面での大会検索に活用する。
+
+### 変更内容
+
+**新規作成テーブル:**
+- `m_prefectures`: 都道府県マスタ
+  - `prefecture_id` (PK) — JIS X 0401コード（1〜47）
+  - `prefecture_name` — 都道府県名（例: "富山県"）
+  - `prefecture_code` — JIS規格コード（例: "16"）
+  - `region_name` — 地方区分（例: "中部"）
+  - `display_order` — 表示順序
+  - `is_active` — 有効/無効フラグ
+  - `created_at` — 作成日時
+
+**既存テーブル変更:**
+- `m_venues` テーブル
+  - `prefecture_id` カラムを追加（FK → m_prefectures）
+
+**スキーマ変更:**
+- `src/db/schema.ts` に `mPrefectures` テーブル定義を追加
+- `src/db/schema.ts` の `mVenues` に `prefecture_id` 追加
+
+**マスターデータ投入:**
+- `scripts/seed-prefectures.mjs` — 47都道府県データの投入スクリプト
+- 実行: `node scripts/seed-prefectures.mjs`
+
+**API実装:**
+- `app/api/prefectures/route.ts` — 都道府県マスタ取得API
+- `app/api/my/teams/[id]/tournaments/route.ts` — 検索パラメータ（keyword, prefectureId, sportTypeId）対応
+
+### 影響範囲
+
+**新規作成ファイル:**
+- `drizzle/0010_add_prefectures_and_venue_prefecture.sql`
+- `scripts/seed-prefectures.mjs`
+- `scripts/apply-migration-0010.mjs`（手動適用用）
+- `app/api/prefectures/route.ts`
+
+**変更ファイル:**
+- `src/db/schema.ts` — m_prefectures追加、m_venues修正
+- `app/api/my/teams/[id]/tournaments/route.ts` — 検索機能追加
+- `drizzle/meta/_journal.json` — マイグレーション履歴に0010追加
+
+### 実行手順
+
+```bash
+# 1. マイグレーション適用（手動）
+node scripts/apply-migration-0010.mjs
+
+# 2. 都道府県マスタデータ投入
+node scripts/seed-prefectures.mjs
+```
+
+### 備考
+
+- 会場が未定の大会は地域検索では表示されない仕様
+- 将来的に大会グループや部門レベルでの地域情報追加も検討可能
+- UI実装は別タスクで実施予定
+
+---
+
+## 0008: t_team_invitations テーブルの新設（2026-02-18）
+
+### 基本情報
+- **日付**: 2026年2月18日
+- **環境**: dev
+- **方法**: 直接 SQLファイル作成 + カスタムマイグレーター
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0008_add_team_invitations.sql`
+
+### 変更の背景と目的
+
+チーム担当者の共同管理機能（2名体制）を実装するため、招待フローで使用する
+`t_team_invitations` テーブルを新設。担当者が亡くなった・辞めた場合にも
+もう1人が継続して管理できるようにする。
+
+### 変更内容
+
+**新規作成テーブル:**
+- `t_team_invitations`: チーム担当者招待トークン管理
+  - `id` (PK, autoincrement)
+  - `team_id` (FK → m_teams, cascade)
+  - `invited_by_login_user_id` (FK → m_login_users, cascade)
+  - `invited_email` — 招待先メールアドレス
+  - `token` (UNIQUE) — 招待トークン（UUID）
+  - `status` — "pending" | "accepted" | "cancelled"
+  - `expires_at` — 有効期限（72時間）
+  - `accepted_at` — 承認日時
+  - `created_at`
+
+**スキーマ変更:**
+- `src/db/schema.ts` に `tTeamInvitations` テーブル定義を追加
+
+### 影響を受けたファイル
+
+- `src/db/schema.ts`
+- `drizzle/0008_add_team_invitations.sql`
+- `drizzle/meta/_journal.json`
+- `app/api/teams/register/route.ts` — チーム作成時に m_team_members へ自動登録
+- `app/api/my/teams/route.ts` — チーム一覧取得API（新設）
+- `app/api/my/teams/[id]/managers/route.ts` — 担当者一覧API（新設）
+- `app/api/my/teams/invite/route.ts` — 招待送信・一覧・キャンセルAPI（新設）
+- `app/api/my/teams/invite/accept/route.ts` — 招待承認API（新設）
+- `app/api/admin/teams/[id]/transfer-owner/route.ts` — 管理者用担当者変更API（新設）
+- `components/features/my/MyDashboardTabs.tsx` — チームタブを実装
+- `app/my/teams/[id]/page.tsx` — チーム管理画面（新設）
+- `app/my/teams/invite/accept/page.tsx` — 招待承認ページ（新設）
+- `app/admin/teams/[id]/page.tsx` — 管理者用担当者変更画面（新設）
+
+### 実行コマンド
+
+```bash
+npm run db:migrate
+```
+
+---
+
 ## 0007: t_tournament_groups に login_user_id を追加（2026-02-17）
 
 ### 基本情報

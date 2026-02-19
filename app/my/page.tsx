@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import SignOutButton from "@/components/features/auth/SignOutButton";
 import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
-import { fetchDashboardData, TournamentDashboardData } from "@/lib/dashboard-data";
+import { fetchDashboardData, fetchTeamData, TournamentDashboardData, TeamDashboardItem } from "@/lib/dashboard-data";
 
 export default async function MyDashboardPage() {
   const session = await auth();
@@ -17,6 +17,7 @@ export default async function MyDashboardPage() {
   const roles = (session.user.roles ?? []) as ("admin" | "operator" | "team")[];
   const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
   const teamIds = (session.user.teamIds ?? []) as string[];
+  const loginUserId = (session.user as { loginUserId?: number }).loginUserId ?? 0;
 
   // 管理者ロールを持つ場合、サーバー側で大会データを取得（高速化）
   let tournamentData: TournamentDashboardData | null = null;
@@ -28,6 +29,17 @@ export default async function MyDashboardPage() {
       tournamentData = await fetchDashboardData(session.user.id, isGlobalAdmin);
     } catch (e) {
       console.error("大会データ取得エラー:", e);
+      // エラー時は null のままクライアント側フォールバック
+    }
+  }
+
+  // チームデータをサーバー側で取得（高速化）
+  let initialTeamData: TeamDashboardItem[] | null = null;
+  if (loginUserId > 0) {
+    try {
+      initialTeamData = await fetchTeamData(loginUserId);
+    } catch (e) {
+      console.error("チームデータ取得エラー:", e);
       // エラー時は null のままクライアント側フォールバック
     }
   }
@@ -63,6 +75,7 @@ export default async function MyDashboardPage() {
           isSuperadmin={isSuperadmin}
           teamIds={teamIds}
           initialTournamentData={tournamentData}
+          initialTeamData={initialTeamData}
         />
       </div>
     </div>

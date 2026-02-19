@@ -57,6 +57,27 @@
       "when": 1771372800000,
       "tag": "0007_add_login_user_id_to_tournament_groups",
       "breakpoints": false
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1771459200000,
+      "tag": "0008_add_team_invitations",
+      "breakpoints": false
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1771545600000,
+      "tag": "0009_nullable_m_teams_columns",
+      "breakpoints": false
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1771632000000,
+      "tag": "0010_add_prefectures_and_venue_prefecture",
+      "breakpoints": false
     }
   ]
 }

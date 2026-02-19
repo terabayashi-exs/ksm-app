@@ -4,6 +4,71 @@ import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
 import { calculateTournamentStatus } from '@/lib/tournament-status';
 
+// ─── チームダッシュボード用 ────────────────────────────────────────────────────
+
+export interface TeamDashboardItem {
+  team_id: string;
+  team_name: string;
+  team_omission: string | null;
+  contact_person: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  is_active: boolean;
+  member_role: string;
+  joined_at: string;
+  player_count: number;
+  manager_count: number;
+}
+
+/**
+ * ログインユーザーが所属するチーム一覧をサーバーサイドで取得
+ * @param loginUserId - m_login_users.login_user_id
+ */
+export async function fetchTeamData(loginUserId: number): Promise<TeamDashboardItem[]> {
+  if (!loginUserId || loginUserId === 0) return [];
+
+  const result = await db.execute(`
+    SELECT
+      t.team_id,
+      t.team_name,
+      t.team_omission,
+      t.contact_person,
+      t.contact_email,
+      t.contact_phone,
+      t.is_active,
+      tm.member_role,
+      tm.created_at AS joined_at,
+      (
+        SELECT COUNT(*)
+        FROM m_players p
+        WHERE p.current_team_id = t.team_id AND p.is_active = 1
+      ) AS player_count,
+      (
+        SELECT COUNT(*)
+        FROM m_team_members tm2
+        WHERE tm2.team_id = t.team_id AND tm2.is_active = 1
+      ) AS manager_count
+    FROM m_team_members tm
+    JOIN m_teams t ON tm.team_id = t.team_id
+    WHERE tm.login_user_id = ? AND tm.is_active = 1 AND t.is_active = 1
+    ORDER BY tm.member_role DESC, tm.created_at ASC
+  `, [loginUserId]);
+
+  return result.rows.map(row => ({
+    team_id: String(row.team_id),
+    team_name: String(row.team_name),
+    team_omission: row.team_omission ? String(row.team_omission) : null,
+    contact_person: row.contact_person ? String(row.contact_person) : null,
+    contact_email: row.contact_email ? String(row.contact_email) : null,
+    contact_phone: row.contact_phone ? String(row.contact_phone) : null,
+    is_active: Number(row.is_active) === 1,
+    member_role: String(row.member_role),
+    joined_at: String(row.joined_at),
+    player_count: Number(row.player_count) || 0,
+    manager_count: Number(row.manager_count) || 0,
+  }));
+}
+
 export interface GroupedTournamentData {
   grouped: Record<string, {
     group: {

@@ -444,7 +444,7 @@ export default function TournamentCreateNewForm() {
               const scoreIcon = sportType.sport_code === 'soccer' ? '⚽' :
                                sportType.sport_code === 'baseball' ? '⚾' :
                                sportType.sport_code === 'basketball' ? '🏀' :
-                               sportType.sport_code === 'pk' ? '⚽' : '⚽';
+                               sportType.sport_code === 'pk' ? '🥅' : '⚽';
               
               return (
                 <Card 

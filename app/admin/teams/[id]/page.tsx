@@ -1,0 +1,178 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, Trash2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+
+interface Manager {
+  login_user_id: number;
+  member_id: number;
+  display_name: string;
+  email: string;
+  member_role: string;
+  joined_at: string;
+}
+
+interface TeamInfo {
+  team_id: string;
+  team_name: string;
+  contact_email: string;
+}
+
+export default function AdminTeamManagerPage() {
+  const params = useParams();
+  const teamId = params.id as string;
+
+  const [team, setTeam] = useState<TeamInfo | null>(null);
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<number | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/transfer-owner`);
+      const result = await res.json();
+      if (result.success) {
+        setTeam(result.team);
+        setManagers(result.managers);
+      }
+    } catch (err) {
+      console.error('データ取得エラー:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [teamId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+
+  const handleRemoveManager = async (loginUserId: number, displayName: string) => {
+    if (!confirm(`「${displayName}」を担当者から削除しますか？`)) return;
+    setProcessing(loginUserId);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/teams/${teamId}/transfer-owner`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login_user_id: loginUserId }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setMessage({ type: 'success', text: `「${displayName}」を担当者から削除しました` });
+        await fetchData();
+      } else {
+        setMessage({ type: 'error', text: result.error });
+      }
+    } catch {
+      setMessage({ type: 'error', text: '処理に失敗しました' });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm border-b border-border">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/admin/administrators"><ArrowLeft className="w-4 h-4 mr-1" />管理者一覧</Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-foreground mt-2">
+            チーム担当者管理
+            {team && <span className="text-lg font-normal text-muted-foreground ml-2">— {team.team_name}</span>}
+          </h1>
+        </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+
+        {message && (
+          <div className={`flex items-start gap-2 p-4 rounded-lg text-sm ${
+            message.type === 'success'
+              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-300'
+              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
+          }`}>
+            {message.type === 'success'
+              ? <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="w-5 h-5" />
+              担当者一覧（{managers.length} / 2名）
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {managers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">担当者が登録されていません</p>
+            ) : (
+              managers.map((manager) => (
+                <div key={manager.login_user_id}
+                  className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-blue-700 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{manager.display_name}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">{manager.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                      onClick={() => handleRemoveManager(manager.login_user_id, manager.display_name)}
+                      disabled={processing === manager.login_user_id || managers.length <= 1}
+                      title={managers.length <= 1 ? '最後の担当者は削除できません' : '担当者から削除'}
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      削除
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/10">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium">操作の注意事項</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>担当者が1名の場合は削除できません。</li>
+                  <li>担当者を削除すると、そのユーザーはこのチームにアクセスできなくなります。</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+      </div>
+    </div>
+  );
+}

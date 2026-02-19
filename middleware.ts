@@ -46,8 +46,10 @@ export default async function middleware(req: NextRequest) {
   // 管理者・運営者ルートの保護
   if (isAdminRoute) {
     if (!isLoggedIn) {
+      // パスとクエリパラメータの両方を保持
+      const fullPath = nextUrl.pathname + nextUrl.search;
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
+        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl)
       );
     }
     if (!hasAdminAccess) {
@@ -58,8 +60,10 @@ export default async function middleware(req: NextRequest) {
   // チームルートの保護
   if (isTeamRoute) {
     if (!isLoggedIn) {
+      // パスとクエリパラメータの両方を保持
+      const fullPath = nextUrl.pathname + nextUrl.search;
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
+        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl)
       );
     }
     if (!hasTeamAccess) {
@@ -70,8 +74,10 @@ export default async function middleware(req: NextRequest) {
   // マイダッシュボードの保護（ログイン済みであれば全ロール可）
   if (isMyRoute) {
     if (!isLoggedIn) {
+      // パスとクエリパラメータの両方を保持
+      const fullPath = nextUrl.pathname + nextUrl.search;
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${nextUrl.pathname}`, nextUrl)
+        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl)
       );
     }
   }

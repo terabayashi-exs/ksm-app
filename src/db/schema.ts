@@ -2,6 +2,26 @@ import { sqliteTable, index, check, integer, text, numeric } from "drizzle-orm/s
   import { sql } from "drizzle-orm"
   import type { TournamentPhases } from "../../lib/types/tournament-phases"
 
+export const mPrefectures = sqliteTable("m_prefectures", {
+	prefectureId: integer("prefecture_id").primaryKey(),
+	prefectureName: text("prefecture_name").notNull(),
+	prefectureCode: text("prefecture_code").notNull(),
+	regionName: text("region_name").notNull(),
+	displayOrder: integer("display_order").notNull(),
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
+	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
+	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
+	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+]);
+
 export const tMatchesFinal = sqliteTable("t_matches_final", {
 	matchId: integer("match_id").primaryKey({ autoIncrement: true }),
 	matchBlockId: integer("match_block_id").notNull().references(() => tMatchBlocks.matchBlockId),
@@ -45,11 +65,11 @@ export const mTeams = sqliteTable("m_teams", {
 	teamId: text("team_id").primaryKey(),
 	teamName: text("team_name").notNull(),
 	teamOmission: text("team_omission"),
-	contactPerson: text("contact_person").notNull(),
-	contactEmail: text("contact_email").notNull(),
+	contactPerson: text("contact_person"),
+	contactEmail: text("contact_email"),
 	contactPhone: text("contact_phone"),
 	representativePlayerId: integer("representative_player_id"),
-	passwordHash: text("password_hash").notNull(),
+	passwordHash: text("password_hash"),
 	isActive: integer("is_active").default(1).notNull(),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
@@ -110,6 +130,7 @@ export const mVenues = sqliteTable("m_venues", {
 	venueId: integer("venue_id").primaryKey({ autoIncrement: true }),
 	venueName: text("venue_name").notNull(),
 	address: text(),
+	prefectureId: integer("prefecture_id").references(() => mPrefectures.prefectureId),
 	availableCourts: integer("available_courts").default(4).notNull(),
 	isActive: integer("is_active").default(1).notNull(),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
@@ -903,4 +924,23 @@ export const mTeamMembers = sqliteTable("m_team_members", {
 	index("idx_team_members_team").on(_table.teamId),
 	index("idx_team_members_user").on(_table.loginUserId),
 	index("idx_team_members_active").on(_table.teamId, _table.isActive),
+]);
+
+// チーム担当者招待テーブル
+export const tTeamInvitations = sqliteTable("t_team_invitations", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	teamId: text("team_id").notNull().references(() => mTeams.teamId, { onDelete: "cascade" }),
+	invitedByLoginUserId: integer("invited_by_login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+	invitedEmail: text("invited_email").notNull(), // 招待先メールアドレス
+	token: text("token").notNull().unique(),        // 招待トークン（UUID）
+	status: text("status").notNull().default("pending"), // "pending" | "accepted" | "cancelled"
+	expiresAt: numeric("expires_at").notNull(),     // 有効期限（72時間）
+	acceptedAt: numeric("accepted_at"),             // 承認日時
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_team_invitations_team").on(_table.teamId),
+	index("idx_team_invitations_token").on(_table.token),
+	index("idx_team_invitations_email").on(_table.invitedEmail),
+	index("idx_team_invitations_status").on(_table.status),
 ]);
