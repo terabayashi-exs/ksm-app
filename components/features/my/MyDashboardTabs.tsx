@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, Save, X, CheckCircle, AlertCircle, LogOut, Search } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, Save, X, CheckCircle, AlertCircle, LogOut, Search, QrCode } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
@@ -296,16 +296,21 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
 
   // フォーマット一覧は初回レンダー時に取得
   const [formatsLoaded, setFormatsLoaded] = useState(false);
-  const loadFormats = async () => {
-    if (formatsLoaded) return;
+  const loadFormats = async (): Promise<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number }>> => {
+    if (formatsLoaded && availableFormats.length > 0) return availableFormats;
     try {
       const res = await fetch('/api/admin/tournament-formats');
       const result = await res.json();
-      if (result.success && result.formats) setAvailableFormats(result.formats);
+      if (result.success && result.formats) {
+        setAvailableFormats(result.formats);
+        setFormatsLoaded(true);
+        return result.formats;
+      }
     } catch (err) {
       console.error('フォーマット取得エラー:', err);
     }
     setFormatsLoaded(true);
+    return [];
   };
 
   const formatDate = (dateString: string) => {
@@ -379,14 +384,14 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
 
   // フォーマット変更クリック
   const handleFormatChangeClick = async (tournament: Tournament) => {
-    await loadFormats();
+    const formats = await loadFormats();
     setSelectedTournamentId(tournament.tournament_id);
     setIsFormatChanging(true);
     try {
       const checkResult = await checkFormatChangeEligibility(tournament.tournament_id);
       if (checkResult.success && checkResult.data) {
         setFormatChangeCheckResult(checkResult.data);
-        const otherFormats = availableFormats.filter(f => f.format_id !== checkResult.data!.current_format_id);
+        const otherFormats = formats.filter(f => f.format_id !== checkResult.data!.current_format_id);
         if (otherFormats.length === 0) {
           alert(`変更可能な他のフォーマットが見つかりません。`);
           setIsFormatChanging(false);
@@ -417,7 +422,7 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
     try {
       const result = await changeFormat(selectedTournamentId, selectedNewFormatId, true);
       if (result.success) {
-        alert(`✅ ${result.message}\n\n次は「組合せ作成・編集」から新しいフォーマットでチームを配置してください。`);
+        alert(`✅ ${result.message}\n\n次は「組合せ作成」から新しいフォーマットでチームを配置してください。`);
         router.refresh();
         setShowFormatChangeDialog(false);
         setSelectedTournamentId(null);
@@ -530,7 +535,7 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
 
             {/* ── 基本情報 ── */}
             <div>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">基本情報</p>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">基本情報</p>
               <div className="flex gap-2 flex-wrap">
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
@@ -544,23 +549,50 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
                     部門編集
                   </Link>
                 </Button>
+                {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleFormatChangeClick(tournament)}
+                    disabled={isFormatChanging && selectedTournamentId === tournament.tournament_id}
+                    className="text-sm hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="部門のフォーマットを変更（試合データは削除されます）"
+                  >
+                    {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-1" />確認中...</>
+                    ) : (
+                      <><Settings className="w-4 h-4 mr-1" />フォーマット変更</>
+                    )}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
+                    <Lock className="w-4 h-4 mr-1" />
+                    フォーマット変更
+                  </Button>
+                )}
               </div>
             </div>
 
             {/* ── 事前準備 ── */}
             <div>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">事前準備</p>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">事前準備</p>
               <div className="flex gap-2 flex-wrap">
-                {/* チーム登録・組合せ・フォーマット変更は planning/recruiting/before_event のみ有効 */}
+                {/* チーム登録・組合せは planning/recruiting/before_event のみ有効 */}
                 {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') ? (
                   <>
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                        <FileText className="w-4 h-4 mr-1" />
+                        ルール設定
+                      </Link>
+                    </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                         <Users className="w-4 h-4 mr-1" />
                         チーム手動登録
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -573,7 +605,13 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
                       className="text-sm hover:border-blue-300 hover:bg-blue-50"
                     >
                       <Shuffle className="w-4 h-4 mr-1" />
-                      組合せ作成・編集
+                      組合せ作成
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
+                        <QrCode className="w-4 h-4 mr-1" />
+                        審判カード印刷
+                      </Link>
                     </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
@@ -581,41 +619,21 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
                         コート名設定
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-green-300 hover:bg-green-50">
+                  </>
+                ) : (
+                  /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
+                  <>
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <FileText className="w-4 h-4 mr-1" />
                         ルール設定
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
-                        <Target className="w-4 h-4 mr-1" />
-                        選出条件変更
-                      </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleFormatChangeClick(tournament)}
-                      disabled={isFormatChanging && selectedTournamentId === tournament.tournament_id}
-                      className="text-sm border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="部門のフォーマットを変更（試合データは削除されます）"
-                    >
-                      {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
-                        <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-1" />確認中...</>
-                      ) : (
-                        <><Settings className="w-4 h-4 mr-1" />フォーマット変更</>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
-                  <>
                     <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
                       <Lock className="w-4 h-4 mr-1" />
                       チーム手動登録
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -623,29 +641,13 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
                     </Button>
                     <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
                       <Lock className="w-4 h-4 mr-1" />
-                      組合せ作成・編集
+                      組合せ作成
                     </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
                         <MapPin className="w-4 h-4 mr-1" />
                         コート名設定
                       </Link>
-                    </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-green-300 hover:bg-green-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
-                        <FileText className="w-4 h-4 mr-1" />
-                        ルール設定
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
-                        <Target className="w-4 h-4 mr-1" />
-                        選出条件変更
-                      </Link>
-                    </Button>
-                    <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
-                      <Lock className="w-4 h-4 mr-1" />
-                      フォーマット変更
                     </Button>
                   </>
                 )}
@@ -654,7 +656,7 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
 
             {/* ── 当日運営 ── */}
             <div>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">当日運営</p>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">当日運営</p>
               <div className="flex gap-2 flex-wrap">
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
@@ -665,7 +667,13 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                     <Trophy className="w-4 h-4 mr-1" />
-                    順位設定
+                    手動順位設定
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                    <Target className="w-4 h-4 mr-1" />
+                    選出条件変更
                   </Link>
                 </Button>
               </div>
@@ -673,8 +681,14 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
 
             {/* ── 管理・その他 ── */}
             <div>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
               <div className="flex gap-2 flex-wrap">
+                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
+                    <Mail className="w-4 h-4 mr-1" />
+                    メール送信
+                  </Link>
+                </Button>
                 <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                     <FileText className="w-4 h-4 mr-1" />
@@ -731,7 +745,7 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
         ) : (
           /* アーカイブ済み */
           <div className="pt-1">
-            <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
+            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
             <div className="flex gap-2 flex-wrap">
               <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">

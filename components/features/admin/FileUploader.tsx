@@ -221,18 +221,26 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
       <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
         <Button
           type="button"
-          variant={state.linkType === 'upload' ? 'default' : 'outline'}
+          variant="outline"
           onClick={() => setState(prev => ({ ...prev, linkType: 'upload', externalUrl: '', error: null }))}
-          className="flex-1"
+          className={`flex-1 ${
+            state.linkType === 'upload'
+              ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+              : 'hover:bg-gray-100'
+          }`}
         >
           <Upload className="h-4 w-4 mr-2" />
           ファイルアップロード
         </Button>
         <Button
           type="button"
-          variant={state.linkType === 'external' ? 'default' : 'outline'}
+          variant="outline"
           onClick={() => setState(prev => ({ ...prev, linkType: 'external', file: null, error: null }))}
-          className="flex-1"
+          className={`flex-1 ${
+            state.linkType === 'external'
+              ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+              : 'hover:bg-gray-100'
+          }`}
         >
           <LinkIcon className="h-4 w-4 mr-2" />
           外部URLリンク

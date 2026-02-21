@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ interface QRMatch {
 
 export default function QRListPage() {
   const params = useParams();
+  const router = useRouter();
   const tournamentId = params.id as string;
 
   const [matches, setMatches] = useState<QRMatch[]>([]);
@@ -158,10 +159,15 @@ export default function QRListPage() {
               </p>
             )}
           </div>
-          <Button onClick={handlePrint} className="flex items-center gap-2">
-            <Printer className="h-4 w-4" />
-            印刷
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
+              <Printer className="h-4 w-4" />
+              印刷
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
+              ダッシュボードに戻る
+            </Button>
+          </div>
         </div>
 
         {/* 完了試合表示チェックボックス */}

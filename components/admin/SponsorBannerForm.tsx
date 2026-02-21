@@ -201,10 +201,54 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
         </div>
       )}
 
-      {/* 基本情報 */}
+      {/* 画像アップロード */}
       <Card>
         <CardHeader>
-          <CardTitle>基本情報</CardTitle>
+          <CardTitle>バナー画像 *</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              画像を選択
+            </Button>
+            {imageFile && (
+              <span className="ml-2 text-sm text-muted-foreground">{imageFile.name}</span>
+            )}
+          </div>
+
+          {imagePreview && (
+            <div className="space-y-2">
+              <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden">
+                <Image
+                  src={imagePreview}
+                  alt="プレビュー"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                バナー作成時に自動的にアップロードされます
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* バナー情報 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>バナー情報</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -393,50 +437,6 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* 画像アップロード */}
-      <Card>
-        <CardHeader>
-          <CardTitle>バナー画像 *</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              画像を選択
-            </Button>
-            {imageFile && (
-              <span className="ml-2 text-sm text-muted-foreground">{imageFile.name}</span>
-            )}
-          </div>
-
-          {imagePreview && (
-            <div className="space-y-2">
-              <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden">
-                <Image
-                  src={imagePreview}
-                  alt="プレビュー"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                バナー作成時に自動的にアップロードされます
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 

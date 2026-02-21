@@ -223,12 +223,12 @@ export async function GET(
       };
     });
 
-    // 管理者メールアドレス取得（ログイン中の管理者のメールアドレス）
+    // 管理者メールアドレス取得（ログイン中のユーザーのメールアドレス）
     let adminEmail: string | null = null;
     try {
       const adminResult = await db.execute(`
-        SELECT email FROM m_administrators WHERE admin_login_id = ?
-      `, [session.user.id]);
+        SELECT email FROM m_login_users WHERE login_user_id = ?
+      `, [session.user.loginUserId]);
       if (adminResult.rows.length > 0) {
         adminEmail = String(adminResult.rows[0].email);
       }

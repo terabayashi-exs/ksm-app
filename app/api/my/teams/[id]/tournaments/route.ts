@@ -128,8 +128,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       WHERE t.is_archived = 0
         AND t.visibility = 'open'
-        AND t.recruitment_start_date <= datetime('now', '+9 hours')
-        AND t.recruitment_end_date >= datetime('now', '+9 hours')
+        AND datetime(t.recruitment_start_date) <= datetime('now', '+9 hours')
+        AND datetime(t.recruitment_end_date) >= datetime('now', '+9 hours')
         AND t.status IN ('recruiting', 'recruitment_closed')
         ${excludeClause}
         ${searchClause}

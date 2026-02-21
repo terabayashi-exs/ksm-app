@@ -44,8 +44,6 @@ export default async function ParticipantsPage({ params }: PageProps) {
             <Button asChild variant="outline">
               <Link
                 href={`/admin/tournaments/${tournamentId}/participants/email`}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="flex items-center gap-2"
               >
                 <Mail className="h-4 w-4" />

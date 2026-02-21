@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import {
 
 export default function SponsorBannersPage() {
   const params = useParams();
+  const router = useRouter();
   const tournamentId = params.id as string;
 
   const [banners, setBanners] = useState<SponsorBanner[]>([]);
@@ -134,10 +135,6 @@ export default function SponsorBannersPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <Button asChild variant="outline" className="mb-4">
-          <Link href="/admin">← 管理者ダッシュボードに戻る</Link>
-        </Button>
-
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold mb-2">スポンサーバナー管理</h1>
@@ -145,11 +142,16 @@ export default function SponsorBannersPage() {
               部門詳細画面に表示するスポンサーバナーを管理します
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners/create`}>
-              + バナー追加
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners/create`}>
+                + バナー追加
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
+              ダッシュボードに戻る
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -188,11 +190,6 @@ export default function SponsorBannersPage() {
           <CardContent className="py-8">
             <div className="text-center text-muted-foreground">
               <p>登録されているバナーはありません</p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners/create`}>
-                  最初のバナーを追加
-                </Link>
-              </Button>
             </div>
           </CardContent>
         </Card>

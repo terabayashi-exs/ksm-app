@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { 
-  ArrowLeft,
+import {
   Clock,
   Play,
   CheckCircle,
@@ -21,7 +20,6 @@ import {
   RotateCcw,
   Undo2
 } from 'lucide-react';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
 import { SPORT_RULE_CONFIGS, SportRuleConfig } from '@/lib/tournament-rules';
@@ -1041,32 +1039,15 @@ export default function AdminMatchesPage() {
       <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin" className="flex items-center">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  ダッシュボードに戻る
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">試合結果入力</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  「{tournament.tournament_name}」の試合進行状況管理
-                </p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">試合結果入力</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                「{tournament.tournament_name}」の試合進行状況管理
+              </p>
             </div>
-            
-            {/* QRコード一覧・リフレッシュボタン */}
+
+            {/* リフレッシュボタン・ダッシュボードに戻るボタン */}
             <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(`/admin/tournaments/${tournamentId}/qr-list`, '_blank')}
-                className="flex items-center"
-              >
-                <QrCode className="w-4 h-4 mr-2" />
-                QRコード一覧
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -1079,6 +1060,9 @@ export default function AdminMatchesPage() {
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? '更新中...' : '最新情報に更新'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => router.push('/my?tab=admin')}>
+                ダッシュボードに戻る
               </Button>
             </div>
           </div>
@@ -1342,10 +1326,11 @@ export default function AdminMatchesPage() {
                               
                               {match.match_status !== 'cancelled' && !match.is_confirmed && (
                                 <Button
-                                  variant="destructive"
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => openCancelDialog(match)}
                                   disabled={cancellingMatches.has(match.match_id)}
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
                                   {cancellingMatches.has(match.match_id) ? '中止中...' : '中止'}

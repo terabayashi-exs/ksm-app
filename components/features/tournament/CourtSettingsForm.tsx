@@ -94,11 +94,8 @@ export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSett
       const result = await response.json();
 
       if (result.success) {
-        setSuccessMessage('コート名を保存しました');
-        // 保存成功後、1秒待ってからマイダッシュボードの管理者タブにリダイレクト
-        setTimeout(() => {
-          router.push('/my?tab=admin');
-        }, 1000);
+        alert('コート名を保存しました');
+        router.push('/my?tab=admin');
       } else {
         setError(result.error || '保存に失敗しました');
       }

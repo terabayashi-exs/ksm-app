@@ -170,18 +170,16 @@ export async function POST(
             tournamentId,
           });
 
-          // チームメンバー全員にメール送信（最大2人）
+          // チームメンバー全員にメール送信（最大2人、Toに設定）
           const recipientEmails = (team.all_emails as string[]).slice(0, 2);
 
-          for (const email of recipientEmails) {
-            await sendEmail({
-              to: email,
-              subject: emailTemplate.subject,
-              text: emailTemplate.text,
-              html: emailTemplate.html,
-              bcc: [bccEmail], // BCCで運営アドレスに送信（送信記録用）
-            });
-          }
+          await sendEmail({
+            to: recipientEmails, // 代表者全員（最大2人）をToに設定
+            subject: emailTemplate.subject,
+            text: emailTemplate.text,
+            html: emailTemplate.html,
+            bcc: [bccEmail], // BCCで運営アドレスに送信（送信記録用）
+          });
 
           // メール送信履歴を記録
           try {
@@ -243,23 +241,23 @@ export async function POST(
 
       // 送信先チーム数で送信方法を分岐
       if (teamsWithEmails.length === 1) {
-        // 1件のみの場合：To = チームメンバー全員（最大2人）、BCC = 運営アドレス
+        // 1件のみの場合：To = チーム代表者全員（最大2人）、BCC = 運営アドレス
         const recipientEmails = (teamsWithEmails[0].all_emails as string[]).slice(0, 2);
 
-        for (const email of recipientEmails) {
-          await sendEmail({
-            to: email,
-            subject: emailTemplate.subject,
-            text: emailTemplate.text,
-            html: emailTemplate.html,
-            bcc: [bccEmail],
-          });
-        }
+        await sendEmail({
+          to: recipientEmails, // 代表者全員（最大2人）をToに設定
+          subject: emailTemplate.subject,
+          text: emailTemplate.text,
+          html: emailTemplate.html,
+          bcc: [bccEmail],
+        });
       } else {
-        // 複数件の場合：To = 運営アドレス、BCC = 全チームメンバー（重複除去）
+        // 複数件の場合：To = 運営アドレス、BCC = 全チーム代表者（各チーム最大2名、重複除去）
         const allEmails: string[] = [];
         for (const team of teamsWithEmails) {
-          allEmails.push(...(team.all_emails as string[]));
+          // 各チームから最大2名の代表者を取得
+          const teamEmails = (team.all_emails as string[]).slice(0, 2);
+          allEmails.push(...teamEmails);
         }
         const bccAddresses = [...new Set(allEmails)].slice(0, 50); // Gmail制限対策：最大50件
 
@@ -268,7 +266,7 @@ export async function POST(
           subject: emailTemplate.subject,
           text: emailTemplate.text,
           html: emailTemplate.html,
-          bcc: bccAddresses, // BCCで各チームメンバーに送信（重複除去済み）
+          bcc: bccAddresses, // BCCで各チーム代表者に送信（重複除去済み、各チーム最大2名）
         });
       }
 

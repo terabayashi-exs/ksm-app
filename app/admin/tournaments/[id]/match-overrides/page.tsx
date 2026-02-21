@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, ArrowLeft, AlertCircle, List } from 'lucide-react';
+import { Pencil, AlertCircle, List } from 'lucide-react';
 import { MatchOverrideDialog } from '@/components/features/admin/MatchOverrideDialog';
 import { BulkMatchOverrideDialog } from '@/components/features/admin/BulkMatchOverrideDialog';
 
@@ -131,29 +131,28 @@ export default function MatchOverridesPage() {
   return (
     <div className="container mx-auto py-8 max-w-6xl">
       <div className="mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/admin')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          ダッシュボードに戻る
-        </Button>
-
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">試合進出条件の設定</h1>
             <p className="text-gray-600">
               トーナメント形式の各試合について、進出元チームを個別に設定できます。
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setIsBulkDialogOpen(true)}
-          >
-            <List className="h-4 w-4 mr-2" />
-            一括変更
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDialogOpen(true)}
+            >
+              <List className="h-4 w-4 mr-2" />
+              一括変更
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/my?tab=admin')}
+            >
+              ダッシュボードに戻る
+            </Button>
+          </div>
         </div>
       </div>
 

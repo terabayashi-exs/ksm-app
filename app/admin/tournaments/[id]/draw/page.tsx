@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import { Shuffle, Save, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
 import TournamentBracketEditor from '@/components/features/tournament/TournamentBracketEditor';
 
@@ -99,6 +99,7 @@ export default function TournamentDrawPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasExistingDraw, setHasExistingDraw] = useState<boolean>(false);
+  const [isTeamListExpanded, setIsTeamListExpanded] = useState(false); // 参加チーム一覧の開閉状態
 
   // 大会情報と参加チーム、試合データの取得
   useEffect(() => {
@@ -1035,7 +1036,8 @@ export default function TournamentDrawPage() {
         throw new Error(errorMessage + detailsMessage);
       }
 
-      router.push('/admin');
+      alert('振分結果を保存しました');
+      router.push('/my?tab=admin');
 
     } catch (err) {
       console.error('保存エラー:', err);
@@ -1063,7 +1065,7 @@ export default function TournamentDrawPage() {
         <Card className="max-w-md mx-auto">
           <CardContent className="p-6 text-center">
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={() => router.push('/admin')} variant="outline">
+            <Button onClick={() => router.push('/my?tab=admin')} variant="outline">
               ダッシュボードに戻る
             </Button>
           </CardContent>
@@ -1097,7 +1099,7 @@ export default function TournamentDrawPage() {
             <div className="flex space-x-3">
               <Button
                 variant="outline"
-                onClick={() => router.push('/admin')}
+                onClick={() => router.push('/my?tab=admin')}
               >
                 ダッシュボードに戻る
               </Button>
@@ -1107,37 +1109,6 @@ export default function TournamentDrawPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 大会情報サマリー */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>大会情報</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">開催期間</p>
-                  <p className="font-medium">{tournament.tournament_period}</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <MapPin className="w-5 h-5 mr-2 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">会場</p>
-                  <p className="font-medium">{tournament.venue_name}</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <Users className="w-5 h-5 mr-2 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">参加チーム</p>
-                  <p className="font-medium">{registeredTeams.length} / {tournament.team_count}チーム</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* 操作ボタン */}
         <Card className="mb-6">
@@ -1173,33 +1144,52 @@ export default function TournamentDrawPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 参加チーム一覧 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex flex-col gap-2">
-                <span>参加チーム一覧 ({registeredTeams.length}チーム)</span>
-                <span className="text-sm font-normal text-blue-600">
-                  ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
-                </span>
-                {hasExistingDraw && (
-                  <span className="text-sm font-normal text-green-600">
-                    ※ 振分け済みチームは各ブロックに表示されています
+        {/* 参加チーム一覧（折りたたみ可能） */}
+        <Card>
+          <CardHeader
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setIsTeamListExpanded(!isTeamListExpanded)}
+          >
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  {isTeamListExpanded ? (
+                    <ChevronDown className="h-5 w-5" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5" />
+                  )}
+                  <span>参加チーム一覧 ({registeredTeams.length}チーム)</span>
+                </div>
+                {!isTeamListExpanded && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    クリックして展開
                   </span>
                 )}
-              </CardTitle>
-            </CardHeader>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          {isTeamListExpanded && (
             <CardContent>
+              <div className="mb-3 space-y-1">
+                <p className="text-sm text-blue-600">
+                  ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
+                </p>
+                {hasExistingDraw && (
+                  <p className="text-sm text-green-600">
+                    ※ 振分け済みチームは各ブロックに表示されています
+                  </p>
+                )}
+              </div>
               {registeredTeams.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
                   参加チームがありません
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {registeredTeams.map((team) => {
                     // team_idが存在することを確認
                     if (!team || !team.team_id) return null;
-                    
+
                     // このチームが既にブロックに振分けされているかチェック
                     const isAssigned = blocks.some(block =>
                       block.teams && block.teams.some(blockTeam => blockTeam && blockTeam.tournament_team_id === team.tournament_team_id)
@@ -1232,10 +1222,11 @@ export default function TournamentDrawPage() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          )}
+        </Card>
 
-          {/* ブロック振分結果 */}
-          <div className="space-y-4">
+        {/* ブロック振分結果 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {blocks.filter(block => {
               const expectedCount = getExpectedTeamCount(block.block_name);
               // 割り当てる枠が0のブロック（team1_source/team2_sourceのみのブロック）を除外
@@ -1251,13 +1242,13 @@ export default function TournamentDrawPage() {
               const isTournament = isTournamentFormat();
 
               return (
-                <Card key={block.block_name}>
+                <Card key={block.block_name} className="h-full flex flex-col">
                   <CardHeader className={headerClass}>
                     <CardTitle className="text-lg">
                       {block.block_name}ブロック ({currentCount}{expectedCount !== null ? `/${expectedCount}` : ''}チーム)
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1">
                   {isTournament ? (
                     /* トーナメント形式の表示 */
                     <TournamentBracketEditor
@@ -1351,7 +1342,6 @@ export default function TournamentDrawPage() {
               );
             })}
           </div>
-        </div>
 
         {/* 試合スケジュールプレビュー */}
         {matches.length > 0 && (
