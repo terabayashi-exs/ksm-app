@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { AlertCircle, Plus, Trash2, Lock } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
   const [deleting, setDeleting] = useState<number | null>(null);
   const [divisionChecks, setDivisionChecks] = useState<Record<number, DivisionCheckResult>>({});
 
-  const fetchIncompleteGroups = async () => {
+  const fetchIncompleteGroups = useCallback(async () => {
     try {
       const response = await fetch('/api/tournament-groups/incomplete');
       const result = await response.json();
@@ -56,11 +56,11 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
     } finally {
       setLoading(false);
     }
-  };
+  }, [onCountChange]);
 
   useEffect(() => {
     fetchIncompleteGroups();
-  }, []);
+  }, [fetchIncompleteGroups]);
 
   const handleDelete = async (groupId: number, groupName: string) => {
     // 確認ダイアログ

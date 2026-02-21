@@ -54,7 +54,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       tt.team_name AS tournament_team_name,
       tt.participation_status,
       tt.assigned_block,
-      tt.block_position
+      tt.block_position,
+      tt.withdrawal_status,
+      tt.withdrawal_requested_at
     FROM t_tournament_teams tt
     JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
     LEFT JOIN m_venues v ON t.venue_id = v.venue_id
@@ -63,11 +65,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     ORDER BY t.tournament_id DESC
   `, [teamId]);
 
-  // 参加申込可能な大会（募集中で未参加、かつステータスが「募集中」または「募集終了」のみ）
-  const joinedTournamentIds = [...new Set(joinedRes.rows.map(r => Number(r.tournament_id)))];
-  const excludeClause = joinedTournamentIds.length > 0
-    ? `AND t.tournament_id NOT IN (${joinedTournamentIds.join(',')})`
-    : '';
+  // 参加申込可能な大会（募集中の大会、複数チーム参加対応のため参加済みでも表示）
+  // 同じマスターチームから2チーム目、3チーム目として参加できるようにするため、除外しない
+  const excludeClause = '';
 
   // 検索条件の構築
   const searchConditions: string[] = [];
@@ -152,6 +152,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         participation_status: String(row.participation_status),
         assigned_block: row.assigned_block ? String(row.assigned_block) : null,
         block_position: row.block_position != null ? Number(row.block_position) : null,
+        withdrawal_status: row.withdrawal_status ? String(row.withdrawal_status) : 'active',
+        withdrawal_requested_at: row.withdrawal_requested_at ? String(row.withdrawal_requested_at) : null,
       })),
       available: availableRes.rows
         .filter(row => Number(row.started_matches_count || 0) === 0) // 試合が開始されている部門を除外

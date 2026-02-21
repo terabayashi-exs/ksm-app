@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import CourtSettingsForm from "@/components/features/tournament/CourtSettingsForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PageProps {
@@ -64,13 +63,7 @@ export default async function TournamentCourtsPage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       <div className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center py-6">
-            <Button asChild variant="ghost" size="sm" className="mr-4">
-              <Link href="/admin">
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                ダッシュボードに戻る
-              </Link>
-            </Button>
+          <div className="flex items-center justify-between py-6">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
                 コート名設定
@@ -79,6 +72,11 @@ export default async function TournamentCourtsPage({ params }: PageProps) {
                 {tournament.tournament_name as string}
               </p>
             </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/my?tab=admin">
+                ダッシュボードに戻る
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

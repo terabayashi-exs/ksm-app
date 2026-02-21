@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ interface CourtSettingsFormProps {
 }
 
 export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSettingsFormProps) {
+  const router = useRouter();
   const [courtSettings, setCourtSettings] = useState<CourtSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,6 +95,10 @@ export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSett
 
       if (result.success) {
         setSuccessMessage('コート名を保存しました');
+        // 保存成功後、1秒待ってからマイダッシュボードの管理者タブにリダイレクト
+        setTimeout(() => {
+          router.push('/my?tab=admin');
+        }, 1000);
       } else {
         setError(result.error || '保存に失敗しました');
       }

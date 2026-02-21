@@ -69,6 +69,92 @@ export async function fetchTeamData(loginUserId: number): Promise<TeamDashboardI
   }));
 }
 
+// ─── チーム詳細データ（担当者・招待）────────────────────────────────────────
+// APIレスポンスと完全一致させる
+
+export interface TeamManager {
+  login_user_id: number;
+  display_name: string;
+  email: string;
+  member_role: 'primary' | 'secondary';
+  joined_at?: string; // 省略可能（サーバー側データにのみ含まれる）
+}
+
+export interface TeamInvitation {
+  id: number;
+  invited_email: string;
+  status: string;
+  expires_at: string;
+  accepted_at?: string | null; // 省略可能（サーバー側データにのみ含まれる）
+  created_at?: string; // 省略可能（サーバー側データにのみ含まれる）
+  invited_by_name?: string | null; // 省略可能（サーバー側データにのみ含まれる）
+}
+
+export interface TeamDetailData {
+  managers: TeamManager[];
+  invitations: TeamInvitation[];
+}
+
+/**
+ * チームの担当者と招待情報をサーバーサイドで取得（パフォーマンス改善）
+ * @param loginUserId - m_login_users.login_user_id
+ * @param teamId - チームID
+ */
+export async function fetchTeamDetailData(loginUserId: number, teamId: string): Promise<TeamDetailData | null> {
+  if (!loginUserId || loginUserId === 0) return null;
+
+  // 権限チェック: このユーザーがこのチームのメンバーか確認
+  const memberCheck = await db.execute(
+    `SELECT id FROM m_team_members WHERE team_id = ? AND login_user_id = ? AND is_active = 1`,
+    [teamId, loginUserId]
+  );
+
+  if (memberCheck.rows.length === 0) return null;
+
+  // 担当者と招待を並列取得（APIレスポンスと同じ形式で返す）
+  const [managersResult, invitationsResult] = await Promise.all([
+    db.execute(`
+      SELECT
+        tm.login_user_id,
+        u.display_name,
+        u.email,
+        tm.member_role,
+        tm.created_at AS joined_at
+      FROM m_team_members tm
+      JOIN m_login_users u ON tm.login_user_id = u.login_user_id
+      WHERE tm.team_id = ? AND tm.is_active = 1
+      ORDER BY tm.member_role DESC, tm.created_at ASC
+    `, [teamId]),
+
+    db.execute(`
+      SELECT
+        id,
+        invited_email,
+        status,
+        expires_at
+      FROM t_team_invitations
+      WHERE team_id = ? AND status = 'pending'
+      ORDER BY created_at DESC
+    `, [teamId])
+  ]);
+
+  return {
+    managers: managersResult.rows.map(row => ({
+      login_user_id: Number(row.login_user_id),
+      display_name: String(row.display_name),
+      email: String(row.email),
+      member_role: String(row.member_role) as 'primary' | 'secondary',
+      joined_at: String(row.joined_at),
+    })),
+    invitations: invitationsResult.rows.map(row => ({
+      id: Number(row.id),
+      invited_email: String(row.invited_email),
+      status: String(row.status),
+      expires_at: String(row.expires_at),
+    })),
+  };
+}
+
 export interface GroupedTournamentData {
   grouped: Record<string, {
     group: {
@@ -114,6 +200,7 @@ const TOURNAMENT_SELECT_FIELDS = `
   t.public_start_date,
   t.recruitment_start_date,
   t.recruitment_end_date,
+  t.sport_type_id,
   t.is_archived,
   t.archive_ui_version,
   t.created_by,
@@ -361,6 +448,7 @@ export async function fetchDashboardData(sessionId: string, isAdmin: boolean): P
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
+      sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : undefined,
       created_by: row.created_by as string,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),

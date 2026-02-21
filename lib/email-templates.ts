@@ -496,11 +496,8 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
             <h1>🏆 楽勝 GO</h1>
             <p>辞退申請受付確認</p>
         </div>
-        
+
         <div class="content">
-            <p>{{contactPerson}} 様</p>
-            <p>いつもお世話になっております。</p>
-            
             <div class="highlight">
                 <h2>辞退申請を受け付けました</h2>
                 <p><strong>チーム名:</strong> {{teamName}}</p>
@@ -540,11 +537,6 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 
     textBody: `
 【{{tournamentName}}】辞退申請受付確認
-
-{{contactPerson}} 様
-
-いつもお世話になっております。
-楽勝 GO 運営事務局です。
 
 ■ 辞退申請を受け付けました
 チーム名: {{teamName}}

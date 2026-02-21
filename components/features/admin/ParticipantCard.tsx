@@ -7,9 +7,8 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Users, Mail, Phone, Calendar, Info } from 'lucide-react';
+import { AlertTriangle, Phone, Calendar, Info } from 'lucide-react';
 import ParticipantStatusBadge from './ParticipantStatusBadge';
-import { Badge } from '@/components/ui/badge';
 import type { ParticipantTeam, ActionType } from './ParticipantActionsModal';
 
 interface ParticipantCardProps {
@@ -32,19 +31,6 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
     return 'border-2 border-green-200 bg-green-50/20';
   };
 
-  // 影響度バッジの取得
-  const getImpactBadge = () => {
-    if (!team.withdrawal_impact) return null;
-
-    const variants = {
-      high: { variant: 'destructive' as const, label: '影響度: 高' },
-      medium: { variant: 'default' as const, label: '影響度: 中' },
-      low: { variant: 'secondary' as const, label: '影響度: 低' }
-    };
-
-    const config = variants[team.withdrawal_impact];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
 
   // 日時フォーマット
   const formatDate = (dateStr: string | null) => {
@@ -84,55 +70,51 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* 基本情報 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span>選手数: {team.player_count || 0}名</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="truncate">{team.contact_email}</span>
-          </div>
-          {team.contact_phone && (
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{team.contact_phone}</span>
+        {/* 担当者情報 */}
+        <div className="space-y-2">
+          {team.team_members && team.team_members.length > 0 ? (
+            team.team_members.map((member, index) => (
+              <div key={index} className="flex items-start gap-2 text-base">
+                <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-medium">担当者{index + 1}: {member.name}</span>
+                  <span className="ml-3">メールアドレス: {member.email}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center gap-2 text-base text-muted-foreground">
+              <Info className="h-5 w-5" />
+              <span>担当者未登録</span>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-muted-foreground" />
-            <span>{team.contact_person}</span>
-          </div>
+          {team.contact_phone && (
+            <div className="flex items-center gap-2 text-base">
+              <Phone className="h-5 w-5 text-muted-foreground" />
+              <span>電話番号: {team.contact_phone}</span>
+            </div>
+          )}
         </div>
 
         {/* 辞退申請情報 */}
         {team.withdrawal_status === 'withdrawal_requested' && (
           <Alert variant="destructive" className="bg-red-50">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="h-5 w-5" />
             <AlertDescription>
               <div className="space-y-2">
-                <div className="font-semibold">辞退申請中</div>
+                <div className="font-semibold text-base">辞退申請中</div>
                 {team.withdrawal_reason && (
-                  <div className="text-sm">
-                    <div className="font-medium mb-1">辞退理由:</div>
-                    <p className="whitespace-pre-wrap">{team.withdrawal_reason}</p>
+                  <div className="text-base">
+                    <span className="font-medium">辞退理由: </span>
+                    <span>{team.withdrawal_reason}</span>
                   </div>
                 )}
                 {team.withdrawal_requested_at && (
-                  <div className="text-xs flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
+                  <div className="text-sm flex items-center gap-1 text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
                     申請日時: {formatDate(team.withdrawal_requested_at)}
                   </div>
                 )}
-                <div className="flex items-center gap-2 mt-2">
-                  {getImpactBadge()}
-                  {team.scheduled_matches !== undefined && team.completed_matches !== undefined && (
-                    <span className="text-xs">
-                      完了試合 {team.completed_matches}/{team.scheduled_matches}
-                    </span>
-                  )}
-                </div>
               </div>
             </AlertDescription>
           </Alert>
@@ -219,8 +201,8 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
 
         {/* 処理済み辞退情報 */}
         {(team.withdrawal_status === 'withdrawal_approved' || team.withdrawal_status === 'withdrawal_rejected') && (
-          <div className="text-xs text-muted-foreground pt-2 border-t">
-            <div>
+          <div className="text-base text-muted-foreground pt-2 border-t space-y-1">
+            <div className="font-semibold">
               {team.withdrawal_status === 'withdrawal_approved' ? '✓ 辞退承認済み' : '✕ 辞退却下済み'}
             </div>
             {team.withdrawal_processed_at && (

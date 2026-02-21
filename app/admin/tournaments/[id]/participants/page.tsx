@@ -4,11 +4,10 @@
 import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { db } from '@/lib/db';
 import ParticipantManagement from '@/components/features/admin/ParticipantManagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users, Mail } from 'lucide-react';
+import { Users, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -30,26 +29,6 @@ export default async function ParticipantsPage({ params }: PageProps) {
     redirect('/admin/tournaments');
   }
 
-  // 大会情報取得
-  const tournamentResult = await db.execute(`
-    SELECT
-      t.tournament_id,
-      t.tournament_name,
-      t.status,
-      f.format_name,
-      v.venue_name
-    FROM t_tournaments t
-    LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-    LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-    WHERE t.tournament_id = ?
-  `, [tournamentId]);
-
-  if (tournamentResult.rows.length === 0) {
-    redirect('/admin/tournaments');
-  }
-
-  const tournament = tournamentResult.rows[0];
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="space-y-6">
@@ -60,18 +39,6 @@ export default async function ParticipantsPage({ params }: PageProps) {
               <Users className="h-8 w-8 text-blue-500" />
               参加チーム管理
             </h1>
-            <p className="text-muted-foreground mt-2">
-              {String(tournament.tournament_name)}
-            </p>
-            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-              <span>{String(tournament.format_name)}</span>
-              {tournament.venue_name && (
-                <>
-                  <span>•</span>
-                  <span>{String(tournament.venue_name)}</span>
-                </>
-              )}
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline">
@@ -86,8 +53,7 @@ export default async function ParticipantsPage({ params }: PageProps) {
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/admin" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
+              <Link href="/my?tab=admin">
                 ダッシュボードに戻る
               </Link>
             </Button>

@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import SignOutButton from "@/components/features/auth/SignOutButton";
 import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
-import { fetchDashboardData, fetchTeamData, TournamentDashboardData, TeamDashboardItem } from "@/lib/dashboard-data";
+import PlanBadge from "@/components/features/subscription/PlanBadge";
+import { fetchDashboardData, fetchTeamData, fetchTeamDetailData, TournamentDashboardData, TeamDashboardItem, TeamDetailData } from "@/lib/dashboard-data";
+import { db } from "@/lib/db";
 
 export default async function MyDashboardPage() {
   const session = await auth();
@@ -33,11 +35,40 @@ export default async function MyDashboardPage() {
     }
   }
 
+  // 競技種別マスタをサーバー側で取得（管理者タブでのアイコン表示遅延を回避）
+  let sportTypes: Array<{sport_type_id: number; sport_name: string; sport_code: string}> = [];
+  try {
+    const sportTypesResult = await db.execute('SELECT sport_type_id, sport_name, sport_code FROM m_sport_types ORDER BY sport_type_id');
+    sportTypes = sportTypesResult.rows.map(row => ({
+      sport_type_id: Number(row.sport_type_id),
+      sport_name: String(row.sport_name),
+      sport_code: String(row.sport_code),
+    }));
+  } catch (e) {
+    console.error("競技種別マスタ取得エラー:", e);
+    // エラー時は空配列のままクライアント側フォールバック
+  }
+
   // チームデータをサーバー側で取得（高速化）
   let initialTeamData: TeamDashboardItem[] | null = null;
+  const initialTeamDetailData: Record<string, TeamDetailData> = {};
+
   if (loginUserId > 0) {
     try {
       initialTeamData = await fetchTeamData(loginUserId);
+
+      // 各チームの担当者・招待データを並列取得（パフォーマンス改善）
+      if (initialTeamData && initialTeamData.length > 0) {
+        const detailPromises = initialTeamData.map(async (team) => {
+          const detail = await fetchTeamDetailData(loginUserId, team.team_id);
+          return { teamId: team.team_id, detail };
+        });
+
+        const details = await Promise.all(detailPromises);
+        details.forEach(({ teamId, detail }) => {
+          if (detail) initialTeamDetailData[teamId] = detail;
+        });
+      }
     } catch (e) {
       console.error("チームデータ取得エラー:", e);
       // エラー時は null のままクライアント側フォールバック
@@ -59,6 +90,13 @@ export default async function MyDashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {/* 管理者ロールがある場合のみプラン表示 */}
+              {(roles.includes("admin") || isSuperadmin) && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">プラン：</span>
+                  <PlanBadge apiUrl="/api/my/subscription/current" />
+                </div>
+              )}
               <Button variant="outline" asChild>
                 <Link href="/">TOPページ</Link>
               </Button>
@@ -74,8 +112,10 @@ export default async function MyDashboardPage() {
           roles={roles}
           isSuperadmin={isSuperadmin}
           teamIds={teamIds}
+          initialSportTypes={sportTypes}
           initialTournamentData={tournamentData}
           initialTeamData={initialTeamData}
+          initialTeamDetailData={initialTeamDetailData}
         />
       </div>
     </div>

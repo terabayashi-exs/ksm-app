@@ -12,15 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, Save, X, CheckCircle, AlertCircle, LogOut, Search } from "lucide-react";
 import Image from "next/image";
-import PlanBadge from "@/components/features/subscription/PlanBadge";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
-import { TournamentDashboardData, GroupedTournamentData, TeamDashboardItem } from "@/lib/dashboard-data";
+import { TournamentDashboardData, GroupedTournamentData, TeamDashboardItem, TeamDetailData, TeamManager, TeamInvitation } from "@/lib/dashboard-data";
 import { Tournament } from "@/lib/types";
 import { getStatusLabel } from "@/lib/tournament-status";
 import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from "@/lib/format-change";
 import { FormatChangeDialog } from "@/components/features/tournament/FormatChangeDialog";
 import { FormatSelectionModal } from "@/components/features/tournament/FormatSelectionModal";
+import WithdrawalModal from "@/components/features/my/WithdrawalModal";
 
 type Role = "admin" | "operator" | "team";
 
@@ -30,12 +30,20 @@ interface Tab {
   icon: React.ReactNode;
 }
 
+interface SportType {
+  sport_type_id: number;
+  sport_name: string;
+  sport_code: string;
+}
+
 interface MyDashboardTabsProps {
   roles: Role[];
   isSuperadmin: boolean;
   teamIds: string[];
   initialTournamentData?: TournamentDashboardData | null;
   initialTeamData?: TeamDashboardItem[] | null;
+  initialTeamDetailData?: Record<string, TeamDetailData>;
+  initialSportTypes?: SportType[];
 }
 
 export default function MyDashboardTabs(props: MyDashboardTabsProps) {
@@ -46,7 +54,7 @@ export default function MyDashboardTabs(props: MyDashboardTabsProps) {
   );
 }
 
-function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentData, initialTeamData }: MyDashboardTabsProps) {
+function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentData, initialTeamData, initialTeamDetailData, initialSportTypes }: MyDashboardTabsProps) {
   const searchParams = useSearchParams();
 
   // 表示するタブを決定
@@ -96,26 +104,20 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentD
 
       {/* タブコンテンツ */}
       <div className="py-8">
-        {activeTab === "admin" && <AdminTabContent isSuperadmin={isSuperadmin} initialTournamentData={initialTournamentData} />}
+        {activeTab === "admin" && <AdminTabContent isSuperadmin={isSuperadmin} initialTournamentData={initialTournamentData} initialSportTypes={initialSportTypes} />}
         {activeTab === "operator" && <OperatorTabContent />}
-        {activeTab === "team" && <TeamTabContent teamIds={teamIds} initialTeamData={initialTeamData} />}
+        {activeTab === "team" && <TeamTabContent teamIds={teamIds} initialTeamData={initialTeamData} initialTeamDetailData={initialTeamDetailData} />}
       </div>
     </div>
   );
 }
 
 // ─── 管理者タブ ────────────────────────────────────────────────────────────────
-function AdminTabContent({ isSuperadmin, initialTournamentData }: { isSuperadmin: boolean; initialTournamentData?: TournamentDashboardData | null }) {
+function AdminTabContent({ isSuperadmin, initialTournamentData, initialSportTypes }: { isSuperadmin: boolean; initialTournamentData?: TournamentDashboardData | null; initialSportTypes?: SportType[] }) {
   const [hasIncompleteGroups, setHasIncompleteGroups] = useState<boolean | null>(null);
 
   return (
     <div className="space-y-8">
-      {/* プラン情報 */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">現在のプラン：</span>
-        <PlanBadge apiUrl="/api/my/subscription/current" />
-      </div>
-
       {/* システム管理者メニュー（スーパーユーザーのみ） */}
       {isSuperadmin && (
         <div>
@@ -237,7 +239,7 @@ function AdminTabContent({ isSuperadmin, initialTournamentData }: { isSuperadmin
           <h2 className="text-xl font-bold text-foreground">大会状況</h2>
         </div>
         {initialTournamentData ? (
-          <TournamentStatusList data={initialTournamentData} />
+          <TournamentStatusList data={initialTournamentData} initialSportTypes={initialSportTypes} />
         ) : (
           <TournamentDashboardList />
         )}
@@ -247,7 +249,7 @@ function AdminTabContent({ isSuperadmin, initialTournamentData }: { isSuperadmin
 }
 
 // ─── 大会状況リスト（サーバーデータを使った表示専用コンポーネント） ────────────
-function TournamentStatusList({ data }: { data: TournamentDashboardData }) {
+function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDashboardData; initialSportTypes?: SportType[] }) {
   const router = useRouter();
   const { data: session } = useSession();
   const isAdminUser = session?.user?.id === 'admin';
@@ -265,6 +267,32 @@ function TournamentStatusList({ data }: { data: TournamentDashboardData }) {
   const [availableFormats, setAvailableFormats] = useState<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number }>>([]);
   const [selectedNewFormatId, setSelectedNewFormatId] = useState<number | null>(null);
   const [selectedNewFormatName, setSelectedNewFormatName] = useState<string>('');
+
+  // 競技種別マスタ（初期値はサーバーから渡されたデータ、フォールバック用にfetchも残す）
+  const [sportTypes, setSportTypes] = useState<SportType[]>(initialSportTypes || []);
+
+  // 初期データがない場合のみクライアント側でfetch
+  useEffect(() => {
+    if (!initialSportTypes || initialSportTypes.length === 0) {
+      fetch('/api/sport-types')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) setSportTypes(data.data);
+        })
+        .catch(err => console.error('Failed to fetch sport types:', err));
+    }
+  }, [initialSportTypes]);
+
+  // 競技種別アイコン取得
+  const getSportIcon = (sportCode: string) => {
+    switch (sportCode) {
+      case 'soccer': return '⚽';
+      case 'baseball': return '⚾';
+      case 'basketball': return '🏀';
+      case 'pk': return '🥅';
+      default: return '⚽';
+    }
+  };
 
   // フォーマット一覧は初回レンダー時に取得
   const [formatsLoaded, setFormatsLoaded] = useState(false);
@@ -407,7 +435,12 @@ function TournamentStatusList({ data }: { data: TournamentDashboardData }) {
     }
   };
 
-  const TournamentCard = ({ tournament }: { tournament: Tournament }) => (
+  const TournamentCard = ({ tournament }: { tournament: Tournament }) => {
+    // 競技種別アイコンを取得
+    const sportType = sportTypes.find(s => s.sport_type_id === tournament.sport_type_id);
+    const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
+
+    return (
     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
       {tournament.logo_blob_url && (
         <div className="absolute top-0 right-0 w-20 h-20 opacity-10 overflow-hidden">
@@ -423,7 +456,10 @@ function TournamentStatusList({ data }: { data: TournamentDashboardData }) {
       <div className="p-4 relative">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{tournament.tournament_name}</h4>
+            <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              {sportIcon && <span className="text-xl">{sportIcon}</span>}
+              {tournament.tournament_name}
+            </h4>
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-1">
               <Trophy className="w-4 h-4 mr-1" />
               <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
@@ -729,7 +765,8 @@ function TournamentStatusList({ data }: { data: TournamentDashboardData }) {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   const renderGroupedSection = (groupedData: GroupedTournamentData) => {
     const groups = Object.values(groupedData.grouped);
@@ -916,18 +953,6 @@ interface TeamInfo {
   player_count: number;
   manager_count: number;
 }
-interface TeamManager {
-  login_user_id: number;
-  display_name: string;
-  email: string;
-  member_role: string;
-}
-interface TeamInvitation {
-  id: number;
-  invited_email: string;
-  status: string;
-  expires_at: string;
-}
 interface TeamPlayer {
   player_id: number;
   player_name: string;
@@ -947,6 +972,8 @@ interface JoinedTournament {
   tournament_team_name: string;
   participation_status: string;
   assigned_block: string | null;
+  withdrawal_status: string;
+  withdrawal_requested_at: string | null;
 }
 interface AvailableTournament {
   tournament_id: number;
@@ -958,16 +985,27 @@ interface AvailableTournament {
   tournament_group_id: number | null;
   group_name: string | null;
   group_order: number | null;
+  sport_type_id: number | null;
 }
-type TeamPanelTab = 'managers' | 'players' | 'tournaments';
+type TeamPanelTab = 'managers' | 'players' | 'search' | 'joined';
 
 // ── チームカード展開パネル ──────────────────────────────
-function TeamExpandedPanel({ team, onDataChange }: {
+function TeamExpandedPanel({ team, onDataChange, initialDetailData }: {
   team: TeamInfo;
   onDataChange: () => void;
+  initialDetailData?: TeamDetailData;
 }) {
+  const searchParams = useSearchParams();
   const teamId = team.team_id;
-  const [activeTab, setActiveTab] = useState<TeamPanelTab>('managers');
+
+  // URLパラメータからタブを取得（参加登録後のリダイレクト用）
+  const teamTabFromUrl = searchParams.get('teamTab') as TeamPanelTab | null;
+
+  const [activeTab, setActiveTab] = useState<TeamPanelTab>(
+    teamTabFromUrl && ['managers', 'players', 'search', 'joined'].includes(teamTabFromUrl)
+      ? teamTabFromUrl
+      : 'managers'
+  );
   const [panelMsg, setPanelMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // 担当者・招待
@@ -999,7 +1037,23 @@ function TeamExpandedPanel({ team, onDataChange }: {
   const [prefectures, setPrefectures] = useState<Array<{prefecture_id: number; prefecture_name: string}>>([]);
   const [sportTypes, setSportTypes] = useState<Array<{sport_type_id: number; sport_name: string; sport_code: string}>>([]);
 
+  // 辞退モーダル関連
+  const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<{
+    tournamentTeamId: number;
+    tournamentTeamName: string;
+    tournamentName: string;
+  } | null>(null);
+
   const fetchManagers = useCallback(async () => {
+    // サーバー側で取得した初期データがあれば使用（高速化）
+    if (initialDetailData && managers.length === 0) {
+      setManagers(initialDetailData.managers);
+      setInvitations(initialDetailData.invitations);
+      setManagersLoading(false);
+      return;
+    }
+
     setManagersLoading(true);
     try {
       const [mRes, iRes] = await Promise.all([
@@ -1014,7 +1068,7 @@ function TeamExpandedPanel({ team, onDataChange }: {
     } finally {
       setManagersLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, initialDetailData, managers.length]);
 
   const fetchPlayers = useCallback(async () => {
     setPlayersLoading(true);
@@ -1061,9 +1115,34 @@ function TeamExpandedPanel({ team, onDataChange }: {
     fetchTournaments('', '', '');
   }, [fetchTournaments]);
 
-  useEffect(() => { fetchManagers(); }, [fetchManagers]);
-  useEffect(() => { if (activeTab === 'players') fetchPlayers(); }, [activeTab, fetchPlayers]);
-  useEffect(() => { if (activeTab === 'tournaments') fetchTournaments(); }, [activeTab, fetchTournaments]);
+  // 大会参加辞退（モーダルを開く）
+  const handleWithdrawal = (tournamentTeamId: number, teamName: string, tournamentName: string) => {
+    setSelectedWithdrawal({
+      tournamentTeamId,
+      tournamentTeamName: teamName,
+      tournamentName,
+    });
+    setWithdrawalModalOpen(true);
+  };
+
+  // 辞退申請成功時のコールバック
+  const handleWithdrawalSuccess = () => {
+    setPanelMsg({ type: 'success', text: '辞退申請を受け付けました。管理者の承認をお待ちください。' });
+    // 大会一覧を再取得
+    fetchTournaments();
+    // モーダルを閉じる
+    setWithdrawalModalOpen(false);
+    setSelectedWithdrawal(null);
+  };
+
+  // 初回マウント時に全データを並列フェッチ（パフォーマンス改善）
+  useEffect(() => {
+    Promise.all([
+      fetchManagers(),
+      fetchPlayers(),
+      fetchTournaments()
+    ]);
+  }, [fetchManagers, fetchPlayers, fetchTournaments]);
 
   // 都道府県マスタ取得
   useEffect(() => {
@@ -1209,19 +1288,11 @@ function TeamExpandedPanel({ team, onDataChange }: {
   const panelTabs: { key: TeamPanelTab; label: string; icon: React.ReactNode }[] = [
     { key: 'managers', label: '担当者', icon: <UserCog className="w-4 h-4" /> },
     { key: 'players', label: '選手', icon: <Users className="w-4 h-4" /> },
-    { key: 'tournaments', label: '大会参加', icon: <Trophy className="w-4 h-4" /> },
+    { key: 'search', label: '大会を探す', icon: <Search className="w-4 h-4" /> },
+    { key: 'joined', label: '申込済の大会', icon: <Trophy className="w-4 h-4" /> },
   ];
 
   const canInvite = team.manager_count < 2 && invitations.length === 0;
-
-  const statusLabel = (status: string) => {
-    switch (status) {
-      case 'confirmed': return { label: '参加確定', cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' };
-      case 'waitlisted': return { label: 'キャンセル待ち', cls: 'bg-amber-100 text-amber-800' };
-      case 'cancelled': return { label: 'キャンセル', cls: 'bg-gray-100 text-gray-600' };
-      default: return { label: status, cls: 'bg-gray-100 text-gray-600' };
-    }
-  };
 
   return (
     <div className="border-t border-border">
@@ -1411,8 +1482,8 @@ function TeamExpandedPanel({ team, onDataChange }: {
           )
         )}
 
-        {/* 大会参加タブ */}
-        {activeTab === 'tournaments' && (
+        {/* 大会を探すタブ */}
+        {activeTab === 'search' && (
           tournamentsLoading ? <div className="text-center py-4"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto" /></div> : (
             <div className="space-y-4">
               {/* 検索UI */}
@@ -1435,7 +1506,7 @@ function TeamExpandedPanel({ team, onDataChange }: {
 
                 {/* 検索条件エリア（折り畳み） */}
                 {searchExpanded && (
-                  <div className="p-4 pt-0 space-y-4 border-t border-border">
+                  <div className="p-4 space-y-4 border-t border-border">
                     {/* フリーワード検索 */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">フリーワード検索</label>
@@ -1538,18 +1609,36 @@ function TeamExpandedPanel({ team, onDataChange }: {
                         grouped.get(key)!.tournaments.push(t);
                       });
 
-                      return Array.from(grouped.entries()).map(([groupId, { group_name, tournaments }]) => (
+                      return Array.from(grouped.entries()).map(([groupId, { group_name, tournaments }]) => {
+                        // グループ内の最初の大会の競技種別アイコンを使用
+                        const sportTypeId = tournaments[0]?.sport_type_id;
+                        const sportType = sportTypes.find(s => s.sport_type_id === sportTypeId);
+                        const sportIcon = sportType ? getSportIcon(sportType.sport_code) : '🏆';
+                        return (
                         <div key={groupId ?? 'no-group'} className="border border-border rounded-lg p-5">
                           <div className="text-lg font-semibold mb-3 flex items-center gap-2">
-                            <Trophy className="w-6 h-6 text-blue-600" />
+                            <span className="text-2xl">{sportIcon}</span>
                             {group_name || '大会'}
                           </div>
                           <div className="space-y-3">
-                            {tournaments.map(t => (
+                            {tournaments.map(t => {
+                              // この部門に申込済みかチェック
+                              const joinedTeams = joined.filter(j => j.tournament_id === t.tournament_id);
+                              const isJoined = joinedTeams.length > 0;
+                              const joinedCount = joinedTeams.length;
+
+                              return (
                               <div key={t.tournament_id} className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-base font-semibold truncate">{t.tournament_name}</div>
-                                  <div className="text-sm text-muted-foreground mt-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="text-base font-semibold truncate">{t.tournament_name}</div>
+                                    {isJoined && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
+                                        ✓ 申込済 {joinedCount > 1 ? `${joinedCount}チーム` : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
                                     {t.event_start_date && t.event_end_date && (
                                       <>
                                         {t.event_start_date === t.event_end_date
@@ -1566,54 +1655,228 @@ function TeamExpandedPanel({ team, onDataChange }: {
                                     )}
                                   </div>
                                 </div>
-                                <Button asChild size="default" className="bg-green-600 hover:bg-green-700 text-white flex-shrink-0 ml-3">
-                                  <Link href={`/tournaments/${t.tournament_id}/join`}>申込</Link>
-                                </Button>
+                                {isJoined ? (
+                                  <Button asChild size="default" variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-300 dark:hover:bg-blue-950/30 flex-shrink-0 ml-3">
+                                    <Link href={`/my/tournaments/${t.tournament_id}/apply?mode=new`}>追加で申込</Link>
+                                  </Button>
+                                ) : (
+                                  <Button asChild size="default" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950/30 flex-shrink-0 ml-3">
+                                    <Link href={`/my/tournaments/${t.tournament_id}/apply`}>申込</Link>
+                                  </Button>
+                                )}
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
-                      ));
+                        );
+                      });
                     })()}
                   </div>
                 )}
               </div>
-              {/* 参加済み */}
-              {joined.length > 0 && (
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-3">参加済み・申込済み</div>
-                  <div className="space-y-2">
-                    {joined.map(t => {
-                      const { label, cls } = statusLabel(t.participation_status);
+            </div>
+          )
+        )}
+
+        {/* 申込済の大会タブ */}
+        {activeTab === 'joined' && (
+          tournamentsLoading ? <div className="text-center py-4"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto" /></div> : (
+            <div className="space-y-4">
+              {joined.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-sm">参加申込済みの大会はありません</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(() => {
+                    // 大会グループごとにグループ化
+                    const grouped = new Map<number | null, { group_name: string | null; tournaments: typeof joined }>();
+                    joined.forEach(t => {
+                      // t.tournament_idから大会グループを特定する必要があるため、availableデータから取得
+                      const availableTournament = available.find(a => a.tournament_id === t.tournament_id);
+                      const key = availableTournament?.tournament_group_id ?? null;
+                      const groupName = availableTournament?.group_name ?? null;
+
+                      if (!grouped.has(key)) {
+                        grouped.set(key, { group_name: groupName, tournaments: [] });
+                      }
+                      grouped.get(key)!.tournaments.push(t);
+                    });
+
+                    return Array.from(grouped.entries()).map(([groupId, { group_name, tournaments }]) => {
+                      // グループ内の最初の大会の競技種別アイコンを使用
+                      const firstTournament = tournaments[0];
+                      const availableTournament = available.find(a => a.tournament_id === firstTournament?.tournament_id);
+                      const sportTypeId = availableTournament?.sport_type_id;
+                      const sportType = sportTypes.find(s => s.sport_type_id === sportTypeId);
+                      const sportIcon = sportType ? getSportIcon(sportType.sport_code) : '🏆';
+
+                      // 部門（tournament_id）ごとにグループ化
+                      const tournamentGroups = new Map<number, typeof joined>();
+                      tournaments.forEach(t => {
+                        if (!tournamentGroups.has(t.tournament_id)) {
+                          tournamentGroups.set(t.tournament_id, []);
+                        }
+                        tournamentGroups.get(t.tournament_id)!.push(t);
+                      });
+
                       return (
-                        <div key={t.tournament_team_id} className="p-3 bg-muted/40 rounded-lg">
-                          <div className="text-sm font-medium">{t.tournament_name}</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label}</span>
-                            {t.assigned_block && <span className="text-xs text-muted-foreground">ブロック: {t.assigned_block}</span>}
+                        <div key={groupId ?? 'no-group'} className="border border-border rounded-lg p-5">
+                          <div className="text-lg font-semibold mb-3 flex items-center gap-2">
+                            <span className="text-2xl">{sportIcon}</span>
+                            {group_name || '大会'}
                           </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{t.tournament_team_name}</div>
+                          <div className="space-y-4">
+                            {Array.from(tournamentGroups.entries()).map(([tournamentId, teams]) => {
+                              const firstTeam = teams[0];
+                              const availableTournament = available.find(a => a.tournament_id === tournamentId);
+
+                              return (
+                                <div key={tournamentId} className="border border-border rounded-lg overflow-hidden bg-gradient-to-br from-background to-muted/10">
+                                  {/* 部門ヘッダー */}
+                                  <div className="px-5 py-4">
+                                    <div className="flex items-center justify-between gap-3 mb-4">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-lg font-bold truncate text-foreground">{firstTeam.tournament_name}</div>
+                                        <div className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
+                                          {availableTournament?.event_start_date && availableTournament?.event_end_date && (
+                                            <div className="flex items-center gap-1.5">
+                                              <CalendarDays className="w-3.5 h-3.5" />
+                                              <span>
+                                                {availableTournament.event_start_date === availableTournament.event_end_date
+                                                  ? availableTournament.event_start_date
+                                                  : `${availableTournament.event_start_date} 〜 ${availableTournament.event_end_date}`
+                                                }
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="flex-shrink-0"
+                                        onClick={() => window.open(`/public/tournaments/${tournamentId}`, '_blank', 'noopener,noreferrer')}
+                                      >
+                                        公開画面を見る
+                                      </Button>
+                                    </div>
+
+                                    {/* 参加チーム一覧 */}
+                                    <div className="space-y-1">
+                                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <Users className="w-3.5 h-3.5" />
+                                        参加チーム {teams.length > 1 && `(${teams.length})`}
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        {teams.map(t => {
+                                          const isWithdrawalRequested = t.withdrawal_status === 'withdrawal_requested';
+                                          const isWithdrawalApproved = t.withdrawal_status === 'withdrawal_approved';
+                                          const isWithdrawalRejected = t.withdrawal_status === 'withdrawal_rejected';
+
+                                          return (
+                                            <div key={t.tournament_team_id} className="pl-5 py-2 rounded-md hover:bg-muted/30 transition-colors group">
+                                              <div className="flex items-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                                  isWithdrawalApproved ? 'bg-gray-400' :
+                                                  isWithdrawalRequested ? 'bg-yellow-500' :
+                                                  isWithdrawalRejected ? 'bg-red-500' :
+                                                  'bg-green-500'
+                                                }`} />
+                                                <div className="font-medium text-base text-foreground flex-1 truncate">
+                                                  {t.tournament_team_name}
+                                                </div>
+                                                {t.assigned_block && (
+                                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
+                                                    ブロック {t.assigned_block}
+                                                  </span>
+                                                )}
+                                                {isWithdrawalRejected && (
+                                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0">
+                                                    辞退却下
+                                                  </span>
+                                                )}
+                                                {!isWithdrawalApproved && (
+                                                  <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30 flex-shrink-0"
+                                                    asChild
+                                                  >
+                                                    <Link href={`/my/tournaments/${t.tournament_id}/apply?team=${teamId}&tournament_team_id=${t.tournament_team_id}`}>
+                                                      <Pencil className="w-3.5 h-3.5 mr-1" />
+                                                      チーム情報を編集
+                                                    </Link>
+                                                  </Button>
+                                                )}
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 flex-shrink-0"
+                                                  disabled={isWithdrawalRequested || isWithdrawalApproved}
+                                                  onClick={() => !isWithdrawalRequested && !isWithdrawalApproved && handleWithdrawal(t.tournament_team_id, t.tournament_team_name, t.tournament_name)}
+                                                >
+                                                  {isWithdrawalApproved ? '辞退承認済み' : isWithdrawalRequested ? '辞退申請中' : '参加を辞退する'}
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
-                    })}
-                  </div>
+                    });
+                  })()}
                 </div>
               )}
             </div>
           )
         )}
       </div>
+
+      {/* 辞退申請モーダル */}
+      {selectedWithdrawal && (
+        <WithdrawalModal
+          isOpen={withdrawalModalOpen}
+          onClose={() => {
+            setWithdrawalModalOpen(false);
+            setSelectedWithdrawal(null);
+          }}
+          onSuccess={handleWithdrawalSuccess}
+          tournamentTeamId={selectedWithdrawal.tournamentTeamId}
+          tournamentTeamName={selectedWithdrawal.tournamentTeamName}
+          tournamentName={selectedWithdrawal.tournamentName}
+          teamId={teamId}
+        />
+      )}
     </div>
   );
 }
 
 // ── チームタブコンテンツ ──────────────────────────────
-function TeamTabContent({ teamIds: _teamIds, initialTeamData }: { teamIds: string[]; initialTeamData?: TeamDashboardItem[] | null }) {
+function TeamTabContent({ teamIds: _teamIds, initialTeamData, initialTeamDetailData }: {
+  teamIds: string[];
+  initialTeamData?: TeamDashboardItem[] | null;
+  initialTeamDetailData?: Record<string, TeamDetailData>;
+}) {
+  const searchParams = useSearchParams();
   const [teams, setTeams] = useState<TeamInfo[]>((initialTeamData ?? []) as TeamInfo[]);
   const [loading, setLoading] = useState(!initialTeamData);
+
+  // URLパラメータからチームIDを取得（参加登録後のリダイレクト用）
+  const teamIdFromUrl = searchParams.get('teamId');
+
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(
-    // initialTeamData が1件のみなら自動展開
-    initialTeamData?.length === 1 ? initialTeamData[0].team_id : null
+    // URLパラメータでチーム指定があればそれを展開、なければ1件のみなら自動展開
+    teamIdFromUrl || (initialTeamData?.length === 1 ? initialTeamData[0].team_id : null)
   );
 
   const fetchTeams = useCallback(async () => {
@@ -1719,7 +1982,11 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: { teamIds: strin
 
             {/* 展開パネル */}
             {isExpanded && (
-              <TeamExpandedPanel team={team} onDataChange={fetchTeams} />
+              <TeamExpandedPanel
+                team={team}
+                onDataChange={fetchTeams}
+                initialDetailData={initialTeamDetailData?.[team.team_id]}
+              />
             )}
           </Card>
         );

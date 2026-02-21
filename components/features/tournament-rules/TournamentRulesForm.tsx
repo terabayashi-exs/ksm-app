@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ interface WalkoverSettings {
 }
 
 export default function TournamentRulesForm({ tournamentId }: TournamentRulesFormProps) {
+  const router = useRouter();
   const [tournament, setTournament] = useState<TournamentInfo | null>(null);
   const [sportConfig, setSportConfig] = useState<SportRuleConfig | null>(null);
   const [rules, setRules] = useState<{ preliminary: FormRule; final: FormRule }>({
@@ -414,8 +416,10 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             })
           });
         }
-        
+
         alert('大会ルール（順位決定ルールを含む）を更新しました');
+        // マイダッシュボード（管理者タブ）に遷移
+        router.push('/my?tab=admin');
       } else {
         alert(`更新に失敗しました: ${result.error}`);
       }
@@ -561,7 +565,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             <RotateCcw className="h-4 w-4 mr-2" />
             デフォルトに戻す
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button variant="outline" onClick={handleSave} disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
             {saving ? "保存中..." : "設定を保存"}
           </Button>
@@ -964,6 +968,18 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           </CardContent>
         </Card>
       )}
+
+      {/* 下部保存ボタン */}
+      <div className="flex justify-end space-x-2 mt-8 pt-6 border-t">
+        <Button variant="outline" onClick={restoreDefaults}>
+          <RotateCcw className="h-4 w-4 mr-2" />
+          デフォルトに戻す
+        </Button>
+        <Button variant="outline" onClick={handleSave} disabled={saving}>
+          <Save className="h-4 w-4 mr-2" />
+          {saving ? "保存中..." : "設定を保存"}
+        </Button>
+      </div>
     </div>
   );
 }

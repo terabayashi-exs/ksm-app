@@ -33,13 +33,18 @@ export interface ParticipantTeam {
   withdrawal_impact?: 'low' | 'medium' | 'high';
   scheduled_matches?: number;
   completed_matches?: number;
-  contact_email: string;
-  contact_person: string;
+  contact_email?: string;
+  contact_person?: string;
   contact_phone?: string | null;
   waitlist_position?: number;
   assigned_block?: string | null;
   block_position?: number | null;
   player_count?: number;
+  team_members?: Array<{
+    name: string;
+    email: string;
+    role: string;
+  }>;
 }
 
 export type ActionType = 'confirm' | 'waitlist' | 'cancel' | 'approve_withdrawal' | 'reject_withdrawal';
@@ -61,6 +66,15 @@ export default function ParticipantActionsModal({
 }: ParticipantActionsModalProps) {
   const [adminComment, setAdminComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // モーダルが開いた時にデフォルトコメントを設定
+  React.useEffect(() => {
+    if (open && action === 'approve_withdrawal') {
+      setAdminComment('辞退を承認しました。');
+    } else if (!open) {
+      setAdminComment('');
+    }
+  }, [open, action]);
 
   if (!team || !action) return null;
 
@@ -172,58 +186,39 @@ export default function ParticipantActionsModal({
             {config.icon}
             <DialogTitle>{config.title}</DialogTitle>
           </div>
-          <DialogDescription>{config.description}</DialogDescription>
+          <DialogDescription className="text-base">{config.description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* 辞退申請の場合、辞退理由と影響度を表示 */}
+          {/* 辞退申請の場合、辞退理由を表示 */}
           {(action === 'approve_withdrawal' || action === 'reject_withdrawal') && team.withdrawal_reason && (
-            <Alert variant={team.withdrawal_impact === 'high' ? 'destructive' : 'default'}>
+            <Alert variant="default">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <div className="font-semibold mb-2">辞退理由</div>
-                <p className="text-sm mb-2">{team.withdrawal_reason}</p>
-                {team.withdrawal_impact && (
-                  <div className="text-xs mt-2">
-                    <span className="font-semibold">影響度:</span>{' '}
-                    <span className={
-                      team.withdrawal_impact === 'high' ? 'text-red-600 font-bold' :
-                      team.withdrawal_impact === 'medium' ? 'text-amber-600 font-bold' :
-                      'text-green-600'
-                    }>
-                      {team.withdrawal_impact === 'high' ? '高' :
-                       team.withdrawal_impact === 'medium' ? '中' : '低'}
-                    </span>
-                    {team.scheduled_matches && team.completed_matches !== undefined && (
-                      <span className="ml-2">
-                        (完了試合: {team.completed_matches}/{team.scheduled_matches})
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="font-semibold mb-2 text-base">辞退理由</div>
+                <p className="text-base">{team.withdrawal_reason}</p>
               </AlertDescription>
             </Alert>
           )}
 
           {/* チーム情報 */}
-          <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
-            <div><span className="font-semibold">チーム名:</span> {team.tournament_team_name}</div>
-            <div><span className="font-semibold">連絡先:</span> {team.contact_person} ({team.contact_email})</div>
-            {team.waitlist_position && (
+          {team.waitlist_position && (
+            <div className="bg-muted p-4 rounded-lg space-y-2 text-base">
               <div><span className="font-semibold">キャンセル待ち順位:</span> {team.waitlist_position}位</div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* コメント入力 */}
           {config.showComment && (
-            <div className="space-y-2">
-              <Label htmlFor="admin-comment">{config.commentLabel}</Label>
+            <div className="space-y-6">
+              <Label htmlFor="admin-comment" className="text-base">{config.commentLabel}</Label>
               <Textarea
                 id="admin-comment"
                 placeholder={config.commentPlaceholder}
                 value={adminComment}
                 onChange={(e) => setAdminComment(e.target.value)}
                 rows={4}
+                className="text-base"
               />
             </div>
           )}

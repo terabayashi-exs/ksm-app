@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 // import { Textarea } from '@/components/ui/textarea';
-import { 
-  ArrowLeft, 
-  Users, 
-  Upload, 
-  UserPlus, 
-  Download, 
+import {
+  Users,
+  Upload,
+  UserPlus,
+  Download,
   AlertCircle,
   FileText,
   Key,
@@ -619,20 +618,17 @@ export default function TeamRegistrationPage() {
       <div className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin" className="flex items-center">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  ダッシュボードに戻る
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">チーム登録（管理者代行）</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  「{tournament.tournament_name}」のチーム登録を管理者が代行します
-                </p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">チーム登録（管理者代行）</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                「{tournament.tournament_name}」のチーム登録を管理者が代行します
+              </p>
             </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/my?tab=admin">
+                ダッシュボードに戻る
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -656,25 +652,29 @@ export default function TeamRegistrationPage() {
         </Card>
 
         {/* タブ切り替え */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg mb-6 w-fit">
-          <Button
-            variant={activeTab === 'manual' ? 'default' : 'ghost'}
-            size="sm"
+        <div className="flex space-x-2 mb-6 border-b border-border">
+          <button
             onClick={() => setActiveTab('manual')}
-            className="flex items-center"
+            className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors ${
+              activeTab === 'manual'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
           >
-            <UserPlus className="w-4 h-4 mr-2" />
+            <UserPlus className="w-4 h-4" />
             手動登録
-          </Button>
-          <Button
-            variant={activeTab === 'csv' ? 'default' : 'ghost'}
-            size="sm"
+          </button>
+          <button
             onClick={() => setActiveTab('csv')}
-            className="flex items-center"
+            className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors ${
+              activeTab === 'csv'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4" />
             CSV一括登録
-          </Button>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -837,7 +837,7 @@ export default function TeamRegistrationPage() {
                       <Button type="button" variant="outline" onClick={() => router.push('/admin')}>
                         キャンセル
                       </Button>
-                      <Button type="submit">
+                      <Button type="submit" variant="outline" className="border-2 border-green-600 text-green-600 hover:bg-green-50 hover:border-green-700">
                         チーム登録
                       </Button>
                     </div>

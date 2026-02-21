@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -33,11 +33,7 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
   const [subscriptionInfo, setSubscriptionInfo] = useState<CurrentSubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSubscriptionInfo();
-  }, []);
-
-  const fetchSubscriptionInfo = async () => {
+  const fetchSubscriptionInfo = useCallback(async () => {
     try {
       const res = await fetch(apiUrl);
       if (res.ok) {
@@ -49,7 +45,11 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiUrl]);
+
+  useEffect(() => {
+    fetchSubscriptionInfo();
+  }, [fetchSubscriptionInfo]);
 
   if (loading || !subscriptionInfo) {
     return null;
@@ -133,7 +133,7 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
       </div>
 
       {/* プラン変更ボタン */}
-      <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
+      <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
         プラン変更
       </Button>
     </div>
