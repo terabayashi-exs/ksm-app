@@ -15,31 +15,25 @@ export async function GET() {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    // 管理者IDを取得
-    const adminResult = await db.execute({
-      sql: 'SELECT administrator_id FROM m_administrators WHERE admin_login_id = ?',
-      args: [session.user.id]
-    });
-
-    if (adminResult.rows.length === 0) {
-      return NextResponse.json({ error: '管理者が見つかりません' }, { status: 404 });
+    const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    if (!adminLoginUserId) {
+      return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
 
-    const administratorId = adminResult.rows[0].administrator_id as string;
-
-    // 管理者配下の運営者を取得
+    // ログイン中の管理者が作成した運営者のみを取得
     const operatorsResult = await db.execute({
       sql: `SELECT
-              operator_id,
-              operator_login_id,
-              operator_name,
-              administrator_id,
-              is_active,
-              created_at,
-              updated_at
-            FROM m_operators
-            WHERE administrator_id = ?`,
-      args: [administratorId]
+              u.login_user_id,
+              u.email,
+              u.display_name,
+              u.is_active,
+              u.created_at,
+              u.updated_at
+            FROM m_login_users u
+            INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+            WHERE r.role = 'operator' AND u.created_by_login_user_id = ?
+            ORDER BY u.created_at DESC`,
+      args: [adminLoginUserId]
     });
 
     // アクセス可能な部門を取得
@@ -58,14 +52,13 @@ export async function GET() {
                 JOIN t_tournament_groups tg ON t.group_id = tg.group_id
                 WHERE ota.operator_id = ?
                 ORDER BY tg.group_name, t.category_name`,
-          args: [operator.operator_id]
+          args: [operator.login_user_id]
         });
 
         return {
-          operatorId: Number(operator.operator_id),
-          operatorLoginId: operator.operator_login_id,
-          operatorName: operator.operator_name,
-          administratorId: Number(operator.administrator_id),
+          operatorId: Number(operator.login_user_id),
+          operatorLoginId: operator.email,
+          operatorName: operator.display_name,
           isActive: operator.is_active === 1,
           createdAt: operator.created_at,
           updatedAt: operator.updated_at,
@@ -103,66 +96,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const body = await request.json();
-
-    // 管理者IDを取得
-    const adminResult = await db.execute({
-      sql: 'SELECT administrator_id FROM m_administrators WHERE admin_login_id = ?',
-      args: [session.user.id]
-    });
-
-    if (adminResult.rows.length === 0) {
-      return NextResponse.json({ error: '管理者が見つかりません' }, { status: 404 });
+    const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    if (!adminLoginUserId) {
+      return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
 
-    const administratorId = adminResult.rows[0].administrator_id as string;
+    const body = await request.json();
 
-    // ログインIDの重複チェック
+    // メールアドレス（ログインID）の重複チェック
     const duplicateCheck = await db.execute({
-      sql: 'SELECT operator_id FROM m_operators WHERE operator_login_id = ?',
+      sql: 'SELECT login_user_id FROM m_login_users WHERE email = ?',
       args: [body.operatorLoginId]
     });
 
     if (duplicateCheck.rows.length > 0) {
-      return NextResponse.json({ error: 'このログインIDは既に使用されています' }, { status: 400 });
+      return NextResponse.json({ error: 'このメールアドレスは既に使用されています' }, { status: 400 });
     }
 
     // パスワードをハッシュ化
     const passwordHash = await bcrypt.hash(body.password, 10);
 
-    // 運営者を登録
+    // m_login_users に登録（運営者はプラン契約者ではないため current_plan_id は NULL）
     const insertResult = await db.execute({
-      sql: `INSERT INTO m_operators (
-              operator_login_id,
+      sql: `INSERT INTO m_login_users (
+              email,
               password_hash,
-              operator_name,
-              administrator_id,
-              is_active
-            ) VALUES (?, ?, ?, ?, ?)`,
+              display_name,
+              is_superadmin,
+              is_active,
+              current_plan_id,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, ?, 0, 1, NULL, datetime('now', '+9 hours'), datetime('now', '+9 hours'))`,
       args: [
         body.operatorLoginId,
         passwordHash,
-        body.operatorName,
-        administratorId,
-        1
+        body.operatorName
       ]
     });
 
-    const operatorId = Number(insertResult.lastInsertRowid);
+    const loginUserId = Number(insertResult.lastInsertRowid);
+
+    // m_login_user_roles に operator ロールを付与
+    await db.execute({
+      sql: `INSERT INTO m_login_user_roles (login_user_id, role, created_at)
+            VALUES (?, 'operator', datetime('now', '+9 hours'))`,
+      args: [loginUserId]
+    });
 
     // 部門アクセス権を登録
     if (body.tournamentAccess && body.tournamentAccess.length > 0) {
       for (const access of body.tournamentAccess) {
         await db.execute({
-          sql: 'INSERT INTO t_operator_tournament_access (operator_id, tournament_id, permissions) VALUES (?, ?, ?)',
-          args: [operatorId, access.tournamentId, JSON.stringify(access.permissions)]
+          sql: 'INSERT INTO t_operator_tournament_access (operator_id, tournament_id, permissions, assigned_by_login_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, datetime(\'now\', \'+9 hours\'), datetime(\'now\', \'+9 hours\'))',
+          args: [loginUserId, access.tournamentId, JSON.stringify(access.permissions), adminLoginUserId]
         });
       }
     }
 
     return NextResponse.json({
       message: '運営者を登録しました',
-      operatorId
+      operatorId: loginUserId
     });
   } catch (error) {
     console.error('運営者登録エラー:', error);

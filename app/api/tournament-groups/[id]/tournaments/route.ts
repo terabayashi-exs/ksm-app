@@ -30,9 +30,9 @@ export async function GET(
               tg.group_name
             FROM t_tournaments t
             JOIN t_tournament_groups tg ON t.group_id = tg.group_id
-            WHERE t.group_id = ? AND tg.admin_login_id = ?
+            WHERE t.group_id = ? AND tg.login_user_id = ?
             ORDER BY t.category_name, t.tournament_name`,
-      args: [groupId, session.user.id]
+      args: [groupId, (session.user as { loginUserId: number }).loginUserId]
     });
 
     return NextResponse.json(result.rows);

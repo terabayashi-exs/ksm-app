@@ -29,7 +29,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canManageCourts', checked as boolean)
               }
             />
-            <Label htmlFor="canManageCourts" className="cursor-pointer">
+            <Label htmlFor="canManageCourts" className="cursor-pointer text-base">
               コート名設定
             </Label>
           </div>
@@ -42,7 +42,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canManageRules', checked as boolean)
               }
             />
-            <Label htmlFor="canManageRules" className="cursor-pointer">
+            <Label htmlFor="canManageRules" className="cursor-pointer text-base">
               ルール設定
             </Label>
           </div>
@@ -55,7 +55,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canRegisterTeams', checked as boolean)
               }
             />
-            <Label htmlFor="canRegisterTeams" className="cursor-pointer">
+            <Label htmlFor="canRegisterTeams" className="cursor-pointer text-base">
               チーム登録
             </Label>
           </div>
@@ -68,7 +68,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canCreateDraws', checked as boolean)
               }
             />
-            <Label htmlFor="canCreateDraws" className="cursor-pointer">
+            <Label htmlFor="canCreateDraws" className="cursor-pointer text-base">
               組合せ作成・編集
             </Label>
           </div>
@@ -81,7 +81,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canChangeFormat', checked as boolean)
               }
             />
-            <Label htmlFor="canChangeFormat" className="cursor-pointer">
+            <Label htmlFor="canChangeFormat" className="cursor-pointer text-base">
               フォーマット変更
             </Label>
           </div>
@@ -94,7 +94,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canManageParticipants', checked as boolean)
               }
             />
-            <Label htmlFor="canManageParticipants" className="cursor-pointer">
+            <Label htmlFor="canManageParticipants" className="cursor-pointer text-base">
               参加チーム管理
             </Label>
           </div>
@@ -107,7 +107,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canInputResults', checked as boolean)
               }
             />
-            <Label htmlFor="canInputResults" className="cursor-pointer">
+            <Label htmlFor="canInputResults" className="cursor-pointer text-base">
               試合結果入力（結果の登録）
             </Label>
           </div>
@@ -120,7 +120,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canConfirmResults', checked as boolean)
               }
             />
-            <Label htmlFor="canConfirmResults" className="cursor-pointer">
+            <Label htmlFor="canConfirmResults" className="cursor-pointer text-base">
               試合結果入力（結果の確定）
             </Label>
           </div>
@@ -133,7 +133,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canSetManualRankings', checked as boolean)
               }
             />
-            <Label htmlFor="canSetManualRankings" className="cursor-pointer">
+            <Label htmlFor="canSetManualRankings" className="cursor-pointer text-base">
               手動順位設定
             </Label>
           </div>
@@ -146,7 +146,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canChangePromotionRules', checked as boolean)
               }
             />
-            <Label htmlFor="canChangePromotionRules" className="cursor-pointer">
+            <Label htmlFor="canChangePromotionRules" className="cursor-pointer text-base">
               選出条件変更
             </Label>
           </div>
@@ -159,7 +159,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canManageFiles', checked as boolean)
               }
             />
-            <Label htmlFor="canManageFiles" className="cursor-pointer">
+            <Label htmlFor="canManageFiles" className="cursor-pointer text-base">
               ファイル管理
             </Label>
           </div>
@@ -172,8 +172,34 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
                 updatePermission('canManageSponsors', checked as boolean)
               }
             />
-            <Label htmlFor="canManageSponsors" className="cursor-pointer">
+            <Label htmlFor="canManageSponsors" className="cursor-pointer text-base">
               スポンサー管理
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="canPrintRefereeCards"
+              checked={permissions.canPrintRefereeCards}
+              onCheckedChange={(checked) =>
+                updatePermission('canPrintRefereeCards', checked as boolean)
+              }
+            />
+            <Label htmlFor="canPrintRefereeCards" className="cursor-pointer text-base">
+              審判カード印刷
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="canSendEmails"
+              checked={permissions.canSendEmails}
+              onCheckedChange={(checked) =>
+                updatePermission('canSendEmails', checked as boolean)
+              }
+            />
+            <Label htmlFor="canSendEmails" className="cursor-pointer text-base">
+              メール送信
             </Label>
           </div>
         </div>

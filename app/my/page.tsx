@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import SignOutButton from "@/components/features/auth/SignOutButton";
 import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
 import PlanBadge from "@/components/features/subscription/PlanBadge";
-import { fetchDashboardData, fetchTeamData, fetchTeamDetailData, TournamentDashboardData, TeamDashboardItem, TeamDetailData } from "@/lib/dashboard-data";
+import { fetchDashboardData, fetchOperatorDashboardData, fetchTeamData, fetchTeamDetailData, TournamentDashboardData, TeamDashboardItem, TeamDetailData } from "@/lib/dashboard-data";
 import { db } from "@/lib/db";
 
 export default async function MyDashboardPage() {
@@ -31,6 +31,17 @@ export default async function MyDashboardPage() {
       tournamentData = await fetchDashboardData(session.user.id, isGlobalAdmin);
     } catch (e) {
       console.error("大会データ取得エラー:", e);
+      // エラー時は null のままクライアント側フォールバック
+    }
+  }
+
+  // 運営者ロールを持つ場合、サーバー側で大会データを取得（高速化）
+  let operatorTournamentData: TournamentDashboardData | null = null;
+  if (roles.includes("operator") && loginUserId > 0) {
+    try {
+      operatorTournamentData = await fetchOperatorDashboardData(loginUserId);
+    } catch (e) {
+      console.error("運営者大会データ取得エラー:", e);
       // エラー時は null のままクライアント側フォールバック
     }
   }
@@ -114,6 +125,7 @@ export default async function MyDashboardPage() {
           teamIds={teamIds}
           initialSportTypes={sportTypes}
           initialTournamentData={tournamentData}
+          initialOperatorTournamentData={operatorTournamentData}
           initialTeamData={initialTeamData}
           initialTeamDetailData={initialTeamDetailData}
         />

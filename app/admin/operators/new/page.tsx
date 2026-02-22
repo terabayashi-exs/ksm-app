@@ -2,7 +2,9 @@ import { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions, ExtendedUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import OperatorForm from '@/components/admin/operators/operator-form';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import NewOperatorForm from '@/components/admin/operators/new-operator-form';
 
 export const metadata: Metadata = {
   title: '運営者を追加',
@@ -25,14 +27,21 @@ export default async function NewOperatorPage({
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">運営者を追加</h1>
-        <p className="text-muted-foreground">
-          新しい運営者を登録します。運営者はログインして担当する大会の運営業務を行うことができます。
-        </p>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">運営者を追加</h1>
+          <p className="text-muted-foreground">
+            メールアドレスを入力すると、既存アカウントの有無を自動判定します。既存ユーザーには即座に権限を付与し、新規ユーザーには招待メールを送信します。
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href={groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators'}>
+            運営者一覧に戻る
+          </Link>
+        </Button>
       </div>
 
-      <OperatorForm mode="create" groupId={groupId} />
+      <NewOperatorForm groupId={groupId} />
     </div>
   );
 }

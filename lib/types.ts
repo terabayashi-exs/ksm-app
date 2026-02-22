@@ -67,6 +67,23 @@ export interface Tournament {
   applied_count?: number;
   withdrawal_requested_count?: number;
   cancelled_count?: number;
+  // 運営者権限情報（運営者タブでのみ使用）
+  operator_permissions?: {
+    canManageCourts?: boolean;
+    canManageRules?: boolean;
+    canRegisterTeams?: boolean;
+    canCreateDraws?: boolean;
+    canChangeFormat?: boolean;
+    canManageParticipants?: boolean;
+    canInputResults?: boolean;
+    canConfirmResults?: boolean;
+    canSetManualRankings?: boolean;
+    canChangePromotionRules?: boolean;
+    canManageFiles?: boolean;
+    canManageSponsors?: boolean;
+    canPrintRefereeCards?: boolean;
+    canSendEmails?: boolean;
+  } | null;
 }
 
 /**

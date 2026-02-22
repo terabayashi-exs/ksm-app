@@ -78,6 +78,13 @@
       "when": 1771632000000,
       "tag": "0010_add_prefectures_and_venue_prefecture",
       "breakpoints": false
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1771747212624,
+      "tag": "0011_flat_black_tarantula",
+      "breakpoints": false
     }
   ]
 }

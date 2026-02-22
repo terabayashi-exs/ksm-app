@@ -16,6 +16,159 @@
 
 ---
 
+## 0012: 部門アクセス権付与者の追跡機能（2026-02-22）
+
+### 基本情報
+- **日付**: 2026年2月22日
+- **環境**: dev
+- **方法**: カスタムマイグレーションスクリプト
+- **実行者**: Claude Code
+- **スクリプト**: `scripts/add-assigned-by-field.mjs`
+
+### 変更の背景と目的
+
+運営者が複数の管理者から部門アクセス権を付与される場合に、「誰がどの部門へのアクセスを許可したか」を追跡できるようにする。
+これにより、マイダッシュボードで管理者別にグループ化された部門リストを表示可能になる。
+
+**ユースケース:**
+- 運営者Xが、A管理者とB管理者の両方から部門アクセス権を付与される
+- マイダッシュボードで「A社主催」「B社主催」のように分類表示
+
+**既存の制限:**
+- `m_login_users.created_by_login_user_id`: アカウント作成者のみ記録（1人のみ）
+- 追加で部門アクセス権を付与した管理者の情報が失われる
+
+### 変更内容
+
+**テーブル変更:**
+- `t_operator_tournament_access` テーブル
+  - `assigned_by_login_user_id` (INTEGER, NULL可) カラムを追加
+  - 外部キー: `m_login_users.login_user_id` (ON DELETE SET NULL)
+  - この部門アクセス権を付与した管理者のIDを記録
+  - インデックス `idx_operator_access_assigned_by` を作成
+
+**データ移行:**
+- 既存レコードの `assigned_by_login_user_id` は `created_by_login_user_id` から推測して設定
+- 今後の新規登録は正確な値が設定される
+
+### 影響を受けたファイル
+
+**スキーマ:**
+- `src/db/schema.ts`: `tOperatorTournamentAccess` 定義を更新
+
+**APIエンドポイント（4箇所）:**
+- `app/api/admin/operators/assign-role/route.ts`: INSERT/UPDATE時に `assigned_by_login_user_id` を設定
+- `app/api/operators/invite/accept/route.ts`: INSERT/UPDATE時に `invited_by_login_user_id` を使用
+- `app/api/admin/operators/[id]/route.ts`: PUT時に `assigned_by_login_user_id` を設定
+- `app/api/admin/operators/route.ts`: POST時に `assigned_by_login_user_id` を設定
+
+**マイグレーションスクリプト:**
+- `scripts/add-assigned-by-field.mjs`: カスタムマイグレーション
+
+### 実行コマンド
+
+```bash
+node scripts/add-assigned-by-field.mjs
+```
+
+### フィールドの役割比較
+
+| フィールド | 意味 | 更新頻度 | 用途 |
+|-----------|------|----------|------|
+| `m_login_users.created_by_login_user_id` | アカウントの作成者 | 1回のみ | ユーザー管理の責任者 |
+| `t_operator_tournament_access.assigned_by_login_user_id` | 部門アクセス権の付与者 | 部門ごと | アクセス権の管理・表示 |
+
+### 注意事項
+
+- 既存データの `assigned_by_login_user_id` は推測値
+- 今後の新規登録からは正確な値が記録される
+- 管理者が削除されても、アクセス権は維持される（SET NULL）
+
+---
+
+## 0011: 運営者招待システム実装（2026-02-22）
+
+### 基本情報
+- **日付**: 2026年2月22日
+- **環境**: dev
+- **方法**: カスタムマイグレーション + カスタムマイグレーター
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0011_flat_black_tarantula.sql`
+
+### 変更の背景と目的
+
+運営者登録の仕組みを改善し、セキュリティとユーザー体験を向上させるため、招待メール方式を実装。
+管理者がパスワードを決定する従来方式から、メールアドレス判定による自動分岐方式に変更。
+
+**新方式のフロー:**
+1. 管理者がメールアドレスを入力
+2. システムが既存アカウントの有無を自動判定
+3. 既存ユーザー → 即座にoperatorロール付与 + 通知メール送信
+4. 新規ユーザー → 招待メール送信（7日間有効）
+
+### 変更内容
+
+**既存テーブル変更:**
+- `m_login_users` テーブル
+  - `created_by_login_user_id` (INTEGER) カラムを追加
+  - 作成者（管理者）のlogin_user_idを記録
+  - インデックス `idx_login_users_created_by` を作成
+
+**新規作成テーブル:**
+- `t_operator_invitations`: 運営者招待テーブル
+  - `id` (PK, AUTOINCREMENT) — 招待ID
+  - `email` (TEXT, NOT NULL) — 招待先メールアドレス
+  - `invited_by_login_user_id` (INTEGER, NOT NULL) — 招待した管理者のID
+  - `tournament_access` (TEXT, NOT NULL) — 部門と権限の配列（JSON形式）
+  - `token` (TEXT, NOT NULL, UNIQUE) — 認証トークン（UUID）
+  - `expires_at` (TEXT, NOT NULL) — 有効期限（7日間）
+  - `status` (TEXT, DEFAULT 'pending') — 'pending' | 'accepted' | 'expired' | 'cancelled'
+  - `accepted_by_login_user_id` (INTEGER) — 承諾後のユーザーID
+  - `accepted_at` (TEXT) — 承認日時
+  - `created_at` (TEXT) — 作成日時
+  - インデックス: email, token, status, invited_by_login_user_id
+
+### 影響範囲
+
+**データベース:**
+- `src/db/schema.ts` — スキーマ定義更新
+- `drizzle/0011_flat_black_tarantula.sql` — マイグレーションファイル
+
+**API (新規作成):**
+- `app/api/admin/operators/check-email/route.ts` — メールアドレス確認API
+- `app/api/admin/operators/assign-role/route.ts` — 既存ユーザーへのロール付与API
+- `app/api/admin/operators/invite/route.ts` — 新規ユーザーへの招待API
+- `app/api/operators/invite/accept/route.ts` — 招待受諾API
+
+**API (修正):**
+- `app/api/admin/operators/route.ts` — GET: 作成者でフィルタリング追加
+- `app/api/admin/operators/[id]/route.ts` — GET/PUT/DELETE: 新スキーマ対応
+
+**画面 (新規作成):**
+- `app/operators/invite/accept/page.tsx` — 招待受諾画面（新規アカウント作成フォーム付き）
+- `components/admin/operators/new-operator-form.tsx` — 新方式の運営者追加フォーム
+
+**画面 (修正):**
+- `app/admin/operators/new/page.tsx` — 新フォームコンポーネントに差し替え
+- `app/admin/operators/page.tsx` — ダッシュボード戻るボタン修正（マイダッシュボードへ）
+- `components/admin/operators/operator-list.tsx` — 「運営者を追加」ボタンに枠線追加
+
+### 実行コマンド
+
+```bash
+npx drizzle-kit generate --custom  # カスタムマイグレーション生成
+npm run db:migrate                 # マイグレーション適用（dev環境）
+```
+
+### 備考
+
+- 既存の`m_operators`テーブルは使用せず、`m_login_users` + `m_login_user_roles`で統合管理
+- 招待メールはnodemailer + Gmail SMTPで送信
+- 通知メール（既存ユーザー）と招待メール（新規ユーザー）の2種類を実装
+- 運営者一覧は作成者（created_by_login_user_id）でフィルタリングされ、管理者ごとに分離表示
+
+---
+
 ## 0010: 都道府県マスタと会場地域機能の追加（2026-02-19）
 
 ### 基本情報

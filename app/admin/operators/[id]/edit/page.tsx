@@ -3,8 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions, ExtendedUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { notFound } from 'next/navigation';
-import OperatorForm from '@/components/admin/operators/operator-form';
+import EditOperatorForm from '@/components/admin/operators/edit-operator-form';
 import { db } from '@/lib/db';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: '運営者を編集',
@@ -20,30 +22,21 @@ interface PageProps {
   }>;
 }
 
-async function getOperator(operatorId: number, adminLoginId: string) {
+async function getOperator(operatorId: number, adminLoginUserId: number) {
   try {
-    // 管理者IDを取得
-    const adminResult = await db.execute({
-      sql: 'SELECT administrator_id FROM m_administrators WHERE admin_login_id = ?',
-      args: [adminLoginId]
-    });
-
-    if (adminResult.rows.length === 0) {
-      return null;
-    }
-
-    // 運営者を取得
+    // 運営者を取得（m_login_users + m_login_user_roles）
     const operatorResult = await db.execute({
       sql: `SELECT
-              operator_id,
-              operator_login_id,
-              operator_name,
-              administrator_id,
-              is_active,
-              created_at,
-              updated_at
-            FROM m_operators
-            WHERE operator_id = ?`,
+              u.login_user_id,
+              u.email,
+              u.display_name,
+              u.is_active,
+              u.created_at,
+              u.updated_at,
+              u.created_by_login_user_id
+            FROM m_login_users u
+            INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+            WHERE u.login_user_id = ? AND r.role = 'operator'`,
       args: [operatorId]
     });
 
@@ -53,8 +46,8 @@ async function getOperator(operatorId: number, adminLoginId: string) {
 
     const operator = operatorResult.rows[0];
 
-    // 所属確認
-    if (operator.administrator_id !== adminResult.rows[0].administrator_id) {
+    // 所属確認（自分が作成した運営者のみ編集可能）
+    if (operator.created_by_login_user_id !== adminLoginUserId) {
       return null;
     }
 
@@ -76,20 +69,19 @@ async function getOperator(operatorId: number, adminLoginId: string) {
     });
 
     return {
-      operatorId: Number(operator.operator_id),
-      operatorLoginId: operator.operator_login_id,
-      operatorName: operator.operator_name,
-      administratorId: Number(operator.administrator_id),
-      isActive: operator.is_active === 1,
-      createdAt: operator.created_at,
-      updatedAt: operator.updated_at,
+      operatorId: Number(operator.login_user_id),
+      operatorLoginId: String(operator.email),
+      operatorName: String(operator.display_name),
+      isActive: Number(operator.is_active) === 1,
+      createdAt: String(operator.created_at),
+      updatedAt: String(operator.updated_at),
       accessibleTournaments: accessResult.rows.map((row) => ({
         tournamentId: Number(row.tournament_id),
-        tournamentName: row.tournament_name,
-        categoryName: row.category_name,
+        tournamentName: String(row.tournament_name),
+        categoryName: String(row.category_name),
         groupId: Number(row.group_id),
-        groupName: row.group_name,
-        permissions: JSON.parse(row.permissions as string)
+        groupName: String(row.group_name),
+        permissions: JSON.parse(String(row.permissions))
       }))
     };
   } catch (error) {
@@ -105,44 +97,43 @@ export default async function EditOperatorPage({ params, searchParams }: PagePro
     redirect('/auth/signin');
   }
 
+  const adminLoginUserId = (session.user as ExtendedUser).loginUserId;
+  if (!adminLoginUserId) {
+    redirect('/auth/signin');
+  }
+
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const operatorId = parseInt(resolvedParams.id);
   const groupId = resolvedSearchParams.group_id ? parseInt(resolvedSearchParams.group_id, 10) : undefined;
 
-  const operator = await getOperator(operatorId, session.user.id);
+  const operator = await getOperator(operatorId, adminLoginUserId);
 
   if (!operator) {
     notFound();
   }
 
-  const initialData = {
-    operatorLoginId: String(operator.operatorLoginId),
-    operatorName: String(operator.operatorName),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tournamentAccess: operator.accessibleTournaments.map((t: any) => ({
-      tournamentId: Number(t.tournamentId),
-      tournamentName: String(t.tournamentName || ''),
-      categoryName: String(t.categoryName || ''),
-      groupId: Number(t.groupId),
-      groupName: String(t.groupName || ''),
-      permissions: t.permissions
-    })),
-  };
-
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">運営者を編集</h1>
-        <p className="text-muted-foreground">
-          {String(operator.operatorName)}（{String(operator.operatorLoginId)}）の情報を編集します。
-        </p>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">運営者を編集</h1>
+          <p className="text-muted-foreground">
+            部門アクセス権と操作権限を変更できます
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href={groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators'}>
+            運営者一覧に戻る
+          </Link>
+        </Button>
       </div>
 
-      <OperatorForm
+      <EditOperatorForm
         operatorId={operatorId}
-        initialData={initialData}
-        mode="edit"
+        operatorEmail={String(operator.operatorLoginId)}
+        operatorName={String(operator.operatorName)}
+        initialTournamentAccess={operator.accessibleTournaments}
         groupId={groupId}
       />
     </div>

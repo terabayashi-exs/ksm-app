@@ -17,12 +17,20 @@ export async function PUT(
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
+    const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    if (!adminLoginUserId) {
+      return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
+    }
+
     const resolvedParams = await params;
     const operatorId = parseInt(resolvedParams.id);
 
-    // 運営者を取得
+    // 運営者を取得（m_login_users + m_login_user_roles）
     const operatorResult = await db.execute({
-      sql: 'SELECT administrator_id, is_active FROM m_operators WHERE operator_id = ?',
+      sql: `SELECT u.is_active, u.created_by_login_user_id
+            FROM m_login_users u
+            INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+            WHERE u.login_user_id = ? AND r.role = 'operator'`,
       args: [operatorId]
     });
 
@@ -32,22 +40,18 @@ export async function PUT(
 
     const operator = operatorResult.rows[0];
 
-    // 管理者IDを確認
-    const adminResult = await db.execute({
-      sql: 'SELECT administrator_id FROM m_administrators WHERE admin_login_id = ?',
-      args: [session.user.id]
-    });
-
-    if (adminResult.rows.length === 0 ||
-        operator.administrator_id !== adminResult.rows[0].administrator_id) {
-      return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
+    // 所属確認（自分が作成した運営者のみ操作可能）
+    if (operator.created_by_login_user_id !== adminLoginUserId) {
+      return NextResponse.json({ error: 'この運営者を操作する権限がありません' }, { status: 403 });
     }
 
     // 有効/無効を切り替え
     const newIsActive = operator.is_active === 1 ? 0 : 1;
 
     await db.execute({
-      sql: 'UPDATE m_operators SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE operator_id = ?',
+      sql: `UPDATE m_login_users
+            SET is_active = ?, updated_at = datetime('now', '+9 hours')
+            WHERE login_user_id = ?`,
       args: [newIsActive, operatorId]
     });
 

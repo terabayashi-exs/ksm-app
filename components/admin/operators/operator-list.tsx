@@ -104,10 +104,11 @@ export default function OperatorList({ groupId }: OperatorListProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-base text-muted-foreground">
           {operators.length}名の運営者が登録されています
         </div>
         <Button
+          variant="outline"
           onClick={() =>
             router.push(
               groupId
@@ -125,29 +126,29 @@ export default function OperatorList({ groupId }: OperatorListProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ログインID</TableHead>
-              <TableHead>名前</TableHead>
-              <TableHead>アクセス可能部門</TableHead>
-              <TableHead>状態</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="text-base">ログインID</TableHead>
+              <TableHead className="text-base">名前</TableHead>
+              <TableHead className="text-base">アクセス可能部門</TableHead>
+              <TableHead className="text-base">状態</TableHead>
+              <TableHead className="text-right text-base">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {operators.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-base">
                   運営者が登録されていません
                 </TableCell>
               </TableRow>
             ) : (
               operators.map((operator) => (
                 <TableRow key={operator.operatorId}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium text-base">
                     {operator.operatorLoginId}
                   </TableCell>
-                  <TableCell>{operator.operatorName}</TableCell>
+                  <TableCell className="text-base">{operator.operatorName}</TableCell>
                   <TableCell>
-                    <div className="text-sm">
+                    <div className="text-base">
                       {getTournamentCount(operator) === 0 ? (
                         <span className="text-muted-foreground">なし</span>
                       ) : (
@@ -157,9 +158,9 @@ export default function OperatorList({ groupId }: OperatorListProps) {
                   </TableCell>
                   <TableCell>
                     {operator.isActive ? (
-                      <Badge variant="default">有効</Badge>
+                      <Badge variant="default" className="text-sm">有効</Badge>
                     ) : (
-                      <Badge variant="secondary">無効</Badge>
+                      <Badge variant="secondary" className="text-sm">無効</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">

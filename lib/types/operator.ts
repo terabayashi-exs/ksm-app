@@ -15,6 +15,8 @@ export interface OperatorPermissions {
   canChangePromotionRules: boolean;  // 選出条件変更
   canManageFiles: boolean;           // ファイル管理
   canManageSponsors: boolean;        // スポンサー管理
+  canPrintRefereeCards: boolean;     // 審判カード印刷
+  canSendEmails: boolean;            // メール送信
 }
 
 /**
@@ -34,6 +36,84 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canChangePromotionRules: false,
   canManageFiles: false,
   canManageSponsors: false,
+  canPrintRefereeCards: false,
+  canSendEmails: false,
+};
+
+/**
+ * 権限プリセットの種類
+ */
+export type PermissionPreset = 'preparation' | 'event_day' | 'management' | 'custom';
+
+/**
+ * 権限プリセット定義
+ */
+export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; description: string; permissions: OperatorPermissions }> = {
+  preparation: {
+    label: '事前準備',
+    description: 'ルール設定、チーム登録、組合せ作成など大会開催前の準備作業',
+    permissions: {
+      canManageCourts: true,           // コート名設定
+      canManageRules: true,            // ルール設定
+      canRegisterTeams: true,          // チーム登録
+      canCreateDraws: true,            // 組合せ作成・編集
+      canChangeFormat: false,          // フォーマット変更（管理者のみ）
+      canManageParticipants: true,     // 参加チーム管理
+      canInputResults: false,
+      canConfirmResults: false,
+      canSetManualRankings: false,
+      canChangePromotionRules: false,
+      canManageFiles: false,
+      canManageSponsors: false,
+      canPrintRefereeCards: true,      // 審判カード印刷
+      canSendEmails: false,
+    }
+  },
+  event_day: {
+    label: '当日運営',
+    description: '試合結果入力、順位設定など大会当日の運営作業',
+    permissions: {
+      canManageCourts: false,
+      canManageRules: false,
+      canRegisterTeams: false,
+      canCreateDraws: false,
+      canChangeFormat: false,
+      canManageParticipants: false,
+      canInputResults: true,           // 試合結果入力（結果の登録）
+      canConfirmResults: true,         // 試合結果入力（結果の確定）
+      canSetManualRankings: true,      // 手動順位設定
+      canChangePromotionRules: true,   // 選出条件変更
+      canManageFiles: false,
+      canManageSponsors: false,
+      canPrintRefereeCards: false,
+      canSendEmails: false,
+    }
+  },
+  management: {
+    label: '管理・その他',
+    description: 'メール送信、ファイル管理、スポンサー管理',
+    permissions: {
+      canManageCourts: false,
+      canManageRules: false,
+      canRegisterTeams: false,
+      canCreateDraws: false,
+      canChangeFormat: false,
+      canManageParticipants: false,
+      canInputResults: false,
+      canConfirmResults: false,
+      canSetManualRankings: false,
+      canChangePromotionRules: false,
+      canManageFiles: true,            // ファイル管理
+      canManageSponsors: true,         // スポンサー管理
+      canPrintRefereeCards: false,
+      canSendEmails: true,             // メール送信
+    }
+  },
+  custom: {
+    label: 'カスタム',
+    description: '個別に権限を設定',
+    permissions: DEFAULT_OPERATOR_PERMISSIONS
+  }
 };
 
 /**

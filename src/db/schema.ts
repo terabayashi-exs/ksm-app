@@ -856,15 +856,17 @@ export const mOperators = sqliteTable("m_operators", {
 
 export const tOperatorTournamentAccess = sqliteTable("t_operator_tournament_access", {
 	accessId: integer("access_id").primaryKey({ autoIncrement: true }),
-	operatorId: integer("operator_id").notNull().references(() => mOperators.operatorId, { onDelete: "cascade" }),
+	operatorId: integer("operator_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
 	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
 	permissions: text("permissions").notNull(),
+	assignedByLoginUserId: integer("assigned_by_login_user_id").references(() => mLoginUsers.loginUserId, { onDelete: "set null" }),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 },
 (_table) => [
 	index("idx_operator_access_operator").on(_table.operatorId),
 	index("idx_operator_access_tournament").on(_table.tournamentId),
+	index("idx_operator_access_assigned_by").on(_table.assignedByLoginUserId),
 ]);
 
 // ==========================================
@@ -879,12 +881,14 @@ export const mLoginUsers = sqliteTable("m_login_users", {
 	isSuperadmin: integer("is_superadmin").default(0).notNull(),
 	isActive: integer("is_active").default(1).notNull(),
 	currentPlanId: integer("current_plan_id").references(() => mSubscriptionPlans.planId),
+	createdByLoginUserId: integer("created_by_login_user_id"), // 作成者（管理者）のID
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 },
 (_table) => [
 	index("idx_login_users_email").on(_table.email),
 	index("idx_login_users_active").on(_table.isActive),
+	index("idx_login_users_created_by").on(_table.createdByLoginUserId),
 ]);
 
 export const mLoginUserRoles = sqliteTable("m_login_user_roles", {
@@ -943,4 +947,24 @@ export const tTeamInvitations = sqliteTable("t_team_invitations", {
 	index("idx_team_invitations_token").on(_table.token),
 	index("idx_team_invitations_email").on(_table.invitedEmail),
 	index("idx_team_invitations_status").on(_table.status),
+]);
+
+// 運営者招待テーブル
+export const tOperatorInvitations = sqliteTable("t_operator_invitations", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	email: text("email").notNull(),                          // 招待先メールアドレス
+	invitedByLoginUserId: integer("invited_by_login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }), // 招待した管理者
+	tournamentAccess: text("tournament_access").notNull(),   // JSON: 部門と権限の配列
+	token: text("token").notNull().unique(),                 // 認証トークン（UUID）
+	expiresAt: numeric("expires_at").notNull(),              // 有効期限（7日間）
+	status: text("status").notNull().default("pending"),     // "pending" | "accepted" | "expired" | "cancelled"
+	acceptedByLoginUserId: integer("accepted_by_login_user_id").references(() => mLoginUsers.loginUserId), // 承諾後のユーザーID
+	acceptedAt: numeric("accepted_at"),                      // 承認日時
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_operator_invitations_email").on(_table.email),
+	index("idx_operator_invitations_token").on(_table.token),
+	index("idx_operator_invitations_status").on(_table.status),
+	index("idx_operator_invitations_invited_by").on(_table.invitedByLoginUserId),
 ]);

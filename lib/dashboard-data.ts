@@ -210,9 +210,8 @@ const TOURNAMENT_SELECT_FIELDS = `
   t.group_order,
   v.venue_name,
   f.format_name,
-  a.logo_blob_url,
-  a.logo_filename,
-  a.organization_name,
+  NULL as logo_blob_url,
+  a.display_name as organization_name,
   g.group_name,
   g.event_description as group_description,
   NULL as group_color,
@@ -226,13 +225,13 @@ const TOURNAMENT_SELECT_FIELDS = `
 const TOURNAMENT_JOINS = `
   LEFT JOIN m_venues v ON t.venue_id = v.venue_id
   LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-  LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
   LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
+  LEFT JOIN m_login_users a ON g.login_user_id = a.login_user_id
 `;
 
 /**
  * ユーザーの大会フィルタ条件を生成
- * 新プロバイダー（login_user_id）と旧プロバイダー（admin_login_id）の両方に対応
+ * login_user_id のみを使用（m_administrators削除に対応）
  */
 function buildUserCondition(sessionId: string, isAdmin: boolean): { condition: string; params: (string | number)[] } {
   if (isAdmin) {
@@ -243,30 +242,33 @@ function buildUserCondition(sessionId: string, isAdmin: boolean): { condition: s
   const isNewProvider = !isNaN(loginUserId) && loginUserId > 0;
 
   if (isNewProvider) {
-    // 新プロバイダー: t_tournament_groups.login_user_id で絞り込む（優先）
-    // login_user_id が NULL の場合は admin_login_id 経由でも照合（移行期対応）
+    // login_user_id で絞り込む
     const condition = `
       EXISTS (
         SELECT 1 FROM t_tournament_groups tg2
         WHERE tg2.group_id = t.group_id
-          AND (
-            tg2.login_user_id = ?
-            OR (
-              tg2.login_user_id IS NULL
-              AND tg2.admin_login_id IS NOT NULL
-              AND tg2.admin_login_id = (
-                SELECT a2.admin_login_id FROM m_administrators a2
-                INNER JOIN m_login_users u ON a2.email = u.email
-                WHERE u.login_user_id = ? LIMIT 1
-              )
-            )
-          )
+          AND tg2.login_user_id = ?
       )`;
-    return { condition, params: [loginUserId, loginUserId] };
+    return { condition, params: [loginUserId] };
   } else {
-    // 旧プロバイダー: created_by で絞り込み
-    return { condition: 't.created_by = ?', params: [sessionId] };
+    // 旧形式のセッションID（後方互換、実質的に使用されない想定）
+    return { condition: '1=0', params: [] };
   }
+}
+
+/**
+ * 運営者用の大会フィルタ条件を生成
+ * t_operator_tournament_access テーブルに基づいて権限がある大会のみを取得
+ * （m_operators テーブルは削除予定のため使用しない）
+ */
+function buildOperatorCondition(loginUserId: number): { condition: string; params: number[] } {
+  const condition = `
+    EXISTS (
+      SELECT 1 FROM t_operator_tournament_access ota
+      WHERE ota.operator_id = ?
+        AND ota.tournament_id = t.tournament_id
+    )`;
+  return { condition, params: [loginUserId] };
 }
 
 /**
@@ -343,6 +345,201 @@ function groupTournaments(tournaments: Tournament[]): GroupedTournamentData {
   });
 
   return { grouped, ungrouped };
+}
+
+/**
+ * 運営者用の大会ダッシュボードデータを取得
+ * @param loginUserId - m_login_users.login_user_id
+ */
+export async function fetchOperatorDashboardData(loginUserId: number): Promise<TournamentDashboardData> {
+  const now = new Date();
+  const oneYearAgo = new Date(now);
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+
+  const { condition, params } = buildOperatorCondition(loginUserId);
+
+  // アクティブな大会（completed 以外）を取得
+  const activeResult = await db.execute(`
+    SELECT ${TOURNAMENT_SELECT_FIELDS}
+    FROM t_tournaments t
+    ${TOURNAMENT_JOINS}
+    WHERE t.status != 'completed'
+      AND ${condition}
+    ORDER BY
+      CASE t.status
+        WHEN 'ongoing' THEN 1
+        WHEN 'planning' THEN 2
+        ELSE 3
+      END,
+      t.group_order,
+      t.created_at DESC
+  `, params);
+
+  // 完了した大会を取得（1年以内）
+  const completedResult = await db.execute(`
+    SELECT ${TOURNAMENT_SELECT_FIELDS}
+    FROM t_tournaments t
+    ${TOURNAMENT_JOINS}
+    WHERE t.status = 'completed'
+      AND ${condition}
+    ORDER BY t.group_order, t.created_at DESC
+  `, params);
+
+  // 完了大会から1年以上経過したものを除外
+  const filteredCompletedRows = completedResult.rows.filter(row => {
+    if (row.tournament_dates) {
+      try {
+        const dates = JSON.parse(row.tournament_dates as string);
+        const dateValues = Object.values(dates) as string[];
+        const latestDate = dateValues.sort().pop();
+        if (latestDate && latestDate >= oneYearAgoStr) return true;
+      } catch {
+        // parse error → 除外
+      }
+    }
+    return false;
+  });
+
+  const allRows = [...activeResult.rows, ...filteredCompletedRows];
+  const tournamentIds = allRows.map(r => Number(r.tournament_id));
+
+  // 試合時刻を一括取得（N+1解消）
+  const matchTimesMap = await fetchAllMatchTimes(tournamentIds);
+
+  // 運営者の権限情報を一括取得（N+1解消）
+  const permissionsMap = new Map<number, Record<string, boolean>>();
+  if (tournamentIds.length > 0) {
+    const placeholders = tournamentIds.map(() => '?').join(', ');
+    const permissionsResult = await db.execute(`
+      SELECT
+        tournament_id,
+        permissions
+      FROM t_operator_tournament_access
+      WHERE operator_id = ?
+        AND tournament_id IN (${placeholders})
+    `, [loginUserId, ...tournamentIds]);
+
+    for (const row of permissionsResult.rows) {
+      const tid = Number(row.tournament_id);
+      try {
+        permissionsMap.set(tid, JSON.parse(row.permissions as string) as Record<string, boolean>);
+      } catch {
+        // JSONパースエラーは無視
+      }
+    }
+  }
+
+  // 動的ステータスを並列計算
+  const tournamentsWithTimes: Tournament[] = await Promise.all(allRows.map(async (row) => {
+    let eventStartDate = '';
+    let eventEndDate = '';
+
+    if (row.tournament_dates) {
+      try {
+        const dates = JSON.parse(row.tournament_dates as string);
+        const sortedDates = (Object.values(dates) as string[]).sort();
+        eventStartDate = sortedDates[0] || '';
+        eventEndDate = sortedDates[sortedDates.length - 1] || '';
+      } catch {
+        // ignore
+      }
+    }
+
+    const tid = Number(row.tournament_id);
+    const { startTime = '', endTime = '' } = matchTimesMap.get(tid) ?? {};
+
+    const calculatedStatus = await calculateTournamentStatus({
+      status: (row.status as string) || 'planning',
+      recruitment_start_date: row.recruitment_start_date as string | null,
+      recruitment_end_date: row.recruitment_end_date as string | null,
+      tournament_dates: (row.tournament_dates as string) || '{}',
+      public_start_date: row.public_start_date as string | null,
+    }, tid);
+
+    return {
+      tournament_id: tid,
+      tournament_name: String(row.tournament_name),
+      format_id: Number(row.format_id),
+      venue_id: Number(row.venue_id),
+      team_count: Number(row.team_count),
+      court_count: Number(row.court_count),
+      tournament_dates: row.tournament_dates as string,
+      match_duration_minutes: Number(row.match_duration_minutes),
+      break_duration_minutes: Number(row.break_duration_minutes),
+      status: calculatedStatus,
+      visibility: Number(row.visibility === 'open' ? 1 : 0),
+      public_start_date: row.public_start_date as string,
+      recruitment_start_date: row.recruitment_start_date as string,
+      recruitment_end_date: row.recruitment_end_date as string,
+      sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : undefined,
+      created_by: row.created_by as string,
+      created_at: String(row.created_at),
+      updated_at: String(row.updated_at),
+      venue_name: row.venue_name as string,
+      format_name: row.format_name as string,
+      is_public: row.visibility === 'open',
+      event_start_date: eventStartDate,
+      event_end_date: eventEndDate,
+      start_time: startTime,
+      end_time: endTime,
+      is_archived: Boolean(row.is_archived),
+      archive_ui_version: row.archive_ui_version as string,
+      logo_blob_url: row.logo_blob_url as string | null,
+      organization_name: row.organization_name as string | null,
+      group_id: row.group_id ? Number(row.group_id) : null,
+      group_order: Number(row.group_order) || 0,
+      category_name: row.tournament_name as string,
+      group_name: row.group_name as string | null,
+      group_description: row.group_description as string | null,
+      group_color: row.group_color as string | null,
+      confirmed_count: Number(row.confirmed_count) || 0,
+      waitlisted_count: Number(row.waitlisted_count) || 0,
+      applied_count: Number(row.applied_count) || 0,
+      withdrawal_requested_count: Number(row.withdrawal_requested_count) || 0,
+      cancelled_count: Number(row.cancelled_count) || 0,
+      operator_permissions: permissionsMap.get(tid) || null,
+    } as Tournament;
+  }));
+
+  // グループステータスを決定
+  const groupStatuses: Record<number, 'planning' | 'recruiting' | 'before_event' | 'ongoing' | 'completed'> = {};
+  tournamentsWithTimes.forEach(t => {
+    if (t.group_id && !groupStatuses[t.group_id]) {
+      const group = tournamentsWithTimes.filter(x => x.group_id === t.group_id);
+      if (group.some(x => x.status === 'ongoing')) groupStatuses[t.group_id] = 'ongoing';
+      else if (group.some(x => x.status === 'before_event')) groupStatuses[t.group_id] = 'before_event';
+      else if (group.some(x => x.status === 'recruiting')) groupStatuses[t.group_id] = 'recruiting';
+      else if (group.some(x => x.status === 'planning')) groupStatuses[t.group_id] = 'planning';
+      else if (group.every(x => x.status === 'completed')) groupStatuses[t.group_id] = 'completed';
+      else groupStatuses[t.group_id] = 'planning';
+    }
+  });
+
+  const filterByStatus = (status: string) =>
+    tournamentsWithTimes.filter(t => t.group_id ? groupStatuses[t.group_id] === status : t.status === status);
+
+  const planning = filterByStatus('planning');
+  const recruiting = filterByStatus('recruiting');
+  const before_event = filterByStatus('before_event');
+  const ongoing = filterByStatus('ongoing');
+  const completed = filterByStatus('completed');
+
+  return {
+    planning,
+    recruiting,
+    before_event,
+    ongoing,
+    completed,
+    total: tournamentsWithTimes.length,
+    grouped: {
+      planning: groupTournaments(planning),
+      recruiting: groupTournaments(recruiting),
+      before_event: groupTournaments(before_event),
+      ongoing: groupTournaments(ongoing),
+      completed: groupTournaments(completed),
+    },
+  };
 }
 
 /**

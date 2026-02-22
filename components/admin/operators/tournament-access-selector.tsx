@@ -4,10 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import PermissionEditor from './permission-editor';
 import { DEFAULT_OPERATOR_PERMISSIONS } from '@/lib/types/operator';
-import type { TournamentAccessConfig, OperatorPermissions } from '@/lib/types/operator';
+import type { TournamentAccessConfig } from '@/lib/types/operator';
 
 interface Tournament {
   tournament_id: number;
@@ -30,7 +28,6 @@ export default function TournamentAccessSelector({
 }: TournamentAccessSelectorProps) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedTournaments, setExpandedTournaments] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchTournaments();
@@ -59,11 +56,6 @@ export default function TournamentAccessSelector({
     const existing = value.find((t) => t.tournamentId === tournamentId);
     if (existing) {
       onChange(value.filter((t) => t.tournamentId !== tournamentId));
-      setExpandedTournaments((prev) => {
-        const next = new Set(prev);
-        next.delete(tournamentId);
-        return next;
-      });
     } else {
       onChange([
         ...value,
@@ -77,26 +69,6 @@ export default function TournamentAccessSelector({
         },
       ]);
     }
-  };
-
-  const updatePermissions = (tournamentId: number, permissions: OperatorPermissions) => {
-    onChange(
-      value.map((t) =>
-        t.tournamentId === tournamentId ? { ...t, permissions } : t
-      )
-    );
-  };
-
-  const toggleTournamentExpansion = (tournamentId: number) => {
-    setExpandedTournaments((prev) => {
-      const next = new Set(prev);
-      if (next.has(tournamentId)) {
-        next.delete(tournamentId);
-      } else {
-        next.add(tournamentId);
-      }
-      return next;
-    });
   };
 
   if (loading) {
@@ -134,74 +106,37 @@ export default function TournamentAccessSelector({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>アクセス可能な部門と権限</CardTitle>
+        <CardTitle>アクセス可能な部門</CardTitle>
         <CardDescription>
-          この運営者がアクセスできる部門を選択し、部門ごとに権限を設定してください
+          この運営者がアクセスできる部門を選択してください
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {tournaments.map((tournament) => {
             const isSelected = value.some((t) => t.tournamentId === tournament.tournament_id);
-            const accessConfig = value.find((t) => t.tournamentId === tournament.tournament_id);
-            const isExpanded = expandedTournaments.has(tournament.tournament_id);
 
             return (
-              <div key={tournament.tournament_id} className="border rounded-lg">
-                {/* 部門選択 */}
-                <div className="flex items-center gap-2 p-3">
-                  <Checkbox
-                    id={`tournament-${tournament.tournament_id}`}
-                    checked={isSelected}
-                    onCheckedChange={() =>
-                      toggleTournament(
-                        tournament.tournament_id,
-                        tournament.tournament_name,
-                        tournament.category_name,
-                        tournament.group_id,
-                        tournament.group_name
-                      )
-                    }
-                  />
-                  <Label
-                    htmlFor={`tournament-${tournament.tournament_id}`}
-                    className="cursor-pointer flex-1"
-                  >
-                    {tournament.category_name || tournament.tournament_name}
-                  </Label>
-                  {isSelected && (
-                    <button
-                      type="button"
-                      onClick={() => toggleTournamentExpansion(tournament.tournament_id)}
-                      className="text-sm text-primary hover:underline flex items-center gap-1"
-                    >
-                      {isExpanded ? (
-                        <>
-                          <ChevronDown className="h-3 w-3" />
-                          権限を閉じる
-                        </>
-                      ) : (
-                        <>
-                          <ChevronRight className="h-3 w-3" />
-                          権限を設定
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {/* 部門ごとの権限設定 */}
-                {isSelected && isExpanded && accessConfig && (
-                  <div className="px-3 pb-3 border-t pt-3">
-                    <PermissionEditor
-                      permissions={accessConfig.permissions}
-                      onChange={(permissions) =>
-                        updatePermissions(tournament.tournament_id, permissions)
-                      }
-                      compact
-                    />
-                  </div>
-                )}
+              <div key={tournament.tournament_id} className="flex items-center gap-3">
+                <Checkbox
+                  id={`tournament-${tournament.tournament_id}`}
+                  checked={isSelected}
+                  onCheckedChange={() =>
+                    toggleTournament(
+                      tournament.tournament_id,
+                      tournament.tournament_name,
+                      tournament.category_name,
+                      tournament.group_id,
+                      tournament.group_name
+                    )
+                  }
+                />
+                <Label
+                  htmlFor={`tournament-${tournament.tournament_id}`}
+                  className="cursor-pointer flex-1 text-base"
+                >
+                  {tournament.category_name || tournament.tournament_name}
+                </Label>
               </div>
             );
           })}

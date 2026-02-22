@@ -41,6 +41,7 @@ interface MyDashboardTabsProps {
   isSuperadmin: boolean;
   teamIds: string[];
   initialTournamentData?: TournamentDashboardData | null;
+  initialOperatorTournamentData?: TournamentDashboardData | null;
   initialTeamData?: TeamDashboardItem[] | null;
   initialTeamDetailData?: Record<string, TeamDetailData>;
   initialSportTypes?: SportType[];
@@ -54,7 +55,7 @@ export default function MyDashboardTabs(props: MyDashboardTabsProps) {
   );
 }
 
-function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentData, initialTeamData, initialTeamDetailData, initialSportTypes }: MyDashboardTabsProps) {
+function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentData, initialOperatorTournamentData, initialTeamData, initialTeamDetailData, initialSportTypes }: MyDashboardTabsProps) {
   const searchParams = useSearchParams();
 
   // 表示するタブを決定
@@ -105,7 +106,7 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentD
       {/* タブコンテンツ */}
       <div className="py-8">
         {activeTab === "admin" && <AdminTabContent isSuperadmin={isSuperadmin} initialTournamentData={initialTournamentData} initialSportTypes={initialSportTypes} />}
-        {activeTab === "operator" && <OperatorTabContent />}
+        {activeTab === "operator" && <OperatorTabContent initialTournamentData={initialOperatorTournamentData} initialSportTypes={initialSportTypes} />}
         {activeTab === "team" && <TeamTabContent teamIds={teamIds} initialTeamData={initialTeamData} initialTeamDetailData={initialTeamDetailData} />}
       </div>
     </div>
@@ -504,25 +505,25 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
             <div className="mt-3">
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
               <div className="grid grid-cols-5 gap-2">
-                <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
-                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
+                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-0.5">想定チーム数</div>
+                  <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
                 </div>
-                <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加確定</div>
-                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                <div className="p-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-0.5">参加確定</div>
+                  <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
                 </div>
-                <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
-                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">キャンセル待ち</div>
-                  <div className="text-lg font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                <div className="p-1.5 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
+                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-0.5">キャンセル待ち</div>
+                  <div className="text-base font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
                 </div>
-                <div className="p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
-                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-1">辞退申請中</div>
-                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                <div className="p-1.5 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
+                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-0.5">辞退申請中</div>
+                  <div className="text-base font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
-                <div className="p-2 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
-                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">キャンセル済</div>
-                  <div className="text-lg font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
+                <div className="p-1.5 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
+                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-0.5">キャンセル済</div>
+                  <div className="text-base font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
             </div>
@@ -941,13 +942,343 @@ function TournamentStatusList({ data, initialSportTypes }: { data: TournamentDas
   );
 }
 
-// ─── 運営者タブ（準備中） ──────────────────────────────────────────────────────
-function OperatorTabContent() {
+// ─── 運営者用の大会状況リスト（権限に応じた表示制御） ────────────
+function OperatorTournamentStatusList({ data, initialSportTypes }: { data: TournamentDashboardData; initialSportTypes?: SportType[] }) {
+  // 競技種別マスタ（初期値はサーバーから渡されたデータ、フォールバック用にfetchも残す）
+  const [sportTypes, setSportTypes] = useState<SportType[]>(initialSportTypes || []);
+
+  // 初期データがない場合のみクライアント側でfetch
+  useEffect(() => {
+    if (!initialSportTypes || initialSportTypes.length === 0) {
+      fetch('/api/sport-types')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) setSportTypes(data.data);
+        })
+        .catch(err => console.error('Failed to fetch sport types:', err));
+    }
+  }, [initialSportTypes]);
+
+  // 競技種別アイコン取得
+  const getSportIcon = (sportCode: string) => {
+    switch (sportCode) {
+      case 'soccer': return '⚽';
+      case 'baseball': return '⚾';
+      case 'basketball': return '🏀';
+      case 'pk': return '🥅';
+      default: return '⚽';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const TournamentCard = ({ tournament }: { tournament: Tournament }) => {
+    // 競技種別アイコンを取得
+    const sportType = sportTypes.find(s => s.sport_type_id === tournament.sport_type_id);
+    const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
+
+    // 運営者権限を取得（nullの場合はすべてfalse）
+    const permissions = tournament.operator_permissions || {};
+
+    return (
+    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
+      {tournament.logo_blob_url && (
+        <div className="absolute top-0 right-0 w-20 h-20 opacity-10 overflow-hidden">
+          <Image
+            src={tournament.logo_blob_url}
+            alt={tournament.organization_name || '管理者ロゴ'}
+            fill
+            className="object-contain"
+            sizes="80px"
+          />
+        </div>
+      )}
+      <div className="p-4 relative">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              {sportIcon && <span className="text-xl">{sportIcon}</span>}
+              {tournament.tournament_name}
+            </h4>
+            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <Trophy className="w-4 h-4 mr-1" />
+              <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+            </div>
+            {tournament.organization_name && (
+              <div className="flex items-center text-xs text-gray-500 dark:text-gray-500 mt-1">
+                <span>主催: {tournament.organization_name}</span>
+              </div>
+            )}
+          </div>
+          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+            tournament.status === 'planning'
+              ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+              : tournament.status === 'recruiting'
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+              : tournament.status === 'before_event'
+              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+              : tournament.status === 'ongoing'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+          }`}>
+            {getStatusLabel(tournament.status)}
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+            <CalendarDays className="w-4 h-4 mr-2" />
+            <span>
+              {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
+              {tournament.event_end_date && tournament.event_end_date !== tournament.event_start_date &&
+                ` - ${formatDate(tournament.event_end_date)}`}
+            </span>
+          </div>
+          {/* 参加状況 */}
+          {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
+            <div className="mt-3">
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
+              <div className="grid grid-cols-5 gap-2">
+                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
+                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-0.5">想定チーム数</div>
+                  <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+                </div>
+                <div className="p-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-0.5">参加確定</div>
+                  <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                </div>
+                <div className="p-1.5 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
+                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-0.5">キャンセル待ち</div>
+                  <div className="text-base font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                </div>
+                <div className="p-1.5 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
+                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-0.5">辞退申請中</div>
+                  <div className="text-base font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                </div>
+                <div className="p-1.5 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
+                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-0.5">キャンセル済</div>
+                  <div className="text-base font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 操作ボタン（運営者向け：権限に応じて表示） */}
+        {!tournament.is_archived ? (
+          <div className="space-y-3 pt-1">
+            {/* ── 基本情報 ── */}
+            <div>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">基本情報</p>
+              <div className="flex gap-2 flex-wrap">
+                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
+                    <Eye className="w-4 h-4 mr-1" />
+                    公開画面を見る
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* ── 当日運営 ── */}
+            {(permissions.canInputResults || permissions.canConfirmResults || permissions.canSetManualRankings || permissions.canChangePromotionRules) && (
+              <div>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">当日運営</p>
+                <div className="flex gap-2 flex-wrap">
+                  {(permissions.canInputResults || permissions.canConfirmResults) && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                        <ClipboardList className="w-4 h-4 mr-1" />
+                        試合結果入力
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canSetManualRankings && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                        <Trophy className="w-4 h-4 mr-1" />
+                        手動順位設定
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canChangePromotionRules && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
+                        <Target className="w-4 h-4 mr-1" />
+                        選出条件変更
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* アーカイブ済み */
+          <div className="pt-1">
+            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">閲覧</p>
+            <div className="flex gap-2 flex-wrap">
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
+                  <Eye className="w-4 h-4 mr-1" />
+                  公開画面を見る
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="text-sm hover:border-purple-300 hover:bg-purple-50">
+                <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                  <Archive className="w-4 h-4 mr-1" />
+                  アーカイブ表示
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    );
+  };
+
+  const renderGroupedSection = (groupedData: GroupedTournamentData) => {
+    const groups = Object.values(groupedData.grouped);
+    const ungrouped = groupedData.ungrouped;
+
+    return (
+      <>
+        {groups.map(({ group, tournaments: divisions }) => (
+          <Card key={group.group_id} className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-2xl mb-2">{group.group_name}</CardTitle>
+                  {group.group_description && (
+                    <p className="text-sm text-muted-foreground mb-3">{group.group_description}</p>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                <div className="grid gap-4">
+                  {divisions.map((division) => (
+                    <TournamentCard key={division.tournament_id} tournament={division} />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {ungrouped.map((division) => (
+          <TournamentCard key={division.tournament_id} tournament={division} />
+        ))}
+      </>
+    );
+  };
+
+  const totalGroups = (groupedData: GroupedTournamentData) =>
+    Object.keys(groupedData.grouped).length + groupedData.ungrouped.length;
+
   return (
-    <div className="text-center py-12 text-muted-foreground">
-      <Building2 className="h-12 w-12 mx-auto mb-4 opacity-30" />
-      <p className="text-lg font-medium text-foreground">運営者機能</p>
-      <p className="text-sm mt-2">準備中です</p>
+    <div className="space-y-6">
+      {/* 募集前の大会 */}
+      {data.planning.length > 0 && (
+        <>
+          <div className="flex items-center text-gray-500 mb-4">
+            <Clock className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">募集前の大会 ({totalGroups(data.grouped.planning)}件)</h3>
+          </div>
+          {renderGroupedSection(data.grouped.planning)}
+        </>
+      )}
+
+      {/* 開催中の大会 */}
+      {data.ongoing.length > 0 && (
+        <>
+          <div className="flex items-center text-green-700 mb-4">
+            <Trophy className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">開催中の大会 ({totalGroups(data.grouped.ongoing)}件)</h3>
+          </div>
+          {renderGroupedSection(data.grouped.ongoing)}
+        </>
+      )}
+
+      {/* 募集中の大会 */}
+      {data.recruiting.length > 0 && (
+        <>
+          <div className="flex items-center text-blue-700 mb-4 mt-8">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">募集中の大会 ({totalGroups(data.grouped.recruiting)}件)</h3>
+          </div>
+          {renderGroupedSection(data.grouped.recruiting)}
+        </>
+      )}
+
+      {/* 開催前の大会 */}
+      {data.before_event.length > 0 && (
+        <>
+          <div className="flex items-center text-orange-700 mb-4 mt-8">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">開催前の大会 ({totalGroups(data.grouped.before_event)}件)</h3>
+          </div>
+          {renderGroupedSection(data.grouped.before_event)}
+        </>
+      )}
+
+      {/* 完了した大会 */}
+      {data.completed.length > 0 && (
+        <>
+          <div className="flex items-center text-gray-700 mb-4 mt-8">
+            <Trophy className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold">完了した大会（過去1年以内） ({totalGroups(data.grouped.completed)}件)</h3>
+          </div>
+          {renderGroupedSection(data.grouped.completed)}
+        </>
+      )}
+
+      {/* 大会がない場合 */}
+      {data.total === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Trophy className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              現在、担当している大会はありません
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              管理者から大会へのアクセス権限が付与されると、ここに表示されます
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── 運営者タブ ──────────────────────────────────────────────────────
+function OperatorTabContent({ initialTournamentData, initialSportTypes }: { initialTournamentData?: TournamentDashboardData | null; initialSportTypes?: SportType[] }) {
+  return (
+    <div className="space-y-8">
+      {/* 運営者メニュー */}
+      <div>
+        <h2 className="text-xl font-bold text-foreground mb-4">運営者メニュー</h2>
+        <p className="text-sm text-muted-foreground mb-6">管理者から付与されたアクセス権限のある大会が表示されます</p>
+      </div>
+
+      {/* 大会状況 */}
+      <div>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-foreground">担当大会一覧</h2>
+        </div>
+        {initialTournamentData ? (
+          <OperatorTournamentStatusList data={initialTournamentData} initialSportTypes={initialSportTypes} />
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-600">大会データを読み込み中...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
