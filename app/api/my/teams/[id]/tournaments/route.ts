@@ -48,6 +48,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       t.tournament_id,
       t.tournament_name,
       t.tournament_dates,
+      t.sport_type_id,
       v.venue_name,
       p.prefecture_name,
       tt.tournament_team_id,
@@ -56,11 +57,16 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       tt.assigned_block,
       tt.block_position,
       tt.withdrawal_status,
-      tt.withdrawal_requested_at
+      tt.withdrawal_requested_at,
+      tg.group_id,
+      tg.group_name,
+      lu.logo_blob_url
     FROM t_tournament_teams tt
     JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
     LEFT JOIN m_venues v ON t.venue_id = v.venue_id
     LEFT JOIN m_prefectures p ON v.prefecture_id = p.prefecture_id
+    LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+    LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
     WHERE tt.team_id = ? AND t.is_archived = 0
     ORDER BY t.tournament_id DESC
   `, [teamId]);
@@ -109,6 +115,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         t.group_order,
         t.format_id,
         t.sport_type_id,
+        lu.logo_blob_url,
         (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'confirmed') AS confirmed_count,
         (
           SELECT COUNT(*)
@@ -126,6 +133,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_prefectures p ON v.prefecture_id = p.prefecture_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+      LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
       WHERE t.is_archived = 0
         AND t.visibility = 'open'
         AND datetime(t.recruitment_start_date) <= datetime('now', '+9 hours')
@@ -154,6 +162,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         block_position: row.block_position != null ? Number(row.block_position) : null,
         withdrawal_status: row.withdrawal_status ? String(row.withdrawal_status) : 'active',
         withdrawal_requested_at: row.withdrawal_requested_at ? String(row.withdrawal_requested_at) : null,
+        sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : null,
+        tournament_group_id: row.group_id ? Number(row.group_id) : null,
+        group_name: row.group_name ? String(row.group_name) : null,
+        logo_blob_url: row.logo_blob_url ? String(row.logo_blob_url) : null,
       })),
       available: availableRes.rows
         .filter(row => Number(row.started_matches_count || 0) === 0) // 試合が開始されている部門を除外
@@ -170,6 +182,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           group_name: row.group_name ? String(row.group_name) : null,
           group_order: row.group_order != null ? Number(row.group_order) : null,
           sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : null,
+          logo_blob_url: row.logo_blob_url ? String(row.logo_blob_url) : null,
         })),
     },
   });

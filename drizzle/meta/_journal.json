@@ -85,6 +85,20 @@
       "when": 1771747212624,
       "tag": "0011_flat_black_tarantula",
       "breakpoints": false
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1740326400000,
+      "tag": "0012_add_prefecture_id_to_m_teams",
+      "breakpoints": false
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1740412800000,
+      "tag": "0013_add_logo_columns_to_m_login_users",
+      "breakpoints": false
     }
   ]
 }

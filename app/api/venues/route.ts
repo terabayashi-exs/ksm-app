@@ -6,22 +6,27 @@ import { auth } from '@/lib/auth';
 export async function GET() {
   try {
     const result = await db.execute(`
-      SELECT 
-        venue_id,
-        venue_name,
-        address,
-        available_courts,
-        is_active,
-        created_at,
-        updated_at
-      FROM m_venues
-      ORDER BY created_at DESC
+      SELECT
+        v.venue_id,
+        v.venue_name,
+        v.address,
+        v.prefecture_id,
+        p.prefecture_name,
+        v.available_courts,
+        v.is_active,
+        v.created_at,
+        v.updated_at
+      FROM m_venues v
+      LEFT JOIN m_prefectures p ON v.prefecture_id = p.prefecture_id
+      ORDER BY v.created_at DESC
     `);
 
     const venues = result.rows.map(row => ({
       venue_id: Number(row.venue_id),
       venue_name: String(row.venue_name),
-      address: String(row.address),
+      address: row.address ? String(row.address) : null,
+      prefecture_id: row.prefecture_id ? Number(row.prefecture_id) : null,
+      prefecture_name: row.prefecture_name ? String(row.prefecture_name) : null,
       available_courts: Number(row.available_courts),
       is_active: Boolean(row.is_active),
       created_at: String(row.created_at),
@@ -59,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { venue_name, address, available_courts, is_active } = body;
+    const { venue_name, address, prefecture_id, available_courts, is_active } = body;
 
     // バリデーション
     if (!venue_name || !venue_name.trim()) {
@@ -97,11 +102,12 @@ export async function POST(request: NextRequest) {
 
     // 会場を作成
     const result = await db.execute(`
-      INSERT INTO m_venues (venue_name, address, available_courts, is_active, created_at, updated_at)
-      VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      INSERT INTO m_venues (venue_name, address, prefecture_id, available_courts, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       venue_name.trim(),
       address.trim(),
+      prefecture_id ? Number(prefecture_id) : null,
       Number(available_courts),
       Boolean(is_active) ? 1 : 0
     ]);
@@ -112,6 +118,7 @@ export async function POST(request: NextRequest) {
         venue_id: Number(result.lastInsertRowid),
         venue_name: venue_name.trim(),
         address: address.trim(),
+        prefecture_id: prefecture_id ? Number(prefecture_id) : null,
         available_courts: Number(available_courts),
         is_active: Boolean(is_active)
       },

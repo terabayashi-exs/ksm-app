@@ -448,7 +448,7 @@ export default function MyTournamentJoinForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => router.push('/my?tab=team&teamTab=search')}
           disabled={loading}
           className="flex-1"
         >

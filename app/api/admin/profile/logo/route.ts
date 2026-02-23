@@ -58,19 +58,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const administratorId = session.user.administratorId;
-    
-    if (!administratorId) {
+    const loginUserId = (session.user as { loginUserId?: number }).loginUserId;
+
+    if (!loginUserId) {
       return NextResponse.json(
-        { success: false, error: '管理者IDが見つかりません' },
+        { success: false, error: 'ログインユーザーIDが見つかりません' },
         { status: 400 }
       );
     }
-    
+
     // 既存のロゴを確認
     const existingLogo = await db.execute(
-      'SELECT logo_blob_url, logo_filename FROM m_administrators WHERE administrator_id = ?',
-      [administratorId]
+      'SELECT logo_blob_url, logo_filename FROM m_login_users WHERE login_user_id = ?',
+      [loginUserId]
     );
 
     // 既存のロゴがあれば削除
@@ -84,11 +84,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 新しいファイル名を生成（管理者IDフォルダ配下に配置）
+    // 新しいファイル名を生成（ログインユーザーIDフォルダ配下に配置）
     const timestamp = Date.now();
     const extension = file.type.split('/')[1];
     const filename = `logo-${timestamp}.${extension}`;
-    const filepath = `logos/${administratorId}/${filename}`;
+    const filepath = `logos/${loginUserId}/${filename}`;
 
     // Vercel Blobにアップロード
     const blob = await put(filepath, file, {
@@ -107,17 +107,17 @@ export async function POST(request: NextRequest) {
 
     // データベース更新
     await db.execute(
-      `UPDATE m_administrators 
-       SET logo_blob_url = ?, 
-           logo_filename = ?, 
+      `UPDATE m_login_users
+       SET logo_blob_url = ?,
+           logo_filename = ?,
            organization_name = ?,
            updated_at = datetime('now', '+9 hours')
-       WHERE administrator_id = ?`,
-      [blob.url, filename, organizationName || null, administratorId]
+       WHERE login_user_id = ?`,
+      [blob.url, filename, organizationName || null, loginUserId]
     );
 
     console.log('データベース更新完了:', {
-      administratorId,
+      loginUserId,
       logoUrl: blob.url,
       filepath: filepath,
       filename: filename,
@@ -155,23 +155,23 @@ export async function GET() {
       );
     }
 
-    const administratorId = session.user.administratorId;
+    const loginUserId = (session.user as { loginUserId?: number }).loginUserId;
 
-    if (!administratorId) {
+    if (!loginUserId) {
       return NextResponse.json(
-        { success: false, error: '管理者IDが見つかりません' },
+        { success: false, error: 'ログインユーザーIDが見つかりません' },
         { status: 400 }
       );
     }
 
     const result = await db.execute(
-      'SELECT logo_blob_url, logo_filename, organization_name FROM m_administrators WHERE administrator_id = ?',
-      [administratorId]
+      'SELECT logo_blob_url, logo_filename, organization_name FROM m_login_users WHERE login_user_id = ?',
+      [loginUserId]
     );
 
     if (result.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: '管理者情報が見つかりません' },
+        { success: false, error: 'ユーザー情報が見つかりません' },
         { status: 404 }
       );
     }
@@ -208,24 +208,24 @@ export async function DELETE() {
       );
     }
 
-    const administratorId = session.user.administratorId;
+    const loginUserId = (session.user as { loginUserId?: number }).loginUserId;
 
-    if (!administratorId) {
+    if (!loginUserId) {
       return NextResponse.json(
-        { success: false, error: '管理者IDが見つかりません' },
+        { success: false, error: 'ログインユーザーIDが見つかりません' },
         { status: 400 }
       );
     }
 
     // 現在のロゴ情報を取得
     const result = await db.execute(
-      'SELECT logo_blob_url, logo_filename FROM m_administrators WHERE administrator_id = ?',
-      [administratorId]
+      'SELECT logo_blob_url, logo_filename FROM m_login_users WHERE login_user_id = ?',
+      [loginUserId]
     );
 
     if (result.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: '管理者情報が見つかりません' },
+        { success: false, error: 'ユーザー情報が見つかりません' },
         { status: 404 }
       );
     }
@@ -250,15 +250,15 @@ export async function DELETE() {
 
     // データベースからロゴ情報をクリア
     await db.execute(
-      `UPDATE m_administrators 
-       SET logo_blob_url = NULL, 
+      `UPDATE m_login_users
+       SET logo_blob_url = NULL,
            logo_filename = NULL,
            updated_at = datetime('now', '+9 hours')
-       WHERE administrator_id = ?`,
-      [administratorId]
+       WHERE login_user_id = ?`,
+      [loginUserId]
     );
 
-    console.log('データベースからロゴ情報をクリアしました:', administratorId);
+    console.log('データベースからロゴ情報をクリアしました:', loginUserId);
 
     return NextResponse.json({
       success: true,

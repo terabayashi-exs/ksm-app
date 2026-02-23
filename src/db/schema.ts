@@ -70,6 +70,7 @@ export const mTeams = sqliteTable("m_teams", {
 	contactPhone: text("contact_phone"),
 	representativePlayerId: integer("representative_player_id"),
 	passwordHash: text("password_hash"),
+	prefectureId: integer("prefecture_id"),
 	isActive: integer("is_active").default(1).notNull(),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),

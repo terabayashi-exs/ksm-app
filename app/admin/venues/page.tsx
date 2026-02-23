@@ -25,7 +25,7 @@ export default async function VenuePage() {
             </div>
             <div>
               <Button asChild variant="outline">
-                <Link href="/admin">ダッシュボードに戻る</Link>
+                <Link href="/my">マイダッシュボードに戻る</Link>
               </Button>
             </div>
           </div>

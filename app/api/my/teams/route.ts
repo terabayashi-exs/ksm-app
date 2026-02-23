@@ -27,6 +27,7 @@ export async function GET(_request: NextRequest) {
         t.contact_person,
         t.contact_email,
         t.contact_phone,
+        t.prefecture_id,
         t.is_active,
         tm.member_role,
         tm.created_at AS joined_at,
@@ -55,6 +56,7 @@ export async function GET(_request: NextRequest) {
         contact_person: String(row.contact_person),
         contact_email: String(row.contact_email),
         contact_phone: row.contact_phone ? String(row.contact_phone) : null,
+        prefecture_id: row.prefecture_id ? Number(row.prefecture_id) : null,
         is_active: Number(row.is_active) === 1,
         member_role: String(row.member_role) as 'primary' | 'secondary',
         joined_at: String(row.joined_at),
@@ -80,14 +82,14 @@ export async function POST(request: NextRequest) {
 
   const loginUserId = session.user.loginUserId;
 
-  let body: { team_name?: string; team_omission?: string };
+  let body: { team_name?: string; team_omission?: string; prefecture_id?: number };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ success: false, error: 'リクエストの形式が不正です' }, { status: 400 });
   }
 
-  const { team_name, team_omission } = body;
+  const { team_name, team_omission, prefecture_id } = body;
 
   if (!team_name || team_name.trim() === '') {
     return NextResponse.json({ success: false, error: 'チーム名は必須です' }, { status: 400 });
@@ -120,9 +122,9 @@ export async function POST(request: NextRequest) {
 
   // m_teams に登録（contact_* は nullable なので省略）
   await db.execute(`
-    INSERT INTO m_teams (team_id, team_name, team_omission, is_active, registration_type, created_at, updated_at)
-    VALUES (?, ?, ?, 1, 'self_registered', ${now}, ${now})
-  `, [teamId, team_name.trim(), team_omission?.trim() || null]);
+    INSERT INTO m_teams (team_id, team_name, team_omission, prefecture_id, is_active, registration_type, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 1, 'self_registered', ${now}, ${now})
+  `, [teamId, team_name.trim(), team_omission?.trim() || null, prefecture_id || null]);
 
   // m_team_members に member として登録
   await db.execute(`

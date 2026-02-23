@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 
   const result = await db.execute(
-    `SELECT team_id, team_name, team_omission FROM m_teams WHERE team_id = ? AND is_active = 1`,
+    `SELECT team_id, team_name, team_omission, prefecture_id FROM m_teams WHERE team_id = ? AND is_active = 1`,
     [teamId]
   );
   if (result.rows.length === 0) {
@@ -43,6 +43,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       team_id: String(row.team_id),
       team_name: String(row.team_name),
       team_omission: row.team_omission ? String(row.team_omission) : null,
+      prefecture_id: row.prefecture_id ? Number(row.prefecture_id) : null,
     },
   });
 }
@@ -62,14 +63,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 });
   }
 
-  let body: { team_name?: string; team_omission?: string | null };
+  let body: { team_name?: string; team_omission?: string | null; prefecture_id?: number | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ success: false, error: 'リクエストの形式が不正です' }, { status: 400 });
   }
 
-  const { team_name, team_omission } = body;
+  const { team_name, team_omission, prefecture_id } = body;
 
   if (!team_name || team_name.trim() === '') {
     return NextResponse.json({ success: false, error: 'チーム名は必須です' }, { status: 400 });
@@ -88,8 +89,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const now = `datetime('now', '+9 hours')`;
   await db.execute(
-    `UPDATE m_teams SET team_name = ?, team_omission = ?, updated_at = ${now} WHERE team_id = ?`,
-    [team_name.trim(), team_omission?.trim() || null, teamId]
+    `UPDATE m_teams SET team_name = ?, team_omission = ?, prefecture_id = ?, updated_at = ${now} WHERE team_id = ?`,
+    [team_name.trim(), team_omission?.trim() || null, prefecture_id || null, teamId]
   );
 
   return NextResponse.json({ success: true, message: 'チーム情報を更新しました' });

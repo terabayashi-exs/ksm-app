@@ -24,10 +24,11 @@ export async function GET(
     }
 
     const result = await db.execute(`
-      SELECT 
+      SELECT
         venue_id,
         venue_name,
         address,
+        prefecture_id,
         available_courts,
         is_active,
         created_at,
@@ -48,6 +49,7 @@ export async function GET(
       venue_id: Number(row.venue_id),
       venue_name: String(row.venue_name),
       address: String(row.address),
+      prefecture_id: row.prefecture_id ? Number(row.prefecture_id) : null,
       available_courts: Number(row.available_courts),
       is_active: Boolean(row.is_active),
       created_at: String(row.created_at),
@@ -98,7 +100,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { venue_name, address, available_courts, is_active } = body;
+    const { venue_name, address, prefecture_id, available_courts, is_active } = body;
 
     // バリデーション
     if (!venue_name || !venue_name.trim()) {
@@ -148,12 +150,13 @@ export async function PUT(
 
     // 会場を更新
     await db.execute(`
-      UPDATE m_venues 
-      SET venue_name = ?, address = ?, available_courts = ?, is_active = ?, updated_at = datetime('now', '+9 hours')
+      UPDATE m_venues
+      SET venue_name = ?, address = ?, prefecture_id = ?, available_courts = ?, is_active = ?, updated_at = datetime('now', '+9 hours')
       WHERE venue_id = ?
     `, [
       venue_name.trim(),
       address.trim(),
+      prefecture_id ? Number(prefecture_id) : null,
       Number(available_courts),
       Boolean(is_active) ? 1 : 0,
       venueId

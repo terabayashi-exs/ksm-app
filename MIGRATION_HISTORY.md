@@ -16,6 +16,75 @@
 
 ---
 
+## 0013: m_login_usersにロゴ関連カラムを追加（2026-02-23）
+
+### 基本情報
+- **日付**: 2026年2月23日
+- **環境**: dev
+- **方法**: 手動スクリプト + マイグレーションファイル作成
+- **実行者**: Claude Code
+- **スクリプト**: `scripts/add-logo-columns-to-login-users.mjs`
+- **マイグレーションファイル**: `drizzle/0013_add_logo_columns_to_m_login_users.sql`
+
+### 変更の背景と目的
+
+管理者がアップロードした組織ロゴを大会カードに表示する機能を実装する。
+当初はm_administratorsテーブルに保存していたが、大会データ取得時にm_login_usersテーブルとJOINするため、パフォーマンスと整合性の観点からm_login_usersテーブルに移行する。
+
+**ユースケース:**
+- マイダッシュボードの大会カードに組織ロゴを表示
+- トップページの大会カードに組織ロゴを表示
+- ロゴと組織名でどこが運営している大会かを一目で識別
+
+**設計判断:**
+- m_login_usersにカラム追加 vs 新規テーブル作成 → 前者を選択
+  - 理由: 1ユーザー1ロゴのシンプルな関係、JOINなしで高速、既存のorganization_nameと統一
+
+### 変更内容
+
+**テーブル変更:**
+- `m_login_users` テーブル
+  - `logo_blob_url` (TEXT, NULL可) - Vercel Blob上のロゴURL
+  - `logo_filename` (TEXT, NULL可) - ロゴファイル名
+  - `organization_name` (TEXT, NULL可) - 組織名
+
+**データ移行:**
+- m_administratorsからm_login_usersにロゴデータを移行
+- administrator_id = 2 のロゴを login_user_id = 10 に移行
+  - ロゴURL: `https://qcxo81wusr3rxbxl.public.blob.vercel-storage.com/logos/2/logo-1758610765618.png`
+  - 組織名: テスト管理機構
+
+### 影響範囲
+
+**変更されたファイル:**
+- `drizzle/0013_add_logo_columns_to_m_login_users.sql` (新規作成)
+- `drizzle/meta/_journal.json` (エントリ追加)
+- `MIGRATION_HISTORY.md` (このエントリ)
+- `app/api/admin/profile/logo/route.ts` (m_administrators → m_login_users)
+- `lib/dashboard-data.ts` (NULL → a.logo_blob_url)
+- `components/features/my/MyDashboardTabs.tsx` (ロゴ表示追加)
+- `scripts/add-logo-columns-to-login-users.mjs` (カラム追加スクリプト)
+- `scripts/migrate-logo-data.mjs` (データ移行スクリプト)
+- `scripts/fix-logo-migration-correct.mjs` (正しいユーザーへの移行)
+
+### 実行コマンド
+
+```bash
+# Dev環境
+node scripts/add-logo-columns-to-login-users.mjs
+node scripts/fix-logo-migration-correct.mjs
+
+# Stag/Main環境（将来実行）
+npm run db:migrate:stag  # または npm run db:migrate:main
+```
+
+### 注意事項
+- m_administratorsテーブルのlogo_blob_url, logo_filename, organization_nameカラムは残存
+- 既存のロゴファイルは移行せず、URLのみコピー
+- 今後のロゴ更新はm_login_usersテーブルで管理
+
+---
+
 ## 0012: 部門アクセス権付与者の追跡機能（2026-02-22）
 
 ### 基本情報

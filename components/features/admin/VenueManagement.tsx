@@ -6,12 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Edit, Trash2, Plus, Building, MapPin, Users } from 'lucide-react';
+
+interface Prefecture {
+  prefecture_id: number;
+  prefecture_name: string;
+  prefecture_code: string;
+  region_name: string;
+  display_order: number;
+}
 
 interface Venue {
   venue_id: number;
   venue_name: string;
   address: string;
+  prefecture_id: number | null;
+  prefecture_name?: string;
   available_courts: number;
   is_active: boolean;
   created_at: string;
@@ -21,12 +32,14 @@ interface Venue {
 interface VenueFormData {
   venue_name: string;
   address: string;
+  prefecture_id: string;
   available_courts: number;
   is_active: boolean;
 }
 
 export default function VenueManagement() {
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
@@ -34,6 +47,7 @@ export default function VenueManagement() {
   const [formData, setFormData] = useState<VenueFormData>({
     venue_name: '',
     address: '',
+    prefecture_id: '',
     available_courts: 1,
     is_active: true
   });
@@ -61,8 +75,23 @@ export default function VenueManagement() {
     }
   };
 
+  // 都道府県マスタを取得
+  const fetchPrefectures = async () => {
+    try {
+      const response = await fetch('/api/prefectures');
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.success) {
+        setPrefectures(result.prefectures);
+      }
+    } catch (err) {
+      console.error('Error fetching prefectures:', err);
+    }
+  };
+
   useEffect(() => {
     fetchVenues();
+    fetchPrefectures();
   }, []);
 
   // フォームリセット
@@ -70,6 +99,7 @@ export default function VenueManagement() {
     setFormData({
       venue_name: '',
       address: '',
+      prefecture_id: '',
       available_courts: 1,
       is_active: true
     });
@@ -89,6 +119,7 @@ export default function VenueManagement() {
     setFormData({
       venue_name: venue.venue_name,
       address: venue.address,
+      prefecture_id: venue.prefecture_id ? String(venue.prefecture_id) : '',
       available_courts: venue.available_courts,
       is_active: venue.is_active
     });
@@ -103,10 +134,6 @@ export default function VenueManagement() {
       setError('会場名を入力してください');
       return;
     }
-    if (!formData.address.trim()) {
-      setError('住所を入力してください');
-      return;
-    }
     if (formData.available_courts < 1) {
       setError('利用可能コート数は1以上で入力してください');
       return;
@@ -116,18 +143,26 @@ export default function VenueManagement() {
       setSaving(true);
       setError(null);
 
-      const url = editingVenue 
+      const url = editingVenue
         ? `/api/venues/${editingVenue.venue_id}`
         : '/api/venues';
-      
+
       const method = editingVenue ? 'PUT' : 'POST';
+
+      const saveData = {
+        venue_name: formData.venue_name,
+        address: formData.address || null,
+        prefecture_id: formData.prefecture_id ? Number(formData.prefecture_id) : null,
+        available_courts: formData.available_courts,
+        is_active: formData.is_active
+      };
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(saveData),
       });
 
       if (!response.ok) {
@@ -252,16 +287,42 @@ export default function VenueManagement() {
                 />
               </div>
             </div>
-            
+
             <div>
-              <Label htmlFor="address">住所 *</Label>
+              <Label htmlFor="prefecture_id">都道府県</Label>
+              <Select
+                value={formData.prefecture_id || "none"}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, prefecture_id: value === "none" ? "" : value }))}
+              >
+                <SelectTrigger id="prefecture_id" className="bg-background">
+                  <SelectValue placeholder="都道府県を選択してください" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-border">
+                  <SelectItem value="none">選択なし</SelectItem>
+                  {prefectures.map((pref) => (
+                    <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)}>
+                      {pref.prefecture_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                会場の所在地となる都道府県を選択してください
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="address">住所</Label>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="例: 東京都中央区スポーツ1-1-1"
+                placeholder="例: 中央区スポーツ1-1-1"
                 rows={3}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                市区町村以降の住所を入力してください
+              </p>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -315,7 +376,14 @@ export default function VenueManagement() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-1">{venue.address}</p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                      <MapPin className="h-4 w-4" />
+                      <span>
+                        {venue.prefecture_name && <span className="font-medium">{venue.prefecture_name}</span>}
+                        {venue.prefecture_name && venue.address && <span className="mx-1">·</span>}
+                        {venue.address || '（所在地未登録）'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span className="flex items-center gap-1">
                         <Users className="h-4 w-4" />

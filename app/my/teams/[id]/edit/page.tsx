@@ -7,7 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+interface Prefecture {
+  prefecture_id: number;
+  prefecture_name: string;
+  prefecture_code: string;
+  region_name: string;
+  display_order: number;
+}
 
 export default function EditTeamPage() {
   const router = useRouter();
@@ -16,10 +31,28 @@ export default function EditTeamPage() {
 
   const [teamName, setTeamName] = useState('');
   const [teamOmission, setTeamOmission] = useState('');
+  const [prefectureId, setPrefectureId] = useState<string>('');
+  const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // 都道府県マスタを取得
+  useEffect(() => {
+    const fetchPrefectures = async () => {
+      try {
+        const res = await fetch('/api/prefectures');
+        const data = await res.json();
+        if (data.success) {
+          setPrefectures(data.prefectures);
+        }
+      } catch (err) {
+        console.error('Failed to fetch prefectures:', err);
+      }
+    };
+    fetchPrefectures();
+  }, []);
 
   // 現在のチーム情報を取得
   useEffect(() => {
@@ -34,6 +67,7 @@ export default function EditTeamPage() {
         if (result.success) {
           setTeamName(result.data.team_name);
           setTeamOmission(result.data.team_omission ?? '');
+          setPrefectureId(result.data.prefecture_id ? String(result.data.prefecture_id) : '');
         } else {
           setError(result.error || 'チーム情報の取得に失敗しました');
         }
@@ -61,6 +95,7 @@ export default function EditTeamPage() {
         body: JSON.stringify({
           team_name: teamName.trim(),
           team_omission: teamOmission.trim() || null,
+          prefecture_id: prefectureId ? Number(prefectureId) : null,
         }),
       });
       const result = await res.json();
@@ -90,18 +125,20 @@ export default function EditTeamPage() {
     <div className="min-h-screen bg-background">
       <div className="bg-card shadow-sm border-b border-border">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/my?tab=team"><ArrowLeft className="w-4 h-4 mr-1" />マイダッシュボード</Link>
-          </Button>
-          <h1 className="text-2xl font-bold text-foreground mt-2 flex items-center gap-2">
-            <Users className="w-6 h-6" />
-            チーム情報を編集する
-          </h1>
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Users className="w-6 h-6" />
+              チーム情報を編集する
+            </h1>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/my?tab=team">ダッシュボードに戻る</Link>
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        <Card>
+        <Card className="border-2">
           <CardHeader>
             <CardTitle className="text-lg">チーム情報</CardTitle>
           </CardHeader>
@@ -136,6 +173,41 @@ export default function EditTeamPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   大会の組み合わせ表などに表示される短縮名です。
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prefecture_id">
+                  主な活動地域
+                  <span className="text-xs text-muted-foreground ml-2">（任意）</span>
+                </Label>
+                <Select
+                  value={prefectureId}
+                  onValueChange={(value) => {
+                    if (value === 'none') {
+                      setPrefectureId('');
+                    } else {
+                      setPrefectureId(value);
+                    }
+                  }}
+                  disabled={submitting || success}
+                >
+                  <SelectTrigger id="prefecture_id" className="bg-background">
+                    <SelectValue placeholder="都道府県を選択してください" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border border-border shadow-lg z-50">
+                    <SelectItem value="none" className="text-muted-foreground bg-card hover:bg-accent">
+                      選択なし
+                    </SelectItem>
+                    {prefectures.map((pref) => (
+                      <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)} className="bg-card hover:bg-accent">
+                        {pref.prefecture_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  ここで地域を選択しておくと、大会を探すときにその地域の大会が自動で検索されるようになります。
                 </p>
               </div>
 

@@ -13,6 +13,7 @@ export interface TeamDashboardItem {
   contact_person: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  prefecture_id: number | null;
   is_active: boolean;
   member_role: string;
   joined_at: string;
@@ -35,6 +36,7 @@ export async function fetchTeamData(loginUserId: number): Promise<TeamDashboardI
       t.contact_person,
       t.contact_email,
       t.contact_phone,
+      t.prefecture_id,
       t.is_active,
       tm.member_role,
       tm.created_at AS joined_at,
@@ -61,6 +63,7 @@ export async function fetchTeamData(loginUserId: number): Promise<TeamDashboardI
     contact_person: row.contact_person ? String(row.contact_person) : null,
     contact_email: row.contact_email ? String(row.contact_email) : null,
     contact_phone: row.contact_phone ? String(row.contact_phone) : null,
+    prefecture_id: row.prefecture_id ? Number(row.prefecture_id) : null,
     is_active: Number(row.is_active) === 1,
     member_role: String(row.member_role),
     joined_at: String(row.joined_at),
@@ -163,6 +166,7 @@ export interface GroupedTournamentData {
       group_description: string | null;
       group_color: string | null;
       display_order: number;
+      logo_blob_url: string | null;
     };
     tournaments: Tournament[];
   }>;
@@ -210,7 +214,7 @@ const TOURNAMENT_SELECT_FIELDS = `
   t.group_order,
   v.venue_name,
   f.format_name,
-  NULL as logo_blob_url,
+  a.logo_blob_url,
   a.display_name as organization_name,
   g.group_name,
   g.event_description as group_description,
@@ -329,7 +333,8 @@ function groupTournaments(tournaments: Tournament[]): GroupedTournamentData {
             group_name: tournament.group_name || '',
             group_description: tournament.group_description || '',
             group_color: tournament.group_color || '#3B82F6',
-            display_order: 0
+            display_order: 0,
+            logo_blob_url: tournament.logo_blob_url || null
           },
           tournaments: []
         };
