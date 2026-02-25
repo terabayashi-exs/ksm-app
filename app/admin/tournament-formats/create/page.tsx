@@ -16,7 +16,7 @@ export default async function CreateTournamentFormatPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
+          <div className="flex items-center py-6">
             <div className="flex items-center space-x-4">
               <Button asChild variant="ghost" size="sm">
                 <Link href="/admin/tournament-formats" className="flex items-center text-gray-600 hover:text-gray-900">

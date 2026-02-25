@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
+
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }

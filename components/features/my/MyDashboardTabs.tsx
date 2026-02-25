@@ -39,6 +39,7 @@ interface MyDashboardTabsProps {
   roles: Role[];
   isSuperadmin: boolean;
   teamIds: string[];
+  currentUserId: string;
   initialTournamentData?: TournamentDashboardData | null;
   initialOperatorTournamentData?: TournamentDashboardData | null;
   initialTeamData?: TeamDashboardItem[] | null;
@@ -53,7 +54,7 @@ export default function MyDashboardTabs(props: MyDashboardTabsProps) {
   );
 }
 
-function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentData, initialOperatorTournamentData, initialTeamData, initialSportTypes }: MyDashboardTabsProps) {
+function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, currentUserId, initialTournamentData, initialOperatorTournamentData, initialTeamData, initialSportTypes }: MyDashboardTabsProps) {
   const searchParams = useSearchParams();
 
   // 表示するタブを決定
@@ -61,7 +62,11 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentD
   const tabs: Tab[] = [];
 
   if (roles.includes("admin") || isSuperadmin) {
-    tabs.push({ key: "admin", label: "大会管理", icon: <Shield className="h-4 w-4" /> });
+    tabs.push({
+      key: "admin",
+      label: isSuperadmin ? "S大会管理" : "大会管理",
+      icon: <Shield className="h-4 w-4" />
+    });
   }
 
   if (roles.includes("operator")) {
@@ -103,7 +108,7 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, initialTournamentD
 
       {/* タブコンテンツ */}
       <div className="py-8">
-        {activeTab === "admin" && <AdminTabContent isSuperadmin={isSuperadmin} initialTournamentData={initialTournamentData} initialSportTypes={initialSportTypes} />}
+        {activeTab === "admin" && <AdminTabContent isSuperadmin={isSuperadmin} currentUserId={currentUserId} initialTournamentData={initialTournamentData} initialSportTypes={initialSportTypes} />}
         {activeTab === "operator" && <OperatorTabContent initialTournamentData={initialOperatorTournamentData} initialSportTypes={initialSportTypes} />}
         {activeTab === "team" && <TeamTabContent teamIds={teamIds} initialTeamData={initialTeamData} />}
       </div>
@@ -154,8 +159,9 @@ function IncompleteTournamentGroupsWrapper({
 }
 
 // ─── 管理者タブ ────────────────────────────────────────────────────────────────
-function AdminTabContent({ isSuperadmin, initialTournamentData, initialSportTypes }: { isSuperadmin: boolean; initialTournamentData?: TournamentDashboardData | null; initialSportTypes?: SportType[] }) {
+function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, initialSportTypes }: { isSuperadmin: boolean; currentUserId: string; initialTournamentData?: TournamentDashboardData | null; initialSportTypes?: SportType[] }) {
   const [hasIncompleteGroups, setHasIncompleteGroups] = useState<boolean | null>(null);
+  const [showAllAdmins, setShowAllAdmins] = useState(false);
 
   // デバッグログ
   useEffect(() => {
@@ -285,11 +291,22 @@ function AdminTabContent({ isSuperadmin, initialTournamentData, initialSportType
 
       {/* 大会状況 */}
       <div>
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-foreground">大会状況</h2>
+          {isSuperadmin && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showAllAdmins}
+                onChange={(e) => setShowAllAdmins(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              他管理者が作成した大会も表示する
+            </label>
+          )}
         </div>
         {initialTournamentData ? (
-          <TournamentStatusList data={initialTournamentData} isSuperadmin={isSuperadmin} initialSportTypes={initialSportTypes} />
+          <TournamentStatusList data={initialTournamentData} isSuperadmin={isSuperadmin} currentUserId={currentUserId} showAllAdmins={showAllAdmins} initialSportTypes={initialSportTypes} />
         ) : (
           <TournamentDashboardList />
         )}
@@ -299,8 +316,60 @@ function AdminTabContent({ isSuperadmin, initialTournamentData, initialSportType
 }
 
 // ─── 大会状況リスト（サーバーデータを使った表示専用コンポーネント） ────────────
-function TournamentStatusList({ data, isSuperadmin, initialSportTypes }: { data: TournamentDashboardData; isSuperadmin: boolean; initialSportTypes?: SportType[] }) {
+function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins, initialSportTypes }: { data: TournamentDashboardData; isSuperadmin: boolean; currentUserId: string; showAllAdmins?: boolean; initialSportTypes?: SportType[] }) {
   const router = useRouter();
+
+  // スーパー管理者で showAllAdmins が true の場合は全て表示、false の場合は自分が作成した大会のみ
+  const filterTournaments = (tournaments: Tournament[]) => {
+    // スーパー管理者でない場合は全て表示
+    if (!isSuperadmin) {
+      return tournaments;
+    }
+    // スーパー管理者で showAllAdmins が true の場合、全て表示
+    if (showAllAdmins) {
+      return tournaments;
+    }
+    // スーパー管理者で showAllAdmins が false（デフォルト）の場合、自分が作成した大会のみ
+    const loginUserId = String(currentUserId);
+    return tournaments.filter(t => t.created_by === loginUserId);
+  };
+
+  // groupedデータ内の大会もフィルタリング
+  const filterGroupedData = (groupedData: GroupedTournamentData): GroupedTournamentData => {
+    const filteredGrouped: GroupedTournamentData['grouped'] = {};
+
+    Object.entries(groupedData.grouped).forEach(([key, value]) => {
+      const filteredTournaments = filterTournaments(value.tournaments);
+      if (filteredTournaments.length > 0) {
+        filteredGrouped[key] = {
+          ...value,
+          tournaments: filteredTournaments
+        };
+      }
+    });
+
+    return {
+      grouped: filteredGrouped,
+      ungrouped: filterTournaments(groupedData.ungrouped)
+    };
+  };
+
+  // フィルタリング済みデータ
+  const filteredData = {
+    planning: filterTournaments(data.planning),
+    recruiting: filterTournaments(data.recruiting),
+    before_event: filterTournaments(data.before_event),
+    ongoing: filterTournaments(data.ongoing),
+    completed: filterTournaments(data.completed),
+    total: data.total,
+    grouped: {
+      planning: filterGroupedData(data.grouped.planning),
+      recruiting: filterGroupedData(data.grouped.recruiting),
+      before_event: filterGroupedData(data.grouped.before_event),
+      ongoing: filterGroupedData(data.grouped.ongoing),
+      completed: filterGroupedData(data.grouped.completed)
+    }
+  };
 
   // 削除・アーカイブ中フラグ
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -913,62 +982,62 @@ function TournamentStatusList({ data, isSuperadmin, initialSportTypes }: { data:
     )}
     <div className="space-y-6">
       {/* 募集前の大会 */}
-      {data.planning.length > 0 && (
+      {filteredData.planning.length > 0 && (
         <>
           <div className="flex items-center text-gray-500 mb-4">
             <Clock className="w-5 h-5 mr-2" />
-            <h3 className="text-xl font-bold">募集前の大会 ({totalGroups(data.grouped.planning)}件)</h3>
+            <h3 className="text-xl font-bold">募集前の大会 ({totalGroups(filteredData.grouped.planning)}件)</h3>
           </div>
-          {renderGroupedSection(data.grouped.planning)}
+          {renderGroupedSection(filteredData.grouped.planning)}
         </>
       )}
 
       {/* 開催中の大会 */}
-      {data.ongoing.length > 0 && (
+      {filteredData.ongoing.length > 0 && (
         <>
           <div className="flex items-center text-green-700 mb-4">
             <Trophy className="w-5 h-5 mr-2" />
-            <h3 className="text-xl font-bold">開催中の大会 ({totalGroups(data.grouped.ongoing)}件)</h3>
+            <h3 className="text-xl font-bold">開催中の大会 ({totalGroups(filteredData.grouped.ongoing)}件)</h3>
           </div>
-          {renderGroupedSection(data.grouped.ongoing)}
+          {renderGroupedSection(filteredData.grouped.ongoing)}
         </>
       )}
 
       {/* 募集中の大会 */}
-      {data.recruiting.length > 0 && (
+      {filteredData.recruiting.length > 0 && (
         <>
           <div className="flex items-center text-blue-700 mb-4 mt-8">
             <CalendarDays className="w-5 h-5 mr-2" />
-            <h3 className="text-xl font-bold">募集中の大会 ({totalGroups(data.grouped.recruiting)}件)</h3>
+            <h3 className="text-xl font-bold">募集中の大会 ({totalGroups(filteredData.grouped.recruiting)}件)</h3>
           </div>
-          {renderGroupedSection(data.grouped.recruiting)}
+          {renderGroupedSection(filteredData.grouped.recruiting)}
         </>
       )}
 
       {/* 開催前の大会 */}
-      {data.before_event.length > 0 && (
+      {filteredData.before_event.length > 0 && (
         <>
           <div className="flex items-center text-orange-700 mb-4 mt-8">
             <CalendarDays className="w-5 h-5 mr-2" />
-            <h3 className="text-xl font-bold">開催前の大会 ({totalGroups(data.grouped.before_event)}件)</h3>
+            <h3 className="text-xl font-bold">開催前の大会 ({totalGroups(filteredData.grouped.before_event)}件)</h3>
           </div>
-          {renderGroupedSection(data.grouped.before_event)}
+          {renderGroupedSection(filteredData.grouped.before_event)}
         </>
       )}
 
       {/* 完了した大会 */}
-      {data.completed.length > 0 && (
+      {filteredData.completed.length > 0 && (
         <>
           <div className="flex items-center text-gray-700 mb-4 mt-8">
             <Trophy className="w-5 h-5 mr-2" />
-            <h3 className="text-xl font-bold">完了した大会（過去1年以内） ({totalGroups(data.grouped.completed)}件)</h3>
+            <h3 className="text-xl font-bold">完了した大会（過去1年以内） ({totalGroups(filteredData.grouped.completed)}件)</h3>
           </div>
-          {renderGroupedSection(data.grouped.completed)}
+          {renderGroupedSection(filteredData.grouped.completed)}
         </>
       )}
 
       {/* 大会がない場合 */}
-      {data.total === 0 && (
+      {filteredData.total === 0 && (
         <Card>
           <CardContent className="text-center py-12">
             <Trophy className="w-12 h-12 mx-auto text-gray-400 mb-4" />
@@ -1507,26 +1576,13 @@ function TeamExpandedPanel({ team }: {
     setSelectedWithdrawal(null);
   };
 
-  // 「大会を探す」タブに切り替わった時の初期化処理
+  // 初回マウント時に必ずデータを取得
   useEffect(() => {
-    // 「大会を探す」タブが表示されていない場合は何もしない
-    if (activeTab !== 'search') return;
-
-    console.log('[大会を探す] タブ初期化開始', {
-      teamId,
-      team_prefecture_id: team.prefecture_id,
-      SEARCH_INITIALIZED_KEY,
-      SEARCH_STATE_KEY
-    });
+    console.log('[チーム詳細パネル] 初回データ取得');
 
     // このチームの検索画面を初めて表示したかチェック
     const isInitialized = sessionStorage.getItem(SEARCH_INITIALIZED_KEY);
     const savedState = sessionStorage.getItem(SEARCH_STATE_KEY);
-
-    console.log('[大会を探す] セッションストレージ状態', {
-      isInitialized,
-      savedState
-    });
 
     let keyword = '';
     let prefectureId = '';
@@ -1534,14 +1590,11 @@ function TeamExpandedPanel({ team }: {
 
     if (isInitialized && savedState) {
       // 既に初期化済みで検索条件がある場合は復元
-      console.log('[大会を探す] 既存の検索条件を復元');
       try {
         const parsed = JSON.parse(savedState);
         keyword = parsed.keyword || '';
         prefectureId = parsed.prefectureId || '';
         sportTypeId = parsed.sportTypeId || '';
-
-        console.log('[大会を探す] 復元した検索条件', { keyword, prefectureId, sportTypeId });
 
         setSearchKeyword(keyword);
         setSelectedPrefecture(prefectureId);
@@ -1551,25 +1604,32 @@ function TeamExpandedPanel({ team }: {
       }
     } else {
       // 初回の場合はチームの主要地域で検索
-      console.log('[大会を探す] 初回訪問 - 主要地域で初期化');
       const initialPrefectureId = team.prefecture_id ? String(team.prefecture_id) : '';
-      console.log('[大会を探す] initialPrefectureId:', initialPrefectureId);
 
       if (initialPrefectureId) {
         prefectureId = initialPrefectureId;
         setSelectedPrefecture(initialPrefectureId);
-        setShowInitialMessage(true); // 初回メッセージを表示
-        console.log('[大会を探す] 主要地域をセット:', initialPrefectureId);
+        setShowInitialMessage(true);
       }
 
       // 初期化完了フラグをセット
       sessionStorage.setItem(SEARCH_INITIALIZED_KEY, 'true');
     }
 
-    console.log('[大会を探す] 大会データをフェッチ:', { keyword, prefectureId, sportTypeId });
-
-    // 大会データをフェッチ
+    // 大会データをフェッチ（初回は必ず実行）
     fetchTournaments(keyword, prefectureId, sportTypeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 「大会を探す」タブに切り替わった時の処理（検索条件の更新時のみ）
+  useEffect(() => {
+    // 「大会を探す」タブが表示されていない場合は何もしない
+    if (activeTab !== 'search') return;
+
+    console.log('[大会を探す] タブ切り替え', {
+      teamId,
+      team_prefecture_id: team.prefecture_id
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 

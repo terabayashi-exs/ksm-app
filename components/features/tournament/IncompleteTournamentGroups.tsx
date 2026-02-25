@@ -14,6 +14,8 @@ interface IncompleteTournamentGroup {
   created_at: string;
   updated_at: string;
   tournament_count: number;
+  is_orphan_tournament?: boolean; // 部門未設定の大会フラグ
+  original_tournament_id?: number; // 元の大会ID
 }
 
 interface DivisionCheckResult {
@@ -145,59 +147,81 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              {divisionChecks[group.group_id]?.allowed ? (
-                <Button
-                  asChild
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
-                >
-                  <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    部門作成
-                  </Link>
-                </Button>
-              ) : (
-                <div className="space-y-1">
+              {group.is_orphan_tournament ? (
+                // 部門未設定の大会の場合：部門を後から設定するUIへ誘導
+                <>
                   <Button
-                    disabled
+                    asChild
                     size="sm"
-                    className="w-full bg-gray-400 text-white cursor-not-allowed"
+                    className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
                   >
-                    <Lock className="w-4 h-4 mr-1" />
-                    上限達成
+                    <Link href={`/admin/tournaments/${group.original_tournament_id}/edit`}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      部門設定
+                    </Link>
                   </Button>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ※大会編集画面で部門を設定できます
+                  </p>
+                </>
+              ) : (
+                // グループありの場合：従来通り
+                <>
+                  {divisionChecks[group.group_id]?.allowed ? (
+                    <Button
+                      asChild
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                    >
+                      <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                        <Plus className="w-4 h-4 mr-1" />
+                        部門作成
+                      </Link>
+                    </Button>
+                  ) : (
+                    <div className="space-y-1">
+                      <Button
+                        disabled
+                        size="sm"
+                        className="w-full bg-gray-400 text-white cursor-not-allowed"
+                      >
+                        <Lock className="w-4 h-4 mr-1" />
+                        上限達成
+                      </Button>
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 text-xs"
+                      >
+                        <Link href="/admin/subscription/plans">
+                          プラン変更
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     asChild
                     size="sm"
                     variant="outline"
-                    className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 text-xs"
+                    className="border-amber-300 hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/30"
                   >
-                    <Link href="/admin/subscription/plans">
-                      プラン変更
+                    <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
+                      編集
                     </Link>
                   </Button>
-                </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600 dark:border-red-800 dark:hover:bg-red-950/30 dark:text-red-400"
+                    onClick={() => handleDelete(group.group_id, group.group_name)}
+                    disabled={deleting === group.group_id}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {deleting === group.group_id ? '削除中...' : '削除'}
+                  </Button>
+                </>
               )}
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="border-amber-300 hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/30"
-              >
-                <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
-                  編集
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600 dark:border-red-800 dark:hover:bg-red-950/30 dark:text-red-400"
-                onClick={() => handleDelete(group.group_id, group.group_name)}
-                disabled={deleting === group.group_id}
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                {deleting === group.group_id ? '削除中...' : '削除'}
-              </Button>
             </div>
           </div>
         </div>

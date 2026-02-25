@@ -109,6 +109,7 @@ export default async function MyDashboardPage() {
           roles={roles}
           isSuperadmin={isSuperadmin}
           teamIds={teamIds}
+          currentUserId={session.user.id}
           initialSportTypes={sportTypes}
           initialTournamentData={tournamentData}
           initialOperatorTournamentData={operatorTournamentData}

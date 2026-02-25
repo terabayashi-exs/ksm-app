@@ -28,6 +28,7 @@ import type { TournamentPhases } from "@/lib/types/tournament-phases";
 import { generatePhasesFromLegacy, validatePhases } from "@/lib/tournament-phases";
 import { PhaseConfigurationSection } from "./PhaseConfigurationSection";
 import { isStandardTwoPhaseConfiguration } from "./phase-utils";
+import ScheduleSimulator from "./ScheduleSimulator";
 
 interface TournamentFormatEditFormProps {
   format: {
@@ -307,6 +308,79 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
     }
   };
 
+  // スケジュールシミュレーターからの展開
+  const handleExportSchedule = (
+    schedule: Array<Array<[string, string] | null>>,
+    _blocks: Array<{ label: string; size: number }>,
+    _courtCount: number
+  ) => {
+    // 既存のテンプレートをクリア
+    while (fields.length > 0) {
+      remove(0);
+    }
+
+    let matchNumber = 1;
+    const newTemplates: Array<{
+      match_number: number;
+      match_code: string;
+      match_type: string;
+      phase: string;
+      round_name: string;
+      block_name: string;
+      team1_source: string;
+      team2_source: string;
+      team1_display_name: string;
+      team2_display_name: string;
+      day_number: number;
+      execution_priority: number;
+      court_number: number;
+      suggested_start_time: string;
+      loser_position_start: number | undefined;
+      loser_position_end: number | undefined;
+      winner_position: number | undefined;
+      position_note: string;
+    }> = [];
+
+    // スケジュールの各スロットから試合を展開
+    schedule.forEach((slot, slotIndex) => {
+      slot.forEach((match: [string, string] | null, courtIndex: number) => {
+        if (match) {
+          const [team1, team2] = match;
+
+          // ブロック名を抽出（例: "A1" → "A"）
+          const blockName = team1.match(/^[A-Z]+/)?.[0] || "";
+
+          newTemplates.push({
+            match_number: matchNumber,
+            match_code: `${team1}-${team2}`,
+            match_type: "通常",
+            phase: "preliminary",
+            round_name: `予選${blockName}ブロック`,
+            block_name: blockName,
+            team1_source: "",
+            team2_source: "",
+            team1_display_name: `${team1}チーム`,
+            team2_display_name: `${team2}チーム`,
+            day_number: 1,
+            execution_priority: slotIndex + 1,
+            court_number: courtIndex + 1,
+            suggested_start_time: "",
+            loser_position_start: undefined,
+            loser_position_end: undefined,
+            winner_position: undefined,
+            position_note: ""
+          });
+
+          matchNumber++;
+        }
+      });
+    });
+
+    // 新しいテンプレートを追加
+    newTemplates.forEach(template => append(template));
+
+    alert(`${newTemplates.length}試合を展開しました`);
+  };
 
   // フォーム送信
   const onSubmit = async (data: TournamentFormatFormData) => {
@@ -578,6 +652,28 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 />
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* スケジュールシミュレーター */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5 text-purple-600" />
+              <span>スケジュールシミュレーター</span>
+              <Badge variant="outline" className="ml-2">参考ツール</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800 font-medium mb-1">💡 試合テンプレート作成の参考に</p>
+              <p className="text-xs text-blue-700">
+                このシミュレーターで生成されたスケジュールを、ボタン一つで試合テンプレートに展開できます。
+                <br />
+                リーグ戦モードを使用すると、節単位で穴あきなしのスケジュールが生成されます。
+              </p>
+            </div>
+            <ScheduleSimulator onExportSchedule={handleExportSchedule} />
           </CardContent>
         </Card>
 
@@ -855,7 +951,6 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                             variant="ghost"
                             size="sm"
                             onClick={() => remove(index)}
-                            disabled={fields.length <= 1}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>

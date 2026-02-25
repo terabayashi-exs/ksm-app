@@ -246,14 +246,19 @@ function buildUserCondition(sessionId: string, isAdmin: boolean): { condition: s
   const isNewProvider = !isNaN(loginUserId) && loginUserId > 0;
 
   if (isNewProvider) {
-    // login_user_id で絞り込む
+    // login_user_id で絞り込む（グループに所属する大会 OR 自分が作成した大会）
     const condition = `
-      EXISTS (
-        SELECT 1 FROM t_tournament_groups tg2
-        WHERE tg2.group_id = t.group_id
-          AND tg2.login_user_id = ?
+      (
+        EXISTS (
+          SELECT 1 FROM t_tournament_groups tg2
+          WHERE tg2.group_id = t.group_id
+            AND tg2.login_user_id = ?
+        )
+        OR (
+          t.group_id IS NULL AND t.created_by = ?
+        )
       )`;
-    return { condition, params: [loginUserId] };
+    return { condition, params: [loginUserId, String(loginUserId)] };
   } else {
     // 旧形式のセッションID（後方互換、実質的に使用されない想定）
     return { condition: '1=0', params: [] };

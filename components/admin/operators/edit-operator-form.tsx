@@ -114,7 +114,7 @@ export default function EditOperatorForm({
   };
 
   // 選択されたプリセットから統合権限を計算
-  const calculateMergedPermissions = (): OperatorPermissions => {
+  const calculateMergedPermissions = useCallback((): OperatorPermissions => {
     const merged = { ...DEFAULT_OPERATOR_PERMISSIONS };
 
     selectedPresets.forEach(preset => {
@@ -128,7 +128,7 @@ export default function EditOperatorForm({
     });
 
     return merged;
-  };
+  }, [selectedPresets]);
 
   // 有効な権限を取得
   const getEffectivePermissions = useCallback((): OperatorPermissions => {
@@ -136,7 +136,7 @@ export default function EditOperatorForm({
       return commonPermissions;
     }
     return calculateMergedPermissions();
-  }, [useCustomPermissions, commonPermissions, selectedPresets, calculateMergedPermissions]);
+  }, [useCustomPermissions, commonPermissions, calculateMergedPermissions]);
 
   // 更新処理
   const handleUpdate = async () => {

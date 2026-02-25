@@ -94,12 +94,12 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       }
       // 通常のリーグブロック（A, B, C...）
       if (match.block_name) {
-        return `予選${match.block_name}ブロック`;
+        return `${match.block_name}ブロック`;
       }
       // match_codeから推測（フォールバック）
       const blockMatch = match.match_code.match(/([ABCD])\d+/);
       if (blockMatch) {
-        return `予選${blockMatch[1]}ブロック`;
+        return `${blockMatch[1]}ブロック`;
       }
       return '予選リーグ';
     } else if (match.phase === 'final') {
