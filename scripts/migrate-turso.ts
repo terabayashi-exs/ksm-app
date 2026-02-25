@@ -36,6 +36,20 @@ async function getMigrationsJournal(): Promise<Migration[]> {
   return journal.entries;
 }
 
+async function ensureMigrationsTable(): Promise<void> {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hash TEXT NOT NULL UNIQUE,
+        created_at INTEGER
+      )
+    `);
+  } catch (error) {
+    // テーブル作成エラーは無視（既に存在する場合など）
+  }
+}
+
 async function getAppliedMigrations(): Promise<Set<string>> {
   try {
     const result = await db.execute('SELECT hash FROM __drizzle_migrations');
@@ -116,6 +130,9 @@ async function migrate() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   try {
+    // マイグレーション履歴テーブルを作成（存在しない場合）
+    await ensureMigrationsTable();
+
     // マイグレーション一覧を取得
     const allMigrations = await getMigrationsJournal();
     console.log(`\n📚 マイグレーションファイル数: ${allMigrations.length}`);

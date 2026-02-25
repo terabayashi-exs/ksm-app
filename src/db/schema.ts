@@ -840,20 +840,8 @@ export const tSponsorBanners = sqliteTable("t_sponsor_banners", {
 	index("idx_sponsor_banners_display").on(_table.tournamentId, _table.targetTab, _table.displayPosition, _table.displayOrder),
 ]);
 
-export const mOperators = sqliteTable("m_operators", {
-	operatorId: integer("operator_id").primaryKey({ autoIncrement: true }),
-	operatorLoginId: text("operator_login_id").unique().notNull(),
-	passwordHash: text("password_hash").notNull(),
-	operatorName: text("operator_name").notNull(),
-	administratorId: integer("administrator_id").notNull().references(() => mAdministrators.administratorId),
-	isActive: integer("is_active").default(1).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_operators_admin").on(_table.administratorId),
-	index("idx_operators_login").on(_table.operatorLoginId),
-]);
+// 注: m_operatorsテーブルは廃止されました。
+// 運営者（operator）の管理はm_login_usersテーブルに統合されています。
 
 export const tOperatorTournamentAccess = sqliteTable("t_operator_tournament_access", {
 	accessId: integer("access_id").primaryKey({ autoIncrement: true }),

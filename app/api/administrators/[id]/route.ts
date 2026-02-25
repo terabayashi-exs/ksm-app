@@ -31,6 +31,7 @@ export async function GET(
         u.display_name,
         u.email,
         u.is_active,
+        u.is_superadmin,
         u.created_at,
         u.updated_at
       FROM m_login_users u
@@ -54,6 +55,7 @@ export async function GET(
         email: String(row.email),
         role: 'admin',
         is_active: Number(row.is_active) === 1,
+        is_superadmin: Number(row.is_superadmin) === 1,
         created_at: String(row.created_at),
         updated_at: String(row.updated_at)
       }
@@ -90,7 +92,7 @@ export async function PUT(
     const loginUserId = Number(resolvedParams.id);
 
     const body = await request.json();
-    const { admin_name, email, password, is_active } = body;
+    const { admin_name, email, password, is_active, is_superadmin } = body;
 
     // バリデーション
     if (!admin_name || !admin_name.trim()) {
@@ -142,24 +144,25 @@ export async function PUT(
     }
 
     const isActiveValue = is_active === false ? 0 : 1;
+    const isSuperadminValue = is_superadmin === true ? 1 : 0;
 
     if (password && password.trim()) {
       const hashedPassword = await bcrypt.hash(password, 10);
       await db.execute(`
         UPDATE m_login_users
-        SET display_name = ?, email = ?, password_hash = ?, is_active = ?,
+        SET display_name = ?, email = ?, password_hash = ?, is_active = ?, is_superadmin = ?,
             current_plan_id = COALESCE(current_plan_id, 1),
             updated_at = datetime('now', '+9 hours')
         WHERE login_user_id = ?
-      `, [admin_name.trim(), email.trim(), hashedPassword, isActiveValue, loginUserId]);
+      `, [admin_name.trim(), email.trim(), hashedPassword, isActiveValue, isSuperadminValue, loginUserId]);
     } else {
       await db.execute(`
         UPDATE m_login_users
-        SET display_name = ?, email = ?, is_active = ?,
+        SET display_name = ?, email = ?, is_active = ?, is_superadmin = ?,
             current_plan_id = COALESCE(current_plan_id, 1),
             updated_at = datetime('now', '+9 hours')
         WHERE login_user_id = ?
-      `, [admin_name.trim(), email.trim(), isActiveValue, loginUserId]);
+      `, [admin_name.trim(), email.trim(), isActiveValue, isSuperadminValue, loginUserId]);
     }
 
     return NextResponse.json({

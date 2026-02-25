@@ -13,6 +13,7 @@ interface Administrator {
   email: string;
   role: string;
   is_active: boolean;
+  is_superadmin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +23,7 @@ interface AdministratorFormData {
   email: string;
   password: string;
   is_active: boolean;
+  is_superadmin: boolean;
 }
 
 // メールアドレス確認結果
@@ -55,7 +57,8 @@ export default function AdministratorManagement() {
     admin_name: '',
     email: '',
     password: '',
-    is_active: true
+    is_active: true,
+    is_superadmin: false
   });
   const [saving, setSaving] = useState(false);
 
@@ -84,7 +87,7 @@ export default function AdministratorManagement() {
 
   // フォームリセット
   const resetAll = () => {
-    setFormData({ admin_name: '', email: '', password: '', is_active: true });
+    setFormData({ admin_name: '', email: '', password: '', is_active: true, is_superadmin: false });
     setEditingAdmin(null);
     setIsCreating(false);
     setCreateStep('email');
@@ -182,7 +185,7 @@ export default function AdministratorManagement() {
   // ── 編集フロー ──────────────────────────────────────────────────
 
   const startEditing = (admin: Administrator) => {
-    setFormData({ admin_name: admin.admin_name, email: admin.email, password: '', is_active: admin.is_active });
+    setFormData({ admin_name: admin.admin_name, email: admin.email, password: '', is_active: admin.is_active, is_superadmin: admin.is_superadmin });
     setEditingAdmin(admin);
     setIsCreating(false);
     setError(null);
@@ -373,14 +376,25 @@ export default function AdministratorManagement() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">本人に別途パスワードをお知らせください</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                  />
-                  <Label htmlFor="is_active">利用可能</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={formData.is_active ?? true}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                    />
+                    <Label htmlFor="is_active">利用可能</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_superadmin"
+                      checked={formData.is_superadmin ?? false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))}
+                    />
+                    <Label htmlFor="is_superadmin">スーパー管理者</Label>
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={handleCreateNew} disabled={saving}>
@@ -438,14 +452,25 @@ export default function AdministratorManagement() {
                 placeholder="6文字以上"
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="edit_is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-              />
-              <Label htmlFor="edit_is_active">利用可能</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_active"
+                  checked={formData.is_active ?? true}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                />
+                <Label htmlFor="edit_is_active">利用可能</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_superadmin"
+                  checked={formData.is_superadmin ?? false}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))}
+                />
+                <Label htmlFor="edit_is_superadmin">スーパー管理者</Label>
+              </div>
             </div>
             <div className="flex gap-2 pt-4">
               <Button variant="outline" onClick={handleUpdate} disabled={saving}>
@@ -488,6 +513,11 @@ export default function AdministratorManagement() {
                       <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">
                         管理者
                       </span>
+                      {admin.is_superadmin && (
+                        <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded font-semibold">
+                          スーパー管理者
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
                       <Mail className="h-4 w-4" />

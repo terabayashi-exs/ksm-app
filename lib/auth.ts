@@ -183,64 +183,8 @@ const authConfig: NextAuthOptions = {
         }
       }
     }),
-    CredentialsProvider({
-      id: "operator",
-      name: "運営者ログイン（旧）",
-      credentials: {
-        loginId: { label: "ログインID", type: "text" },
-        password: { label: "パスワード", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.loginId || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const result = await db.execute({
-            sql: `SELECT operator_id, operator_login_id, password_hash, operator_name, is_active
-                  FROM m_operators
-                  WHERE operator_login_id = ? AND is_active = 1`,
-            args: [credentials.loginId as string]
-          });
-
-          if (result.rows.length === 0) {
-            return null;
-          }
-
-          const operator = result.rows[0];
-          const isValidPassword = await bcrypt.compare(
-            credentials.password as string,
-            operator.password_hash as string
-          );
-
-          if (!isValidPassword) {
-            return null;
-          }
-
-          const accessResult = await db.execute({
-            sql: `SELECT tournament_id FROM t_operator_tournament_access WHERE operator_id = ?`,
-            args: [operator.operator_id]
-          });
-
-          const accessibleTournaments = accessResult.rows.map(row => Number(row.tournament_id));
-
-          return {
-            id: operator.operator_login_id as string,
-            email: `${operator.operator_login_id}@operator.local`,
-            name: operator.operator_name as string,
-            loginUserId: 0, // 旧Provider用のダミー値
-            roles: ["operator" as const],
-            isSuperadmin: false,
-            role: "operator" as const,
-            operatorId: String(operator.operator_id),
-            accessibleTournaments
-          };
-        } catch (error) {
-          console.error("Operator authentication error:", error);
-          return null;
-        }
-      }
-    }),
+    // 注: 旧operator認証プロバイダーは削除されました。
+    // 運営者は統合ログイン（login）プロバイダーを使用してください。
     CredentialsProvider({
       id: "team",
       name: "チーム代表者ログイン（旧）",

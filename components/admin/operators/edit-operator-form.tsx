@@ -136,7 +136,7 @@ export default function EditOperatorForm({
       return commonPermissions;
     }
     return calculateMergedPermissions();
-  }, [useCustomPermissions, commonPermissions, selectedPresets]);
+  }, [useCustomPermissions, commonPermissions, selectedPresets, calculateMergedPermissions]);
 
   // 更新処理
   const handleUpdate = async () => {

@@ -163,11 +163,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         params: [tournamentId],
         description: '大会ルール設定の削除'
       },
+      {
+        phase: 'Phase 1',
+        step: 4,
+        table: 't_operator_invitations',
+        query: `DELETE FROM t_operator_invitations WHERE tournament_access LIKE ?`,
+        params: [`%"tournament_id":${tournamentId}%`],
+        description: '運営者招待データの削除（JSON検索）'
+      },
 
       // Phase 2: 試合関連テーブル（相互依存があるため慎重に順序化）
       {
         phase: 'Phase 2',
-        step: 4,
+        step: 5,
         table: 't_match_status',
         query: `DELETE FROM t_match_status WHERE match_id IN (
           SELECT ml.match_id FROM t_matches_live ml 
@@ -179,7 +187,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
       {
         phase: 'Phase 2',
-        step: 5,
+        step: 6,
         table: 't_matches_final',
         query: `DELETE FROM t_matches_final WHERE match_id IN (
           SELECT ml.match_id FROM t_matches_live ml 
@@ -191,7 +199,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
       {
         phase: 'Phase 2',
-        step: 6,
+        step: 7,
         table: 't_matches_live',
         query: `DELETE FROM t_matches_live WHERE match_block_id IN (
           SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
@@ -203,7 +211,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       // Phase 3: 中間レイヤー（他テーブルから参照されているテーブル）
       {
         phase: 'Phase 3',
-        step: 7,
+        step: 8,
         table: 't_tournament_teams',
         query: 'DELETE FROM t_tournament_teams WHERE tournament_id = ?',
         params: [tournamentId],
@@ -213,7 +221,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       // Phase 4: 最上位レイヤー（最後に削除）
       {
         phase: 'Phase 4',
-        step: 8,
+        step: 9,
         table: 't_match_blocks',
         query: 'DELETE FROM t_match_blocks WHERE tournament_id = ?',
         params: [tournamentId],
@@ -223,7 +231,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       // Phase 5: アーカイブデータの削除
       {
         phase: 'Phase 5',
-        step: 9,
+        step: 10,
         table: 't_archived_tournament_json',
         query: 'DELETE FROM t_archived_tournament_json WHERE tournament_id = ?',
         params: [tournamentId],
@@ -330,12 +338,43 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 6. Blobアーカイブデータの削除
+    // 6. スポンサーバナー画像削除（Blob Storage）
+    try {
+      console.log(`\n🖼️  スポンサーバナー画像の削除を試行中...`);
+      const bannerResult = await db.execute(
+        'SELECT image_blob_url FROM t_sponsor_banners WHERE tournament_id = ?',
+        [tournamentId]
+      );
+
+      if (bannerResult.rows.length > 0) {
+        const { del } = await import('@vercel/blob');
+        const blobUrls = bannerResult.rows.map((row) => row.image_blob_url as string);
+        console.log(`📊 削除対象のバナー画像: ${blobUrls.length}件`);
+
+        let deletedCount = 0;
+        for (const url of blobUrls) {
+          try {
+            await del(url);
+            deletedCount++;
+          } catch (error) {
+            console.warn(`⚠️ Blob削除エラー (${url}):`, error instanceof Error ? error.message : error);
+          }
+        }
+        console.log(`✅ スポンサーバナー画像削除完了: ${deletedCount}/${blobUrls.length}件`);
+      } else {
+        console.log(`ℹ️  スポンサーバナー画像: 削除対象なし`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`⚠️  スポンサーバナー画像削除でエラー: ${errorMessage}`);
+    }
+
+    // 7. Blobアーカイブデータの削除
     try {
       console.log(`\n🗂️  Blobアーカイブデータの削除を試行中...`);
       const { TournamentBlobArchiver } = await import('@/lib/tournament-blob-archiver');
       const blobDeleted = await TournamentBlobArchiver.deleteArchive(tournamentId);
-      
+
       if (blobDeleted) {
         console.log(`✅ Blobアーカイブデータを削除しました`);
       } else {
@@ -346,7 +385,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       console.warn(`⚠️  Blobアーカイブデータ削除でエラー: ${errorMessage}`);
     }
 
-    // 7. 大会メインテーブルの削除（完全削除モード）
+    // 8. 大会メインテーブルの削除（完全削除モード）
     let tournamentMainDeleted = false;
     try {
       const deleteResult = await db.execute(`
@@ -376,7 +415,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       tournamentMainDeleted = false;
     }
 
-    // 8. 結果サマリーの生成
+    // 9. 結果サマリーの生成
     const successfulSteps = deletionResults.filter(r => r.success);
     const failedSteps = deletionResults.filter(r => !r.success);
     const totalExecutionTime = deletionResults.reduce((sum, r) => sum + r.executionTime, 0);

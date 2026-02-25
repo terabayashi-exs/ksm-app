@@ -33,12 +33,17 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
   const [deleting, setDeleting] = useState<number | null>(null);
   const [divisionChecks, setDivisionChecks] = useState<Record<number, DivisionCheckResult>>({});
 
+  console.log('[IncompleteTournamentGroups] コンポーネントがマウントされました');
+
   const fetchIncompleteGroups = useCallback(async () => {
     try {
+      console.log('[IncompleteTournamentGroups] APIを呼び出し中...');
       const response = await fetch('/api/tournament-groups/incomplete');
       const result = await response.json();
+      console.log('[IncompleteTournamentGroups] APIレスポンス:', result);
 
       if (result.success && result.data) {
+        console.log('[IncompleteTournamentGroups] 作成中の大会数:', result.data.length);
         setIncompleteGroups(result.data);
         onCountChange?.(result.data.length);
 
@@ -50,9 +55,13 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
           checks[group.group_id] = checkData;
         }
         setDivisionChecks(checks);
+      } else {
+        console.log('[IncompleteTournamentGroups] データなしまたはエラー');
+        onCountChange?.(0);
       }
     } catch (err) {
       console.error('作成中の大会取得エラー:', err);
+      onCountChange?.(0);
     } finally {
       setLoading(false);
     }

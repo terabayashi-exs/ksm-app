@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import SignOutButton from "@/components/features/auth/SignOutButton";
 import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
 import PlanBadge from "@/components/features/subscription/PlanBadge";
-import { fetchDashboardData, fetchOperatorDashboardData, fetchTeamData, fetchTeamDetailData, TournamentDashboardData, TeamDashboardItem, TeamDetailData } from "@/lib/dashboard-data";
+import { fetchDashboardData, fetchOperatorDashboardData, fetchTeamData, TournamentDashboardData, TeamDashboardItem } from "@/lib/dashboard-data";
 import { db } from "@/lib/db";
 
 export default async function MyDashboardPage() {
@@ -62,24 +62,10 @@ export default async function MyDashboardPage() {
 
   // チームデータをサーバー側で取得（高速化）
   let initialTeamData: TeamDashboardItem[] | null = null;
-  const initialTeamDetailData: Record<string, TeamDetailData> = {};
 
   if (loginUserId > 0) {
     try {
       initialTeamData = await fetchTeamData(loginUserId);
-
-      // 各チームの担当者・招待データを並列取得（パフォーマンス改善）
-      if (initialTeamData && initialTeamData.length > 0) {
-        const detailPromises = initialTeamData.map(async (team) => {
-          const detail = await fetchTeamDetailData(loginUserId, team.team_id);
-          return { teamId: team.team_id, detail };
-        });
-
-        const details = await Promise.all(detailPromises);
-        details.forEach(({ teamId, detail }) => {
-          if (detail) initialTeamDetailData[teamId] = detail;
-        });
-      }
     } catch (e) {
       console.error("チームデータ取得エラー:", e);
       // エラー時は null のままクライアント側フォールバック
@@ -127,7 +113,6 @@ export default async function MyDashboardPage() {
           initialTournamentData={tournamentData}
           initialOperatorTournamentData={operatorTournamentData}
           initialTeamData={initialTeamData}
-          initialTeamDetailData={initialTeamDetailData}
         />
       </div>
     </div>
