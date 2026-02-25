@@ -14,8 +14,8 @@ interface PageProps {
 export default async function CreateNewTournamentPage({ searchParams }: PageProps) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
-    redirect("/auth/login");
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+    redirect("/auth/admin/login");
   }
 
   const params = await searchParams;

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
@@ -150,7 +150,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 

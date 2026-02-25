@@ -7,9 +7,9 @@ import VenueManagement from "@/components/features/admin/VenueManagement";
 
 export default async function VenuePage() {
   const session = await auth();
-  
-  if (!session || session.user.role !== "admin") {
-    redirect("/auth/login");
+
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+    redirect("/auth/admin/login");
   }
 
   return (

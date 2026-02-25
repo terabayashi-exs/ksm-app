@@ -24,8 +24,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
   const resolvedParams = await params;
   const session = await auth();
 
-  if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
-    redirect("/auth/login");
+  if (!session || session.user.role !== "admin") {
+    redirect("/auth/admin/login");
   }
 
   // フォーマット情報を取得（競技種別も含む）

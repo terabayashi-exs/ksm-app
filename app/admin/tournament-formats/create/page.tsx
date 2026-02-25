@@ -7,9 +7,9 @@ import TournamentFormatCreateForm from "@/components/features/tournament-format/
 
 export default async function CreateTournamentFormatPage() {
   const session = await auth();
-  
-  if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
-    redirect("/auth/login");
+
+  if (!session || session.user.role !== "admin") {
+    redirect("/auth/admin/login");
   }
 
   return (

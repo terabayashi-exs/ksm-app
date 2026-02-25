@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function SportTypesPage() {
   const session = await auth();
-  
-  if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
-    redirect("/auth/login");
+
+  if (!session || session.user.role !== "admin") {
+    redirect("/auth/admin/login");
   }
 
   // 競技種別一覧を取得

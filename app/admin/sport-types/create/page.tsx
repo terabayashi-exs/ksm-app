@@ -7,9 +7,9 @@ import SportTypeCreateForm from "@/components/features/sport-type/SportTypeCreat
 
 export default async function CreateSportTypePage() {
   const session = await auth();
-  
-  if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
-    redirect("/auth/login");
+
+  if (!session || session.user.role !== "admin") {
+    redirect("/auth/admin/login");
   }
 
   return (
