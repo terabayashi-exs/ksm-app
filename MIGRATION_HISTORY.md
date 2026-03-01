@@ -85,6 +85,95 @@ npm run db:migrate:stag  # または npm run db:migrate:main
 
 ---
 
+## 0014: t_operator_tournament_accessにassigned_by_login_user_idを追加（2026-03-01）
+
+### 基本情報
+- **日付**: 2026年3月1日
+- **環境**: stag, main
+- **方法**: マイグレーションファイル + 手動スクリプト
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0014_add_assigned_by_login_user_id.sql`
+- **スクリプト**: `scripts/add-assigned-by-column-stag.ts`, `scripts/add-index-stag.ts`, `scripts/migrate-0014-to-main.ts`
+
+### 変更の背景と目的
+
+staging環境のt_operator_tournament_accessテーブルに、dev環境では既に存在する`assigned_by_login_user_id`カラムが存在していなかったため、dev環境との整合性を保つために追加する。
+
+**背景:**
+- 0012マイグレーションでdev環境にはassigned_by_login_user_idカラムが追加済み
+- staging環境にはこのカラムが存在せず、環境間の不整合が発生
+- 運営者管理機能の正常動作のため、staging環境にも同じスキーマを適用する必要があった
+
+### 変更内容
+
+**テーブル変更:**
+- `t_operator_tournament_access` テーブル
+  - `assigned_by_login_user_id` (INTEGER, NULL可) カラムを追加
+  - 外部キー: `m_login_users.login_user_id` (ON DELETE SET NULL)
+  - この部門アクセス権を付与した管理者のIDを記録
+  - インデックス `idx_operator_access_assigned_by` を作成
+
+### 影響範囲
+
+**新規作成されたファイル:**
+- `scripts/add-assigned-by-column-stag.ts` (カラム追加スクリプト)
+- `scripts/add-index-stag.ts` (インデックス追加スクリプト)
+- `scripts/check-stag-schema.ts` (スキーマ確認スクリプト)
+
+**更新されたファイル:**
+- `MIGRATION_HISTORY.md` (このエントリ)
+
+### 実行コマンド
+
+```bash
+# Staging環境（手動スクリプト）
+npx tsx scripts/add-assigned-by-column-stag.ts
+npx tsx scripts/add-index-stag.ts
+
+# Main環境（マイグレーションファイル適用）
+npx tsx scripts/migrate-0014-to-main.ts
+```
+
+### SQLステートメント
+
+```sql
+-- カラム追加
+ALTER TABLE t_operator_tournament_access
+ADD COLUMN assigned_by_login_user_id INTEGER REFERENCES m_login_users(login_user_id) ON DELETE SET NULL;
+
+-- インデックス追加
+CREATE INDEX IF NOT EXISTS idx_operator_access_assigned_by
+ON t_operator_tournament_access(assigned_by_login_user_id);
+```
+
+### 検証結果
+
+**追加前:**
+- staging/main環境: カラム数6個（access_id, operator_id, tournament_id, permissions, created_at, updated_at）
+- assigned_by_login_user_id: 存在しない
+
+**追加後（全環境）:**
+- dev/stag/main環境: カラム数7個（assigned_by_login_user_idが追加）
+- インデックス: idx_operator_access_assigned_by 追加済み
+- 全環境のスキーマ整合性: 確認済み✅
+
+### マイグレーションファイル
+
+drizzle/0014_add_assigned_by_login_user_id.sql:
+```sql
+ALTER TABLE `t_operator_tournament_access`
+ADD COLUMN `assigned_by_login_user_id` integer REFERENCES `m_login_users`(`login_user_id`) ON DELETE SET NULL;
+
+CREATE INDEX `idx_operator_access_assigned_by` ON `t_operator_tournament_access` (`assigned_by_login_user_id`);
+```
+
+### 注意事項
+- 既存レコードの `assigned_by_login_user_id` は NULL
+- 今後の新規登録時に正確な値が設定される
+- 全環境（dev/stag/main）に適用完了
+
+---
+
 ## 0012: 部門アクセス権付与者の追跡機能（2026-02-22）
 
 ### 基本情報

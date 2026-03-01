@@ -99,6 +99,13 @@
       "when": 1740412800000,
       "tag": "0013_add_logo_columns_to_m_login_users",
       "breakpoints": false
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1740499200000,
+      "tag": "0014_add_assigned_by_login_user_id",
+      "breakpoints": false
     }
   ]
 }
