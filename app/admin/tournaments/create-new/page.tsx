@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TournamentCreateNewForm from "@/components/features/tournament/TournamentCreateNewForm";
@@ -29,36 +29,37 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">部門作成</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">部門作成</h1>
+              <p className="text-sm text-white/70 mt-1">
                 大会に属する部門（カテゴリー）を作成します
               </p>
-            </div>
-            <div>
-              <Button asChild variant="outline">
-                <Link href="/my">ダッシュボードに戻る</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
         {/* 部門追加制限に達している場合のエラー表示 */}
         {divisionCheckResult && !divisionCheckResult.allowed ? (
-          <Card className="border-2 border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
+          <Card className="border-2 border-destructive/30 bg-destructive/5 dark:border-red-800 dark:bg-red-950/20">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-red-800 dark:text-red-200">
+              <CardTitle className="flex items-center space-x-2 text-destructive dark:text-red-200">
                 <AlertTriangle className="w-6 h-6" />
                 <span>部門作成制限に達しています</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-red-700 dark:text-red-300">
+              <div className="text-destructive dark:text-red-300">
                 <p className="font-semibold mb-2">{divisionCheckResult.reason}</p>
                 <div className="space-y-1 text-sm">
                   <p>現在の部門数: {divisionCheckResult.current}部門</p>
@@ -66,7 +67,7 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
                 </div>
               </div>
               <div className="flex gap-3">
-                <Button asChild variant="default" className="bg-blue-600 hover:bg-blue-700">
+                <Button asChild variant="default" className="bg-primary hover:bg-primary/90">
                   <Link href="/admin/subscription/plans">
                     プランをアップグレード
                   </Link>

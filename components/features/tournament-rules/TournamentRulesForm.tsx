@@ -435,7 +435,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
     return (
       <div className="flex justify-center items-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
           <p className="text-sm text-gray-600">ルール設定を読み込み中...</p>
         </div>
       </div>
@@ -445,8 +445,8 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   if (!tournament || !sportConfig) {
     return (
       <div className="text-center py-12">
-        <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-        <p className="text-red-600">大会またはルール設定の読み込みに失敗しました</p>
+        <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-2" />
+        <p className="text-destructive">大会またはルール設定の読み込みに失敗しました</p>
       </div>
     );
   }
@@ -480,7 +480,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                     key={period.period_number}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                       isActive 
-                        ? 'border-blue-500 bg-blue-50' 
+                        ? 'border-primary bg-primary/5'
                         : 'border-gray-200 hover:border-gray-300'
                     } ${isRequired ? 'border-green-500 bg-green-50' : ''}`}
                     onClick={() => !isRequired && togglePeriod(phase, period.period_number)}
@@ -500,9 +500,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             
             {/* バリデーションメッセージ表示 */}
             {validationErrors[phase] && (
-              <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-red-700">
+              <div className="flex items-start space-x-2 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-destructive">
                   <strong>設定エラー:</strong> {validationErrors[phase]}
                 </div>
               </div>
@@ -552,7 +552,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-            <Settings className="h-6 w-6 text-blue-600" />
+            <Settings className="h-6 w-6 text-primary" />
             <span>大会ルール設定</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">
@@ -643,7 +643,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                     
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        <span className="font-medium text-sm bg-primary/10 text-primary px-2 py-1 rounded">
                           {index + 1}
                         </span>
                         <span className="font-medium">
@@ -665,7 +665,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                         variant="ghost"
                         size="sm"
                         onClick={() => removeTieBreakingRule(index)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-destructive hover:text-destructive/80"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -833,8 +833,8 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             </div>
 
             {/* 競技種別に応じた説明 */}
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
+            <div className="mt-4 p-3 bg-primary/5 rounded-lg">
+              <p className="text-sm text-primary">
                 <strong>{tournament?.sport_name || 'この競技'}</strong>では勝点システムを使用します。
                 設定した勝点に基づいて順位表が計算されます。
               </p>

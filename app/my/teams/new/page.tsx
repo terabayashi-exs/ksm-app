@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, AlertCircle } from 'lucide-react';
+import { Users, AlertCircle, ArrowLeft } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -81,21 +81,25 @@ export default function NewTeamPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b border-border">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Users className="w-6 h-6" />
-              チームを登録する
-            </h1>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/my?tab=team">ダッシュボードに戻る</Link>
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Users className="w-6 h-6 text-white" />
+            チームを登録する
+          </h1>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=team">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+
         <Card className="border-2">
           <CardHeader>
             <CardTitle className="text-lg">チーム情報</CardTitle>
@@ -170,9 +174,9 @@ export default function NewTeamPage() {
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                <div className="flex items-start gap-2 p-3 bg-destructive/5 dark:bg-red-950/20 rounded-lg border border-destructive/20 dark:border-red-800">
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-destructive dark:text-red-300">{error}</p>
                 </div>
               )}
 
@@ -180,7 +184,7 @@ export default function NewTeamPage() {
                 <Button
                   type="submit"
                   disabled={submitting || !teamName.trim()}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {submitting ? '登録中...' : 'チームを登録する'}
                 </Button>
@@ -192,9 +196,9 @@ export default function NewTeamPage() {
           </CardContent>
         </Card>
 
-        <Card className="mt-4 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10">
+        <Card className="mt-4 border-primary/20 dark:border-blue-800 bg-primary/5 dark:bg-blue-950/10">
           <CardContent className="pt-4">
-            <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+            <div className="text-sm text-primary dark:text-blue-300 space-y-1">
               <p className="font-medium">チーム登録後にできること</p>
               <ul className="list-disc list-inside text-xs space-y-1 mt-2">
                 <li>選手の登録・管理</li>

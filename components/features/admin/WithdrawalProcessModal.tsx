@@ -174,7 +174,7 @@ export default function WithdrawalProcessModal({
       description: 'この辞退申請を承認しますか？承認後は取り消すことができません。',
       buttonText: '承認する',
       buttonIcon: <CheckCircle className="w-4 h-4" />,
-      buttonClass: 'bg-green-600 hover:bg-green-700 text-white',
+      buttonClass: 'bg-primary hover:bg-primary/90 text-primary-foreground',
       badgeClass: 'bg-green-50 text-green-700 border-green-200'
     },
     reject: {

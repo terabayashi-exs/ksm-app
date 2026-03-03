@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher';
-import BackButton from '@/components/ui/back-button';
 import TournamentSchedule from '@/components/features/tournament/TournamentSchedule';
 import TournamentStandings from '@/components/features/tournament/TournamentStandings';
 import TournamentResults from '@/components/features/tournament/TournamentResults';
@@ -97,7 +96,7 @@ function TournamentOverview({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Trophy className="h-5 w-5 mr-2 text-blue-600" />
+            <Trophy className="h-5 w-5 mr-2 text-primary" />
             大会基本情報
           </CardTitle>
         </CardHeader>
@@ -161,7 +160,7 @@ function TournamentOverview({
                     </p>
                   </div>
                   <div className="flex justify-center">
-                    <Button asChild className="bg-green-600 hover:bg-green-700">
+                    <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
                       <Link 
                         href={`/public/tournaments/${tournament.tournament_id}/bracket-pdf`}
                         className="flex items-center gap-2"
@@ -182,23 +181,23 @@ function TournamentOverview({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                  <BarChart3 className="h-5 w-5 mr-2 text-primary" />
                   結果表（PDF版）
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col space-y-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex flex-col space-y-3 p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg border border-primary/20 dark:border-blue-800">
                   <div className="flex-1">
-                    <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">PDFで結果表を表示</h4>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                    <h4 className="font-medium text-primary dark:text-blue-200 mb-1">PDFで結果表を表示</h4>
+                    <p className="text-sm text-primary dark:text-blue-300">
                       手動作成された結果表をPDF形式でご覧いただけます。順位・戦績の確認に最適です。
                     </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    <p className="text-xs text-primary dark:text-blue-400 mt-1">
                       ※ 最新の順位・戦績は「順位表」「戦績表」ページをご確認ください
                     </p>
                   </div>
                   <div className="flex justify-center">
-                    <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                    <Button asChild className="bg-primary hover:bg-primary/90">
                       <Link 
                         href={`/public/tournaments/${tournament.tournament_id}/results-pdf`}
                         className="flex items-center gap-2"
@@ -236,7 +235,7 @@ function TournamentOverview({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {dateEntries.map(([dayNumber, date]) => (
                 <div key={dayNumber} className="flex items-center p-3 bg-muted/50 rounded-lg">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold mr-3">
                     {dayNumber}
                   </div>
                   <div>
@@ -260,8 +259,8 @@ function TournamentOverview({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">{tournament.match_duration_minutes}</p>
+            <div className="text-center p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg">
+              <p className="text-2xl font-bold text-primary">{tournament.match_duration_minutes}</p>
               <p className="text-sm text-muted-foreground">試合時間（分）</p>
             </div>
             <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
@@ -386,7 +385,6 @@ async function TournamentDetailContent({ params }: PageProps) {
 
           {/* ナビゲーションボタン */}
           <div className="flex items-center gap-3 mb-6 no-print">
-            <BackButton />
             {group && (
               <Button variant="outline" asChild>
                 <Link href={`/public/tournaments/groups/${group.group_id}`} className="flex items-center">

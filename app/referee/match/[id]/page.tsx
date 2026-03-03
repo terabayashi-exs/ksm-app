@@ -489,7 +489,7 @@ export default function RefereeMatchPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">認証中...</p>
         </div>
       </div>
@@ -501,9 +501,9 @@ export default function RefereeMatchPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
-            <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800 dark:text-red-200">
+            <Alert className="border-destructive/20 bg-destructive/5 dark:bg-red-950/20 dark:border-red-800">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <AlertDescription className="text-destructive dark:text-red-200">
                 {error}
               </AlertDescription>
             </Alert>
@@ -671,9 +671,9 @@ export default function RefereeMatchPage() {
                 <div className="space-y-3">
                   {/* 確定前のメッセージ */}
                   {!isConfirmed && (
-                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
-                      <AlertDescription className="text-blue-800 dark:text-blue-200">
+                    <Alert className="border-primary/20 bg-primary/5 dark:bg-blue-950/20 dark:border-blue-800">
+                      <AlertCircle className="h-4 w-4 text-primary" />
+                      <AlertDescription className="text-primary dark:text-blue-200">
                         結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
                       </AlertDescription>
                     </Alert>
@@ -728,9 +728,9 @@ export default function RefereeMatchPage() {
 
               {match.match_status === 'completed' && !isConfirmed && (
                 <div className="space-y-3">
-                  <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
-                    <AlertCircle className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800 dark:text-blue-200">
+                  <Alert className="border-primary/20 bg-primary/5 dark:bg-blue-950/20 dark:border-blue-800">
+                    <AlertCircle className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-primary dark:text-blue-200">
                       結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
                     </AlertDescription>
                   </Alert>

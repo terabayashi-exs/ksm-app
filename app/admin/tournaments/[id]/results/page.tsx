@@ -92,29 +92,27 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin" className="flex items-center">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  ダッシュボードに戻る
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">結果入力</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  「{tournament.tournament_name}」の試合結果を入力・管理します
-                </p>
-              </div>
-            </div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">結果入力</h1>
+            <p className="text-sm text-white/70 mt-1">
+              「{tournament.tournament_name}」の試合結果を入力・管理します
+            </p>
           </div>
         </div>
       </div>
 
       {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
         <div className="bg-card rounded-lg shadow p-8 text-center">
           <Trophy className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-2xl font-bold text-foreground mb-2">

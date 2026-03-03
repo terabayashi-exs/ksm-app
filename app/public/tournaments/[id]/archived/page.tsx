@@ -567,8 +567,8 @@ function ArchivedTournamentTeams({ teams }: { teams: TeamData[] }) {
                     )}
                     
                     {team.withdrawal_status !== 'active' && (
-                      <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
-                        <span className="text-red-700 font-medium">
+                      <div className="mt-3 p-2 bg-destructive/5 border border-destructive/20 rounded">
+                        <span className="text-destructive font-medium">
                           {team.withdrawal_status === 'withdrawal_approved' ? '辞退済み' : '辞退申請中'}
                         </span>
                       </div>
@@ -684,12 +684,12 @@ function renderInlineComponent(archived: ReturnType<typeof getArchivedTournament
 
         {/* エラー通知 */}
         <div className="mb-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
             <div className="flex items-center">
-              <Archive className="h-5 w-5 text-red-600 mr-2" />
+              <Archive className="h-5 w-5 text-destructive mr-2" />
               <div className="flex-1">
-                <p className="font-medium text-red-800">アーカイブコンポーネント読み込みエラー</p>
-                <p className="text-sm text-red-700 mt-1">
+                <p className="font-medium text-destructive">アーカイブコンポーネント読み込みエラー</p>
+                <p className="text-sm text-destructive mt-1">
                   アーカイブ表示コンポーネントの読み込みに失敗しました。管理者にお問い合わせください。
                 </p>
               </div>

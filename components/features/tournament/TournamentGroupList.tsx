@@ -160,7 +160,7 @@ export default function TournamentGroupList() {
       {groups.map((group, index) => (
         <div
           key={group.group_id}
-          className="border rounded-lg p-6 hover:shadow-md transition-shadow"
+          className="border rounded-lg p-6 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
           style={{ borderLeftColor: group.group_color, borderLeftWidth: '4px' }}
         >
           <div className="flex justify-between items-start mb-3">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -123,21 +123,25 @@ export default function EditTeamPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b border-border">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Users className="w-6 h-6" />
-              チーム情報を編集する
-            </h1>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/my?tab=team">ダッシュボードに戻る</Link>
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Users className="w-6 h-6 text-white" />
+            チーム情報を編集する
+          </h1>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=team">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+
         <Card className="border-2">
           <CardHeader>
             <CardTitle className="text-lg">チーム情報</CardTitle>
@@ -212,9 +216,9 @@ export default function EditTeamPage() {
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                <div className="flex items-start gap-2 p-3 bg-destructive/5 dark:bg-red-950/20 rounded-lg border border-destructive/20 dark:border-red-800">
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-destructive dark:text-red-300">{error}</p>
                 </div>
               )}
 
@@ -229,7 +233,7 @@ export default function EditTeamPage() {
                 <Button
                   type="submit"
                   disabled={submitting || success || !teamName.trim()}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {submitting ? '更新中...' : '変更を保存する'}
                 </Button>

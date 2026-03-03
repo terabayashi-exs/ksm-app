@@ -151,7 +151,7 @@ export default function SportTypeCreateForm() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Settings className="h-5 w-5 text-blue-600" />
+            <Settings className="h-5 w-5 text-primary" />
             <span>基本情報</span>
           </CardTitle>
         </CardHeader>
@@ -347,8 +347,8 @@ export default function SportTypeCreateForm() {
             ))}
           </div>
           
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-sm text-blue-800 dark:text-blue-200 flex items-center">
+          <div className="mt-4 p-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/20 rounded-lg">
+            <p className="text-sm text-primary dark:text-primary/80 flex items-center">
               <AlertTriangle className="h-4 w-4 mr-2" />
               通常ピリオドは必須で、延長・PK戦は大会ごとに使用可否を設定できます
             </p>
@@ -361,7 +361,7 @@ export default function SportTypeCreateForm() {
         <Button type="button" variant="outline" onClick={() => router.back()}>
           キャンセル
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+        <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
           {isSubmitting ? "作成中..." : "競技種別を作成"}
         </Button>
       </div>

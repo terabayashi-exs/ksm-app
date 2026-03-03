@@ -457,10 +457,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 id="tournament_name"
                 {...form.register('tournament_name')}
                 placeholder="例: 第1回PKトーナメント"
-                className={form.formState.errors.tournament_name ? 'border-red-500' : ''}
+                className={form.formState.errors.tournament_name ? 'border-destructive' : ''}
               />
               {form.formState.errors.tournament_name && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   {form.formState.errors.tournament_name.message}
                 </p>
               )}
@@ -473,7 +473,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 value={form.watch('venue_id')?.toString()}
                 onValueChange={(value) => form.setValue('venue_id', parseInt(value))}
               >
-                <SelectTrigger className={form.formState.errors.venue_id ? 'border-red-500' : ''}>
+                <SelectTrigger className={form.formState.errors.venue_id ? 'border-destructive' : ''}>
                   <SelectValue placeholder="会場を選択してください" />
                 </SelectTrigger>
                 <SelectContent>
@@ -485,7 +485,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 </SelectContent>
               </Select>
               {form.formState.errors.venue_id && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   {form.formState.errors.venue_id.message}
                 </p>
               )}
@@ -500,10 +500,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 min="2"
                 max="128"
                 {...form.register('team_count', { valueAsNumber: true })}
-                className={form.formState.errors.team_count ? 'border-red-500' : ''}
+                className={form.formState.errors.team_count ? 'border-destructive' : ''}
               />
               {form.formState.errors.team_count && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   {form.formState.errors.team_count.message}
                 </p>
               )}
@@ -585,10 +585,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   min="1"
                   max="20"
                   {...form.register('court_count', { valueAsNumber: true })}
-                  className={form.formState.errors.court_count ? 'border-red-500' : ''}
+                  className={form.formState.errors.court_count ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.court_count && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <p className="text-sm text-destructive mt-1">
                     {form.formState.errors.court_count.message}
                   </p>
                 )}
@@ -600,10 +600,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   id="available_courts"
                   placeholder="例: 1,3,4,7"
                   {...form.register('available_courts')}
-                  className={form.formState.errors.available_courts ? 'border-red-500' : ''}
+                  className={form.formState.errors.available_courts ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.available_courts && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <p className="text-sm text-destructive mt-1">
                     {form.formState.errors.available_courts.message}
                   </p>
                 )}
@@ -622,10 +622,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   min="5"
                   max="120"
                   {...form.register('match_duration_minutes', { valueAsNumber: true })}
-                  className={form.formState.errors.match_duration_minutes ? 'border-red-500' : ''}
+                  className={form.formState.errors.match_duration_minutes ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.match_duration_minutes && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <p className="text-sm text-destructive mt-1">
                     {form.formState.errors.match_duration_minutes.message}
                   </p>
                 )}
@@ -639,10 +639,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   min="0"
                   max="60"
                   {...form.register('break_duration_minutes', { valueAsNumber: true })}
-                  className={form.formState.errors.break_duration_minutes ? 'border-red-500' : ''}
+                  className={form.formState.errors.break_duration_minutes ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.break_duration_minutes && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <p className="text-sm text-destructive mt-1">
                     {form.formState.errors.break_duration_minutes.message}
                   </p>
                 )}
@@ -660,9 +660,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium mb-2">💡 リアルタイムプレビュー機能</p>
-              <p className="text-xs text-blue-700">
+            <div className="mb-4 p-4 bg-primary/5 rounded-lg">
+              <p className="text-sm text-primary font-medium mb-2">💡 リアルタイムプレビュー機能</p>
+              <p className="text-xs text-primary">
                 上記の運営設定を変更すると、自動的にスケジュールが更新されます。
                 試合時間をクリックして個別に調整したり、コート番号を変更することも可能です。
                 時間重複エラーやコート数不足がある場合は警告が表示されるので、設定を調整して最適なスケジュールを作成してください。
@@ -717,10 +717,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   id="public_start_date"
                   type="datetime-local"
                   {...form.register('public_start_date')}
-                  className={form.formState.errors.public_start_date ? 'border-red-500' : ''}
+                  className={form.formState.errors.public_start_date ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.public_start_date && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-destructive">
                     {form.formState.errors.public_start_date.message}
                   </p>
                 )}
@@ -732,10 +732,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   id="recruitment_start_date"
                   type="datetime-local"
                   {...form.register('recruitment_start_date')}
-                  className={form.formState.errors.recruitment_start_date ? 'border-red-500' : ''}
+                  className={form.formState.errors.recruitment_start_date ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.recruitment_start_date && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-destructive">
                     {form.formState.errors.recruitment_start_date.message}
                   </p>
                 )}
@@ -747,19 +747,19 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                   id="recruitment_end_date"
                   type="datetime-local"
                   {...form.register('recruitment_end_date')}
-                  className={form.formState.errors.recruitment_end_date ? 'border-red-500' : ''}
+                  className={form.formState.errors.recruitment_end_date ? 'border-destructive' : ''}
                 />
                 {form.formState.errors.recruitment_end_date && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-destructive">
                     {form.formState.errors.recruitment_end_date.message}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">日程設定について</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              <h4 className="font-medium text-primary mb-2">日程設定について</h4>
+              <ul className="text-sm text-primary space-y-1">
                 <li>• 公開開始日時: 一般ユーザーが大会情報を閲覧できるようになる日時</li>
                 <li>• 募集開始日時: チームが大会への参加申込みを開始できる日時</li>
                 <li>• 募集終了日時: チームの参加申込みを締め切る日時</li>
@@ -772,7 +772,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                 type="checkbox"
                 id="show_players_public"
                 {...form.register('show_players_public')}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <div className="flex-1">
                 <Label htmlFor="show_players_public" className="cursor-pointer font-medium">
@@ -789,17 +789,17 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
 
         {/* エラーサマリー */}
         {Object.keys(form.formState.errors).length > 0 && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-destructive/20 bg-destructive/5">
             <CardContent className="pt-6">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-5 w-5 text-destructive" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-red-800 mb-2">入力内容にエラーがあります</h3>
-                  <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                  <h3 className="text-sm font-medium text-destructive mb-2">入力内容にエラーがあります</h3>
+                  <ul className="list-disc list-inside text-sm text-destructive space-y-1">
                     {form.formState.errors.tournament_name && <li>{form.formState.errors.tournament_name.message}</li>}
                     {form.formState.errors.venue_id && <li>{form.formState.errors.venue_id.message}</li>}
                     {form.formState.errors.team_count && <li>{form.formState.errors.team_count.message}</li>}

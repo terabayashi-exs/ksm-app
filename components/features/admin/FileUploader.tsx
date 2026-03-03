@@ -225,7 +225,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
           onClick={() => setState(prev => ({ ...prev, linkType: 'upload', externalUrl: '', error: null }))}
           className={`flex-1 ${
             state.linkType === 'upload'
-              ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
               : 'hover:bg-gray-100'
           }`}
         >
@@ -238,7 +238,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
           onClick={() => setState(prev => ({ ...prev, linkType: 'external', file: null, error: null }))}
           className={`flex-1 ${
             state.linkType === 'external'
-              ? 'bg-green-600 text-white hover:bg-green-700 border-green-600'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
               : 'hover:bg-gray-100'
           }`}
         >

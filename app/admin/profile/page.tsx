@@ -8,7 +8,7 @@ import Link from 'next/link';
 import AdminLogoUpload from '@/components/features/admin/AdminLogoUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ImageIcon } from 'lucide-react';
+import { ArrowLeft, ImageIcon } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'プロフィール設定 - 管理者',
@@ -24,51 +24,52 @@ export default async function AdminProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">ロゴ設定</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">ロゴ設定</h1>
+              <p className="text-sm text-white/70 mt-1">
                 ロゴの設定を行います
               </p>
-            </div>
-            <div>
-              <Button asChild variant="outline">
-                <Link href="/my?tab=admin">マイダッシュボードに戻る</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
         <div className="grid gap-8">
         {/* ロゴ設定 */}
         <AdminLogoUpload />
 
         {/* 設定説明 */}
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-primary/5 border-primary/20">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-800">
+            <CardTitle className="flex items-center gap-2 text-primary">
               <ImageIcon className="h-5 w-5" />
               ロゴについて
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-blue-700">
+          <CardContent className="text-primary">
             <div className="space-y-3">
               <h3 className="font-medium">ロゴ設定の効果</h3>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>あなたが作成した大会のカードに組織ロゴが表示されます</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>参加者や観覧者が大会の主催者を一目で識別できます</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>組織のブランディング効果が期待できます</span>
                 </li>
               </ul>
@@ -76,19 +77,19 @@ export default async function AdminProfilePage() {
               <h3 className="font-medium mt-4">ロゴの推奨仕様</h3>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>形式: JPEG、PNG、WebP</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>サイズ: 256x256px程度の正方形（最小128x128px）</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>容量: 1MB以下</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                   <span>背景: 透明または白背景を推奨</span>
                 </li>
               </ul>

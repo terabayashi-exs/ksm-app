@@ -2,11 +2,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, AlertCircle, List } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, Pencil, AlertCircle, List } from 'lucide-react';
 import { MatchOverrideDialog } from '@/components/features/admin/MatchOverrideDialog';
 import { BulkMatchOverrideDialog } from '@/components/features/admin/BulkMatchOverrideDialog';
 
@@ -33,7 +34,6 @@ interface MatchOverride {
 
 export default function MatchOverridesPage() {
   const params = useParams();
-  const router = useRouter();
   const tournamentId = parseInt(params.id as string);
 
   const [templates, setTemplates] = useState<MatchTemplate[]>([]);
@@ -129,34 +129,35 @@ export default function MatchOverridesPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">試合進出条件の設定</h1>
-            <p className="text-gray-600">
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">試合進出条件の設定</h1>
+            <p className="text-sm text-white/70 mt-1">
               トーナメント形式の各試合について、進出元チームを個別に設定できます。
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsBulkDialogOpen(true)}
-            >
-              <List className="h-4 w-4 mr-2" />
-              一括変更
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push('/my?tab=admin')}
-            >
-              ダッシュボードに戻る
-            </Button>
-          </div>
         </div>
       </div>
-
-      <Card className="mb-6">
+      <div className="container mx-auto py-8 max-w-6xl">
+        <div className="flex items-center justify-between mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsBulkDialogOpen(true)}
+          >
+            <List className="h-4 w-4 mr-2" />
+            一括変更
+          </Button>
+        </div>
+        <Card className="mb-6">
         <CardHeader>
           <CardTitle>使い方</CardTitle>
           <CardDescription>
@@ -191,14 +192,14 @@ export default function MatchOverridesPage() {
             const override = overrides.find(o => o.match_code === template.match_code);
 
             return (
-              <Card key={template.match_code} className={isOverridden ? 'border-blue-300 bg-blue-50/50' : ''}>
+              <Card key={template.match_code} className={isOverridden ? 'border-primary/30 bg-primary/5' : ''}>
                 <CardContent className="py-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-lg font-semibold">{template.match_code}</h3>
                         <Badge variant="outline">{template.round_name}</Badge>
-                        {isOverridden && <Badge className="bg-blue-500">オーバーライド設定済み</Badge>}
+                        {isOverridden && <Badge className="bg-primary">オーバーライド設定済み</Badge>}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -208,7 +209,7 @@ export default function MatchOverridesPage() {
                             {isOverridden && currentTeam1Source !== template.team1_source && (
                               <>
                                 <span className="text-gray-400 line-through">{template.team1_source}</span>
-                                <span className="text-blue-600 font-semibold">→ {currentTeam1Source}</span>
+                                <span className="text-primary font-semibold">→ {currentTeam1Source}</span>
                               </>
                             )}
                             {(!isOverridden || currentTeam1Source === template.team1_source) && (
@@ -224,7 +225,7 @@ export default function MatchOverridesPage() {
                             {isOverridden && currentTeam2Source !== template.team2_source && (
                               <>
                                 <span className="text-gray-400 line-through">{template.team2_source}</span>
-                                <span className="text-blue-600 font-semibold">→ {currentTeam2Source}</span>
+                                <span className="text-primary font-semibold">→ {currentTeam2Source}</span>
                               </>
                             )}
                             {(!isOverridden || currentTeam2Source === template.team2_source) && (
@@ -282,12 +283,13 @@ export default function MatchOverridesPage() {
         />
       )}
 
-      <BulkMatchOverrideDialog
-        open={isBulkDialogOpen}
-        onOpenChange={setIsBulkDialogOpen}
-        tournamentId={tournamentId}
-        onSave={loadData}
-      />
+        <BulkMatchOverrideDialog
+          open={isBulkDialogOpen}
+          onOpenChange={setIsBulkDialogOpen}
+          tournamentId={tournamentId}
+          onSave={loadData}
+        />
+      </div>
     </div>
   );
 }

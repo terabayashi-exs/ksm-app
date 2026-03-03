@@ -153,7 +153,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                   <Button
                     asChild
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground dark:bg-primary dark:hover:bg-primary/90"
                   >
                     <Link href={`/admin/tournaments/${group.original_tournament_id}/edit`}>
                       <Plus className="w-4 h-4 mr-1" />
@@ -171,7 +171,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                     <Button
                       asChild
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
                         <Plus className="w-4 h-4 mr-1" />

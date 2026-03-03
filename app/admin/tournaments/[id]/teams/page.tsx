@@ -15,7 +15,8 @@ import {
   AlertCircle,
   FileText,
   Key,
-  Trash2
+  Trash2,
+  ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -615,33 +616,35 @@ export default function TeamRegistrationPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">チーム登録（管理者代行）</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">チーム登録（管理者代行）</h1>
+              <p className="text-sm text-white/70 mt-1">
                 「{tournament.tournament_name}」のチーム登録を管理者が代行します
               </p>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/my?tab=admin">
-                ダッシュボードに戻る
-              </Link>
-            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+
         {/* パスワード管理についての注意書き */}
-        <Card className="mb-6 border-blue-200 bg-blue-50">
+        <Card className="mb-6 border-primary/20 bg-primary/5">
           <CardContent className="p-4">
             <div className="flex items-start space-x-3">
-              <Key className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <Key className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-medium text-blue-900 mb-1">パスワード管理について</h3>
-                <p className="text-sm text-blue-800">
+                <h3 className="font-medium text-primary mb-1">パスワード管理について</h3>
+                <p className="text-sm text-primary">
                   管理者代行でのチーム登録では、仮パスワードが自動生成されます。
                   登録完了後に表示される仮パスワードを、チーム代表者にお伝えください。
                   チーム代表者は初回ログイン時にパスワード変更が必要です。
@@ -857,12 +860,12 @@ export default function TeamRegistrationPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* CSVテンプレートダウンロード */}
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
                     <div className="flex items-start space-x-3">
-                      <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <FileText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
-                        <h3 className="font-medium text-blue-900 mb-2">1. CSVテンプレートをダウンロード</h3>
-                        <p className="text-sm text-blue-800 mb-3">
+                        <h3 className="font-medium text-primary mb-2">1. CSVテンプレートをダウンロード</h3>
+                        <p className="text-sm text-primary mb-3">
                           まず、CSVテンプレートをダウンロードして、チーム情報を入力してください。
                         </p>
                         <Button variant="outline" onClick={downloadCsvTemplate} size="sm">
@@ -904,12 +907,12 @@ export default function TeamRegistrationPage() {
 
                   {/* エラー表示 */}
                   {csvErrors.length > 0 && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
                       <div className="flex items-start space-x-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
                         <div>
-                          <h3 className="font-medium text-red-900 mb-2">CSVファイルにエラーがあります</h3>
-                          <ul className="text-sm text-red-800 space-y-1">
+                          <h3 className="font-medium text-destructive mb-2">CSVファイルにエラーがあります</h3>
+                          <ul className="text-sm text-destructive space-y-1">
                             {csvErrors.map((error, index) => (
                               <li key={index}>• {error}</li>
                             ))}
@@ -1017,7 +1020,7 @@ export default function TeamRegistrationPage() {
                                   size="sm"
                                   onClick={() => handleDeleteTeam(team)}
                                   disabled={deletingTeamId === team.team_id}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/20"
                                 >
                                   {deletingTeamId === team.team_id ? (
                                     <>

@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shuffle, Save, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { Shuffle, Save, RotateCcw, ChevronUp, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
 import TournamentBracketEditor from '@/components/features/tournament/TournamentBracketEditor';
 
@@ -565,7 +566,7 @@ export default function TournamentDrawPage() {
       case 'insufficient':
         return 'bg-yellow-50 border-yellow-300 text-yellow-900';
       case 'excess':
-        return 'bg-red-50 border-red-300 text-red-900';
+        return 'bg-destructive/5 border-destructive/30 text-destructive';
       default:
         return '';
     }
@@ -1052,7 +1053,7 @@ export default function TournamentDrawPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -1064,7 +1065,7 @@ export default function TournamentDrawPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md mx-auto">
           <CardContent className="p-6 text-center">
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-destructive mb-4">{error}</p>
             <Button onClick={() => router.push('/my?tab=admin')} variant="outline">
               ダッシュボードに戻る
             </Button>
@@ -1084,31 +1085,29 @@ export default function TournamentDrawPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">
                 {hasExistingDraw ? '組合せ編集' : '組合せ作成'}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-white/70 mt-1">
                 {tournament.tournament_name}
                 {hasExistingDraw && <span className="ml-2 text-green-600">※ 既存の組合せを編集中</span>}
               </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/my?tab=admin')}
-              >
-                ダッシュボードに戻る
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
 
         {/* 操作ボタン */}
         <Card className="mb-6">
@@ -1171,7 +1170,7 @@ export default function TournamentDrawPage() {
           {isTeamListExpanded && (
             <CardContent>
               <div className="mb-3 space-y-1">
-                <p className="text-sm text-blue-600">
+                <p className="text-sm text-primary">
                   ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
                 </p>
                 {hasExistingDraw && (
@@ -1274,14 +1273,14 @@ export default function TournamentDrawPage() {
                         return (
                           <div
                             key={team.tournament_team_id}
-                            className="p-4 bg-blue-50 border border-blue-200 rounded-lg"
+                            className="p-4 bg-primary/5 border border-primary/20 rounded-lg"
                           >
                             {/* チーム情報エリア */}
                             <div className="mb-3">
-                              <p className="font-medium text-blue-900 text-base leading-relaxed">
+                              <p className="font-medium text-primary text-base leading-relaxed">
                                 {block.block_name}{teamIndex + 1}. {team.team_name}
                               </p>
-                              <p className="text-sm text-blue-700 mt-1">
+                              <p className="text-sm text-primary mt-1">
                                 {team.contact_person || '連絡先不明'}
                               </p>
                             </div>
@@ -1377,7 +1376,7 @@ export default function TournamentDrawPage() {
                       if (showRoundHeader) {
                         rows.push(
                           <tr key={`round-header-${match.round_name}-${index}`}>
-                            <td colSpan={5} className="px-4 py-2 bg-blue-50 border-b">
+                            <td colSpan={5} className="px-4 py-2 bg-primary/5 border-b">
                               <div className="flex items-center">
                                 <Badge variant="secondary" className="mr-2">
                                   {match.round_name || match.block_name || (match.phase === 'preliminary' ? '予選リーグ' : '決勝トーナメント')}

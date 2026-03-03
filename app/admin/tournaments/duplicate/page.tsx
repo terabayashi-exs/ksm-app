@@ -2,13 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Shield, Database, Users, Calendar, CheckCircle, XCircle, Trophy } from 'lucide-react';
+import { Copy, Shield, Database, Users, Calendar, CheckCircle, XCircle, Trophy, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface Tournament {
   tournament_id: number;
@@ -112,7 +112,6 @@ const DUPLICATE_LEVELS: DuplicateLevel[] = [
 ];
 
 export default function TournamentDuplicatePage() {
-  const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
@@ -253,28 +252,27 @@ export default function TournamentDuplicatePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">部門データ複製</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">部門データ複製</h1>
+              <p className="text-sm text-white/70 mt-1">
                 既存の部門を複製してデモ用データを効率的に作成できます
               </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/admin')}
-              >
-                管理者ダッシュボードに戻る
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+
         {/* 情報カード */}
         <Card className="border-green-200 bg-green-50 mb-6">
           <CardHeader>
@@ -295,15 +293,15 @@ export default function TournamentDuplicatePage() {
 
         {/* 結果表示 */}
         {duplicateResult && (
-          <Card className={`mb-6 ${duplicateResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+          <Card className={`mb-6 ${duplicateResult.success ? 'border-green-200 bg-green-50' : 'border-destructive/20 bg-destructive/5'}`}>
             <CardHeader>
-              <CardTitle className={`flex items-center ${duplicateResult.success ? 'text-green-800' : 'text-red-800'}`}>
+              <CardTitle className={`flex items-center ${duplicateResult.success ? 'text-green-800' : 'text-destructive'}`}>
                 {duplicateResult.success ? <CheckCircle className="w-5 h-5 mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
                 {duplicateResult.success ? '複製完了' : '複製失敗'}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className={duplicateResult.success ? 'text-green-700' : 'text-red-700'}>
+              <p className={duplicateResult.success ? 'text-green-700' : 'text-destructive'}>
                 {duplicateResult.message}
               </p>
               {duplicateResult.success && duplicateResult.details && (
@@ -321,7 +319,7 @@ export default function TournamentDuplicatePage() {
                 </div>
               )}
               {duplicateResult.error && (
-                <p className="mt-2 text-red-600 text-sm">エラー詳細: {duplicateResult.error}</p>
+                <p className="mt-2 text-destructive text-sm">エラー詳細: {duplicateResult.error}</p>
               )}
             </CardContent>
           </Card>
@@ -350,7 +348,7 @@ export default function TournamentDuplicatePage() {
                       key={`tournament-${tournament.tournament_id}`}
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                         selectedTournament === tournament.tournament_id
-                          ? 'border-blue-500 bg-blue-50'
+                          ? 'border-primary bg-primary/5'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                       onClick={() => handleTournamentSelect(tournament.tournament_id)}
@@ -411,7 +409,7 @@ export default function TournamentDuplicatePage() {
                       key={group.group_id}
                       className={`p-4 mb-2 border rounded-lg cursor-pointer transition-colors ${
                         selectedGroupId === group.group_id
-                          ? 'border-blue-500 bg-blue-50'
+                          ? 'border-primary bg-primary/5'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                       onClick={() => setSelectedGroupId(group.group_id)}
@@ -474,7 +472,7 @@ export default function TournamentDuplicatePage() {
                     key={level.level}
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                       selectedLevel === level.level
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-primary bg-primary/5'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                     onClick={() => setSelectedLevel(level.level)}
@@ -565,7 +563,7 @@ export default function TournamentDuplicatePage() {
               <Button
                 onClick={handleDuplicate}
                 disabled={duplicating}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {duplicating ? '複製中...' : '複製実行'}
               </Button>

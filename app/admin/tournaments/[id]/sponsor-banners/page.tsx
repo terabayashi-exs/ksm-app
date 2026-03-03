@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ArrowLeft, Plus } from 'lucide-react';
 import {
   type SponsorBanner,
   getPositionLabel,
@@ -20,7 +21,6 @@ import {
 
 export default function SponsorBannersPage() {
   const params = useParams();
-  const router = useRouter();
   const tournamentId = params.id as string;
 
   const [banners, setBanners] = useState<SponsorBanner[]>([]);
@@ -133,31 +133,37 @@ export default function SponsorBannersPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">スポンサーバナー管理</h1>
-            <p className="text-muted-foreground">
+    <div className="min-h-screen bg-background">
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">スポンサーバナー管理</h1>
+            <p className="text-sm text-white/70 mt-1">
               部門詳細画面に表示するスポンサーバナーを管理します
             </p>
-          </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline">
-              <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners/create`}>
-                + バナー追加
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
-              ダッシュボードに戻る
-            </Button>
           </div>
         </div>
       </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners/create`}>
+              <Plus className="h-4 w-4 mr-2" />
+              バナー追加
+            </Link>
+          </Button>
+        </div>
+
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-800">{error}</p>
+        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 mb-6">
+          <p className="text-destructive">{error}</p>
         </div>
       )}
 
@@ -234,7 +240,7 @@ export default function SponsorBannersPage() {
                                       href={banner.banner_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-sm text-blue-600 hover:underline"
+                                      className="text-sm text-primary hover:underline"
                                     >
                                       {banner.banner_url}
                                     </a>
@@ -284,7 +290,7 @@ export default function SponsorBannersPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-red-600 hover:bg-red-50"
+                                  className="text-destructive hover:bg-destructive/5"
                                   onClick={() => handleDelete(banner.banner_id)}
                                   disabled={deleting === banner.banner_id}
                                 >
@@ -303,6 +309,7 @@ export default function SponsorBannersPage() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

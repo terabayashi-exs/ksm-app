@@ -196,8 +196,8 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
+        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+          <p className="text-destructive">{error}</p>
         </div>
       )}
 
@@ -303,8 +303,8 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
                 </SelectItem>
               </SelectContent>
             </Select>
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
+            <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-md">
+              <p className="text-sm text-primary">
                 {formData.banner_size === BANNER_SIZES.LARGE ? (
                   <>
                     <span className="font-semibold">大バナー：</span>
@@ -354,8 +354,8 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
                 </p>
               )}
               {formData.display_position === 'sidebar' && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
+                <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-md">
+                  <p className="text-sm text-primary">
                     <span className="font-semibold">📱 表示に関する注意：</span>
                     <br />
                     サイドバーはPC（デスクトップ）表示のみで表示されます。スマートフォンやタブレットでは表示されません。

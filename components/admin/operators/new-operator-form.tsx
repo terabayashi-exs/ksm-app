@@ -297,12 +297,12 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
           {existingUser && (
             <Alert className={existingUser.hasOperatorRole
-              ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+              ? "bg-primary/5 dark:bg-primary/10 border-primary/20 dark:border-primary/20"
               : "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
             }>
-              <UserCheck className={`h-4 w-4 ${existingUser.hasOperatorRole ? 'text-blue-600' : 'text-green-600'}`} />
+              <UserCheck className={`h-4 w-4 ${existingUser.hasOperatorRole ? 'text-primary' : 'text-green-600'}`} />
               <AlertDescription className={existingUser.hasOperatorRole
-                ? "text-blue-800 dark:text-blue-300"
+                ? "text-primary dark:text-primary/80"
                 : "text-green-800 dark:text-green-300"
               }>
                 <strong>

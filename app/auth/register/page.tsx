@@ -92,8 +92,8 @@ function EmailInputForm() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-              <Mail className="h-12 w-12 text-blue-600" />
+            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+              <Mail className="h-12 w-12 text-primary" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
@@ -133,7 +133,7 @@ function EmailInputForm() {
               </div>
 
               {error && (
-                <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -148,7 +148,7 @@ function EmailInputForm() {
                 既にアカウントをお持ちの方は{' '}
                 <Link
                   href="/auth/login"
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-primary hover:text-primary/80"
                 >
                   こちらからログイン
                 </Link>
@@ -160,7 +160,7 @@ function EmailInputForm() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            className="text-sm font-medium text-primary hover:text-primary/80"
           >
             ← トップページに戻る
           </Link>
@@ -291,8 +291,8 @@ function AccountRegisterForm({ token }: { token: string }) {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-              <UserPlus className="h-12 w-12 text-blue-600" />
+            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+              <UserPlus className="h-12 w-12 text-primary" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
@@ -396,9 +396,9 @@ function AccountRegisterForm({ token }: { token: string }) {
               </div>
 
               {error && (
-                <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                  <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <div className="flex items-center space-x-2 p-2 bg-destructive/5 dark:bg-red-950/20 border border-destructive/20 dark:border-red-800 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                  <p className="text-sm text-destructive dark:text-red-400">{error}</p>
                 </div>
               )}
 
@@ -420,7 +420,7 @@ function AccountRegisterForm({ token }: { token: string }) {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 既にアカウントをお持ちの方は{' '}
-                <Link href="/auth/login" className="text-blue-600 hover:text-blue-500 font-medium">
+                <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
                   こちらからログイン
                 </Link>
               </p>
@@ -429,7 +429,7 @@ function AccountRegisterForm({ token }: { token: string }) {
         </Card>
 
         <div className="text-center">
-          <Link href="/" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+          <Link href="/" className="text-sm font-medium text-primary hover:text-primary/80">
             <ArrowLeft className="inline h-3 w-3 mr-1" />
             トップページに戻る
           </Link>

@@ -283,7 +283,7 @@ export default function AdminTeamsPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -293,18 +293,19 @@ export default function AdminTeamsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">チーム一覧</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <h1 className="text-3xl font-bold text-white">チーム一覧</h1>
+              <p className="text-sm text-white/70 mt-1">
                 大会別の参加チーム一覧を確認できます
               </p>
             </div>
             <div className="flex space-x-3">
               <Button
                 variant="outline"
+                className="text-white border-white/30 hover:bg-white/10 hover:text-white"
                 onClick={() => router.push('/admin')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -364,16 +365,16 @@ export default function AdminTeamsPage() {
                   <>
                     {/* グループ化された大会 */}
                     {filteredGroups.map((group) => (
-                      <div key={`group-${group.group_id}`} className="border-2 border-blue-200 rounded-lg p-3 bg-blue-50/30">
+                      <div key={`group-${group.group_id}`} className="border-2 border-primary/20 rounded-lg p-3 bg-primary/5">
                         <div className="mb-3">
                           <div className="flex items-center mb-1">
-                            <Trophy className="w-4 h-4 mr-2 text-blue-600" />
-                            <h3 className="font-bold text-sm text-blue-900">
+                            <Trophy className="w-4 h-4 mr-2 text-primary" />
+                            <h3 className="font-bold text-sm text-primary">
                               {group.group_name || `グループ ${group.group_id}`}
                             </h3>
                           </div>
                           {group.group_description && (
-                            <p className="text-xs text-blue-700 ml-6">{group.group_description}</p>
+                            <p className="text-xs text-primary ml-6">{group.group_description}</p>
                           )}
                         </div>
                         <div className="space-y-2 ml-2">
@@ -382,7 +383,7 @@ export default function AdminTeamsPage() {
                               key={`tournament-${tournament.tournament_id}`}
                               className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                                 selectedTournamentId === tournament.tournament_id
-                                  ? 'border-blue-500 bg-blue-100'
+                                  ? 'border-primary bg-primary/10'
                                   : 'border-gray-200 bg-white hover:border-gray-300'
                               }`}
                               onClick={() => handleTournamentSelect(tournament.tournament_id)}
@@ -431,7 +432,7 @@ export default function AdminTeamsPage() {
                         key={`tournament-${tournament.tournament_id}`}
                         className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                           selectedTournamentId === tournament.tournament_id
-                            ? 'border-blue-500 bg-blue-50'
+                            ? 'border-primary bg-primary/5'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => handleTournamentSelect(tournament.tournament_id)}
@@ -516,7 +517,7 @@ export default function AdminTeamsPage() {
                   </div>
                 ) : teamsLoading ? (
                   <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                     <p className="text-muted-foreground">チーム一覧を読み込み中...</p>
                   </div>
                 ) : filteredTeams.length === 0 ? (
@@ -558,7 +559,7 @@ export default function AdminTeamsPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                            <Badge variant="outline" className="bg-primary/10 text-primary">
                               #{index + 1}
                             </Badge>
                           </div>

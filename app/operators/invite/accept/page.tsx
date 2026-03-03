@@ -103,7 +103,7 @@ function AcceptInviteContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -118,7 +118,7 @@ function AcceptInviteContent() {
             ) : error ? (
               <XCircle className="w-12 h-12 text-red-500" />
             ) : (
-              <Shield className="w-12 h-12 text-blue-500" />
+              <Shield className="w-12 h-12 text-primary" />
             )}
           </div>
           <CardTitle className="text-xl">
@@ -137,9 +137,9 @@ function AcceptInviteContent() {
             </div>
           ) : error ? (
             <div className="space-y-4">
-              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+              <div className="flex items-start gap-2 p-3 bg-destructive/5 dark:bg-red-950/20 rounded-lg border border-destructive/20 dark:border-red-800">
+                <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-destructive dark:text-red-300">{error}</p>
               </div>
               <Button asChild variant="outline" className="w-full">
                 <Link href="/">TOPページへ</Link>
@@ -148,7 +148,7 @@ function AcceptInviteContent() {
           ) : inviteInfo ? (
             <div className="space-y-4">
               {/* 招待情報 */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 space-y-2">
+              <div className="p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg border border-primary/20 dark:border-blue-800 space-y-2">
                 <div className="text-sm">
                   <span className="text-muted-foreground">招待者：</span>
                   <span className="font-medium">{inviteInfo.invitedByName}</span>
@@ -242,7 +242,7 @@ function AcceptInviteContent() {
               <Button
                 onClick={handleAccept}
                 disabled={accepting}
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {accepting ? '処理中...' : inviteInfo.hasAccount ? '運営者として登録' : 'アカウントを作成して登録'}
               </Button>
@@ -258,7 +258,7 @@ export default function AcceptInvitePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     }>
       <AcceptInviteContent />

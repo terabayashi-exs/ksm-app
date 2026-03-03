@@ -477,7 +477,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Settings className="h-5 w-5 text-blue-600" />
+              <Settings className="h-5 w-5 text-primary" />
               <span>フォーマット基本情報</span>
             </CardTitle>
           </CardHeader>
@@ -489,10 +489,10 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                   id="format_name"
                   {...register("format_name")}
                   placeholder="例: 16チーム予選リーグ+決勝トーナメント"
-                  className={errors.format_name ? "border-red-500" : ""}
+                  className={errors.format_name ? "border-destructive" : ""}
                 />
                 {errors.format_name && (
-                  <p className="text-sm text-red-600">{errors.format_name.message}</p>
+                  <p className="text-sm text-destructive">{errors.format_name.message}</p>
                 )}
               </div>
 
@@ -500,7 +500,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 <Label htmlFor="sport_type_id">競技種別 *</Label>
                 {sportTypesLoading ? (
                   <div className="flex items-center space-x-2 p-3 border rounded-md">
-                    <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
                     <span className="text-sm text-gray-600">読み込み中...</span>
                   </div>
                 ) : (
@@ -508,7 +508,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                     value={String(selectedSportTypeId || 1)}
                     onValueChange={(value) => setValue("sport_type_id", parseInt(value), { shouldValidate: true })}
                   >
-                    <SelectTrigger className={errors.sport_type_id ? "border-red-500" : ""}>
+                    <SelectTrigger className={errors.sport_type_id ? "border-destructive" : ""}>
                       <SelectValue placeholder="競技種別を選択" />
                     </SelectTrigger>
                     <SelectContent>
@@ -521,7 +521,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                   </Select>
                 )}
                 {errors.sport_type_id && (
-                  <p className="text-sm text-red-600">{errors.sport_type_id.message}</p>
+                  <p className="text-sm text-destructive">{errors.sport_type_id.message}</p>
                 )}
               </div>
 
@@ -533,10 +533,10 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                   {...register("target_team_count", { valueAsNumber: true })}
                   min={4}
                   max={128}
-                  className={errors.target_team_count ? "border-red-500" : ""}
+                  className={errors.target_team_count ? "border-destructive" : ""}
                 />
                 {errors.target_team_count && (
-                  <p className="text-sm text-red-600">{errors.target_team_count.message}</p>
+                  <p className="text-sm text-destructive">{errors.target_team_count.message}</p>
                 )}
               </div>
             </div>
@@ -665,9 +665,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800 font-medium mb-1">💡 試合テンプレート作成の参考に</p>
-              <p className="text-xs text-blue-700">
+            <div className="mb-3 p-3 bg-primary/5 border border-primary/20 rounded-md">
+              <p className="text-sm text-primary font-medium mb-1">💡 試合テンプレート作成の参考に</p>
+              <p className="text-xs text-primary">
                 このシミュレーターで生成されたスケジュールを、ボタン一つで試合テンプレートに展開できます。
                 <br />
                 リーグ戦モードを使用すると、節単位で穴あきなしのスケジュールが生成されます。
@@ -699,9 +699,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
           </CardHeader>
           <CardContent>
             {/* 不戦勝試合の説明 */}
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800 font-medium mb-1">💡 不戦勝試合について</p>
-              <p className="text-xs text-blue-700">
+            <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-md">
+              <p className="text-sm text-primary font-medium mb-1">💡 不戦勝試合について</p>
+              <p className="text-xs text-primary">
                 チーム数が2のべき乗でない場合（例: 5チーム）、不戦勝試合を設定できます。
                 <br />
                 <strong>チーム1表示名</strong>または<strong>チーム2表示名</strong>のどちらか一方を<strong>空欄</strong>にすると、自動的に不戦勝試合として扱われます。
@@ -711,8 +711,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
             </div>
 
             {errors.templates && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600 flex items-center">
+              <div className="mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-md">
+                <p className="text-sm text-destructive flex items-center">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   {errors.templates.message}
                 </p>
@@ -791,7 +791,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.match_code`)}
-                          className={errors.templates?.[index]?.match_code ? "border-red-500 w-20" : "w-20"}
+                          className={errors.templates?.[index]?.match_code ? "border-destructive w-20" : "w-20"}
                           placeholder="A1"
                         />
                       </td>
@@ -838,14 +838,14 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team1_display_name`)}
-                          className={errors.templates?.[index]?.team1_display_name ? "border-red-500 w-40" : "w-40"}
+                          className={errors.templates?.[index]?.team1_display_name ? "border-destructive w-40" : "w-40"}
                           placeholder="A1チーム (空欄=不戦勝)"
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team2_display_name`)}
-                          className={errors.templates?.[index]?.team2_display_name ? "border-red-500 w-40" : "w-40"}
+                          className={errors.templates?.[index]?.team2_display_name ? "border-destructive w-40" : "w-40"}
                           placeholder="A2チーム (空欄=不戦勝)"
                         />
                       </td>
@@ -972,7 +972,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
           <Button 
             type="submit" 
             disabled={isSubmitting || !hasChanges} 
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Save className="h-4 w-4 mr-2" />
             {isSubmitting ? "更新中..." : "フォーマットを更新"}

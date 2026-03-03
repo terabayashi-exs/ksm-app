@@ -7,6 +7,7 @@ import EditOperatorForm from '@/components/admin/operators/edit-operator-form';
 import { db } from '@/lib/db';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: '運営者を編集',
@@ -114,28 +115,34 @@ export default async function EditOperatorPage({ params, searchParams }: PagePro
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">運営者を編集</h1>
-          <p className="text-muted-foreground">
-            部門アクセス権と操作権限を変更できます
-          </p>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">運営者を編集</h1>
+            <p className="text-sm text-white/70 mt-1">
+              部門アクセス権と操作権限を変更できます
+            </p>
+          </div>
         </div>
-        <Button asChild variant="outline">
-          <Link href={groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators'}>
-            運営者一覧に戻る
-          </Link>
-        </Button>
       </div>
-
-      <EditOperatorForm
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href={groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators'}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              運営者一覧に戻る
+            </Link>
+          </Button>
+        </div>
+        <EditOperatorForm
         operatorId={operatorId}
         operatorEmail={String(operator.operatorLoginId)}
         operatorName={String(operator.operatorName)}
         initialTournamentAccess={operator.accessibleTournaments}
         groupId={groupId}
       />
+      </div>
     </div>
   );
 }

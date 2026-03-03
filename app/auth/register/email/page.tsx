@@ -90,8 +90,8 @@ export default function RegisterEmailPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-              <Mail className="h-12 w-12 text-blue-600" />
+            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+              <Mail className="h-12 w-12 text-primary" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
@@ -131,7 +131,7 @@ export default function RegisterEmailPage() {
               </div>
 
               {error && (
-                <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -146,7 +146,7 @@ export default function RegisterEmailPage() {
                 既にアカウントをお持ちの方は{" "}
                 <Link
                   href="/auth/login"
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-primary hover:text-primary/80"
                 >
                   こちらからログイン
                 </Link>
@@ -158,7 +158,7 @@ export default function RegisterEmailPage() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            className="text-sm font-medium text-primary hover:text-primary/80"
           >
             ← トップページに戻る
           </Link>

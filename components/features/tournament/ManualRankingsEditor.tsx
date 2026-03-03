@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Trophy, Save, RotateCcw, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Link from 'next/link';
 
 interface TeamRanking {
   team_id: string;
@@ -641,13 +640,10 @@ export default function ManualRankingsEditor({ tournamentId, blocks, preliminary
           <Button
             onClick={saveChanges}
             disabled={saving || !hasChanges}
-            className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white"
+            className="border-2 border-primary bg-primary hover:bg-primary/90 hover:border-primary/90 text-primary-foreground"
           >
             <Save className="w-4 h-4 mr-1" />
             {saving ? '保存中...' : '変更を保存'}
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/admin">戻る</Link>
           </Button>
         </div>
       </div>

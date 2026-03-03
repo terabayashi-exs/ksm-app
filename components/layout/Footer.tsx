@@ -3,8 +3,8 @@ import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-secondary/50 border-t border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="bg-base-800">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
           {/* システム情報 */}
           <div className="mb-8">
@@ -15,32 +15,32 @@ export default function Footer() {
                   alt="楽勝 GO"
                   width={1000}
                   height={313}
-                  className="h-full w-auto object-contain"
+                  className="h-full w-auto object-contain brightness-0 invert"
                 />
               </div>
             </div>
-            <p className="text-muted-foreground text-sm mb-4 max-w-2xl mx-auto">
+            <p className="text-white/60 text-sm mb-4 max-w-2xl mx-auto">
               あらゆるスポーツ大会の運営を効率化する総合的な管理システムです。
               大会の作成から結果の公開まで、一元的に管理できます。
             </p>
-            <div className="text-sm text-muted-foreground">
-              <span>© 2025 楽勝 GO</span>
-              <span className="ml-3 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded border border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
+            <div className="text-sm text-white/50">
+              <span>&copy; 2025 楽勝 GO</span>
+              <span className="ml-3 text-xs bg-white/10 text-white/60 px-2 py-1 rounded border border-white/10">
                 BETA
               </span>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border mt-8 pt-8 text-center">
-          <p className="text-sm text-muted-foreground mb-6">
+        <div className="border-t border-white/10 mt-8 pt-8 text-center">
+          <p className="text-sm text-white/50 mb-6">
             このシステムは大会運営の効率化を目的として開発されました。
             <br />
             ご質問やサポートが必要な場合は、管理者にお問い合わせください。
           </p>
 
           {/* 運営・開発ロゴ */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-white/50">
             <div className="flex items-center gap-2">
               <span>運営・お問い合せ:</span>
               <a
@@ -54,7 +54,7 @@ export default function Footer() {
                   alt="富山交易株式会社"
                   width={378}
                   height={60}
-                  className="h-10 w-auto object-contain"
+                  className="h-10 w-auto object-contain brightness-0 invert opacity-70"
                 />
               </a>
             </div>
@@ -65,7 +65,7 @@ export default function Footer() {
                 alt="A&S.IT"
                 width={122}
                 height={60}
-                className="h-10 w-auto object-contain"
+                className="h-10 w-auto object-contain brightness-0 invert opacity-70"
               />
             </div>
           </div>

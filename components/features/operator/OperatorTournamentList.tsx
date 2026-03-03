@@ -140,7 +140,7 @@ export default function OperatorTournamentList() {
               </div>
             )}
             {tournament.assigned_by_name && (
-              <div className="flex items-center text-xs text-blue-600 mt-1">
+              <div className="flex items-center text-xs text-primary mt-1">
                 <span>招待元: {tournament.assigned_by_name}</span>
               </div>
             )}
@@ -200,9 +200,9 @@ export default function OperatorTournamentList() {
               <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
               <div className="grid grid-cols-5 gap-2">
                 {/* 想定チーム数 */}
-                <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
-                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+                <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 dark:border-primary/20 text-center">
+                  <div className="text-xs text-primary dark:text-primary/80 font-medium mb-1">想定チーム数</div>
+                  <div className="text-lg font-bold text-primary dark:text-primary/80">{tournament.team_count}</div>
                 </div>
                 {/* 参加確定 */}
                 <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
@@ -230,7 +230,7 @@ export default function OperatorTournamentList() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+          <Button asChild size="sm" variant="outline" className="text-sm hover:border-primary/30 hover:bg-primary/5">
             <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
               <Eye className="w-4 h-4 mr-1" />
               詳細
@@ -245,7 +245,7 @@ export default function OperatorTournamentList() {
     return (
       <div className="space-y-6">
         <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <p className="mt-2 text-gray-600">大会データを読み込み中...</p>
         </div>
       </div>
@@ -255,9 +255,9 @@ export default function OperatorTournamentList() {
   if (error) {
     return (
       <div className="space-y-6">
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/5">
           <CardContent className="p-6">
-            <p className="text-red-600 text-center">{error}</p>
+            <p className="text-destructive text-center">{error}</p>
           </CardContent>
         </Card>
       </div>

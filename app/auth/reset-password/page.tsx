@@ -108,7 +108,7 @@ function ResetPasswordForm() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">リセットリンクを確認中...</p>
             </div>
           </CardContent>
@@ -130,13 +130,13 @@ function ResetPasswordForm() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+                <AlertCircle className="h-6 w-6 text-destructive" />
                 リンクが無効です
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-sm text-red-800 dark:text-red-400">
+              <div className="bg-destructive/5 dark:bg-red-950/20 border border-destructive/20 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm text-destructive dark:text-red-400">
                   {tokenError}
                 </p>
               </div>
@@ -250,7 +250,7 @@ function ResetPasswordForm() {
                 </div>
 
                 {error && (
-                  <div className="text-red-600 text-sm bg-red-50 dark:bg-red-950/20 p-3 rounded border border-red-200 dark:border-red-800">
+                  <div className="text-destructive text-sm bg-destructive/5 dark:bg-red-950/20 p-3 rounded border border-destructive/20 dark:border-red-800">
                     {error}
                   </div>
                 )}
@@ -289,7 +289,7 @@ function ResetPasswordForm() {
               <div className="mt-6 text-center">
                 <Link
                   href="/auth/login"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                  className="text-sm font-medium text-primary hover:text-primary/80"
                 >
                   ログイン画面に戻る
                 </Link>
@@ -306,7 +306,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>
       <ResetPasswordForm />

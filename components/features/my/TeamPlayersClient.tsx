@@ -228,7 +228,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                 <Button
                   onClick={handleSavePlayers}
                   disabled={saving}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {saving ? '保存中...' : '保存'}

@@ -284,7 +284,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
                     <Button
                       onClick={handleInvite}
                       disabled={inviting || !inviteEmail.trim()}
-                      className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0"
                     >
                       <Mail className="w-4 h-4 mr-2" />
                       {inviting ? '送信中...' : '招待'}

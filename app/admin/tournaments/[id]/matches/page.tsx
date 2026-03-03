@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 import {
+  ArrowLeft,
   Clock,
   Play,
   CheckCircle,
@@ -1018,7 +1020,7 @@ export default function AdminMatchesPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -1036,40 +1038,38 @@ export default function AdminMatchesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">試合結果入力</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                「{tournament.tournament_name}」の試合進行状況管理
-              </p>
-            </div>
-
-            {/* リフレッシュボタン・ダッシュボードに戻るボタン */}
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('Manual refresh triggered');
-                  fetchData(true); // 手動リフレッシュ時はローダーを表示
-                }}
-                disabled={loading}
-                className="flex items-center"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                {loading ? '更新中...' : '最新情報に更新'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => router.push('/my?tab=admin')}>
-                ダッシュボードに戻る
-              </Button>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">試合結果入力</h1>
+            <p className="text-sm text-white/70 mt-1">
+              「{tournament.tournament_name}」の試合進行状況管理
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log('Manual refresh triggered');
+              fetchData(true);
+            }}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? '更新中...' : '最新情報に更新'}
+          </Button>
+        </div>
         {/* 通知バナー - この大会に関連する要対応事項のみ表示 */}
         <NotificationBanner tournamentId={parseInt(tournamentId)} />
         
@@ -1330,7 +1330,7 @@ export default function AdminMatchesPage() {
                                   size="sm"
                                   onClick={() => openCancelDialog(match)}
                                   disabled={cancellingMatches.has(match.match_id)}
-                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  className="text-destructive border-destructive/20 hover:bg-destructive/5"
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
                                   {cancellingMatches.has(match.match_id) ? '中止中...' : '中止'}
@@ -1414,7 +1414,7 @@ export default function AdminMatchesPage() {
                   「{selectedMatch?.team1_name} vs {selectedMatch?.team2_name}」を中止します。
                 </p>
                 <Label className="text-base font-medium">中止理由を選択してください</Label>
-                <p className="text-xs text-muted-foreground mt-2 bg-blue-50 p-2 rounded">
+                <p className="text-xs text-muted-foreground mt-2 bg-primary/5 p-2 rounded">
                   💡 <strong>選択ガイド：</strong><br/>
                   • <strong>中止</strong>: 大会全体の中止・辞退・欠席の場合（試合数にカウントしない）<br/>
                   • <strong>その他3つ</strong>: 遅刻・1試合のみの特別処理（試合数にカウントする）
@@ -1428,7 +1428,7 @@ export default function AdminMatchesPage() {
                     value="no_show_both"
                     checked={cancellationType === 'no_show_both'}
                     onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
-                    className="text-blue-600"
+                    className="text-primary"
                   />
                   <div>
                     <div className="font-medium">両チーム不参加（遅刻・その試合のみ欠場）</div>
@@ -1442,7 +1442,7 @@ export default function AdminMatchesPage() {
                     value="no_show_team1"
                     checked={cancellationType === 'no_show_team1'}
                     onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
-                    className="text-blue-600"
+                    className="text-primary"
                   />
                   <div>
                     <div className="font-medium">{selectedMatch?.team1_name}不参加（遅刻・その試合のみ欠場）</div>
@@ -1456,7 +1456,7 @@ export default function AdminMatchesPage() {
                     value="no_show_team2"
                     checked={cancellationType === 'no_show_team2'}
                     onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
-                    className="text-blue-600"
+                    className="text-primary"
                   />
                   <div>
                     <div className="font-medium">{selectedMatch?.team2_name}不参加（遅刻・その試合のみ欠場）</div>
@@ -1470,7 +1470,7 @@ export default function AdminMatchesPage() {
                     value="no_count"
                     checked={cancellationType === 'no_count'}
                     onChange={(e) => setCancellationType(e.target.value as typeof cancellationType)}
-                    className="text-blue-600"
+                    className="text-primary"
                   />
                   <div>
                     <div className="font-medium">中止（大会全体を辞退・欠席）</div>

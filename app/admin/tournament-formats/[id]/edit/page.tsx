@@ -54,28 +54,26 @@ export default async function EditTournamentFormatPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/admin/tournament-formats" className="flex items-center text-gray-600 hover:text-gray-900">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  フォーマット一覧に戻る
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">大会フォーマット編集</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  {String(format.format_name)} の編集
-                </p>
-              </div>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">大会フォーマット編集</h1>
+            <p className="text-sm text-white/70 mt-1">
+              {String(format.format_name)} の編集
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/tournament-formats">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              フォーマット一覧に戻る
+            </Link>
+          </Button>
+        </div>
         <TournamentFormatEditForm
           format={{
             format_id: Number(format.format_id),

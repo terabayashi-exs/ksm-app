@@ -79,32 +79,41 @@ export default function AdminTeamManagerPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/administrators"><ArrowLeft className="w-4 h-4 mr-1" />管理者一覧</Link>
-          </Button>
-          <h1 className="text-2xl font-bold text-foreground mt-2">
-            チーム担当者管理
-            {team && <span className="text-lg font-normal text-muted-foreground ml-2">— {team.team_name}</span>}
-          </h1>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">
+              チーム担当者管理
+            </h1>
+            {team && (
+              <p className="text-sm text-white/70 mt-1">{team.team_name}</p>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/administrators">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              管理者一覧に戻る
+            </Link>
+          </Button>
+        </div>
 
         {message && (
           <div className={`flex items-start gap-2 p-4 rounded-lg text-sm ${
             message.type === 'success'
               ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-300'
-              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
+              : 'bg-destructive/5 border border-destructive/20 text-destructive dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
           }`}>
             {message.type === 'success'
               ? <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -128,8 +137,8 @@ export default function AdminTeamManagerPage() {
                 <div key={manager.login_user_id}
                   className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-blue-700 dark:text-blue-400" />
+                    <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-primary dark:text-blue-400" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -142,7 +151,7 @@ export default function AdminTeamManagerPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                      className="border-destructive/30 text-destructive hover:border-destructive/40 hover:bg-destructive/5 dark:border-red-800 dark:text-red-400"
                       onClick={() => handleRemoveManager(manager.login_user_id, manager.display_name)}
                       disabled={processing === manager.login_user_id || managers.length <= 1}
                       title={managers.length <= 1 ? '最後の担当者は削除できません' : '担当者から削除'}

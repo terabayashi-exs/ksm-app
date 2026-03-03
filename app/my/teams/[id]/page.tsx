@@ -86,7 +86,7 @@ function MessageBanner({ message, onClose }: {
     <div className={`flex items-start justify-between gap-2 p-4 rounded-lg text-sm ${
       message.type === 'success'
         ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-300'
-        : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
+        : 'bg-destructive/5 border border-destructive/20 text-destructive dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
     }`}>
       <div className="flex items-start gap-2">
         {message.type === 'success'
@@ -260,7 +260,7 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
                 <Button
                   onClick={handleInvite}
                   disabled={inviting || !inviteEmail.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0"
                 >
                   <Mail className="w-4 h-4 mr-1" />
                   {inviting ? '送信中...' : '招待を送る'}
@@ -374,7 +374,7 @@ function PlayersTab({ teamId, setMessage }: {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto" />
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
       </div>
     );
   }
@@ -409,7 +409,7 @@ function PlayersTab({ teamId, setMessage }: {
               {players.map(player => (
                 <div key={player.player_id}
                   className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-700 dark:text-blue-300">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary dark:text-blue-300">
                     {player.jersey_number != null ? player.jersey_number : '—'}
                   </div>
                   <span className="text-sm font-medium">{player.player_name}</span>
@@ -423,7 +423,7 @@ function PlayersTab({ teamId, setMessage }: {
             <div className="space-y-2">
               {/* ヘッダー */}
               <div className="grid grid-cols-[1fr_80px_32px] gap-2 text-xs text-muted-foreground px-1">
-                <span>選手名 <span className="text-red-500">*</span></span>
+                <span>選手名 <span className="text-destructive">*</span></span>
                 <span>背番号</span>
                 <span />
               </div>
@@ -466,7 +466,7 @@ function PlayersTab({ teamId, setMessage }: {
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Save className="w-4 h-4 mr-1" />
                 {saving ? '保存中...' : '保存する'}
@@ -518,7 +518,7 @@ function TournamentsTab({ teamId }: { teamId: string }) {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto" />
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
       </div>
     );
   }
@@ -550,7 +550,7 @@ function TournamentsTab({ teamId }: { teamId: string }) {
                       {t.recruitment_end_date && <span>締切: {t.recruitment_end_date}</span>}
                     </div>
                   </div>
-                  <Button asChild size="sm" className="bg-green-600 hover:bg-green-700 text-white flex-shrink-0 ml-3">
+                  <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0 ml-3">
                     <Link href={`/tournaments/${t.tournament_id}/join`}>
                       参加申込
                     </Link>
@@ -650,7 +650,7 @@ export default function TeamManagePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -666,15 +666,12 @@ export default function TeamManagePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b border-border">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/my"><ArrowLeft className="w-4 h-4 mr-1" />マイダッシュボード</Link>
-          </Button>
-          <h1 className="text-2xl font-bold text-foreground mt-2">
+          <h1 className="text-2xl font-bold text-white">
             {team.team_name}
             {team.team_omission && (
-              <span className="text-base font-normal text-muted-foreground ml-2">（{team.team_omission}）</span>
+              <span className="text-base font-normal text-white/70 ml-2">（{team.team_omission}）</span>
             )}
           </h1>
         </div>
@@ -688,8 +685,8 @@ export default function TeamManagePage() {
                 onClick={() => { setActiveTab(tab.key); setMessage(null); }}
                 className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.key
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+                    ? 'border-white text-white'
+                    : 'border-transparent text-white/60 hover:text-white hover:border-white/40'
                 }`}
               >
                 {tab.icon}
@@ -703,6 +700,14 @@ export default function TeamManagePage() {
 
       {/* コンテンツ */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              マイダッシュボード
+            </Link>
+          </Button>
+        </div>
         {message && (
           <MessageBanner message={message} onClose={() => setMessage(null)} />
         )}

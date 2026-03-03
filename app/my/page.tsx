@@ -75,14 +75,14 @@ export default async function MyDashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="bg-card shadow-sm border-b border-border">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-3xl font-bold text-white">
                 マイダッシュボード
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-white/70 mt-1">
                 ようこそ、{session.user.name}さん
               </p>
             </div>
@@ -90,7 +90,7 @@ export default async function MyDashboardPage() {
               {/* 管理者ロールがある場合のみプラン表示 */}
               {(roles.includes("admin") || isSuperadmin) && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">プラン：</span>
+                  <span className="text-sm text-white/70">プラン：</span>
                   <PlanBadge apiUrl="/api/my/subscription/current" />
                 </div>
               )}

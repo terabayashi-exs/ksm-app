@@ -8,7 +8,8 @@ import { useParams, useRouter } from 'next/navigation';
 import FileManagementContainer from '@/components/features/admin/FileManagementContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, HardDrive, Upload, Loader2, Link as LinkIcon } from 'lucide-react';
+import { FileText, HardDrive, Upload, Loader2, Link as LinkIcon, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 // ファイルサイズを人間が読みやすい形式に変換
 function formatFileSize(bytes: number): string {
@@ -62,7 +63,7 @@ export default function TournamentFilesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -70,32 +71,36 @@ export default function TournamentFilesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー部分 */}
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
+          <div className="py-6">
               <div className="flex items-center space-x-3 mb-2">
-                <FileText className="h-6 w-6 text-blue-600" />
-                <h1 className="text-2xl font-bold text-foreground">ファイル管理</h1>
+                <FileText className="h-6 w-6 text-white" />
+                <h1 className="text-2xl font-bold text-white">ファイル管理</h1>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/70">
                 大会に関連するファイルをアップロード・管理できます。公開設定で一般ユーザーへの共有も可能です。
               </p>
-            </div>
-            <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
-              ダッシュボードに戻る
-            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+
         {/* 統計情報 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Upload className="h-8 w-8 text-blue-600" />
+                <Upload className="h-8 w-8 text-primary" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-muted-foreground">アップロードファイル</p>
                   <p className="text-2xl font-bold text-foreground">{uploadFiles}</p>

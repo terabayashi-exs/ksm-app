@@ -56,8 +56,8 @@ function TeamLoginForm() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-              <Users className="h-12 w-12 text-green-600" />
+            <div className="p-3 bg-primary/10 dark:bg-green-900/30 rounded-full">
+              <Users className="h-12 w-12 text-primary" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
@@ -101,7 +101,7 @@ function TeamLoginForm() {
               </div>
 
               {error && (
-                <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -113,7 +113,7 @@ function TeamLoginForm() {
               <div className="text-center">
                 <Link
                   href="/auth/forgot-password"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                  className="text-sm font-medium text-primary hover:text-primary/80"
                 >
                   パスワードを忘れた方はこちら
                 </Link>
@@ -125,7 +125,7 @@ function TeamLoginForm() {
                 チーム登録がお済みでない場合は{" "}
                 <Link
                   href="/auth/register/email"
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-primary hover:text-primary/80"
                 >
                   こちらから登録
                 </Link>
@@ -137,7 +137,7 @@ function TeamLoginForm() {
                 管理者の方は{" "}
                 <Link
                   href="/auth/admin/login"
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-primary hover:text-primary/80"
                 >
                   管理者ログイン
                 </Link>
@@ -149,7 +149,7 @@ function TeamLoginForm() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            className="text-sm font-medium text-primary hover:text-primary/80"
           >
             ← トップページに戻る
           </Link>

@@ -116,7 +116,7 @@ export default function QRListPage() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">QRコード一覧を読み込み中...</p>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function QRListPage() {
               試合前・進行中の試合のQRコードを表示します（全{filteredMatches.length}試合）
             </p>
             {validity && (
-              <p className="text-sm text-blue-600 mt-2 font-medium">
+              <p className="text-sm text-primary mt-2 font-medium">
                 QRコード有効期限: {new Date(validity.validUntil).toLocaleString('ja-JP', {
                   year: 'numeric',
                   month: '2-digit',
@@ -177,7 +177,7 @@ export default function QRListPage() {
               type="checkbox"
               checked={includeCompleted}
               onChange={(e) => setIncludeCompleted(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
             />
             <span className="text-sm text-gray-700">完了した試合も表示する</span>
           </label>
@@ -249,7 +249,7 @@ export default function QRListPage() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-2xl font-bold text-blue-600 match-title">
+                          <CardTitle className="text-2xl font-bold text-primary match-title">
                             {match.match_code}
                           </CardTitle>
                           <p className="text-sm text-gray-500 mt-1">

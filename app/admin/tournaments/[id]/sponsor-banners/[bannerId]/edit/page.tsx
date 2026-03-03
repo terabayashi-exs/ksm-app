@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import SponsorBannerForm from '@/components/admin/SponsorBannerForm';
 import type { SponsorBanner } from '@/lib/sponsor-banner-specs';
 
@@ -61,8 +62,8 @@ export default function EditSponsorBannerPage() {
   if (error || !banner) {
     return (
       <div className="container mx-auto py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error || 'バナーが見つかりません'}</p>
+        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+          <p className="text-destructive">{error || 'バナーが見つかりません'}</p>
         </div>
         <Button asChild className="mt-4">
           <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`}>
@@ -74,20 +75,26 @@ export default function EditSponsorBannerPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">バナー編集</h1>
-          <p className="text-muted-foreground">スポンサーバナーの情報を編集します</p>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">バナー編集</h1>
+            <p className="text-sm text-white/70 mt-1">スポンサーバナーの情報を編集します</p>
+          </div>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`}>
-            バナー一覧に戻る
-          </Link>
-        </Button>
       </div>
-
-      <SponsorBannerForm tournamentId={tournamentId} banner={banner} mode="edit" />
+      <div className="container mx-auto py-8 px-4">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              バナー一覧に戻る
+            </Link>
+          </Button>
+        </div>
+        <SponsorBannerForm tournamentId={tournamentId} banner={banner} mode="edit" />
+      </div>
     </div>
   );
 }

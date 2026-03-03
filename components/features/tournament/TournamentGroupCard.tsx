@@ -60,17 +60,17 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
   const getStatusBadge = (status: TournamentStatus) => {
     switch (status) {
       case 'planning':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
       case 'recruiting':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/10 text-primary';
       case 'before_event':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-accent text-accent-foreground';
       case 'ongoing':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary/10 text-primary';
       case 'completed':
-        return 'bg-muted text-foreground';
+        return 'bg-muted text-muted-foreground';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -83,13 +83,13 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
   const representativeOrganization = tournaments.find(t => t.organization_name)?.organization_name;
 
   return (
-    <Card className="hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-200 dark:border-blue-800 relative overflow-hidden">
+    <Card className="border-2 border-gray-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden">
       {/* グループカラーの左ボーダー */}
       <div
         className="absolute left-0 top-0 bottom-0 w-1"
         style={{ backgroundColor: group.group_color }}
       />
-      
+
       {/* 背景ロゴ */}
       {representativeLogo && (
         <div className="absolute inset-0 opacity-5">
@@ -146,7 +146,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
             {tournaments.map((tournament) => (
             <div
               key={tournament.tournament_id}
-              className="border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-gradient-to-r from-white to-blue-50 dark:from-blue-950/20 dark:to-indigo-950/20 hover:shadow-md transition-all"
+              className="border-2 border-gray-200 rounded-lg p-4 bg-card hover:border-primary hover:shadow-md transition-all duration-300"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
@@ -158,19 +158,19 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                       {getStatusText(tournament.status)}
                     </span>
                     {tournament.is_joined && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary flex items-center">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         参加済み
                       </span>
                     )}
                   </div>
-                  
+
                   {tournament.category_name && (
                     <p className="text-sm text-muted-foreground mb-2">
                       {tournament.tournament_name}
                     </p>
                   )}
-                  
+
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
                     <span className="flex items-center gap-1">
                       <Trophy className="h-3 w-3" />
@@ -193,27 +193,27 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                     <div className="mb-2">
                       <div className="grid grid-cols-2 gap-2">
                         {/* 想定チーム数 */}
-                        <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                          <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
-                          <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count || 0}</div>
+                        <div className="p-2 bg-muted rounded-lg border border-border text-center">
+                          <div className="text-xs text-muted-foreground font-medium mb-1">想定チーム数</div>
+                          <div className="text-base font-bold text-foreground">{tournament.team_count || 0}</div>
                         </div>
                         {/* 参加申請 */}
-                        <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                          <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加申請</div>
-                          <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.applied_count || 0}</div>
+                        <div className="p-2 bg-muted rounded-lg border border-border text-center">
+                          <div className="text-xs text-muted-foreground font-medium mb-1">参加申請</div>
+                          <div className="text-base font-bold text-foreground">{tournament.applied_count || 0}</div>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex flex-col gap-1 ml-4">
                   <Button asChild size="sm" variant="outline">
                     <Link href={`/public/tournaments/${tournament.tournament_id}`}>
                       詳細
                     </Link>
                   </Button>
-                  
+
                   {/* 参加済みの場合は参加選手変更ボタンを表示 */}
                   {tournament.is_joined && userRole === 'team' && (
                     <Button asChild size="sm" variant="outline">
@@ -222,12 +222,12 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                       </Link>
                     </Button>
                   )}
-                  
+
                   {/* 未参加かつ募集期間中の場合に参加ボタンを表示 */}
                   {!tournament.is_joined &&
-                   tournament.recruitment_start_date && 
-                   tournament.recruitment_end_date && 
-                   new Date(tournament.recruitment_start_date) <= new Date() && 
+                   tournament.recruitment_start_date &&
+                   tournament.recruitment_end_date &&
+                   new Date(tournament.recruitment_start_date) <= new Date() &&
                    new Date() <= new Date(tournament.recruitment_end_date) &&
                    tournament.status !== 'ongoing' &&
                    tournament.status !== 'completed' && (

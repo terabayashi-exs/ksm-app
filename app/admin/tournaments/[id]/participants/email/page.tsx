@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, Send, AlertCircle, Loader2, Users } from 'lucide-react';
+import { ArrowLeft, Send, AlertCircle, Loader2, Users } from 'lucide-react';
+import Link from 'next/link';
 import { EMAIL_PRESETS, EmailPresetId } from '@/lib/email/templates-broadcast';
 
 // 自動送信メールのtemplate_id一覧（履歴から除外する）
@@ -49,7 +50,6 @@ interface Team {
 
 export default function EmailSendPage() {
   const params = useParams();
-  const router = useRouter();
   const tournamentId = params.id as string;
 
   const [teams, setTeams] = useState<Team[]>([]);
@@ -88,10 +88,10 @@ export default function EmailSendPage() {
   const getTemplateColor = (templateId: string): string => {
     const colorMap: Record<string, string> = {
       participationConfirmed: 'text-green-600', // 参加確定通知 - 緑
-      participationNotSelected: 'text-red-600', // 参加見送り通知 - 赤
+      participationNotSelected: 'text-destructive', // 参加見送り通知 - 赤
       participationCancelled: 'text-muted-foreground', // キャンセル通知 - グレー
       waitlist: 'text-muted-foreground', // キャンセル待ち通知 - グレー
-      withdrawal_approved: 'text-red-600', // 辞退承認通知 - 赤
+      withdrawal_approved: 'text-destructive', // 辞退承認通知 - 赤
       withdrawal_rejected: 'text-purple-600', // 辞退却下通知 - 紫
       scheduleAnnouncement: 'text-blue-600', // 大会日程・組合せ決定通知 - 青
       auto_application: 'text-muted-foreground', // 申請受付（自動） - グレー
@@ -342,30 +342,33 @@ export default function EmailSendPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="space-y-6">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Mail className="h-8 w-8 text-blue-500" />
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">メール一括送信</h1>
-              <p className="text-muted-foreground mt-1">{tournamentName}</p>
-            </div>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">メール一括送信</h1>
+            <p className="text-sm text-white/70 mt-1">{tournamentName}</p>
           </div>
-          <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
-            ダッシュボードに戻る
+        </div>
+      </div>
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
           </Button>
         </div>
-
-        {/* 注意事項 */}
+        <div className="space-y-6">
+          {/* 注意事項 */}
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-2">
@@ -403,7 +406,7 @@ export default function EmailSendPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
-                    <span className="text-red-600 font-medium">参加見送り・辞退承認</span>
+                    <span className="text-destructive font-medium">参加見送り・辞退承認</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
@@ -625,6 +628,7 @@ export default function EmailSendPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     </div>

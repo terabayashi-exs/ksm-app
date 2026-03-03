@@ -1190,7 +1190,7 @@ export default function TournamentCreateNewForm() {
         <Button type="button" variant="outline" onClick={() => setStep('format-selection')}>
           フォーマット選択に戻る
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+        <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           {isSubmitting ? "作成中..." : "🏆 部門を作成"}
         </Button>
       </div>

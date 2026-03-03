@@ -262,8 +262,8 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
             )}
           </p>
           {isEditMode && (
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
+            <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-md">
+              <p className="text-sm text-primary">
                 既に参加申し込み済みです。参加選手の変更や背番号の修正が可能です。
               </p>
             </div>

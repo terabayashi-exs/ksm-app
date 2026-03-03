@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Plus, Calendar, Users, MapPin, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Calendar, Users, MapPin, Trash2 } from 'lucide-react';
 
 interface TournamentGroup {
   group_id: number;
@@ -114,37 +114,35 @@ export default function TournamentGroupsList() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">大会一覧</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                大会の管理を行います（各大会に複数の部門を作成できます）
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/my')}
-              >
-                ダッシュボードに戻る
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/admin/tournament-groups/create">
-                  <Plus className="w-4 h-4 mr-2" />
-                  大会作成
-                </Link>
-              </Button>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">大会一覧</h1>
+            <p className="text-sm text-white/70 mt-1">
+              大会の管理を行います（各大会に複数の部門を作成できます）
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/tournament-groups/create">
+              <Plus className="h-4 w-4 mr-2" />
+              大会作成
+            </Link>
+          </Button>
+        </div>
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 mb-6">
+            <p className="text-destructive">{error}</p>
           </div>
         )}
 
@@ -173,7 +171,7 @@ export default function TournamentGroupsList() {
                 {tournamentGroups.map((group) => (
                   <Card
                     key={group.group_id}
-                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    className="hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer"
                     onClick={() => router.push(`/admin/tournament-groups/${group.group_id}`)}
                   >
                     <CardContent className="p-6">
@@ -191,7 +189,7 @@ export default function TournamentGroupsList() {
                               size="sm"
                               onClick={(e) => handleDeleteGroup(group, e)}
                               disabled={deletingGroupId === group.group_id}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/5"
                             >
                               {deletingGroupId === group.group_id ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>

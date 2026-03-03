@@ -383,7 +383,7 @@ export default function EditOperatorForm({
         <Button
           onClick={handleUpdate}
           disabled={submitting || tournamentAccess.length === 0}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {submitting ? (
             <>

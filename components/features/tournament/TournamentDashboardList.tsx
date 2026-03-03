@@ -634,7 +634,7 @@ export default function TournamentDashboardList({
   };
 
   const TournamentCard = ({ tournament }: { tournament: Tournament }) => (
-    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
+    <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       {/* 管理者ロゴ背景 */}
       {tournament.logo_blob_url && (
         <div className="absolute top-0 right-0 w-20 h-20 opacity-10 overflow-hidden">
@@ -1682,7 +1682,7 @@ export default function TournamentDashboardList({
                     <Button
                       asChild
                       size="sm"
-                      className="text-sm bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+                      className="text-sm bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
                         <Plus className="w-4 h-4 mr-2" />

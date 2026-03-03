@@ -169,7 +169,7 @@ export function FormatSelectionModal({
             <button
               onClick={handleConfirm}
               disabled={!selectedFormatId}
-              className="px-5 py-2.5 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="px-5 py-2.5 text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               このフォーマットを選択
             </button>

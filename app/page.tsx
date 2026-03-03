@@ -6,10 +6,10 @@ import InitialFooterBanner from "@/components/layout/InitialFooterBanner";
 import TournamentGroupCard from "@/components/features/tournament/TournamentGroupCard";
 import AnnouncementList from "@/components/features/announcements/AnnouncementList";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
-import { Trophy, TrendingUp, Clock, Users, Calendar } from "lucide-react";
+import { Trophy, TrendingUp, Clock, Users, Calendar, ArrowRight, Search, Sparkles } from "lucide-react";
 
 async function getGroupedPublicTournaments(_teamId?: string) {
   try {
@@ -42,51 +42,62 @@ export default async function Home() {
 
   const groupedData = await getGroupedPublicTournaments(teamId);
 
+  // 統計データ（0でないもののみ表示用）
+  const statsItems = [
+    { label: "開催中", value: groupedData.ongoing.length, icon: TrendingUp, href: "/tournaments?status=ongoing" },
+    { label: "募集中", value: groupedData.recruiting.length, icon: Clock, href: "/tournaments?status=recruiting" },
+    { label: "開催前", value: groupedData.before_event.length, icon: Calendar, href: "/tournaments?status=before_event" },
+    { label: "完了", value: groupedData.completed.length, icon: Trophy, href: "/tournaments?status=completed" },
+  ].filter(item => item.value > 0);
+
+  const hasTournaments = groupedData.ongoing.length > 0 || groupedData.recruiting.length > 0 || groupedData.before_event.length > 0 || groupedData.completed.length > 0;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      {/* ヒーローセクション */}
-      <section className="relative py-16 overflow-hidden bg-transparent">
-        {/* コンテンツ */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      {/* ヒーローセクション - hero-gradient背景 + 白テキスト */}
+      <section className="bg-hero-gradient py-10 sm:py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            {/* 大きなロゴ画像（透過対応） */}
-            <div className="mb-8 relative w-full max-w-6xl mx-auto">
+            {/* ロゴ画像 */}
+            <div className="mb-4 relative w-full max-w-4xl mx-auto">
               <Image
                 src="/images/systemlogo_1000_250-タイトルなし.png"
                 alt="楽勝 GO"
                 width={1000}
                 height={250}
-                className="mx-auto w-full h-auto max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl"
+                className="mx-auto w-full h-auto max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl brightness-0 invert"
                 style={{ objectFit: 'contain' }}
                 priority
               />
             </div>
-            <p className="text-lg md:text-xl mb-6 text-muted-foreground max-w-3xl mx-auto relative z-10">
-              あらゆるスポーツ大会の運営から結果公開まで、すべてを一元管理
-              <br />
-              簡単・楽勝で大会運営ができる総合管理システムです
+            <p className="text-sm sm:text-lg text-white/90 max-w-2xl mx-auto leading-relaxed">
+              スポーツ大会運営を、楽勝に。
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* アクションボタンセクション */}
-      <section className="py-8 bg-background">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* アクションボタン */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
             {session?.user ? (
-              <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                <Link href="/my">マイダッシュボード</Link>
+              <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90 font-bold">
+                <Link href="/my">
+                  マイダッシュボード
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             ) : (
               <>
-                <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
-                  <Link href="/auth/login">ログイン</Link>
+                <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90 font-bold">
+                  <Link href="/tournaments">
+                    <Search className="mr-2 h-4 w-4" />
+                    大会を探す
+                  </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                  <Link href="/auth/register">新規ユーザー登録</Link>
+                <Button asChild size="lg" variant="outline" className="border-2 border-white text-white bg-transparent hover:bg-white/10">
+                  <Link href="/auth/login">
+                    ログイン / 新規登録
+                  </Link>
                 </Button>
               </>
             )}
@@ -94,97 +105,69 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* お知らせセクション */}
-      <section className="py-8 bg-background">
+      {/* お知らせセクション - white背景 */}
+      <section className="py-6 bg-background">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnnouncementList />
         </div>
       </section>
 
-      {/* 統計セクション */}
-      <section className="relative py-16 overflow-hidden">
-        {/* シンプルな背景 */}
-        <div className="absolute inset-0">
-          {/* 薄い芝生風グラデーション */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-lime-50/15 to-transparent dark:from-transparent dark:via-green-900/8 dark:to-transparent"></div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Link href="/tournaments?status=ongoing" className="block">
-              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="pt-6">
-                  <TrendingUp className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.ongoing.length}</h3>
-                  <p className="text-muted-foreground">開催中の大会数</p>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/tournaments?status=recruiting" className="block">
-              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="pt-6">
-                  <Clock className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.recruiting.length}</h3>
-                  <p className="text-muted-foreground">募集中の大会数</p>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/tournaments?status=before_event" className="block">
-              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="pt-6">
-                  <Calendar className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.before_event.length}</h3>
-                  <p className="text-muted-foreground">開催前の大会数</p>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/tournaments?status=completed" className="block">
-              <Card className="text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="pt-6">
-                  <Trophy className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                  <h3 className="text-3xl font-bold text-foreground mb-2">{groupedData.completed.length}</h3>
-                  <p className="text-muted-foreground">完了した大会数</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
+      {/* 統計セクション - white背景（0値は非表示） */}
+      <section className="py-8 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {statsItems.length > 0 ? (
+            <div className={`grid gap-3 sm:gap-5 ${
+              statsItems.length === 1 ? 'grid-cols-1 max-w-xs mx-auto' :
+              statsItems.length === 2 ? 'grid-cols-2 max-w-lg mx-auto' :
+              statsItems.length === 3 ? 'grid-cols-3 max-w-2xl mx-auto' :
+              'grid-cols-2 lg:grid-cols-4'
+            }`}>
+              {statsItems.map((item) => (
+                <Link key={item.label} href={item.href} className="block">
+                  <div className="text-center bg-background border-2 border-gray-200 rounded-lg p-4 sm:p-6 cursor-pointer hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+                    <item.icon className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-2" />
+                    <h3 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">{item.value}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{item.label}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Sparkles className="h-10 w-10 text-primary/40 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">
+                次の大会をお楽しみに！
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* 最新大会セクション */}
-      <section className="relative py-16 bg-card/50 overflow-hidden">
-        {/* シンプルな背景 */}
-        <div className="absolute inset-0">
-          {/* 芝生風の背景 */}
-          <div className="absolute inset-0 bg-gradient-to-b from-lime-50/25 via-green-50/15 to-transparent dark:from-green-900/15 dark:via-green-900/8 dark:to-transparent"></div>
-        </div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">最新の大会情報</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+      {/* 最新大会セクション - gray-50背景 */}
+      <section className="py-10 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">最新の大会情報</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
               現在公開中の大会や最近開催された大会の情報をご覧いただけます
             </p>
           </div>
 
-          {(groupedData.ongoing.length > 0 || groupedData.recruiting.length > 0 || groupedData.before_event.length > 0 || groupedData.completed.length > 0) ? (
-            <div className="space-y-12 mb-8">
+          {hasTournaments ? (
+            <div className="space-y-8 mb-8">
               {/* 開催中の大会 */}
               {groupedData.ongoing.length > 0 && (
                 <div>
-                  <div className="flex items-center mb-6">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg border-2 border-green-300 dark:border-green-700">
-                      <TrendingUp className="h-5 w-5 text-green-700 dark:text-green-300" />
-                      <h3 className="text-xl font-bold text-green-800 dark:text-green-200">開催中の大会</h3>
-                      <span className="ml-2 px-2 py-1 bg-green-600 text-white rounded-full text-sm font-medium">
-                        {groupedData.ongoing.length}件
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-md border-2 border-gray-200">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <h3 className="text-base font-semibold text-foreground">開催中の大会</h3>
+                      <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs font-medium">
+                        {groupedData.ongoing.length}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {groupedData.ongoing.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <TournamentGroupCard
                         key={groupData.group.group_id}
@@ -200,16 +183,16 @@ export default async function Home() {
               {/* 募集中の大会 */}
               {groupedData.recruiting.length > 0 && (
                 <div>
-                  <div className="flex items-center mb-6">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg border-2 border-blue-300 dark:border-blue-700">
-                      <Clock className="h-5 w-5 text-blue-700 dark:text-blue-300" />
-                      <h3 className="text-xl font-bold text-blue-800 dark:text-blue-200">募集中の大会</h3>
-                      <span className="ml-2 px-2 py-1 bg-blue-600 text-white rounded-full text-sm font-medium">
-                        {groupedData.recruiting.length}件
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-md border-2 border-gray-200">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <h3 className="text-base font-semibold text-foreground">募集中の大会</h3>
+                      <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs font-medium">
+                        {groupedData.recruiting.length}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {groupedData.recruiting.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <TournamentGroupCard
                         key={groupData.group.group_id}
@@ -225,16 +208,16 @@ export default async function Home() {
               {/* 開催前の大会 */}
               {groupedData.before_event.length > 0 && (
                 <div>
-                  <div className="flex items-center mb-6">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-lg border-2 border-orange-300 dark:border-orange-700">
-                      <Calendar className="h-5 w-5 text-orange-700 dark:text-orange-300" />
-                      <h3 className="text-xl font-bold text-orange-800 dark:text-orange-200">開催前の大会</h3>
-                      <span className="ml-2 px-2 py-1 bg-orange-600 text-white rounded-full text-sm font-medium">
-                        {groupedData.before_event.length}件
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-md border-2 border-gray-200">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <h3 className="text-base font-semibold text-foreground">開催前の大会</h3>
+                      <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs font-medium">
+                        {groupedData.before_event.length}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {groupedData.before_event.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <TournamentGroupCard
                         key={groupData.group.group_id}
@@ -250,16 +233,16 @@ export default async function Home() {
               {/* 完了した大会 */}
               {groupedData.completed.length > 0 && (
                 <div>
-                  <div className="flex items-center mb-6">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-900/30 dark:to-slate-900/30 rounded-lg border-2 border-gray-300 dark:border-gray-700">
-                      <Trophy className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                      <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">完了した大会</h3>
-                      <span className="ml-2 px-2 py-1 bg-gray-600 text-white rounded-full text-sm font-medium">
-                        {groupedData.completed.length}件
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-md border-2 border-gray-200">
+                      <Trophy className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-base font-semibold text-foreground">完了した大会</h3>
+                      <span className="ml-1 px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs font-medium">
+                        {groupedData.completed.length}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {groupedData.completed.map((groupData: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <TournamentGroupCard
                         key={groupData.group.group_id}
@@ -273,90 +256,80 @@ export default async function Home() {
               )}
             </div>
           ) : (
-            <Card className="text-center py-12">
-              <CardContent>
-                <Trophy className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  公開中の大会はありません
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  現在公開されている大会情報がありません。
-                  新しい大会が開催されるまでお待ちください。
-                </p>
-                {session?.user?.role === "admin" && (
-                  <Button asChild>
-                    <Link href="/admin/tournaments/create-new">大会を作成</Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            <div className="text-center py-12">
+              <Trophy className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                新しい大会の開催をお楽しみに！
+              </h3>
+              <p className="text-muted-foreground mb-6 text-sm">
+                大会が公開されるとこちらに表示されます。
+              </p>
+              {session?.user?.role === "admin" && (
+                <Button asChild>
+                  <Link href="/admin/tournaments/create-new">大会を作成</Link>
+                </Button>
+              )}
+            </div>
           )}
 
           <div className="text-center">
-            <div className="border-2 border-blue-600 rounded-lg p-6 bg-blue-50 dark:bg-blue-950/20 max-w-md mx-auto">
-              <h3 className="text-lg font-semibold text-foreground mb-3">
-                もっと大会を探してみませんか？
-              </h3>
-              <Button asChild size="lg" className="w-full">
-                <Link href="/tournaments">大会を探す</Link>
-              </Button>
-            </div>
+            <Card className="max-w-md mx-auto border-2 border-gray-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <CardContent className="pt-6">
+                <h3 className="text-base font-semibold text-foreground mb-3">
+                  もっと大会を探してみませんか？
+                </h3>
+                <Button asChild size="lg" className="w-full">
+                  <Link href="/tournaments">
+                    大会を探す
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* 機能紹介セクション */}
-      <section className="relative py-16 bg-muted/30 overflow-hidden">
-        {/* シンプルな背景 */}
-        <div className="absolute inset-0">
-          {/* 芝生風の薄い背景 */}
-          <div className="absolute inset-0 bg-gradient-to-t from-lime-50/18 via-transparent to-transparent dark:from-green-900/10 dark:via-transparent dark:to-transparent"></div>
-        </div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">システムの特徴</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+      {/* 機能紹介セクション - white背景 */}
+      <section className="py-12 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">システムの特徴</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               楽勝 GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-card/90 backdrop-blur-sm border-border/50">
-              <CardHeader>
-                <Trophy className="h-8 w-8 text-blue-600 mb-2" />
-                <CardTitle>大会管理</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  大会の作成から運営まで、直感的な操作で効率的に管理。様々なスポーツ・競技に対応しています。
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="bg-background border-2 border-gray-200 rounded-lg p-6 text-center hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Trophy className="h-7 w-7 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-2">大会管理</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                大会の作成から運営まで、直感的な操作で効率的に管理。様々なスポーツ・競技に対応しています。
+              </p>
+            </div>
 
-            <Card className="bg-card/90 backdrop-blur-sm border-border/50">
-              <CardHeader>
-                <Users className="h-8 w-8 text-green-600 mb-2" />
-                <CardTitle>チーム管理</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  参加チームの登録・管理から選手情報の管理まで一元化されています。
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-background border-2 border-gray-200 rounded-lg p-6 text-center hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Users className="h-7 w-7 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-2">チーム管理</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                参加チームの登録・管理から選手情報の管理まで一元化されています。
+              </p>
+            </div>
 
-            <Card className="bg-card/90 backdrop-blur-sm border-border/50">
-              <CardHeader>
-                <Calendar className="h-8 w-8 text-purple-600 mb-2" />
-                <CardTitle>スケジュール管理</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  試合スケジュールの自動生成と管理で、運営負荷を大幅に軽減します。
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-background border-2 border-gray-200 rounded-lg p-6 text-center hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Calendar className="h-7 w-7 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-2">スケジュール管理</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                試合スケジュールの自動生成と管理で、運営負荷を大幅に軽減します。
+              </p>
+            </div>
           </div>
         </div>
       </section>

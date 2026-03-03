@@ -563,7 +563,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
     const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
 
     return (
-    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
+    <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       <div className="p-4 relative">
         <div className="flex justify-between items-start mb-3">
           <div>
@@ -1100,7 +1100,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
     const permissions = tournament.operator_permissions || {};
 
     return (
-    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative">
+    <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       <div className="p-4 relative">
         <div className="flex justify-between items-start mb-3">
           <div>
@@ -1830,7 +1830,7 @@ function TeamExpandedPanel({ team }: {
 
                     {/* 検索ボタン */}
                     <div className="flex gap-2 pt-2">
-                      <Button onClick={handleSearch} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                      <Button onClick={handleSearch} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
                         <Search className="w-4 h-4 mr-1" />
                         検索
                       </Button>
@@ -2173,7 +2173,7 @@ function TeamExpandedPanel({ team }: {
                             const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
 
                             return (
-                              <div key={t.tournament_id} className="border border-border rounded-lg p-4 bg-gradient-to-br from-background to-muted/10 hover:shadow-md transition-shadow">
+                              <div key={t.tournament_id} className="border border-border rounded-lg p-4 bg-gradient-to-br from-background to-muted/10 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="flex-1 min-w-0">
                                     <div className="text-base font-bold truncate text-foreground flex items-center gap-2 mb-2">

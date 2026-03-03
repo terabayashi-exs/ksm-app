@@ -457,7 +457,7 @@ export default function MyTournamentJoinForm({
         <Button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {loading ? '処理中...' : (isEditMode ? '変更を保存' : '参加を申し込む')}
         </Button>

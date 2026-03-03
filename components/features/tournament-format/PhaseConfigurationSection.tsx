@@ -137,12 +137,12 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
       {/* バリデーションエラー表示 */}
       {validationErrors.length > 0 && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-800 font-medium mb-1 flex items-center">
+        <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-md">
+          <p className="text-sm text-destructive font-medium mb-1 flex items-center">
             <AlertTriangle className="h-4 w-4 mr-2" />
             フェーズ設定にエラーがあります
           </p>
-          <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+          <ul className="text-xs text-destructive list-disc list-inside space-y-1">
             {validationErrors.map((error, index) => (
               <li key={index}>{error}</li>
             ))}
@@ -280,7 +280,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
                   disabled={phases.phases.length <= 1}
                   className="h-8 w-8 p-0"
                 >
-                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             </div>

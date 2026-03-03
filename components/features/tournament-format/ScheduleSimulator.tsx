@@ -667,7 +667,7 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
                   mode === m
-                    ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-300"
+                    ? "bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80"
                     : "bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
                 }`}
               >
@@ -686,7 +686,7 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
             type="button"
             onClick={handleGenerate}
             disabled={generating}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {generating ? "生成中..." : `${modeLabels[mode]}で生成`}
           </Button>
@@ -694,7 +694,7 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
             <Button
               type="button"
               onClick={handleExport}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               試合テンプレートに展開
             </Button>

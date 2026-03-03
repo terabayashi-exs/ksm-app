@@ -224,7 +224,7 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
               <Button
                 onClick={handleSaveChanges}
                 disabled={saving}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -271,7 +271,7 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
           {(editMode ? editedTournaments : tournaments).map((tournament, index) => (
             <div
               key={tournament.tournament_id}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="border rounded-lg p-4 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               draggable={editMode}
               onDragStart={(e) => e.dataTransfer.setData('index', index.toString())}
               onDragOver={(e) => e.preventDefault()}

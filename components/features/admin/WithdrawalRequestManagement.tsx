@@ -386,7 +386,7 @@ export default function WithdrawalRequestManagement() {
             <Button
               onClick={() => openProcessModal(request, 'approve')}
               disabled={processingRequest === request.tournament_team_id}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <CheckCircle className="w-4 h-4 mr-2" />
               承認
@@ -551,7 +551,7 @@ export default function WithdrawalRequestManagement() {
                 <Button
                   onClick={() => openBulkProcessModal('approve')}
                   disabled={selectedRequests.size === 0 || bulkProcessing}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   size="sm"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />

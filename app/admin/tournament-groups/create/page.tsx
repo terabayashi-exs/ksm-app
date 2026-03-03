@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TournamentGroupCreateForm from "@/components/features/tournament/TournamentGroupCreateForm";
@@ -20,25 +20,26 @@ export default async function CreateTournamentGroupPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">大会作成</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">大会作成</h1>
+              <p className="text-sm text-white/70 mt-1">
                 新しい大会を作成します。作成後、部門を追加できます。
               </p>
-            </div>
-            <div>
-              <Button asChild variant="outline">
-                <Link href="/my">ダッシュボードに戻る</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
         {!canCreateTournament ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />

@@ -100,16 +100,16 @@ export default async function TournamentResultsPdfPage({ params }: PageProps) {
         {/* 案内・操作エリア */}
         <div className="mb-6 space-y-4">
           {/* 更新情報 */}
-          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+          <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
+                <Clock className="h-5 w-5 text-primary mt-0.5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-blue-800">
+                <h3 className="text-sm font-medium text-primary">
                   📊 結果表について
                 </h3>
-                <div className="mt-1 text-sm text-blue-700">
+                <div className="mt-1 text-sm text-primary">
                   <p>この結果表は手動で作成・更新されます。最新の順位・戦績は「順位表」「戦績表」ページをご確認ください。</p>
                   <p className="text-xs mt-1 opacity-75">
                     ※ ファイルの最終更新日時はダウンロードボタンから確認できます
@@ -125,7 +125,7 @@ export default async function TournamentResultsPdfPage({ params }: PageProps) {
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg transition-colors shadow-sm"
             >
               <Download className="h-4 w-4" />
               PDFをダウンロード・別タブで開く
@@ -159,7 +159,7 @@ export default async function TournamentResultsPdfPage({ params }: PageProps) {
                 <a
                   href={pdfUrl}
                   download={`tournament-${tournament.tournament_id}-results.pdf`}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors"
                 >
                   <Download className="h-4 w-4" />
                   PDFをダウンロード
