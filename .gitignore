@@ -65,7 +65,7 @@ test-*.js
 storybook-static
 
 # claude code
-.claude/settings.local.json
+.claude/
 
 # MCP/Serena settings
 .mcp.json
