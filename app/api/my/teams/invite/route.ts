@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
   if (userCheck.rows.length === 0) {
     return NextResponse.json({
       success: false,
-      error: 'このメールアドレスはアカウント登録されていません。招待を送信するには、相手が先に楽勝GOにアカウント登録している必要があります。'
+      error: 'このメールアドレスはアカウント登録されていません。招待を送信するには、相手が先に大会GOにアカウント登録している必要があります。'
     }, { status: 400 });
   }
 

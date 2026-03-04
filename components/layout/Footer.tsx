@@ -11,10 +11,10 @@ export default function Footer() {
             <div className="flex items-center justify-center mb-4">
               <div className="relative h-16">
                 <Image
-                  src="/images/systemlogo_1000_313-タイトルあり.png"
-                  alt="楽勝 GO"
-                  width={1000}
-                  height={313}
+                  src="/images/taikaigo-logo.svg"
+                  alt="大会GO"
+                  width={1149}
+                  height={355}
                   className="h-full w-auto object-contain brightness-0 invert"
                 />
               </div>
@@ -24,7 +24,7 @@ export default function Footer() {
               大会の作成から結果の公開まで、一元的に管理できます。
             </p>
             <div className="text-sm text-white/50">
-              <span>&copy; 2025 楽勝 GO</span>
+              <span>&copy; 2025 大会GO</span>
               <span className="ml-3 text-xs bg-white/10 text-white/60 px-2 py-1 rounded border border-white/10">
                 BETA
               </span>

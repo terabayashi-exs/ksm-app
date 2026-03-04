@@ -125,13 +125,13 @@ export async function POST(request: NextRequest) {
         );
 
         const mailOptions = {
-          from: `"楽勝GO運営" <${process.env.EMAIL_USER}>`,
+          from: `"大会GO運営" <${process.env.EMAIL_USER}>`,
           to: String(user.email),
-          subject: '【楽勝GO】運営者権限が付与されました',
+          subject: '【大会GO】運営者権限が付与されました',
           text: `
 ${user.display_name} 様
 
-楽勝GOの運営者として権限が付与されました。
+大会GOの運営者として権限が付与されました。
 
 アクセス可能な部門：
 ${tournamentNames.filter(name => name).join('\n')}
@@ -142,7 +142,7 @@ https://${process.env.NEXT_PUBLIC_SITE_URL || 'localhost:3000'}/my?tab=operator
 何かご不明な点がございましたら、お気軽にお問い合わせください。
 
 ---
-楽勝GO運営チーム
+大会GO運営チーム
           `.trim()
         };
 

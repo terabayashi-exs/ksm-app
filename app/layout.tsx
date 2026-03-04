@@ -5,8 +5,8 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 export const metadata = {
-  title: "Rakusyo GO - スポーツ大会管理システム",
-  description: "あらゆるスポーツ大会の運営から結果公開まで、簡単・楽勝で大会運営ができる総合管理システム",
+  title: "Taikai GO - スポーツ大会管理システム",
+  description: "あらゆるスポーツ大会の運営から結果公開まで、簡単に大会運営ができる総合管理システム",
   robots: "index, follow",
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
 };

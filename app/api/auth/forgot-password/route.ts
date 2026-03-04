@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     const expiresAtFormatted = format(new Date(expiresAtStr.replace(' ', 'T')), "yyyy年MM月dd日 HH:mm");
 
     // メールテンプレートの作成
-    const emailSubject = "【楽勝 GO】パスワードリセットのご案内";
+    const emailSubject = "【大会GO】パスワードリセットのご案内";
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 楽勝 GO</h1>
+            <h1>🏆 大会GO</h1>
             <p>パスワードリセットのご案内</p>
         </div>
         <div class="content">
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
 </html>`;
 
     const emailText = `
-【楽勝 GO】パスワードリセットのご案内
+【大会GO】パスワードリセットのご案内
 
 ${team.team_name} 様
 
@@ -146,7 +146,7 @@ ${resetUrl}
 
 ───────────────────────────
 このメールは自動送信されています。
-© 楽勝 GO 運営事務局
+© 大会GO 運営事務局
 ───────────────────────────
 `;
 

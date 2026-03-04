@@ -209,7 +209,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
             }),
             tournamentDate: tournamentDateStr,
             venueInfo: info.venue_name ? String(info.venue_name) : undefined,
-            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'taikaigo-official@taikai-go.com',
             contactPhone: undefined, // 電話番号は現在未対応
             organizationName: info.organization_name ? String(info.organization_name) : undefined
           };
@@ -246,7 +246,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
           // BCC送信先を準備
           const bccAddresses: string[] = [];
-          const bccEmail = process.env.SMTP_BCC_EMAIL || 'rakusyo-mail@rakusyo-go.com';
+          const bccEmail = process.env.SMTP_BCC_EMAIL || 'taikaigo-mail@taikai-go.com';
           bccAddresses.push(bccEmail);
 
           // 大会作成管理者のメールアドレスがあれば追加

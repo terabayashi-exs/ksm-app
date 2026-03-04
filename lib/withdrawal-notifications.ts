@@ -164,7 +164,7 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
 
       // BCC送信先を準備（運営アドレス + 大会作成管理者）
       const bccAddresses: string[] = [];
-      const bccEmail = process.env.SMTP_BCC_EMAIL || 'rakusyo-mail@rakusyo-go.com';
+      const bccEmail = process.env.SMTP_BCC_EMAIL || 'taikaigo-mail@taikai-go.com';
       bccAddresses.push(bccEmail);
 
       // 大会作成管理者のメールアドレスがあれば追加

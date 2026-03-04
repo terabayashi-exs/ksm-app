@@ -54,7 +54,7 @@ ${data.contactEmail}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-楽勝GO大会運営システム
+大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -243,7 +243,7 @@ ${data.contactEmail}
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
+      <p>大会GO大会運営システム</p>
       <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは自動送信されています。返信しないでください。</p>
     </div>
   </div>
@@ -305,7 +305,7 @@ ${data.contactEmail}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-楽勝GO大会運営システム
+大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -494,7 +494,7 @@ ${data.contactEmail}
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
+      <p>大会GO大会運営システム</p>
       <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは自動送信されています。返信しないでください。</p>
     </div>
   </div>
@@ -557,7 +557,7 @@ ${data.contactEmail}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-楽勝GO大会運営システム
+大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -717,7 +717,7 @@ ${data.contactEmail}
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
+      <p>大会GO大会運営システム</p>
       <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは自動送信されています。返信しないでください。</p>
     </div>
   </div>
@@ -763,7 +763,7 @@ ${data.adminComment}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-楽勝GO大会運営システム
+大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -868,7 +868,7 @@ ${data.adminComment}
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
+      <p>大会GO大会運営システム</p>
       <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは自動送信されています。返信しないでください。</p>
     </div>
   </div>
@@ -913,7 +913,7 @@ ${data.adminComment}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-楽勝GO大会運営システム
+大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -1018,7 +1018,7 @@ ${data.adminComment}
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
+      <p>大会GO大会運営システム</p>
       <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは自動送信されています。返信しないでください。</p>
     </div>
   </div>
@@ -1059,7 +1059,7 @@ ${data.adminComment}
 
 またのご参加をお待ちしております。
 
-楽勝GO大会運営システム
+大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -1158,7 +1158,7 @@ ${data.adminComment}
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
+      <p>大会GO大会運営システム</p>
       <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは自動送信されています。返信しないでください。</p>
     </div>
   </div>

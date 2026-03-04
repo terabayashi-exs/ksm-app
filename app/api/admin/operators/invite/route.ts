@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     // 招待メールを送信
     try {
       const emailText = `
-楽勝GOの運営者としてご招待します。
+大会GOの運営者としてご招待します。
 
 アクセス可能な部門：
 ${tournamentNames.filter(name => name).join('\n')}
@@ -129,12 +129,12 @@ ${inviteUrl}
 何かご不明な点がございましたら、お気軽にお問い合わせください。
 
 ---
-楽勝GO運営チーム
+大会GO運営チーム
       `.trim();
 
       await sendEmail({
         to: email.trim(),
-        subject: '【楽勝GO】運営者としてご招待',
+        subject: '【大会GO】運営者としてご招待',
         text: emailText,
         html: emailText.replace(/\n/g, '<br>')
       });

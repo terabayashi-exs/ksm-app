@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const htmlContent = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">アカウント登録のご案内</h2>
-        <p>楽勝 GOへのアカウント登録申請ありがとうございます。</p>
+        <p>大会GOへのアカウント登録申請ありがとうございます。</p>
         <p>以下のリンクをクリックして、アカウント登録を完了してください。</p>
         <p style="margin: 30px 0;">
           <a href="${verificationUrl}"
@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
     `;
 
     const textContent = `
-楽勝 GO - アカウント登録のご案内
+大会GO - アカウント登録のご案内
 
-楽勝 GOへのアカウント登録申請ありがとうございます。
+大会GOへのアカウント登録申請ありがとうございます。
 
 以下のリンクをクリックして、アカウント登録を完了してください。
 ${verificationUrl}
@@ -87,7 +87,7 @@ ${verificationUrl}
 
     await sendEmail({
       to: email,
-      subject: '【楽勝 GO】アカウント登録のご案内',
+      subject: '【大会GO】アカウント登録のご案内',
       text: textContent,
       html: htmlContent,
     });

@@ -54,7 +54,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 楽勝 GO</h1>
+            <h1>🏆 大会GO</h1>
             <p>辞退申請承認のお知らせ</p>
         </div>
         
@@ -119,7 +119,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
         <div class="footer">
             <p>このメールは自動送信されています。</p>
             {{#if contactEmail}}<p>お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>{{/if}}
-            <p>このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
+            <p>このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
         </div>
     </div>
 </body>
@@ -131,7 +131,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 {{contactPerson}} 様
 
 いつもお世話になっております。
-楽勝 GO 運営事務局です。
+大会GO 運営事務局です。
 
 ■ 辞退申請が承認されました
 チーム名: {{teamName}}
@@ -175,7 +175,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 ───────────────────────────
 このメールは自動送信されています。
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
-このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
+このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
 `
   };
@@ -212,7 +212,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 楽勝 GO</h1>
+            <h1>🏆 大会GO</h1>
             <p>辞退申請についてのお知らせ</p>
         </div>
         
@@ -276,7 +276,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
         <div class="footer">
             <p>このメールは自動送信されています。</p>
             {{#if contactEmail}}<p>お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>{{/if}}
-            <p>このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
+            <p>このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
         </div>
     </div>
 </body>
@@ -288,7 +288,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 {{contactPerson}} 様
 
 いつもお世話になっております。
-楽勝 GO 運営事務局です。
+大会GO 運営事務局です。
 
 ■ 辞退申請について
 チーム名: {{teamName}}
@@ -331,7 +331,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 ───────────────────────────
 このメールは自動送信されています。
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
-このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
+このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
 `
   };
@@ -349,7 +349,7 @@ export interface PasswordResetEmailVariables {
 
 export function getPasswordResetTemplate(): EmailTemplate {
   return {
-    subject: '【楽勝 GO】パスワードリセットのご案内',
+    subject: '【大会GO】パスワードリセットのご案内',
 
     htmlBody: `
 <!DOCTYPE html>
@@ -376,7 +376,7 @@ export function getPasswordResetTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 楽勝 GO</h1>
+            <h1>🏆 大会GO</h1>
             <p>パスワードリセットのご案内</p>
         </div>
 
@@ -421,14 +421,14 @@ export function getPasswordResetTemplate(): EmailTemplate {
         <div class="footer">
             <p>このメールは自動送信されています。<br>
             心当たりがない場合は、このメールを破棄してください。</p>
-            <p>© 楽勝 GO 運営事務局</p>
+            <p>© 大会GO 運営事務局</p>
         </div>
     </div>
 </body>
 </html>`,
 
     textBody: `
-【楽勝 GO】パスワードリセットのご案内
+【大会GO】パスワードリセットのご案内
 
 {{teamName}} 様
 
@@ -457,7 +457,7 @@ export function getPasswordResetTemplate(): EmailTemplate {
 ───────────────────────────
 このメールは自動送信されています。
 心当たりがない場合は、このメールを破棄してください。
-© 楽勝 GO 運営事務局
+© 大会GO 運営事務局
 ───────────────────────────
 `
   };
@@ -493,7 +493,7 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 楽勝 GO</h1>
+            <h1>🏆 大会GO</h1>
             <p>辞退申請受付確認</p>
         </div>
 
@@ -529,7 +529,7 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
         <div class="footer">
             <p>このメールは自動送信されています。</p>
             {{#if contactEmail}}<p>お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}</p>{{/if}}
-            <p>このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
+            <p>このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。</p>
         </div>
     </div>
 </body>
@@ -561,7 +561,7 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 ───────────────────────────
 このメールは自動送信されています。
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
-このメールは楽勝GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
+このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
 `
   };

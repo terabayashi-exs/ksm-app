@@ -457,7 +457,7 @@ async function handleTournamentJoin(
             categoryName: String(tournament.tournament_name),
             tournamentDate: tournamentDateStr,
             venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
-            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'taikaigo-official@taikai-go.com',
             playerCount: participatingPlayers.length,
             tournamentUrl: tournamentUrl
           });

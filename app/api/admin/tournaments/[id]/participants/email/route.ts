@@ -143,7 +143,7 @@ export async function POST(
     });
 
     // 運営メールアドレス（BCC送信先）
-    const bccEmail = process.env.SMTP_BCC_EMAIL || 'rakusyo-mail@rakusyo-go.com';
+    const bccEmail = process.env.SMTP_BCC_EMAIL || 'taikaigo-mail@taikai-go.com';
 
     // {{teamName}} プレースホルダーが含まれているかチェック
     const hasTeamNamePlaceholder = emailBody.includes('{{teamName}}');

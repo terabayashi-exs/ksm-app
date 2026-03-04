@@ -63,10 +63,10 @@ export default async function Home() {
             {/* ロゴ画像 */}
             <div className="mb-4 relative w-full max-w-4xl mx-auto">
               <Image
-                src="/images/systemlogo_1000_250-タイトルなし.png"
-                alt="楽勝 GO"
-                width={1000}
-                height={250}
+                src="/images/taikaigo-logo-notext.svg"
+                alt="大会GO"
+                width={1149}
+                height={278}
                 className="mx-auto w-full h-auto max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl brightness-0 invert"
                 style={{ objectFit: 'contain' }}
                 priority
@@ -296,7 +296,7 @@ export default async function Home() {
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">システムの特徴</h2>
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              楽勝 GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
+              大会GOは、あらゆるスポーツ大会運営に必要な機能を網羅した総合管理システムです
             </p>
           </div>
 
