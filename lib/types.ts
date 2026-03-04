@@ -273,6 +273,8 @@ export interface MatchTemplate {
   suggested_start_time?: string;
   period_count?: number;
   is_bye_match: number;  // 0: 通常試合, 1: 不戦勝試合
+  matchday?: number;     // 節番号（リーグ戦用）
+  cycle?: number;        // 巡目（リーグ戦用、デフォルト1）
   created_at: string;
   updated_at?: string;
 }

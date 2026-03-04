@@ -104,7 +104,9 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             loser_position_start: t.loser_position_start ? Number(t.loser_position_start) : undefined,
             loser_position_end: t.loser_position_end ? Number(t.loser_position_end) : undefined,
             winner_position: t.winner_position ? Number(t.winner_position) : undefined,
-            position_note: String(t.position_note || "")
+            position_note: String(t.position_note || ""),
+            matchday: t.matchday != null ? Number(t.matchday) : undefined,
+            cycle: t.cycle != null ? Number(t.cycle) : undefined
           }))}
         />
       </div>

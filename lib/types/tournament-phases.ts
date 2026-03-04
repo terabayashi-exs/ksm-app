@@ -24,6 +24,8 @@ export interface TournamentPhase {
   display_name?: string;
   /** オプションの説明文 */
   description?: string;
+  /** 総当たり巡回数（リーグ戦の場合に使用、デフォルト1） */
+  total_cycles?: number;
 }
 
 /**

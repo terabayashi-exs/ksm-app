@@ -41,7 +41,6 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
       phases: [...phases.phases, newPhase]
     };
     onPhasesChange(newPhases);
-    validateAndUpdate(newPhases);
   };
 
   // フェーズ削除
@@ -50,7 +49,6 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
     const reorderedPhases = reorderPhases(newPhasesArray);
     const newPhases = { phases: reorderedPhases };
     onPhasesChange(newPhases);
-    validateAndUpdate(newPhases);
   };
 
   // フェーズ更新
@@ -62,7 +60,6 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
     };
     const newPhases = { phases: newPhasesArray };
     onPhasesChange(newPhases);
-    validateAndUpdate(newPhases);
   };
 
   // フェーズ移動
@@ -78,7 +75,6 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
     const reorderedPhases = reorderPhases(newPhasesArray);
     const newPhases = { phases: reorderedPhases };
     onPhasesChange(newPhases);
-    validateAndUpdate(newPhases);
   };
 
   // プリセット読み込み
@@ -86,14 +82,18 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
     if (presetKey && PHASE_PRESETS[presetKey]) {
       const preset = PHASE_PRESETS[presetKey];
       onPhasesChange(preset.phases);
-      validateAndUpdate(preset.phases);
     }
   };
 
-  // バリデーション実行
+  // バリデーション実行（保存時に呼ばれる用途で残す）
   const validateAndUpdate = (phasesToValidate: TournamentPhases) => {
     const validation = validatePhaseConfiguration(phasesToValidate);
     setValidationErrors(validation.errors);
+  };
+
+  // 手動バリデーション
+  const handleValidate = () => {
+    validateAndUpdate(phases);
   };
 
   return (
@@ -150,6 +150,19 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
         </div>
       )}
 
+      {/* 手動バリデーションボタン */}
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleValidate}
+        >
+          <AlertTriangle className="h-4 w-4 mr-1" />
+          設定を検証
+        </Button>
+      </div>
+
       {/* 警告メッセージ */}
       <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
         <p className="text-sm text-yellow-800 font-medium mb-1 flex items-center">
@@ -165,7 +178,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
       {/* フェーズリスト */}
       <div className="space-y-3">
         {phases.phases.map((phase, index) => (
-          <Card key={`${phase.id}-${index}`} className="p-4">
+          <Card key={index} className="p-4">
             <div className="grid grid-cols-12 gap-3 items-start">
               {/* 順序移動ボタン */}
               <div className="col-span-1 flex flex-col space-y-1">
@@ -313,7 +326,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
             {phases.phases.map((phase, index) => (
               <div key={phase.id} className="flex items-center">
                 <Badge variant="outline" className="text-xs">
-                  {phase.display_name || phase.name} ({phase.format_type === 'league' ? 'リーグ' : 'トーナメント'})
+                  {phase.display_name || phase.name}
                 </Badge>
                 {index < phases.phases.length - 1 && (
                   <span className="text-gray-400 mx-2">→</span>

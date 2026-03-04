@@ -294,6 +294,8 @@ export const mMatchTemplates = sqliteTable("m_match_templates", {
 	positionNote: text("position_note"),
 	winnerPosition: integer("winner_position"),
 	isByeMatch: integer("is_bye_match").default(0).notNull(),
+	matchday: integer("matchday"),
+	cycle: integer("cycle").default(1),
 },
 (_table) => [
 	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),

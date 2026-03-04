@@ -106,6 +106,13 @@
       "when": 1740499200000,
       "tag": "0014_add_assigned_by_login_user_id",
       "breakpoints": false
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1740585600000,
+      "tag": "0015_add_matchday_and_cycle",
+      "breakpoints": false
     }
   ]
 }

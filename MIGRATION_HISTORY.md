@@ -16,6 +16,53 @@
 
 ---
 
+## 0015: m_match_templatesにリーグ戦対応カラムを追加（2026-03-04）
+
+### 基本情報
+- **日付**: 2026年3月4日
+- **環境**: dev
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）+ 手動SQL補完
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0015_add_matchday_and_cycle.sql`
+
+### 変更の背景と目的
+
+公式リーグ戦に対応するため、「節」（matchday）と「巡目」（cycle）の概念をm_match_templatesに追加する。
+現在のシステムは1〜2日で全試合を完了する大会を想定しているが、リーグ戦では複数節にわたる開催となる。
+
+例: 8チーム総当たり2巡の場合、7×2 = 14節が必要。
+
+**ユースケース:**
+- リーグ戦の節ごとの試合管理（第1節、第2節...）
+- 総当たり何巡目かの管理（1巡目 vs 2巡目で同一対戦カード）
+
+### 変更内容
+
+**テーブル変更:**
+- `m_match_templates` テーブル
+  - `matchday` (INTEGER, NULL可) - 節番号（第1節=1, 第2節=2...）。入力は必須ではない
+  - `cycle` (INTEGER, DEFAULT 1) - 巡目（総当たり何巡目か）
+
+**型定義変更:**
+- `lib/types/tournament-phases.ts` の `TournamentPhase` インターフェース
+  - `total_cycles?: number` を追加（リーグ戦フェーズの総巡回数、デフォルト1）
+
+### 影響範囲
+
+**変更されたファイル:**
+- `drizzle/0015_add_matchday_and_cycle.sql` (新規作成)
+- `drizzle/meta/_journal.json` (エントリ追加)
+- `src/db/schema.ts` (mMatchTemplatesにmatchday, cycle追加)
+- `lib/types/tournament-phases.ts` (TournamentPhaseにtotal_cycles追加)
+- `MIGRATION_HISTORY.md` (本ファイル)
+
+### 備考
+- `total_cycles` はm_tournament_formatsのphasesカラム（JSON）内で管理するため、DBスキーマ変更は不要
+- 既存のフォーマットデータには影響なし（matchday=NULL, cycle=1がデフォルト）
+- 将来的にリーグ戦用の部門作成画面を新設する際にこれらのフィールドを活用予定
+
+---
+
 ## 0013: m_login_usersにロゴ関連カラムを追加（2026-02-23）
 
 ### 基本情報

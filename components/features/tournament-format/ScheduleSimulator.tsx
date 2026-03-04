@@ -451,7 +451,8 @@ interface ScheduleSimulatorProps {
   onExportSchedule: (
     schedule: Array<Array<[string, string] | null>>,
     blocks: Array<{ label: string; size: number }>,
-    courtCount: number
+    courtCount: number,
+    slotRounds?: Array<number | undefined>
   ) => void;
 }
 
@@ -492,7 +493,8 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
   const handleExport = () => {
     if (schedule) {
       const plainSchedule = schedule.map(slot => slot.matches);
-      onExportSchedule(plainSchedule, blocks, courtCount);
+      const slotRounds = schedule.map(slot => slot.round);
+      onExportSchedule(plainSchedule, blocks, courtCount, slotRounds);
     }
   };
 

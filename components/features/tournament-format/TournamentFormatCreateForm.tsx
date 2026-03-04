@@ -62,6 +62,9 @@ interface MatchTemplate {
   loser_position_end?: number;
   winner_position?: number;
   position_note?: string;
+  // リーグ戦対応フィールド
+  matchday?: number;
+  cycle?: number;
 }
 
 interface TournamentFormatFormData {
@@ -152,7 +155,10 @@ export default function TournamentFormatCreateForm() {
         loser_position_start: undefined,
         loser_position_end: undefined,
         winner_position: undefined,
-        position_note: ""
+        position_note: "",
+        // リーグ戦対応フィールド
+        matchday: undefined,
+        cycle: undefined
       }]
     }
   });
@@ -210,7 +216,10 @@ export default function TournamentFormatCreateForm() {
       loser_position_start: undefined,
       loser_position_end: undefined,
       winner_position: undefined,
-      position_note: ""
+      position_note: "",
+      // リーグ戦対応フィールド
+      matchday: undefined,
+      cycle: undefined
     });
   };
 
@@ -241,41 +250,28 @@ export default function TournamentFormatCreateForm() {
     }
   };
 
-  // スケジュールシミュレーターからの展開
+  // スケジュールシミュレーターからの展開（既存テンプレートに追加）
   const handleExportSchedule = (
     schedule: Array<Array<[string, string] | null>>,
     _blocks: Array<{ label: string; size: number }>,
-    _courtCount: number
+    _courtCount: number,
+    slotRounds?: Array<number | undefined>
   ) => {
-    // 既存のテンプレートをクリア
-    while (fields.length > 0) {
-      remove(0);
-    }
+    // 既存テンプレートから最大値を取得
+    const currentTemplates = watch("templates") || [];
+    const maxMatchNumber = currentTemplates.reduce((max, t) => Math.max(max, t.match_number || 0), 0);
+    const maxMatchday = currentTemplates.reduce((max, t) => Math.max(max, t.matchday || 0), 0);
 
-    let matchNumber = 1;
-    const newTemplates: Array<{
-      match_number: number;
-      match_code: string;
-      match_type: string;
-      phase: string;
-      round_name: string;
-      block_name: string;
-      team1_source: string;
-      team2_source: string;
-      team1_display_name: string;
-      team2_display_name: string;
-      day_number: number;
-      execution_priority: number;
-      court_number: number;
-      suggested_start_time: string;
-      loser_position_start: number | undefined;
-      loser_position_end: number | undefined;
-      winner_position: number | undefined;
-      position_note: string;
-    }> = [];
+    let matchNumber = maxMatchNumber + 1;
+    const newTemplates: MatchTemplate[] = [];
+
+    // シミュレーターの節番号のオフセットを計算
+    const matchdayOffset = maxMatchday;
 
     // スケジュールの各スロットから試合を展開
     schedule.forEach((slot, slotIndex) => {
+      const roundNumber = slotRounds?.[slotIndex];
+
       slot.forEach((match: [string, string] | null, courtIndex: number) => {
         if (match) {
           const [team1, team2] = match;
@@ -301,7 +297,9 @@ export default function TournamentFormatCreateForm() {
             loser_position_start: undefined,
             loser_position_end: undefined,
             winner_position: undefined,
-            position_note: ""
+            position_note: "",
+            matchday: roundNumber ? roundNumber + matchdayOffset : undefined,
+            cycle: undefined
           });
 
           matchNumber++;
@@ -309,10 +307,10 @@ export default function TournamentFormatCreateForm() {
       });
     });
 
-    // 新しいテンプレートを追加
+    // 既存テンプレートに追加
     newTemplates.forEach(template => append(template));
 
-    alert(`${newTemplates.length}試合を展開しました`);
+    alert(`${newTemplates.length}試合を追加しました（合計${currentTemplates.length + newTemplates.length}試合）`);
   };
 
   // フォーム送信
@@ -665,6 +663,8 @@ export default function TournamentFormatCreateForm() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">敗者順位終了</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">勝者順位</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">順位説明</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">節</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">巡目</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                 </tr>
               </thead>
@@ -801,7 +801,7 @@ export default function TournamentFormatCreateForm() {
                         {...register(`templates.${index}.court_number`, { valueAsNumber: true })}
                         className="w-16"
                         min={1}
-                        max={8}
+                        max={99}
                         placeholder="1"
                       />
                     </td>
@@ -848,6 +848,24 @@ export default function TournamentFormatCreateForm() {
                         {...register(`templates.${index}.position_note`)}
                         className="w-24"
                         placeholder="決勝戦"
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        type="number"
+                        {...register(`templates.${index}.matchday`, { valueAsNumber: true })}
+                        className="w-16"
+                        min={1}
+                        placeholder=""
+                      />
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap border-r">
+                      <Input
+                        type="number"
+                        {...register(`templates.${index}.cycle`, { valueAsNumber: true })}
+                        className="w-16"
+                        min={1}
+                        placeholder="1"
                       />
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-center">
