@@ -122,12 +122,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           FROM t_match_status ms
           INNER JOIN t_matches_live ml ON ms.match_id = ml.match_id
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-          LEFT JOIN m_match_templates mt ON mt.format_id = t.format_id AND mt.match_code = ml.match_code AND mt.phase = mb.phase
           WHERE mb.tournament_id = t.tournament_id
             AND ms.match_status != 'scheduled'
             AND ml.team1_tournament_team_id IS NOT NULL
             AND ml.team2_tournament_team_id IS NOT NULL
-            AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+            AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
         ) AS started_matches_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id

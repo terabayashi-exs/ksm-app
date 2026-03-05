@@ -257,7 +257,7 @@ export async function POST(
           mb.phase
         FROM t_matches_live ml
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        WHERE mb.tournament_id = ? AND mb.phase = 'preliminary'
+        WHERE mb.tournament_id = ?
       `, [tournamentId]);
 
       // block_name + block_position から tournament_team_id へのマッピングを作成

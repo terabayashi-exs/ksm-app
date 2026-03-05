@@ -16,10 +16,11 @@ import {
   getDefaultTieBreakingRules,
   validateTieBreakingRules
 } from "@/lib/tie-breaking-rules";
-import { 
-  validateSoccerPeriodSettings, 
-  generatePeriodDisplayLabel 
+import {
+  validateSoccerPeriodSettings,
+  generatePeriodDisplayLabel
 } from "@/lib/tournament-rule-validator";
+import { parsePhasesJson } from "@/lib/tournament-phases";
 
 interface TournamentInfo {
   tournament_id: number;
@@ -28,8 +29,7 @@ interface TournamentInfo {
   sport_name: string;
   sport_code: string;
   format_id: number | null;
-  preliminary_format_type: string | null;
-  final_format_type: string | null;
+  phases: string | null;
 }
 
 interface TournamentRulesFormProps {
@@ -107,8 +107,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   const supportsDraws = ['soccer', 'pk_championship', 'futsal', 'handball'].includes(sportCode);
   const rankingMethod = sportCode === 'baseball' ? 'win_rate' : 'points';
 
-  // 決勝フェーズの有無（final_format_typeがnullまたは空文字列なら決勝なし）
-  const hasFinalPhase = tournament?.final_format_type != null && tournament.final_format_type !== '';
+  // 決勝フェーズの有無（phasesから判定）
+  const parsedPhases = tournament?.phases ? parsePhasesJson(tournament.phases) : null;
+  const hasFinalPhase = parsedPhases ? parsedPhases.phases.length > 1 : false;
 
   // データ取得
   useEffect(() => {

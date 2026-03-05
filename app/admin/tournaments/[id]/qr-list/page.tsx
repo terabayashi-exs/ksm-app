@@ -27,13 +27,20 @@ interface QRMatch {
   tournament_date: string;
   match_status: string;
   block_name: string;
+  round_name: string | null;
   phase: string;
+  phase_name: string;
   team1_name: string;
   team2_name: string;
   team1_omission: string;
   team2_omission: string;
   referee_url: string;
   qr_image_url: string;
+}
+
+interface TournamentPhaseInfo {
+  id: string;
+  name: string;
 }
 
 export default function QRListPage() {
@@ -49,10 +56,21 @@ export default function QRListPage() {
   const [filterBlock, setFilterBlock] = useState<string>('all');
   const [includeCompleted, setIncludeCompleted] = useState(false);
   const [validity, setValidity] = useState<{ validFrom: string; validUntil: string } | null>(null);
+  const [phaseList, setPhaseList] = useState<TournamentPhaseInfo[]>([]);
 
   const fetchMatches = useCallback(async () => {
     try {
       setLoading(true);
+
+      // 大会情報からphasesを取得
+      const tournamentRes = await fetch(`/api/tournaments/${tournamentId}`);
+      const tournamentData = await tournamentRes.json();
+      if (tournamentData.success && tournamentData.data?.phases?.phases) {
+        const sorted = [...tournamentData.data.phases.phases]
+          .sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+        setPhaseList(sorted.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
+      }
+
       const url = `/api/tournaments/${tournamentId}/qr-list${includeCompleted ? '?includeCompleted=true' : ''}`;
       const res = await fetch(url);
       const data = await res.json();
@@ -99,18 +117,29 @@ export default function QRListPage() {
     window.print();
   };
 
+  // フェーズIDから表示名を取得
+  const getPhaseName = (phaseId: string): string => {
+    const found = phaseList.find(p => p.id === phaseId);
+    if (found) return found.name;
+    if (phaseId === 'preliminary') return '予選';
+    if (phaseId === 'final') return '決勝';
+    return phaseId;
+  };
+
   const uniquePhases = Array.from(new Set(matches.map(m => m.phase)));
 
-  // ブロックをmatch_block_idの昇順でソート
-  const blockMap = new Map<string, number>();
+  // ブロックをmatch_block_idの昇順でソート（表示名も保持）
+  const blockMap = new Map<string, { matchBlockId: number; displayName: string }>();
   matches.forEach(m => {
     if (!blockMap.has(m.block_name)) {
-      blockMap.set(m.block_name, m.match_block_id);
+      blockMap.set(m.block_name, {
+        matchBlockId: m.match_block_id,
+        displayName: m.round_name || m.block_name
+      });
     }
   });
   const uniqueBlocks = Array.from(blockMap.entries())
-    .sort((a, b) => a[1] - b[1])
-    .map(entry => entry[0]);
+    .sort((a, b) => a[1].matchBlockId - b[1].matchBlockId);
 
   if (loading) {
     return (
@@ -203,7 +232,7 @@ export default function QRListPage() {
                   <option value="all">すべて</option>
                   {uniquePhases.map(phase => (
                     <option key={phase} value={phase}>
-                      {phase === 'preliminary' ? '予選' : '決勝'}
+                      {getPhaseName(phase)}
                     </option>
                   ))}
                 </select>
@@ -217,8 +246,8 @@ export default function QRListPage() {
                   className="w-full p-2 border rounded-md"
                 >
                   <option value="all">すべて</option>
-                  {uniqueBlocks.map(block => (
-                    <option key={block} value={block}>{block}</option>
+                  {uniqueBlocks.map(([blockName, info]) => (
+                    <option key={blockName} value={blockName}>{info.displayName}</option>
                   ))}
                 </select>
               </div>
@@ -253,7 +282,7 @@ export default function QRListPage() {
                             {match.match_code}
                           </CardTitle>
                           <p className="text-sm text-gray-500 mt-1">
-                            {match.phase === 'preliminary' ? '予選' : '決勝'} - {match.block_name}
+                            {getPhaseName(match.phase)} - {match.round_name || match.block_name}
                           </p>
                         </div>
                         <div className="text-right">

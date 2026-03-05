@@ -16,6 +16,124 @@
 
 ---
 
+## 0017: format_nameをt_tournamentsに追加 - マスターテーブルJOIN削減（2026-03-05）
+
+### 基本情報
+- **日付**: 2026年3月5日
+- **環境**: dev
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0017_add_format_name_to_tournaments.sql`
+
+### 変更の背景と目的
+
+テンプレート独立化の一環として、`m_tournament_formats`テーブルからformat_nameを取得するための
+JOINが30箇所以上に存在していた。format_nameをt_tournamentsに直接保持することで、
+マスターテーブルへの依存をさらに削減し、クエリのパフォーマンスを改善する。
+
+### 変更内容
+
+#### t_tournaments に1カラム追加
+- `format_name` (TEXT) - フォーマット名（m_tournament_formatsからコピー）
+
+#### データバックフィル
+- マイグレーションSQL内で既存データをm_tournament_formatsから一括コピー
+
+### 影響を受けたファイル
+
+#### スキーマ・マイグレーション
+- `src/db/schema.ts` - formatNameカラム追加
+- `drizzle/0017_add_format_name_to_tournaments.sql` - 新規
+- `drizzle/meta/_journal.json` - エントリ追加
+
+#### INSERT/UPDATE時のformat_nameコピー処理追加
+- `app/api/tournaments/create-new/route.ts`
+- `app/api/tournaments/route.ts` (POST)
+- `app/api/admin/tournaments/[id]/change-format/route.ts`
+- `app/api/admin/tournaments/duplicate/route.ts`
+- `scripts/duplicate-tournament.ts`
+- `scripts/duplicate-tournament-batch.ts`
+
+#### JOIN削除・t.format_nameへの切り替え（約30ファイル）
+- `app/api/tournaments/public-grouped/route.ts`
+- `app/api/tournaments/dashboard/route.ts`
+- `app/api/teams/tournaments/route.ts`
+- `app/api/tournaments/route.ts`
+- `app/api/tournament-groups/[id]/route.ts`
+- `lib/api/tournaments.ts`
+- `lib/dashboard-data.ts`
+- `app/api/tournaments/search/route.ts`
+- `app/api/tournaments/public/route.ts`
+- `app/api/admin/tournaments/active/route.ts`
+- `app/api/admin/withdrawal-requests/route.ts`
+- `app/api/admin/withdrawal-requests/[id]/process/route.ts`
+- `app/api/tournaments/public-groups/[id]/route.ts`
+- `app/api/admin/tournaments/route.ts`
+- `app/api/admin/tournaments/[id]/teams/route.ts`
+- `app/api/admin/tournaments/[id]/participants/route.ts`
+- `app/api/tournaments/[id]/route.ts`
+- `app/api/operators/tournaments/route.ts`
+- `lib/tournament-detail.ts`
+
+#### JOINを維持（format_name以外の情報が必要なため）
+- `app/api/tournaments/[id]/bracket/route.ts` - target_team_count取得
+- `lib/tournament-json-archiver.ts` - target_team_count, format_description取得
+
+---
+
+## 0016: テンプレート独立化 - t_tournaments/t_matches_live/t_matches_finalにカラム追加（2026-03-04）
+
+### 基本情報
+- **日付**: 2026年3月4日
+- **環境**: dev
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）+ バックフィルスクリプト
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0016_template_independence.sql`
+- **バックフィルスクリプト**: `scripts/backfill-template-data.ts`
+
+### 変更の背景と目的
+
+テンプレートを編集すると過去の大会の表示・動作に影響が出る問題を解消するため、
+m_tournament_formats / m_match_templates のフィールドを t_tournaments / t_matches_live / t_matches_final にコピーする。
+
+### 変更内容
+
+#### t_tournaments に3カラム追加
+- `preliminary_format_type` (TEXT) - 予選形式（league/tournament）
+- `final_format_type` (TEXT) - 決勝形式
+- `phases` (TEXT/JSON) - フェーズ構成
+
+#### t_matches_live / t_matches_final に各16カラム追加
+- `phase` (TEXT) - フェーズID
+- `match_type` (TEXT) - 試合種別
+- `round_name` (TEXT) - ラウンド名
+- `block_name` (TEXT) - ブロック名
+- `team1_source` / `team2_source` (TEXT) - 進出元
+- `day_number` (INTEGER) - 日程番号
+- `execution_priority` (INTEGER) - 実行順序
+- `suggested_start_time` (TEXT) - 推奨開始時刻
+- `loser_position_start` / `loser_position_end` (INTEGER) - 敗者順位範囲
+- `position_note` (TEXT) - 順位注釈
+- `winner_position` (INTEGER) - 勝者順位
+- `is_bye_match` (INTEGER, DEFAULT 0) - 不戦勝フラグ
+- `matchday` (INTEGER) - 節番号
+- `cycle` (INTEGER, DEFAULT 1) - 巡目
+
+### 影響を受けたファイル
+- `src/db/schema.ts` - スキーマ定義
+- `lib/types.ts` - 型定義
+- `app/api/tournaments/create-new/route.ts` - 部門作成API
+- `app/api/admin/tournaments/[id]/change-format/route.ts` - フォーマット変更API
+- `app/api/matches/[id]/confirm/route.ts` - 試合確定処理
+
+### 実行コマンド
+```bash
+npm run db:migrate
+npx tsx scripts/backfill-template-data.ts dev
+```
+
+---
+
 ## 0015: m_match_templatesにリーグ戦対応カラムを追加（2026-03-04）
 
 ### 基本情報

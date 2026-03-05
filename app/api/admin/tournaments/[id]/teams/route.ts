@@ -87,10 +87,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
-        f.format_name,
+        t.format_name,
         v.venue_name
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);

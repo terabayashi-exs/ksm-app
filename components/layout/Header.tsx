@@ -29,11 +29,11 @@ export default function Header() {
             <Link href="/" className="flex items-center">
               <div className="relative h-12">
                 <Image
-                  src="/images/taikaigo-logo.svg"
+                  src="/images/taikaigo-logo-v1.4-1020-360-title.png"
                   alt="大会GO"
-                  width={1149}
-                  height={355}
-                  className="h-full w-auto brightness-0 invert"
+                  width={1020}
+                  height={360}
+                  className="h-full w-auto"
                   style={{ objectFit: 'contain' }}
                   priority
                 />

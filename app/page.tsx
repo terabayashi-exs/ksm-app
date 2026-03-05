@@ -63,11 +63,11 @@ export default async function Home() {
             {/* ロゴ画像 */}
             <div className="mb-4 relative w-full max-w-4xl mx-auto">
               <Image
-                src="/images/taikaigo-logo-notext.svg"
+                src="/images/taikaigo-logo-v1.4-1012-300.png"
                 alt="大会GO"
-                width={1149}
-                height={278}
-                className="mx-auto w-full h-auto max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl brightness-0 invert"
+                width={1012}
+                height={300}
+                className="mx-auto w-full h-auto max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl"
                 style={{ objectFit: 'contain' }}
                 priority
               />

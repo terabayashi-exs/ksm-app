@@ -9,7 +9,7 @@ import { useSidebarBanners } from '@/hooks/useSidebarBanners';
 
 interface TabContentWithSidebarProps {
   tournamentId: number;
-  targetTab: 'overview' | 'schedule' | 'preliminary' | 'final' | 'standings' | 'teams';
+  targetTab: string;
   children: ReactNode;
 }
 

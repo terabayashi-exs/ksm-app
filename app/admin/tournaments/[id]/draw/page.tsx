@@ -29,7 +29,9 @@ interface Tournament {
   team_count: number;
   tournament_dates: string;
   tournament_period: string;
-  preliminary_format_type?: string;
+  phases?: {
+    phases: Array<{ id: string; order: number; name: string; format_type: string }>;
+  };
 }
 
 interface Match {
@@ -102,6 +104,15 @@ export default function TournamentDrawPage() {
   const [hasExistingDraw, setHasExistingDraw] = useState<boolean>(false);
   const [isTeamListExpanded, setIsTeamListExpanded] = useState(false); // 参加チーム一覧の開閉状態
 
+  // phasesから最初のフェーズ（組合せ対象）のIDを取得
+  const getFirstPhaseId = useCallback((): string => {
+    if (tournament?.phases?.phases?.length) {
+      const sorted = [...tournament.phases.phases].sort((a, b) => a.order - b.order);
+      return sorted[0].id;
+    }
+    return 'preliminary'; // フォールバック
+  }, [tournament]);
+
   // 大会情報と参加チーム、試合データの取得
   useEffect(() => {
     const fetchData = async () => {
@@ -117,6 +128,15 @@ export default function TournamentDrawPage() {
         }
         
         setTournament(tournamentData.data);
+
+        // phasesから最初のフェーズIDを取得
+        let firstPhaseId = 'preliminary';
+        const tData = tournamentData.data;
+        if (tData.phases?.phases?.length) {
+          const sorted = [...tData.phases.phases].sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+          firstPhaseId = sorted[0].id;
+        }
+        console.log('[Draw] First phase ID:', firstPhaseId);
 
         // 参加チーム一覧を取得
         const teamsResponse = await fetch(`/api/tournaments/${tournamentId}/teams`);
@@ -331,7 +351,7 @@ export default function TournamentDrawPage() {
         }
 
         // ブロック初期化
-        await initializeBlocks(formattedTeams, matchesData.data);
+        await initializeBlocks(formattedTeams, matchesData.data, firstPhaseId);
 
       } catch (err) {
         console.error('データ取得エラー:', err);
@@ -347,11 +367,11 @@ export default function TournamentDrawPage() {
   }, [tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ブロック構造の初期化
-  const initializeBlocks = useCallback(async (_teams: Team[], matches: Match[]) => {
-    // 予選ブロックを抽出
+  const initializeBlocks = useCallback(async (_teams: Team[], matches: Match[], firstPhaseId: string = 'preliminary') => {
+    // 最初のフェーズのブロックを抽出
     const preliminaryBlocks = new Set<string>();
     matches.forEach(match => {
-      if (match.phase === 'preliminary' && match.block_name) {
+      if (match.phase === firstPhaseId && match.block_name) {
         preliminaryBlocks.add(match.block_name);
       }
     });
@@ -424,7 +444,7 @@ export default function TournamentDrawPage() {
         // ブロック構造を作成（既存の振分け情報を反映）
         const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
           block_name: blockName,
-          phase: 'preliminary',
+          phase: firstPhaseId,
           teams: blockTeamMap[blockName] // undefinedも含めて位置を保持
         }));
 
@@ -438,7 +458,7 @@ export default function TournamentDrawPage() {
         // エラーの場合は空のブロックを作成
         const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
           block_name: blockName,
-          phase: 'preliminary',
+          phase: firstPhaseId,
           teams: []
         }));
 
@@ -446,11 +466,11 @@ export default function TournamentDrawPage() {
       }
     } catch (error) {
       console.error('振分け情報の取得に失敗:', error);
-      
+
       // エラーの場合は空のブロックを作成
       const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
         block_name: blockName,
-        phase: 'preliminary',
+        phase: firstPhaseId,
         teams: []
       }));
 
@@ -464,9 +484,13 @@ export default function TournamentDrawPage() {
     return blockCount ? blockCount.expected_team_count : null;
   };
 
-  // 予選形式がトーナメントかどうかを判定
+  // 最初のフェーズの形式がトーナメントかどうかを判定
   const isTournamentFormat = (): boolean => {
-    return tournament?.preliminary_format_type === 'tournament';
+    if (tournament?.phases?.phases?.length) {
+      const sorted = [...tournament.phases.phases].sort((a, b) => a.order - b.order);
+      return sorted[0].format_type === 'tournament';
+    }
+    return false;
   };
 
   // 第1ラウンドのスロット情報を取得
@@ -476,7 +500,7 @@ export default function TournamentDrawPage() {
     // - team1_sourceとteam2_sourceが空の試合も第1ラウンド
     const firstRoundMatches = matches.filter(
       m =>
-        m.phase === 'preliminary' &&
+        m.phase === getFirstPhaseId() &&
         m.block_name === blockName &&
         (
           m.is_bye_match === 1 || // BYE試合（シード枠）は常に含める
@@ -487,7 +511,7 @@ export default function TournamentDrawPage() {
 
     console.log(`[getFirstRoundSlots] Block ${blockName}:`, {
       totalMatches: matches.length,
-      preliminaryMatches: matches.filter(m => m.phase === 'preliminary' && m.block_name === blockName).length,
+      preliminaryMatches: matches.filter(m => m.phase === getFirstPhaseId() && m.block_name === blockName).length,
       firstRoundMatches: firstRoundMatches.length,
       firstRoundMatchCodes: firstRoundMatches.map(m => m.match_code),
       byeMatches: firstRoundMatches.filter(m => m.is_bye_match === 1).map(m => m.match_code)
@@ -619,7 +643,7 @@ export default function TournamentDrawPage() {
         // フォールバック: matchesのチーム割り当てをクリア
         const newMatches = matches.map(m => {
           // 第1ラウンドの試合: チームIDと名前をクリア
-          if (m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
+          if (m.phase === getFirstPhaseId() && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
             return {
               ...m,
               team1_tournament_team_id: undefined,
@@ -629,7 +653,7 @@ export default function TournamentDrawPage() {
             };
           }
           // 次のラウンド以降の試合: team1_name/team2_nameのみクリア（ソースから解決された名前を削除）
-          if (m.phase === 'preliminary' && (m.team1_source || m.team2_source)) {
+          if (m.phase === getFirstPhaseId() && (m.team1_source || m.team2_source)) {
             return {
               ...m,
               team1_name: undefined,
@@ -674,7 +698,7 @@ export default function TournamentDrawPage() {
         // 第1ラウンドの試合を直接取得（割り当て前の状態）
         const firstRoundMatches = newMatches.filter(
           m =>
-            m.phase === 'preliminary' &&
+            m.phase === getFirstPhaseId() &&
             m.block_name === block.block_name &&
             (!m.team1_source || m.team1_source === '') &&
             (!m.team2_source || m.team2_source === '')
@@ -953,7 +977,7 @@ export default function TournamentDrawPage() {
         blocks.forEach(block => {
           const firstRoundMatches = matches.filter(
             m =>
-              m.phase === 'preliminary' &&
+              m.phase === getFirstPhaseId() &&
               m.block_name === block.block_name &&
               (!m.team1_source || m.team1_source === '') &&
               (!m.team2_source || m.team2_source === '')
@@ -1015,7 +1039,7 @@ export default function TournamentDrawPage() {
       const requestBody = {
         blocks: drawData,
         matches: matches
-          .filter(m => m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
+          .filter(m => m.phase === getFirstPhaseId() && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
           .map(m => ({
             match_id: m.match_id,
             team1_tournament_team_id: m.team1_tournament_team_id,
@@ -1379,7 +1403,7 @@ export default function TournamentDrawPage() {
                             <td colSpan={5} className="px-4 py-2 bg-primary/5 border-b">
                               <div className="flex items-center">
                                 <Badge variant="secondary" className="mr-2">
-                                  {match.round_name || match.block_name || (match.phase === 'preliminary' ? '予選リーグ' : '決勝トーナメント')}
+                                  {match.round_name || match.block_name || (match.phase === getFirstPhaseId() ? '予選リーグ' : '決勝トーナメント')}
                                 </Badge>
                               </div>
                             </td>
@@ -1393,7 +1417,7 @@ export default function TournamentDrawPage() {
                           <td className="px-4 py-3 font-medium">{match.match_code}</td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="text-xs">
-                              {match.phase === 'preliminary' ? '予選' : '決勝'}
+                              {match.phase === getFirstPhaseId() ? '予選' : '決勝'}
                             </Badge>
                           </td>
                           <td className="px-4 py-3">
@@ -1438,13 +1462,7 @@ export default function TournamentDrawPage() {
                   </tbody>
                 </table>
                 <div className="mt-4 text-sm text-muted-foreground text-center">
-                  全 {matches.filter(m => m.is_bye_match !== 1).length} 試合
-                  <span className="ml-4">
-                    予選: {matches.filter(m => m.phase === 'preliminary' && m.is_bye_match !== 1).length}試合
-                  </span>
-                  <span className="ml-4">
-                    決勝: {matches.filter(m => m.phase === 'final' && m.is_bye_match !== 1).length}試合
-                  </span>
+                  全 {matches.filter(m => m.phase === getFirstPhaseId() && m.is_bye_match !== 1).length} 試合
                 </div>
               </div>
             </CardContent>

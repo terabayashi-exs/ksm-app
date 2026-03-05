@@ -47,9 +47,9 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const includeBye = searchParams.get('includeBye') === 'true';
 
-    // 大会の存在確認とformat_id取得
+    // 大会の存在確認
     const tournamentResult = await db.execute(`
-      SELECT tournament_id, format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -58,8 +58,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    const formatId = tournamentResult.rows[0].format_id;
 
     // 組み合わせ作成状況を判定
     console.log('Checking team assignment status...');
@@ -103,15 +101,15 @@ export async function GET(
         ml.confirmed_by,
         mb.phase,
         mb.display_round_name,
-        COALESCE(NULLIF(mt.block_name, ''), mb.block_name) as block_name,
+        COALESCE(NULLIF(ml.block_name, ''), mb.block_name) as block_name,
         mb.match_type,
         mb.block_order,
-        -- m_match_templatesからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
-        mt.round_name,
-        mt.day_number,
-        mt.team1_source,
-        mt.team2_source,
-        mt.is_bye_match,
+        -- t_matches_liveからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
+        ml.round_name,
+        ml.day_number,
+        ml.team1_source,
+        ml.team2_source,
+        ml.is_bye_match,
         -- 実際のチーム名を取得（tournament_team_idで一意に取得）
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
@@ -132,7 +130,6 @@ export async function GET(
         mf.updated_at as final_updated_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
@@ -142,9 +139,9 @@ export async function GET(
       ${teamFilter}
       ORDER BY
         CASE WHEN mb.phase = 'preliminary' THEN 1 WHEN mb.phase = 'final' THEN 2 ELSE 3 END,
-        mt.round_name ASC,
+        ml.round_name ASC,
         ml.match_number ASC
-    `, [formatId, tournamentId]);
+    `, [tournamentId]);
 
     console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);
 

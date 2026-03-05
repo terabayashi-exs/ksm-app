@@ -56,9 +56,9 @@ export async function POST(
       );
     }
 
-    // 大会のフォーマットを取得
+    // 大会存在確認
     const tournamentResult = await db.execute(`
-      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -68,19 +68,18 @@ export async function POST(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id;
-
     // 影響を受ける試合を取得
     const templatesResult = await db.execute(`
       SELECT
-        match_code,
-        team1_source,
-        team2_source
-      FROM m_match_templates
-      WHERE format_id = ?
-        AND phase = 'final'
-        AND (team1_source = ? OR team2_source = ?)
-    `, [formatId, from_source, from_source]);
+        ml.match_code,
+        ml.team1_source,
+        ml.team2_source
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND mb.phase = 'final'
+        AND (ml.team1_source = ? OR ml.team2_source = ?)
+    `, [tournamentId, from_source, from_source]);
 
     if (templatesResult.rows.length === 0) {
       return NextResponse.json(

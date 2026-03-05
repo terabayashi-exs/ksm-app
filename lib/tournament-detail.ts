@@ -74,12 +74,9 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       SELECT 
         t.*,
         v.venue_name,
-        v.address,
-        tf.format_name,
-        tf.format_description
+        v.address
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -138,12 +135,9 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
       SELECT
         t.*,
         v.venue_name,
-        v.address,
-        tf.format_name,
-        tf.format_description
+        v.address
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -188,7 +182,10 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
 
       // アーカイブ関連
       is_archived: Boolean(row.is_archived),
-      archive_ui_version: row.archive_ui_version ? String(row.archive_ui_version) : undefined
+      archive_ui_version: row.archive_ui_version ? String(row.archive_ui_version) : undefined,
+
+      // フェーズ構成
+      phases: row.phases ? (typeof row.phases === 'string' ? JSON.parse(row.phases as string) : row.phases) : undefined,
     };
 
     return tournament;

@@ -19,6 +19,7 @@ import { redirect } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Trophy, Users, Clock, Target, Award, BarChart3, FileText, ExternalLink, GitBranch, ChevronRight, Home } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
 import { Tournament } from '@/lib/types';
+import type { TournamentPhase } from '@/lib/types/tournament-phases';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 
@@ -329,6 +330,26 @@ function Bracket({ tournament }: { tournament: Tournament }) {
   return <TournamentBracket tournamentId={tournament.tournament_id} />;
 }
 
+// フェーズのアイコンを取得する関数
+function getPhaseIcon(phase: TournamentPhase) {
+  if (phase.format_type === 'tournament') {
+    return <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />;
+  }
+  return <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />;
+}
+
+// フェーズ一覧を取得（phases JSONから、またはフォールバック）
+function getPhaseList(tournament: Tournament): TournamentPhase[] {
+  if (tournament.phases?.phases && tournament.phases.phases.length > 0) {
+    return [...tournament.phases.phases].sort((a, b) => a.order - b.order);
+  }
+  // フォールバック: 旧形式（予選・決勝固定）
+  return [
+    { id: 'preliminary', order: 1, name: '予選', format_type: 'league' as const },
+    { id: 'final', order: 2, name: '決勝', format_type: 'tournament' as const },
+  ];
+}
+
 // ローディングコンポーネント
 function TournamentDetailLoading() {
   return (
@@ -422,92 +443,96 @@ async function TournamentDetailContent({ params }: PageProps) {
           </div>
 
           {/* タブナビゲーション */}
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full mb-8 grid-cols-3 grid-rows-2 gap-1 h-auto sm:grid-cols-6 sm:grid-rows-1 no-print">
-              <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline sm:inline">大会</span>概要
-              </TabsTrigger>
-              <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                日程<span className="hidden xs:inline sm:inline">・結果</span>
-              </TabsTrigger>
-              <TabsTrigger value="preliminary" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                予選
-              </TabsTrigger>
-              <TabsTrigger value="final" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                決勝
-              </TabsTrigger>
-              <TabsTrigger value="standings" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                順位表
-              </TabsTrigger>
-              <TabsTrigger value="teams" className="flex items-center justify-center py-3 text-xs sm:text-sm">
-                <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline sm:inline">参加</span>チーム
-              </TabsTrigger>
-            </TabsList>
+          {(() => {
+            const phaseList = getPhaseList(tournament);
+            // タブ総数: 概要 + 日程 + フェーズ数 + 順位表 + チーム = 4 + phaseList.length
+            const totalTabs = 4 + phaseList.length;
+            const mobileRows = Math.ceil(totalTabs / 3);
+            // Tailwind grid-cols-Nクラスの対応表（動的文字列はパージ対象となるため固定文字列を使用）
+            const smGridColsMap: Record<number, string> = {
+              4: 'sm:grid-cols-4',
+              5: 'sm:grid-cols-5',
+              6: 'sm:grid-cols-6',
+              7: 'sm:grid-cols-7',
+              8: 'sm:grid-cols-8',
+            };
+            const mobileGridRowsMap: Record<number, string> = {
+              1: 'grid-rows-1',
+              2: 'grid-rows-2',
+              3: 'grid-rows-3',
+            };
+            const smGridCols = smGridColsMap[totalTabs] || 'sm:grid-cols-6';
+            const mobileGridRows = mobileGridRowsMap[mobileRows] || 'grid-rows-2';
+            return (
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className={`grid w-full mb-8 grid-cols-3 ${mobileGridRows} gap-1 h-auto ${smGridCols} sm:grid-rows-1 no-print`}>
+                  <TabsTrigger value="overview" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                    <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden xs:inline sm:inline">大会</span>概要
+                  </TabsTrigger>
+                  <TabsTrigger value="schedule" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    日程<span className="hidden xs:inline sm:inline">・結果</span>
+                  </TabsTrigger>
+                  {phaseList.map((phase) => (
+                    <TabsTrigger key={phase.id} value={`phase_${phase.id}`} className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                      {getPhaseIcon(phase)}
+                      {phase.name}
+                    </TabsTrigger>
+                  ))}
+                  <TabsTrigger value="standings" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                    <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    順位表
+                  </TabsTrigger>
+                  <TabsTrigger value="teams" className="flex items-center justify-center py-3 text-xs sm:text-sm">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden xs:inline sm:inline">参加</span>チーム
+                  </TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="overview">
-              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="overview">
-                <TournamentOverview
-                  tournament={tournament}
-                  bracketPdfExists={bracketPdfExists}
-                  resultsPdfExists={resultsPdfExists}
-                />
-              </TabContentWithSidebar>
-            </TabsContent>
+                <TabsContent value="overview">
+                  <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="overview">
+                    <TournamentOverview
+                      tournament={tournament}
+                      bracketPdfExists={bracketPdfExists}
+                      resultsPdfExists={resultsPdfExists}
+                    />
+                  </TabContentWithSidebar>
+                </TabsContent>
 
-            <TabsContent value="schedule">
-              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="schedule">
-                <ScheduleResults tournament={tournament} />
-              </TabContentWithSidebar>
-            </TabsContent>
+                <TabsContent value="schedule">
+                  <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="schedule">
+                    <ScheduleResults tournament={tournament} />
+                  </TabContentWithSidebar>
+                </TabsContent>
 
-            <TabsContent value="preliminary">
-              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="preliminary">
-                <TournamentPhaseView
-                  tournamentId={tournament.tournament_id}
-                  phase="preliminary"
-                  phaseName="予選"
-                />
-              </TabContentWithSidebar>
-            </TabsContent>
+                {phaseList.map((phase) => (
+                  <TabsContent key={phase.id} value={`phase_${phase.id}`}>
+                    <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab={phase.id}>
+                      <TournamentPhaseView
+                        tournamentId={tournament.tournament_id}
+                        phase={phase.id}
+                        phaseName={phase.name}
+                        formatType={phase.format_type}
+                      />
+                    </TabContentWithSidebar>
+                  </TabsContent>
+                ))}
 
-            <TabsContent value="final">
-              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="final">
-                <TournamentPhaseView
-                  tournamentId={tournament.tournament_id}
-                  phase="final"
-                  phaseName="決勝"
-                />
-              </TabContentWithSidebar>
-            </TabsContent>
+                <TabsContent value="standings">
+                  <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="standings">
+                    <Standings tournament={tournament} />
+                  </TabContentWithSidebar>
+                </TabsContent>
 
-            {/* 既存の実装（非表示だが保持）
-            <TabsContent value="bracket">
-              <Bracket tournament={tournament} />
-            </TabsContent>
-
-            <TabsContent value="results">
-              <Results tournament={tournament} />
-            </TabsContent>
-            */}
-
-            <TabsContent value="standings">
-              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="standings">
-                <Standings tournament={tournament} />
-              </TabContentWithSidebar>
-            </TabsContent>
-
-            <TabsContent value="teams">
-              <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="teams">
-                <Teams tournament={tournament} />
-              </TabContentWithSidebar>
-            </TabsContent>
-          </Tabs>
+                <TabsContent value="teams">
+                  <TabContentWithSidebar tournamentId={tournament.tournament_id} targetTab="teams">
+                    <Teams tournament={tournament} />
+                  </TabContentWithSidebar>
+                </TabsContent>
+              </Tabs>
+            );
+          })()}
         </div>
 
         <Footer />

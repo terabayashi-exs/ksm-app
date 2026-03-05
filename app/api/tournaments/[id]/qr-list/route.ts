@@ -20,9 +20,9 @@ export async function GET(
       ? "ml.match_status IN ('scheduled', 'ongoing', 'completed')"
       : "ml.match_status IN ('scheduled', 'ongoing')";
 
-    // 大会のformat_idを取得
+    // 大会の存在確認
     const tournamentResult = await db.execute(`
-      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -31,8 +31,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    const formatId = tournamentResult.rows[0].format_id;
 
     // 試合一覧を取得（BYE試合を除外）
     const matchesResult = await db.execute(`
@@ -48,23 +46,24 @@ export async function GET(
         mb.match_block_id,
         mb.block_name,
         mb.phase,
+        mb.display_round_name,
+        ml.round_name,
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
         tt1.team_omission as team1_real_omission,
         tt2.team_omission as team2_real_omission,
-        mt.is_bye_match,
-        mt.team1_source,
-        mt.team2_source
+        ml.is_bye_match,
+        ml.team1_source,
+        ml.team2_source
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
       AND ${statusCondition}
-      AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+      AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
       ORDER BY mb.match_block_id, ml.tournament_date, ml.start_time, ml.match_code
-    `, [formatId, tournamentId]);
+    `, [tournamentId]);
 
     // コート番号の一覧を取得
     const courtNumbers = Array.from(
@@ -119,15 +118,14 @@ export async function GET(
         tt2.team_name as team2_real_name,
         tt1.team_omission as team1_real_omission,
         tt2.team_omission as team2_real_omission,
-        mt.team1_source,
-        mt.team2_source
+        ml.team1_source,
+        ml.team2_source
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
-      WHERE mb.tournament_id = ? AND mt.is_bye_match = 1
-    `, [formatId, tournamentId]);
+      WHERE mb.tournament_id = ? AND ml.is_bye_match = 1
+    `, [tournamentId]);
 
     byeMatchesResult.rows.forEach((m) => {
       // BYE試合の勝者を特定（空でない方のチーム）
@@ -264,6 +262,8 @@ export async function GET(
         match_status: match.match_status,
         block_name: match.block_name,
         phase: match.phase,
+        phase_name: match.display_round_name ? String(match.display_round_name) : String(match.phase),
+        round_name: match.round_name ? String(match.round_name) : null,
         team1_name: resolvedTeam1Name,
         team2_name: resolvedTeam2Name,
         team1_omission: resolvedTeam1Omission,

@@ -4,6 +4,7 @@ import { updateFinalTournamentRankings, updateBlockRankingsOnMatchConfirm } from
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
 import { checkAndPromoteOnMatchConfirm } from '@/lib/tournament-promotion';
+import { buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 /**
  * 大会の全試合が確定されているかチェックし、完了していれば大会ステータスを更新する
@@ -152,20 +153,14 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
         // エラーが発生しても試合確定処理は成功とする
       }
 
-      // トーナメント形式の場合は順位設定を実行（予選・決勝両方対応）
-      // MIGRATION NOTE: preliminary_format_type='tournament'と final_format_type='tournament'の両方に対応
+      // トーナメント形式の場合は順位設定を実行（phasesから判定）
       const blockInfoResult = await db.execute({
         sql: `
           SELECT
             mb.phase,
-            CASE
-              WHEN mb.phase = 'preliminary' THEN f.preliminary_format_type
-              WHEN mb.phase = 'final' THEN f.final_format_type
-              ELSE NULL
-            END as format_type
+            t.phases
           FROM t_match_blocks mb
           JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
-          JOIN m_tournament_formats f ON t.format_id = f.format_id
           WHERE mb.match_block_id = ?
         `,
         args: [matchBlockId]
@@ -174,7 +169,8 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
       if (blockInfoResult.rows.length > 0) {
         const blockInfo = blockInfoResult.rows[0];
         const phase = blockInfo.phase as string;
-        const formatType = blockInfo.format_type as string | null;
+        const handlerPhaseFormatMap = buildPhaseFormatMap(blockInfo.phases as string | null);
+        const formatType = handlerPhaseFormatMap.get(phase) || null;
 
         // トーナメント形式の場合のみ順位設定を実行
         if (formatType === 'tournament') {

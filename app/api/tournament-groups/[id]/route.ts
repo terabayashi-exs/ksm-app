@@ -71,10 +71,9 @@ export async function GET(
         t.recruitment_end_date,
         t.created_at,
         t.updated_at,
-        f.format_name,
+        t.format_name,
         COUNT(DISTINCT tt.team_id) as registered_teams
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       WHERE t.group_id = ?
       GROUP BY t.tournament_id

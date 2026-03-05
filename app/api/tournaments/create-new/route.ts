@@ -6,6 +6,7 @@ import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from 
 import { canAddDivision } from "@/lib/subscription/plan-checker";
 import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 import { calculateTournamentStatusSync } from "@/lib/tournament-status";
+import { buildPhaseFormatMap, buildPhaseNameMap, buildTemplatePhaseMapping } from "@/lib/tournament-phases";
 
 export async function POST(request: NextRequest) {
   try {
@@ -154,7 +155,8 @@ export async function POST(request: NextRequest) {
         format_id,
         format_name,
         preliminary_format_type,
-        final_format_type
+        final_format_type,
+        phases
       FROM m_tournament_formats
       WHERE format_id = ?
     `, [format_id]);
@@ -169,6 +171,24 @@ export async function POST(request: NextRequest) {
     const formatInfo = formatResult.rows[0];
     const preliminaryFormatType = formatInfo.preliminary_format_type;
     const finalFormatType = formatInfo.final_format_type;
+    const formatPhases = formatInfo.phases as string | null;
+
+    // テンプレート独立化: フォーマット情報をt_tournamentsにコピー
+    await db.execute(`
+      UPDATE t_tournaments SET
+        format_name = ?,
+        preliminary_format_type = ?,
+        final_format_type = ?,
+        phases = ?,
+        updated_at = datetime('now', '+9 hours')
+      WHERE tournament_id = ?
+    `, [
+      formatInfo.format_name,
+      preliminaryFormatType,
+      finalFormatType,
+      typeof formatPhases === 'string' ? formatPhases : JSON.stringify(formatPhases),
+      tournamentId
+    ]);
 
     // 選択されたフォーマットの試合テンプレートを取得
     const templatesResult = await db.execute(`
@@ -187,7 +207,14 @@ export async function POST(request: NextRequest) {
         day_number,
         execution_priority,
         court_number,
-        suggested_start_time
+        suggested_start_time,
+        loser_position_start,
+        loser_position_end,
+        position_note,
+        winner_position,
+        is_bye_match,
+        matchday,
+        cycle
       FROM m_match_templates
       WHERE format_id = ?
       ORDER BY match_number
@@ -204,32 +231,39 @@ export async function POST(request: NextRequest) {
     const blockMap = new Map<string, number>();
     const uniqueBlocks = new Set<string>();
 
-    // 全テンプレートからブロック情報を収集
+    // phasesからフェーズごとのフォーマットタイプと表示名を取得
+    const phaseFormats = buildPhaseFormatMap(formatPhases);
+    const phaseNamesMap = buildPhaseNameMap(formatPhases);
+
+    // テンプレートのphase → phasesのidへのマッピングを構築
+    const templatePhases = templatesResult.rows.map(t => t.phase as string);
+    const templatePhaseMapping = buildTemplatePhaseMapping(templatePhases, formatPhases);
+
+    console.log('Phase formats map:', Object.fromEntries(phaseFormats));
+    console.log('Template phase mapping:', Object.fromEntries(templatePhaseMapping));
+
+    // 全テンプレートからブロック情報を収集（区切り文字に :: を使用）
+    // テンプレートのphaseをactual phaseにマッピングして使用
     templatesResult.rows.forEach(template => {
-      const blockKey = `${template.phase}_${template.block_name || 'default'}`;
+      const actualPhase = templatePhaseMapping.get(template.phase as string) || template.phase as string;
+      const blockKey = `${actualPhase}::${template.block_name || 'default'}`;
       uniqueBlocks.add(blockKey);
     });
 
-    // フェーズごとのフォーマットタイプを確認
-    const phaseFormats = new Map<string, string>();
-    if (preliminaryFormatType) {
-      phaseFormats.set('preliminary', String(preliminaryFormatType));
-    }
-    if (finalFormatType) {
-      phaseFormats.set('final', String(finalFormatType));
-    }
-
     // ブロックテーブルに登録
     for (const blockKey of uniqueBlocks) {
-      const [phase, blockName] = blockKey.split('_');
+      const separatorIndex = blockKey.indexOf('::');
+      const phase = blockKey.substring(0, separatorIndex);
+      const blockName = blockKey.substring(separatorIndex + 2);
       const formatType = phaseFormats.get(phase);
 
       // トーナメント形式の場合：統合ブロック1つのみ作成
       // リーグ形式の場合：各ブロック（A, B, C...）を作成
       if (formatType === 'tournament') {
         // 統合ブロックが未作成の場合のみ作成
-        const unifiedBlockKey = `${phase}_unified`;
+        const unifiedBlockKey = `${phase}::unified`;
         if (!blockMap.has(unifiedBlockKey)) {
+          const unifiedBlockName = `${phase}_unified`;
           const blockResult = await db.execute(`
             INSERT INTO t_match_blocks (
               tournament_id,
@@ -241,7 +275,7 @@ export async function POST(request: NextRequest) {
               created_at,
               updated_at
             ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-          `, [tournamentId, phase, phase, unifiedBlockKey]);
+          `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, unifiedBlockName]);
 
           const unifiedBlockId = Number(blockResult.lastInsertRowid);
 
@@ -250,12 +284,12 @@ export async function POST(request: NextRequest) {
 
           // 同じフェーズの全ブロックを統合ブロックにマッピング
           Array.from(uniqueBlocks)
-            .filter(key => key.startsWith(`${phase}_`))
+            .filter(key => key.startsWith(`${phase}::`))
             .forEach(key => {
               blockMap.set(key, unifiedBlockId);
             });
 
-          console.log(`✅ ${phase}フェーズの統合ブロック作成: ${unifiedBlockKey} (ID: ${unifiedBlockId})`);
+          console.log(`✅ ${phase}フェーズの統合ブロック作成: ${unifiedBlockName} (ID: ${unifiedBlockId})`);
         }
       } else {
         // リーグ形式：個別ブロックを作成
@@ -272,7 +306,7 @@ export async function POST(request: NextRequest) {
             created_at,
             updated_at
           ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-        `, [tournamentId, phase, phase, displayName]);
+        `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, displayName]);
 
         blockMap.set(blockKey, Number(blockResult.lastInsertRowid));
       }
@@ -320,7 +354,8 @@ export async function POST(request: NextRequest) {
     let matchesCreated = 0;
     
     for (const template of templatesResult.rows) {
-      const blockKey = `${template.phase}_${template.block_name || 'default'}`;
+      const actualPhase = templatePhaseMapping.get(template.phase as string) || template.phase as string;
+      const blockKey = `${actualPhase}::${template.block_name || 'default'}`;
       const matchBlockId = blockMap.get(blockKey);
       
       if (!matchBlockId) {
@@ -402,8 +437,24 @@ export async function POST(request: NextRequest) {
           start_time,
           team1_scores,
           team2_scores,
-          winner_tournament_team_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          winner_tournament_team_id,
+          phase,
+          match_type,
+          round_name,
+          block_name,
+          team1_source,
+          team2_source,
+          day_number,
+          execution_priority,
+          suggested_start_time,
+          loser_position_start,
+          loser_position_end,
+          position_note,
+          winner_position,
+          is_bye_match,
+          matchday,
+          cycle
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         matchBlockId,
         tournamentDate,
@@ -417,7 +468,23 @@ export async function POST(request: NextRequest) {
         assignedStartTime,
         '[0]', // team1_scores をJSON文字列で初期化
         '[0]', // team2_scores をJSON文字列で初期化
-        null  // winner_tournament_team_id は結果確定時に設定
+        null,  // winner_tournament_team_id は結果確定時に設定
+        actualPhase,
+        template.match_type,
+        template.round_name || null,
+        template.block_name || null,
+        template.team1_source || null,
+        template.team2_source || null,
+        template.day_number,
+        template.execution_priority,
+        template.suggested_start_time || null,
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.position_note || null,
+        template.winner_position || null,
+        template.is_bye_match || 0,
+        template.matchday || null,
+        template.cycle || 1
       ]);
 
       // コート終了時刻を更新（次の試合のため）
@@ -489,13 +556,11 @@ export async function POST(request: NextRequest) {
 
     // 作成された大会情報を取得
     const createdTournament = await db.execute(`
-      SELECT 
+      SELECT
         t.*,
-        v.venue_name,
-        f.format_name
+        v.venue_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 

@@ -11,11 +11,11 @@ export default function Footer() {
             <div className="flex items-center justify-center mb-4">
               <div className="relative h-16">
                 <Image
-                  src="/images/taikaigo-logo.svg"
+                  src="/images/taikaigo-logo-v1.4-1020-360-title.png"
                   alt="大会GO"
-                  width={1149}
-                  height={355}
-                  className="h-full w-auto object-contain brightness-0 invert"
+                  width={1020}
+                  height={360}
+                  className="h-full w-auto object-contain"
                 />
               </div>
             </div>

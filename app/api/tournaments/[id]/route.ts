@@ -49,12 +49,12 @@ export async function GET(
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name,
-        f.preliminary_format_type,
-        f.final_format_type
+        t.format_name,
+        t.preliminary_format_type,
+        t.final_format_type,
+        t.phases
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -88,7 +88,8 @@ export async function GET(
       venue_name: row.venue_name as string,
       format_name: row.format_name as string,
       preliminary_format_type: row.preliminary_format_type as string | undefined,
-      final_format_type: row.final_format_type as string | undefined
+      final_format_type: row.final_format_type as string | undefined,
+      phases: row.phases ? (typeof row.phases === 'string' ? JSON.parse(row.phases as string) : row.phases) : undefined
     };
 
     return NextResponse.json({
@@ -268,8 +269,6 @@ export async function PUT(
       `, [tournamentId]);
 
       if (formatResult.rows.length > 0) {
-        const formatId = Number(formatResult.rows[0].format_id);
-
         // 日付マッピングを作成
         const dateMapping = data.tournament_dates.reduce((acc, td) => {
           acc[td.dayNumber] = td.date;
@@ -278,12 +277,11 @@ export async function PUT(
 
         // すべての試合のtournament_dateを再計算
         const matchesResult = await db.execute(`
-          SELECT ml.match_id, ml.match_code, mt.day_number
+          SELECT ml.match_id, ml.match_code, ml.day_number
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-          LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
           WHERE mb.tournament_id = ?
-        `, [formatId, tournamentId]);
+        `, [tournamentId]);
 
         let updatedCount = 0;
         for (const match of matchesResult.rows) {
@@ -355,10 +353,9 @@ export async function PUT(
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -626,16 +623,18 @@ async function updateTournamentSchedule(
   scheduleSettings: ScheduleSettings
 ) {
   try {
-    // フォーマットIDに対応するテンプレートを取得
+    // t_matches_liveから試合テンプレート相当データを取得
     const templatesResult = await db.execute(`
-      SELECT * FROM m_match_templates 
-      WHERE format_id = ? 
-      ORDER BY execution_priority ASC
-    `, [formatId]);
-    
+      SELECT ml.*, mb.phase
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+      ORDER BY ml.execution_priority ASC
+    `, [tournamentId]);
+
     const templates: MatchTemplate[] = templatesResult.rows.map(row => ({
-      template_id: Number(row.template_id),
-      format_id: Number(row.format_id),
+      template_id: Number(row.match_id),
+      format_id: 0,
       match_number: Number(row.match_number),
       match_code: String(row.match_code),
       match_type: String(row.match_type),
@@ -656,7 +655,7 @@ async function updateTournamentSchedule(
     }));
 
     if (templates.length === 0) {
-      console.warn(`フォーマットID ${formatId} のテンプレートが見つかりません`);
+      console.warn(`大会ID ${tournamentId} の試合テンプレートデータが見つかりません`);
       return;
     }
 

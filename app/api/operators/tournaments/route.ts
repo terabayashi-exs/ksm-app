@@ -58,7 +58,7 @@ export async function GET() {
       t.group_id,
       t.group_order,
       v.venue_name,
-      f.format_name,
+      t.format_name,
       NULL as logo_blob_url,
       a.display_name as organization_name,
       g.group_name,
@@ -73,7 +73,6 @@ export async function GET() {
 
     const TOURNAMENT_JOINS = `
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       LEFT JOIN m_login_users a ON g.login_user_id = a.login_user_id
     `;

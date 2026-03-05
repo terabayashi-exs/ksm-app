@@ -113,6 +113,20 @@
       "when": 1740585600000,
       "tag": "0015_add_matchday_and_cycle",
       "breakpoints": false
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1740672000000,
+      "tag": "0016_template_independence",
+      "breakpoints": false
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1740758400000,
+      "tag": "0017_add_format_name_to_tournaments",
+      "breakpoints": false
     }
   ]
 }

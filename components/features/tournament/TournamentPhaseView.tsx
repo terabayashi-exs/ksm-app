@@ -11,39 +11,41 @@ import { AlertCircle, Loader2, Trophy, Download } from 'lucide-react';
 
 interface TournamentPhaseViewProps {
   tournamentId: number;
-  phase: 'preliminary' | 'final';
-  phaseName: string; // 表示用の名称（例：「予選」「決勝」）
-}
-
-interface MatchData {
-  match_type: string;
-  phase: string;
-  block_name: string;
-  display_round_name: string;
+  phase: string; // フェーズID（例：'preliminary', 'final'）
+  phaseName: string; // 表示用の名称（例：「予選」「決勝トーナメント」）
+  formatType?: 'league' | 'tournament'; // 形式タイプ（phases JSONから直接渡す）
 }
 
 /**
- * 予選・決勝を形式に応じて表示するコンポーネント
+ * フェーズを形式に応じて表示するコンポーネント
  * - リーグ戦形式の場合：戦績表を表示
  * - トーナメント形式の場合：トーナメント表を表示
  */
 export default function TournamentPhaseView({
   tournamentId,
   phase,
-  phaseName
+  phaseName,
+  formatType: formatTypeProp
 }: TournamentPhaseViewProps) {
   const [matchType, setMatchType] = useState<'league' | 'tournament' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasMatches, setHasMatches] = useState(false);
 
   useEffect(() => {
-    async function fetchPhaseType() {
+    async function resolveFormatType() {
       try {
         setLoading(true);
         setError(null);
 
-        // 大会情報を取得してフォーマットタイプを判定
+        // formatTypePropが直接渡されている場合はAPI呼び出し不要
+        if (formatTypeProp) {
+          console.log(`[TournamentPhaseView] Phase ${phase}: formatType from props = "${formatTypeProp}"`);
+          setMatchType(formatTypeProp);
+          setLoading(false);
+          return;
+        }
+
+        // formatTypePropが未指定の場合のみAPIから判定
         const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`, {
           cache: 'no-store'
         });
@@ -60,54 +62,24 @@ export default function TournamentPhaseView({
 
         const tournament = tournamentData.data;
 
-        console.log(`[TournamentPhaseView] Tournament ${tournamentId}, Phase ${phase}:`);
-        console.log(`[TournamentPhaseView] preliminary_format_type: "${tournament.preliminary_format_type}", final_format_type: "${tournament.final_format_type}"`);
+        // phases JSONからフェーズIDに対応するformat_typeを取得
+        let resolvedFormatType: string | undefined;
 
-        // 試合データの存在確認
-        const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/public-matches`, {
-          cache: 'no-store'
-        });
-
-        if (!matchesResponse.ok) {
-          throw new Error('試合データの取得に失敗しました');
+        if (tournament.phases?.phases) {
+          const phaseConfig = tournament.phases.phases.find((p: { id: string }) => p.id === phase);
+          resolvedFormatType = phaseConfig?.format_type;
         }
 
-        const matchesData = await matchesResponse.json();
+        console.log(`[TournamentPhaseView] Phase ${phase}: resolved formatType = "${resolvedFormatType}"`);
 
-        if (!matchesData.success || !matchesData.data) {
-          throw new Error('試合データが見つかりません');
-        }
-
-        // 指定されたphaseの試合を抽出
-        const phaseMatches = matchesData.data.filter((match: MatchData) => match.phase === phase);
-
-        console.log(`[TournamentPhaseView] Found ${phaseMatches.length} matches for this phase`);
-
-        if (phaseMatches.length === 0) {
-          setHasMatches(false);
-          setLoading(false);
-          return;
-        }
-
-        setHasMatches(true);
-
-        // m_tournament_formatsのpreliminary_format_type/final_format_typeで判定
-        const formatType = phase === 'preliminary'
-          ? tournament.preliminary_format_type
-          : tournament.final_format_type;
-
-        console.log(`[TournamentPhaseView] Format type for ${phase}: "${formatType}"`);
-
-        if (formatType === 'league') {
-          console.log(`[TournamentPhaseView] Detected LEAGUE format`);
+        if (resolvedFormatType === 'league') {
           setMatchType('league');
-        } else if (formatType === 'tournament') {
-          console.log(`[TournamentPhaseView] Detected TOURNAMENT format`);
+        } else if (resolvedFormatType === 'tournament') {
           setMatchType('tournament');
         } else {
-          // フォールバック: 値が設定されていない場合はデフォルト動作
-          console.warn(`[TournamentPhaseView] Unknown format type "${formatType}", defaulting to league for preliminary, tournament for final`);
-          setMatchType(phase === 'preliminary' ? 'league' : 'tournament');
+          // フォールバック: デフォルトはリーグ戦
+          console.warn(`[TournamentPhaseView] Unknown format type "${resolvedFormatType}", defaulting to league`);
+          setMatchType('league');
         }
 
         setLoading(false);
@@ -118,8 +90,8 @@ export default function TournamentPhaseView({
       }
     }
 
-    fetchPhaseType();
-  }, [tournamentId, phase]);
+    resolveFormatType();
+  }, [tournamentId, phase, formatTypeProp]);
 
   if (loading) {
     return (
@@ -139,18 +111,8 @@ export default function TournamentPhaseView({
     );
   }
 
-  if (!hasMatches) {
-    return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          {phaseName}の試合データがありません。
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
   // match_typeに応じてコンポーネントを表示
+  // 試合データの有無は各子コンポーネント内でハンドリングされる
   if (matchType === 'league') {
     return (
       <div>

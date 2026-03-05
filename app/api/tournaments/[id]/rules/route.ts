@@ -37,11 +37,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         st.supports_point_system,
         st.supports_draws,
         st.ranking_method,
-        f.preliminary_format_type,
-        f.final_format_type
+        t.phases
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
     
@@ -121,8 +119,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         supports_draws: Boolean(tournament.supports_draws),
         ranking_method: String(tournament.ranking_method),
         format_id: tournament.format_id ? Number(tournament.format_id) : null,
-        preliminary_format_type: tournament.preliminary_format_type ? String(tournament.preliminary_format_type) : null,
-        final_format_type: tournament.final_format_type ? String(tournament.final_format_type) : null
+        phases: tournament.phases ? String(tournament.phases) : null
       },
       rules,
       sport_config: sportConfig

@@ -191,30 +191,19 @@ async function extractTopTeamsDynamic(
   const promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; } = {};
 
   try {
-    // 大会のフォーマットIDを取得
-    const formatResult = await db.execute({
-      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
-      args: [tournamentId]
-    });
-    
-    if (formatResult.rows.length === 0) {
-      throw new Error(`Tournament ${tournamentId} not found`);
-    }
-    
-    const formatId = formatResult.rows[0].format_id as number;
-    
-    // 決勝トーナメントのテンプレートから必要な進出条件を取得（オーバーライド適用）
+    // 決勝トーナメントのライブ試合から必要な進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
         SELECT DISTINCT
-          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
-        FROM m_match_templates mt
+          COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, ml.team2_source) as team2_source
+        FROM t_matches_live ml
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_tournament_match_overrides mo
-          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
-        WHERE mt.format_id = ? AND mt.phase = 'final'
+          ON ml.match_code = mo.match_code AND mo.tournament_id = ?
+        WHERE mb.tournament_id = ? AND mb.phase = 'final'
       `,
-      args: [tournamentId, formatId]
+      args: [tournamentId, tournamentId]
     });
     
     // 必要な進出パターンを抽出（ブロック_順位形式のみ、試合の勝敗は除外）
@@ -464,22 +453,22 @@ async function updateFinalTournamentMatches(
 
     console.log(`[PROMOTION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
 
-    // テンプレートから各試合の進出条件を取得（オーバーライド適用）
+    // ライブ試合から各試合の進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
         SELECT
-          mt.match_code,
-          mt.round_name,
-          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
-          mt.team1_display_name as template_team1_name,
-          mt.team2_display_name as template_team2_name
-        FROM m_match_templates mt
-        JOIN t_tournaments t ON mt.format_id = t.format_id
+          ml.match_code,
+          ml.round_name,
+          COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, ml.team2_source) as team2_source,
+          ml.team1_display_name as template_team1_name,
+          ml.team2_display_name as template_team2_name
+        FROM t_matches_live ml
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_tournament_match_overrides mo
-          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
-        WHERE t.tournament_id = ? AND mt.phase = 'final'
-        ORDER BY mt.match_code
+          ON ml.match_code = mo.match_code AND mo.tournament_id = ?
+        WHERE mb.tournament_id = ? AND mb.phase = 'final'
+        ORDER BY ml.match_code
       `,
       args: [tournamentId, tournamentId]
     });
@@ -696,25 +685,13 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
   try {
     console.log(`[PROMOTION_VALIDATION] 決勝トーナメント進出条件チェック開始: Tournament ${tournamentId}`);
 
-    // 1. 大会のフォーマットIDを取得
-    const formatResult = await db.execute({
-      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
-      args: [tournamentId]
-    });
-
-    if (formatResult.rows.length === 0) {
-      throw new Error(`Tournament ${tournamentId} not found`);
-    }
-
-    const formatId = formatResult.rows[0].format_id as number;
-
-    // 2. 予選ブロックの順位表から進出チーム情報を取得
+    // 1. 予選ブロックの順位表から進出チーム情報を取得
     const blockRankings = await getAllBlockRankings(tournamentId);
     const promotions = await extractTopTeamsDynamic(tournamentId, blockRankings);
 
     console.log(`[PROMOTION_VALIDATION] 進出チーム情報取得完了: ${Object.keys(promotions).length}件`);
 
-    // 3. 決勝トーナメント試合のテンプレートと実際のデータを取得（オーバーライド適用）
+    // 2. 決勝トーナメント試合の実際のデータを取得（オーバーライド適用）
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -724,27 +701,26 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
           ml.team2_tournament_team_id,
           ml.team1_display_name,
           ml.team2_display_name,
-          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
-          mt.team1_display_name as template_team1_display,
-          mt.team2_display_name as template_team2_display,
+          COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, ml.team2_source) as team2_source,
+          ml.team1_display_name as template_team1_display,
+          ml.team2_display_name as template_team2_display,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ? AND mt.phase = mb.phase
-        LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = ?
+        LEFT JOIN t_tournament_match_overrides mo ON ml.match_code = mo.match_code AND mo.tournament_id = ?
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ? AND mb.phase = 'final'
         ORDER BY ml.match_code
       `,
-      args: [formatId, tournamentId, tournamentId]
+      args: [tournamentId, tournamentId]
     });
 
     console.log(`[PROMOTION_VALIDATION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
 
-    // 4. 各試合の進出条件をチェック
+    // 3. 各試合の進出条件をチェック
     for (const match of matchesResult.rows) {
       const matchId = match.match_id as number;
       const matchCode = match.match_code as string;
@@ -829,7 +805,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
       }
     }
 
-    // 5. チェック結果のサマリー
+    // 4. チェック結果のサマリー
     const errorCount = issues.filter(i => i.severity === 'error').length;
     const warningCount = issues.filter(i => i.severity === 'warning').length;
     const placeholderCount = issues.filter(i => i.is_placeholder).length;
@@ -965,12 +941,12 @@ export async function checkAndPromoteOnOverrideChange(tournamentId: number, over
       const sourceResult = await db.execute({
         sql: `
           SELECT
-            COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-            COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
-          FROM m_match_templates mt
-          INNER JOIN t_tournaments t ON t.format_id = mt.format_id
-          LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = t.tournament_id
-          WHERE t.tournament_id = ? AND mt.match_code = ?
+            COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+            COALESCE(mo.team2_source_override, ml.team2_source) as team2_source
+          FROM t_matches_live ml
+          JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_tournament_match_overrides mo ON ml.match_code = mo.match_code AND mo.tournament_id = mb.tournament_id
+          WHERE mb.tournament_id = ? AND ml.match_code = ?
         `,
         args: [tournamentId, matchCode]
       });
@@ -1115,16 +1091,17 @@ export async function checkAndPromoteOnMatchConfirm(
         sql: `
           SELECT COUNT(*) as override_count
           FROM t_tournament_match_overrides mo
-          INNER JOIN m_match_templates mt ON mt.match_code = mo.match_code
-          INNER JOIN t_tournaments t ON t.tournament_id = mo.tournament_id AND t.format_id = mt.format_id
+          INNER JOIN t_matches_live ml ON ml.match_code = mo.match_code
+          INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           WHERE mo.tournament_id = ?
-            AND mt.phase = 'final'
+            AND mb.tournament_id = ?
+            AND mb.phase = 'final'
             AND (
-              COALESCE(mo.team1_source_override, mt.team1_source) LIKE ? OR
-              COALESCE(mo.team2_source_override, mt.team2_source) LIKE ?
+              COALESCE(mo.team1_source_override, ml.team1_source) LIKE ? OR
+              COALESCE(mo.team2_source_override, ml.team2_source) LIKE ?
             )
         `,
-        args: [tournamentId, `${blockName}_%`, `${blockName}_%`]
+        args: [tournamentId, tournamentId, `${blockName}_%`, `${blockName}_%`]
       });
 
       const overrideCount = Number(overrideCheckResult.rows[0]?.override_count || 0);

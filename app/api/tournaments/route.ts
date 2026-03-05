@@ -47,11 +47,18 @@ export async function POST(request: NextRequest) {
     // 現在のアーカイブUIバージョンを取得
     const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
 
+    // フォーマット名を取得
+    const formatResult = await db.execute(`
+      SELECT format_name FROM m_tournament_formats WHERE format_id = ?
+    `, [data.format_id]);
+    const formatName = formatResult.rows[0]?.format_name as string || null;
+
     // 大会作成
     const result = await db.execute(`
       INSERT INTO t_tournaments (
         tournament_name,
         format_id,
+        format_name,
         venue_id,
         team_count,
         court_count,
@@ -67,10 +74,11 @@ export async function POST(request: NextRequest) {
         archive_ui_version,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       data.tournament_name,
       data.format_id,
+      formatName,
       data.venue_id,
       data.team_count,
       data.court_count,
@@ -131,10 +139,9 @@ export async function POST(request: NextRequest) {
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [Number(tournamentId)]);
 
@@ -207,10 +214,9 @@ export async function GET(request: NextRequest) {
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
     `;
 
     const params: (string | number)[] = [];

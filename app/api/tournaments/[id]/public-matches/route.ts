@@ -50,10 +50,10 @@ export async function GET(
       );
     }
 
-    // まず大会の存在確認（visibility条件なし）とformat_idを取得
+    // まず大会の存在確認（visibility条件なし）
     console.log('Checking tournament existence for ID:', tournamentId);
     const allTournamentsResult = await db.execute(`
-      SELECT tournament_id, tournament_name, visibility, status, format_id FROM t_tournaments
+      SELECT tournament_id, tournament_name, visibility, status FROM t_tournaments
       WHERE tournament_id = ?
     `, [tournamentId]);
 
@@ -67,16 +67,14 @@ export async function GET(
       );
     }
 
-    // visibility値の確認とformat_idの取得
+    // visibility値の確認
     const tournament = allTournamentsResult.rows[0];
-    const formatId = tournament.format_id ? Number(tournament.format_id) : null;
     console.log('Tournament visibility value:', tournament.visibility, 'type:', typeof tournament.visibility);
-    console.log('Tournament format_id:', formatId);
 
     // 大会の公開状態チェック（暫定的に緩和）
     // TODO: 本番環境では visibility = 1 の条件を復活させる
     const tournamentResult = await db.execute(`
-      SELECT tournament_id, visibility, status FROM t_tournaments 
+      SELECT tournament_id, visibility, status FROM t_tournaments
       WHERE tournament_id = ?
     `, [tournamentId]);
 
@@ -174,6 +172,7 @@ export async function GET(
               mb.block_name,
               mb.match_type,
               mb.block_order,
+              ml.round_name,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
@@ -227,6 +226,7 @@ export async function GET(
                 mb.block_name,
                 mb.match_type,
                 mb.block_order,
+                ml.round_name,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
@@ -236,12 +236,11 @@ export async function GET(
                 CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
                 COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
                 ml.cancellation_type,
-                mt.is_bye_match,
-                mt.team1_source,
-                mt.team2_source
+                ml.is_bye_match,
+                ml.team1_source,
+                ml.team2_source
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
               LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
@@ -250,7 +249,7 @@ export async function GET(
               LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
               WHERE mb.tournament_id = ?
               ORDER BY mb.block_order ASC, ml.match_number ASC
-            `, [formatId, tournamentId]);
+            `, [tournamentId]);
           } else {
             // すべての必要な列が存在する場合はJOINクエリを実行
             console.log('All required columns exist, using JOIN query');
@@ -281,6 +280,7 @@ export async function GET(
                 mb.block_name,
                 mb.match_type,
                 mb.block_order,
+                ml.round_name,
                 mf.team1_scores as team1_goals,
                 mf.team2_scores as team2_goals,
                 mf.winner_tournament_team_id,
@@ -290,12 +290,11 @@ export async function GET(
                 mf.updated_at as confirmed_at,
                 COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
                 ml.cancellation_type,
-                mt.is_bye_match,
-                mt.team1_source,
-                mt.team2_source
+                ml.is_bye_match,
+                ml.team1_source,
+                ml.team2_source
               FROM t_matches_live ml
               INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-              LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
               LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -305,7 +304,7 @@ export async function GET(
               LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
               WHERE mb.tournament_id = ?
               ORDER BY mb.block_order ASC, ml.match_number ASC
-            `, [formatId, tournamentId]);
+            `, [tournamentId]);
           }
         }
       } catch (tableCheckError) {
@@ -331,6 +330,7 @@ export async function GET(
             mb.block_name,
             mb.match_type,
             mb.block_order,
+            ml.round_name,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
@@ -507,6 +507,7 @@ export async function GET(
           block_name: row.block_name ? String(row.block_name) : 'A',
           match_type: String(row.match_type || '通常'),
           block_order: Number(row.block_order || 1),
+          round_name: row.round_name ? String(row.round_name) : null,
           // 結果情報（PK戦を考慮したスコア計算）
           ...(function() {
             const team1Score = calculateDisplayScore(row.team1_goals);

@@ -105,15 +105,15 @@ async function duplicateTournamentForUser(
       const t: any = originalTournament;
       const insertTournament = await db.execute({
         sql: `INSERT INTO t_tournaments (
-          group_id, tournament_name, format_id, venue_id, team_count, court_count,
+          group_id, tournament_name, format_id, format_name, venue_id, team_count, court_count,
           tournament_dates, match_duration_minutes, break_duration_minutes,
           status, visibility, public_start_date, recruitment_start_date, recruitment_end_date,
           sport_type_id, created_by, archive_ui_version, is_archived,
           files_count, group_order, category_name, show_players_public,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
         args: [
-          newGroupId, t.tournament_name, t.format_id, t.venue_id, t.team_count, t.court_count,
+          newGroupId, t.tournament_name, t.format_id, t.format_name || null, t.venue_id, t.team_count, t.court_count,
           t.tournament_dates, t.match_duration_minutes, t.break_duration_minutes,
           t.status, t.visibility, t.public_start_date, t.recruitment_start_date, t.recruitment_end_date,
           t.sport_type_id, targetUsername, t.archive_ui_version, t.is_archived,

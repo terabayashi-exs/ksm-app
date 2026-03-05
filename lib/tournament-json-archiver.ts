@@ -42,41 +42,43 @@ export async function archiveTournamentAsJson(
     let formatDetails = null;
     try {
       const formatResult = await db.execute(`
-        SELECT 
-          tf.format_id,
-          tf.format_name,
-          tf.target_team_count,
-          tf.format_description,
-          tf.created_at as format_created_at
-        FROM m_tournament_formats tf
-        JOIN t_tournaments t ON t.format_id = tf.format_id
+        SELECT
+          t.format_id,
+          t.format_name,
+          f.target_team_count,
+          f.format_description,
+          f.created_at as format_created_at
+        FROM t_tournaments t
+        LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
         WHERE t.tournament_id = ?
       `, [tournamentId]);
 
       if (formatResult.rows && formatResult.rows.length > 0) {
         const format = formatResult.rows[0];
-        
-        // 関連する試合テンプレート情報も取得
-        const templatesResult = await db.execute(`
-          SELECT 
-            template_id,
-            match_code,
-            phase,
-            round_name,
-            block_name,
-            match_type,
-            execution_priority,
-            team1_source,
-            team2_source
-          FROM m_match_templates
-          WHERE format_id = ?
-          ORDER BY execution_priority, match_code
-        `, [format.format_id]);
+
+        // 試合データから試合構造情報を取得（m_match_templates の代替）
+        // t_matches_live には phase, round_name, block_name, match_type,
+        // execution_priority, team1_source, team2_source が直接格納されている
+        const matchStructureResult = await db.execute(`
+          SELECT DISTINCT
+            ml.match_code,
+            mb.phase,
+            ml.round_name,
+            ml.block_name,
+            ml.match_type,
+            ml.execution_priority,
+            ml.team1_source,
+            ml.team2_source
+          FROM t_matches_live ml
+          JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          WHERE mb.tournament_id = ?
+          ORDER BY ml.execution_priority, ml.match_code
+        `, [tournamentId]);
 
         // 実際のブロック情報から予選・決勝情報を推測
         const blocksInfo = await db.execute(`
           SELECT DISTINCT phase, COUNT(*) as block_count
-          FROM t_match_blocks 
+          FROM t_match_blocks
           WHERE tournament_id = ?
           GROUP BY phase
         `, [tournamentId]);
@@ -94,23 +96,22 @@ export async function archiveTournamentAsJson(
             preliminary_format: preliminaryBlocks > 0 ? 'league' : 'none',
             final_format: finalBlocks > 0 ? 'tournament' : 'none',
             preliminary_advance_count: 2, // デフォルト値
-            has_third_place_match: templatesResult.rows.some(t => t.match_code === 'T7'),
+            has_third_place_match: matchStructureResult.rows.some(t => t.match_code === 'T7'),
             format_created_at: format.format_created_at
           },
-          match_templates: templatesResult.rows.map(template => ({
-            template_id: template.template_id,
-            match_code: template.match_code,
-            phase: template.phase,
-            round_name: template.round_name,
-            block_name: template.block_name,
-            match_type: template.match_type,
-            execution_priority: template.execution_priority,
-            team1_source: template.team1_source,
-            team2_source: template.team2_source
+          match_templates: matchStructureResult.rows.map(match => ({
+            match_code: match.match_code,
+            phase: match.phase,
+            round_name: match.round_name,
+            block_name: match.block_name,
+            match_type: match.match_type,
+            execution_priority: match.execution_priority,
+            team1_source: match.team1_source,
+            team2_source: match.team2_source
           }))
         };
-        
-        console.log(`✅ 大会フォーマット詳細取得成功: ${format.format_name} (テンプレート数: ${templatesResult.rows.length})`);
+
+        console.log(`✅ 大会フォーマット詳細取得成功: ${format.format_name} (試合構造数: ${matchStructureResult.rows.length})`);
       }
     } catch (error) {
       console.warn(`Warning: Could not fetch tournament format details for tournament ${tournamentId}:`, error);

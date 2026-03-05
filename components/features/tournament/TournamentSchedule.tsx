@@ -40,6 +40,7 @@ interface MatchData {
   remarks: string | null;
   has_result: boolean;
   cancellation_type: string | null;
+  round_name: string | null;
 }
 
 interface TournamentScheduleProps {
@@ -85,58 +86,55 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
   }, [tournamentId]);
 
 
-  // ブロック分類関数
+  // ブロック分類関数（フェーズIDに依存しない動的判定）
   const getBlockKey = (match: MatchData): string => {
-    if (match.phase === 'preliminary') {
-      // 統合トーナメントブロック
-      if (match.block_name === 'preliminary_unified') {
-        return '予選トーナメント';
-      }
-      // 通常のリーグブロック（A, B, C...）
-      if (match.block_name) {
-        return `${match.block_name}ブロック`;
-      }
-      // match_codeから推測（フォールバック）
-      const blockMatch = match.match_code.match(/([ABCD])\d+/);
-      if (blockMatch) {
-        return `${blockMatch[1]}ブロック`;
-      }
-      return '予選リーグ';
-    } else if (match.phase === 'final') {
-      // 統合トーナメントブロック
-      if (match.block_name === 'final_unified') {
-        return '決勝トーナメント';
-      }
-      // 決勝リーグブロック（1位リーグ、2位リーグなど）
-      if (match.block_name && match.block_name !== 'final' && match.block_name !== 'default') {
-        return match.block_name;
-      }
-      // 最終フォールバック
-      return '決勝トーナメント';
-    } else {
-      return match.phase || 'その他';
+    // _unifiedブロックの場合はdisplay_round_nameを使用
+    if (match.block_name && match.block_name.endsWith('_unified')) {
+      return match.display_round_name || match.round_name || 'トーナメント';
     }
+    // 1文字のブロック名（A, B, C...）は「Xブロック」形式
+    if (match.block_name && match.block_name.length === 1) {
+      return `${match.block_name}ブロック`;
+    }
+    // それ以外の意味のあるblock_name（1位リーグ等）はそのまま
+    if (match.block_name && match.block_name !== 'default') {
+      return match.block_name;
+    }
+    // display_round_nameがあればそれを使用
+    if (match.display_round_name) return match.display_round_name;
+    return match.phase || 'その他';
   };
 
+  const blockColors = [
+    'bg-blue-100 text-blue-800',
+    'bg-green-100 text-green-800',
+    'bg-yellow-100 text-yellow-800',
+    'bg-purple-100 text-purple-800',
+    'bg-pink-100 text-pink-800',
+    'bg-indigo-100 text-indigo-800',
+    'bg-rose-100 text-rose-800',
+    'bg-teal-100 text-teal-800',
+    'bg-cyan-100 text-cyan-800',
+    'bg-lime-100 text-lime-800',
+    'bg-amber-100 text-amber-800',
+    'bg-sky-100 text-sky-800',
+    'bg-fuchsia-100 text-fuchsia-800',
+    'bg-emerald-100 text-emerald-800',
+    'bg-violet-100 text-violet-800',
+    'bg-red-100 text-red-800',
+  ];
   const getBlockColor = (blockKey: string): string => {
-    // 予選ブロックの色分け
-    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800';
-    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800';
-    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800';
-    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800';
-    if (blockKey.includes('予選E')) return 'bg-pink-100 text-pink-800';
-    if (blockKey.includes('予選F')) return 'bg-indigo-100 text-indigo-800';
-    if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
-
-    // 決勝リーグの色分け
-    if (blockKey.includes('1位リーグ') || blockKey.includes('1位ブロック')) return 'bg-amber-100 text-amber-800';
-    if (blockKey.includes('2位リーグ') || blockKey.includes('2位ブロック')) return 'bg-cyan-100 text-cyan-800';
-    if (blockKey.includes('3位リーグ') || blockKey.includes('3位ブロック')) return 'bg-lime-100 text-lime-800';
-    if (blockKey.includes('4位リーグ') || blockKey.includes('4位ブロック')) return 'bg-teal-100 text-teal-800';
-
-    // 決勝トーナメント
-    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800';
-
+    // 「Xブロック」形式からブロック文字を抽出して色分け（A～Z対応）
+    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    if (blockMatch) {
+      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
+      return blockColors[index % blockColors.length];
+    }
+    // X位リーグ/ブロックの色分け
+    if (blockKey.includes('1位')) return 'bg-amber-100 text-amber-800';
+    if (blockKey.includes('2位')) return 'bg-cyan-100 text-cyan-800';
+    if (blockKey.includes('3位')) return 'bg-lime-100 text-lime-800';
+    if (blockKey.includes('4位')) return 'bg-teal-100 text-teal-800';
     return 'bg-muted text-muted-foreground';
   };
 
@@ -297,24 +295,16 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       blocks.add(getBlockKey(match));
     });
     return Array.from(blocks).sort((a, b) => {
-      // フェーズ別の優先順位を設定（予選 → 決勝）
-      const phaseOrderA = a.includes('予選') ? 0 : 1;
-      const phaseOrderB = b.includes('予選') ? 0 : 1;
-
-      if (phaseOrderA !== phaseOrderB) {
-        return phaseOrderA - phaseOrderB;
+      // 「Xブロック」形式のブロック同士はアルファベット順
+      const blockMatchA = a.match(/^([A-Z])ブロック$/);
+      const blockMatchB = b.match(/^([A-Z])ブロック$/);
+      if (blockMatchA && blockMatchB) {
+        return blockMatchA[1].localeCompare(blockMatchB[1]);
       }
-
-      // 同じフェーズ内でblock_nameの昇順でソート
-      // 予選の場合: "予選Aブロック" → "A"を抽出してソート
-      // 決勝の場合: "1位リーグ", "2位リーグ", "決勝トーナメント" などを比較
-      if (a.includes('予選') && b.includes('予選')) {
-        const blockA = a.replace('予選', '').replace('ブロック', '');
-        const blockB = b.replace('予選', '').replace('ブロック', '');
-        return blockA.localeCompare(blockB);
-      }
-
-      // 決勝同士の場合はそのまま比較（round_name順）
+      // ブロック形式が先、その他が後
+      if (blockMatchA && !blockMatchB) return -1;
+      if (!blockMatchA && blockMatchB) return 1;
+      // それ以外はそのまま比較
       return a.localeCompare(b);
     });
   };
@@ -326,18 +316,13 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
 
   // ブロックタブの短縮名を取得（スマホ表示用）
   const getBlockShortName = (blockKey: string): string => {
-    if (blockKey.includes('予選A')) return 'A';
-    if (blockKey.includes('予選B')) return 'B';
-    if (blockKey.includes('予選C')) return 'C';
-    if (blockKey.includes('予選D')) return 'D';
-    if (blockKey.includes('予選E')) return 'E';
-    if (blockKey.includes('予選F')) return 'F';
-    if (blockKey.includes('1位リーグ') || blockKey.includes('1位ブロック')) return '1位';
-    if (blockKey.includes('2位リーグ') || blockKey.includes('2位ブロック')) return '2位';
-    if (blockKey.includes('3位リーグ') || blockKey.includes('3位ブロック')) return '3位';
-    if (blockKey.includes('4位リーグ') || blockKey.includes('4位ブロック')) return '4位';
-    if (blockKey.includes('決勝')) return '決勝';
-    // round_nameをそのまま使用（20文字まで）
+    // 「Xブロック」形式 → アルファベットのみ
+    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    if (blockMatch) return blockMatch[1];
+    // X位リーグ/ブロック → X位
+    const rankMatch = blockKey.match(/^(\d+位)/);
+    if (rankMatch) return rankMatch[1];
+    // そのまま使用（20文字まで）
     if (blockKey.length <= 20) return blockKey;
     return blockKey.substring(0, 18) + '..';
   };
@@ -428,24 +413,14 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
               {/* ブロック別試合表示 */}
               {Object.entries(matchesByBlock)
                 .sort(([blockKeyA], [blockKeyB]) => {
-                  // フェーズ別の優先順位を設定（予選 → 決勝）
-                  const phaseOrderA = blockKeyA.includes('予選') ? 0 : 1;
-                  const phaseOrderB = blockKeyB.includes('予選') ? 0 : 1;
-
-                  if (phaseOrderA !== phaseOrderB) {
-                    return phaseOrderA - phaseOrderB;
+                  // 「Xブロック」形式のブロック同士はアルファベット順
+                  const matchA = blockKeyA.match(/^([A-Z])ブロック$/);
+                  const matchB = blockKeyB.match(/^([A-Z])ブロック$/);
+                  if (matchA && matchB) {
+                    return matchA[1].localeCompare(matchB[1]);
                   }
-
-                  // 同じフェーズ内でblock_nameの昇順でソート
-                  // 予選の場合: "予選Aブロック" → "A"を抽出してソート
-                  // 決勝の場合: "1位リーグ", "2位リーグ", "決勝トーナメント" などを比較
-                  if (blockKeyA.includes('予選') && blockKeyB.includes('予選')) {
-                    const blockA = blockKeyA.replace('予選', '').replace('ブロック', '');
-                    const blockB = blockKeyB.replace('予選', '').replace('ブロック', '');
-                    return blockA.localeCompare(blockB);
-                  }
-
-                  // 決勝同士の場合はそのまま比較（round_name順）
+                  if (matchA && !matchB) return -1;
+                  if (!matchA && matchB) return 1;
                   return blockKeyA.localeCompare(blockKeyB);
                 })
                 .map(([blockKey, blockMatches]) => (

@@ -42,14 +42,13 @@ export async function GET() {
         t.group_id,
         t.group_order,
         t.team_count,
-        f.format_name,
+        t.format_name,
         v.venue_name,
         t.tournament_dates,
         g.group_name,
         g.event_description as group_description,
         (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND (tt.withdrawal_status = 'active' OR tt.withdrawal_status IS NULL)) as applied_count
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.visibility = 'open'
@@ -74,7 +73,7 @@ export async function GET() {
         t.group_id,
         t.group_order,
         t.team_count,
-        f.format_name,
+        t.format_name,
         v.venue_name,
         t.tournament_dates,
         g.group_name,
@@ -92,7 +91,6 @@ export async function GET() {
         (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id AND tp.tournament_team_id = tt.tournament_team_id) as player_count,
         (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       INNER JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id

@@ -1,7 +1,7 @@
 // app/admin/tournaments/[id]/match-overrides/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,21 +32,110 @@ interface MatchOverride {
   original_team2_source: string | null;
 }
 
+interface PhaseConfig {
+  id: string;
+  format_type: 'league' | 'tournament';
+}
+
+interface MatchDataForSources {
+  match_code?: string;
+  phase?: string;
+  team1_source?: string;
+  team2_source?: string;
+}
+
+// ソース候補を事前計算するユーティリティ
+function buildSourceCandidates(
+  allMatches: MatchDataForSources[],
+  phases: PhaseConfig[],
+  blockTeamCounts: { block_name: string; expected_team_count: number }[]
+): {
+  // フェーズのformat_typeごとのソース候補
+  tournamentSources: string[];
+  leagueSources: string[];
+  // format_type判定用マップ
+  phaseFormatMap: Map<string, 'league' | 'tournament'>;
+} {
+  const phaseFormatMap = new Map<string, 'league' | 'tournament'>();
+  phases.forEach(p => phaseFormatMap.set(p.id, p.format_type));
+
+  // トーナメント用: 登録済みsourceから参照されているmatch_codeを抽出し、winner/loserの両方を生成
+  const referencedMatchCodes = new Set<string>();
+  const leagueSet = new Set<string>();
+
+  allMatches.forEach(match => {
+    [match.team1_source, match.team2_source].forEach(source => {
+      if (!source) return;
+      const m = source.match(/^([A-Z]+\d+)_(winner|loser)$/);
+      if (m) {
+        referencedMatchCodes.add(m[1]);
+      } else if (/^[A-Z]_\d+$/.test(source)) {
+        leagueSet.add(source);
+      }
+    });
+  });
+
+  const tournamentSet = new Set<string>();
+  referencedMatchCodes.forEach(code => {
+    tournamentSet.add(`${code}_winner`);
+    tournamentSet.add(`${code}_loser`);
+  });
+
+  // block-team-countsからブロック順位パターンを生成（リーグ用）
+  blockTeamCounts.forEach(block => {
+    for (let i = 1; i <= block.expected_team_count; i++) {
+      leagueSet.add(`${block.block_name}_${i}`);
+    }
+  });
+
+  // 実際に存在するformat_typeを判定
+  const hasLeaguePhase = phases.some(p => p.format_type === 'league');
+  const hasTournamentPhase = phases.some(p => p.format_type === 'tournament');
+
+  const sortSources = (sources: string[]) => sources.sort((a, b) => {
+    const blockA = a.match(/^([A-Z])_(\d+)$/);
+    const blockB = b.match(/^([A-Z])_(\d+)$/);
+    if (blockA && blockB) {
+      if (blockA[1] !== blockB[1]) return blockA[1].localeCompare(blockB[1]);
+      return parseInt(blockA[2]) - parseInt(blockB[2]);
+    }
+    if (blockA) return -1;
+    if (blockB) return 1;
+    return a.localeCompare(b);
+  });
+
+  return {
+    tournamentSources: hasTournamentPhase ? sortSources(Array.from(tournamentSet)) : [],
+    leagueSources: hasLeaguePhase ? sortSources(Array.from(leagueSet)) : [],
+    phaseFormatMap,
+  };
+}
+
 export default function MatchOverridesPage() {
   const params = useParams();
   const tournamentId = parseInt(params.id as string);
 
   const [templates, setTemplates] = useState<MatchTemplate[]>([]);
   const [overrides, setOverrides] = useState<MatchOverride[]>([]);
+  const [allMatches, setAllMatches] = useState<MatchDataForSources[]>([]);
+  const [phases, setPhases] = useState<PhaseConfig[]>([]);
+  const [blockTeamCounts, setBlockTeamCounts] = useState<{ block_name: string; expected_team_count: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<{
     matchCode: string;
+    phase: string;
     team1Source: string | null;
     team2Source: string | null;
     originalTeam1Source: string | null;
     originalTeam2Source: string | null;
   } | null>(null);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+
+  // ソース候補を事前計算（メモ化）
+  const sourceCandidates = useMemo(
+    () => buildSourceCandidates(allMatches, phases, blockTeamCounts),
+    [allMatches, phases, blockTeamCounts]
+  );
 
   useEffect(() => {
     loadData();
@@ -55,34 +144,53 @@ export default function MatchOverridesPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // 決勝トーナメントのテンプレートを取得
-      const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`);
-      const tournamentData = await tournamentResponse.json();
+      // 大会情報・試合データ・ブロック別チーム数・オーバーライド情報を並列取得
+      const [tournamentResponse, matchesResponse, blockCountsResponse, overridesResponse] = await Promise.all([
+        fetch(`/api/tournaments/${tournamentId}`),
+        fetch(`/api/tournaments/${tournamentId}/matches`),
+        fetch(`/api/tournaments/${tournamentId}/block-team-counts`),
+        fetch(`/api/tournaments/${tournamentId}/match-overrides`),
+      ]);
 
-      if (!tournamentData.success) {
-        throw new Error('大会情報の取得に失敗しました');
+      const [tournamentData, matchesData, blockCountsData, overridesData] = await Promise.all([
+        tournamentResponse.json(),
+        matchesResponse.json(),
+        blockCountsResponse.json(),
+        overridesResponse.json(),
+      ]);
+
+      // phases設定
+      if (tournamentData.success && tournamentData.data?.phases?.phases) {
+        setPhases(tournamentData.data.phases.phases);
       }
 
-      const formatId = tournamentData.data.format_id;
+      // block-team-counts
+      if (blockCountsData.success && blockCountsData.data?.block_team_counts) {
+        setBlockTeamCounts(blockCountsData.data.block_team_counts);
+      }
 
-      const templatesResponse = await fetch(`/api/tournaments/formats/${formatId}/templates`);
-      const templatesData = await templatesResponse.json();
+      if (matchesData.success && Array.isArray(matchesData.data)) {
+        // 全試合データを保存（ソース候補計算用）
+        setAllMatches(matchesData.data);
 
-      if (templatesData.success && templatesData.data && templatesData.data.templates && Array.isArray(templatesData.data.templates)) {
-        // 選出条件が設定されている試合のみフィルタリング（team1_source または team2_source が存在する試合）
-        // 予選トーナメント・決勝トーナメント両方に対応
-        const matchesWithSource = templatesData.data.templates.filter(
-          (t: MatchTemplate) => t.team1_source || t.team2_source
-        );
+        // team1_source または team2_source が存在する試合のみフィルタリング（一覧表示用）
+        const matchesWithSource = matchesData.data
+          .filter((m: MatchTemplate & { round_name?: string; display_round_name?: string }) => m.team1_source || m.team2_source)
+          .map((m: MatchTemplate & { round_name?: string; display_round_name?: string }) => ({
+            match_code: m.match_code,
+            phase: m.phase,
+            round_name: m.round_name || m.display_round_name || '',
+            team1_source: m.team1_source,
+            team2_source: m.team2_source,
+            team1_display_name: m.team1_display_name || '',
+            team2_display_name: m.team2_display_name || '',
+          }));
         setTemplates(matchesWithSource);
       } else {
-        console.error('テンプレートデータの取得に失敗:', templatesData);
+        console.error('試合データの取得に失敗:', matchesData);
         setTemplates([]);
+        setAllMatches([]);
       }
-
-      // オーバーライド情報を取得
-      const overridesResponse = await fetch(`/api/tournaments/${tournamentId}/match-overrides`);
-      const overridesData = await overridesResponse.json();
 
       if (overridesData.success) {
         setOverrides(overridesData.data);
@@ -95,12 +203,13 @@ export default function MatchOverridesPage() {
     }
   };
 
-  const handleEditMatch = (matchCode: string, originalTeam1Source: string | null, originalTeam2Source: string | null) => {
+  const handleEditMatch = (matchCode: string, phase: string, originalTeam1Source: string | null, originalTeam2Source: string | null) => {
     // オーバーライドがあればその値を、なければ元の値を使用
     const override = overrides.find(o => o.match_code === matchCode);
 
     setSelectedMatch({
       matchCode,
+      phase,
       team1Source: override?.team1_source_override || originalTeam1Source,
       team2Source: override?.team2_source_override || originalTeam2Source,
       originalTeam1Source,
@@ -118,6 +227,15 @@ export default function MatchOverridesPage() {
 
   const hasOverride = (matchCode: string): boolean => {
     return overrides.some(o => o.match_code === matchCode);
+  };
+
+  // 選択中の試合のformat_typeに応じたソース候補
+  const getAvailableSourcesForMatch = (phase: string): string[] => {
+    const formatType = sourceCandidates.phaseFormatMap.get(phase);
+    if (formatType === 'tournament') return sourceCandidates.tournamentSources;
+    if (formatType === 'league') return sourceCandidates.leagueSources;
+    // フォールバック: 全候補
+    return [...sourceCandidates.leagueSources, ...sourceCandidates.tournamentSources];
   };
 
   if (isLoading) {
@@ -252,7 +370,7 @@ export default function MatchOverridesPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleEditMatch(template.match_code, template.team1_source, template.team2_source)}
+                      onClick={() => handleEditMatch(template.match_code, template.phase, template.team1_source, template.team2_source)}
                     >
                       <Pencil className="h-4 w-4 mr-2" />
                       編集
@@ -275,6 +393,7 @@ export default function MatchOverridesPage() {
           }}
           tournamentId={tournamentId}
           matchCode={selectedMatch.matchCode}
+          availableSources={getAvailableSourcesForMatch(selectedMatch.phase)}
           currentTeam1Source={selectedMatch.team1Source}
           currentTeam2Source={selectedMatch.team2Source}
           originalTeam1Source={selectedMatch.originalTeam1Source}
@@ -287,6 +406,8 @@ export default function MatchOverridesPage() {
           open={isBulkDialogOpen}
           onOpenChange={setIsBulkDialogOpen}
           tournamentId={tournamentId}
+          leagueSources={sourceCandidates.leagueSources}
+          tournamentSources={sourceCandidates.tournamentSources}
           onSave={loadData}
         />
       </div>

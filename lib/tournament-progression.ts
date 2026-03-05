@@ -15,26 +15,13 @@ interface ProgressionRule {
 }
 
 /**
- * m_match_templatesテーブルからトーナメント進出ルールを動的に取得
+ * t_matches_liveテーブルからトーナメント進出ルールを動的に取得
  * @param matchCode - 試合コード
  * @param tournamentId - 大会ID
  * @param phase - フェーズ（'preliminary' または 'final'）
  */
 async function getTournamentProgressionRules(matchCode: string, tournamentId: number, phase: string): Promise<ProgressionRule> {
   try {
-    // 該当試合のフォーマットIDを取得
-    const formatResult = await db.execute(`
-      SELECT t.format_id
-      FROM t_tournaments t
-      WHERE t.tournament_id = ?
-    `, [tournamentId]);
-
-    if (formatResult.rows.length === 0) {
-      throw new Error(`Tournament ${tournamentId} not found`);
-    }
-
-    const formatId = formatResult.rows[0].format_id as number;
-
     // この試合を参照している他の試合を検索（オーバーライドを考慮）
     const winnerPattern = `${matchCode}_winner`;
     const loserPattern = `${matchCode}_loser`;
@@ -43,23 +30,24 @@ async function getTournamentProgressionRules(matchCode: string, tournamentId: nu
 
     const dependentMatchesResult = await db.execute(`
       SELECT
-        mt.match_code,
-        COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-        COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
-        mt.team1_display_name,
-        mt.team2_display_name
-      FROM m_match_templates mt
+        ml.match_code,
+        COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+        COALESCE(mo.team2_source_override, ml.team2_source) as team2_source,
+        ml.team1_display_name,
+        ml.team2_display_name
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_match_overrides mo
-        ON mt.match_code = mo.match_code AND mo.tournament_id = ?
-      WHERE mt.format_id = ?
-      AND mt.phase = ?
+        ON ml.match_code = mo.match_code AND mo.tournament_id = ?
+      WHERE mb.tournament_id = ?
+      AND mb.phase = ?
       AND (
-        COALESCE(mo.team1_source_override, mt.team1_source) = ?
-        OR COALESCE(mo.team1_source_override, mt.team1_source) = ?
-        OR COALESCE(mo.team2_source_override, mt.team2_source) = ?
-        OR COALESCE(mo.team2_source_override, mt.team2_source) = ?
+        COALESCE(mo.team1_source_override, ml.team1_source) = ?
+        OR COALESCE(mo.team1_source_override, ml.team1_source) = ?
+        OR COALESCE(mo.team2_source_override, ml.team2_source) = ?
+        OR COALESCE(mo.team2_source_override, ml.team2_source) = ?
       )
-    `, [tournamentId, formatId, phase, winnerPattern, loserPattern, winnerPattern, loserPattern]);
+    `, [tournamentId, tournamentId, phase, winnerPattern, loserPattern, winnerPattern, loserPattern]);
 
     console.log(`[TOURNAMENT_PROGRESSION] Found ${dependentMatchesResult.rows.length} dependent matches`);
 
@@ -153,7 +141,7 @@ export async function updateTournamentProgression(
       }
     }
 
-    // m_match_templatesから進出ルールを動的に取得（phaseでフィルタ）
+    // t_matches_liveから進出ルールを動的に取得（phaseでフィルタ）
     const rules = await getTournamentProgressionRules(matchCode, tournamentId, matchPhase);
 
     if (rules.winner_targets.length === 0 && rules.loser_targets.length === 0) {
@@ -248,27 +236,16 @@ async function updateMatchTeamName(
 
     console.log(`[TOURNAMENT_PROGRESSION] Current ${targetMatchCode} ${position}: display_name="${currentDisplayName}", tournament_team_id="${currentTournamentTeamId}"`);
 
-    // まず、m_match_templatesから期待されるプレースホルダーテキストを取得
-    const templateResult = await db.execute(`
-      SELECT t.format_id
-      FROM t_tournaments t
-      WHERE t.tournament_id = ?
-    `, [tournamentId]);
-
-    if (templateResult.rows.length === 0) {
-      throw new Error(`Tournament ${tournamentId} not found`);
-    }
-
-    const formatId = templateResult.rows[0].format_id as number;
-
+    // まず、t_matches_liveから期待されるプレースホルダーテキストを取得
     const placeholderResult = await db.execute(`
-      SELECT ${position}_display_name as placeholder
-      FROM m_match_templates
-      WHERE format_id = ? AND match_code = ?
-    `, [formatId, targetMatchCode]);
+      SELECT ml.${position}_display_name as placeholder
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND ml.match_code = ?
+    `, [tournamentId, targetMatchCode]);
 
     if (placeholderResult.rows.length === 0) {
-      console.log(`[TOURNAMENT_PROGRESSION] Template for match ${targetMatchCode} not found`);
+      console.log(`[TOURNAMENT_PROGRESSION] Match ${targetMatchCode} not found in t_matches_live`);
       return;
     }
 
@@ -344,15 +321,12 @@ export async function recalculateAllTournamentProgression(tournamentId: number):
         mf.winner_tournament_team_id,
         mf.is_draw,
         mb.phase,
-        mt.execution_priority
+        mf.execution_priority
       FROM t_matches_final mf
       INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
-      LEFT JOIN m_match_templates mt ON mt.match_code = mf.match_code
-        AND mt.format_id = (SELECT format_id FROM t_tournaments WHERE tournament_id = ?)
-        AND mt.phase = mb.phase
       WHERE mb.tournament_id = ? AND mb.phase = 'final'
-      ORDER BY mt.execution_priority ASC, mf.match_code ASC
-    `, [tournamentId, tournamentId]);
+      ORDER BY mf.execution_priority ASC, mf.match_code ASC
+    `, [tournamentId]);
 
     console.log(`[TOURNAMENT_PROGRESSION] Found ${confirmedMatches.rows.length} confirmed tournament matches`);
 

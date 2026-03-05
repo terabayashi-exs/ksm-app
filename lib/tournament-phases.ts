@@ -110,6 +110,99 @@ export function getPhaseFormatType(phases: TournamentPhases, phaseId: string): P
 }
 
 /**
+ * phases JSON文字列またはオブジェクトをパースしてTournamentPhasesを取得
+ */
+export function parsePhasesJson(phases: string | object | null | undefined): TournamentPhases | null {
+  if (!phases) return null;
+  try {
+    const data = typeof phases === 'string' ? JSON.parse(phases) : phases;
+    if (data?.phases && Array.isArray(data.phases) && data.phases.length > 0) {
+      return data as TournamentPhases;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * phases JSON文字列からフェーズID→format_typeのマップを構築する
+ * DB取得値（string | object）を直接渡せる
+ */
+export function buildPhaseFormatMap(phases: string | object | null | undefined): Map<string, PhaseFormatType> {
+  const map = new Map<string, PhaseFormatType>();
+  const parsed = parsePhasesJson(phases);
+  if (parsed) {
+    for (const p of parsed.phases) {
+      if (p.id && p.format_type) {
+        map.set(p.id, p.format_type);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * phases JSON文字列からフェーズID→表示名のマップを構築する
+ */
+export function buildPhaseNameMap(phases: string | object | null | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  const parsed = parsePhasesJson(phases);
+  if (parsed) {
+    for (const p of parsed.phases) {
+      if (p.id && p.name) {
+        map.set(p.id, p.name);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * テンプレートのphase（旧形式: preliminary/final）をphasesのidにマッピングする
+ * テンプレートのphaseがphasesのidに直接一致する場合はそのまま、
+ * 一致しない場合はorder順で対応付ける
+ */
+export function buildTemplatePhaseMapping(
+  templatePhases: string[],
+  phases: string | object | null | undefined
+): Map<string, string> {
+  const mapping = new Map<string, string>();
+  const parsed = parsePhasesJson(phases);
+  if (!parsed) return mapping;
+
+  const sortedPhases = [...parsed.phases].sort((a, b) => a.order - b.order);
+  const phaseIds = new Set(sortedPhases.map(p => p.id));
+  const uniqueTemplatePhases = [...new Set(templatePhases)];
+
+  // まず直接一致するものをマッピング
+  const unmapped: string[] = [];
+  for (const tp of uniqueTemplatePhases) {
+    if (phaseIds.has(tp)) {
+      mapping.set(tp, tp);
+    } else {
+      unmapped.push(tp);
+    }
+  }
+
+  // 一致しないテンプレートphaseをorder順でマッピング
+  if (unmapped.length > 0) {
+    const phaseOrder: Record<string, number> = { preliminary: 1, final: 2 };
+    unmapped.sort((a, b) => (phaseOrder[a] || 99) - (phaseOrder[b] || 99));
+
+    const availablePhases = sortedPhases.filter(p =>
+      !Array.from(mapping.values()).includes(p.id)
+    );
+
+    for (let i = 0; i < unmapped.length && i < availablePhases.length; i++) {
+      mapping.set(unmapped[i], availablePhases[i].id);
+    }
+  }
+
+  return mapping;
+}
+
+/**
  * 標準的な2フェーズ構成を生成（予選→決勝）
  */
 export function generateStandardTwoPhaseConfiguration(): TournamentPhases {

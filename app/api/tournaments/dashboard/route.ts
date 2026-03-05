@@ -52,7 +52,7 @@ export async function GET() {
         t.group_id,
         t.group_order,
         v.venue_name,
-        f.format_name,
+        t.format_name,
         a.logo_blob_url,
         a.logo_filename,
         a.organization_name,
@@ -66,7 +66,6 @@ export async function GET() {
         (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'cancelled') as cancelled_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status != 'completed'
@@ -115,7 +114,7 @@ export async function GET() {
         t.group_id,
         t.group_order,
         v.venue_name,
-        f.format_name,
+        t.format_name,
         a.logo_blob_url,
         a.logo_filename,
         a.organization_name,
@@ -129,7 +128,6 @@ export async function GET() {
         (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'cancelled') as cancelled_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.status = 'completed'

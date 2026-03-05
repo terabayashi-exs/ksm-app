@@ -33,7 +33,7 @@ interface BlockStanding {
 
 interface TournamentResultsProps {
   tournamentId: number;
-  phase?: 'preliminary' | 'final'; // オプショナル: デフォルトは予選
+  phase?: string; // フェーズID（デフォルトは'preliminary'）
 }
 
 export default function TournamentResults({ tournamentId, phase = 'preliminary' }: TournamentResultsProps) {
@@ -45,53 +45,54 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  // ブロック分類関数（TournamentSchedule.tsxと同じロジック）
-  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
-    if (phase === 'preliminary') {
-      // 統合トーナメントブロック
-      if (blockName === 'preliminary_unified') {
-        return '予選トーナメント';
-      }
-      // 通常のリーグブロック（A, B, C...）
-      if (blockName) {
-        return `予選${blockName}ブロック`;
-      }
-      // match_codeから推測（フォールバック）
-      if (matchCode) {
-        const blockMatch = matchCode.match(/([ABCD])\d+/);
-        if (blockMatch) {
-          return `予選${blockMatch[1]}ブロック`;
-        }
-      }
-      return '予選リーグ';
-    } else if (phase === 'final') {
-      // 統合トーナメントブロック
-      if (blockName === 'final_unified') {
-        return '決勝トーナメント';
-      }
-      // 決勝リーグブロック（1位リーグ、2位リーグなど）
-      if (blockName && blockName !== 'final' && blockName !== 'default') {
-        return blockName;
-      }
-      // 最終フォールバック
-      return '決勝トーナメント';
-    } else {
-      return phase || 'その他';
+  // ブロック分類関数（フェーズIDに依存しない動的判定）
+  const getBlockKey = (_phase: string, blockName: string, displayRoundName?: string): string => {
+    // _unifiedブロックの場合はdisplay_round_nameを使用
+    if (blockName && blockName.endsWith('_unified')) {
+      return displayRoundName || 'トーナメント';
     }
+    // 1文字のブロック名（A, B, C...）は「Xブロック」形式
+    if (blockName && blockName.length === 1) {
+      return `${blockName}ブロック`;
+    }
+    // それ以外の意味のあるblock_name（1位リーグ等）はそのまま
+    if (blockName && blockName !== 'default') {
+      return blockName;
+    }
+    // display_round_nameがあればそれを使用
+    if (displayRoundName) return displayRoundName;
+    return 'その他';
   };
 
-  // ブロック色分け関数（日程・結果ページと同様）
+  // ブロック色分け関数（動的判定）
+  const blockColors = [
+    'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+    'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+    'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300',
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
+    'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-300',
+    'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300',
+    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
+    'bg-lime-100 text-lime-800 dark:bg-lime-900/20 dark:text-lime-300',
+    'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+    'bg-sky-100 text-sky-800 dark:bg-sky-900/20 dark:text-sky-300',
+    'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/20 dark:text-fuchsia-300',
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300',
+    'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300',
+    'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
+  ];
   const getBlockColor = (blockKey: string): string => {
-    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
-    if (blockKey.includes('1位リーグ')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('2位リーグ')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('3位リーグ')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('リーグ')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    if (blockMatch) {
+      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
+      return blockColors[index % blockColors.length];
+    }
+    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     return 'bg-muted text-muted-foreground';
   };
 
@@ -575,14 +576,9 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
 
 
   // 指定されたフェーズかどうかの判定
-  // データベースのphaseフィールド（'preliminary' or 'final'）のみで判定
+  // 動的フェーズID対応: propsで受け取ったphaseとDBのphaseフィールドを比較
   const isTargetPhase = (matchPhase: string): boolean => {
-    if (phase === 'preliminary') {
-      return matchPhase === 'preliminary';
-    } else if (phase === 'final') {
-      return matchPhase === 'final';
-    }
-    return false;
+    return matchPhase === phase;
   };
 
   // 特定ブロックの順位表データを取得

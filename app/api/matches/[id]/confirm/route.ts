@@ -6,6 +6,7 @@ import { updateBlockRankingsOnMatchConfirm } from '@/lib/standings-calculator';
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { parseTotalScore } from '@/lib/score-parser';
 import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
+import { buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -100,8 +101,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         team1_tournament_team_id, team2_tournament_team_id,
         team1_display_name, team2_display_name,
         court_number, start_time, team1_scores, team2_scores, winner_tournament_team_id,
-        is_draw, is_walkover, remarks, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_draw, is_walkover, remarks, created_at, updated_at,
+        phase, match_type, round_name, block_name,
+        team1_source, team2_source, day_number, execution_priority,
+        suggested_start_time, loser_position_start, loser_position_end,
+        position_note, winner_position, is_bye_match, matchday, cycle
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       liveMatch.match_id,
       liveMatch.match_block_id,
@@ -122,7 +128,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
       0, // is_walkover: 通常は0
       liveMatch.remarks,
       now,
-      now
+      now,
+      // テンプレート独立化: t_matches_liveからコピー
+      liveMatch.phase || null,
+      liveMatch.match_type || null,
+      liveMatch.round_name || null,
+      liveMatch.block_name || null,
+      liveMatch.team1_source || null,
+      liveMatch.team2_source || null,
+      liveMatch.day_number || null,
+      liveMatch.execution_priority || null,
+      liveMatch.suggested_start_time || null,
+      liveMatch.loser_position_start || null,
+      liveMatch.loser_position_end || null,
+      liveMatch.position_note || null,
+      liveMatch.winner_position || null,
+      liveMatch.is_bye_match || 0,
+      liveMatch.matchday || null,
+      liveMatch.cycle || null
     ]);
 
     console.log(`[MATCH_CONFIRM] Match ${matchId} confirmed by ${confirmedBy}`);
@@ -167,25 +190,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
     try {
       const matchBlockId = liveMatch.match_block_id as number;
 
-      // ブロック情報とフォーマットタイプを取得
+      // ブロック情報とフォーマットタイプを取得（phasesから判定）
       const blockInfoResult = await db.execute(`
         SELECT
           mb.phase,
-          CASE
-            WHEN mb.phase = 'preliminary' THEN f.preliminary_format_type
-            WHEN mb.phase = 'final' THEN f.final_format_type
-            ELSE NULL
-          END as format_type
+          t.phases
         FROM t_match_blocks mb
         JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
-        JOIN m_tournament_formats f ON t.format_id = f.format_id
         WHERE mb.match_block_id = ?
       `, [matchBlockId]);
 
       if (blockInfoResult.rows.length > 0) {
         const blockInfo = blockInfoResult.rows[0];
         const phase = blockInfo.phase as string;
-        const formatType = blockInfo.format_type as string | null;
+        const confirmPhaseFormatMap = buildPhaseFormatMap(blockInfo.phases as string | null);
+        const formatType = confirmPhaseFormatMap.get(phase) || null;
 
         // トーナメント形式の場合のみ順位設定を実行
         if (formatType === 'tournament') {
@@ -247,22 +266,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       console.log(`[MATCH_CONFIRM] Checking if tournament ${tournamentId} is complete...`);
 
-      // 大会のフォーマットIDを取得
-      const tournamentFormatResult = await db.execute(`
-        SELECT format_id FROM t_tournaments WHERE tournament_id = ?
-      `, [tournamentId]);
-
-      const formatId = tournamentFormatResult.rows[0]?.format_id as number;
-
       // 大会の全試合数を取得（BYE試合のみ除外、チーム割当の有無は関係なし）
+      // テンプレート独立化: ml.is_bye_matchから直接参照
       const totalMatchesResult = await db.execute(`
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
         WHERE mb.tournament_id = ?
-          AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
-      `, [formatId, tournamentId]);
+          AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
+      `, [tournamentId]);
 
       const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
 
@@ -272,11 +284,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
         WHERE mb.tournament_id = ?
-          AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+          AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
           AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
-      `, [formatId, tournamentId]);
+      `, [tournamentId]);
 
       const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
 

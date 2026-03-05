@@ -9,6 +9,7 @@
  */
 
 import type { TournamentStatus } from './tournament-status';
+import type { TournamentPhases } from './types/tournament-phases';
 
 /**
  * 部門（旧：大会）
@@ -40,6 +41,7 @@ export interface Tournament {
   format_name?: string;
   preliminary_format_type?: string; // 予選の形式 ('league' | 'tournament')
   final_format_type?: string; // 決勝の形式 ('league' | 'tournament')
+  phases?: TournamentPhases; // フェーズ構成（テンプレート独立化）
   // 後方互換性のため (ダッシュボードで使用)
   is_public?: boolean;
   event_start_date?: string;
@@ -234,6 +236,23 @@ export interface Match {
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   result_status: 'none' | 'pending' | 'confirmed';
   remarks?: string;
+  // テンプレート独立化: m_match_templatesからコピーされたフィールド
+  phase?: string;
+  match_type?: string;
+  round_name?: string;
+  block_name?: string;
+  team1_source?: string;
+  team2_source?: string;
+  day_number?: number;
+  execution_priority?: number;
+  suggested_start_time?: string;
+  loser_position_start?: number;
+  loser_position_end?: number;
+  position_note?: string;
+  winner_position?: number;
+  is_bye_match?: number;
+  matchday?: number;
+  cycle?: number;
 }
 
 export interface Venue {

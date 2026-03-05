@@ -42,9 +42,8 @@ export async function GET(
         t.tournament_name,
         t.team_count as max_teams,
         t.status,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 

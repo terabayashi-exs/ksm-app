@@ -61,14 +61,14 @@ export async function GET(
         mo.override_reason,
         mo.overridden_by,
         mo.overridden_at,
-        mt.team1_source as original_team1_source,
-        mt.team2_source as original_team2_source,
-        mt.team1_display_name as original_team1_display_name,
-        mt.team2_display_name as original_team2_display_name,
-        mt.round_name
+        ml.team1_source as original_team1_source,
+        ml.team2_source as original_team2_source,
+        ml.team1_display_name as original_team1_display_name,
+        ml.team2_display_name as original_team2_display_name,
+        ml.round_name
       FROM t_tournament_match_overrides mo
-      INNER JOIN m_match_templates mt ON mt.match_code = mo.match_code
-      INNER JOIN t_tournaments t ON t.tournament_id = mo.tournament_id AND t.format_id = mt.format_id
+      INNER JOIN t_matches_live ml ON ml.match_code = mo.match_code
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id AND mb.tournament_id = mo.tournament_id
       WHERE mo.tournament_id = ?
       ORDER BY mo.match_code
     `, [tournamentId]);
@@ -152,13 +152,13 @@ export async function POST(
       );
     }
 
-    // 試合テンプレート存在確認（選出条件が設定されている試合のみ対象）
+    // 試合存在確認（選出条件が設定されている試合のみ対象）
     const templateCheck = await db.execute(`
-      SELECT mt.match_code
-      FROM m_match_templates mt
-      INNER JOIN t_tournaments t ON t.format_id = mt.format_id
-      WHERE t.tournament_id = ? AND mt.match_code = ?
-        AND (mt.team1_source IS NOT NULL OR mt.team2_source IS NOT NULL)
+      SELECT ml.match_code
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND ml.match_code = ?
+        AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
     `, [tournamentId, match_code]);
 
     if (templateCheck.rows.length === 0) {

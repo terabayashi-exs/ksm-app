@@ -35,12 +35,9 @@ export async function GET(
       );
     }
 
-    // 大会のフォーマットIDを取得
+    // 大会存在確認 + phases取得
     const tournamentResult = await db.execute(`
-      SELECT t.format_id, f.format_name
-      FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-      WHERE t.tournament_id = ?
+      SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -50,32 +47,68 @@ export async function GET(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id;
+    // phasesからorder:1（最初のフェーズ）のIDを取得
+    const tournament = tournamentResult.rows[0];
+    let firstPhaseId: string | null = null;
+    try {
+      const phasesStr = tournament.phases;
+      if (phasesStr) {
+        const phasesData = typeof phasesStr === 'string' ? JSON.parse(phasesStr) : phasesStr;
+        if (phasesData?.phases?.length > 0) {
+          const sorted = [...phasesData.phases].sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+          firstPhaseId = sorted[0].id;
+        }
+      }
+    } catch (e) {
+      console.warn('phases解析失敗:', e);
+    }
 
-    // 第1ラウンド（元チームのみ）の試合を取得して想定チーム数を計算
+    // フォールバック: phasesがない場合はmb.phaseを使ってフェーズ一覧から最初を取得
+    if (!firstPhaseId) {
+      const phaseResult = await db.execute(`
+        SELECT DISTINCT mb.phase FROM t_match_blocks mb
+        WHERE mb.tournament_id = ?
+        ORDER BY mb.block_order ASC
+        LIMIT 1
+      `, [tournamentId]);
+      if (phaseResult.rows.length > 0) {
+        firstPhaseId = String(phaseResult.rows[0].phase);
+      }
+    }
+
+    if (!firstPhaseId) {
+      return NextResponse.json({
+        success: true,
+        data: { tournament_id: tournamentId, block_team_counts: [] }
+      });
+    }
+
+    // 最初のフェーズの第1ラウンド（元チームのみ）の試合を取得して想定チーム数を計算
     const firstRoundResult = await db.execute(`
       SELECT
-        block_name,
-        team1_display_name,
-        team2_display_name
-      FROM m_match_templates
-      WHERE format_id = ?
-        AND phase = 'preliminary'
-        AND block_name IS NOT NULL
-        AND (team1_source IS NULL OR team1_source = '')
-        AND (team2_source IS NULL OR team2_source = '')
-      ORDER BY block_name, match_number
-    `, [formatId]);
+        ml.block_name,
+        ml.team1_display_name,
+        ml.team2_display_name
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND mb.phase = ?
+        AND ml.block_name IS NOT NULL
+        AND (ml.team1_source IS NULL OR ml.team1_source = '')
+        AND (ml.team2_source IS NULL OR ml.team2_source = '')
+      ORDER BY ml.block_name, ml.match_number
+    `, [tournamentId, firstPhaseId]);
 
     // ブロック別の総試合数も取得（表示用）
     const matchCountResult = await db.execute(`
       SELECT
-        block_name,
+        ml.block_name,
         COUNT(*) as match_count
-      FROM m_match_templates
-      WHERE format_id = ? AND phase = 'preliminary' AND block_name IS NOT NULL
-      GROUP BY block_name
-    `, [formatId]);
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND mb.phase = ? AND ml.block_name IS NOT NULL
+      GROUP BY ml.block_name
+    `, [tournamentId, firstPhaseId]);
 
     // ブロック別のチームプレースホルダーを集計
     const blockTeamSets = new Map<string, Set<string>>();
@@ -117,7 +150,6 @@ export async function GET(
       success: true,
       data: {
         tournament_id: tournamentId,
-        format_id: Number(formatId),
         block_team_counts: blockTeamCounts
       }
     });

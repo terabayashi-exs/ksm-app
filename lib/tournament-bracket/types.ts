@@ -54,7 +54,7 @@ export interface BracketMatch {
 
 export interface BracketProps {
   tournamentId: number;
-  phase?: "preliminary" | "final";
+  phase?: string; // フェーズID（デフォルトは'final'）
 }
 
 export interface SportScoreConfig {

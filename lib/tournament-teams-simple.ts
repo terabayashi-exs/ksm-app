@@ -31,31 +31,23 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
   const teamOrderMap = new Map<string, { order: number; leagueName: string }>();
 
   try {
-    // 大会のフォーマットIDを取得
-    const formatResult = await db.execute({
-      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
-      args: [tournamentId]
-    });
-
-    if (formatResult.rows.length === 0) {
-      return teamOrderMap;
-    }
-
-    const formatId = formatResult.rows[0].format_id as number;
-
-    // 決勝フェーズのテンプレートからチーム順序を取得
-    const templateResult = await db.execute({
+    // 決勝フェーズの試合からround_name・team_source・チームIDを一括取得
+    // t_matches_live に phase, round_name, team1_source, team2_source が直接格納されている
+    const matchesResult = await db.execute({
       sql: `
-        SELECT
-          mt.match_code,
-          mt.round_name,
-          mt.team1_source,
-          mt.team2_source
-        FROM m_match_templates mt
-        WHERE mt.format_id = ? AND mt.phase = 'final'
-        ORDER BY mt.match_number
+        SELECT DISTINCT
+          ml.match_code,
+          ml.round_name,
+          ml.team1_source,
+          ml.team2_source,
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ? AND mb.phase = 'final'
+        ORDER BY ml.match_number
       `,
-      args: [formatId]
+      args: [tournamentId]
     });
 
     // チームソースと順序のマッピングを構築（例: A_1 → {round: "1位リーグ", position: 1}）
@@ -65,7 +57,7 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
     const roundOrderMap = new Map<string, number>();
     let currentRoundOrder = 0;
 
-    templateResult.rows.forEach(row => {
+    matchesResult.rows.forEach(row => {
       const roundName = row.round_name as string;
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
@@ -94,48 +86,29 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
       assignSource(team2Source);
     });
 
-    // 決勝フェーズの試合から実際のチームIDを取得
-    const matchesResult = await db.execute({
-      sql: `
-        SELECT DISTINCT
-          ml.match_code,
-          ml.team1_tournament_team_id,
-          ml.team2_tournament_team_id
-        FROM t_matches_live ml
-        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
-        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-        WHERE mb.tournament_id = ? AND mb.phase = 'final'
-      `,
-      args: [tournamentId]
-    });
-
-    // テンプレートとマッチングしてチームIDに順序を割り当て
+    // 取得済みの試合データからチームIDに順序を割り当て
     for (const match of matchesResult.rows) {
-      const template = templateResult.rows.find(t => t.match_code === match.match_code);
-      if (template) {
-        const team1Source = template.team1_source as string;
-        const team2Source = template.team2_source as string;
-        const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
-        const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
+      const team1Source = match.team1_source as string;
+      const team2Source = match.team2_source as string;
+      const team1TournamentTeamId = match.team1_tournament_team_id as number | null;
+      const team2TournamentTeamId = match.team2_tournament_team_id as number | null;
 
-        if (team1TournamentTeamId && team1Source && sourceOrderMap.has(team1Source)) {
-          const order = sourceOrderMap.get(team1Source)!;
-          // ラウンド別 + 位置別の順序（出現順序に基づく汎用的な計算）
-          const roundOrder = roundOrderMap.get(order.round) || 0;
-          const roundBase = (roundOrder + 1) * 1000;
-          const leagueName = order.round; // round_nameをそのまま使用
-          teamOrderMap.set(String(team1TournamentTeamId), { order: roundBase + order.position, leagueName });
-        }
+      if (team1TournamentTeamId && team1Source && sourceOrderMap.has(team1Source)) {
+        const order = sourceOrderMap.get(team1Source)!;
+        // ラウンド別 + 位置別の順序（出現順序に基づく汎用的な計算）
+        const roundOrder = roundOrderMap.get(order.round) || 0;
+        const roundBase = (roundOrder + 1) * 1000;
+        const leagueName = order.round; // round_nameをそのまま使用
+        teamOrderMap.set(String(team1TournamentTeamId), { order: roundBase + order.position, leagueName });
+      }
 
-        if (team2TournamentTeamId && team2Source && sourceOrderMap.has(team2Source)) {
-          const order = sourceOrderMap.get(team2Source)!;
-          // ラウンド別 + 位置別の順序（出現順序に基づく汎用的な計算）
-          const roundOrder = roundOrderMap.get(order.round) || 0;
-          const roundBase = (roundOrder + 1) * 1000;
-          const leagueName = order.round; // round_nameをそのまま使用
-          teamOrderMap.set(String(team2TournamentTeamId), { order: roundBase + order.position, leagueName });
-        }
+      if (team2TournamentTeamId && team2Source && sourceOrderMap.has(team2Source)) {
+        const order = sourceOrderMap.get(team2Source)!;
+        // ラウンド別 + 位置別の順序（出現順序に基づく汎用的な計算）
+        const roundOrder = roundOrderMap.get(order.round) || 0;
+        const roundBase = (roundOrder + 1) * 1000;
+        const leagueName = order.round; // round_nameをそのまま使用
+        teamOrderMap.set(String(team2TournamentTeamId), { order: roundBase + order.position, leagueName });
       }
     }
 

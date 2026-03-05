@@ -6,6 +6,7 @@ import ManualRankingsEditor from "@/components/features/tournament/ManualRanking
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { buildPhaseFormatMap } from "@/lib/tournament-phases";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -36,8 +37,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         t.status,
         v.venue_name,
         tf.format_name,
-        tf.preliminary_format_type,
-        tf.final_format_type
+        t.phases
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
@@ -57,14 +57,14 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     status: tournamentResult.rows[0].status as string,
     venue_name: tournamentResult.rows[0].venue_name as string,
     format_name: tournamentResult.rows[0].format_name as string,
-    preliminary_format_type: tournamentResult.rows[0].preliminary_format_type as string,
-    final_format_type: tournamentResult.rows[0].final_format_type as string
+    phases: tournamentResult.rows[0].phases as string | null
   };
 
   // ブロック情報と順位表を取得
-  // トーナメント形式：統合ブロック（block_name = 'preliminary_unified' or 'final_unified'）
-  // リーグ形式：個別ブロック（block_name != '*_unified'）
-  const blocksResult = await db.execute({
+  // phasesのformat_typeに応じてフィルタリング
+  const manualPhaseFormatMap = buildPhaseFormatMap(tournament.phases);
+
+  const allBlocksResult = await db.execute({
     sql: `
       SELECT
         mb.match_block_id,
@@ -76,19 +76,21 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         mb.remarks
       FROM t_match_blocks mb
       WHERE mb.tournament_id = ?
-        AND (
-          (mb.phase = 'preliminary' AND ? = 'tournament' AND mb.block_name = 'preliminary_unified')
-          OR (mb.phase = 'preliminary' AND ? = 'league' AND mb.block_name != 'preliminary_unified')
-          OR (mb.phase = 'final' AND ? = 'tournament' AND mb.block_name = 'final_unified')
-          OR (mb.phase = 'final' AND ? = 'league' AND mb.block_name != 'final_unified')
-        )
-      ORDER BY
-        CASE mb.phase WHEN 'preliminary' THEN 1 WHEN 'final' THEN 2 ELSE 3 END,
-        mb.block_order,
-        mb.match_block_id
+      ORDER BY mb.block_order, mb.match_block_id
     `,
-    args: [tournamentId, tournament.preliminary_format_type, tournament.preliminary_format_type, tournament.final_format_type, tournament.final_format_type]
+    args: [tournamentId]
   });
+
+  // format_typeに応じてブロックをフィルタリング
+  const filteredBlocks = allBlocksResult.rows.filter(block => {
+    const blockPhase = block.phase as string;
+    const blockName = block.block_name as string;
+    const formatType = manualPhaseFormatMap.get(blockPhase);
+    if (formatType === 'tournament') return blockName.endsWith('_unified');
+    if (formatType === 'league') return !blockName.endsWith('_unified');
+    return true;
+  });
+  const blocksResult = { rows: filteredBlocks };
 
   const blocks = blocksResult.rows.map(row => ({
     match_block_id: row.match_block_id as number,
@@ -99,98 +101,127 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     remarks: row.remarks as string | null
   }));
 
-  // 決勝トーナメントの試合情報を取得
-  const finalTournamentResult = await db.execute({
-    sql: `
-      SELECT
-        ml.match_id,
-        ml.match_code,
-        ml.team1_tournament_team_id,
-        ml.team2_tournament_team_id,
-        COALESCE(tt1.team_name, ml.team1_display_name) as team1_display_name,
-        COALESCE(tt2.team_name, ml.team2_display_name) as team2_display_name,
-        mf.team1_scores,
-        mf.team2_scores,
-        mf.winner_tournament_team_id,
-        mf.is_draw,
-        mf.is_walkover,
-        CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
-        ml.match_status,
-        ml.start_time,
-        ml.court_number
-      FROM t_matches_live ml
-      LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-      LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
-      LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      WHERE mb.tournament_id = ?
-        AND mb.phase = 'final'
-      ORDER BY ml.match_number, ml.match_code
-    `,
-    args: [tournamentId]
-  });
+  // トーナメント形式のフェーズIDを動的に取得
+  const tournamentPhaseIds = Array.from(manualPhaseFormatMap.entries())
+    .filter(([, formatType]) => formatType === 'tournament')
+    .map(([phaseId]) => phaseId);
 
-  const finalMatches = finalTournamentResult.rows.map(row => ({
-    match_id: row.match_id as number,
-    match_code: row.match_code as string,
-    team1_tournament_team_id: row.team1_tournament_team_id as number | null,
-    team2_tournament_team_id: row.team2_tournament_team_id as number | null,
-    team1_display_name: row.team1_display_name as string,
-    team2_display_name: row.team2_display_name as string,
-    team1_scores: row.team1_scores as number | null,
-    team2_scores: row.team2_scores as number | null,
-    winner_tournament_team_id: row.winner_tournament_team_id as number | null,
-    is_draw: Boolean(row.is_draw),
-    is_walkover: Boolean(row.is_walkover),
-    is_confirmed: Boolean(row.is_confirmed),
-    match_status: row.match_status as string,
-    start_time: row.start_time as string | null,
-    court_number: row.court_number as number | null
-  }));
+  // トーナメント形式フェーズの試合情報を取得
+  let finalMatches: Array<{
+    match_id: number;
+    match_code: string;
+    team1_tournament_team_id: number | null;
+    team2_tournament_team_id: number | null;
+    team1_display_name: string;
+    team2_display_name: string;
+    team1_scores: number | null;
+    team2_scores: number | null;
+    winner_tournament_team_id: number | null;
+    is_draw: boolean;
+    is_walkover: boolean;
+    is_confirmed: boolean;
+    match_status: string;
+    start_time: string | null;
+    court_number: number | null;
+  }> = [];
 
-  // 決勝トーナメントの順位データを取得
-  const finalBlockResult = await db.execute({
-    sql: `
-      SELECT 
-        match_block_id,
-        team_rankings,
-        remarks
-      FROM t_match_blocks 
-      WHERE tournament_id = ? 
-      AND phase = 'final'
-      LIMIT 1
-    `,
-    args: [tournamentId]
-  });
+  if (tournamentPhaseIds.length > 0) {
+    const placeholders = tournamentPhaseIds.map(() => '?').join(', ');
+    const finalTournamentResult = await db.execute({
+      sql: `
+        SELECT
+          ml.match_id,
+          ml.match_code,
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id,
+          COALESCE(tt1.team_name, ml.team1_display_name) as team1_display_name,
+          COALESCE(tt2.team_name, ml.team2_display_name) as team2_display_name,
+          mf.team1_scores,
+          mf.team2_scores,
+          mf.winner_tournament_team_id,
+          mf.is_draw,
+          mf.is_walkover,
+          CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
+          ml.match_status,
+          ml.start_time,
+          ml.court_number
+        FROM t_matches_live ml
+        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+        LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
+        WHERE mb.tournament_id = ?
+          AND mb.phase IN (${placeholders})
+        ORDER BY ml.match_number, ml.match_code
+      `,
+      args: [tournamentId, ...tournamentPhaseIds]
+    });
 
-  let finalRankings = null;
-  if (finalBlockResult.rows.length > 0) {
-    const finalBlock = finalBlockResult.rows[0];
-    finalRankings = {
-      match_block_id: finalBlock.match_block_id as number,
-      team_rankings: finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [],
-      remarks: finalBlock.remarks as string | null
-    };
-
-    console.log(`[MANUAL_RANKINGS_PAGE] 決勝トーナメント順位取得: ${finalRankings.team_rankings.length}チーム`);
+    finalMatches = finalTournamentResult.rows.map(row => ({
+      match_id: row.match_id as number,
+      match_code: row.match_code as string,
+      team1_tournament_team_id: row.team1_tournament_team_id as number | null,
+      team2_tournament_team_id: row.team2_tournament_team_id as number | null,
+      team1_display_name: row.team1_display_name as string,
+      team2_display_name: row.team2_display_name as string,
+      team1_scores: row.team1_scores as number | null,
+      team2_scores: row.team2_scores as number | null,
+      winner_tournament_team_id: row.winner_tournament_team_id as number | null,
+      is_draw: Boolean(row.is_draw),
+      is_walkover: Boolean(row.is_walkover),
+      is_confirmed: Boolean(row.is_confirmed),
+      match_status: row.match_status as string,
+      start_time: row.start_time as string | null,
+      court_number: row.court_number as number | null
+    }));
   }
 
-  // 決勝進出条件を取得（team1_source, team2_sourceから必要な順位を判定）
-  // テンプレートとオーバーライドの両方を考慮
+  // トーナメント形式フェーズの順位データを取得（_unifiedブロックから）
+  let finalRankings = null;
+  if (tournamentPhaseIds.length > 0) {
+    const placeholders = tournamentPhaseIds.map(() => '?').join(', ');
+    const finalBlockResult = await db.execute({
+      sql: `
+        SELECT
+          match_block_id,
+          team_rankings,
+          remarks
+        FROM t_match_blocks
+        WHERE tournament_id = ?
+          AND phase IN (${placeholders})
+          AND block_name LIKE '%_unified'
+        LIMIT 1
+      `,
+      args: [tournamentId, ...tournamentPhaseIds]
+    });
+
+    if (finalBlockResult.rows.length > 0) {
+      const finalBlock = finalBlockResult.rows[0];
+      finalRankings = {
+        match_block_id: finalBlock.match_block_id as number,
+        team_rankings: finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [],
+        remarks: finalBlock.remarks as string | null
+      };
+    }
+  }
+
+  // 進出条件を取得（t_matches_liveのteam1_source/team2_sourceから判定）
+  // オーバーライドも考慮
   const promotionRequirementsResult = await db.execute({
     sql: `
       SELECT DISTINCT
-        COALESCE(tmo.team1_source_override, mt.team1_source) as team1_source,
-        COALESCE(tmo.team2_source_override, mt.team2_source) as team2_source
-      FROM m_match_templates mt
+        COALESCE(tmo.team1_source_override, ml.team1_source) as team1_source,
+        COALESCE(tmo.team2_source_override, ml.team2_source) as team2_source
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_match_overrides tmo
-        ON mt.match_code = tmo.match_code
+        ON ml.match_code = tmo.match_code
         AND tmo.tournament_id = ?
-      WHERE mt.format_id = ?
-        AND mt.phase = 'final'
-        AND (mt.team1_source IS NOT NULL OR mt.team2_source IS NOT NULL)
+      WHERE mb.tournament_id = ?
+        AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
+        AND (ml.team1_source LIKE '%_%' OR ml.team2_source LIKE '%_%')
     `,
-    args: [tournamentId, tournament.format_id]
+    args: [tournamentId, tournamentId]
   });
 
   const promotionRequirements = promotionRequirementsResult.rows.flatMap(row => {
@@ -225,8 +256,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         <ManualRankingsEditor
           tournamentId={tournamentId}
           blocks={blocks}
-          preliminaryFormatType={tournament.preliminary_format_type}
-          finalFormatType={tournament.final_format_type}
+          phases={tournament.phases}
           finalMatches={finalMatches}
           finalRankings={finalRankings}
           promotionRequirements={promotionRequirements}

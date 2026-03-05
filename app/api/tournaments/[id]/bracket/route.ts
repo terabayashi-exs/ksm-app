@@ -22,8 +22,8 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const phase = searchParams.get('phase') || 'final';
 
-    // phaseのバリデーション
-    if (phase !== 'preliminary' && phase !== 'final') {
+    // phaseのバリデーション（動的フェーズID対応: 英数字・アンダースコアのみ許可）
+    if (!/^[a-zA-Z0-9_]+$/.test(phase)) {
       return NextResponse.json(
         { success: false, error: 'Invalid phase parameter' },
         { status: 400 }
@@ -34,9 +34,9 @@ export async function GET(
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
 
-    // 大会のformat_idとtarget_team_countを取得
+    // 大会のtarget_team_countを取得
     const tournamentResult = await db.execute(
-      `SELECT t.format_id, f.target_team_count
+      `SELECT f.target_team_count
        FROM t_tournaments t
        JOIN m_tournament_formats f ON t.format_id = f.format_id
        WHERE t.tournament_id = ?`,
@@ -50,7 +50,6 @@ export async function GET(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id as number;
     const targetTeamCount = tournamentResult.rows[0].target_team_count as number;
 
     // まず基本的なクエリでデータを取得（多競技対応データ含む）
@@ -70,7 +69,7 @@ export async function GET(
         ml.period_count as live_period_count,
         mf.winner_tournament_team_id,
         COALESCE(mf.is_draw, 0) as is_draw,
-        COALESCE(mf.is_walkover, mt.is_bye_match, 0) as is_walkover,
+        COALESCE(mf.is_walkover, ml.is_bye_match, 0) as is_walkover,
         ml.match_status,
         CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed,
         ml.match_number as execution_priority,
@@ -79,17 +78,16 @@ export async function GET(
         mb.match_type,
         mb.block_name,
         mb.display_round_name,
-        mt.position_note,
-        mt.team1_source,
-        mt.team2_source,
-        mt.is_bye_match
+        ml.position_note,
+        ml.team1_source,
+        ml.team2_source,
+        ml.is_bye_match
       FROM t_matches_live ml
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_rules tr ON mb.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
         AND mb.phase = ?
       ORDER BY ml.match_number, ml.match_code
@@ -97,7 +95,7 @@ export async function GET(
 
     // execution_groupは現在のスキーマでは利用不可
 
-    const matches = await db.execute(query, [formatId, tournamentId, phase]);
+    const matches = await db.execute(query, [tournamentId, phase]);
 
     // トーナメント試合が存在しない場合は404を返す
     if (!matches.rows || matches.rows.length === 0) {
