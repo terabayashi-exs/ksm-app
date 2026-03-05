@@ -24,20 +24,15 @@ const getDbClient = (): Client => {
     console.warn('Environment variables not found, using fallback configuration');
     url = FALLBACK_CONFIG.url;
     authToken = FALLBACK_CONFIG.authToken;
-  } else {
-    console.log('Using environment variables for database connection');
   }
 
-  console.log('Database client initializing:', { 
-    url: url.substring(0, 30) + '...', 
-    hasToken: !!authToken,
-    source: process.env.DATABASE_URL ? 'env' : 'fallback',
-    NODE_ENV: process.env.NODE_ENV
-  });
-
   try {
+    console.log('Database client initializing:', {
+      url: url!.substring(0, 30) + '...',
+    });
+
     dbInstance = createClient({
-      url,
+      url: url!,
       authToken,
     });
 
@@ -48,9 +43,9 @@ const getDbClient = (): Client => {
   }
 };
 
-// エクスポート用のProxy
+// エクスポート用のProxy（遅延初期化を提供）
 export const db = new Proxy({} as Client, {
-  get(target, prop) {
+  get(_target, prop) {
     const client = getDbClient();
     const value = client[prop as keyof Client];
     if (typeof value === 'function') {

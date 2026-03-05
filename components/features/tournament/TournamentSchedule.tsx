@@ -13,8 +13,6 @@ interface MatchData {
   tournament_date: string;
   match_number: number;
   match_code: string;
-  team1_id: string | null;
-  team2_id: string | null;
   team1_tournament_team_id?: number | null;
   team2_tournament_team_id?: number | null;
   team1_display_name: string;
@@ -31,7 +29,6 @@ interface MatchData {
   team2_goals: number | null;
   team1_pk_goals?: number | null; // PK戦スコア（追加）
   team2_pk_goals?: number | null; // PK戦スコア（追加）
-  winner_team_id: string | null;
   winner_tournament_team_id?: number | null;
   is_draw: boolean;
   is_walkover: boolean;
@@ -45,15 +42,18 @@ interface MatchData {
 
 interface TournamentScheduleProps {
   tournamentId: number;
+  initialMatches?: MatchData[];
 }
 
-export default function TournamentSchedule({ tournamentId }: TournamentScheduleProps) {
-  const [matches, setMatches] = useState<MatchData[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function TournamentSchedule({ tournamentId, initialMatches }: TournamentScheduleProps) {
+  const [matches, setMatches] = useState<MatchData[]>(initialMatches || []);
+  const [loading, setLoading] = useState(!initialMatches);
   const [error, setError] = useState<string | null>(null);
 
-  // 試合データの取得
+  // 試合データの取得（initialMatchesが提供されていない場合のみ）
   useEffect(() => {
+    if (initialMatches) return;
+
     const fetchMatches = async () => {
       setLoading(true);
       setError(null);
@@ -83,7 +83,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     };
 
     fetchMatches();
-  }, [tournamentId]);
+  }, [tournamentId, initialMatches]);
 
 
   // ブロック分類関数（フェーズIDに依存しない動的判定）
@@ -195,9 +195,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
       }
       // 通常の不戦勝（片方チーム不参加）
       // 勝者を判定してwinnerプロパティを追加
-      const winnerIsTeam1 = match.winner_tournament_team_id
-        ? match.winner_tournament_team_id === match.team1_tournament_team_id
-        : match.winner_team_id === match.team1_id;
+      const winnerIsTeam1 = match.winner_tournament_team_id === match.team1_tournament_team_id;
 
       return {
         status: 'walkover',
@@ -232,10 +230,7 @@ export default function TournamentSchedule({ tournamentId }: TournamentScheduleP
     }
 
     // 勝敗がついている場合
-    // tournament_team_idが利用可能な場合はそちらを優先、なければteam_idで比較
-    const winnerIsTeam1 = match.winner_tournament_team_id
-      ? match.winner_tournament_team_id === match.team1_tournament_team_id
-      : match.winner_team_id === match.team1_id;
+    const winnerIsTeam1 = match.winner_tournament_team_id === match.team1_tournament_team_id;
     return {
       status: 'completed',
       display: (

@@ -8,12 +8,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2, Trophy, Download } from 'lucide-react';
+import type { BracketMatch, SportScoreConfig } from '@/lib/tournament-bracket';
 
 interface TournamentPhaseViewProps {
   tournamentId: number;
   phase: string; // フェーズID（例：'preliminary', 'final'）
   phaseName: string; // 表示用の名称（例：「予選」「決勝トーナメント」）
   formatType?: 'league' | 'tournament'; // 形式タイプ（phases JSONから直接渡す）
+  initialBracketMatches?: BracketMatch[];
+  initialBracketSportConfig?: SportScoreConfig;
 }
 
 /**
@@ -25,7 +28,9 @@ export default function TournamentPhaseView({
   tournamentId,
   phase,
   phaseName,
-  formatType: formatTypeProp
+  formatType: formatTypeProp,
+  initialBracketMatches,
+  initialBracketSportConfig,
 }: TournamentPhaseViewProps) {
   const [matchType, setMatchType] = useState<'league' | 'tournament' | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,7 +157,12 @@ export default function TournamentPhaseView({
           </div>
         </div>
 
-        <TournamentBracket tournamentId={tournamentId} phase={phase} />
+        <TournamentBracket
+          tournamentId={tournamentId}
+          phase={phase}
+          initialMatches={initialBracketMatches}
+          initialSportConfig={initialBracketSportConfig}
+        />
 
         {/* 操作ガイドと注意事項 */}
         <div className="grid md:grid-cols-2 gap-6 mt-8 no-print">

@@ -23,10 +23,15 @@ export async function GET(
     // 多競技対応戦績表データを取得
     const results = await getTournamentResults(tournamentId);
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       data: results,
       message: '拡張戦績表を正常に取得しました'
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
     });
 
   } catch (error) {

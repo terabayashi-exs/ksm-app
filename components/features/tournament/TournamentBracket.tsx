@@ -19,6 +19,11 @@ import type {
   PatternConfig,
 } from "@/lib/tournament-bracket";
 
+interface TournamentBracketProps extends BracketProps {
+  initialMatches?: BracketMatch[];
+  initialSportConfig?: SportScoreConfig;
+}
+
 /**
  * トーナメントブラケット表示コンポーネント
  *
@@ -27,13 +32,17 @@ import type {
 export default function TournamentBracket({
   tournamentId,
   phase = "final",
-}: BracketProps) {
-  const [matches, setMatches] = useState<BracketMatch[]>([]);
-  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  initialMatches,
+  initialSportConfig,
+}: TournamentBracketProps) {
+  const [matches, setMatches] = useState<BracketMatch[]>(initialMatches || []);
+  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(initialSportConfig || null);
+  const [loading, setLoading] = useState(!initialMatches);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialMatches) return;
+
     const fetchMatches = async () => {
       try {
         setLoading(true);
@@ -67,7 +76,7 @@ const response = await fetch(
     };
 
     fetchMatches();
-  }, [tournamentId, phase]);
+  }, [tournamentId, phase, initialMatches]);
 
   if (loading) {
     return (

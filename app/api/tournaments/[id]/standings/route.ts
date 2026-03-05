@@ -49,12 +49,17 @@ export async function GET(
     const totalTeams = totalTeamsResult.rows[0]?.total_teams as number || 0;
     const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       data: standings,
       total_matches: totalMatches,
       total_teams: totalTeams,
       message: '順位表を正常に取得しました'
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
     });
 
   } catch (error) {

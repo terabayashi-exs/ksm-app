@@ -161,9 +161,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       };
     });
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       data: formattedMatches
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20',
+      },
     });
 
   } catch (error) {

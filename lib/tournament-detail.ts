@@ -1,7 +1,9 @@
 // lib/tournament-detail.ts
 import { db } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import { Tournament } from '@/lib/types';
 import type { TournamentStatus } from '@/lib/tournament-status';
+import type { ExtendedUser } from '@/lib/auth';
 
 /**
  * アーカイブされた大会の詳細情報を取得する
@@ -240,19 +242,43 @@ export async function getTournamentWithGroupInfo(tournamentId: number) {
     // 同じグループに所属する他の部門を取得
     let sibling_divisions: Array<{ tournament_id: number; tournament_name: string }> = [];
     if (group) {
-      const divisionsResult = await db.execute(`
-        SELECT
-          t.tournament_id,
-          t.tournament_name,
-          t.visibility,
-          t.public_start_date
-        FROM t_tournaments t
-        WHERE t.group_id = ?
-          AND t.tournament_id != ?
-          AND t.visibility = 'open'
-          AND t.public_start_date <= date('now')
-        ORDER BY t.created_at ASC
-      `, [group.group_id, tournamentId]);
+      const session = await auth();
+      const user = session?.user as ExtendedUser | undefined;
+      const isAdmin = user?.roles?.includes('admin');
+      const isOperator = user?.roles?.includes('operator');
+
+      let divisionsResult;
+      if (isAdmin) {
+        // 管理者: すべての部門を表示
+        divisionsResult = await db.execute(`
+          SELECT t.tournament_id, t.tournament_name
+          FROM t_tournaments t
+          WHERE t.group_id = ?
+            AND t.tournament_id != ?
+          ORDER BY t.created_at ASC
+        `, [group.group_id, tournamentId]);
+      } else if (isOperator && user?.accessibleTournaments?.length) {
+        // 運営者: 割り当てられた部門 + 公開部門を表示
+        const placeholders = user.accessibleTournaments.map(() => '?').join(',');
+        divisionsResult = await db.execute(`
+          SELECT t.tournament_id, t.tournament_name
+          FROM t_tournaments t
+          WHERE t.group_id = ?
+            AND t.tournament_id != ?
+            AND (t.visibility = 'open' OR t.tournament_id IN (${placeholders}))
+          ORDER BY t.created_at ASC
+        `, [group.group_id, tournamentId, ...user.accessibleTournaments]);
+      } else {
+        // 一般ユーザー・未ログイン: 公開部門のみ
+        divisionsResult = await db.execute(`
+          SELECT t.tournament_id, t.tournament_name
+          FROM t_tournaments t
+          WHERE t.group_id = ?
+            AND t.tournament_id != ?
+            AND t.visibility = 'open'
+          ORDER BY t.created_at ASC
+        `, [group.group_id, tournamentId]);
+      }
 
       sibling_divisions = divisionsResult.rows.map(row => ({
         tournament_id: Number(row.tournament_id),

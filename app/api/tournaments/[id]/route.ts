@@ -92,9 +92,14 @@ export async function GET(
       phases: row.phases ? (typeof row.phases === 'string' ? JSON.parse(row.phases as string) : row.phases) : undefined
     };
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       data: tournament
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
     });
 
   } catch (error) {

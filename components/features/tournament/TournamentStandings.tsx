@@ -57,25 +57,46 @@ interface BlockStanding {
   remarks?: string | null;
 }
 
-interface TournamentStandingsProps {
-  tournamentId: number;
+interface StandingsInitialData {
+  standings: BlockStanding[];
+  totalMatches: number;
+  totalTeams: number;
+  phaseFormatMap: Record<string, string>;
+  phaseNameMap: Record<string, string>;
 }
 
-export default function TournamentStandings({ tournamentId }: TournamentStandingsProps) {
+interface TournamentStandingsProps {
+  tournamentId: number;
+  initialData?: StandingsInitialData;
+}
+
+export default function TournamentStandings({ tournamentId, initialData }: TournamentStandingsProps) {
   const { data: session } = useSession();
-  const [standings, setStandings] = useState<BlockStanding[]>([]);
-  const [totalMatches, setTotalMatches] = useState<number>(0);
-  const [totalTeams, setTotalTeams] = useState<number>(0);
-  const [sportConfig, setSportConfig] = useState<SportConfig | null>(null);
-  const [phaseFormatMap, setPhaseFormatMap] = useState<Map<string, string>>(new Map());
-  const [phaseNameMap, setPhaseNameMap] = useState<Map<string, string>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const [standings, setStandings] = useState<BlockStanding[]>(initialData?.standings || []);
+  const [totalMatches, setTotalMatches] = useState<number>(initialData?.totalMatches || 0);
+  const [totalTeams, setTotalTeams] = useState<number>(initialData?.totalTeams || 0);
+  const [sportConfig, setSportConfig] = useState<SportConfig | null>(initialData ? {
+    sport_code: 'pk_championship',
+    score_label: '得点',
+    score_against_label: '失点',
+    difference_label: '得失点差',
+    supports_pk: false
+  } : null);
+  const [phaseFormatMap, setPhaseFormatMap] = useState<Map<string, string>>(
+    initialData ? new Map(Object.entries(initialData.phaseFormatMap)) : new Map()
+  );
+  const [phaseNameMap, setPhaseNameMap] = useState<Map<string, string>>(
+    initialData ? new Map(Object.entries(initialData.phaseNameMap)) : new Map()
+  );
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
   const [recalculateMessage, setRecalculateMessage] = useState<string | null>(null);
 
-  // 順位表データの取得
+  // 順位表データの取得（initialDataが提供されていない場合のみ）
   useEffect(() => {
+    if (initialData) return;
+
     const fetchStandings = async () => {
       setLoading(true);
       setError(null);
@@ -148,7 +169,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     };
 
     fetchStandings();
-  }, [tournamentId]);
+  }, [tournamentId, initialData]);
 
   // 順位表の再計算
   const handleRecalculate = async () => {
