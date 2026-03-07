@@ -233,3 +233,4 @@ export const tSponsorBannersRelations = relations(tSponsorBanners, ({one}) => ({
 		references: [tTournaments.tournamentId]
 	}),
 }));
+

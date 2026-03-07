@@ -16,6 +16,33 @@
 
 ---
 
+## 0018: venue_nameをt_matches_liveに追加 - リーグ戦の試合別会場対応（2026-03-06）
+
+### 基本情報
+- **日付**: 2026年3月6日
+- **環境**: dev
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0018_add_venue_name_to_matches.sql`
+
+### 変更内容
+- `t_matches_live` に `venue_name` (TEXT, NULLable) カラムを追加
+- リーグ戦では試合ごとに会場が異なるため、試合単位で会場名を保持する
+
+### 影響を受けたファイル
+- `src/db/schema.ts` - tMatchesLive に venueName 追加
+- `drizzle/0018_add_venue_name_to_matches.sql` - 新規
+- `drizzle/meta/_journal.json` - エントリ追加
+- `app/api/tournaments/[id]/matchday-settings/route.ts` - GET/PUT で venue_name 対応
+- `components/features/tournament/MatchdaySettingsForm.tsx` - 会場選択UI追加
+
+### 実行コマンド
+```bash
+npm run db:migrate
+```
+
+---
+
 ## 0017: format_nameをt_tournamentsに追加 - マスターテーブルJOIN削減（2026-03-05）
 
 ### 基本情報

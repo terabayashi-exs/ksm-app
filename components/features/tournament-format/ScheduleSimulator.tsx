@@ -171,22 +171,10 @@ function buildFixedCourtSchedule(
 ): Array<Array<[string, string] | null>> {
   const schedule: Array<Array<[string, string] | null>> = [];
 
-  // ブロックをコートに割り当て
-  const pairs: Array<string[]> = [];
-  for (let i = 0; i < blocks.length; i += 2) {
-    if (i + 1 < blocks.length) {
-      pairs.push([blocks[i].label, blocks[i + 1].label]);
-    } else {
-      pairs.push([blocks[i].label]);
-    }
-  }
-
+  // ブロックをコートに均等に割り当て（ブロック単位でラウンドロビン）
   const courtAssignments: Record<string, number> = {};
-  for (let i = 0; i < pairs.length; i++) {
-    const court = i % courtCount;
-    for (const blockLabel of pairs[i]) {
-      courtAssignments[blockLabel] = court;
-    }
+  for (let i = 0; i < blocks.length; i++) {
+    courtAssignments[blocks[i].label] = i % courtCount;
   }
 
   // 試合を配置

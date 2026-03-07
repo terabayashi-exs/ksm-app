@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Image as ImageIcon } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Image as ImageIcon, Calendar } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
@@ -649,12 +649,21 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     公開画面を見る
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
-                    <FileEdit className="w-4 h-4 mr-1" />
-                    部門編集
-                  </Link>
-                </Button>
+                {tournament.has_matchdays ? (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/edit-league`}>
+                      <FileEdit className="w-4 h-4 mr-1" />
+                      部門編集
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                      <FileEdit className="w-4 h-4 mr-1" />
+                      部門編集
+                    </Link>
+                  </Button>
+                )}
                 {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') ? (
                   <Button
                     size="sm"
@@ -674,6 +683,14 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
                     <Lock className="w-4 h-4 mr-1" />
                     フォーマット変更
+                  </Button>
+                )}
+                {tournament.has_matchdays && (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
+                      <Calendar className="w-4 h-4 mr-1" />
+                      節設定
+                    </Link>
                   </Button>
                 )}
               </div>

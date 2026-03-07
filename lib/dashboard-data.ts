@@ -223,7 +223,8 @@ const TOURNAMENT_SELECT_FIELDS = `
   (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'waitlisted' AND tt.withdrawal_status = 'active') as waitlisted_count,
   (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.withdrawal_status = 'active') as applied_count,
   (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.withdrawal_status = 'withdrawal_requested') as withdrawal_requested_count,
-  (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'cancelled') as cancelled_count
+  (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'cancelled') as cancelled_count,
+  (SELECT COUNT(*) FROM t_matches_live ml2 JOIN t_match_blocks mb2 ON ml2.match_block_id = mb2.match_block_id WHERE mb2.tournament_id = t.tournament_id AND ml2.matchday IS NOT NULL LIMIT 1) as has_matchdays_flag
 `;
 
 const TOURNAMENT_JOINS = `
@@ -507,6 +508,7 @@ export async function fetchOperatorDashboardData(loginUserId: number): Promise<T
       applied_count: Number(row.applied_count) || 0,
       withdrawal_requested_count: Number(row.withdrawal_requested_count) || 0,
       cancelled_count: Number(row.cancelled_count) || 0,
+      has_matchdays: Number(row.has_matchdays_flag) > 0,
       operator_permissions: permissionsMap.get(tid) || null,
     } as Tournament;
   }));
@@ -680,6 +682,7 @@ export async function fetchDashboardData(sessionId: string, isAdmin: boolean): P
       applied_count: Number(row.applied_count) || 0,
       withdrawal_requested_count: Number(row.withdrawal_requested_count) || 0,
       cancelled_count: Number(row.cancelled_count) || 0,
+      has_matchdays: Number(row.has_matchdays_flag) > 0,
     } as Tournament;
   }));
 

@@ -37,6 +37,8 @@ interface TournamentFormatEditFormProps {
     sport_type_id: number;
     target_team_count: number;
     format_description?: string;
+    default_match_duration?: number | null;
+    default_break_duration?: number | null;
     preliminary_format_type?: string | null;
     final_format_type?: string | null;
     phases?: TournamentPhases;
@@ -111,6 +113,8 @@ interface TournamentFormatFormData {
   sport_type_id: number;
   target_team_count: number;
   format_description: string;
+  default_match_duration: number | null;
+  default_break_duration: number | null;
   preliminary_format_type: string | null;
   final_format_type: string | null;
   phases?: TournamentPhases;
@@ -174,6 +178,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       sport_type_id: format.sport_type_id || 1,
       target_team_count: Number(format.target_team_count) || 8,
       format_description: format.format_description || "",
+      default_match_duration: format.default_match_duration ?? null,
+      default_break_duration: format.default_break_duration ?? null,
       preliminary_format_type: format.preliminary_format_type || null,
       final_format_type: format.final_format_type || null,
       templates: templates.map(t => ({
@@ -550,6 +556,33 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 placeholder="このフォーマットの詳細や特徴を記載してください"
                 rows={3}
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="default_match_duration">デフォルト試合時間(分)</Label>
+                <Input
+                  id="default_match_duration"
+                  type="number"
+                  {...register("default_match_duration", { valueAsNumber: true, setValueAs: (v: string) => v === '' ? null : Number(v) })}
+                  min={1}
+                  max={120}
+                  placeholder="未設定"
+                />
+                <p className="text-xs text-muted-foreground">部門作成時に自動入力される試合時間</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="default_break_duration">デフォルト休憩時間(分)</Label>
+                <Input
+                  id="default_break_duration"
+                  type="number"
+                  {...register("default_break_duration", { valueAsNumber: true, setValueAs: (v: string) => v === '' ? null : Number(v) })}
+                  min={0}
+                  max={30}
+                  placeholder="未設定"
+                />
+                <p className="text-xs text-muted-foreground">部門作成時に自動入力される休憩時間</p>
+              </div>
             </div>
 
             {/* 試合形式選択 */}

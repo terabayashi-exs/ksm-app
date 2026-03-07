@@ -41,6 +41,8 @@ export async function GET(
         mt.court_number,
         mt.suggested_start_time,
         mt.is_bye_match,
+        mt.matchday,
+        mt.cycle,
         mt.created_at,
         st.sport_code
       FROM m_match_templates mt
@@ -71,6 +73,8 @@ export async function GET(
       suggested_start_time: row.suggested_start_time ? String(row.suggested_start_time) : undefined,
       period_count: undefined, // スキーマに存在しないため undefined に設定
       is_bye_match: Number(row.is_bye_match || 0),
+      matchday: row.matchday ? Number(row.matchday) : undefined,
+      cycle: row.cycle ? Number(row.cycle) : undefined,
       created_at: String(row.created_at)
     })) as MatchTemplate[];
 
@@ -145,7 +149,21 @@ export async function GET(
           maxDayNumber,
           requiredDays: maxDayNumber - minDayNumber + 1,
           phases: [...new Set(templates.map(t => t.phase))],
-          matchTypes: [...new Set(templates.map(t => t.match_type))]
+          matchTypes: [...new Set(templates.map(t => t.match_type))],
+          hasMatchdays: templates.some(t => t.matchday != null),
+          maxMatchday: templates.reduce((max, t) => Math.max(max, t.matchday || 0), 0),
+          matchesByMatchday: (() => {
+            const byMatchday: Record<number, number> = {};
+            templates.forEach(t => {
+              if (t.matchday != null) {
+                byMatchday[t.matchday] = (byMatchday[t.matchday] || 0) + 1;
+              }
+            });
+            return Object.entries(byMatchday).map(([matchday, matchCount]) => ({
+              matchday: Number(matchday),
+              matchCount
+            }));
+          })()
         }
       }
     });

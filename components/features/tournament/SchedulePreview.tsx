@@ -479,16 +479,22 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         }
 
         // カスタムスケジュールが未設定の場合のみ、実際の試合データで初期化
-        // 既にカスタムスケジュールがある場合は保持する
+        // 既にカスタムスケジュールがある場合は試合時間の変更を反映する
         setCustomSchedule(prev => {
           if (!prev) {
             // Initializing custom schedule with actual match data
-            // First match loaded for edit schedule
             return editSchedule;
           }
-          // Preserving existing custom schedule in edit mode
-          // Using existing custom schedule data
-          return prev;
+          // 試合時間が変更された場合、既存スケジュールの終了時刻を再計算
+          const updated = JSON.parse(JSON.stringify(prev));
+          for (const day of updated.days) {
+            for (const match of day.matches) {
+              if (match.startTime && match.startTime !== '--:--') {
+                match.endTime = minutesToTime(timeToMinutes(match.startTime) + settings.matchDurationMinutes);
+              }
+            }
+          }
+          return updated;
         });
 
         // ここではonScheduleChangeを呼び出さない（別のuseEffectで処理）
@@ -651,7 +657,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     if (!displaySchedule) return;
 
     // ブロック表示名から実際のブロック名を抽出 (例: "Aブロック" → "A")
-    const blockNameMatch = blockDisplayName.match(/^([A-Z])ブロック$/);
+    const blockNameMatch = blockDisplayName.match(/([A-Z])ブロック$/);
     const actualBlockName = blockNameMatch ? blockNameMatch[1] : blockDisplayName;
 
     // 利用可能コートのチェック
@@ -670,7 +676,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     
     const conflictBlock = otherBlockAssignments.find(([, court]) => court === newCourtNumber);
     if (conflictBlock) {
-      if (!confirm(`コート${newCourtNumber}は既に予選${conflictBlock[0]}ブロックで使用されています。変更を続行しますか？`)) {
+      if (!confirm(`コート${newCourtNumber}は既に${conflictBlock[0]}ブロックで使用されています。変更を続行しますか？`)) {
         return;
       }
     }
@@ -911,13 +917,13 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
   // ブロック分類関数（フェーズIDに依存しない動的判定）
   const getBlockKey = (template: MatchTemplate): string => {
+    // round_nameがあればそれを使用（予選Aブロック、決勝Aブロック、1位リーグ等）
+    if (template.round_name) {
+      return template.round_name;
+    }
     // 1文字のブロック名（A, B, C...）は「Xブロック」形式
     if (template.block_name && template.block_name.length === 1) {
       return `${template.block_name}ブロック`;
-    }
-    // round_nameがあればそれを使用（1位リーグ等）
-    if (template.round_name) {
-      return template.round_name;
     }
     // block_nameがあればそのまま
     if (template.block_name && template.block_name !== 'default') {
@@ -949,7 +955,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     'bg-red-100 text-red-800',
   ];
   const getBlockColor = (blockKey: string): string => {
-    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    const blockMatch = blockKey.match(/([A-Z])ブロック$/);
     if (blockMatch) {
       const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
       return previewBlockColors[index % previewBlockColors.length];
@@ -1180,8 +1186,8 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               Object.entries(matchesByBlock)
                 .sort(([blockKeyA], [blockKeyB]) => {
                   // 「Xブロック」形式のブロック同士はアルファベット順
-                  const matchA = blockKeyA.match(/^([A-Z])ブロック$/);
-                  const matchB = blockKeyB.match(/^([A-Z])ブロック$/);
+                  const matchA = blockKeyA.match(/([A-Z])ブロック$/);
+                  const matchB = blockKeyB.match(/([A-Z])ブロック$/);
                   if (matchA && matchB) {
                     return matchA[1].localeCompare(matchB[1]);
                   }
@@ -1203,7 +1209,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                       </div>
                       
                       {/* ブロック単位コート変更UI（ブロック形式のみ・まとめて変更用） */}
-                      {(/^[A-Z]ブロック$/).test(blockKey) && (
+                      {(/[A-Z]ブロック$/).test(blockKey) && (
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-muted-foreground">ブロック一括設定:</span>
                           {editingBlockCourt === blockKey ? (
@@ -1211,7 +1217,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                               <span className="text-xs">コート</span>
                               <select
                                 value={(() => {
-                                  const bm = blockKey.match(/^([A-Z])ブロック$/);
+                                  const bm = blockKey.match(/([A-Z])ブロック$/);
                                   const actualBlockName = bm ? bm[1] : blockKey;
                                   return blockCourtAssignments[actualBlockName] ?? blockMatches[0]?.courtNumber ?? 1;
                                 })()}
@@ -1247,7 +1253,7 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                               title="このブロックの全試合を同じコートに一括設定"
                             >
                               <span>コート{(() => {
-                                const bm = blockKey.match(/^([A-Z])ブロック$/);
+                                const bm = blockKey.match(/([A-Z])ブロック$/);
                                 const actualBlockName = bm ? bm[1] : blockKey;
                                 return blockCourtAssignments[actualBlockName] ?? blockMatches[0]?.courtNumber ?? 1;
                               })()}</span>

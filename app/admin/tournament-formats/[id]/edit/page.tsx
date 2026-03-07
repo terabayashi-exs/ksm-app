@@ -81,6 +81,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             sport_type_id: Number(format.sport_type_id || 1),
             target_team_count: Number(format.target_team_count),
             format_description: String(format.format_description || ""),
+            default_match_duration: format.default_match_duration ? Number(format.default_match_duration) : null,
+            default_break_duration: format.default_break_duration ? Number(format.default_break_duration) : null,
             preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
             final_format_type: format.final_format_type ? String(format.final_format_type) : null,
             phases: format.phases ? JSON.parse(format.phases as string) : undefined

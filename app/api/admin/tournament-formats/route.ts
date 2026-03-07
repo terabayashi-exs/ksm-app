@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, phases, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, default_match_duration, default_break_duration, preliminary_format_type, final_format_type, phases, templates } = body;
 
     // バリデーション
     if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
 
     // フォーマット作成
     const formatResult = await db.execute(`
-      INSERT INTO m_tournament_formats (format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, phases, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-    `, [format_name, sport_type_id, target_team_count, format_description || "", preliminary_format_type || null, final_format_type || null, phases ? JSON.stringify(phases) : null]);
+      INSERT INTO m_tournament_formats (format_name, sport_type_id, target_team_count, format_description, default_match_duration, default_break_duration, preliminary_format_type, final_format_type, phases, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+    `, [format_name, sport_type_id, target_team_count, format_description || "", default_match_duration ?? null, default_break_duration ?? null, preliminary_format_type || null, final_format_type || null, phases ? JSON.stringify(phases) : null]);
 
     const formatId = Number(formatResult.lastInsertRowid);
 

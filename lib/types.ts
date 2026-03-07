@@ -69,6 +69,8 @@ export interface Tournament {
   applied_count?: number;
   withdrawal_requested_count?: number;
   cancelled_count?: number;
+  // リーグ戦 節設定の有無
+  has_matchdays?: boolean;
   // 運営者権限情報（運営者タブでのみ使用）
   operator_permissions?: {
     canManageCourts?: boolean;

@@ -63,6 +63,7 @@ export const tMatchesFinal = sqliteTable("t_matches_final", {
 	isByeMatch: integer("is_bye_match").default(0),
 	matchday: integer("matchday"),
 	cycle: integer("cycle").default(1),
+	venueName: text("venue_name"),
 },
 (_table) => [
 	index("idx_matches_final_winner_tournament").on(_table.winnerTournamentTeamId),
@@ -146,6 +147,7 @@ export const tMatchesLive = sqliteTable("t_matches_live", {
 	isByeMatch: integer("is_bye_match").default(0),
 	matchday: integer("matchday"),
 	cycle: integer("cycle").default(1),
+	venueName: text("venue_name"),
 },
 (_table) => [
 	index("idx_matches_live_team1_tournament").on(_table.team1TournamentTeamId),
@@ -193,6 +195,8 @@ export const mTournamentFormats = sqliteTable("m_tournament_formats", {
 	// 既存フィールド（後方互換性のため維持）
 	preliminaryFormatType: text("preliminary_format_type"),
 	finalFormatType: text("final_format_type"),
+	defaultMatchDuration: integer("default_match_duration"),
+	defaultBreakDuration: integer("default_break_duration"),
 	// 新規フィールド: 柔軟なフェーズ構成をJSON形式で保存
 	phases: text("phases", { mode: 'json' }).$type<TournamentPhases>(),
 },

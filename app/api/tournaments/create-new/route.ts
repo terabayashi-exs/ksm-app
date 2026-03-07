@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       tournament_dates,
       match_duration_minutes,
       break_duration_minutes,
-      start_time,
+      start_time: start_time_input,
       is_public,
       public_start_date,
       recruitment_start_date,
@@ -344,24 +344,57 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // コート別の終了時刻を管理
-    const courtEndTimes: Record<number, string> = {};
-    for (let i = 1; i <= court_count; i++) {
-      courtEndTimes[i] = start_time;
+    // day_numberごとのデフォルト開始時刻を自動検出
+    const DEFAULT_START_TIME = "09:00";
+    const dayStartTimes: Record<string, string> = {};
+
+    // テンプレートのsuggested_start_timeからday_numberごとの最速時刻を取得
+    for (const template of templatesResult.rows) {
+      const dayKey = template.day_number?.toString() || "1";
+      const suggestedTime = template.suggested_start_time ? String(template.suggested_start_time) : null;
+      if (suggestedTime) {
+        if (!dayStartTimes[dayKey] || suggestedTime < dayStartTimes[dayKey]) {
+          dayStartTimes[dayKey] = suggestedTime;
+        }
+      }
     }
+
+    // フォームからの入力値、またはテンプレートの最速時刻、またはデフォルトの順で決定
+    const getStartTimeForDay = (dayKey: string): string => {
+      if (start_time_input) return start_time_input;
+      return dayStartTimes[dayKey] || DEFAULT_START_TIME;
+    };
+
+    // day_numberごとのコート別終了時刻を管理
+    const courtEndTimesByDay: Record<string, Record<number, string>> = {};
+
+    const getCourtEndTimes = (dayKey: string): Record<number, string> => {
+      if (!courtEndTimesByDay[dayKey]) {
+        const startTime = getStartTimeForDay(dayKey);
+        courtEndTimesByDay[dayKey] = {};
+        for (let i = 1; i <= court_count; i++) {
+          courtEndTimesByDay[dayKey][i] = startTime;
+        }
+      }
+      return courtEndTimesByDay[dayKey];
+    };
 
     // 試合作成
     let matchesCreated = 0;
-    
+
     for (const template of templatesResult.rows) {
       const actualPhase = templatePhaseMapping.get(template.phase as string) || template.phase as string;
       const blockKey = `${actualPhase}::${template.block_name || 'default'}`;
       const matchBlockId = blockMap.get(blockKey);
-      
+
       if (!matchBlockId) {
         console.error(`ブロックID が見つかりません: ${blockKey}`);
         continue;
       }
+
+      const dayKey = template.day_number?.toString() || "1";
+      const courtEndTimes = getCourtEndTimes(dayKey);
+      const dayStartTime = getStartTimeForDay(dayKey);
 
       // 時間とコートの決定ロジック
       let assignedCourt: number;
@@ -372,7 +405,7 @@ export async function POST(request: NextRequest) {
       if (customMatch) {
         assignedCourt = customMatch.court_number;
         assignedStartTime = customMatch.start_time;
-      } 
+      }
       // 2. テンプレートのsuggested_start_timeを優先（時間指定がある場合）
       else if (template.suggested_start_time) {
         assignedStartTime = String(template.suggested_start_time);
@@ -382,10 +415,10 @@ export async function POST(request: NextRequest) {
         } else {
           // 最も早く空くコートを選択
           let earliestCourt = 1;
-          let earliestTime = courtEndTimes[1] || start_time;
-          
+          let earliestTime = courtEndTimes[1] || dayStartTime;
+
           for (let court = 2; court <= court_count; court++) {
-            const courtTime = courtEndTimes[court] || start_time;
+            const courtTime = courtEndTimes[court] || dayStartTime;
             if (courtTime < earliestTime) {
               earliestTime = courtTime;
               earliestCourt = court;
@@ -393,35 +426,32 @@ export async function POST(request: NextRequest) {
           }
           assignedCourt = earliestCourt;
         }
-      } 
+      }
       // 3. テンプレートのcourt_numberのみ指定の場合
       else if (template.court_number && Number(template.court_number) > 0) {
         assignedCourt = Number(template.court_number);
-        assignedStartTime = courtEndTimes[assignedCourt] || start_time;
-      } 
+        assignedStartTime = courtEndTimes[assignedCourt] || dayStartTime;
+      }
       // 4. 完全自動割り当て
       else {
         // 最も早く空くコートを選択
         let earliestCourt = 1;
-        let earliestTime = courtEndTimes[1] || start_time;
-        
+        let earliestTime = courtEndTimes[1] || dayStartTime;
+
         for (let court = 2; court <= court_count; court++) {
-          const courtTime = courtEndTimes[court] || start_time;
+          const courtTime = courtEndTimes[court] || dayStartTime;
           if (courtTime < earliestTime) {
             earliestTime = courtTime;
             earliestCourt = court;
           }
         }
-        
+
         assignedCourt = earliestCourt;
         assignedStartTime = earliestTime;
       }
 
       // 試合データを作成
-      const dayKey = template.day_number?.toString() || "1";
       const tournamentDate = tournamentDatesObj[dayKey] || event_start_date;
-
-      // period_countはスキーマに存在しないため、デフォルト値1を使用（変数は不要）
 
       await db.execute(`
         INSERT INTO t_matches_live (
@@ -488,21 +518,16 @@ export async function POST(request: NextRequest) {
       ]);
 
       // コート終了時刻を更新（次の試合のため）
-      // 全ての競技で設定された試合時間をそのまま使用
       const actualMatchDuration = match_duration_minutes;
-      
       const endTime = addMinutesToTime(assignedStartTime, actualMatchDuration + break_duration_minutes);
-      
+
       // テンプレートで固定時間が指定されている場合は、そのコートの時間管理を慎重に行う
       if (template.suggested_start_time) {
-        // 固定時間指定の場合は、最低限の終了時刻のみ設定
-        const currentCourtEndTime = courtEndTimes[assignedCourt] || start_time;
-        // 時間文字列を分で比較して、より遅い時刻を選択
+        const currentCourtEndTime = courtEndTimes[assignedCourt] || dayStartTime;
         const currentEndMinutes = timeToMinutes(currentCourtEndTime);
         const newEndMinutes = timeToMinutes(endTime);
         courtEndTimes[assignedCourt] = newEndMinutes > currentEndMinutes ? endTime : currentCourtEndTime;
       } else {
-        // 通常の連続スケジュールの場合
         courtEndTimes[assignedCourt] = endTime;
       }
 

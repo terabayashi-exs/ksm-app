@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const formatId = parseInt(resolvedParams.id);
     const body = await request.json();
-    const { format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, phases, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, default_match_duration, default_break_duration, preliminary_format_type, final_format_type, phases, templates } = body;
 
     // バリデーション
     if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
@@ -75,9 +75,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // フォーマット更新
     await db.execute(`
       UPDATE m_tournament_formats
-      SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, preliminary_format_type = ?, final_format_type = ?, phases = ?, updated_at = datetime('now', '+9 hours')
+      SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, default_match_duration = ?, default_break_duration = ?, preliminary_format_type = ?, final_format_type = ?, phases = ?, updated_at = datetime('now', '+9 hours')
       WHERE format_id = ?
-    `, [format_name, sport_type_id, target_team_count, format_description || "", preliminary_format_type || null, final_format_type || null, phases ? JSON.stringify(phases) : null, formatId]);
+    `, [format_name, sport_type_id, target_team_count, format_description || "", default_match_duration ?? null, default_break_duration ?? null, preliminary_format_type || null, final_format_type || null, phases ? JSON.stringify(phases) : null, formatId]);
 
     // 既存テンプレートを削除
     await db.execute(`

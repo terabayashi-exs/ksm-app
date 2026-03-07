@@ -8,7 +8,9 @@ import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
 import type { TournamentStatus } from '@/lib/tournament-status';
 
-async function getTournament(id: string): Promise<Tournament | null> {
+type TournamentWithExtras = Tournament & { sport_name: string | null; default_match_duration: number | null; default_break_duration: number | null };
+
+async function getTournament(id: string): Promise<TournamentWithExtras | null> {
   try {
     // Fetching tournament data server-side
     const result = await db.execute(`
@@ -28,13 +30,21 @@ async function getTournament(id: string): Promise<Tournament | null> {
         t.public_start_date,
         t.recruitment_start_date,
         t.recruitment_end_date,
+        t.sport_type_id,
+        t.group_id,
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        f.format_name,
+        f.default_match_duration,
+        f.default_break_duration,
+        st.sport_name,
+        tg.group_name
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+      LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       WHERE t.tournament_id = ?
     `, [parseInt(id)]);
 
@@ -59,11 +69,17 @@ async function getTournament(id: string): Promise<Tournament | null> {
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
+      sport_type_id: Number(row.sport_type_id || 0),
+      group_id: row.group_id ? Number(row.group_id) : null,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
-      format_name: row.format_name as string
-    };
+      format_name: row.format_name as string,
+      group_name: row.group_name ? String(row.group_name) : null,
+      sport_name: row.sport_name ? String(row.sport_name) : null,
+      default_match_duration: row.default_match_duration ? Number(row.default_match_duration) : null,
+      default_break_duration: row.default_break_duration ? Number(row.default_break_duration) : null,
+    } as Tournament & { sport_name: string | null; default_match_duration: number | null; default_break_duration: number | null };
   } catch (error) {
     console.error('大会データの取得に失敗:', error);
     return null;
@@ -110,7 +126,7 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <Button asChild variant="outline" size="sm">
-            <Link href="/my/dashboard">
+            <Link href="/my">
               ← ダッシュボードに戻る
             </Link>
           </Button>
