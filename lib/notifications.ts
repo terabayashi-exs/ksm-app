@@ -151,29 +151,31 @@ export async function getTournamentNotifications(
 }
 
 /**
- * 決勝トーナメント進出チームが決定しているかチェック
+ * トーナメント形式フェーズの進出チームが決定しているかチェック
+ * 動的フェーズ対応: match_type がトーナメント形式のブロックを対象
  */
 export async function checkFinalTournamentPromotionCompleted(tournamentId: number): Promise<boolean> {
   try {
-    // 決勝トーナメントブロックを取得
-    const finalBlockResult = await db.execute({
+    // トーナメント形式の試合ブロックを取得（動的フェーズ対応）
+    const tournamentBlockResult = await db.execute({
       sql: `
         SELECT match_block_id
-        FROM t_match_blocks 
-        WHERE tournament_id = ? AND phase = 'final'
+        FROM t_match_blocks
+        WHERE tournament_id = ?
+          AND match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
       `,
       args: [tournamentId]
     });
 
-    if (finalBlockResult.rows.length === 0) {
-      // 決勝トーナメントブロックがない場合は進出完了とみなす
+    if (tournamentBlockResult.rows.length === 0) {
+      // トーナメント形式ブロックがない場合は進出完了とみなす
       return true;
     }
 
-    const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
-    
-    // 決勝トーナメント試合で実チーム名が設定されているかチェック
-    // プレースホルダー（T1_winner, T2_winnerなど）ではなく実際のチームIDが設定されているかチェック
+    const blockIds = tournamentBlockResult.rows.map(r => r.match_block_id as number);
+    const placeholders = blockIds.map(() => '?').join(',');
+
+    // トーナメント形式試合で実チーム名が設定されているかチェック
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -182,9 +184,9 @@ export async function checkFinalTournamentPromotionCompleted(tournamentId: numbe
             team1_tournament_team_id IS NOT NULL AND team2_tournament_team_id IS NOT NULL
             THEN 1 END) as real_team_matches
         FROM t_matches_live
-        WHERE match_block_id = ?
+        WHERE match_block_id IN (${placeholders})
       `,
-      args: [finalBlockId]
+      args: blockIds
     });
 
     const totalMatches = matchesResult.rows[0]?.total_matches as number || 0;

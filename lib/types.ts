@@ -304,7 +304,7 @@ export interface MatchBlock {
   match_block_id: number;
   tournament_id: number;
   block_name: string;
-  block_type: 'preliminary' | 'final';
+  block_type: string; // Phase ID (e.g. 'preliminary', 'final', or custom phase IDs)
   display_order: number;
   is_active: boolean;
 }

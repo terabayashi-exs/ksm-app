@@ -72,6 +72,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "試合テンプレートを最低1つ作成してください" }, { status: 400 });
     }
 
+    // テンプレートのフェーズバリデーション
+    if (phases?.phases) {
+      const validPhaseIds = new Set(phases.phases.map((p: { id: string }) => p.id));
+      const invalidTemplates = templates.filter((t: { phase?: string; match_number?: number; match_code?: string }) => !t.phase || !validPhaseIds.has(t.phase));
+      if (invalidTemplates.length > 0) {
+        const details = invalidTemplates.map((t: { match_number?: number; match_code?: string }) => `試合No.${t.match_number}（${t.match_code}）`).join('、');
+        return NextResponse.json({ error: `以下の試合でフェーズが未選択です: ${details}` }, { status: 400 });
+      }
+    }
+
     // フォーマット更新
     await db.execute(`
       UPDATE m_tournament_formats

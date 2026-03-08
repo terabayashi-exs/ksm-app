@@ -1,5 +1,6 @@
 // lib/tournament-teams-simple.ts
 import { db } from '@/lib/db';
+import { getTournamentFormatPhases } from '@/lib/tournament-phases';
 
 export interface SimpleTournamentTeam {
   tournament_team_id: number;
@@ -31,7 +32,16 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
   const teamOrderMap = new Map<string, { order: number; leagueName: string }>();
 
   try {
-    // 決勝フェーズの試合からround_name・team_source・チームIDを一括取得
+    // トーナメント形式フェーズのIDを取得
+    const phasesResult = await db.execute({
+      sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
+      args: [tournamentId]
+    });
+    const phasesJson = phasesResult.rows[0]?.phases as string | null;
+    const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
+    const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+
+    // トーナメント形式フェーズの試合からround_name・team_source・チームIDを一括取得
     // t_matches_live に phase, round_name, team1_source, team2_source が直接格納されている
     const matchesResult = await db.execute({
       sql: `
@@ -44,10 +54,10 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
           ml.team2_tournament_team_id
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        WHERE mb.tournament_id = ? AND mb.phase = 'final'
+        WHERE mb.tournament_id = ? AND mb.phase IN (${phasePlaceholders})
         ORDER BY ml.match_number
       `,
-      args: [tournamentId]
+      args: [tournamentId, ...tournamentPhaseIds]
     });
 
     // チームソースと順序のマッピングを構築（例: A_1 → {round: "1位リーグ", position: 1}）

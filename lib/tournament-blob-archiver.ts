@@ -367,21 +367,16 @@ export class TournamentBlobArchiver {
         ORDER BY ml.tournament_date, ml.match_number
       `, [tournamentId]);
 
-      // 4. 順位表データ
+      // 4. 順位表データ（フェーズ順はblock_orderで制御）
       const standingsResult = await db.execute(`
-        SELECT 
+        SELECT
           mb.block_name,
           mb.phase,
           mb.team_rankings,
           mb.remarks
         FROM t_match_blocks mb
         WHERE mb.tournament_id = ?
-        ORDER BY 
-          CASE mb.phase 
-            WHEN 'preliminary' THEN 1
-            WHEN 'final' THEN 2 
-          END,
-          mb.block_name
+        ORDER BY mb.block_order, mb.block_name
       `, [tournamentId]);
 
       // 5. 戦績表データ

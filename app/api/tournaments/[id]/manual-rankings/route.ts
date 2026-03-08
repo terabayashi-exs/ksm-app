@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
 import { autoResolveManualRankingNotifications, resolveManualRankingNotificationsImmediately } from '@/lib/notifications';
+import { getTournamentFormatPhases, getLeagueFormatPhases } from '@/lib/tournament-phases';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -108,14 +109,22 @@ export async function PUT(
 
     // 決勝トーナメントの順位保存処理
     if (finalTournament) {
-      // 決勝トーナメントブロックを取得
+      // トーナメント形式フェーズのブロックを取得
+      const phasesResult = await db.execute({
+        sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
+        args: [tournamentId]
+      });
+      const phasesJson = phasesResult.rows[0]?.phases as string | null;
+      const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
+      const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+
       const finalBlockResult = await db.execute({
         sql: `
-          SELECT match_block_id 
-          FROM t_match_blocks 
-          WHERE tournament_id = ? AND phase = 'final'
+          SELECT match_block_id
+          FROM t_match_blocks
+          WHERE tournament_id = ? AND phase IN (${phasePlaceholders})
         `,
-        args: [tournamentId]
+        args: [tournamentId, ...tournamentPhaseIds]
       });
 
       if (finalBlockResult.rows.length > 0) {
@@ -210,22 +219,32 @@ export async function GET(
       );
     }
 
-    // ブロック情報と順位表を取得（予選リーグのみ）
+    // フェーズ情報を取得
+    const phasesResult = await db.execute({
+      sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
+      args: [tournamentId]
+    });
+    const phasesJson = phasesResult.rows[0]?.phases as string | null;
+    const leaguePhaseIds = getLeagueFormatPhases(phasesJson);
+    const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
+
+    // ブロック情報と順位表を取得（リーグ形式フェーズのみ）
+    const leaguePlaceholders = leaguePhaseIds.map(() => '?').join(',');
     const blocksResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           match_block_id,
           phase,
           display_round_name,
           block_name,
           team_rankings,
           remarks
-        FROM t_match_blocks 
-        WHERE tournament_id = ? 
-        AND phase = 'preliminary'
+        FROM t_match_blocks
+        WHERE tournament_id = ?
+        AND phase IN (${leaguePlaceholders})
         ORDER BY block_order, match_block_id
       `,
-      args: [tournamentId]
+      args: [tournamentId, ...leaguePhaseIds]
     });
 
     const blocks = blocksResult.rows.map(row => ({
@@ -237,22 +256,23 @@ export async function GET(
       remarks: row.remarks as string | null
     }));
 
-    // 決勝トーナメントの順位データを取得
+    // トーナメント形式フェーズの順位データを取得
+    const tournamentPlaceholders = tournamentPhaseIds.map(() => '?').join(',');
     const finalBlockResult = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           match_block_id,
           phase,
           display_round_name,
           block_name,
           team_rankings,
           remarks
-        FROM t_match_blocks 
-        WHERE tournament_id = ? 
-        AND phase = 'final'
+        FROM t_match_blocks
+        WHERE tournament_id = ?
+        AND phase IN (${tournamentPlaceholders})
         LIMIT 1
       `,
-      args: [tournamentId]
+      args: [tournamentId, ...tournamentPhaseIds]
     });
 
     let finalTournament = null;

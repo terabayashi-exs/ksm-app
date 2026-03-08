@@ -416,7 +416,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
               <div className="text-sm text-gray-600 dark:text-gray-300">ブロック数</div>

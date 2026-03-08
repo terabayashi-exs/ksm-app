@@ -82,7 +82,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       rules = rulesResult.rows.map(row => ({
         tournament_rule_id: Number(row.tournament_rule_id),
         tournament_id: Number(row.tournament_id),
-        phase: row.phase as 'preliminary' | 'final',
+        phase: String(row.phase),
         use_extra_time: Boolean(row.use_extra_time),
         use_penalty: Boolean(row.use_penalty),
         active_periods: String(row.active_periods),

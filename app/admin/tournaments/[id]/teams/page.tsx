@@ -61,6 +61,18 @@ interface TeamData {
   created_at: string;
 }
 
+interface RegistrationResult {
+  teamName: string;
+  teamId: string;
+  contactEmail: string;
+  tempPassword: string | null;
+  isExistingTeam: boolean;
+  isExistingLoginUser: boolean;
+  resolutionMethod: string;
+  success: boolean;
+  error?: string;
+}
+
 export default function TeamRegistrationPage() {
   const router = useRouter();
   const params = useParams();
@@ -89,6 +101,7 @@ export default function TeamRegistrationPage() {
   const [csvUploading, setCsvUploading] = useState(false);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
+  const [registrationResults, setRegistrationResults] = useState<RegistrationResult[]>([]);
 
   // 大会情報と既存参加チーム取得
   useEffect(() => {
@@ -455,7 +468,12 @@ export default function TeamRegistrationPage() {
             results.push({
               success: false,
               teamName: team.team_name,
-              teamOmission: team.team_omission,
+              teamId: '',
+              contactEmail: team.contact_email,
+              tempPassword: null,
+              isExistingTeam: false,
+              isExistingLoginUser: false,
+              resolutionMethod: 'new_team',
               error: errorMessage
             });
             continue;
@@ -468,14 +486,22 @@ export default function TeamRegistrationPage() {
               success: true,
               teamName: team.team_name,
               teamId: result.data.team_id,
+              contactEmail: team.contact_email,
               tempPassword: result.data.temporary_password || tempPassword,
-              isExistingTeam: result.data.is_existing_team
+              isExistingTeam: result.data.is_existing_team,
+              isExistingLoginUser: result.data.is_existing_login_user || false,
+              resolutionMethod: result.data.resolution_method || 'new_team'
             });
           } else {
             results.push({
               success: false,
               teamName: team.team_name,
-              teamOmission: team.team_omission,
+              teamId: '',
+              contactEmail: team.contact_email,
+              tempPassword: null,
+              isExistingTeam: false,
+              isExistingLoginUser: false,
+              resolutionMethod: 'new_team',
               error: result.error
             });
           }
@@ -483,7 +509,12 @@ export default function TeamRegistrationPage() {
           results.push({
             success: false,
             teamName: team.team_name,
-            teamOmission: team.team_omission,
+            teamId: '',
+            contactEmail: team.contact_email,
+            tempPassword: null,
+            isExistingTeam: false,
+            isExistingLoginUser: false,
+            resolutionMethod: 'new_team',
             error: error instanceof Error ? error.message : 'API呼び出しエラー'
           });
         }
@@ -493,7 +524,10 @@ export default function TeamRegistrationPage() {
       const successCount = results.filter(r => r.success).length;
       const failureCount = results.length - successCount;
 
-      // 結果レポート表示（リロード前に表示）
+      // 結果を state に保存
+      setRegistrationResults(results as RegistrationResult[]);
+
+      // 簡略化されたalert表示
       let message = `CSV一括登録完了\n\n成功: ${successCount}チーム\n失敗: ${failureCount}チーム`;
 
       if (failureCount > 0) {
@@ -501,40 +535,21 @@ export default function TeamRegistrationPage() {
         results
           .filter(r => !r.success)
           .forEach(r => {
-            message += `- ${r.teamName} (${r.teamOmission}): ${r.error}\n`;
+            message += `- ${r.teamName}: ${r.error}\n`;
           });
-        message += '\n※チーム名または略称が既に使用されている場合は、CSVファイルで異なる名称に変更してください。';
       }
 
       if (successCount > 0) {
-        message += '\n\n【重要】以下の情報をチーム代表者にお伝えください:\n';
-        results
-          .filter(r => r.success)
-          .forEach(r => {
-            message += `\n[${r.teamName}]\n`;
-            message += `ログインID: ${r.teamId}\n`;
-            if (r.isExistingTeam) {
-              message += `パスワード: 既存のパスワードを使用\n`;
-            } else {
-              message += `仮パスワード: ${r.tempPassword}\n`;
-            }
-          });
+        message += '\n\n結果CSVダウンロードボタンが表示されます。\nダウンロードしてチーム代表者に仮パスワード等をお伝えください。';
       }
 
-      // alertを先に表示（ユーザーがOKを押すまで待機）
       alert(message);
 
-      // ユーザーがOKを押した後にページリロード
-      if (successCount > 0) {
-        window.location.reload();
-      }
-      
-      // 成功時はフォームリセット
+      // 成功時はフォームリセット（ただしリロードはしない - CSVダウンロード後にリロード）
       if (successCount > 0) {
         setCsvFile(null);
         setCsvPreview([]);
         setCsvErrors([]);
-        // ファイル入力もリセット
         const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       }
@@ -592,6 +607,39 @@ export default function TeamRegistrationPage() {
     } finally {
       setDeletingTeamId(null);
     }
+  };
+
+  // 結果CSVダウンロード
+  const downloadResultsCsv = () => {
+    const header = 'チーム名,ログインID,メールアドレス,仮パスワード,アカウント状態,処理方法\n';
+    const rows = registrationResults
+      .filter(r => r.success)
+      .map(r => {
+        const status = r.isExistingLoginUser ? '既存アカウント' : (r.isExistingTeam ? '既存チーム' : '新規作成');
+        const password = r.tempPassword || '既存パスワード使用';
+        const methodMap: Record<string, string> = {
+          'login_user_with_team': '既存アカウントのチーム使用',
+          'login_user_new_team': '既存アカウントに新規チーム作成',
+          'new_team': '新規チーム作成'
+        };
+        const method = methodMap[r.resolutionMethod] || r.resolutionMethod;
+        return `"${r.teamName}","${r.teamId}","${r.contactEmail}","${password}","${status}","${method}"`;
+      })
+      .join('\n');
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `registration_results_${tournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // ダウンロード後にページリロード
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   if (loading) {
@@ -706,11 +754,12 @@ export default function TeamRegistrationPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="team_omission">チーム略称</Label>
+                        <Label htmlFor="team_omission">チーム略称 *</Label>
                         <Input
                           id="team_omission"
                           value={manualForm.team_omission}
                           onChange={(e) => setManualForm(prev => ({ ...prev, team_omission: e.target.value }))}
+                          required
                           placeholder="例: サンプル"
                         />
                       </div>
@@ -967,6 +1016,25 @@ export default function TeamRegistrationPage() {
                           </Button>
                         </div>
                       )}
+                    </div>
+                  )}
+                  {/* 結果CSVダウンロード */}
+                  {registrationResults.filter(r => r.success).length > 0 && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Download className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h3 className="font-medium text-blue-900 mb-2">登録結果CSVダウンロード</h3>
+                          <p className="text-sm text-blue-800 mb-3">
+                            登録結果（ログインID・仮パスワード含む）をCSVファイルでダウンロードできます。
+                            チーム代表者への通知にご利用ください。
+                          </p>
+                          <Button variant="outline" onClick={downloadResultsCsv} size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                            <Download className="w-4 h-4 mr-2" />
+                            結果CSVをダウンロード（{registrationResults.filter(r => r.success).length}チーム）
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>

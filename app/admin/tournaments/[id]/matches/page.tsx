@@ -49,6 +49,7 @@ interface MatchData {
   actual_start_time?: string;
   actual_end_time?: string;
   phase: string;
+  format_type: string;
   display_round_name: string;
   block_name: string;
   match_type: string;
@@ -63,6 +64,7 @@ interface MatchData {
 interface MatchBlock {
   match_block_id: number;
   phase: string;
+  format_type: string;
   display_round_name: string;
   block_name: string;
   match_type: string;
@@ -226,6 +228,7 @@ export default function AdminMatchesPage() {
               blocksMap.set(match.match_block_id, {
                 match_block_id: match.match_block_id,
                 phase: match.phase,
+                format_type: match.format_type || 'league',
                 display_round_name: match.display_round_name,
                 block_name: match.block_name,
                 match_type: match.match_type,
@@ -246,43 +249,47 @@ export default function AdminMatchesPage() {
           });
           
           let blocks = Array.from(blocksMap.values())
-            .sort((a, b) => {
-              // 予選を先に、決勝を後に配置
-              if (a.phase === 'preliminary' && b.phase === 'final') return -1;
-              if (a.phase === 'final' && b.phase === 'preliminary') return 1;
-              // 同じフェーズ内ではblock_orderでソート
-              return a.block_order - b.block_order;
-            });
+            .sort((a, b) => a.block_order - b.block_order);
 
-          // 決勝フェーズのブロックを統合
-          const finalBlocks = blocks.filter(b => b.phase === 'final');
-          const otherBlocks = blocks.filter(b => b.phase !== 'final');
+          // トーナメント形式フェーズのブロックをフェーズごとに統合
+          const tournamentPhaseBlocks = new Map<string, MatchBlock[]>();
+          const nonTournamentBlocks: MatchBlock[] = [];
 
-          if (finalBlocks.length > 0) {
-            // 決勝ブロックを1つに統合
-            const firstFinalBlock = finalBlocks[0];
-            const unifiedFinalBlock: MatchBlock = {
-              match_block_id: firstFinalBlock.match_block_id,
-              phase: 'final',
-              display_round_name: '決勝トーナメント',
-              block_name: 'final_unified',
-              match_type: firstFinalBlock.match_type,
-              block_order: firstFinalBlock.block_order,
-              matches: []
-            };
+          blocks.forEach(block => {
+            if (block.format_type === 'tournament') {
+              const existing = tournamentPhaseBlocks.get(block.phase) || [];
+              existing.push(block);
+              tournamentPhaseBlocks.set(block.phase, existing);
+            } else {
+              nonTournamentBlocks.push(block);
+            }
+          });
 
-            // 全決勝ブロックの試合を統合
-            finalBlocks.forEach(block => {
-              unifiedFinalBlock.matches.push(...block.matches);
-            });
+          const unifiedBlocks: MatchBlock[] = [...nonTournamentBlocks];
 
-            // ソートして結合
-            blocks = [...otherBlocks, unifiedFinalBlock].sort((a, b) => {
-              if (a.phase === 'preliminary' && b.phase === 'final') return -1;
-              if (a.phase === 'final' && b.phase === 'preliminary') return 1;
-              return a.block_order - b.block_order;
-            });
-          }
+          tournamentPhaseBlocks.forEach((phaseBlocks, phaseId) => {
+            if (phaseBlocks.length > 0) {
+              const firstBlock = phaseBlocks[0];
+              const unifiedBlock: MatchBlock = {
+                match_block_id: firstBlock.match_block_id,
+                phase: phaseId,
+                format_type: 'tournament',
+                display_round_name: firstBlock.display_round_name,
+                block_name: `${phaseId}_unified`,
+                match_type: firstBlock.match_type,
+                block_order: firstBlock.block_order,
+                matches: []
+              };
+
+              phaseBlocks.forEach(block => {
+                unifiedBlock.matches.push(...block.matches);
+              });
+
+              unifiedBlocks.push(unifiedBlock);
+            }
+          });
+
+          blocks = unifiedBlocks.sort((a, b) => a.block_order - b.block_order);
 
           setMatchBlocks(blocks);
         } else {

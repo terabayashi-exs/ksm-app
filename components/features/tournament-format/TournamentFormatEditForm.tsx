@@ -429,6 +429,16 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
         return;
       }
 
+      // テンプレートのフェーズが有効なフェーズIDかチェック
+      const validPhaseIds = new Set(phasesToSave.phases.map(p => p.id));
+      const invalidTemplates = data.templates.filter(t => !t.phase || !validPhaseIds.has(t.phase));
+      if (invalidTemplates.length > 0) {
+        const details = invalidTemplates.map(t => `試合No.${t.match_number}（${t.match_code}）`).join('、');
+        alert(`以下の試合でフェーズが未選択です:\n${details}\n\n全ての試合にフェーズを設定してください。`);
+        setIsSubmitting(false);
+        return;
+      }
+
       // 前後の空白をトリミング（不戦勝試合は空文字列のまま）
       const processedData = {
         ...data,

@@ -7,6 +7,7 @@ import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 import type { TournamentStatus } from '@/lib/tournament-status';
+import { getPhaseFormatTypeFromJson, buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 export async function POST(request: NextRequest) {
   try {
@@ -342,77 +343,90 @@ async function generateMatchesFromTemplate(
       return acc;
     }, {} as Record<number, string>);
 
+    // 大会のフェーズ構成を取得（動的フェーズ対応）
+    const tournamentPhasesResult = await db.execute(`
+      SELECT phases FROM t_tournaments WHERE tournament_id = ?
+    `, [tournamentId]);
+    const tournamentPhasesJson = (tournamentPhasesResult.rows[0]?.phases as string | null) ?? null;
+    const phaseFormatMap = buildPhaseFormatMap(tournamentPhasesJson);
+
     // 順位管理単位としてのブロックを作成
-    // 1. 予選ブロック（A, B, C, D など）
-    // 2. 決勝トーナメント（1つのブロック）
+    // リーグ形式のフェーズ: ブロック別（A, B, C, D など）
+    // トーナメント形式のフェーズ: round_nameまたはblock_nameでグループ化
     const blockIdMapping = new Map<string, number>();
     let blockOrder = 0;
 
-    // 予選ブロックを抽出・作成
-    const preliminaryBlocks = new Set<string>();
-    templates.forEach(template => {
-      if (template.phase === 'preliminary' && template.block_name) {
-        preliminaryBlocks.add(template.block_name);
+    // 全フェーズのブロックを動的に抽出・作成
+    const phaseIds = [...new Set(templates.map(t => t.phase))];
+
+    for (const phaseId of phaseIds) {
+      const formatType = phaseFormatMap.get(phaseId) || getPhaseFormatTypeFromJson(tournamentPhasesJson, phaseId);
+
+      if (formatType === 'league') {
+        // リーグ形式: ブロック別に登録
+        const leagueBlocks = new Set<string>();
+        templates.forEach(template => {
+          if (template.phase === phaseId && template.block_name) {
+            leagueBlocks.add(template.block_name);
+          }
+        });
+
+        for (const blockName of Array.from(leagueBlocks).sort()) {
+          const blockResult = await db.execute(`
+            INSERT INTO t_match_blocks (
+              tournament_id,
+              phase,
+              display_round_name,
+              block_name,
+              match_type,
+              block_order
+            ) VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            tournamentId,
+            phaseId,
+            `${blockName}ブロック`,
+            blockName,
+            '通常',
+            blockOrder++
+          ]);
+
+          const blockId = Number(blockResult.lastInsertRowid);
+          blockIdMapping.set(`${phaseId}_${blockName}`, blockId);
+        }
+      } else {
+        // トーナメント形式: round_nameまたはblock_nameでグループ化
+        const tournamentBlocks = new Map<string, string>(); // key: ユニークキー, value: 表示名
+        templates.forEach(template => {
+          if (template.phase === phaseId) {
+            const displayName = template.round_name || template.block_name || 'トーナメント';
+            const blockKey = template.block_name || displayName;
+            tournamentBlocks.set(blockKey, displayName);
+          }
+        });
+
+        for (const [blockKey, displayName] of Array.from(tournamentBlocks.entries()).sort()) {
+          const tBlockResult = await db.execute(`
+            INSERT INTO t_match_blocks (
+              tournament_id,
+              phase,
+              display_round_name,
+              block_name,
+              match_type,
+              block_order
+            ) VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            tournamentId,
+            phaseId,
+            displayName,
+            blockKey,
+            '通常',
+            blockOrder++
+          ]);
+
+          const tBlockId = Number(tBlockResult.lastInsertRowid);
+          blockIdMapping.set(`${phaseId}_${blockKey}`, tBlockId);
+        }
       }
-    });
-
-    // 予選ブロック毎にt_match_blocksに登録
-    for (const blockName of Array.from(preliminaryBlocks).sort()) {
-      const blockResult = await db.execute(`
-        INSERT INTO t_match_blocks (
-          tournament_id,
-          phase,
-          display_round_name,
-          block_name,
-          match_type,
-          block_order
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        tournamentId,
-        'preliminary',
-        `予選${blockName}ブロック`,
-        blockName,
-        '通常',
-        blockOrder++
-      ]);
-
-      const blockId = Number(blockResult.lastInsertRowid);
-      blockIdMapping.set(`preliminary_${blockName}`, blockId);
-    }
-
-    // 決勝ブロックを抽出・作成（round_nameまたはblock_nameでグループ化）
-    const finalBlocks = new Map<string, string>(); // key: ユニークキー, value: 表示名
-    templates.forEach(template => {
-      if (template.phase === 'final') {
-        // round_nameを優先、なければblock_name、どちらもなければデフォルト
-        const displayName = template.round_name || template.block_name || '決勝トーナメント';
-        const blockKey = template.block_name || displayName;
-        finalBlocks.set(blockKey, displayName);
-      }
-    });
-
-    // 決勝ブロック毎にt_match_blocksに登録
-    for (const [blockKey, displayName] of Array.from(finalBlocks.entries()).sort()) {
-      const finalBlockResult = await db.execute(`
-        INSERT INTO t_match_blocks (
-          tournament_id,
-          phase,
-          display_round_name,
-          block_name,
-          match_type,
-          block_order
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        tournamentId,
-        'final',
-        displayName,
-        blockKey,
-        '通常',
-        blockOrder++
-      ]);
-
-      const finalBlockId = Number(finalBlockResult.lastInsertRowid);
-      blockIdMapping.set(`final_${blockKey}`, finalBlockId);
     }
 
     // スケジュール情報の準備
@@ -473,15 +487,16 @@ async function generateMatchesFromTemplate(
 
     // マッチを作成
     for (const template of templates) {
-      // 新しいブロック構造に合わせてブロックIDを取得
+      // 新しいブロック構造に合わせてブロックIDを取得（動的フェーズ対応）
       let blockId: number | undefined;
+      const templateFormatType = phaseFormatMap.get(template.phase) || getPhaseFormatTypeFromJson(tournamentPhasesJson, template.phase);
 
-      if (template.phase === 'preliminary') {
-        blockId = blockIdMapping.get(`preliminary_${template.block_name}`);
-      } else if (template.phase === 'final') {
-        // block_nameを使ってブロックIDを取得（round_nameまたはblock_nameでグループ化されたブロック）
-        const blockKey = template.block_name || (template.round_name || '決勝トーナメント');
-        blockId = blockIdMapping.get(`final_${blockKey}`);
+      if (templateFormatType === 'league') {
+        blockId = blockIdMapping.get(`${template.phase}_${template.block_name}`);
+      } else {
+        // トーナメント形式: block_nameを使ってブロックIDを取得
+        const blockKey = template.block_name || (template.round_name || 'トーナメント');
+        blockId = blockIdMapping.get(`${template.phase}_${blockKey}`);
       }
 
       if (!blockId) {

@@ -26,7 +26,7 @@ import {
 } from '@/lib/tie-breaking-calculator';
 import { getTournamentPointSystem, PointSystem } from '@/lib/point-system-loader';
 import { parseTotalScore, parseScoreArray } from '@/lib/score-parser';
-import { buildPhaseFormatMap, parsePhasesJson } from '@/lib/tournament-phases';
+import { buildPhaseFormatMap, parsePhasesJson, buildUnifiedBlockName, getPhaseLabel, isUnifiedBlockName, getPhaseFormatTypeFromJson, getTournamentFormatPhases } from '@/lib/tournament-phases';
 
 /**
  * スコア文字列を数値に変換（全形式対応）
@@ -223,11 +223,11 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
  */
 export async function updateFinalTournamentRankings(tournamentId: number, phase: string = 'final'): Promise<void> {
   try {
-    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    const phaseLabel = getPhaseLabel(null, phase);
     console.log(`[TOURNAMENT_RANKINGS] ${phaseLabel}トーナメント順位更新開始: Tournament ${tournamentId}, Phase ${phase}`);
 
-    // 統合トーナメントブロックを取得（block_nameが'preliminary_unified'または'final_unified'）
-    const unifiedBlockName = phase === 'final' ? 'final_unified' : 'preliminary_unified';
+    // 統合トーナメントブロックを取得
+    const unifiedBlockName = buildUnifiedBlockName(phase);
     const tournamentBlockResult = await db.execute({
       sql: `
         SELECT match_block_id, team_rankings
@@ -316,11 +316,11 @@ export async function updateBlockRankingsOnMatchConfirm(matchBlockId: number, to
 
     // トーナメント形式の場合は統合ブロックに順位表を更新
     if (currentFormatType === 'tournament') {
-      const phaseLabel = phase === 'final' ? '決勝' : '予選';
+      const phaseLabel = getPhaseLabel(formatResult.rows[0]?.phases as string | null, phase);
       console.log(`[STANDINGS] ${phaseLabel}トーナメントの順位表更新を実行`);
 
-      // 統合ブロックを取得（block_nameが'preliminary_unified'または'final_unified'のブロック）
-      const unifiedBlockName = phase === 'final' ? 'final_unified' : 'preliminary_unified';
+      // 統合ブロックを取得
+      const unifiedBlockName = buildUnifiedBlockName(phase);
       const unifiedBlockResult = await db.execute({
         sql: `SELECT match_block_id FROM t_match_blocks
               WHERE tournament_id = ? AND phase = ? AND block_name = ?`,
@@ -509,8 +509,8 @@ async function getParticipatingTeamsForBlock(
 
     const blockName = blockResult.rows[0].block_name as string;
 
-    // 統合ブロック（preliminary_unified, final_unified）かどうかを判定
-    const isUnifiedBlock = blockName === 'preliminary_unified' || blockName === 'final_unified';
+    // 統合ブロックかどうかを判定
+    const isUnifiedBlock = isUnifiedBlockName(blockName);
 
     // 該当ブロックの参加チーム一覧を取得
     let teamsResult;
@@ -613,13 +613,21 @@ export async function calculateBlockStandings(
     const blockPhase = blockInfoQuery.rows[0].phase as string;
     const blockName = blockInfoQuery.rows[0].block_name as string;
 
+    // phasesからformat_typeを取得して判定
+    const phasesResult = await db.execute({
+      sql: `SELECT phases FROM t_tournaments WHERE tournament_id = ?`,
+      args: [tournamentId]
+    });
+    const phasesJson = phasesResult.rows[0]?.phases as string | null;
+    const blockPhaseFormatType = getPhaseFormatTypeFromJson(phasesJson, blockPhase);
+
     // ブロック内のチーム一覧を取得
     let teamsResult;
 
-    if (blockPhase === 'final') {
-      // 決勝フェーズの場合は試合データから直接チーム情報を取得
+    if (blockPhaseFormatType === 'tournament') {
+      // トーナメント形式フェーズの場合は試合データから直接チーム情報を取得
       // 複数エントリーチーム対応: display_nameで一意に識別
-      console.log(`[STANDINGS] 決勝フェーズのブロックのため、試合データからチーム情報を取得`);
+      console.log(`[STANDINGS] トーナメント形式フェーズのブロックのため、試合データからチーム情報を取得`);
       teamsResult = await db.execute({
         sql: `
           SELECT DISTINCT
@@ -649,9 +657,9 @@ export async function calculateBlockStandings(
       });
     } else {
       // 予選フェーズの場合
-      // 統合ブロック（preliminary_unified）の場合は全チームを取得
+      // 統合ブロックの場合は全チームを取得
       // それ以外のブロック（A, B, C等）の場合は assigned_block でフィルタ
-      const isUnifiedBlock = blockName === 'preliminary_unified' || blockName === 'final_unified';
+      const isUnifiedBlock = isUnifiedBlockName(blockName);
 
       if (isUnifiedBlock) {
         console.log(`[STANDINGS] 統合ブロック（${blockName}）のため、全チームを取得`);
@@ -742,7 +750,7 @@ export async function calculateBlockStandings(
     const winPoints = pointSystem.win;
     const drawPoints = pointSystem.draw;
     const lossPoints = pointSystem.loss;
-    
+
     // 不戦勝設定を取得
     const { getTournamentWalkoverSettings } = await import('./tournament-rules');
     const walkoverSettings = await getTournamentWalkoverSettings(tournamentId);
@@ -850,7 +858,7 @@ export async function calculateBlockStandings(
       const sportCode = await getTournamentSportCode(tournamentId);
 
       // カスタム順位決定ルールを取得
-      const customRules = await getTournamentTieBreakingRules(tournamentId, blockPhase as 'preliminary' | 'final');
+      const customRules = await getTournamentTieBreakingRules(tournamentId, blockPhase);
 
       if (customRules.length > 0) {
         console.log(`[STANDINGS] カスタム順位決定ルール適用開始: ${customRules.length}個のルール`);
@@ -1327,22 +1335,32 @@ async function getRequiredPromotionPositions(
     }
 
     // 決勝進出条件を取得（テンプレート + オーバーライド）
-    const promotionRequirementsResult = await db.execute({
-      sql: `
-        SELECT DISTINCT
-          COALESCE(tmo.team1_source_override, ml.team1_source) as team1_source,
-          COALESCE(tmo.team2_source_override, ml.team2_source) as team2_source
-        FROM t_matches_live ml
-        LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_match_overrides tmo
-          ON ml.match_code = tmo.match_code
-          AND tmo.tournament_id = ?
-        WHERE mb.tournament_id = ?
-          AND mb.phase = 'final'
-          AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
-      `,
-      args: [tournamentId, tournamentId]
-    });
+    // tournament形式のフェーズIDを取得して、そのフェーズの試合から進出条件を抽出
+    const tournamentFormatPhaseIds = getTournamentFormatPhases(formatResult.rows[0]?.phases as string | null);
+
+    // tournament形式フェーズがない場合は空の結果を返す
+    let promotionRequirementsResult;
+    if (tournamentFormatPhaseIds.length === 0) {
+      promotionRequirementsResult = { rows: [] };
+    } else {
+      const placeholders = tournamentFormatPhaseIds.map(() => '?').join(', ');
+      promotionRequirementsResult = await db.execute({
+        sql: `
+          SELECT DISTINCT
+            COALESCE(tmo.team1_source_override, ml.team1_source) as team1_source,
+            COALESCE(tmo.team2_source_override, ml.team2_source) as team2_source
+          FROM t_matches_live ml
+          LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_tournament_match_overrides tmo
+            ON ml.match_code = tmo.match_code
+            AND tmo.tournament_id = ?
+          WHERE mb.tournament_id = ?
+            AND mb.phase IN (${placeholders})
+            AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
+        `,
+        args: [tournamentId, tournamentId, ...tournamentFormatPhaseIds]
+      });
+    }
 
     // 当該ブロックに必要な順位を抽出
     const requiredPositions = new Set<number>();
@@ -1938,7 +1956,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number, phase: s
  */
 async function calculateDetailedFinalTournamentStandings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    const phaseLabel = getPhaseLabel(null, phase);
     console.log(`[DETAILED_TOURNAMENT_RANKINGS] 詳細順位計算開始: Tournament ${tournamentId}, Phase: ${phaseLabel}`);
 
     // トーナメントの試合情報を結合して取得
@@ -2180,7 +2198,7 @@ function calculateTemplateBasedTournamentPositionByTournamentTeamId(
  */
 async function calculateTemplateBasedRankings(tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    const phaseLabel = getPhaseLabel(null, phase);
     console.log(`[TEMPLATE_RANKINGS] テンプレートベース順位計算開始: Tournament ${tournamentId}, Phase: ${phaseLabel}`);
 
     // トーナメントブロックを取得
@@ -2358,12 +2376,20 @@ export async function calculateMultiSportBlockStandings(
     const blockPhase = blockInfoQuery.rows[0]?.phase as string;
     const blockName = blockInfoQuery.rows[0]?.block_name as string;
 
+    // phasesからformat_typeを取得して判定
+    const multiSportPhasesResult = await db.execute({
+      sql: `SELECT phases FROM t_tournaments WHERE tournament_id = ?`,
+      args: [tournamentId]
+    });
+    const multiSportPhasesJson = multiSportPhasesResult.rows[0]?.phases as string | null;
+    const multiSportPhaseFormatType = getPhaseFormatTypeFromJson(multiSportPhasesJson, blockPhase);
+
     let teamsResult;
 
-    if (blockPhase === 'final') {
-      // 決勝フェーズの場合は試合データから直接チーム情報を取得
+    if (multiSportPhaseFormatType === 'tournament') {
+      // トーナメント形式フェーズの場合は試合データから直接チーム情報を取得
       // MIGRATION NOTE: tournament_team_idのみを使用（team_idは将来削除予定）
-      console.log(`[MULTI_SPORT_STANDINGS] 決勝フェーズのブロックのため、試合データからチーム情報を取得`);
+      console.log(`[MULTI_SPORT_STANDINGS] トーナメント形式フェーズのブロックのため、試合データからチーム情報を取得`);
       teamsResult = await db.execute({
         sql: `
           SELECT DISTINCT
@@ -2556,9 +2582,9 @@ export async function calculateMultiSportBlockStandings(
       `, [matchBlockId]);
       
       if (blockInfo.rows.length > 0) {
-        const phase = String(blockInfo.rows[0].phase) as 'preliminary' | 'final';
+        const phase = String(blockInfo.rows[0].phase);
         const tournamentId = Number(blockInfo.rows[0].tournament_id);
-        
+
         // カスタム順位決定ルールを取得
         const customRules = await getTournamentTieBreakingRules(tournamentId, phase);
         
@@ -2766,7 +2792,7 @@ export function convertMultiSportToLegacyStanding(multiSportStanding: MultiSport
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function calculateTemplateBasedRankingsForBlock(matchBlockId: number, tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    const phaseLabel = getPhaseLabel(null, phase);
     console.log(`[TEMPLATE_RANKINGS_BLOCK] テンプレートベース順位計算開始: Block ${matchBlockId}, Tournament ${tournamentId}, Phase: ${phaseLabel}`);
 
     // ブロック情報を取得
@@ -2874,7 +2900,7 @@ async function calculateTemplateBasedRankingsForBlock(matchBlockId: number, tour
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function calculateDetailedBlockTournamentStandings(matchBlockId: number, tournamentId: number, phase: string = 'final'): Promise<TeamStanding[]> {
   try {
-    const phaseLabel = phase === 'final' ? '決勝' : '予選';
+    const phaseLabel = getPhaseLabel(null, phase);
     console.log(`[DETAILED_BLOCK_TOURNAMENT] 詳細順位計算開始: Block ${matchBlockId}, Tournament ${tournamentId}, Phase: ${phaseLabel}`);
 
     // ブロックのトーナメント試合情報を取得

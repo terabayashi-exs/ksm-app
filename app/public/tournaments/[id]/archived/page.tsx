@@ -110,8 +110,23 @@ interface ResultData {
 interface StandingData {
   block_name: string;
   phase: string;
+  format_type?: string;
   team_rankings?: string;
   remarks?: string;
+}
+
+/**
+ * 順位データがリーグ形式（勝点・試合数等の統計あり）かどうかを判定
+ * format_typeがあればそれを使用、なければデータ構造とphase文字列からフォールバック判定
+ */
+function isLeagueStandings(block: StandingData, rankings: TeamRanking[]): boolean {
+  if (block.format_type) return block.format_type === 'league';
+  // データ構造で判定: matches_playedやpointsがあればリーグ形式
+  if (rankings.length > 0 && rankings[0].matches_played !== undefined && rankings[0].matches_played > 0) {
+    return true;
+  }
+  // フォールバック: phase文字列で判定（レガシー互換）
+  return block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ');
 }
 
 interface TeamRanking {
@@ -411,7 +426,8 @@ function ArchivedTournamentStandings({ standings }: { standings: StandingData[] 
     <div className="space-y-6">
       {standings.map(block => {
         const rankings: TeamRanking[] = block.team_rankings ? JSON.parse(block.team_rankings) : [];
-        
+        const isLeague = isLeagueStandings(block, rankings);
+
         return (
           <Card key={block.block_name}>
             <CardHeader>
@@ -441,7 +457,7 @@ function ArchivedTournamentStandings({ standings }: { standings: StandingData[] 
                     <tr className="border-b">
                       <th className="text-center py-2 px-3 font-medium text-gray-700">順位</th>
                       <th className="text-left py-2 px-4 font-medium text-gray-700">チーム名</th>
-                      {block.phase === 'preliminary' ? (
+                      {isLeague ? (
                         <>
                           <th className="text-center py-2 px-3 font-medium text-gray-700">勝点</th>
                           <th className="text-center py-2 px-3 font-medium text-gray-700">試合</th>
@@ -466,12 +482,12 @@ function ArchivedTournamentStandings({ standings }: { standings: StandingData[] 
                         <td className="py-3 px-4">
                           <div className="flex items-center">
                             <span className="font-medium">{team.team_name}</span>
-                            {team.position <= 2 && block.phase === 'preliminary' && (
+                            {team.position <= 2 && isLeague && (
                               <span className="ml-2 text-yellow-500">👑</span>
                             )}
                           </div>
                         </td>
-                        {block.phase === 'preliminary' ? (
+                        {isLeague ? (
                           <>
                             <td className="text-center py-3 px-3 font-bold text-blue-600">{team.points}</td>
                             <td className="text-center py-3 px-3">{team.matches_played}</td>

@@ -62,7 +62,10 @@ function TournamentOverview({
   };
 
   const tournamentDates = tournament.tournament_dates ? JSON.parse(tournament.tournament_dates) : {};
-  const dateEntries = Object.entries(tournamentDates).sort(([a], [b]) => Number(a) - Number(b));
+  // 有効な日付のみフィルタリング（空文字列や不正な値を除外）
+  const dateEntries = Object.entries(tournamentDates)
+    .filter(([, date]) => date && typeof date === 'string' && (date as string).trim() !== '' && !isNaN(new Date(date as string).getTime()))
+    .sort(([a], [b]) => Number(a) - Number(b));
 
   return (
     <div className="space-y-6">

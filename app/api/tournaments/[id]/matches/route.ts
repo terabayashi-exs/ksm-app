@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { parsePhasesJson } from '@/lib/tournament-phases';
 
 // キャッシュを無効化
 export const dynamic = 'force-dynamic';
@@ -47,9 +48,9 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const includeBye = searchParams.get('includeBye') === 'true';
 
-    // 大会の存在確認
+    // 大会の存在確認（フェーズ構成も取得）
     const tournamentResult = await db.execute(`
-      SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -57,6 +58,17 @@ export async function GET(
         { success: false, error: '大会が見つかりません' },
         { status: 404 }
       );
+    }
+
+    // フェーズ構成からphase順序マップとformat_typeマップを構築
+    const tournamentPhases = parsePhasesJson(tournamentResult.rows[0].phases as string | null);
+    const phaseOrderMap = new Map<string, number>();
+    const phaseFormatTypeMap = new Map<string, string>();
+    if (tournamentPhases) {
+      for (const p of tournamentPhases.phases) {
+        phaseOrderMap.set(p.id, p.order);
+        phaseFormatTypeMap.set(p.id, p.format_type);
+      }
     }
 
     // 組み合わせ作成状況を判定
@@ -79,6 +91,16 @@ export async function GET(
     console.log(`Fetching matches for tournament ${tournamentId}...`);
     // 全ての試合を取得（不戦勝試合のフィルタリングはフロントエンド側で実施）
     const teamFilter = '';
+
+    // フェーズ順序のCASE文を動的に構築
+    let phaseOrderSql = 'mb.block_order';
+    if (phaseOrderMap.size > 0) {
+      const caseParts = Array.from(phaseOrderMap.entries())
+        .map(([phaseId, order]) => `WHEN mb.phase = '${phaseId}' THEN ${order}`)
+        .join(' ');
+      phaseOrderSql = `CASE ${caseParts} ELSE 999 END`;
+    }
+
     const matchesResult = await db.execute(`
       SELECT
         ml.match_id,
@@ -110,6 +132,9 @@ export async function GET(
         ml.team1_source,
         ml.team2_source,
         ml.is_bye_match,
+        ml.matchday,
+        ml.cycle,
+        ml.venue_name,
         -- 実際のチーム名を取得（tournament_team_idで一意に取得）
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
@@ -138,7 +163,7 @@ export async function GET(
       WHERE mb.tournament_id = ?
       ${teamFilter}
       ORDER BY
-        CASE WHEN mb.phase = 'preliminary' THEN 1 WHEN mb.phase = 'final' THEN 2 ELSE 3 END,
+        ${phaseOrderSql},
         ml.round_name ASC,
         ml.match_number ASC
     `, [tournamentId]);
@@ -261,6 +286,7 @@ export async function GET(
         remarks: row.remarks ? String(row.remarks) : null,
         // ブロック情報
         phase: String(row.phase),
+        format_type: phaseFormatTypeMap.get(String(row.phase)) || 'league',
         display_round_name: String(row.round_name || row.display_round_name),
         round_name: row.round_name ? String(row.round_name) : null,
         block_name: row.block_name ? String(row.block_name) : null,
@@ -271,7 +297,10 @@ export async function GET(
         team2_source: row.team2_source ? String(row.team2_source) : null,
         is_bye_match: row.is_bye_match ? Number(row.is_bye_match) : 0,
         team1_display_name: String(row.team1_display_name || ''),
-        team2_display_name: String(row.team2_display_name || '')
+        team2_display_name: String(row.team2_display_name || ''),
+        matchday: row.matchday ? Number(row.matchday) : null,
+        cycle: row.cycle ? Number(row.cycle) : null,
+        venue_name: row.venue_name ? String(row.venue_name) : null
       };
     });
 

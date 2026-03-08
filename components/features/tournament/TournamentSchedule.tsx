@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
 import MatchNewsArea from './MatchNewsArea';
 
@@ -19,6 +19,7 @@ interface MatchData {
   team2_display_name: string;
   court_number: number | null;
   court_name?: string | null;
+  venue_name?: string | null;
   start_time: string | null;
   phase: string;
   display_round_name: string;
@@ -38,6 +39,7 @@ interface MatchData {
   has_result: boolean;
   cancellation_type: string | null;
   round_name: string | null;
+  matchday?: number | null;
 }
 
 interface TournamentScheduleProps {
@@ -45,10 +47,17 @@ interface TournamentScheduleProps {
   initialMatches?: MatchData[];
 }
 
+interface TeamOption {
+  tournament_team_id: number;
+  display_name: string;
+}
+
 export default function TournamentSchedule({ tournamentId, initialMatches }: TournamentScheduleProps) {
   const [matches, setMatches] = useState<MatchData[]>(initialMatches || []);
   const [loading, setLoading] = useState(!initialMatches);
   const [error, setError] = useState<string | null>(null);
+  const [filterTeamId, setFilterTeamId] = useState<string>('all');
+  const [confirmedTeams, setConfirmedTeams] = useState<TeamOption[]>([]);
 
   // 試合データの取得（initialMatchesが提供されていない場合のみ）
   useEffect(() => {
@@ -85,58 +94,45 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
     fetchMatches();
   }, [tournamentId, initialMatches]);
 
+  // 参加確定チーム一覧を取得（辞退チーム除外）
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/teams`);
+        const result = await response.json();
+        if (result.success && result.data?.teams) {
+          const teams: TeamOption[] = result.data.teams.map((t: { tournament_team_id: number; display_name?: string; team_name?: string }) => ({
+            tournament_team_id: t.tournament_team_id,
+            display_name: t.display_name || t.team_name || '',
+          }));
+          teams.sort((a, b) => a.display_name.localeCompare(b.display_name, 'ja'));
+          setConfirmedTeams(teams);
+        }
+      } catch (err) {
+        console.error('チーム一覧取得エラー:', err);
+      }
+    };
+    fetchTeams();
+  }, [tournamentId]);
 
-  // ブロック分類関数（フェーズIDに依存しない動的判定）
-  const getBlockKey = (match: MatchData): string => {
-    // _unifiedブロックの場合はdisplay_round_nameを使用
-    if (match.block_name && match.block_name.endsWith('_unified')) {
-      return match.display_round_name || match.round_name || 'トーナメント';
-    }
-    // 1文字のブロック名（A, B, C...）は「Xブロック」形式
-    if (match.block_name && match.block_name.length === 1) {
-      return `${match.block_name}ブロック`;
-    }
-    // それ以外の意味のあるblock_name（1位リーグ等）はそのまま
-    if (match.block_name && match.block_name !== 'default') {
-      return match.block_name;
-    }
-    // display_round_nameがあればそれを使用
-    if (match.display_round_name) return match.display_round_name;
-    return match.phase || 'その他';
-  };
+  // チームが試合に割り当て済みかどうか（フィルター表示条件）
+  const hasAssignedTeams = useMemo(() => {
+    return matches.some(m => m.team1_tournament_team_id || m.team2_tournament_team_id);
+  }, [matches]);
 
-  const blockColors = [
-    'bg-blue-100 text-blue-800',
-    'bg-green-100 text-green-800',
-    'bg-yellow-100 text-yellow-800',
-    'bg-purple-100 text-purple-800',
-    'bg-pink-100 text-pink-800',
-    'bg-indigo-100 text-indigo-800',
-    'bg-rose-100 text-rose-800',
-    'bg-teal-100 text-teal-800',
-    'bg-cyan-100 text-cyan-800',
-    'bg-lime-100 text-lime-800',
-    'bg-amber-100 text-amber-800',
-    'bg-sky-100 text-sky-800',
-    'bg-fuchsia-100 text-fuchsia-800',
-    'bg-emerald-100 text-emerald-800',
-    'bg-violet-100 text-violet-800',
-    'bg-red-100 text-red-800',
-  ];
-  const getBlockColor = (blockKey: string): string => {
-    // 「Xブロック」形式からブロック文字を抽出して色分け（A～Z対応）
-    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
-    if (blockMatch) {
-      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
-      return blockColors[index % blockColors.length];
-    }
-    // X位リーグ/ブロックの色分け
-    if (blockKey.includes('1位')) return 'bg-amber-100 text-amber-800';
-    if (blockKey.includes('2位')) return 'bg-cyan-100 text-cyan-800';
-    if (blockKey.includes('3位')) return 'bg-lime-100 text-lime-800';
-    if (blockKey.includes('4位')) return 'bg-teal-100 text-teal-800';
-    return 'bg-muted text-muted-foreground';
-  };
+  // フィルタリングされた試合一覧
+  const filteredMatches = useMemo(() => {
+    if (filterTeamId === 'all') return matches;
+    const teamId = parseInt(filterTeamId);
+    return matches.filter(m =>
+      m.team1_tournament_team_id === teamId || m.team2_tournament_team_id === teamId
+    );
+  }, [matches, filterTeamId]);
+
+  // リーグ戦モード判定（matchdayが設定されている試合があるか）
+  const isLeagueMode = useMemo(() => {
+    return matches.some(m => m.matchday != null && m.matchday > 0);
+  }, [matches]);
 
   // 試合結果の表示
   const getMatchResult = (match: MatchData) => {
@@ -283,46 +279,6 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
     );
   }
 
-  // ブロック情報を取得
-  const getAvailableBlocks = () => {
-    const blocks = new Set<string>();
-    matches.forEach(match => {
-      blocks.add(getBlockKey(match));
-    });
-    return Array.from(blocks).sort((a, b) => {
-      // 「Xブロック」形式のブロック同士はアルファベット順
-      const blockMatchA = a.match(/^([A-Z])ブロック$/);
-      const blockMatchB = b.match(/^([A-Z])ブロック$/);
-      if (blockMatchA && blockMatchB) {
-        return blockMatchA[1].localeCompare(blockMatchB[1]);
-      }
-      // ブロック形式が先、その他が後
-      if (blockMatchA && !blockMatchB) return -1;
-      if (!blockMatchA && blockMatchB) return 1;
-      // それ以外はそのまま比較
-      return a.localeCompare(b);
-    });
-  };
-
-  // 指定されたブロックの試合をフィルタリング
-  const getMatchesForBlock = (blockKey: string) => {
-    return matches.filter(match => getBlockKey(match) === blockKey);
-  };
-
-  // ブロックタブの短縮名を取得（スマホ表示用）
-  const getBlockShortName = (blockKey: string): string => {
-    // 「Xブロック」形式 → アルファベットのみ
-    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
-    if (blockMatch) return blockMatch[1];
-    // X位リーグ/ブロック → X位
-    const rankMatch = blockKey.match(/^(\d+位)/);
-    if (rankMatch) return rankMatch[1];
-    // そのまま使用（20文字まで）
-    if (blockKey.length <= 20) return blockKey;
-    return blockKey.substring(0, 18) + '..';
-  };
-
-  const availableBlocks = getAvailableBlocks();
 
   // 概要情報カードコンポーネント
   const OverviewCard = ({ filteredMatches }: { filteredMatches: MatchData[] }) => (
@@ -334,7 +290,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">{filteredMatches.length}</div>
             <div className="text-sm text-muted-foreground">試合数</div>
@@ -359,7 +315,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
     </Card>
   );
 
-  // 日程別スケジュール表示コンポーネント
+  // 日程別スケジュール表示コンポーネント（時間順）
   const ScheduleByDate = ({ filteredMatches }: { filteredMatches: MatchData[] }) => {
     const filteredMatchesByDate = filteredMatches.reduce((acc, match) => {
       const date = match.tournament_date;
@@ -374,18 +330,16 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
 
     return (
       <>
-        {sortedFilteredDates.map((date, _dateIndex) => {
+        {sortedFilteredDates.map((date) => {
           const dayMatches = filteredMatchesByDate[date];
-          
-          // ブロック別にマッチを分類
-          const matchesByBlock = dayMatches.reduce((acc, match) => {
-            const blockKey = getBlockKey(match);
-            if (!acc[blockKey]) {
-              acc[blockKey] = [];
-            }
-            acc[blockKey].push(match);
-            return acc;
-          }, {} as Record<string, MatchData[]>);
+
+          // 時間順にソート（時間未設定は末尾）
+          const sortedMatches = [...dayMatches].sort((a, b) => {
+            const timeA = a.start_time || '99:99';
+            const timeB = b.start_time || '99:99';
+            if (timeA !== timeB) return timeA.localeCompare(timeB);
+            return a.match_code.localeCompare(b.match_code, undefined, { numeric: true });
+          });
 
           return (
             <div key={date} className="space-y-4">
@@ -405,125 +359,191 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
                 </CardHeader>
               </Card>
 
-              {/* ブロック別試合表示 */}
-              {Object.entries(matchesByBlock)
-                .sort(([blockKeyA], [blockKeyB]) => {
-                  // 「Xブロック」形式のブロック同士はアルファベット順
-                  const matchA = blockKeyA.match(/^([A-Z])ブロック$/);
-                  const matchB = blockKeyB.match(/^([A-Z])ブロック$/);
-                  if (matchA && matchB) {
-                    return matchA[1].localeCompare(matchB[1]);
-                  }
-                  if (matchA && !matchB) return -1;
-                  if (!matchA && matchB) return 1;
-                  return blockKeyA.localeCompare(blockKeyB);
-                })
-                .map(([blockKey, blockMatches]) => (
-                <Card key={blockKey}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
-                        {blockKey}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {blockMatches.length}試合
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse min-w-[700px]">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-2 font-medium w-20">時間</th>
-                            <th className="text-left py-3 px-2 font-medium w-20">試合</th>
-                            <th className="text-left py-3 px-2 font-medium">対戦</th>
-                            <th className="text-right py-3 px-2 font-medium w-[200px]">結果</th>
-                            <th className="text-right py-3 px-2 font-medium w-[100px]">コート</th>
+              {/* 時間順試合表示 */}
+              <Card>
+                <CardContent className="pt-4">
+                  <table className="w-full border-collapse table-fixed">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-1.5 font-medium w-[3.5rem]">時間</th>
+                        <th className="text-left py-3 px-1.5 font-medium w-[3rem]">試合</th>
+                        <th className="text-left py-3 px-1.5 font-medium">対戦</th>
+                        <th className="text-right py-3 px-1.5 font-medium">結果</th>
+                        <th className="text-right py-3 px-1.5 font-medium w-[4.5rem]">コート</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedMatches.map((match) => {
+                        const result = getMatchResult(match);
+
+                        return (
+                          <tr key={match.match_id} className="border-b hover:bg-muted">
+                            <td className="py-2 px-1.5 whitespace-nowrap">
+                              <span className="text-sm">{formatTime(match.start_time)}</span>
+                            </td>
+                            <td className="py-2 px-1.5 whitespace-nowrap">
+                              <div className="text-sm font-medium">{match.match_code}</div>
+                            </td>
+                            <td className="py-2 px-1.5">
+                              <div className="text-sm space-y-0.5">
+                                <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
+                                  {match.team1_display_name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">vs</div>
+                                <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
+                                  {match.team2_display_name}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-2 px-1.5 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end space-x-1">
+                                <div className="hidden md:inline">{result.icon}</div>
+                                <div className="text-sm">{result.display}</div>
+                              </div>
+                              {match.remarks && !match.is_walkover && (
+                                <div className="text-xs text-muted-foreground mt-1 hidden md:block text-right">
+                                  {match.remarks}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2 px-1.5 whitespace-nowrap text-right">
+                              {match.court_number ? (
+                                <div className="flex items-center justify-end text-sm">
+                                  <MapPin className="h-3 w-3 mr-1 text-muted-foreground hidden md:inline" />
+                                  <span>{match.court_name || match.court_number}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {blockMatches
-                            .sort((a, b) => {
-                              return a.match_code.localeCompare(b.match_code, undefined, { numeric: true });
-                            })
-                            .map((match) => {
-                              const result = getMatchResult(match);
-                              
-                              return (
-                                <tr key={match.match_id} className="border-b hover:bg-muted">
-                                  <td className="py-2 px-2">
-                                    <div className="flex items-center text-xs md:text-sm">
-                                      <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
-                                      <span className="truncate">{formatTime(match.start_time)}</span>
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-2">
-                                    <div className="font-medium text-xs md:text-sm">{match.match_code}</div>
-                                    <div className="text-xs text-muted-foreground hidden md:block">{match.match_type}</div>
-                                  </td>
-                                  <td className="py-2 px-2">
-                                    <div className="text-xs md:text-sm">
-                                      <div className="hidden md:block space-y-1">
-                                        {/* デスクトップ表示: 縦並び */}
-                                        <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
-                                          {match.team1_display_name}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">vs</div>
-                                        <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
-                                          {match.team2_display_name}
-                                        </div>
-                                      </div>
-                                      <div className="md:hidden">
-                                        {/* モバイル表示: 横並び */}
-                                        <div className="flex items-center space-x-1 text-xs">
-                                          <span className={`truncate max-w-[3.5rem] ${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
-                                            {match.team1_display_name}
-                                          </span>
-                                          <span className="text-muted-foreground text-xs">vs</span>
-                                          <span className={`truncate max-w-[3.5rem] ${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
-                                            {match.team2_display_name}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-2 whitespace-nowrap text-right">
-                                    <div className="flex items-center justify-end space-x-1">
-                                      <div className="hidden md:inline">{result.icon}</div>
-                                      <div className="text-xs md:text-sm">{result.display}</div>
-                                    </div>
-                                    {match.remarks && !match.is_walkover && (
-                                      <div className="text-xs text-muted-foreground mt-1 hidden md:block text-right">
-                                        {match.remarks}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2 whitespace-nowrap text-right">
-                                    {match.court_number ? (
-                                      <div className="flex items-center justify-end text-xs md:text-sm">
-                                        <MapPin className="h-3 w-3 mr-1 text-muted-foreground hidden md:inline" />
-                                        <span className="md:hidden">
-                                          {match.court_name || match.court_number}
-                                        </span>
-                                        <span className="hidden md:inline">
-                                          {match.court_name || match.court_number}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <span className="text-muted-foreground text-xs">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
             </div>
+          );
+        })}
+      </>
+    );
+  };
+
+  // 節別スケジュール表示コンポーネント（リーグ戦用・試合コード順）
+  const ScheduleByMatchday = ({ filteredMatches: fm }: { filteredMatches: MatchData[] }) => {
+    // 節ごとにグループ化
+    const matchesByMatchday = fm.reduce((acc, match) => {
+      const md = match.matchday ?? 0;
+      if (!acc[md]) acc[md] = [];
+      acc[md].push(match);
+      return acc;
+    }, {} as Record<number, MatchData[]>);
+
+    const sortedMatchdays = Object.keys(matchesByMatchday).map(Number).sort((a, b) => a - b);
+
+    // 日付の短縮フォーマット（M/d）
+    const formatShortDate = (dateStr: string): string => {
+      if (!dateStr || dateStr === '2024-01-01') return '-';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '-';
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    };
+
+    return (
+      <>
+        {sortedMatchdays.map((matchday) => {
+          const mdMatches = matchesByMatchday[matchday];
+
+          // 試合コード順にソート
+          const sortedMatches = [...mdMatches].sort((a, b) =>
+            a.match_code.localeCompare(b.match_code, undefined, { numeric: true })
+          );
+
+          return (
+            <Card key={matchday}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Trophy className="h-5 w-5 mr-2 text-primary" />
+                    第{matchday}節
+                  </div>
+                  <span className="text-sm text-muted-foreground font-normal">
+                    {mdMatches.length}試合
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <table className="w-full border-collapse table-fixed">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-1.5 font-medium w-[3rem]">日程</th>
+                      <th className="text-left py-3 px-1.5 font-medium w-[3.5rem]">時間</th>
+                      <th className="text-left py-3 px-1.5 font-medium w-[3rem]">試合</th>
+                      <th className="text-left py-3 px-1.5 font-medium">対戦</th>
+                      <th className="text-right py-3 px-1.5 font-medium">結果</th>
+                      <th className="text-right py-3 px-1.5 font-medium w-[5.5rem]">会場</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedMatches.map((match) => {
+                      const result = getMatchResult(match);
+
+                      return (
+                        <tr key={match.match_id} className="border-b hover:bg-muted">
+                          <td className="py-2 px-1.5 whitespace-nowrap">
+                            <span className="text-sm">{formatShortDate(match.tournament_date)}</span>
+                          </td>
+                          <td className="py-2 px-1.5 whitespace-nowrap">
+                            <span className="text-sm">{formatTime(match.start_time)}</span>
+                          </td>
+                          <td className="py-2 px-1.5 whitespace-nowrap">
+                            <div className="text-sm font-medium">{match.match_code}</div>
+                          </td>
+                          <td className="py-2 px-1.5">
+                            <div className="text-sm space-y-0.5">
+                              <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
+                                {match.team1_display_name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">vs</div>
+                              <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
+                                {match.team2_display_name}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-1.5 whitespace-nowrap text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <div className="hidden md:inline">{result.icon}</div>
+                              <div className="text-sm">{result.display}</div>
+                            </div>
+                            {match.remarks && !match.is_walkover && (
+                              <div className="text-xs text-muted-foreground mt-1 hidden md:block text-right">
+                                {match.remarks}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2 px-1.5 whitespace-nowrap text-right">
+                            {(match.venue_name || match.court_name) ? (
+                              <div className="text-sm text-right">
+                                <div className="flex items-center justify-end">
+                                  <MapPin className="h-3 w-3 mr-1 text-muted-foreground hidden md:inline" />
+                                  <span>{match.venue_name || `コート${match.court_number}`}</span>
+                                </div>
+                                {match.court_name && (
+                                  <div className="text-xs text-muted-foreground">{match.court_name}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
           );
         })}
       </>
@@ -535,55 +555,37 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
       {/* 試合速報エリア */}
       <MatchNewsArea tournamentId={tournamentId} />
 
-      {/* ブロック別タブ */}
-      <Tabs defaultValue="all" className="w-full">
-        <div className="relative">
-          <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 overflow-x-auto">
-            <div className="flex space-x-1 min-w-max">
-              <TabsTrigger 
-                value="all" 
-                className="flex items-center px-3 py-2 text-xs sm:text-sm whitespace-nowrap"
-              >
-                <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                <span className="hidden xs:inline">全て表示</span>
-                <span className="xs:hidden">全て</span>
-              </TabsTrigger>
-              {availableBlocks.map((blockKey) => (
-                <TabsTrigger 
-                  key={blockKey}
-                  value={blockKey}
-                  className={`flex items-center px-3 py-2 text-xs sm:text-sm whitespace-nowrap ${getBlockColor(blockKey)}`}
-                >
-                  <span className="hidden sm:inline">{blockKey}</span>
-                  <span className="sm:hidden">{getBlockShortName(blockKey)}</span>
-                  <span className="ml-1 text-xs opacity-75">
-                    ({getMatchesForBlock(blockKey).length})
-                  </span>
-                </TabsTrigger>
+      {/* チームフィルター（チームが割り当て済みで確定チームがある場合のみ表示） */}
+      {hasAssignedTeams && confirmedTeams.length > 0 && (
+        <div className="flex items-center gap-3">
+          <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Select value={filterTeamId} onValueChange={setFilterTeamId}>
+            <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectValue placeholder="チームで絞り込み" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべての試合</SelectItem>
+              {confirmedTeams.map((team) => (
+                <SelectItem key={team.tournament_team_id} value={team.tournament_team_id.toString()}>
+                  {team.display_name}
+                </SelectItem>
               ))}
-            </div>
-          </TabsList>
+            </SelectContent>
+          </Select>
+          {filterTeamId !== 'all' && (
+            <span className="text-sm text-muted-foreground shrink-0">
+              {filteredMatches.length}試合
+            </span>
+          )}
         </div>
+      )}
 
-        {/* 全て表示タブ */}
-        <TabsContent value="all" className="mt-6">
-          <div className="space-y-6">
-            <OverviewCard filteredMatches={matches} />
-            <ScheduleByDate filteredMatches={matches} />
-          </div>
-        </TabsContent>
-
-        {/* ブロック別タブ */}
-        {availableBlocks.map((blockKey) => (
-          <TabsContent key={blockKey} value={blockKey} className="mt-6">
-            <div className="space-y-6">
-              <OverviewCard filteredMatches={getMatchesForBlock(blockKey)} />
-              <ScheduleByDate filteredMatches={getMatchesForBlock(blockKey)} />
-            </div>
-          </TabsContent>
-        ))}
-
-      </Tabs>
+      <OverviewCard filteredMatches={filteredMatches} />
+      {isLeagueMode ? (
+        <ScheduleByMatchday filteredMatches={filteredMatches} />
+      ) : (
+        <ScheduleByDate filteredMatches={filteredMatches} />
+      )}
     </div>
   );
 }

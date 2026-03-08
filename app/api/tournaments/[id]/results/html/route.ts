@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTournamentResults } from '@/lib/match-results-calculator';
+import { buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -21,10 +22,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 大会情報を取得
     const tournamentResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_name,
         v.venue_name,
-        t.tournament_dates
+        t.tournament_dates,
+        t.phases
       FROM t_tournaments t
       LEFT JOIN m_venues v ON t.venue_id = v.venue_id
       WHERE t.tournament_id = ?
@@ -55,10 +57,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
     
-    // 予選リーグのみをフィルタリング
-    const preliminaryBlocks = blockResults.filter(block => 
-      block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ')
-    );
+    // リーグ形式フェーズのみをフィルタリング
+    const phaseFormatMap = buildPhaseFormatMap(tournamentRow.phases as string | null);
+    const preliminaryBlocks = blockResults.filter(block => {
+      const formatType = phaseFormatMap.get(block.phase);
+      if (formatType) return formatType === 'league';
+      // フォールバック: phases情報がない場合は従来の判定
+      return block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ');
+    });
 
     if (preliminaryBlocks.length === 0) {
       return NextResponse.json(

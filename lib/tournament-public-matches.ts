@@ -113,10 +113,15 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             ml.match_code,
             ml.team1_tournament_team_id,
             ml.team2_tournament_team_id,
-            ml.team1_display_name,
-            ml.team2_display_name,
+            ml.team1_display_name as team1_display_name_raw,
+            ml.team2_display_name as team2_display_name_raw,
+            tt1.team_name as team1_real_name,
+            tt1.team_omission as team1_real_omission,
+            tt2.team_name as team2_real_name,
+            tt2.team_omission as team2_real_omission,
             ml.court_number,
             tc.court_name,
+            ml.venue_name,
             ml.start_time,
             mb.phase,
             mb.display_round_name,
@@ -124,6 +129,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             mb.match_type,
             mb.block_order,
             ml.round_name,
+            ml.matchday,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
@@ -134,6 +140,8 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+          LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+          LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
           WHERE mb.tournament_id = ?
           ORDER BY mb.block_order ASC, ml.match_number ASC
         `, [tournamentId]);
@@ -165,12 +173,9 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               tt1.team_omission as team1_real_omission,
               tt2.team_name as team2_real_name,
               tt2.team_omission as team2_real_omission,
-              mt1.team_name as team1_master_name,
-              mt1.team_omission as team1_master_omission,
-              mt2.team_name as team2_master_name,
-              mt2.team_omission as team2_master_omission,
               ml.court_number,
               tc.court_name,
+              ml.venue_name,
               ml.start_time,
               mb.phase,
               mb.display_round_name,
@@ -178,6 +183,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               mb.match_type,
               mb.block_order,
               ml.round_name,
+              ml.matchday,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
               CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
@@ -196,8 +202,6 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
             LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
             LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-            LEFT JOIN m_teams mt1 ON tt1.team_id = mt1.team_id
-            LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
             WHERE mb.tournament_id = ?
             ORDER BY mb.block_order ASC, ml.match_number ASC
           `, [tournamentId]);
@@ -219,12 +223,9 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               tt1.team_omission as team1_real_omission,
               tt2.team_name as team2_real_name,
               tt2.team_omission as team2_real_omission,
-              mt1.team_name as team1_master_name,
-              mt1.team_omission as team1_master_omission,
-              mt2.team_name as team2_master_name,
-              mt2.team_omission as team2_master_omission,
               ml.court_number,
               tc.court_name,
+              ml.venue_name,
               ml.start_time,
               mb.phase,
               mb.display_round_name,
@@ -232,6 +233,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               mb.match_type,
               mb.block_order,
               ml.round_name,
+              ml.matchday,
               mf.team1_scores as team1_goals,
               mf.team2_scores as team2_goals,
               mf.winner_tournament_team_id,
@@ -251,8 +253,6 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
             LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
             LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-            LEFT JOIN m_teams mt1 ON tt1.team_id = mt1.team_id
-            LEFT JOIN m_teams mt2 ON tt2.team_id = mt2.team_id
             WHERE mb.tournament_id = ?
             ORDER BY mb.block_order ASC, ml.match_number ASC
           `, [tournamentId]);
@@ -271,10 +271,15 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           ml.match_code,
           ml.team1_tournament_team_id,
           ml.team2_tournament_team_id,
-          ml.team1_display_name,
-          ml.team2_display_name,
+          ml.team1_display_name as team1_display_name_raw,
+          ml.team2_display_name as team2_display_name_raw,
+          tt1.team_name as team1_real_name,
+          tt1.team_omission as team1_real_omission,
+          tt2.team_name as team2_real_name,
+          tt2.team_omission as team2_real_omission,
           ml.court_number,
           tc.court_name,
+          ml.venue_name,
           ml.start_time,
           mb.phase,
           mb.display_round_name,
@@ -282,6 +287,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           mb.match_type,
           mb.block_order,
           ml.round_name,
+          ml.matchday,
           CASE WHEN ml.result_status = 'confirmed' THEN ml.team1_scores ELSE NULL END as team1_goals,
           CASE WHEN ml.result_status = 'confirmed' THEN ml.team2_scores ELSE NULL END as team2_goals,
           CASE WHEN ml.result_status = 'confirmed' THEN ml.winner_tournament_team_id ELSE NULL END as winner_tournament_team_id,
@@ -295,6 +301,8 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ?
         ORDER BY mb.block_order ASC, ml.match_number ASC
       `, [tournamentId]);
@@ -400,22 +408,20 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         continue;
       }
 
-      // チーム名の決定（略称を優先、なければ正式名称、なければプレースホルダーから解決）
+      // チーム名の決定（t_tournament_teamsの略称を優先、なければ正式名称、なければプレースホルダーから解決）
       let team1DisplayName = String(
         row.team1_real_omission || row.team1_real_name ||
-        row.team1_master_omission || row.team1_master_name ||
         row.team1_display_name_raw || 'チーム1'
       );
       let team2DisplayName = String(
         row.team2_real_omission || row.team2_real_name ||
-        row.team2_master_omission || row.team2_master_name ||
         row.team2_display_name_raw || 'チーム2'
       );
 
       // プレースホルダーの場合、実チーム名に解決
       const blockName = row.block_name ? String(row.block_name) : null;
 
-      if (!row.team1_real_name && !row.team1_master_name && row.team1_display_name_raw && blockName) {
+      if (!row.team1_real_name && row.team1_display_name_raw && blockName) {
         const position = extractPosition(String(row.team1_display_name_raw));
         if (position !== null) {
           const key = `${blockName}-${position}`;
@@ -427,7 +433,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         }
       }
 
-      if (!row.team2_real_name && !row.team2_master_name && row.team2_display_name_raw && blockName) {
+      if (!row.team2_real_name && row.team2_display_name_raw && blockName) {
         const position = extractPosition(String(row.team2_display_name_raw));
         if (position !== null) {
           const key = `${blockName}-${position}`;
@@ -451,6 +457,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         team2_display_name: team2DisplayName,
         court_number: row.court_number ? Number(row.court_number) : 1,
         court_name: row.court_name ? String(row.court_name) : null,
+        venue_name: row.venue_name ? String(row.venue_name) : null,
         start_time: row.start_time ? String(row.start_time) : null,
         // ブロック情報
         phase: String(row.phase || 'preliminary'),
@@ -459,6 +466,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         match_type: String(row.match_type || '通常'),
         block_order: Number(row.block_order || 1),
         round_name: row.round_name ? String(row.round_name) : null,
+        matchday: row.matchday ? Number(row.matchday) : null,
         // 結果情報（PK戦を考慮したスコア計算）
         ...(function() {
           const team1Score = calculateDisplayScore(row.team1_goals);

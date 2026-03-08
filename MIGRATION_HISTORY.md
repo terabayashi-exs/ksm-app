@@ -16,6 +16,33 @@
 
 ---
 
+## 0020: t_tournament_rulesのphase CHECK制約を削除 - フェーズ可変対応（2026-03-08）
+
+### 基本情報
+- **日付**: 2026年3月8日
+- **環境**: dev（未適用）
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0020_remove_phase_check_constraint.sql`
+
+### 変更内容
+- `t_tournament_rules`テーブルの`phase`カラムのCHECK制約 `phase IN ('preliminary', 'final')` を削除
+- SQLiteではALTER TABLEでCHECK制約を削除できないため、テーブル再作成方式で対応
+- フェーズIDが`phases` JSONの任意の値を取れるようになる（例: `preliminary_1`, `league_round` 等）
+
+### 変更理由
+- 大会フォーマットの`phases` JSONで定義される任意のフェーズIDを`t_tournament_rules`に登録できるようにするため
+- 従来は「予選」と「決勝」の2フェーズ固定だったが、3フェーズ以上の大会構成に対応
+
+### 影響を受けたファイル
+- `src/db/schema.ts` - CHECK制約行を削除
+- `lib/tournament-rules.ts` - `TournamentRule.phase`型を`string`に変更
+- `app/api/tournaments/[id]/rules/route.ts` - phase型キャストを修正
+- `components/features/tournament-rules/TournamentRulesForm.tsx` - フェーズカードを動的生成に変更
+- `drizzle/meta/_journal.json` - エントリ追加
+
+---
+
 ## 0018: venue_nameをt_matches_liveに追加 - リーグ戦の試合別会場対応（2026-03-06）
 
 ### 基本情報

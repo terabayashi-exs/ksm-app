@@ -93,8 +93,6 @@ async function executeMigrationFile(filePath: string, tag: string): Promise<void
       const ignorableErrors = [
         'already exists',
         'duplicate',
-        'no such column',  // カラムが既に削除済み
-        'no such table',   // テーブルが既に削除済み
       ];
 
       const shouldIgnore = ignorableErrors.some(msg => error.message?.includes(msg));

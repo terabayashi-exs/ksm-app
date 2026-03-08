@@ -4,7 +4,7 @@ import { updateFinalTournamentRankings, updateBlockRankingsOnMatchConfirm } from
 import { processTournamentProgression } from '@/lib/tournament-progression';
 import { handleTemplateBasedPositions } from '@/lib/template-position-handler';
 import { checkAndPromoteOnMatchConfirm } from '@/lib/tournament-promotion';
-import { buildPhaseFormatMap } from '@/lib/tournament-phases';
+import { buildPhaseFormatMap, getPhaseFormatTypeFromJson } from '@/lib/tournament-phases';
 
 /**
  * 大会の全試合が確定されているかチェックし、完了していれば大会ステータスを更新する
@@ -206,9 +206,9 @@ export async function confirmMatchResult(matchId: number): Promise<void> {
             // エラーでも処理は継続
           }
 
-          // 決勝の場合は従来の順位計算も実行（フォールバック）
-          if (phase === 'final') {
-            await updateFinalTournamentRankings(tournamentId);
+          // トーナメント形式の場合は従来の順位計算も実行（フォールバック）
+          if (formatType === 'tournament') {
+            await updateFinalTournamentRankings(tournamentId, phase);
           }
         }
       }
@@ -320,11 +320,15 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
 
     // 更新されたブロックの順位表を一括更新
     const affectedTournaments = new Set<number>();
-    const finalTournamentsToUpdate = new Set<number>();
+    const tournamentsToUpdateRankings: Array<{tournamentId: number, phase: string}> = [];
+    const seenRankingUpdates = new Set<string>();
 
     for (const matchBlockId of updatedBlocks) {
       const blockResult = await db.execute({
-        sql: 'SELECT tournament_id, phase, block_name FROM t_match_blocks WHERE match_block_id = ?',
+        sql: `SELECT mb.tournament_id, mb.phase, mb.block_name, t.phases
+              FROM t_match_blocks mb
+              JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
+              WHERE mb.match_block_id = ?`,
         args: [matchBlockId]
       });
 
@@ -344,9 +348,14 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
           // エラーが発生しても処理は継続
         }
         
-        // 決勝トーナメントの場合はテンプレートベース順位設定と決勝順位更新対象に追加
-        if (phase === 'final') {
-          finalTournamentsToUpdate.add(tournamentId);
+        // トーナメント形式の場合はテンプレートベース順位設定と順位更新対象に追加
+        const bulkFormatType = getPhaseFormatTypeFromJson(blockResult.rows[0].phases as string | null, phase);
+        if (bulkFormatType === 'tournament') {
+          const dedupeKey = `${tournamentId}_${phase}`;
+          if (!seenRankingUpdates.has(dedupeKey)) {
+            seenRankingUpdates.add(dedupeKey);
+            tournamentsToUpdateRankings.push({tournamentId, phase});
+          }
           
           // 一括確定でもテンプレートベース順位設定を実行
           try {
@@ -388,10 +397,10 @@ export async function confirmMultipleMatchResults(matchIds: number[]): Promise<v
       }
     }
 
-    // 決勝トーナメントの順位を更新
-    for (const tournamentId of finalTournamentsToUpdate) {
-      console.log(`[BULK_CONFIRM] 決勝トーナメント順位一括更新: Tournament ${tournamentId}`);
-      await updateFinalTournamentRankings(tournamentId);
+    // トーナメント形式フェーズの順位を更新
+    for (const { tournamentId, phase } of tournamentsToUpdateRankings) {
+      console.log(`[BULK_CONFIRM] トーナメント順位一括更新: Tournament ${tournamentId}, Phase ${phase}`);
+      await updateFinalTournamentRankings(tournamentId, phase);
     }
 
     // 影響を受けた大会の完了チェック

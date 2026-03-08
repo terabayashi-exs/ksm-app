@@ -83,8 +83,12 @@ export async function archiveTournamentAsJson(
           GROUP BY phase
         `, [tournamentId]);
 
-        const preliminaryBlocks = Number(blocksInfo.rows.find(b => b.phase === 'preliminary')?.block_count) || 0;
-        const finalBlocks = Number(blocksInfo.rows.find(b => b.phase === 'final')?.block_count) || 0;
+        // フェーズごとのブロック数を動的に集計
+        const phaseBlockCounts: Record<string, number> = {};
+        for (const b of blocksInfo.rows) {
+          const phase = b.phase as string;
+          phaseBlockCounts[phase] = Number(b.block_count) || 0;
+        }
 
         formatDetails = {
           format_info: {
@@ -92,9 +96,10 @@ export async function archiveTournamentAsJson(
             format_name: format.format_name,
             target_team_count: format.target_team_count,
             format_description: format.format_description,
-            // 推測された情報
-            preliminary_format: preliminaryBlocks > 0 ? 'league' : 'none',
-            final_format: finalBlocks > 0 ? 'tournament' : 'none',
+            // 推測された情報（後方互換性のためpreliminary/finalも維持）
+            preliminary_format: (phaseBlockCounts['preliminary'] || 0) > 0 ? 'league' : 'none',
+            final_format: (phaseBlockCounts['final'] || 0) > 0 ? 'tournament' : 'none',
+            phase_block_counts: phaseBlockCounts,
             preliminary_advance_count: 2, // デフォルト値
             has_third_place_match: matchStructureResult.rows.some(t => t.match_code === 'T7'),
             format_created_at: format.format_created_at
@@ -176,21 +181,16 @@ export async function archiveTournamentAsJson(
       ORDER BY ml.tournament_date, ml.match_number
     `, [tournamentId]);
 
-    // 4. 順位表データを取得
+    // 4. 順位表データを取得（フェーズ順はblock_orderで制御）
     const standingsResult = await db.execute(`
-      SELECT 
+      SELECT
         mb.block_name,
         mb.phase,
         mb.team_rankings,
         mb.remarks
       FROM t_match_blocks mb
       WHERE mb.tournament_id = ?
-      ORDER BY 
-        CASE mb.phase 
-          WHEN 'preliminary' THEN 1
-          WHEN 'final' THEN 2 
-        END,
-        mb.block_name
+      ORDER BY mb.block_order, mb.block_name
     `, [tournamentId]);
 
     // 5. 戦績表用の結果データを取得
@@ -338,6 +338,19 @@ export async function archiveTournamentAsJson(
         ORDER BY tt.assigned_block, tt.block_position
       `, [tournamentId]);
 
+      // フェーズごとのブロック分類を動的に構築
+      const blocksByPhase: Record<string, string[]> = {};
+      const blocksCountByPhase: Record<string, number> = {};
+      for (const b of blocksResult.rows) {
+        const phase = b.phase as string;
+        if (!blocksByPhase[phase]) {
+          blocksByPhase[phase] = [];
+          blocksCountByPhase[phase] = 0;
+        }
+        blocksByPhase[phase].push(b.block_name as string);
+        blocksCountByPhase[phase]++;
+      }
+
       blockStructure = {
         blocks_info: blocksResult.rows.map(block => ({
           match_block_id: block.match_block_id,
@@ -363,14 +376,19 @@ export async function archiveTournamentAsJson(
           });
           return acc;
         }, {} as Record<string, unknown[]>),
-        preliminary_blocks: blocksResult.rows.filter(b => b.phase === 'preliminary').map(b => b.block_name),
-        final_blocks: blocksResult.rows.filter(b => b.phase === 'final').map(b => b.block_name),
+        // 後方互換性のためpreliminary/finalも維持
+        preliminary_blocks: blocksByPhase['preliminary'] || [],
+        final_blocks: blocksByPhase['final'] || [],
+        // 動的フェーズ対応
+        blocks_by_phase: blocksByPhase,
+        blocks_count_by_phase: blocksCountByPhase,
         total_blocks_count: blocksResult.rows.length,
-        preliminary_blocks_count: blocksResult.rows.filter(b => b.phase === 'preliminary').length,
-        final_blocks_count: blocksResult.rows.filter(b => b.phase === 'final').length
+        preliminary_blocks_count: blocksCountByPhase['preliminary'] || 0,
+        final_blocks_count: blocksCountByPhase['final'] || 0
       };
 
-      console.log(`✅ ブロック構成情報取得成功: ${blockStructure.total_blocks_count}ブロック (予選:${blockStructure.preliminary_blocks_count}, 決勝:${blockStructure.final_blocks_count})`);
+      const phaseCountsLog = Object.entries(blocksCountByPhase).map(([p, c]) => `${p}:${c}`).join(', ');
+      console.log(`✅ ブロック構成情報取得成功: ${blockStructure.total_blocks_count}ブロック (${phaseCountsLog})`);
     } catch (error) {
       console.warn(`Warning: Could not fetch block structure for tournament ${tournamentId}:`, error);
       blockStructure = {
@@ -378,6 +396,8 @@ export async function archiveTournamentAsJson(
         block_assignments: {},
         preliminary_blocks: [],
         final_blocks: [],
+        blocks_by_phase: {},
+        blocks_count_by_phase: {},
         total_blocks_count: 0,
         preliminary_blocks_count: 0,
         final_blocks_count: 0

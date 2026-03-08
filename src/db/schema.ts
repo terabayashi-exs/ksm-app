@@ -692,7 +692,6 @@ export const tTournamentRules = sqliteTable("t_tournament_rules", {
 (_table) => [
 	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
 	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
 	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
 	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
 	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),

@@ -154,7 +154,7 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{teamsData.total_teams}</div>
               <div className="text-sm text-muted-foreground">参加チーム数</div>

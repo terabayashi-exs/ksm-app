@@ -18,6 +18,7 @@ import type {
   PatternType,
   PatternConfig,
 } from "@/lib/tournament-bracket";
+import { isUnifiedBlockName } from "@/lib/tournament-phases";
 
 interface TournamentBracketProps extends BracketProps {
   initialMatches?: BracketMatch[];
@@ -157,13 +158,13 @@ const response = await fetch(
   };
 
   // block_nameでグループ化（試合数に関わらず実行）
-  // 統合ブロック（preliminary_unified, final_unified）の場合は、match_codeからブロック名を抽出
+  // 統合ブロック（*_unified）の場合は、match_codeからブロック名を抽出
   const blockMap = new Map<string, BracketMatch[]>();
   mainMatches.forEach((match) => {
     let blockName = match.block_name || "main";
 
     // 統合ブロックの場合は、match_codeの先頭文字（A、B、Cなど）をブロック名として使用
-    if (blockName === 'preliminary_unified' || blockName === 'final_unified') {
+    if (isUnifiedBlockName(blockName)) {
       const matchCodePrefix = match.match_code.match(/^([A-Z])/);
       if (matchCodePrefix) {
         blockName = matchCodePrefix[1];

@@ -629,13 +629,20 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     );
   }
 
-  if (results.length === 0) {
+  // 対象フェーズのブロックをフィルタ
+  const phaseBlocks = results.filter(block => isTargetPhase(block.phase));
+
+  if (results.length === 0 || phaseBlocks.length === 0) {
     return (
       <Card>
         <CardContent className="text-center py-12">
           <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">戦績表</h3>
-          <p className="text-muted-foreground">まだ試合結果がないため、戦績表を表示できません。</p>
+          <p className="text-muted-foreground">
+            {results.length === 0
+              ? 'まだ試合が作成されていないため、戦績表を表示できません。'
+              : 'このフェーズの組み合わせはまだ作成されていません。予選の進出処理後に表示されます。'}
+          </p>
         </CardContent>
       </Card>
     );
@@ -664,27 +671,22 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {results.filter(block => isTargetPhase(block.phase)).length}
+                {phaseBlocks.length}
               </div>
               <div className="text-sm text-muted-foreground">ブロック数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {results
-                  .filter(block => isTargetPhase(block.phase))
-                  .reduce((sum, block) => sum + block.teams.length, 0)
-                }
+                {phaseBlocks.reduce((sum, block) => sum + block.teams.length, 0)}
               </div>
               <div className="text-sm text-muted-foreground">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {results
-                  .filter(block => isTargetPhase(block.phase))
-                  .reduce((sum, block) =>
+                {phaseBlocks.reduce((sum, block) =>
                     sum + block.matches.filter(match =>
                       match.is_confirmed &&
                       match.team1_goals !== null &&
@@ -700,8 +702,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
       </Card>
 
       {/* ブロック別戦績表 */}
-      {results
-        .filter(block => isTargetPhase(block.phase)) // 予選リーグのみ表示
+      {phaseBlocks
         .sort((a, b) => {
           // ブロック名でソート（A → B → C → D の順）
           return (a.block_name || '').localeCompare(b.block_name || '', undefined, { numeric: true });

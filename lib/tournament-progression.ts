@@ -18,7 +18,7 @@ interface ProgressionRule {
  * t_matches_liveテーブルからトーナメント進出ルールを動的に取得
  * @param matchCode - 試合コード
  * @param tournamentId - 大会ID
- * @param phase - フェーズ（'preliminary' または 'final'）
+ * @param phase - フェーズID（動的フェーズ対応）
  */
 async function getTournamentProgressionRules(matchCode: string, tournamentId: number, phase: string): Promise<ProgressionRule> {
   try {
@@ -305,12 +305,13 @@ async function getTeamDisplayNameByTournamentTeamId(tournamentTeamId: number | n
 /**
  * 既存の確定済み試合に基づいてトーナメント進出を再計算する
  * MIGRATION NOTE: tournament_team_idベースで処理
+ * 全フェーズのトーナメント形式試合を対象（動的フェーズ対応）
  */
 export async function recalculateAllTournamentProgression(tournamentId: number): Promise<void> {
   try {
     console.log(`[TOURNAMENT_PROGRESSION] Recalculating tournament progression for tournament ${tournamentId}`);
 
-    // 確定済みの決勝トーナメント試合を取得（execution_priorityでソート）
+    // 確定済みのトーナメント形式試合を取得（全フェーズ対象、execution_priorityでソート）
     // MIGRATION NOTE: tournament_team_idも取得
     const confirmedMatches = await db.execute(`
       SELECT
@@ -324,8 +325,9 @@ export async function recalculateAllTournamentProgression(tournamentId: number):
         mf.execution_priority
       FROM t_matches_final mf
       INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
-      WHERE mb.tournament_id = ? AND mb.phase = 'final'
-      ORDER BY mf.execution_priority ASC, mf.match_code ASC
+      WHERE mb.tournament_id = ?
+        AND mb.match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
+      ORDER BY mb.block_order ASC, mf.execution_priority ASC, mf.match_code ASC
     `, [tournamentId]);
 
     console.log(`[TOURNAMENT_PROGRESSION] Found ${confirmedMatches.rows.length} confirmed tournament matches`);

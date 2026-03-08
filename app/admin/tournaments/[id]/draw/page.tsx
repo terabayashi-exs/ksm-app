@@ -56,6 +56,9 @@ interface Match {
   start_time?: string;
   court_number?: number;
   is_bye_match?: number;
+  matchday?: number | null;
+  cycle?: number | null;
+  venue_name?: string | null;
 }
 
 interface Block {
@@ -674,6 +677,43 @@ export default function TournamentDrawPage() {
     setBlocks(newBlocks);
   };
 
+  // ブロック割り当てに基づいて試合のチーム名を更新する
+  const updateMatchesFromBlocks = (currentMatches: Match[], updatedBlocks: Block[]): Match[] => {
+    // ブロック割り当てマップを構築: "A1チーム" → 実際のチーム名
+    const blockAssignmentMap: Record<string, { team_name: string; tournament_team_id: number }> = {};
+    updatedBlocks.forEach(block => {
+      block.teams.forEach((team, index) => {
+        if (team && team.team_id && team.team_name) {
+          const key = `${block.block_name}${index + 1}チーム`;
+          blockAssignmentMap[key] = {
+            team_name: team.team_name,
+            tournament_team_id: team.tournament_team_id
+          };
+        }
+      });
+    });
+
+    return currentMatches.map(m => {
+      const newMatch = { ...m };
+
+      // team1_display_name からチーム解決
+      if (m.team1_display_name && blockAssignmentMap[m.team1_display_name]) {
+        const assigned = blockAssignmentMap[m.team1_display_name];
+        newMatch.team1_name = assigned.team_name;
+        newMatch.team1_tournament_team_id = assigned.tournament_team_id;
+      }
+
+      // team2_display_name からチーム解決
+      if (m.team2_display_name && blockAssignmentMap[m.team2_display_name]) {
+        const assigned = blockAssignmentMap[m.team2_display_name];
+        newMatch.team2_name = assigned.team_name;
+        newMatch.team2_tournament_team_id = assigned.tournament_team_id;
+      }
+
+      return newMatch;
+    });
+  };
+
   // ランダム振付実行
   const handleRandomDraw = () => {
     if (blocks.length === 0) return;
@@ -788,6 +828,7 @@ export default function TournamentDrawPage() {
         });
 
         setBlocks(newBlocks);
+        setMatches(updateMatchesFromBlocks(matches, newBlocks));
       } else {
         // 想定チーム数が取得できない場合は均等に振分
         const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
@@ -802,6 +843,7 @@ export default function TournamentDrawPage() {
         });
 
         setBlocks(newBlocks);
+        setMatches(updateMatchesFromBlocks(matches, newBlocks));
       }
     }
   };
@@ -827,6 +869,9 @@ export default function TournamentDrawPage() {
     }
 
     setBlocks(newBlocks);
+    if (!isTournamentFormat()) {
+      setMatches(updateMatchesFromBlocks(matches, newBlocks));
+    }
   };
 
   // ブロック内でチームの順番を変更
@@ -851,6 +896,9 @@ export default function TournamentDrawPage() {
     }
 
     setBlocks(newBlocks);
+    if (!isTournamentFormat()) {
+      setMatches(updateMatchesFromBlocks(matches, newBlocks));
+    }
   };
 
   // トーナメント形式: チーム単位で移動
@@ -1232,7 +1280,7 @@ export default function TournamentDrawPage() {
                               {isAssigned && <span className="text-xs text-green-600 ml-2">(振分け済み)</span>}
                             </p>
                             <p className={`text-sm ${isAssigned ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
-                              代表者: {team.contact_person}
+                              {team.team_omission || ''}
                             </p>
                           </div>
                           <Badge variant={isAssigned ? "secondary" : "outline"}>
@@ -1304,9 +1352,6 @@ export default function TournamentDrawPage() {
                               <p className="font-medium text-primary text-base leading-relaxed">
                                 {block.block_name}{teamIndex + 1}. {team.team_name}
                               </p>
-                              <p className="text-sm text-primary mt-1">
-                                {team.contact_person || '連絡先不明'}
-                              </p>
                             </div>
                             
                             {/* ボタンエリア */}
@@ -1367,107 +1412,126 @@ export default function TournamentDrawPage() {
           </div>
 
         {/* 試合スケジュールプレビュー */}
-        {matches.length > 0 && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>試合スケジュールプレビュー</CardTitle>
-              <p className="text-sm text-gray-500">
-                チーム振分後の試合対戦表です
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="border-b bg-muted">
-                      <th className="px-4 py-3 text-left">試合</th>
-                      <th className="px-4 py-3 text-left">フェーズ</th>
-                      <th className="px-4 py-3 text-left">対戦カード</th>
-                      <th className="px-4 py-3 text-left">日程</th>
-                      <th className="px-4 py-3 text-left">コート</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matches
-                      .filter(match => match.is_bye_match !== 1) // 不戦勝試合を除外
-                      .map((match, index, filteredMatches) => {
-                      // ラウンド名の境界線を表示するかチェック
-                      const showRoundHeader = index === 0 || filteredMatches[index - 1].round_name !== match.round_name;
+        {matches.length > 0 && (() => {
+          const firstPhaseMatches = matches.filter(m => m.is_bye_match !== 1 && m.phase === getFirstPhaseId());
+          const hasMatchday = firstPhaseMatches.some(m => m.matchday != null && m.matchday > 0);
 
-                      const rows = [];
+          return (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>試合スケジュールプレビュー</CardTitle>
+                <p className="text-sm text-gray-500">
+                  チーム振分後の試合対戦表です
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto">
+                    <thead>
+                      <tr className="border-b bg-muted">
+                        <th className="px-4 py-3 text-left">試合</th>
+                        <th className="px-4 py-3 text-left">対戦カード</th>
+                        <th className="px-4 py-3 text-left">日程</th>
+                        {hasMatchday ? (
+                          <>
+                            <th className="px-4 py-3 text-left">会場</th>
+                            <th className="px-4 py-3 text-left">巡目</th>
+                          </>
+                        ) : (
+                          <th className="px-4 py-3 text-left">コート</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {firstPhaseMatches.map((match, index, filteredMatches) => {
+                        const rows = [];
 
-                      // ラウンド名ヘッダー行を追加
-                      if (showRoundHeader) {
+                        if (hasMatchday) {
+                          // 節ごとにグルーピング
+                          const showMatchdayHeader = index === 0 || filteredMatches[index - 1].matchday !== match.matchday;
+                          if (showMatchdayHeader) {
+                            rows.push(
+                              <tr key={`matchday-header-${match.matchday}-${index}`}>
+                                <td colSpan={5} className="px-4 py-2 bg-primary/5 border-b">
+                                  <div className="flex items-center">
+                                    <Badge variant="secondary" className="mr-2">
+                                      第{match.matchday}節
+                                    </Badge>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+                        } else {
+                          // ブロック/ラウンドごとにグルーピング
+                          const showRoundHeader = index === 0 || filteredMatches[index - 1].round_name !== match.round_name;
+                          if (showRoundHeader) {
+                            rows.push(
+                              <tr key={`round-header-${match.round_name}-${index}`}>
+                                <td colSpan={4} className="px-4 py-2 bg-primary/5 border-b">
+                                  <div className="flex items-center">
+                                    <Badge variant="secondary" className="mr-2">
+                                      {match.round_name || match.block_name || '予選リーグ'}
+                                    </Badge>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+                        }
+
+                        // 試合行
                         rows.push(
-                          <tr key={`round-header-${match.round_name}-${index}`}>
-                            <td colSpan={5} className="px-4 py-2 bg-primary/5 border-b">
-                              <div className="flex items-center">
-                                <Badge variant="secondary" className="mr-2">
-                                  {match.round_name || match.block_name || (match.phase === getFirstPhaseId() ? '予選リーグ' : '決勝トーナメント')}
-                                </Badge>
+                          <tr key={`match-${match.match_id}`} className="border-b hover:bg-muted">
+                            <td className="px-4 py-3 font-medium">{match.match_code}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center space-x-2">
+                                <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
+                                  {match.team1_name || resolveTeamSource(match.team1_source) || match.team1_display_name}
+                                </span>
+                                <span className="text-muted-foreground font-bold">vs</span>
+                                <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
+                                  {match.team2_name || resolveTeamSource(match.team2_source) || match.team2_display_name}
+                                </span>
                               </div>
                             </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div>
+                                <p>{new Date(match.tournament_date).toLocaleDateString('ja-JP')}</p>
+                                {match.start_time && (
+                                  <p className="text-muted-foreground">{match.start_time}</p>
+                                )}
+                              </div>
+                            </td>
+                            {hasMatchday ? (
+                              <>
+                                <td className="px-4 py-3 text-sm">
+                                  {match.venue_name || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  {match.cycle ? `${match.cycle}巡目` : '-'}
+                                </td>
+                              </>
+                            ) : (
+                              <td className="px-4 py-3 text-sm">
+                                {match.court_number ? `コート${match.court_number}` : '-'}
+                              </td>
+                            )}
                           </tr>
                         );
-                      }
 
-                      // 試合行を追加
-                      rows.push(
-                        <tr key={`match-${match.match_id}`} className="border-b hover:bg-muted">
-                          <td className="px-4 py-3 font-medium">{match.match_code}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="text-xs">
-                              {match.phase === getFirstPhaseId() ? '予選' : '決勝'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center space-x-2">
-                              <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
-                                {(() => {
-                                  const team1 = match.team1_name || resolveTeamSource(match.team1_source) || match.team1_display_name;
-                                  if (match.match_code === 'A3') {
-                                    console.log(`[Preview A3] team1: name="${match.team1_name}", source="${match.team1_source}", display="${match.team1_display_name}", resolved="${team1}"`);
-                                  }
-                                  return team1;
-                                })()}
-                              </span>
-                              <span className="text-muted-foreground font-bold">vs</span>
-                              <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
-                                {(() => {
-                                  const team2 = match.team2_name || resolveTeamSource(match.team2_source) || match.team2_display_name;
-                                  if (match.match_code === 'A3') {
-                                    console.log(`[Preview A3] team2: name="${match.team2_name}", source="${match.team2_source}", display="${match.team2_display_name}", resolved="${team2}"`);
-                                  }
-                                  return team2;
-                                })()}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div>
-                              <p>{new Date(match.tournament_date).toLocaleDateString('ja-JP')}</p>
-                              {match.start_time && (
-                                <p className="text-muted-foreground">{match.start_time}</p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {match.court_number ? `コート${match.court_number}` : '-'}
-                          </td>
-                        </tr>
-                      );
-
-                      return rows;
-                    })}
-                  </tbody>
-                </table>
-                <div className="mt-4 text-sm text-muted-foreground text-center">
-                  全 {matches.filter(m => m.phase === getFirstPhaseId() && m.is_bye_match !== 1).length} 試合
+                        return rows;
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="mt-4 text-sm text-muted-foreground text-center">
+                    全 {firstPhaseMatches.length} 試合
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   );
