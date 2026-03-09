@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
@@ -37,6 +38,8 @@ interface TournamentResultsProps {
 }
 
 export default function TournamentResults({ tournamentId, phase = 'preliminary' }: TournamentResultsProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'operator';
   const [results, setResults] = useState<BlockResults[]>([]);
   const [standings, setStandings] = useState<BlockStanding[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('');
@@ -45,12 +48,16 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  // ブロック分類関数（フェーズIDに依存しない動的判定）
-  const getBlockKey = (_phase: string, blockName: string, displayRoundName?: string): string => {
+  // ブロック分類関数（round_name優先、フェーズIDに依存しない動的判定）
+  const getBlockKey = (_phase: string, blockName: string, displayRoundName?: string, roundName?: string | null): string => {
     // _unifiedブロックの場合はdisplay_round_nameを使用
     if (blockName && blockName.endsWith('_unified')) {
       return displayRoundName || 'トーナメント';
     }
+    // round_name（t_matches_liveの値）があればそれを優先使用
+    if (roundName) return roundName;
+    // display_round_nameがあればそれを使用
+    if (displayRoundName) return displayRoundName;
     // 1文字のブロック名（A, B, C...）は「Xブロック」形式
     if (blockName && blockName.length === 1) {
       return `${blockName}ブロック`;
@@ -59,8 +66,6 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     if (blockName && blockName !== 'default') {
       return blockName;
     }
-    // display_round_nameがあればそれを使用
-    if (displayRoundName) return displayRoundName;
     return 'その他';
   };
 
@@ -104,7 +109,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
       try {
         // 戦績表データ、順位表データ、大会情報を並列取得（多競技対応版）
         const [resultsResponse, standingsResponse, tournamentResponse] = await Promise.all([
-          fetch(`/api/tournaments/${tournamentId}/results-enhanced`, { cache: 'no-store' }),
+          fetch(`/api/tournaments/${tournamentId}/results-enhanced${isAdmin ? '?admin=1' : ''}`, { cache: 'no-store' }),
           fetch(`/api/tournaments/${tournamentId}/standings`, { cache: 'no-store' }),
           fetch(`/api/tournaments/${tournamentId}`, { cache: 'no-store' })
         ]);
@@ -172,7 +177,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     };
 
     fetchData();
-  }, [tournamentId]);
+  }, [tournamentId, isAdmin]);
 
   // PDFダウンロード機能（ページ別生成方式）
   const handleDownloadPdf = async () => {
@@ -453,8 +458,8 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     // チーム数に基づく列幅調整
     const cellSizes = getTableCellSizes(teamCount);
     
-    // getBlockKey関数で適切なブロック名を取得（block_name優先）
-    const blockDisplayName = getBlockKey(block.phase, block.block_name, block.display_round_name);
+    // getBlockKey関数で適切なブロック名を取得（round_name優先）
+    const blockDisplayName = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
     
     return `
       <div style="margin-bottom: 40px;">
@@ -708,8 +713,8 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
           return (a.block_name || '').localeCompare(b.block_name || '', undefined, { numeric: true });
         })
         .map((block) => {
-          // getBlockKey関数で適切なブロック名を取得（block_name優先）
-          const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name);
+          // getBlockKey関数で適切なブロック名を取得（round_name優先）
+          const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
 
           return (
             <Card key={block.match_block_id}>
@@ -816,7 +821,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                           {block.teams.map((opponent, opponentIndex) => (
                             <td
                               key={`${block.block_name}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
-                              className="border border-border p-1 md:p-2 text-center bg-card"
+                              className="border border-border p-1 md:p-2 text-center bg-card min-w-[4rem] md:min-w-[5.5rem]"
                             >
                               {team.tournament_team_id === opponent.tournament_team_id ? (
                                 <div className="w-full h-8 md:h-10 bg-muted flex items-center justify-center">
@@ -824,12 +829,12 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                                 </div>
                               ) : (
                                 <div
-                                  className={`w-full h-8 md:h-10 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
+                                  className={`w-full min-h-[2rem] md:min-h-[2.5rem] py-1 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
                                     getResultColor(block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.result || null, block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score)
                                   }`}
                                   title={`vs ${opponent.team_name} (${block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.match_code || ''})`}
                                 >
-                                  <div className="text-center leading-tight whitespace-pre-line text-xs md:text-sm">
+                                  <div className="text-center leading-tight whitespace-pre text-xs md:text-sm">
                                     {block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score || '-'}
                                   </div>
                                 </div>

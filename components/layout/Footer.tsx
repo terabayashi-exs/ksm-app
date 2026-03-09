@@ -9,12 +9,12 @@ export default function Footer() {
           {/* システム情報 */}
           <div className="mb-8">
             <div className="flex items-center justify-center mb-4">
-              <div className="relative h-16">
+              <div className="relative h-12">
                 <Image
-                  src="/images/taikaigo-logo-v1.4-1020-360-title.png"
+                  src="/images/taikaigo-logo-v1.4-1012-300.png"
                   alt="大会GO"
-                  width={1020}
-                  height={360}
+                  width={500}
+                  height={148}
                   className="h-full w-auto object-contain"
                 />
               </div>

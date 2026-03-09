@@ -1,10 +1,9 @@
-// components/layout/Header.tsx
+// components/layout/TopNavBar.tsx
 "use client";
 
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,29 +15,16 @@ import {
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { User, LogOut, Menu, X, Search } from "lucide-react";
 
-export default function Header() {
+export default function TopNavBar() {
   const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-base-800 border-b-[3px] border-primary">
+    <div className="bg-base-800">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* ロゴ */}
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center">
-              <div className="relative h-10">
-                <Image
-                  src="/images/taikaigo-logo-v1.4-1012-300.png"
-                  alt="大会GO"
-                  width={500}
-                  height={148}
-                  className="h-full w-auto"
-                  style={{ objectFit: 'contain' }}
-                  priority
-                />
-              </div>
-            </Link>
+        <div className="flex justify-between items-center h-12">
+          {/* 左側: β版バッジ */}
+          <div className="flex items-center">
             <Badge className="text-xs bg-white/15 text-white/80 border-white/20 hover:bg-white/20">
               β版
             </Badge>
@@ -177,6 +163,6 @@ export default function Header() {
           </div>
         </div>
       )}
-    </header>
+    </div>
   );
 }

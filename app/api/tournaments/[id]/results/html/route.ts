@@ -78,7 +78,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       block_name: block.block_name,
       phase: block.phase,
       display_round_name: block.display_round_name,
-      results: block.match_matrix as { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } },
+      results: block.match_matrix as unknown as { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } },
       teams: block.teams // Keep the full team objects instead of just IDs
     }));
 
@@ -128,11 +128,12 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
   // 結果の色分け
   const getResultColor = (result: string | null): string => {
     if (!result) return '#F3F4F6'; // gray-100
-    
+
     if (result === 'win') return '#D1FAE5'; // green-100
     if (result === 'loss') return '#FEE2E2'; // red-100
     if (result === 'draw') return '#DBEAFE'; // blue-100
-    
+    if (result === 'mixed') return '#F3F4F6'; // gray-100（勝敗混在）
+
     return '#F3F4F6'; // gray-100
   };
 
@@ -267,6 +268,7 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
           font-weight: bold;
           font-size: 11px;
           min-width: 60px;
+          white-space: pre-line;
           height: 40px;
           line-height: 40px;
         }

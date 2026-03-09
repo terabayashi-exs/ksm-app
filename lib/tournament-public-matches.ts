@@ -136,7 +136,9 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             CASE WHEN ml.result_status = 'confirmed' THEN ml.is_draw ELSE 0 END as is_draw,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.is_walkover ELSE 0 END as is_walkover,
             ml.remarks,
-            CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at
+            CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
+            ml.team1_scores as live_team1_scores,
+            ml.team2_scores as live_team2_scores
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
@@ -245,7 +247,9 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               ml.cancellation_type,
               ml.is_bye_match,
               ml.team1_source,
-              ml.team2_source
+              ml.team2_source,
+              ml.team1_scores as live_team1_scores,
+              ml.team2_scores as live_team2_scores
             FROM t_matches_live ml
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
             LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
@@ -490,7 +494,10 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         // 不戦勝関連フィールド
         is_bye_match: row.is_bye_match ? Number(row.is_bye_match) : 0,
         team1_source: row.team1_source ? String(row.team1_source) : null,
-        team2_source: row.team2_source ? String(row.team2_source) : null
+        team2_source: row.team2_source ? String(row.team2_source) : null,
+        // ライブスコア（管理者表示用）
+        live_team1_scores: row.live_team1_scores ? String(row.live_team1_scores) : null,
+        live_team2_scores: row.live_team2_scores ? String(row.live_team2_scores) : null
       };
 
       matches.push(processedMatch);

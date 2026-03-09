@@ -18,10 +18,11 @@ export async function GET(
       );
     }
 
-    console.log(`[ENHANCED_RESULTS] Tournament ${tournamentId} - Fetching multi-sport match results`);
+    const isAdmin = request.nextUrl.searchParams.get('admin') === '1';
+    console.log(`[ENHANCED_RESULTS] Tournament ${tournamentId} - Fetching multi-sport match results (isAdmin=${isAdmin})`);
 
     // 多競技対応戦績表データを取得
-    const results = await getTournamentResults(tournamentId);
+    const results = await getTournamentResults(tournamentId, isAdmin);
 
     return new Response(JSON.stringify({
       success: true,

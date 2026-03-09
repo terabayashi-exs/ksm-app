@@ -138,6 +138,8 @@ export async function GET(
         -- 実際のチーム名を取得（tournament_team_idで一意に取得）
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
+        tt1.team_omission as team1_omission,
+        tt2.team_omission as team2_omission,
         -- 試合状態テーブルから情報取得
         ms.match_status,
         ms.current_period as status_current_period,
@@ -263,6 +265,8 @@ export async function GET(
         team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
         team1_name: resolvedTeam1Name, // BYE試合対応：プレースホルダーから実チーム名に解決
         team2_name: resolvedTeam2Name, // BYE試合対応：プレースホルダーから実チーム名に解決
+        team1_omission: row.team1_omission ? String(row.team1_omission) : '',
+        team2_omission: row.team2_omission ? String(row.team2_omission) : '',
         court_number: row.court_number ? Number(row.court_number) : null,
         court_name: row.court_name ? String(row.court_name) : null,
         scheduled_time: row.start_time ? String(row.start_time) : null, // scheduled_timeに統一

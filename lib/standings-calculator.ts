@@ -62,6 +62,7 @@ export interface BlockStanding {
   phase: string;
   display_round_name: string;
   block_name: string;
+  round_name?: string | null;
   teams: TeamStanding[];
   remarks?: string | null;
 }
@@ -98,15 +99,16 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
     const allBlocks = await db.execute({
       sql: `
         SELECT
-          match_block_id,
-          phase,
-          display_round_name,
-          block_name,
-          team_rankings,
-          remarks
-        FROM t_match_blocks
-        WHERE tournament_id = ?
-        ORDER BY block_order, block_name
+          mb.match_block_id,
+          mb.phase,
+          mb.display_round_name,
+          mb.block_name,
+          mb.team_rankings,
+          mb.remarks,
+          (SELECT ml.round_name FROM t_matches_live ml WHERE ml.match_block_id = mb.match_block_id LIMIT 1) as round_name
+        FROM t_match_blocks mb
+        WHERE mb.tournament_id = ?
+        ORDER BY mb.block_order, mb.block_name
       `,
       args: [tournamentId]
     });
@@ -204,6 +206,7 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
         phase: block.phase as string,
         display_round_name: block.display_round_name as string,
         block_name: block.block_name as string,
+        round_name: block.round_name as string | null,
         teams: teams,
         remarks: block.remarks as string | null
       });
@@ -696,6 +699,29 @@ export async function calculateBlockStandings(
           `,
           args: [tournamentId, blockName]
         });
+
+        // assigned_blockでチームが見つからない場合（後続フェーズなど）は試合データから取得
+        if (!teamsResult.rows || teamsResult.rows.length === 0) {
+          console.log(`[STANDINGS] assigned_block='${blockName}' でチームが見つからないため、試合データから取得`);
+          teamsResult = await db.execute({
+            sql: `
+              SELECT DISTINCT
+                sub.tournament_team_id,
+                tt.team_id,
+                COALESCE(tt.team_name, t.team_name) as team_name,
+                COALESCE(tt.team_omission, t.team_omission) as team_omission
+              FROM (
+                SELECT team1_tournament_team_id as tournament_team_id FROM t_matches_live WHERE match_block_id = ? AND team1_tournament_team_id IS NOT NULL
+                UNION
+                SELECT team2_tournament_team_id FROM t_matches_live WHERE match_block_id = ? AND team2_tournament_team_id IS NOT NULL
+              ) sub
+              LEFT JOIN t_tournament_teams tt ON sub.tournament_team_id = tt.tournament_team_id
+              LEFT JOIN m_teams t ON tt.team_id = t.team_id
+              ORDER BY COALESCE(tt.team_name, t.team_name)
+            `,
+            args: [matchBlockId, matchBlockId]
+          });
+        }
       }
     }
 

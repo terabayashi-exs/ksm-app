@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
+import { parseTotalScore } from '@/lib/score-parser';
 import MatchNewsArea from './MatchNewsArea';
 
 interface MatchData {
@@ -40,6 +42,8 @@ interface MatchData {
   cancellation_type: string | null;
   round_name: string | null;
   matchday?: number | null;
+  live_team1_scores?: string | null;
+  live_team2_scores?: string | null;
 }
 
 interface TournamentScheduleProps {
@@ -53,6 +57,8 @@ interface TeamOption {
 }
 
 export default function TournamentSchedule({ tournamentId, initialMatches }: TournamentScheduleProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'operator';
   const [matches, setMatches] = useState<MatchData[]>(initialMatches || []);
   const [loading, setLoading] = useState(!initialMatches);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +144,31 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
   const getMatchResult = (match: MatchData) => {
     // 確定済みの試合結果がない場合
     if (!match.has_result) {
+      // 管理者・運営者の場合、進行中・完了の試合にライブスコアを表示
+      if (isAdmin && (match.match_status === 'ongoing' || match.match_status === 'completed') && match.live_team1_scores && match.live_team2_scores) {
+        try {
+          const t1 = parseTotalScore(match.live_team1_scores);
+          const t2 = parseTotalScore(match.live_team2_scores);
+          const statusLabel = match.match_status === 'ongoing' ? '試合中' : '確定待ち';
+          const colorClass = match.match_status === 'ongoing' ? 'text-orange-600 animate-pulse' : 'text-purple-600';
+          const iconEl = match.match_status === 'ongoing'
+            ? <Clock className="h-4 w-4 text-orange-500" />
+            : <AlertTriangle className="h-4 w-4 text-purple-500" />;
+          return {
+            status: match.match_status === 'ongoing' ? 'ongoing' : 'completed_unconfirmed',
+            display: (
+              <span className={`${colorClass} text-sm font-medium`}>
+                {t1} - {t2}
+                <span className="text-xs ml-1">({statusLabel})</span>
+              </span>
+            ),
+            icon: iconEl
+          };
+        } catch {
+          // パース失敗時はフォールスルー
+        }
+      }
+
       // 試合状態に応じて表示を変更
       switch (match.match_status) {
         case 'ongoing':
@@ -218,7 +249,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches }: Tou
         status: 'draw',
         display: (
           <span className="text-blue-600 text-sm font-medium">
-            {getScoreDisplay()} (引分)
+            {getScoreDisplay()}
           </span>
         ),
         icon: <Users className="h-4 w-4 text-blue-500" />

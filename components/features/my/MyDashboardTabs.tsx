@@ -689,7 +689,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
                       <Calendar className="w-4 h-4 mr-1" />
-                      節設定
+                      日程・会場設定
                     </Link>
                   </Button>
                 )}
@@ -736,12 +736,14 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         審判カード印刷
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
-                        <MapPin className="w-4 h-4 mr-1" />
-                        コート名設定
-                      </Link>
-                    </Button>
+                    {!tournament.has_matchdays && (
+                      <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                        <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
+                          <MapPin className="w-4 h-4 mr-1" />
+                          コート名設定
+                        </Link>
+                      </Button>
+                    )}
                   </>
                 ) : (
                   /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
@@ -766,12 +768,14 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                       <Lock className="w-4 h-4 mr-1" />
                       組合せ作成
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
-                        <MapPin className="w-4 h-4 mr-1" />
-                        コート名設定
-                      </Link>
-                    </Button>
+                    {!tournament.has_matchdays && (
+                      <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                        <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
+                          <MapPin className="w-4 h-4 mr-1" />
+                          コート名設定
+                        </Link>
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

@@ -341,7 +341,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
 
       const result = await res.json();
       if (result.success) {
-        alert("節設定を保存しました");
+        alert("日程・会場設定を保存しました");
         router.refresh();
       } else if (result.conflicts) {
         alert("日時・コートの重複があります:\n\n" + result.conflicts.join('\n'));

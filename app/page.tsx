@@ -1,8 +1,8 @@
 // app/page.tsx
 import { auth } from "@/lib/auth";
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import InitialFooterBanner from "@/components/layout/InitialFooterBanner";
+import TopNavBar from "@/components/layout/TopNavBar";
 import TournamentGroupCard from "@/components/features/tournament/TournamentGroupCard";
 import AnnouncementList from "@/components/features/announcements/AnnouncementList";
 import { Button } from "@/components/ui/button";
@@ -54,19 +54,20 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      {/* TOP画面用ナビバー（ヘッダーの代わり） */}
+      <TopNavBar />
 
       {/* ヒーローセクション - hero-gradient背景 + 白テキスト */}
       <section className="bg-hero-gradient py-10 sm:py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            {/* ロゴ画像 */}
+            {/* ロゴ画像（タイトル付き） */}
             <div className="mb-4 relative w-full max-w-4xl mx-auto">
               <Image
-                src="/images/taikaigo-logo-v1.4-1012-300.png"
+                src="/images/taikaigo-logo-v1.4-1020-360-title.png"
                 alt="大会GO"
-                width={1012}
-                height={300}
+                width={500}
+                height={176}
                 className="mx-auto w-full h-auto max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl"
                 style={{ objectFit: 'contain' }}
                 priority

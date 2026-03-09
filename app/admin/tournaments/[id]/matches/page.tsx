@@ -39,6 +39,8 @@ interface MatchData {
   match_code: string;
   team1_name: string;
   team2_name: string;
+  team1_omission: string;
+  team2_omission: string;
   court_number: number;
   court_name?: string | null;
   scheduled_time: string;
@@ -59,6 +61,9 @@ interface MatchData {
   final_team1_scores?: string;
   final_team2_scores?: string;
   is_confirmed: boolean;
+  matchday: number | null;
+  venue_name: string | null;
+  cycle: number | null;
 }
 
 interface MatchBlock {
@@ -70,6 +75,9 @@ interface MatchBlock {
   match_type: string;
   block_order: number;
   matches: MatchData[];
+  // 表示グループの種類
+  group_type?: 'block' | 'time_order' | 'matchday';
+  matchday?: number | null;
 }
 
 type FilterType = 'all' | 'scheduled' | 'ongoing' | 'completed' | 'pending_confirmation' | 'cancelled';
@@ -220,76 +228,87 @@ export default function AdminMatchesPage() {
           console.log('Processed matches data:', matchesData); // デバッグログ
           setMatches(matchesData);
           
-          // match_block_id単位でグループ化
-          const blocksMap = new Map<number, MatchBlock>();
-          
-          matchesData.forEach((match: MatchData) => {
-            if (!blocksMap.has(match.match_block_id)) {
-              blocksMap.set(match.match_block_id, {
-                match_block_id: match.match_block_id,
-                phase: match.phase,
-                format_type: match.format_type || 'league',
-                display_round_name: match.display_round_name,
-                block_name: match.block_name,
-                match_type: match.match_type,
-                block_order: match.block_order,
-                matches: []
+          // 節(matchday)の有無で表示グループ化方式を分ける
+          const hasMatchday = matchesData.some((m: MatchData) => m.matchday !== null && m.matchday !== undefined);
+
+          let blocks: MatchBlock[];
+
+          if (hasMatchday) {
+            // === 節あり: 節ごとにグループ化、節内は試合コード順 ===
+            const matchdayMap = new Map<number, MatchData[]>();
+            matchesData.forEach((match: MatchData) => {
+              const md = match.matchday ?? 0;
+              if (!matchdayMap.has(md)) {
+                matchdayMap.set(md, []);
+              }
+              const list = matchdayMap.get(md)!;
+              if (!list.some(m => m.match_id === match.match_id)) {
+                list.push(match);
+              }
+            });
+
+            blocks = Array.from(matchdayMap.entries())
+              .sort(([a], [b]) => a - b)
+              .map(([md, mdMatches]) => {
+                // 試合コード順にソート
+                mdMatches.sort((a, b) => a.match_code.localeCompare(b.match_code, undefined, { numeric: true }));
+                const first = mdMatches[0];
+                return {
+                  match_block_id: first.match_block_id,
+                  phase: first.phase,
+                  format_type: first.format_type || 'league',
+                  display_round_name: `第${md}節`,
+                  block_name: `matchday_${md}`,
+                  match_type: first.match_type,
+                  block_order: md,
+                  matches: mdMatches,
+                  group_type: 'matchday' as const,
+                  matchday: md,
+                };
               });
-            }
-            const block = blocksMap.get(match.match_block_id)!;
-            // 重複チェック: 同じmatch_idが既に存在しないか確認
-            if (!block.matches.some(m => m.match_id === match.match_id)) {
-              block.matches.push(match);
-            }
-          });
-          
-          // 各ブロック内の試合を試合コード順にソート
-          blocksMap.forEach(block => {
-            block.matches.sort((a, b) => a.match_code.localeCompare(b.match_code, undefined, { numeric: true }));
-          });
-          
-          let blocks = Array.from(blocksMap.values())
-            .sort((a, b) => a.block_order - b.block_order);
+          } else {
+            // === 節なし（1Day/2Day）: 試合開始時間順にフラット表示 ===
+            // まず全試合を重複排除して集める
+            const allMatches: MatchData[] = [];
+            const seenIds = new Set<number>();
+            matchesData.forEach((match: MatchData) => {
+              if (!seenIds.has(match.match_id)) {
+                seenIds.add(match.match_id);
+                allMatches.push(match);
+              }
+            });
 
-          // トーナメント形式フェーズのブロックをフェーズごとに統合
-          const tournamentPhaseBlocks = new Map<string, MatchBlock[]>();
-          const nonTournamentBlocks: MatchBlock[] = [];
+            // 開始時間順 → 同一時間内はブロック順 → 試合コード順
+            allMatches.sort((a, b) => {
+              // 日付比較
+              const dateComp = (a.tournament_date || '').localeCompare(b.tournament_date || '');
+              if (dateComp !== 0) return dateComp;
+              // 開始時間比較
+              const timeA = a.scheduled_time || '';
+              const timeB = b.scheduled_time || '';
+              const timeComp = timeA.localeCompare(timeB);
+              if (timeComp !== 0) return timeComp;
+              // 同一時間内はブロック順
+              if (a.block_order !== b.block_order) return a.block_order - b.block_order;
+              // 同一ブロック内は試合コード順
+              return a.match_code.localeCompare(b.match_code, undefined, { numeric: true });
+            });
 
-          blocks.forEach(block => {
-            if (block.format_type === 'tournament') {
-              const existing = tournamentPhaseBlocks.get(block.phase) || [];
-              existing.push(block);
-              tournamentPhaseBlocks.set(block.phase, existing);
-            } else {
-              nonTournamentBlocks.push(block);
-            }
-          });
-
-          const unifiedBlocks: MatchBlock[] = [...nonTournamentBlocks];
-
-          tournamentPhaseBlocks.forEach((phaseBlocks, phaseId) => {
-            if (phaseBlocks.length > 0) {
-              const firstBlock = phaseBlocks[0];
-              const unifiedBlock: MatchBlock = {
-                match_block_id: firstBlock.match_block_id,
-                phase: phaseId,
-                format_type: 'tournament',
-                display_round_name: firstBlock.display_round_name,
-                block_name: `${phaseId}_unified`,
-                match_type: firstBlock.match_type,
-                block_order: firstBlock.block_order,
-                matches: []
-              };
-
-              phaseBlocks.forEach(block => {
-                unifiedBlock.matches.push(...block.matches);
-              });
-
-              unifiedBlocks.push(unifiedBlock);
-            }
-          });
-
-          blocks = unifiedBlocks.sort((a, b) => a.block_order - b.block_order);
+            // 1つのグループとしてまとめる
+            const first = allMatches[0];
+            blocks = allMatches.length > 0 ? [{
+              match_block_id: first?.match_block_id ?? 0,
+              phase: first?.phase ?? '',
+              format_type: first?.format_type || 'league',
+              display_round_name: '全試合',
+              block_name: 'all_matches',
+              match_type: first?.match_type ?? '',
+              block_order: 0,
+              matches: allMatches,
+              group_type: 'time_order' as const,
+              matchday: null,
+            }] : [];
+          }
 
           setMatchBlocks(blocks);
         } else {
@@ -951,41 +970,18 @@ export default function AdminMatchesPage() {
     }
   };
 
-  // ブロック色を取得（全ブロックに異なる色を割り当て）
-  const getBlockColor = (blockName: string) => {
-    // 統合ブロック用の色
-    if (blockName === 'final_unified') return 'bg-red-600 text-white';
-    if (blockName === 'preliminary_unified') return 'bg-orange-600 text-white';
-
-    // 通常ブロック用の色パレット
-    const colorPalette = [
-      'bg-blue-600 text-white',      // A
-      'bg-green-600 text-white',     // B
-      'bg-yellow-600 text-white',    // C
-      'bg-purple-600 text-white',    // D
-      'bg-pink-600 text-white',      // E
-      'bg-indigo-600 text-white',    // F
-      'bg-teal-600 text-white',      // G
-      'bg-cyan-600 text-white',      // H
-      'bg-amber-600 text-white',     // I
-      'bg-lime-600 text-white',      // J
-      'bg-emerald-600 text-white',   // K
-      'bg-violet-600 text-white',    // L
-      'bg-fuchsia-600 text-white',   // M
-      'bg-rose-600 text-white',      // N
-      'bg-sky-600 text-white',       // O
-      'bg-orange-600 text-white',    // P
-    ];
-
-    // ブロック名がA-Zの場合、インデックスに応じた色を返す
-    if (blockName.length === 1 && blockName >= 'A' && blockName <= 'Z') {
-      const index = blockName.charCodeAt(0) - 'A'.charCodeAt(0);
-      return colorPalette[index % colorPalette.length];
+  // 会場/コート表示
+  const getLocationDisplay = (match: MatchData): string => {
+    if (match.matchday !== null && match.matchday !== undefined) {
+      // 節あり: 会場名（コート名登録があればコート名）
+      if (match.court_name) return match.court_name;
+      if (match.venue_name) return match.venue_name;
+      return `コート${match.court_number}`;
     }
-
-    // その他のブロック名の場合はデフォルト色
-    return 'bg-gray-600 text-white';
+    // 節なし: コート表示
+    return match.court_name || `コート${match.court_number}`;
   };
+
 
   // ブロック境界線の色を取得
   const getBlockBorderColor = (blockName: string) => {
@@ -1099,6 +1095,7 @@ export default function AdminMatchesPage() {
                 size="sm"
                 onClick={() => setFilter('scheduled')}
               >
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-gray-300 mr-1.5 shrink-0" />
                 試合前 ({matches.filter(m => m.match_status === 'scheduled').length})
               </Button>
               <Button
@@ -1106,6 +1103,7 @@ export default function AdminMatchesPage() {
                 size="sm"
                 onClick={() => setFilter('ongoing')}
               >
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5 shrink-0" />
                 進行中 ({matches.filter(m => m.match_status === 'ongoing').length})
               </Button>
               <Button
@@ -1113,6 +1111,7 @@ export default function AdminMatchesPage() {
                 size="sm"
                 onClick={() => setFilter('completed')}
               >
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5 shrink-0" />
                 完了 ({matches.filter(m => m.match_status === 'completed' && m.is_confirmed).length})
               </Button>
               <Button
@@ -1120,6 +1119,7 @@ export default function AdminMatchesPage() {
                 size="sm"
                 onClick={() => setFilter('pending_confirmation')}
               >
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5 shrink-0" />
                 確定待ち ({matches.filter(m => m.match_status === 'completed' && !m.is_confirmed).length})
               </Button>
               <Button
@@ -1127,42 +1127,57 @@ export default function AdminMatchesPage() {
                 size="sm"
                 onClick={() => setFilter('cancelled')}
               >
+                <span className="w-2.5 h-2.5 rounded-full bg-gray-400 mr-1.5 shrink-0" />
                 中止 ({matches.filter(m => m.match_status === 'cancelled').length})
               </Button>
             </div>
 
-            {/* ブロックフィルター */}
-            <div className="flex items-center space-x-2 flex-wrap gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">ブロック:</span>
-              <Button
-                variant={blockFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setBlockFilter('all')}
-              >
-                全ブロック
-              </Button>
-              {matchBlocks.map((block) => (
-                <Button
-                  key={`${block.phase}-${block.block_name}`}
-                  variant={blockFilter === block.block_name ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setBlockFilter(block.block_name)}
-                  className="flex items-center space-x-2"
+            {/* 節フィルター（プルダウン） */}
+            {matchBlocks.length > 1 && matchBlocks[0]?.group_type === 'matchday' && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">節:</span>
+                <select
+                  value={blockFilter}
+                  onChange={(e) => setBlockFilter(e.target.value)}
+                  className="border rounded-md px-3 py-2 text-sm bg-background text-foreground"
                 >
-                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBlockColor(block.block_name)}`}>
-                    {block.display_round_name}
-                  </span>
-                  <span className="text-sm">
-                    ({block.matches.length})
-                  </span>
-                </Button>
-              ))}
-            </div>
+                  <option value="all">すべての節 ({matches.length})</option>
+                  {matchBlocks.map((block) => (
+                    <option key={block.block_name} value={block.block_name}>
+                      {block.display_round_name} ({block.matches.length}試合)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* ブロックフィルター（節なし・プルダウン） */}
+            {matchBlocks[0]?.group_type === 'time_order' && (() => {
+              const blockNames = Array.from(new Set(matches.map(m => m.block_name).filter(Boolean))).sort();
+              return blockNames.length > 1 ? (
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">ブロック:</span>
+                  <select
+                    value={blockFilter}
+                    onChange={(e) => setBlockFilter(e.target.value)}
+                    className="border rounded-md px-3 py-2 text-sm bg-background text-foreground"
+                  >
+                    <option value="all">全ブロック ({matches.length})</option>
+                    {blockNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name} ({matches.filter(m => m.block_name === name).length}試合)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null;
+            })()}
           </CardContent>
         </Card>
 
-        {/* 試合一覧（ブロック別グループ表示） */}
+        {/* 試合一覧 */}
         <div className="space-y-6">
           {matchBlocks.length === 0 ? (
             <Card>
@@ -1172,12 +1187,16 @@ export default function AdminMatchesPage() {
             </Card>
           ) : (
             matchBlocks.map((block) => {
-              // ブロックフィルターをまず適用
-              if (blockFilter !== 'all' && block.block_name !== blockFilter) {
+              // 節フィルターを適用（matchdayグループの場合）
+              if (block.group_type === 'matchday' && blockFilter !== 'all' && block.block_name !== blockFilter) {
                 return null;
               }
 
               const blockMatches = block.matches.filter(match => {
+                // ブロックフィルター（time_orderの場合、試合のblock_nameでフィルター）
+                if (block.group_type === 'time_order' && blockFilter !== 'all' && match.block_name !== blockFilter) {
+                  return false;
+                }
                 // 試合状態フィルターを適用
                 switch (filter) {
                   case 'scheduled': return match.match_status === 'scheduled';
@@ -1188,178 +1207,191 @@ export default function AdminMatchesPage() {
                   default: return true;
                 }
               });
-              
-              // フィルターで試合がないブロックは表示しない
+
+              // フィルターで試合がないグループは表示しない
               if (blockMatches.length === 0) return null;
-              
+
+              const isTimeOrder = block.group_type === 'time_order';
+
+              // グループヘッダーの表示名を決定
+              const groupTitle = isTimeOrder
+                ? (blockFilter !== 'all' ? `${blockFilter}ブロック` : '全試合')
+                : block.display_round_name;
+
               return (
-                <Card key={`${block.phase}-${block.block_name}`} className={`border-l-4 ${getBlockBorderColor(block.block_name)}`}>
+                <Card key={`${block.phase}-${block.block_name}`} className={isTimeOrder ? '' : `border-l-4 ${getBlockBorderColor(block.block_name)}`}>
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Badge variant="secondary" className="text-sm">
-                          {block.display_round_name}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {block.match_type}
-                        </Badge>
-                      </div>
+                      <Badge variant="secondary" className="text-sm">
+                        {groupTitle}
+                      </Badge>
                       <Badge variant="outline" className="text-xs text-muted-foreground">
                         {blockMatches.length}/{block.matches.length}試合
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {blockMatches.map((match) => (
-                        <div key={`${match.match_block_id}-${match.match_code}-${match.match_id}`} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
-                            {/* 試合情報 */}
-                            <div className="lg:col-span-2">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <span className="font-mono text-sm text-muted-foreground">
-                                  {match.match_code}
-                                </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {blockMatches.map((match) => {
+                        // ボタン数を計算
+                        const showConfirm = match.match_status === 'completed' && !match.is_confirmed && getScoreDisplay(match);
+                        const showUnconfirm = match.is_confirmed && match.match_status !== 'cancelled';
+                        const showCancel = match.match_status === 'scheduled' && !match.is_confirmed;
+                        const showUncancel = match.match_status === 'cancelled';
+                        const buttonCount = 2 + (showConfirm ? 1 : 0) + (showUnconfirm ? 1 : 0) + (showCancel ? 1 : 0) + (showUncancel ? 1 : 0);
+
+                        // ステータス別カード背景色
+                        const cardBg = match.match_status === 'cancelled'
+                          ? 'bg-gray-100 border border-gray-400'
+                          : match.match_status === 'ongoing'
+                            ? 'bg-red-100 border border-red-300'
+                            : match.is_confirmed
+                              ? 'bg-blue-100 border border-blue-300'
+                              : match.match_status === 'completed' && !match.is_confirmed
+                                ? 'bg-purple-100 border border-purple-300'
+                                : 'border';
+
+                        return (
+                        <div key={`${match.match_block_id}-${match.match_code}-${match.match_id}`} className={`rounded-lg p-5 hover:shadow-md transition-shadow flex flex-col ${cardBg}`}>
+                          {/* 試合コード + チーム名（略称表示） */}
+                          <div className="flex items-center gap-2.5 mb-3">
+                            <span className="font-mono text-lg font-bold text-muted-foreground shrink-0">
+                              {match.match_code}
+                            </span>
+                            <span className="text-lg font-bold text-foreground truncate">
+                              {(() => {
+                                const winnerName = getWinnerName(match);
+                                const scoreDisplay = getScoreDisplay(match);
+                                const team1Display = match.team1_omission || match.team1_name;
+                                const team2Display = match.team2_omission || match.team2_name;
+
+                                if (!scoreDisplay) {
+                                  return `${team1Display} vs ${team2Display}`;
+                                }
+
+                                const isTeam1Winner = winnerName === match.team1_name;
+                                const isTeam2Winner = winnerName === match.team2_name;
+
+                                return (
+                                  <>
+                                    {isTeam1Winner && '👑 '}{team1Display} vs {isTeam2Winner && '👑 '}{team2Display}
+                                  </>
+                                );
+                              })()}
+                            </span>
+                          </div>
+
+                          {/* スコア表示 */}
+                          {getScoreDisplay(match) && (
+                            <div className="mb-3">
+                              <div className={`text-xl font-bold ${
+                                match.is_confirmed ? 'text-blue-600' : 'text-orange-600'
+                              }`}>
+                                {getScoreDisplay(match)}
                               </div>
-                              <div className="text-lg font-bold text-foreground mb-1">
-                                {(() => {
-                                  const winnerName = getWinnerName(match);
-                                  const scoreDisplay = getScoreDisplay(match);
-                                  
-                                  if (!scoreDisplay) {
-                                    // スコアがない場合は通常表示
-                                    return `${match.team1_name} vs ${match.team2_name}`;
-                                  }
-                                  
-                                  const isTeam1Winner = winnerName === match.team1_name;
-                                  const isTeam2Winner = winnerName === match.team2_name;
-                                  
-                                  return (
-                                    <>
-                                      {isTeam1Winner && '👑 '}{match.team1_name} vs {isTeam2Winner && '👑 '}{match.team2_name}
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                              
-                              {/* スコア表示 */}
-                              {getScoreDisplay(match) && (
-                                <div className="mb-2">
-                                  <div className={`text-xl font-bold mb-1 ${
-                                    match.is_confirmed ? 'text-blue-600' : 'text-orange-600'
-                                  }`}>
-                                    {getScoreDisplay(match)}
-                                  </div>
-                                  {/* 勝利表示：試合完了時、確定待ち時、確定済み時のみ表示 */}
-                                  {getWinnerName(match) && (match.match_status === 'completed' || match.is_confirmed) && (
-                                    <div className={`text-sm font-medium ${
-                                      getWinnerName(match) === '引き分け' 
-                                        ? 'text-muted-foreground' 
-                                        : match.is_confirmed 
-                                          ? 'text-blue-600' 
-                                          : 'text-orange-600'
-                                    }`}>
-                                      勝利: {getWinnerName(match)}
-                                    </div>
-                                  )}
+                              {getWinnerName(match) && (match.match_status === 'completed' || match.is_confirmed) && (
+                                <div className={`text-base font-medium ${
+                                  getWinnerName(match) === '引き分け'
+                                    ? 'text-muted-foreground'
+                                    : match.is_confirmed
+                                      ? 'text-blue-600'
+                                      : 'text-orange-600'
+                                }`}>
+                                  勝利: {getWinnerName(match)}
                                 </div>
                               )}
-
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground flex-wrap">
-                                {match.tournament_date && (
-                                  <div className="flex items-center">
-                                    📅 {getDateDisplay(match.tournament_date)}
-                                  </div>
-                                )}
-                                <div className="flex items-center">
-                                  <MapPin className="w-4 h-4 mr-1" />
-                                  {match.court_name ? match.court_name : `コート${match.court_number}`}
-                                </div>
-                                <div className="flex items-center">
-                                  <Clock className="w-4 h-4 mr-1" />
-                                  {getTimeDisplay(match)}
-                                </div>
-                              </div>
                             </div>
+                          )}
 
-                            {/* ステータス */}
-                            <div className="text-center">
-                              {getStatusBadge(match)}
-                            </div>
+                          {/* メタ情報 + ステータス */}
+                          <div className="flex items-center gap-3 text-base text-muted-foreground flex-wrap mb-3">
+                            {match.tournament_date && (
+                              <span className="flex items-center">
+                                📅 {getDateDisplay(match.tournament_date)}
+                              </span>
+                            )}
+                            <span className="flex items-center">
+                              <MapPin className="w-4 h-4 mr-1" />
+                              {getLocationDisplay(match)}
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="w-4 h-4 mr-1" />
+                              {getTimeDisplay(match)}
+                            </span>
+                            {getStatusBadge(match)}
+                          </div>
 
-                            {/* アクション */}
-                            <div className="flex items-center space-x-2 justify-end">
+                          {/* ボタン（カード下部） */}
+                          <div className={`border-t pt-3 mt-auto grid gap-2 ${
+                            buttonCount === 3 ? 'grid-cols-3' : buttonCount === 4 ? 'grid-cols-4' : 'grid-cols-2'
+                          }`}>
+                            <Button
+                              variant="outline"
+                              className="w-full text-base px-2 h-11"
+                              onClick={() => router.push(`/referee/match/${match.match_id}?token=admin`)}
+                            >
+                              <Eye className="w-5 h-5 mr-1" />
+                              結果入力
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              className="w-full text-base px-2 h-11"
+                              onClick={() => generateQR(match.match_id)}
+                            >
+                              <QrCode className="w-5 h-5 mr-1" />
+                              QR
+                            </Button>
+
+                            {showConfirm && (
+                              <Button
+                                className="w-full text-base px-2 h-11 bg-green-600 hover:bg-green-700"
+                                onClick={() => confirmMatch(match.match_id, match.match_code)}
+                                disabled={confirmingMatches.has(match.match_id)}
+                              >
+                                {confirmingMatches.has(match.match_id) ? '確定中...' : '結果確定'}
+                              </Button>
+                            )}
+
+                            {showUnconfirm && (
                               <Button
                                 variant="outline"
-                                size="sm"
-                                onClick={() => generateQR(match.match_id)}
+                                className="w-full text-base px-2 h-11 text-orange-600 border-orange-200 hover:bg-muted"
+                                onClick={() => unconfirmMatch(match.match_id, match.match_code)}
+                                disabled={unconfirmingMatches.has(match.match_id)}
                               >
-                                <QrCode className="w-4 h-4 mr-1" />
-                                QR
+                                <RotateCcw className="w-5 h-5 mr-1" />
+                                {unconfirmingMatches.has(match.match_id) ? '解除中...' : '確定解除'}
                               </Button>
-                              
+                            )}
+
+                            {showCancel && (
                               <Button
                                 variant="outline"
-                                size="sm"
-                                onClick={() => router.push(`/referee/match/${match.match_id}?token=admin`)}
+                                className="w-full text-base px-2 h-11 text-destructive border-destructive/20 hover:bg-destructive/5"
+                                onClick={() => openCancelDialog(match)}
+                                disabled={cancellingMatches.has(match.match_id)}
                               >
-                                <Eye className="w-4 h-4 mr-1" />
-                                詳細
+                                <XCircle className="w-5 h-5 mr-1" />
+                                {cancellingMatches.has(match.match_id) ? '中止中...' : '中止'}
                               </Button>
+                            )}
 
-                              {match.match_status === 'completed' && !match.is_confirmed && getScoreDisplay(match) && (
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  onClick={() => confirmMatch(match.match_id, match.match_code)}
-                                  disabled={confirmingMatches.has(match.match_id)}
-                                >
-                                  {confirmingMatches.has(match.match_id) ? '確定中...' : '結果確定'}
-                                </Button>
-                              )}
-                              
-                              {match.is_confirmed && match.match_status !== 'cancelled' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-orange-600 border-orange-200 hover:bg-muted"
-                                  onClick={() => unconfirmMatch(match.match_id, match.match_code)}
-                                  disabled={unconfirmingMatches.has(match.match_id)}
-                                >
-                                  <RotateCcw className="w-4 h-4 mr-1" />
-                                  {unconfirmingMatches.has(match.match_id) ? '解除中...' : '確定解除'}
-                                </Button>
-                              )}
-                              
-                              {match.match_status !== 'cancelled' && !match.is_confirmed && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openCancelDialog(match)}
-                                  disabled={cancellingMatches.has(match.match_id)}
-                                  className="text-destructive border-destructive/20 hover:bg-destructive/5"
-                                >
-                                  <XCircle className="w-4 h-4 mr-1" />
-                                  {cancellingMatches.has(match.match_id) ? '中止中...' : '中止'}
-                                </Button>
-                              )}
-                              
-                              {match.match_status === 'cancelled' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-green-600 border-green-200 hover:bg-muted"
-                                  onClick={() => uncancelMatch(match.match_id, match.match_code)}
-                                  disabled={uncancellingMatches.has(match.match_id)}
-                                >
-                                  <Undo2 className="w-4 h-4 mr-1" />
-                                  {uncancellingMatches.has(match.match_id) ? '解除中...' : '中止解除'}
-                                </Button>
-                              )}
-                            </div>
+                            {showUncancel && (
+                              <Button
+                                variant="outline"
+                                className="w-full text-base px-2 h-11 text-green-600 border-green-200 hover:bg-muted"
+                                onClick={() => uncancelMatch(match.match_id, match.match_code)}
+                                disabled={uncancellingMatches.has(match.match_id)}
+                              >
+                                <Undo2 className="w-5 h-5 mr-1" />
+                                {uncancellingMatches.has(match.match_id) ? '解除中...' : '中止解除'}
+                              </Button>
+                            )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

@@ -343,3 +343,34 @@ export function getLeagueFormatPhases(
     .sort((a, b) => a.order - b.order)
     .map(p => p.id);
 }
+
+/**
+ * 最初のフェーズより後の全フェーズIDリストを取得する（format_type不問）
+ * リーグ→リーグ、リーグ→トーナメント両方の進出に対応
+ */
+export function getSubsequentPhases(
+  phases: string | object | null | undefined
+): string[] {
+  const parsed = parsePhasesJson(phases);
+  if (!parsed) return ['final'];
+  const sorted = [...parsed.phases].sort((a, b) => a.order - b.order);
+  // 最初のフェーズを除外して、2つ目以降のフェーズを返す
+  return sorted.slice(1).map(p => p.id);
+}
+
+/**
+ * 指定フェーズの次のフェーズIDを取得する（1つだけ）
+ * フェーズ間進出で、現在フェーズ＋次フェーズに限定するために使用
+ * @returns 次のフェーズID、または見つからない場合はnull
+ */
+export function getNextPhase(
+  phases: string | object | null | undefined,
+  currentPhaseId: string
+): string | null {
+  const parsed = parsePhasesJson(phases);
+  if (!parsed) return null;
+  const sorted = [...parsed.phases].sort((a, b) => a.order - b.order);
+  const currentIndex = sorted.findIndex(p => p.id === currentPhaseId);
+  if (currentIndex === -1 || currentIndex >= sorted.length - 1) return null;
+  return sorted[currentIndex + 1].id;
+}
