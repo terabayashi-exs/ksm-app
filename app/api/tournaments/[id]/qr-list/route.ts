@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { getCourtDisplayNames } from '@/lib/court-name-helper';
+import { SPORT_RULE_CONFIGS } from '@/lib/tournament-rules';
 
 export async function GET(
   request: NextRequest,
@@ -32,6 +33,34 @@ export async function GET(
       );
     }
 
+    // 競技種別とルール情報を取得（ピリオド名表示用）
+    const sportResult = await db.execute(`
+      SELECT st.sport_code
+      FROM t_tournaments t
+      INNER JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+      WHERE t.tournament_id = ?
+    `, [tournamentId]);
+    const sportCode = sportResult.rows.length > 0 ? String(sportResult.rows[0].sport_code) : 'pk';
+    const sportConfig = SPORT_RULE_CONFIGS[sportCode];
+
+    // フェーズ別のルール設定を取得（active_periodsからピリオド名リストを生成）
+    const rulesResult = await db.execute(`
+      SELECT phase, active_periods FROM t_tournament_rules WHERE tournament_id = ?
+    `, [tournamentId]);
+    const phasePeriodsMap: Record<string, string[]> = {};
+    rulesResult.rows.forEach(row => {
+      const phase = String(row.phase);
+      try {
+        const activePeriodNums: number[] = JSON.parse(String(row.active_periods || '[]')).map(Number);
+        const periodNames = activePeriodNums
+          .map(num => sportConfig?.default_periods.find(p => p.period_number === num)?.period_name || `P${num}`)
+          .filter(Boolean);
+        phasePeriodsMap[phase] = periodNames;
+      } catch {
+        phasePeriodsMap[phase] = [];
+      }
+    });
+
     // 試合一覧を取得（BYE試合を除外）
     const matchesResult = await db.execute(`
       SELECT
@@ -43,6 +72,8 @@ export async function GET(
         ml.match_status,
         ml.team1_display_name,
         ml.team2_display_name,
+        ml.venue_name,
+        ml.matchday,
         mb.match_block_id,
         mb.block_name,
         mb.phase,
@@ -251,12 +282,37 @@ export async function GET(
       const courtNumber = match.court_number as number;
       const courtName = courtDisplayNames[courtNumber] || String(courtNumber);
 
+      // 会場表示の構築
+      const venueName = match.venue_name ? String(match.venue_name) : null;
+      const hasMatchday = match.matchday !== null && match.matchday !== undefined;
+
+      // コート/会場表示ロジック
+      // 節ありの場合: コート名があれば括弧付きで表示
+      // 節なしの場合: コート名のみ
+      let locationDisplay: string;
+      if (hasMatchday) {
+        if (venueName && courtName && courtName !== String(courtNumber)) {
+          locationDisplay = `${venueName}(${courtName})`;
+        } else if (venueName) {
+          locationDisplay = venueName;
+        } else {
+          locationDisplay = courtName;
+        }
+      } else {
+        locationDisplay = courtName;
+      }
+
+      // フェーズに対応するピリオド名リスト
+      const matchPhase = String(match.phase);
+      const periodLabels = phasePeriodsMap[matchPhase] || [];
+
       return {
         match_id: match.match_id,
         match_code: match.match_code,
         match_block_id: match.match_block_id,
         court_number: match.court_number,
         court_name: courtName,
+        location_display: locationDisplay,
         start_time: typeof match.start_time === 'string' ? match.start_time.substring(0, 5) : '--:--',
         tournament_date: match.tournament_date || '',
         match_status: match.match_status,
@@ -270,6 +326,9 @@ export async function GET(
         team2_omission: resolvedTeam2Omission,
         referee_url: refereeUrl,
         qr_image_url: qrImageUrl,
+        venue_name: venueName,
+        matchday: match.matchday ? Number(match.matchday) : null,
+        period_labels: periodLabels,
       };
     });
 

@@ -768,6 +768,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                       <Lock className="w-4 h-4 mr-1" />
                       組合せ作成
                     </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
+                        <QrCode className="w-4 h-4 mr-1" />
+                        審判カード印刷
+                      </Link>
+                    </Button>
                     {!tournament.has_matchdays && (
                       <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
                         <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>

@@ -13,7 +13,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Users,
   AlertCircle
 } from 'lucide-react';
 
@@ -23,6 +22,7 @@ interface QRMatch {
   match_block_id: number;
   court_number: number;
   court_name: string;
+  location_display: string;
   start_time: string;
   tournament_date: string;
   match_status: string;
@@ -36,6 +36,9 @@ interface QRMatch {
   team2_omission: string;
   referee_url: string;
   qr_image_url: string;
+  venue_name: string | null;
+  matchday: number | null;
+  period_labels: string[];
 }
 
 interface TournamentPhaseInfo {
@@ -115,6 +118,14 @@ export default function QRListPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // 日付の短縮フォーマット（M/d）
+  const formatShortDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
   // フェーズIDから表示名を取得
@@ -266,51 +277,81 @@ export default function QRListPage() {
         </Alert>
       ) : (
         <>
-          {/* 10枚ごとにページセクションで区切る */}
-          {Array.from({ length: Math.ceil(filteredMatches.length / 10) }, (_, pageIndex) => (
+          {/* 8枚ごとにページセクションで区切る（A4に2列×4行） */}
+          {Array.from({ length: Math.ceil(filteredMatches.length / 8) }, (_, pageIndex) => (
             <div key={pageIndex} className="print-page">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-container">
-                {filteredMatches.slice(pageIndex * 10, (pageIndex + 1) * 10).map((match) => (
+                {filteredMatches.slice(pageIndex * 8, (pageIndex + 1) * 8).map((match) => (
                   <Card
                     key={match.match_id}
                     className="print-card"
                   >
-                    <CardHeader className="pb-3">
+                    <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-2xl font-bold text-primary match-title">
-                            {match.match_code}
-                          </CardTitle>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {getPhaseName(match.phase)} - {match.round_name || match.block_name}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1 text-sm text-gray-600 court-info">
-                            <MapPin className="h-4 w-4" />
-                            {match.court_name}
-                          </div>
-                          <div className="flex items-center gap-1 text-sm text-gray-600 mt-1 court-info">
+                        <CardTitle className="text-2xl font-bold text-primary match-title">
+                          {match.match_code}
+                        </CardTitle>
+                        <div className="flex items-center gap-3 text-base font-semibold text-gray-700 court-info">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {formatShortDate(match.tournament_date)}
+                          </span>
+                          <span className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
                             {match.start_time}
-                          </div>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            {match.location_display}
+                          </span>
                         </div>
                       </div>
                     </CardHeader>
 
-                    <CardContent>
-                      {/* 対戦カード */}
-                      <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="h-4 w-4 text-gray-600" />
-                          <span className="text-sm font-medium text-gray-600">対戦カード</span>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-bold text-lg team-name">{match.team1_omission}</div>
-                          <div className="text-gray-600 text-sm my-1">vs</div>
-                          <div className="font-bold text-lg team-name">{match.team2_omission}</div>
+                    <CardContent className="pt-0">
+                      {/* 対戦カード（1行表示） */}
+                      <div className="mb-3 p-2 bg-gray-50 rounded-md matchup-area">
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="font-bold text-lg team-name text-right flex-1 truncate">{match.team1_omission}</span>
+                          <span className="text-gray-500 text-sm font-medium shrink-0">vs</span>
+                          <span className="font-bold text-lg team-name text-left flex-1 truncate">{match.team2_omission}</span>
                         </div>
                       </div>
+
+                      {/* ピリオド別スコア記入欄 */}
+                      {match.period_labels.length > 0 && (
+                        <div className="mb-3 score-table-area">
+                          <table className="w-full border-collapse text-sm">
+                            <thead>
+                              <tr>
+                                <th className="border border-gray-300 bg-gray-100 px-2 py-1 text-left font-medium text-xs w-[35%]"></th>
+                                {match.period_labels.map((label, i) => (
+                                  <th key={i} className="border border-gray-300 bg-gray-100 px-2 py-1 text-center font-medium text-xs">
+                                    {label}
+                                  </th>
+                                ))}
+                                <th className="border border-gray-300 bg-gray-200 px-2 py-1 text-center font-medium text-xs">計</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td className="border border-gray-300 px-2 py-1 text-xs font-medium truncate">{match.team1_omission}</td>
+                                {match.period_labels.map((_, i) => (
+                                  <td key={i} className="border border-gray-300 px-2 py-2.5 text-center score-cell">&nbsp;</td>
+                                ))}
+                                <td className="border border-gray-300 px-2 py-2.5 text-center bg-gray-50 score-cell">&nbsp;</td>
+                              </tr>
+                              <tr>
+                                <td className="border border-gray-300 px-2 py-1 text-xs font-medium truncate">{match.team2_omission}</td>
+                                {match.period_labels.map((_, i) => (
+                                  <td key={i} className="border border-gray-300 px-2 py-2.5 text-center score-cell">&nbsp;</td>
+                                ))}
+                                <td className="border border-gray-300 px-2 py-2.5 text-center bg-gray-50 score-cell">&nbsp;</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
 
                       {/* QRコード */}
                       <div className="text-center">
@@ -326,12 +367,6 @@ export default function QRListPage() {
                         <p className="text-xs text-gray-500 mt-2 no-print">
                           審判はこのQRコードをスキャンして結果を入力
                         </p>
-                      </div>
-
-                      {/* 試合日（印刷用） */}
-                      <div className="print-only text-center mt-2 text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 inline mr-1" />
-                        {match.tournament_date}
                       </div>
                     </CardContent>
                   </Card>
@@ -356,154 +391,141 @@ export default function QRListPage() {
             display: none !important;
           }
 
-          .print-only {
-            display: block !important;
-          }
-
           @page {
             size: A4 portrait;
-            margin: 25mm 15mm 25mm 15mm;
+            margin: 8mm 8mm 8mm 8mm;
           }
 
-          /* 印刷時の基本設定 */
-          html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-          }
-
-          /* コンテナの余白を適切に設定 */
+          /* コンテナリセット */
           .container {
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
           }
 
-          /* ページラッパー - 各ページごとに区切る */
+          /* ページラッパー: 1ページ = 2列×4行のグリッド */
           .print-page {
             page-break-after: always !important;
             break-after: page !important;
-            padding: 8mm !important;
+            padding: 0 !important;
             box-sizing: border-box !important;
           }
 
-          /* 最後のページは改ページしない */
           .print-page:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
 
-          /* 2列5行のグリッドレイアウト（1ページに10試合） */
+          /* CSS Gridで2列×4行を厳密に制御 */
           .print-container {
-            display: block !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            grid-template-rows: repeat(4, 1fr) !important;
+            gap: 2mm !important;
             margin: 0 !important;
             padding: 0 !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
+            /* A4 - 余白(上下16mm) = 281mm を4行で使い切る */
+            height: 281mm !important;
           }
 
-          /* ページごとのグリッドグループ */
+          /* カード: グリッドセルに収まる固定サイズ */
           .print-card {
-            display: inline-block !important;
-            width: calc(50% - 2.5mm) !important;
-            vertical-align: top !important;
-            break-inside: avoid;
-            page-break-inside: avoid;
-            margin: 0 0 5mm 0 !important;
-            height: auto;
-            border: 1px solid #ccc !important;
-            padding: 2.5mm !important;
-            box-sizing: border-box;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+            border: 1px solid #999 !important;
+            padding: 2mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
 
-          /* 左側のカード（奇数番目）に右マージン */
-          .print-card:nth-child(odd) {
-            margin-right: 5mm !important;
-          }
-
-          /* CardHeader と CardContent の余白調整 */
+          /* CardHeader/CardContent の余白調整 */
           .print-card > div {
             padding: 1mm !important;
             margin: 0 !important;
           }
 
-          .print-card .pb-3 {
-            padding-bottom: 1mm !important;
+          .print-card .pb-2 {
+            padding-bottom: 0.5mm !important;
           }
 
-          /* QRコードサイズ - 読み取り可能なサイズを維持 */
-          .qr-code-image {
-            width: 80px !important;
-            height: 80px !important;
-            margin: 1.5mm auto !important;
+          .print-card .pt-0 {
+            padding-top: 0 !important;
           }
 
-          /* フォントサイズ調整 - 読みやすいサイズに */
+          /* 試合コード */
           .match-title {
-            font-size: 22px !important;
-            margin-bottom: 1mm !important;
+            font-size: 18px !important;
+            margin-bottom: 0 !important;
             font-weight: bold !important;
+            line-height: 1.2 !important;
+          }
+
+          /* 日時・会場情報 */
+          .court-info {
+            font-size: 11px !important;
+            font-weight: 600 !important;
             line-height: 1.3 !important;
+            gap: 4px !important;
+          }
+
+          .court-info svg {
+            width: 10px !important;
+            height: 10px !important;
+          }
+
+          /* 対戦カード */
+          .matchup-area {
+            margin-bottom: 1.5mm !important;
+            padding: 1mm 2mm !important;
           }
 
           .team-name {
-            font-size: 18px !important;
-            line-height: 1.4 !important;
+            font-size: 13px !important;
+            line-height: 1.2 !important;
             font-weight: bold !important;
-            padding: 1.5mm 0 !important;
           }
 
-          /* コート情報と時間 */
-          .court-info {
-            font-size: 16px !important;
-            font-weight: 600 !important;
-            line-height: 1.3 !important;
-          }
-
-          /* 対戦カード部分 */
-          .print-card .mb-4 {
+          /* スコア記入表 */
+          .score-table-area {
             margin-bottom: 1.5mm !important;
-            padding: 2mm !important;
-            min-height: 28mm !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
+          }
+
+          .score-table-area table {
+            font-size: 9px !important;
+          }
+
+          .score-table-area th {
+            padding: 0.5mm 1mm !important;
+            font-size: 8px !important;
+          }
+
+          .score-table-area td {
+            padding: 0.5mm 1mm !important;
+            font-size: 8px !important;
+          }
+
+          .score-cell {
+            min-height: 5mm !important;
+            height: 5mm !important;
+          }
+
+          /* QRコード */
+          .qr-code-image {
+            width: 60px !important;
+            height: 60px !important;
+            margin: 1mm auto !important;
           }
 
           /* アイコンサイズ */
           .print-card svg {
-            width: 14px !important;
-            height: 14px !important;
+            width: 10px !important;
+            height: 10px !important;
           }
-
-          /* vsの余白 */
-          .print-card .my-1 {
-            margin-top: 1mm !important;
-            margin-bottom: 1mm !important;
-            font-size: 15px !important;
-          }
-
-          /* ヘッダー内の余白調整 */
-          .print-card .text-sm {
-            margin-top: 0.5mm !important;
-            font-size: 14px !important;
-            line-height: 1.3 !important;
-          }
-
-          /* 試合日表示の余白 */
-          .print-only {
-            margin-top: 1mm !important;
-            font-size: 13px !important;
-          }
-
-          /* 対戦カード内のタイトル */
-          .print-card .mb-4 .text-sm {
-            font-size: 15px !important;
-          }
-        }
-
-        .print-only {
-          display: none;
         }
       `}</style>
     </div>
