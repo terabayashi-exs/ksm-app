@@ -39,6 +39,9 @@ export const ROUND_ORDER: Record<string, number> = {
 
 export const THIRD_PLACE_MATCH_TYPE = 'third_place';
 
+// N位決定戦にマッチする正規表現（3位、5位、7位など）
+export const PLACEMENT_MATCH_PATTERN = /^(\d+)位決定戦$/;
+
 // match_type を日本語ラベルに変換
 export const MATCH_TYPE_LABELS: Record<string, string> = {
   'preliminary': '予選',

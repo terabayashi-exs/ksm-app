@@ -128,6 +128,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             mb.display_round_name,
             mb.block_name,
             mb.match_type,
+            ml.match_type as live_match_type,
             mb.block_order,
             ml.round_name,
             ml.matchday,
@@ -185,6 +186,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               mb.display_round_name,
               mb.block_name,
               mb.match_type,
+            ml.match_type as live_match_type,
               mb.block_order,
               ml.round_name,
               ml.matchday,
@@ -236,6 +238,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               mb.display_round_name,
               mb.block_name,
               mb.match_type,
+            ml.match_type as live_match_type,
               mb.block_order,
               ml.round_name,
               ml.matchday,
@@ -293,6 +296,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           mb.display_round_name,
           mb.block_name,
           mb.match_type,
+            ml.match_type as live_match_type,
           mb.block_order,
           ml.round_name,
           ml.matchday,
@@ -417,14 +421,16 @@ export async function getTournamentPublicMatches(tournamentId: number) {
       }
 
       // チーム名の決定（t_tournament_teamsの略称を優先、なければ正式名称、なければプレースホルダーから解決）
-      let team1DisplayName = String(
-        row.team1_real_omission || row.team1_real_name ||
-        row.team1_display_name_raw || 'チーム1'
-      );
-      let team2DisplayName = String(
-        row.team2_real_omission || row.team2_real_name ||
-        row.team2_display_name_raw || 'チーム2'
-      );
+      // エキシビジョンマッチ(FM)の場合、実チームが未割当なら「調整中」と表示
+      const isExhibition = String(row.live_match_type || '') === 'FM';
+      const hasTeam1Assigned = !!(row.team1_real_omission || row.team1_real_name);
+      const hasTeam2Assigned = !!(row.team2_real_omission || row.team2_real_name);
+      let team1DisplayName = hasTeam1Assigned
+        ? String(row.team1_real_omission || row.team1_real_name)
+        : (isExhibition ? '調整中' : String(row.team1_display_name_raw || 'チーム1'));
+      let team2DisplayName = hasTeam2Assigned
+        ? String(row.team2_real_omission || row.team2_real_name)
+        : (isExhibition ? '調整中' : String(row.team2_display_name_raw || 'チーム2'));
 
       // プレースホルダーの場合、実チーム名に解決
       const blockName = row.block_name ? String(row.block_name) : null;

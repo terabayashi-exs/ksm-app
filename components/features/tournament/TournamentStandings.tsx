@@ -53,6 +53,7 @@ interface BlockStanding {
   phase: string;
   display_round_name: string;
   block_name: string;
+  round_name?: string | null;
   teams: TeamStanding[];
   remarks?: string | null;
 }
@@ -223,8 +224,11 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
     }
   };
 
-  // ブロック分類関数（phaseNameMapベースで動的に判定）
-  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string): string => {
+  // ブロック分類関数（round_name優先で動的に判定）
+  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, roundName?: string | null): string => {
+    // round_name（t_matches_liveから取得）があれば最優先で使用
+    if (roundName) return roundName;
+
     // _unifiedブロックの場合はdisplay_round_nameを使用
     if (blockName && blockName.endsWith('_unified')) {
       if (displayRoundName) return displayRoundName;
@@ -491,6 +495,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
               phase: phase,
               display_round_name: phaseNameMap.get(phase) || 'トーナメント',
               block_name: '', // 統合のためブロック名なし
+              round_name: blocks[0].round_name,
               teams: sortedTeams,
               remarks: blocks[0].remarks,
             });
@@ -507,7 +512,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 {(() => {
-                  const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name);
+                  const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
                   return (
                     <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                       {blockKey}

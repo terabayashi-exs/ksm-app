@@ -6,6 +6,7 @@ import {
   TournamentBlock,
   MultiBlockBracket,
   organizeMatchesByMatchType,
+  compareMatchCode,
   getPatternByMatchCount,
   getPatternByTeamCount,
   getPatternConfig,
@@ -102,7 +103,7 @@ const response = await fetch(
     );
   }
 
-  const { mainMatches, thirdPlaceMatch } = organizeMatchesByMatchType(matches);
+  const { mainMatches, placementMatches, loserSemifinalMatches } = organizeMatchesByMatchType(matches);
 
   // 試合がない場合
   if (mainMatches.length === 0) {
@@ -183,7 +184,7 @@ const response = await fetch(
     const { actualMatches, seedTeams } = separateByeMatches(matches);
 
     // 試合をmatch_codeでソート（BYE試合除外後）
-    const sortedMatches = actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code));
+    const sortedMatches = actualMatches.sort((a, b) => compareMatchCode(a.match_code, b.match_code));
 
     console.log(`[${blockName}] sortedMatches (BYE除外後):`, sortedMatches.map(m =>
       `${m.match_code}(${m.position_note}): ${m.team1_source || 'initial'} vs ${m.team2_source || 'initial'}`
@@ -208,11 +209,13 @@ const response = await fetch(
         return true;
       }
 
-      // sourceが予選ブロックの順位参照（"A_1", "B_2" など）の場合も第1ラウンド
-      // パターン: アルファベット大文字 + "_" + 数字
+      // sourceが予選ブロックの順位参照の場合も第1ラウンド
+      // パターン:
+      //   "A_1", "B_2" — ブロック順位参照
+      //   "BEST_3_1", "BEST_3_2" — 全ブロック横断の順位参照
       const isLeagueReference = (source: string | undefined | null) => {
         if (!source) return false;
-        return /^[A-Z]_\d+$/.test(source);
+        return /^[A-Z]_\d+$/.test(source) || /^BEST_\d+_\d+$/.test(source);
       };
 
       return isLeagueReference(m.team1_source) && isLeagueReference(m.team2_source);
@@ -410,7 +413,7 @@ const response = await fetch(
               const { actualMatches, seedTeams } = separateByeMatches(mainMatches);
 
               // ラウンドラベルを生成（position_noteベース）
-              const sortedMatches = actualMatches.sort((a, b) => a.match_code.localeCompare(b.match_code));
+              const sortedMatches = actualMatches.sort((a, b) => compareMatchCode(a.match_code, b.match_code));
               const pattern = getPatternByMatchCount(sortedMatches.length);
               const config = getPatternConfig(pattern);
 
@@ -458,18 +461,31 @@ const response = await fetch(
             })()
           )}
 
-          {/* 3位決定戦ブロック */}
-          {thirdPlaceMatch && (
-            <div className="third-place-section">
+          {/* 敗者側準決勝（各試合を個別ブロックで描画） */}
+          {loserSemifinalMatches.map((match) => (
+            <div key={`loser-sf-${match.match_code}`} className="third-place-section">
               <TournamentBlock
-                blockId="third"
-                matches={[thirdPlaceMatch]}
+                blockId={`loser-sf-${match.match_code}`}
+                matches={[match]}
                 sportConfig={sportConfig || undefined}
-                title="3位決定戦"
-                roundLabels={["3位決定戦"]}
+                title={match.position_note || "下位決定準決勝"}
+                roundLabels={[match.position_note || "下位決定準決勝"]}
               />
             </div>
-          )}
+          ))}
+
+          {/* 順位決定戦ブロック（3位・5位・7位など） */}
+          {placementMatches.map(({ position, match }) => (
+            <div key={`placement-${position}`} className="third-place-section">
+              <TournamentBlock
+                blockId={`placement-${position}`}
+                matches={[match]}
+                sportConfig={sportConfig || undefined}
+                title={`${position}位決定戦`}
+                roundLabels={[`${position}位決定戦`]}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </>

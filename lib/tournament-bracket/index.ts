@@ -18,6 +18,7 @@ export {
   SEMI_FINAL_CODES,
   THIRD_PLACE_CODES,
   FINAL_CODES,
+  PLACEMENT_MATCH_PATTERN,
 } from "./constants";
 
 // 型定義
@@ -54,4 +55,4 @@ export {
 export type { PatternType, PatternConfig, RoundConfig, SeedSlot, P6SeedLayout } from "./patterns";
 
 // ユーティリティ
-export { organizeBracket, organizeMatchesByMatchType } from "./utils";
+export { organizeBracket, organizeMatchesByMatchType, compareMatchCode } from "./utils";

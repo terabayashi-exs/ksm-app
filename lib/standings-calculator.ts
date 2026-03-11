@@ -96,6 +96,7 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
     console.log(`[getTournamentStandings] Tournament ${tournamentId}: phaseFormatMap=`, Object.fromEntries(phaseFormatMap));
 
     // 全ブロックを取得し、フェーズのformat_typeに応じてフィルタリング
+    // エキシビジョンマッチ(FM)のみのブロックを除外
     const allBlocks = await db.execute({
       sql: `
         SELECT
@@ -108,6 +109,11 @@ export async function getTournamentStandings(tournamentId: number): Promise<Bloc
           (SELECT ml.round_name FROM t_matches_live ml WHERE ml.match_block_id = mb.match_block_id LIMIT 1) as round_name
         FROM t_match_blocks mb
         WHERE mb.tournament_id = ?
+          AND EXISTS (
+            SELECT 1 FROM t_matches_live ml
+            WHERE ml.match_block_id = mb.match_block_id
+              AND (ml.match_type IS NULL OR ml.match_type != 'FM')
+          )
         ORDER BY mb.block_order, mb.block_name
       `,
       args: [tournamentId]
