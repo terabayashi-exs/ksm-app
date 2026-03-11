@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       data.tournament_name,
       data.format_id,
       formatName,
-      data.venue_id,
+      data.venue_id ?? null,
       data.team_count,
       data.court_count,
       tournamentDatesJson,
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         v.venue_name,
         t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [Number(tournamentId)]);
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
         v.venue_name,
         t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
     `;
 
     const params: (string | number)[] = [];
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,
@@ -538,10 +538,11 @@ async function generateMatchesFromTemplate(
           team1_scores,
           team2_scores,
           period_count,
+          match_type,
           winner_team_id,
           winner_tournament_team_id,
           remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         blockId,
         tournamentDate,
@@ -558,6 +559,7 @@ async function generateMatchesFromTemplate(
         null, // team1_scores は初期状態でnull
         null, // team2_scores は初期状態でnull
         periodCount, // テンプレートから取得したperiod_count
+        template.match_type || "通常", // テンプレートの試合種別
         null, // winner_team_id は結果確定時に設定
         null, // winner_tournament_team_id は結果確定時に設定
         null  // remarks

@@ -1,6 +1,7 @@
 // app/api/tournaments/[id]/public-matches/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getTournamentPublicMatches } from '@/lib/tournament-public-matches';
+import { db } from '@/lib/db';
 
 // キャッシュはCache-Controlヘッダーで制御
 
@@ -55,9 +56,54 @@ export async function GET(
       );
     }
 
+    // 部門に紐づく会場マスタ情報を取得（t_tournaments + t_matches_live 両方から収集）
+    let venues: Array<{ venue_id: number; venue_name: string; google_maps_url: string | null }> = [];
+    try {
+      const venueIds = new Set<number>();
+
+      // 1. 部門に設定された会場
+      const tournamentRow = await db.execute(`SELECT venue_id FROM t_tournaments WHERE tournament_id = ?`, [tournamentId]);
+      const venueIdJson = tournamentRow.rows[0]?.venue_id;
+      if (venueIdJson) {
+        const venueIdStr = String(venueIdJson);
+        const normalizedJson = venueIdStr.startsWith('[') ? venueIdStr : `[${venueIdStr}]`;
+        try {
+          const ids = JSON.parse(normalizedJson) as number[];
+          ids.forEach(id => venueIds.add(id));
+        } catch { /* ignore parse error */ }
+      }
+
+      // 2. 試合に設定された会場
+      const matchVenueResult = await db.execute(`
+        SELECT DISTINCT ml.venue_id
+        FROM t_matches_live ml
+        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ? AND ml.venue_id IS NOT NULL
+      `, [tournamentId]);
+      matchVenueResult.rows.forEach(r => {
+        if (r.venue_id) venueIds.add(Number(r.venue_id));
+      });
+
+      if (venueIds.size > 0) {
+        const idList = Array.from(venueIds).join(',');
+        const venueResult = await db.execute(`
+          SELECT venue_id, venue_name, google_maps_url
+          FROM m_venues WHERE venue_id IN (${idList})
+        `);
+        venues = venueResult.rows.map(r => ({
+          venue_id: Number(r.venue_id),
+          venue_name: String(r.venue_name),
+          google_maps_url: r.google_maps_url ? String(r.google_maps_url) : null,
+        }));
+      }
+    } catch (venueError) {
+      console.warn('会場情報取得エラー:', venueError);
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      data: result
+      data: result,
+      venues,
     }), {
       headers: {
         'Content-Type': 'application/json',

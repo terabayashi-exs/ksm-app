@@ -171,7 +171,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
     formState: { errors, isDirty },
     control,
     setValue,
-    watch
+    watch,
+    getValues
   } = useForm<TournamentFormatFormData>({
     defaultValues: {
       format_name: format.format_name || "",
@@ -217,6 +218,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
   const selectedSportTypeId = watch("sport_type_id");
   const preliminaryFormatType = watch("preliminary_format_type");
   const finalFormatType = watch("final_format_type");
+  const watchedTemplates = watch("templates");
 
   // 競技種別データの取得
   useEffect(() => {
@@ -314,13 +316,13 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
   // 順番移動
   const moveTemplate = (index: number, direction: 'up' | 'down') => {
     if (direction === 'up' && index > 0) {
-      const temp = fields[index];
-      const prev = fields[index - 1];
+      const temp = getValues(`templates.${index}`);
+      const prev = getValues(`templates.${index - 1}`);
       update(index, prev);
       update(index - 1, temp);
     } else if (direction === 'down' && index < fields.length - 1) {
-      const temp = fields[index];
-      const next = fields[index + 1];
+      const temp = getValues(`templates.${index}`);
+      const next = getValues(`templates.${index + 1}`);
       update(index, next);
       update(index + 1, temp);
     }
@@ -771,6 +773,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合番号</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合コード</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">フェーズ</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合種別</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">ラウンド名</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">ブロック名</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
@@ -843,8 +846,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Select
-                          value={field.phase}
-                          onValueChange={(value) => update(index, { ...field, phase: value })}
+                          value={watchedTemplates?.[index]?.phase || field.phase}
+                          onValueChange={(value) => setValue(`templates.${index}.phase`, value)}
                         >
                           <SelectTrigger className="w-24">
                             <SelectValue />
@@ -864,6 +867,26 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                                 </SelectItem>
                               ))
                             )}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap border-r">
+                        <Select
+                          value={watchedTemplates?.[index]?.match_type || field.match_type || "通常"}
+                          onValueChange={(value) => {
+                            setValue(`templates.${index}.match_type`, value);
+                            if (value === "FM") {
+                              setValue(`templates.${index}.team1_display_name`, "");
+                              setValue(`templates.${index}.team2_display_name`, "");
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="通常">通常</SelectItem>
+                            <SelectItem value="FM">FM</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
@@ -899,14 +922,14 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                         <Input
                           {...register(`templates.${index}.team1_source`)}
                           className="w-28"
-                          placeholder="T1_winner"
+                          placeholder="A_1, T1_winner, BEST_3_1"
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team2_source`)}
                           className="w-28"
-                          placeholder="T2_winner"
+                          placeholder="A_1, T1_winner, BEST_3_1"
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">

@@ -219,7 +219,7 @@ export async function GET(
         (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id) as player_count
       FROM t_tournament_teams tt
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       INNER JOIN m_teams mt ON tt.team_id = mt.team_id
       WHERE tt.tournament_team_id = ?
     `, [tournamentTeamId]);

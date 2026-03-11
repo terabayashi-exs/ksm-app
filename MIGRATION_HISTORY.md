@@ -16,6 +16,140 @@
 
 ---
 
+## 0022: 会場マスタのオーナー管理・共有フラグ対応（2026-03-11）
+
+### 基本情報
+- **日付**: 2026年3月11日
+- **環境**: dev
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0022_venue_ownership.sql`
+
+### 変更内容
+
+#### `m_venues` テーブル拡張
+- `created_by_login_user_id` INTEGER - 会場を作成した管理者のlogin_user_id
+- `is_shared` INTEGER NOT NULL DEFAULT 0 - 共有フラグ（1: 全ユーザーに公開）
+
+#### データ移行
+- 既存会場は全て `is_shared = 1` に設定（後方互換性維持）
+- 既存会場の `created_by_login_user_id` は NULL（superadminのみ編集・削除可能）
+
+### 影響を受けたファイル
+- `src/db/schema.ts` - mVenues に2カラム追加
+- `drizzle/0022_venue_ownership.sql` - マイグレーションSQL
+- `drizzle/meta/_journal.json` - エントリ追加
+- `app/api/venues/route.ts` - GET: scopeパラメータ追加 / POST: オーナー設定
+- `app/api/venues/[id]/route.ts` - GET/PUT/DELETE: 権限チェック + レスポンス拡張
+- `app/admin/venues/page.tsx` - props追加（loginUserId, isSuperadmin）
+- `components/features/admin/VenueManagement.tsx` - props受取・スコープ取得・共有UI
+- `components/features/tournament/TournamentCreateNewForm.tsx` - fetch URL変更（scope=available）
+- `components/forms/TournamentEditForm.tsx` - fetch URL変更（scope=available）
+- `components/features/tournament/TournamentGroupCreateForm.tsx` - fetch URL変更（scope=available）
+- `components/features/tournament/TournamentGroupEditForm.tsx` - fetch URL変更（scope=available）
+- `lib/types.ts` - Venue型拡張
+
+---
+
+## 0021: 複数会場対応 - venue_id JSON配列化・会場マスタ地図情報追加・試合テーブル拡張（2026-03-10）
+
+### 基本情報
+- **日付**: 2026年3月10日
+- **環境**: dev
+- **方法**: カスタムマイグレーター（`scripts/migrate-turso.ts`）+ 手動スクリプト
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0021_multi_venue_support.sql`
+
+### 変更内容
+
+#### 1. `m_venues` テーブル拡張
+- `google_maps_url` (TEXT) - Google Maps URL
+- `latitude` (REAL) - 緯度
+- `longitude` (REAL) - 経度
+
+#### 2. `t_tournaments.venue_id` INTEGER → TEXT（JSON配列）
+- `venue_id` を `venue_id_legacy` にリネーム（旧FK制約付きINTEGER）
+- 新しい `venue_id` カラムをTEXT型で追加（JSON配列 例: `"[1, 3]"`）
+- 既存データを `UPDATE t_tournaments SET venue_id = '[' || venue_id_legacy || ']'` で変換
+- SQLiteのFK制約回避のためRENAME COLUMN + ADD COLUMNアプローチを採用
+
+#### 3. `t_matches_live` / `t_matches_final` テーブル拡張
+- `court_name` (TEXT) - コート名
+- `venue_id` (INTEGER) - 会場ID
+
+#### 4. `t_tournament_courts` テーブル拡張
+- `venue_id` (INTEGER) - 会場ID
+
+### 変更理由
+- 1日目A会場・2日目B会場のように複数会場を使う大会に対応
+- 会場マスタに地図情報を追加し、参加者への会場案内を改善
+- 試合テーブルにコート名・会場IDを追加し、コート別・会場別の試合管理を実現
+
+### 影響を受けたファイル
+
+#### スキーマ・型定義
+- `src/db/schema.ts` - m_venues拡張、venue_id TEXT化、matches拡張、courts拡張
+- `src/db/relations.ts` - venue_idリレーション削除
+- `lib/types.ts` - Tournament.venue_id: number → string|null、Venue地図フィールド追加、parseVenueIds()ヘルパー追加
+
+#### 会場マスタAPI・UI
+- `app/api/venues/route.ts` - 地図フィールド対応（GET/POST）
+- `app/api/venues/[id]/route.ts` - 地図フィールド対応（GET/PUT）、削除チェックをjson_each対応
+- `components/features/admin/VenueManagement.tsx` - 地図フィールドUI追加
+
+#### venue_id JOIN更新（JSON_EXTRACT対応）- 25+ファイル
+- `app/api/tournaments/route.ts`
+- `app/api/tournaments/[id]/route.ts`
+- `app/api/tournaments/search/route.ts`
+- `app/api/tournaments/public/route.ts`
+- `app/api/tournaments/dashboard/route.ts`
+- `app/api/tournaments/create-new/route.ts`
+- `app/api/tournaments/create-league/route.ts`
+- `app/api/admin/tournaments/route.ts`
+- `app/api/admin/tournaments/active/route.ts`
+- `app/api/admin/tournaments/duplicate/route.ts`
+- `app/api/admin/tournaments/[id]/teams/route.ts`
+- `app/api/operators/tournaments/route.ts`
+- `app/api/teams/tournaments/route.ts`
+- `app/api/teams/profile/route.ts`
+- `app/api/my/tournaments/[tournament_id]/apply/route.ts`
+- `app/api/my/teams/[id]/tournaments/route.ts`
+- `app/api/my/teams/[id]/tournaments/past/route.ts`
+- `app/api/my/teams/[id]/tournaments/[tournament_team_id]/withdraw/route.ts`
+- `app/api/tournaments/[id]/join/route.ts`
+- `app/api/tournaments/[id]/results/html/route.ts`
+- `app/api/tournaments/public-groups/[id]/route.ts`
+- `app/api/admin/withdrawal-requests/route.ts`
+- `app/api/admin/withdrawal-requests/[id]/route.ts`
+- `app/tournaments/[id]/teams/page.tsx`
+- `lib/tournament-detail.ts`
+- `lib/dashboard-data.ts`
+- `lib/api/tournaments.ts`
+- `lib/tournament-json-archiver.ts`
+- `lib/withdrawal-notifications.ts`
+- `app/admin/tournaments/[id]/edit/page.tsx`
+- `app/admin/tournaments/[id]/results/page.tsx`
+- `app/admin/tournaments/[id]/manual-rankings/page.tsx`
+
+#### 部門作成・編集フォーム
+- `components/features/tournament/TournamentCreateNewForm.tsx` - 複数会場Popover UI、コート数自動導出
+- `components/forms/TournamentEditForm.tsx` - 複数会場Popover UI
+- `app/api/tournaments/create-new/route.ts` - venue_ids配列受け取り、JSON保存
+- `app/api/tournaments/[id]/route.ts` - PUT: venue_ids配列受け取り
+
+#### スケジュールプレビュー
+- `components/features/tournament/SchedulePreview.tsx` - コート別表示、コート編集機能削除
+
+#### 新規ファイル
+- `components/ui/popover.tsx` - shadcn/ui Popoverコンポーネント
+- `app/admin/tournaments/[id]/court-venue-settings/page.tsx` - 会場・コート設定画面
+- `app/api/tournaments/[id]/court-venue-settings/route.ts` - 会場・コート設定API
+
+#### ダッシュボード
+- `components/features/my/MyDashboardTabs.tsx` - 「会場・コート設定」ボタン追加
+
+---
+
 ## 0020: t_tournament_rulesのphase CHECK制約を削除 - フェーズ可変対応（2026-03-08）
 
 ### 基本情報

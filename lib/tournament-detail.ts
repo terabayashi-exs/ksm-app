@@ -31,7 +31,7 @@ async function getArchivedTournamentById(tournamentId: number): Promise<Tourname
       tournament_id: Number(tournamentData.tournament_id),
       tournament_name: String(tournamentData.tournament_name),
       format_id: Number(tournamentData.format_id),
-      venue_id: Number(tournamentData.venue_id),
+      venue_id: tournamentData.venue_id ? String(tournamentData.venue_id) : null,
       team_count: Number(tournamentData.team_count),
       status: tournamentData.status,
       court_count: Number(tournamentData.court_count),
@@ -78,7 +78,7 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
         v.venue_name,
         v.address
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -93,7 +93,7 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       tournament_id: row.tournament_id as number,
       tournament_name: row.tournament_name as string,
       format_id: row.format_id as number,
-      venue_id: row.venue_id as number,
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: row.team_count as number,
       status: row.status as TournamentStatus,
       court_count: row.court_count as number,
@@ -106,7 +106,7 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : undefined,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
-      
+
       // Optional joined fields
       venue_name: row.venue_name as string | undefined,
       format_name: row.format_name as string | undefined,
@@ -139,7 +139,7 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
         v.venue_name,
         v.address
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -160,7 +160,7 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
       tournament_id: row.tournament_id as number,
       tournament_name: row.tournament_name as string,
       format_id: row.format_id as number,
-      venue_id: row.venue_id as number,
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: row.team_count as number,
       status: row.status as TournamentStatus,
       court_count: row.court_count as number,

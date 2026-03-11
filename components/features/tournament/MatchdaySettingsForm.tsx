@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,69 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { AlertTriangle, Loader2, Save, Copy, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+
+/** 手動入力可能なコンボボックス */
+function ComboInput({
+  value,
+  onChange,
+  suggestions,
+  placeholder,
+  className,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <Input
+          ref={inputRef}
+          className={className}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+      </PopoverAnchor>
+      {suggestions.length > 0 && (
+        <PopoverContent
+          className="p-1 w-[var(--radix-popover-trigger-width)]"
+          align="start"
+          sideOffset={2}
+          onOpenAutoFocus={e => e.preventDefault()}
+        >
+          <div className="max-h-40 overflow-y-auto">
+            {suggestions.map(name => (
+              <button
+                key={name}
+                type="button"
+                className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent cursor-pointer"
+                onMouseDown={e => {
+                  e.preventDefault();
+                  onChange(name);
+                  setOpen(false);
+                }}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      )}
+    </Popover>
+  );
+}
 
 interface Venue {
   venue_id: number;
@@ -85,6 +147,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   const [bulkApplyVenue, setBulkApplyVenue] = useState(true);
   const [bulkApplyCourt, setBulkApplyCourt] = useState(true);
   const [bulkApplyDate, setBulkApplyDate] = useState(true);
+  const [bulkApplyStartTime, setBulkApplyStartTime] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -180,6 +243,12 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
     ));
   }, []);
 
+  const updateMatchFields = useCallback((matchId: number, fields: Partial<MatchItem>) => {
+    setMatches(prev => prev.map(m =>
+      m.match_id === matchId ? { ...m, ...fields } : m
+    ));
+  }, []);
+
   const toggleMatchday = (matchday: number) => {
     setCollapsedMatchdays(prev => {
       const next = new Set(prev);
@@ -255,7 +324,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       return;
     }
 
-    if (!bulkApplyVenue && !bulkApplyCourt && !bulkApplyDate && !bulkStartTime) {
+    if (!bulkApplyVenue && !bulkApplyCourt && !bulkApplyDate && !bulkApplyStartTime) {
       alert("適用する項目を1つ以上選択してください");
       return;
     }
@@ -288,7 +357,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
           updated.tournament_date = matchdayDates[m.matchday];
         }
 
-        if (bulkStartTime) {
+        if (bulkApplyStartTime) {
           if (timeIntervalMinutes > 0) {
             // 節内の試合順に開始時刻をずらす
             const idx = matchdayIndexMap.get(m.matchday) || 0;
@@ -305,6 +374,8 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
 
         if (bulkApplyVenue && bulkVenueName) {
           updated.venue_name = bulkVenueName;
+          // 会場設定時はコート名にも同名を自動セット
+          updated.court_name = bulkVenueName;
         }
 
         if (bulkApplyCourt && bulkCourtName) {
@@ -376,7 +447,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   const courtNameSuggestions = Array.from(new Set([...usedCourtNames, ...COURT_NAME_PRESETS]));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       {/* ヘッダー情報 */}
       <Card>
         <CardHeader className="pb-3">
@@ -432,15 +503,15 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
               </div>
               {/* 開始時刻 */}
               <div className="flex items-start gap-2">
-                <div className="w-4 mt-1.5" />
+                <Checkbox checked={bulkApplyStartTime} onCheckedChange={(v) => setBulkApplyStartTime(!!v)} className="mt-1.5" />
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-xs">開始時刻</Label>
-                    <Input className="h-9" type="time" value={bulkStartTime} onChange={e => setBulkStartTime(e.target.value)} />
+                    <Input className="h-9" type="time" value={bulkStartTime} onChange={e => setBulkStartTime(e.target.value)} disabled={!bulkApplyStartTime} />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">試合間隔</Label>
-                    <Select value={bulkTimeInterval} onValueChange={setBulkTimeInterval}>
+                    <Select value={bulkTimeInterval} onValueChange={setBulkTimeInterval} disabled={!bulkApplyStartTime}>
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
@@ -465,6 +536,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                       <option key={v.venue_id} value={v.venue_name} />
                     ))}
                   </datalist>
+                  <p className="text-xs text-muted-foreground">※ 会場を設定するとコート名にも同じ名称が自動設定されます</p>
                 </div>
               </div>
               {/* コート名 */}
@@ -472,12 +544,14 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                 <Checkbox checked={bulkApplyCourt} onCheckedChange={(v) => setBulkApplyCourt(!!v)} className="mt-1.5" />
                 <div className="flex-1 space-y-1">
                   <Label className="text-xs">コート名</Label>
-                  <Input className="h-9" value={bulkCourtName} onChange={e => setBulkCourtName(e.target.value)} placeholder="例: メインコート" list="bulk-court-presets" disabled={!bulkApplyCourt} />
-                  <datalist id="bulk-court-presets">
-                    {courtNameSuggestions.map(name => (
-                      <option key={name} value={name} />
-                    ))}
-                  </datalist>
+                  <ComboInput
+                    className="h-9"
+                    value={bulkCourtName}
+                    onChange={setBulkCourtName}
+                    suggestions={courtNameSuggestions}
+                    placeholder="例: メインコート"
+                    disabled={!bulkApplyCourt}
+                  />
                 </div>
               </div>
             </div>
@@ -650,33 +724,36 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">会場</Label>
-                            <Input
-                              className="h-8 text-sm"
-                              value={match.venue_name}
-                              onChange={e => updateMatch(match.match_id, "venue_name", e.target.value)}
-                              placeholder="空欄可"
-                              list={`venue-presets-${match.match_id}`}
-                            />
-                            <datalist id={`venue-presets-${match.match_id}`}>
-                              {venues.map(v => (
-                                <option key={v.venue_id} value={v.venue_name} />
-                              ))}
-                            </datalist>
+                            <Select
+                              value={match.venue_name || "__empty__"}
+                              onValueChange={(v) => {
+                                const venueName = v === "__empty__" ? "" : v;
+                                updateMatchFields(match.match_id, {
+                                  venue_name: venueName,
+                                  court_name: venueName,
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="選択してください" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__empty__">未選択</SelectItem>
+                                {venues.map(v => (
+                                  <SelectItem key={v.venue_id} value={v.venue_name}>{v.venue_name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">コート名</Label>
-                            <Input
+                            <ComboInput
                               className="h-8 text-sm"
                               value={match.court_name}
-                              onChange={e => updateMatch(match.match_id, "court_name", e.target.value)}
+                              onChange={v => updateMatch(match.match_id, "court_name", v)}
+                              suggestions={courtNameSuggestions}
                               placeholder="空欄可"
-                              list={`court-presets-${match.match_id}`}
                             />
-                            <datalist id={`court-presets-${match.match_id}`}>
-                              {courtNameSuggestions.map(name => (
-                                <option key={name} value={name} />
-                              ))}
-                            </datalist>
                           </div>
                         </div>
                       </div>
@@ -689,20 +766,22 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
         })}
       </div>
 
-      {/* 保存ボタン */}
-      <div className="flex justify-end gap-3 sticky bottom-4">
-        <Button variant="outline" onClick={() => router.push('/my')}>
-          キャンセル
-        </Button>
-        <Button onClick={handleSave} disabled={saving || conflicts.length > 0}>
-          {saving ? (
-            <><Loader2 className="w-4 h-4 animate-spin mr-2" />保存中...</>
-          ) : conflicts.length > 0 ? (
-            <><AlertTriangle className="w-4 h-4 mr-2" />重複あり</>
-          ) : (
-            <><Save className="w-4 h-4 mr-2" />保存する</>
-          )}
-        </Button>
+      {/* 保存ボタン（画面下部固定） */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-end gap-3">
+          <Button variant="outline" onClick={() => router.push('/my')}>
+            キャンセル
+          </Button>
+          <Button onClick={handleSave} disabled={saving || conflicts.length > 0}>
+            {saving ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />保存中...</>
+            ) : conflicts.length > 0 ? (
+              <><AlertTriangle className="w-4 h-4 mr-2" />重複あり</>
+            ) : (
+              <><Save className="w-4 h-4 mr-2" />保存する</>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

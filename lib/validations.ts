@@ -22,8 +22,11 @@ export const tournamentCreateSchema = z.object({
     .min(1, '大会フォーマットを選択してください'),
   
   venue_id: z.number()
-    .min(1, '会場を選択してください'),
-  
+    .min(1, '会場を選択してください')
+    .optional(),
+
+  venue_ids: z.array(z.number()).optional(),
+
   team_count: z.number()
     .min(2, 'チーム数は2以上で入力してください')
     .max(128, 'チーム数は128以下で入力してください'),
@@ -71,6 +74,14 @@ export const tournamentCreateSchema = z.object({
     .min(1, '募集終了日時は必須です')
     .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, '募集終了日時は YYYY-MM-DD または YYYY-MM-DDTHH:mm 形式で入力してください')
 }).refine((data) => {
+  // venue_id または venue_ids のどちらかが必須
+  const hasVenueId = data.venue_id != null && data.venue_id >= 1;
+  const hasVenueIds = data.venue_ids != null && data.venue_ids.length > 0;
+  return hasVenueId || hasVenueIds;
+}, {
+  message: '会場を1つ以上選択してください',
+  path: ['venue_id']
+}).refine((data) => {
   // 開催日番号の重複チェック
   const dayNumbers = data.tournament_dates.map(d => d.dayNumber);
   const uniqueDayNumbers = new Set(dayNumbers);
@@ -113,6 +124,56 @@ export const tournamentCreateSchema = z.object({
 
 export type TournamentCreateForm = z.infer<typeof tournamentCreateSchema>;
 export type TournamentDate = z.infer<typeof tournamentDateSchema>;
+
+// 部門編集用スキーマ（PUTリクエスト用）
+export const tournamentEditSchema = z.object({
+  tournament_name: z.string()
+    .min(1, '大会名は必須です')
+    .max(100, '大会名は100文字以内で入力してください'),
+
+  format_id: z.number()
+    .min(1, 'フォーマットIDが必要です'),
+
+  venue_id: z.number().optional(),
+  venue_ids: z.array(z.number()).optional(),
+
+  team_count: z.number()
+    .min(2, 'チーム数は2以上で入力してください')
+    .max(128, 'チーム数は128以下で入力してください'),
+
+  tournament_dates: z.array(tournamentDateSchema)
+    .min(1, '最低1つの開催日を指定してください'),
+
+  match_duration_minutes: z.number()
+    .min(5, '試合時間は5分以上で入力してください')
+    .max(120, '試合時間は120分以下で入力してください'),
+
+  break_duration_minutes: z.number()
+    .min(0, '休憩時間は0分以上で入力してください')
+    .max(60, '休憩時間は60分以下で入力してください'),
+
+  is_public: z.boolean().optional().default(false),
+  show_players_public: z.boolean().optional().default(false),
+
+  public_start_date: z.string().min(1, '公開開始日時は必須です'),
+  recruitment_start_date: z.string().min(1, '募集開始日時は必須です'),
+  recruitment_end_date: z.string().min(1, '募集終了日時は必須です'),
+
+  customMatches: z.array(z.object({
+    match_id: z.number(),
+    start_time: z.string(),
+    court_number: z.number(),
+  })).optional(),
+}).passthrough().refine((data) => {
+  const hasVenueId = data.venue_id != null && data.venue_id >= 1;
+  const hasVenueIds = data.venue_ids != null && data.venue_ids.length > 0;
+  return hasVenueId || hasVenueIds;
+}, {
+  message: '会場を1つ以上選択してください',
+  path: ['venue_ids']
+});
+
+export type TournamentEditForm = z.infer<typeof tournamentEditSchema>;
 
 // チーム登録フォームのスキーマ
 export const teamRegisterSchema = z.object({

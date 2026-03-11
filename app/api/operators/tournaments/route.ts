@@ -72,7 +72,7 @@ export async function GET() {
     `;
 
     const TOURNAMENT_JOINS = `
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       LEFT JOIN m_login_users a ON g.login_user_id = a.login_user_id
     `;

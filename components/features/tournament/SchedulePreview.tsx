@@ -30,10 +30,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
   const [editingMatch, setEditingMatch] = useState<string | null>(null); // "dayIndex-matchIndex"
   const [hasManualEdits, setHasManualEdits] = useState(false); // 手動編集フラグ
   const [previousSettings, setPreviousSettings] = useState<ScheduleSettings | null>(null); // 前回のsettings
-  const [editingBlockCourt, setEditingBlockCourt] = useState<string | null>(null); // ブロックコート編集中のブロック名
-  const [blockCourtAssignments, setBlockCourtAssignments] = useState<Record<string, number>>({}); // ブロック→コート割り当て
-  const [editingMatchCourt, setEditingMatchCourt] = useState<string | null>(null); // 個別試合コート編集中の試合キー
-  const [matchCourtAssignments, setMatchCourtAssignments] = useState<Record<number, number>>({}); // 試合番号→コート割り当て
   const [initialSchedule, setInitialSchedule] = useState<TournamentSchedule | null>(null); // 初期スケジュール保存用（リセット用）
   const [dayStartTimeInputs, setDayStartTimeInputs] = useState<Record<number, string>>({}); // 開催日ごとの一括調整用時刻入力
   
@@ -57,8 +53,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       setFetchingMatches(false);
       setHasManualEdits(false);
       setPreviousSettings(null);
-      setBlockCourtAssignments({});
-      setMatchCourtAssignments({});
     }
   }, [tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -652,113 +646,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     }
   };
 
-  // ブロック単位のコート変更ハンドラー
-  const handleBlockCourtChange = (blockDisplayName: string, newCourtNumber: number) => {
-    if (!displaySchedule) return;
-
-    // ブロック表示名から実際のブロック名を抽出 (例: "Aブロック" → "A")
-    const blockNameMatch = blockDisplayName.match(/([A-Z])ブロック$/);
-    const actualBlockName = blockNameMatch ? blockNameMatch[1] : blockDisplayName;
-
-    // 利用可能コートのチェック
-    const availableCourts = settings.availableCourts?.length 
-      ? settings.availableCourts 
-      : Array.from({length: settings.courtCount}, (_, i) => i + 1);
-
-    if (!availableCourts.includes(newCourtNumber)) {
-      alert(`コート${newCourtNumber}は利用可能コートに含まれていません`);
-      return;
-    }
-
-    // 他のブロックとの重複チェック
-    const otherBlockAssignments = Object.entries(blockCourtAssignments)
-      .filter(([block]) => block !== actualBlockName);
-    
-    const conflictBlock = otherBlockAssignments.find(([, court]) => court === newCourtNumber);
-    if (conflictBlock) {
-      if (!confirm(`コート${newCourtNumber}は既に${conflictBlock[0]}ブロックで使用されています。変更を続行しますか？`)) {
-        return;
-      }
-    }
-
-    // ブロック割り当てを更新
-    const newBlockAssignments = {
-      ...blockCourtAssignments,
-      [actualBlockName]: newCourtNumber
-    };
-    setBlockCourtAssignments(newBlockAssignments);
-
-    // スケジュールを再計算（カスタムコート割り当て付き）
-    if (templates.length > 0) {
-      const customAssignment = {
-        blockAssignments: newBlockAssignments,
-        matchAssignments: matchCourtAssignments // 既存の個別試合割り当ても保持
-      };
-
-      const recalculatedSchedule = calculateTournamentSchedule(templates, settings, customAssignment);
-      setCustomSchedule(recalculatedSchedule);
-      setHasManualEdits(true);
-
-      // 親コンポーネントに通知
-      if (onScheduleChange) {
-        const customMatches = recalculatedSchedule.days.flatMap(day => 
-          day.matches.map(match => ({
-            match_id: match.template.match_number,
-            start_time: match.startTime,
-            court_number: match.courtNumber
-          }))
-        );
-        onScheduleChange(customMatches);
-      }
-    }
-  };
-
-  // 個別試合のコート変更ハンドラー
-  const handleMatchCourtChange = (matchNumber: number, newCourtNumber: number) => {
-    if (!displaySchedule) return;
-
-    // 利用可能コートのチェック
-    const availableCourts = settings.availableCourts?.length 
-      ? settings.availableCourts 
-      : Array.from({length: settings.courtCount}, (_, i) => i + 1);
-
-    if (!availableCourts.includes(newCourtNumber)) {
-      alert(`コート${newCourtNumber}は利用可能コートに含まれていません`);
-      return;
-    }
-
-    // 試合別割り当てを更新
-    const newMatchAssignments = {
-      ...matchCourtAssignments,
-      [matchNumber]: newCourtNumber
-    };
-    setMatchCourtAssignments(newMatchAssignments);
-
-    // スケジュールを再計算（カスタムコート割り当て付き）
-    if (templates.length > 0) {
-      const customAssignment = {
-        blockAssignments: blockCourtAssignments,
-        matchAssignments: newMatchAssignments
-      };
-
-      const recalculatedSchedule = calculateTournamentSchedule(templates, settings, customAssignment);
-      setCustomSchedule(recalculatedSchedule);
-      setHasManualEdits(true);
-
-      // 親コンポーネントに通知
-      if (onScheduleChange) {
-        const customMatches = recalculatedSchedule.days.flatMap(day => 
-          day.matches.map(match => ({
-            match_id: match.template.match_number,
-            start_time: match.startTime,
-            court_number: match.courtNumber
-          }))
-        );
-        onScheduleChange(customMatches);
-      }
-    }
-  };
-
   // スケジュールリセット関数
   const handleScheduleReset = () => {
     if (!initialSchedule) return;
@@ -766,10 +653,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     // 編集状態をリセット
     setHasManualEdits(false);
     setEditingMatch(null);
-    setEditingBlockCourt(null);
-    setEditingMatchCourt(null);
-    setBlockCourtAssignments({});
-    setMatchCourtAssignments({});
 
     // カスタムスケジュールを初期状態にリセット（深いコピー）
     const resetSchedule = JSON.parse(JSON.stringify(initialSchedule));
@@ -936,37 +819,6 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
     return blockKey;
   };
 
-  const previewBlockColors = [
-    'bg-blue-100 text-blue-800',
-    'bg-green-100 text-green-800',
-    'bg-yellow-100 text-yellow-800',
-    'bg-purple-100 text-purple-800',
-    'bg-pink-100 text-pink-800',
-    'bg-indigo-100 text-indigo-800',
-    'bg-rose-100 text-rose-800',
-    'bg-teal-100 text-teal-800',
-    'bg-cyan-100 text-cyan-800',
-    'bg-lime-100 text-lime-800',
-    'bg-amber-100 text-amber-800',
-    'bg-sky-100 text-sky-800',
-    'bg-fuchsia-100 text-fuchsia-800',
-    'bg-emerald-100 text-emerald-800',
-    'bg-violet-100 text-violet-800',
-    'bg-red-100 text-red-800',
-  ];
-  const getBlockColor = (blockKey: string): string => {
-    const blockMatch = blockKey.match(/([A-Z])ブロック$/);
-    if (blockMatch) {
-      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
-      return previewBlockColors[index % previewBlockColors.length];
-    }
-    if (blockKey.includes('1位')) return 'bg-amber-100 text-amber-800';
-    if (blockKey.includes('2位')) return 'bg-cyan-100 text-cyan-800';
-    if (blockKey.includes('3位')) return 'bg-lime-100 text-lime-800';
-    if (blockKey.includes('4位')) return 'bg-teal-100 text-teal-800';
-    return 'bg-muted text-muted-foreground';
-  };
-
 
   if (!formatId) {
     return (
@@ -1075,17 +927,18 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         </CardContent>
       </Card>
 
-      {/* ブロック別スケジュール */}
+      {/* コート別スケジュール */}
       {displaySchedule.days.map((day, dayIndex) => {
-        // ブロック別にマッチを分類
-        const matchesByBlock = day.matches.reduce((acc, match) => {
-          const blockKey = getBlockKey(match.template);
-          if (!acc[blockKey]) {
-            acc[blockKey] = [];
-          }
-          acc[blockKey].push(match);
+        // コート別にマッチを分類
+        const matchesByCourt = day.matches.reduce((acc, match) => {
+          const courtKey = match.courtNumber;
+          if (!acc[courtKey]) acc[courtKey] = [];
+          acc[courtKey].push(match);
           return acc;
-        }, {} as Record<string, ScheduleMatch[]>);
+        }, {} as Record<number, ScheduleMatch[]>);
+
+        // 使用コート数
+        const usedCourts = Object.keys(matchesByCourt).length;
 
         return (
           <div key={dayIndex} className="space-y-4">
@@ -1115,16 +968,16 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
                     <div className="text-muted-foreground">試合数</div>
                   </div>
                   <div className="bg-muted rounded p-2 text-center">
-                    <div className="font-medium">{day.requiredCourts}</div>
-                    <div className="text-muted-foreground">必要コート数</div>
+                    <div className="font-medium">{usedCourts}</div>
+                    <div className="text-muted-foreground">使用コート数</div>
                   </div>
                   <div className="bg-muted rounded p-2 text-center">
                     <div className="font-medium">{day.timeSlots}</div>
                     <div className="text-muted-foreground">タイムスロット</div>
                   </div>
                   <div className="bg-muted rounded p-2 text-center">
-                    <div className="font-medium">{Object.keys(matchesByBlock).length}</div>
-                    <div className="text-muted-foreground">ブロック数</div>
+                    <div className="font-medium">{day.requiredCourts}</div>
+                    <div className="text-muted-foreground">最大必要コート数</div>
                   </div>
                 </div>
 
@@ -1175,220 +1028,120 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
               </CardContent>
             </Card>
 
-            {/* ブロック別試合表示 */}
-            {Object.keys(matchesByBlock).length === 0 ? (
+            {/* コート別試合表示 */}
+            {usedCourts === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <p className="text-muted-foreground">この日は試合がありません</p>
                 </CardContent>
               </Card>
             ) : (
-              Object.entries(matchesByBlock)
-                .sort(([blockKeyA], [blockKeyB]) => {
-                  // 「Xブロック」形式のブロック同士はアルファベット順
-                  const matchA = blockKeyA.match(/([A-Z])ブロック$/);
-                  const matchB = blockKeyB.match(/([A-Z])ブロック$/);
-                  if (matchA && matchB) {
-                    return matchA[1].localeCompare(matchB[1]);
-                  }
-                  if (matchA && !matchB) return -1;
-                  if (!matchA && matchB) return 1;
-                  return blockKeyA.localeCompare(blockKeyB);
-                })
-                .map(([blockKey, blockMatches]) => (
-                <Card key={blockKey}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
-                          {getBlockDisplayName(blockKey)}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {blockMatches.length}試合
-                        </span>
-                      </div>
-                      
-                      {/* ブロック単位コート変更UI（ブロック形式のみ・まとめて変更用） */}
-                      {(/[A-Z]ブロック$/).test(blockKey) && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-muted-foreground">ブロック一括設定:</span>
-                          {editingBlockCourt === blockKey ? (
-                            <div className="flex items-center space-x-1">
-                              <span className="text-xs">コート</span>
-                              <select
-                                value={(() => {
-                                  const bm = blockKey.match(/([A-Z])ブロック$/);
-                                  const actualBlockName = bm ? bm[1] : blockKey;
-                                  return blockCourtAssignments[actualBlockName] ?? blockMatches[0]?.courtNumber ?? 1;
-                                })()}
-                                onChange={(e) => {
-                                  const newCourt = parseInt(e.target.value);
-                                  handleBlockCourtChange(blockKey, newCourt);
-                                  setEditingBlockCourt(null);
-                                }}
-                                onBlur={() => setEditingBlockCourt(null)}
-                                className="text-xs border rounded px-1 py-0.5 w-12"
-                                autoFocus
-                              >
-                                {(settings.availableCourts?.length
-                                  ? settings.availableCourts
-                                  : Array.from({length: settings.courtCount}, (_, i) => i + 1)
-                                ).map(courtNum => (
-                                  <option key={courtNum} value={courtNum}>{courtNum}</option>
-                                ))}
-                              </select>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setEditingBlockCourt(null)}
-                                className="h-5 w-5 p-0"
-                              >
-                                ✕
-                              </Button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setEditingBlockCourt(blockKey)}
-                              className="flex items-center space-x-1 text-xs text-orange-600 hover:text-orange-800 transition-colors"
-                              title="このブロックの全試合を同じコートに一括設定"
-                            >
-                              <span>コート{(() => {
-                                const bm = blockKey.match(/([A-Z])ブロック$/);
-                                const actualBlockName = bm ? bm[1] : blockKey;
-                                return blockCourtAssignments[actualBlockName] ?? blockMatches[0]?.courtNumber ?? 1;
-                              })()}</span>
-                              <Edit3 className="w-3 h-3" />
-                            </button>
-                          )}
-                          <span className="text-xs text-gray-400">（個別設定が優先）</span>
+              Object.entries(matchesByCourt)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([courtKey, courtMatches]) => {
+                  const courtColors = ['bg-blue-100 text-blue-800', 'bg-green-100 text-green-800', 'bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800', 'bg-pink-100 text-pink-800', 'bg-teal-100 text-teal-800'];
+                  const colorClass = courtColors[(Number(courtKey) - 1) % courtColors.length];
+
+                  return (
+                    <Card key={courtKey}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${colorClass}`}>
+                            <MapPin className="w-3 h-3 inline mr-1" />
+                            コート {courtKey}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {courtMatches.length}試合
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-2 px-3 font-medium">時間</th>
+                                <th className="text-left py-2 px-3 font-medium">試合コード</th>
+                                <th className="text-left py-2 px-3 font-medium">対戦カード</th>
+                                <th className="text-left py-2 px-3 font-medium">ブロック</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {courtMatches
+                                .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+                                .map((match) => {
+                                  const originalMatchIndex = day.matches.findIndex(m => m === match);
+                                  const editKey = `${dayIndex}-${originalMatchIndex}`;
+                                  const isEditing = editingMatch === editKey;
+                                  const blockKey = getBlockKey(match.template);
+
+                                  return (
+                                    <tr key={originalMatchIndex} className="border-b hover:bg-muted">
+                                      <td className="py-2 px-3 text-sm">
+                                        {!isEditing ? (
+                                          <div className="flex items-center space-x-1">
+                                            <button
+                                              onClick={() => {
+                                                if (!customSchedule) {
+                                                  setCustomSchedule(displaySchedule);
+                                                }
+                                                setEditingMatch(editKey);
+                                              }}
+                                              className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
+                                              title="時刻を編集"
+                                            >
+                                              <span>{match.startTime}</span>
+                                              <Edit3 className="w-3 h-3" />
+                                            </button>
+                                            <span>-</span>
+                                            <span>{match.endTime}</span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center space-x-1">
+                                            <Input
+                                              type="time"
+                                              defaultValue={displaySchedule?.days?.[dayIndex]?.matches?.[originalMatchIndex]?.startTime || match.startTime}
+                                              className="w-20 h-7 text-xs"
+                                              onBlur={(e) => {
+                                                handleTimeChange(dayIndex, originalMatchIndex, e.target.value);
+                                                setEditingMatch(null);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  const target = e.target as HTMLInputElement;
+                                                  handleTimeChange(dayIndex, originalMatchIndex, target.value);
+                                                  setEditingMatch(null);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingMatch(null);
+                                                }
+                                              }}
+                                              autoFocus
+                                            />
+                                            <span>-</span>
+                                            <span>{match.endTime}</span>
+                                          </div>
+                                        )}
+                                      </td>
+                                      <td className="py-2 px-3">
+                                        <div className="font-medium">{match.template.match_code}</div>
+                                        <div className="text-xs text-muted-foreground">{match.template.match_type}</div>
+                                      </td>
+                                      <td className="py-2 px-3 text-sm">
+                                        {match.template.team1_display_name || '調整中'} vs {match.template.team2_display_name || '調整中'}
+                                      </td>
+                                      <td className="py-2 px-3 text-sm text-muted-foreground">
+                                        {getBlockDisplayName(blockKey)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
                         </div>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 px-3 font-medium">時間</th>
-                            <th className="text-left py-2 px-3 font-medium">試合</th>
-                            <th className="text-left py-2 px-3 font-medium">対戦</th>
-                            <th className="text-left py-2 px-3 font-medium">コート</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {blockMatches
-                            .map((match) => {
-                              const originalMatchIndex = day.matches.findIndex(m => m === match);
-                              const editKey = `${dayIndex}-${originalMatchIndex}`;
-                              const isEditing = editingMatch === editKey;
-                              
-                              return (
-                                <tr key={originalMatchIndex} className="border-b hover:bg-muted">
-                                  <td className="py-2 px-3 text-sm">
-                                    {!isEditing ? (
-                                      <div className="flex items-center space-x-1">
-                                        <button
-                                          onClick={() => {
-                                            // カスタムスケジュールを初期化（未設定の場合）
-                                            if (!customSchedule) {
-                                              // Initializing custom schedule for editing
-                                              setCustomSchedule(displaySchedule);
-                                            }
-                                            setEditingMatch(editKey);
-                                          }}
-                                          className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
-                                          title="時刻を編集"
-                                        >
-                                          <span title={`Rendered: ${match.startTime}, Display: ${displaySchedule?.days?.[dayIndex]?.matches?.[originalMatchIndex]?.startTime || 'undefined'}`}>
-                                            {match.startTime}
-                                          </span>
-                                          <Edit3 className="w-3 h-3" />
-                                        </button>
-                                        <span>-</span>
-                                        <span>{match.endTime}</span>
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center space-x-1">
-                                        <Input
-                                          type="time"
-                                          defaultValue={displaySchedule?.days?.[dayIndex]?.matches?.[originalMatchIndex]?.startTime || match.startTime}
-                                          className="w-20 h-7 text-xs"
-                                          onBlur={(e) => {
-                                            // フォーカスが外れた時に親に通知
-                                            handleTimeChange(dayIndex, originalMatchIndex, e.target.value);
-                                            setEditingMatch(null);
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              const target = e.target as HTMLInputElement;
-                                              handleTimeChange(dayIndex, originalMatchIndex, target.value);
-                                              setEditingMatch(null);
-                                            } else if (e.key === 'Escape') {
-                                              setEditingMatch(null);
-                                            }
-                                          }}
-                                          autoFocus
-                                        />
-                                        <span>-</span>
-                                        <span>{match.endTime}</span>
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-3">
-                                    <div className="font-medium">{match.template.match_code}</div>
-                                    <div className="text-xs text-muted-foreground">{match.template.match_type}</div>
-                                  </td>
-                                  <td className="py-2 px-3 text-sm">
-                                    {match.template.team1_display_name} vs {match.template.team2_display_name}
-                                  </td>
-                                  <td className="py-2 px-3">
-                                    {/* 個別試合コート変更UI（全試合対応） */}
-                                    <div className="flex items-center text-sm">
-                                      <MapPin className="w-3 h-3 mr-1" />
-                                      {editingMatchCourt === editKey ? (
-                                        <div className="flex items-center space-x-1">
-                                          <span>コート</span>
-                                          <select
-                                            value={matchCourtAssignments[match.template.match_number] ?? match.courtNumber}
-                                            onChange={(e) => {
-                                              const newCourt = parseInt(e.target.value);
-                                              handleMatchCourtChange(match.template.match_number, newCourt);
-                                              setEditingMatchCourt(null);
-                                            }}
-                                            onBlur={() => setEditingMatchCourt(null)}
-                                            className="text-xs border rounded px-1 py-0.5 w-12"
-                                            autoFocus
-                                          >
-                                            {(settings.availableCourts?.length 
-                                              ? settings.availableCourts 
-                                              : Array.from({length: settings.courtCount}, (_, i) => i + 1)
-                                            ).map(courtNum => (
-                                              <option key={courtNum} value={courtNum}>{courtNum}</option>
-                                            ))}
-                                          </select>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          onClick={() => setEditingMatchCourt(editKey)}
-                                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
-                                          title="コート番号を変更（個別設定）"
-                                        >
-                                          <span>コート {matchCourtAssignments[match.template.match_number] ?? match.courtNumber}</span>
-                                          <Edit3 className="w-3 h-3" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
             )}
           </div>
         );

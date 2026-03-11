@@ -9,7 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Info, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, Info, Building2, X, ChevronsUpDown, Check } from "lucide-react";
+
+interface Venue {
+  venue_id: number;
+  venue_name: string;
+  available_courts: number;
+}
 
 interface TournamentData {
   tournament_id: number;
@@ -31,6 +39,7 @@ interface TournamentData {
   group_name: string;
   default_match_duration: number | null;
   default_break_duration: number | null;
+  venue_id: string | null;
 }
 
 interface MatchItem {
@@ -48,6 +57,7 @@ interface Props {
 
 const leagueEditSchema = z.object({
   tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
+  venue_ids: z.array(z.number()).min(1, "会場を1つ以上選択してください"),
   match_duration_minutes: z.number().min(5, "試合時間は5分以上").max(120, "試合時間は120分以下"),
   is_public: z.boolean(),
   show_players_public: z.boolean(),
@@ -58,12 +68,30 @@ const leagueEditSchema = z.object({
 
 type LeagueEditForm = z.infer<typeof leagueEditSchema>;
 
+function parseVenueIds(venueId: string | null | undefined): number[] {
+  if (!venueId) return [];
+  try {
+    const parsed = JSON.parse(venueId);
+    if (Array.isArray(parsed)) return parsed.map(Number).filter(n => !isNaN(n));
+    const num = Number(venueId);
+    return isNaN(num) ? [] : [num];
+  } catch {
+    const num = Number(venueId);
+    return isNaN(num) ? [] : [num];
+  }
+}
+
 export default function TournamentEditLeagueForm({ tournamentId }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tournament, setTournament] = useState<TournamentData | null>(null);
   const [matches, setMatches] = useState<MatchItem[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [selectedVenues, setSelectedVenues] = useState<Venue[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(true);
+  const [venuePopoverOpen, setVenuePopoverOpen] = useState(false);
+  const [venueSearchQuery, setVenueSearchQuery] = useState("");
 
   const {
     register,
@@ -87,8 +115,11 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
           setTournament(data.tournament);
           setMatches(data.matches || []);
 
+          const venueIds = parseVenueIds(data.tournament.venue_id);
+
           reset({
             tournament_name: data.tournament.tournament_name,
+            venue_ids: venueIds,
             match_duration_minutes: data.tournament.match_duration_minutes,
             is_public: data.tournament.visibility === "open",
             show_players_public: data.tournament.show_players_public,
@@ -96,6 +127,26 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
             recruitment_start_date: data.tournament.recruitment_start_date,
             recruitment_end_date: data.tournament.recruitment_end_date,
           });
+
+          // 会場データの取得
+          try {
+            const venueRes = await fetch("/api/venues?scope=available");
+            const venueData = await venueRes.json();
+            if (venueData.success) {
+              const venueList: Venue[] = (venueData.data || []).map((v: Record<string, unknown>) => ({
+                venue_id: Number(v.venue_id),
+                venue_name: String(v.venue_name),
+                available_courts: Number(v.available_courts ?? 0),
+              }));
+              setVenues(venueList);
+              const currentVenues = venueList.filter(v => venueIds.includes(v.venue_id));
+              setSelectedVenues(currentVenues);
+            }
+          } catch (err) {
+            console.error("会場取得エラー:", err);
+          } finally {
+            setLoadingVenues(false);
+          }
         }
       } catch (err) {
         console.error("データ取得エラー:", err);
@@ -202,6 +253,97 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
           {...register("tournament_name")}
         />
         {errors.tournament_name && <p className="text-sm text-destructive">{errors.tournament_name.message}</p>}
+      </div>
+
+      {/* 会場（複数選択） */}
+      <div className="space-y-2">
+        <Label>会場 <span className="text-destructive">*</span></Label>
+        {loadingVenues ? (
+          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-muted-foreground">読み込み中...</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {selectedVenues.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedVenues.map((venue) => (
+                  <Badge key={venue.venue_id} variant="secondary" className="text-sm py-1 px-2 gap-1">
+                    {venue.venue_name}（{venue.available_courts}コート）
+                    <button
+                      type="button"
+                      className="ml-1 hover:text-destructive"
+                      onClick={() => {
+                        const newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                        setSelectedVenues(newVenues);
+                        setValue('venue_ids', newVenues.map(v => v.venue_id));
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            <Popover open={venuePopoverOpen} onOpenChange={setVenuePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={venuePopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedVenues.length === 0
+                    ? "会場を選択..."
+                    : `${selectedVenues.length}件の会場を選択中`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-2" align="start">
+                <Input
+                  placeholder="会場名で検索..."
+                  value={venueSearchQuery}
+                  onChange={(e) => setVenueSearchQuery(e.target.value)}
+                  className="mb-2"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {venues
+                    .filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                    .map((venue) => {
+                      const isSelected = selectedVenues.some(sv => sv.venue_id === venue.venue_id);
+                      return (
+                        <button
+                          key={venue.venue_id}
+                          type="button"
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          onClick={() => {
+                            let newVenues: Venue[];
+                            if (isSelected) {
+                              newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                            } else {
+                              newVenues = [...selectedVenues, venue];
+                            }
+                            setSelectedVenues(newVenues);
+                            setValue('venue_ids', newVenues.map(v => v.venue_id));
+                          }}
+                        >
+                          <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                          <span>{venue.venue_name}</span>
+                          <span className="text-muted-foreground ml-auto text-xs">{venue.available_courts}コート</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+        {errors.venue_ids && <p className="text-sm text-destructive">{errors.venue_ids.message}</p>}
+        <p className="text-xs text-muted-foreground">
+          ここで選択した会場が、日程・会場設定の会場プルダウンに表示されます
+        </p>
       </div>
 
       {/* 試合時間 */}

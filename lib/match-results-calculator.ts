@@ -136,6 +136,11 @@ export async function getTournamentResults(tournamentId: number, isAdmin: boolea
         isAdmin
       );
 
+      // 対象試合が0件のブロック（全試合がエキシビジョン等）は非表示
+      if (blockResult.matches.length === 0 && blockResult.teams.length === 0) {
+        continue;
+      }
+
       results.push({
         match_block_id: block.match_block_id as number,
         phase: block.phase as string,
@@ -237,6 +242,7 @@ async function getBlockResults(
             WHERE (ml.team1_tournament_team_id = tt.tournament_team_id
                    OR ml.team2_tournament_team_id = tt.tournament_team_id)
               AND ml.match_block_id = ?
+              AND (ml.match_type IS NULL OR ml.match_type != 'FM')
           )
         ORDER BY template_display_name NULLS LAST, tt.block_position NULLS LAST
       `,
@@ -270,6 +276,7 @@ async function getBlockResults(
             LEFT JOIN t_tournament_teams tt ON ml.team1_tournament_team_id = tt.tournament_team_id
             WHERE ml.match_block_id = ?
             AND ml.team1_display_name IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
             UNION
             SELECT DISTINCT
               ml.team2_display_name as template_display_name,
@@ -282,6 +289,7 @@ async function getBlockResults(
             LEFT JOIN t_tournament_teams tt ON ml.team2_tournament_team_id = tt.tournament_team_id
             WHERE ml.match_block_id = ?
             AND ml.team2_display_name IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
           )
           SELECT
             template_display_name,
@@ -340,6 +348,7 @@ async function getBlockResults(
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE ml.match_block_id = ?
+        AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.cycle, ml.match_code
       `,
       args: [matchBlockId]

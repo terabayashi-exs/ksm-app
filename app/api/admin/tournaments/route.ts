@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT mf.match_id) as results_count
       FROM t_tournaments t
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       LEFT JOIN t_match_blocks mb ON t.tournament_id = mb.tournament_id
       LEFT JOIN t_matches_live ml ON mb.match_block_id = ml.match_block_id

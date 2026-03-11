@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Edit, Trash2, Plus, Building, MapPin, Users } from 'lucide-react';
+import { AlertCircle, Edit, Trash2, Plus, Building, MapPin, Users, ExternalLink, Globe } from 'lucide-react';
 
 interface Prefecture {
   prefecture_id: number;
@@ -24,7 +24,13 @@ interface Venue {
   prefecture_id: number | null;
   prefecture_name?: string;
   available_courts: number;
+  google_maps_url?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   is_active: boolean;
+  is_shared: boolean;
+  created_by_login_user_id: number | null;
+  created_by_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -34,10 +40,19 @@ interface VenueFormData {
   address: string;
   prefecture_id: string;
   available_courts: number;
+  google_maps_url: string;
+  latitude: string;
+  longitude: string;
   is_active: boolean;
+  is_shared: boolean;
 }
 
-export default function VenueManagement() {
+interface VenueManagementProps {
+  loginUserId: number;
+  isSuperadmin: boolean;
+}
+
+export default function VenueManagement({ loginUserId, isSuperadmin }: VenueManagementProps) {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,15 +64,19 @@ export default function VenueManagement() {
     address: '',
     prefecture_id: '',
     available_courts: 1,
-    is_active: true
+    google_maps_url: '',
+    latitude: '',
+    longitude: '',
+    is_active: true,
+    is_shared: false
   });
   const [saving, setSaving] = useState(false);
 
-  // 会場一覧を取得
+  // 会場一覧を取得（scope=managed）
   const fetchVenues = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/venues');
+      const response = await fetch('/api/venues?scope=managed');
       if (!response.ok) {
         throw new Error('会場データの取得に失敗しました');
       }
@@ -101,7 +120,11 @@ export default function VenueManagement() {
       address: '',
       prefecture_id: '',
       available_courts: 1,
-      is_active: true
+      google_maps_url: '',
+      latitude: '',
+      longitude: '',
+      is_active: true,
+      is_shared: false
     });
     setEditingVenue(null);
     setIsCreating(false);
@@ -121,11 +144,20 @@ export default function VenueManagement() {
       address: venue.address,
       prefecture_id: venue.prefecture_id ? String(venue.prefecture_id) : '',
       available_courts: venue.available_courts,
-      is_active: venue.is_active
+      google_maps_url: venue.google_maps_url || '',
+      latitude: venue.latitude != null ? String(venue.latitude) : '',
+      longitude: venue.longitude != null ? String(venue.longitude) : '',
+      is_active: venue.is_active,
+      is_shared: venue.is_shared
     });
     setEditingVenue(venue);
     setIsCreating(false);
     setError(null);
+  };
+
+  // 編集・削除可能かどうか
+  const canEditVenue = (venue: Venue) => {
+    return isSuperadmin || venue.created_by_login_user_id === loginUserId;
   };
 
   // 保存処理
@@ -149,13 +181,21 @@ export default function VenueManagement() {
 
       const method = editingVenue ? 'PUT' : 'POST';
 
-      const saveData = {
+      const saveData: Record<string, unknown> = {
         venue_name: formData.venue_name,
         address: formData.address || null,
         prefecture_id: formData.prefecture_id ? Number(formData.prefecture_id) : null,
         available_courts: formData.available_courts,
+        google_maps_url: formData.google_maps_url || null,
+        latitude: formData.latitude ? Number(formData.latitude) : null,
+        longitude: formData.longitude ? Number(formData.longitude) : null,
         is_active: formData.is_active
       };
+
+      // superadminのみis_sharedを送信
+      if (isSuperadmin) {
+        saveData.is_shared = formData.is_shared;
+      }
 
       const response = await fetch(url, {
         method,
@@ -166,7 +206,8 @@ export default function VenueManagement() {
       });
 
       if (!response.ok) {
-        throw new Error('保存に失敗しました');
+        const result = await response.json();
+        throw new Error(result.error || '保存に失敗しました');
       }
 
       const result = await response.json();
@@ -177,7 +218,7 @@ export default function VenueManagement() {
       // 一覧を再取得
       await fetchVenues();
       resetForm();
-      
+
     } catch (err) {
       console.error('Error saving venue:', err);
       setError(err instanceof Error ? err.message : '保存中にエラーが発生しました');
@@ -198,14 +239,14 @@ export default function VenueManagement() {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok || !result.success) {
         // 使用中の大会がある場合の詳細エラー表示
         if (result.usedTournaments && result.usedTournaments.length > 0) {
           const tournamentList = result.usedTournaments
             .map((t: { tournament_name: string; status: string }) => `・${t.tournament_name}（${t.status === 'planning' ? '準備中' : t.status === 'ongoing' ? '開催中' : '完了'}）`)
             .join('\n');
-          
+
           setError(`${result.error}\n\n使用中の大会一覧:\n${tournamentList}`);
         } else {
           setError(result.error || '削除に失敗しました');
@@ -216,7 +257,7 @@ export default function VenueManagement() {
       // 一覧を再取得
       await fetchVenues();
       setError(null);
-      
+
     } catch (err) {
       console.error('Error deleting venue:', err);
       setError(err instanceof Error ? err.message : '削除中にエラーが発生しました');
@@ -325,6 +366,42 @@ export default function VenueManagement() {
               </p>
             </div>
 
+            <div>
+              <Label htmlFor="google_maps_url">Google Maps URL</Label>
+              <Input
+                id="google_maps_url"
+                type="url"
+                value={formData.google_maps_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, google_maps_url: e.target.value }))}
+                placeholder="https://maps.google.com/..."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="latitude">緯度</Label>
+                <Input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  value={formData.latitude}
+                  onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                  placeholder="例: 36.6953"
+                />
+              </div>
+              <div>
+                <Label htmlFor="longitude">経度</Label>
+                <Input
+                  id="longitude"
+                  type="number"
+                  step="any"
+                  value={formData.longitude}
+                  onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                  placeholder="例: 137.2113"
+                />
+              </div>
+            </div>
+
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -334,6 +411,22 @@ export default function VenueManagement() {
               />
               <Label htmlFor="is_active">利用可能</Label>
             </div>
+
+            {/* 共有フラグ（superadminのみ） */}
+            {isSuperadmin && (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="is_shared"
+                  checked={formData.is_shared}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_shared: e.target.checked }))}
+                />
+                <Label htmlFor="is_shared" className="flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  共有（全ユーザーに公開）
+                </Label>
+              </div>
+            )}
 
             <div className="flex gap-2 pt-4">
               <Button onClick={handleSave} disabled={saving}>
@@ -352,7 +445,7 @@ export default function VenueManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            登録済み会場一覧
+            {isSuperadmin ? '全会場一覧' : '自分の会場一覧'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -370,6 +463,23 @@ export default function VenueManagement() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-medium text-gray-900">{venue.venue_name}</h3>
+                      {venue.google_maps_url && (
+                        <a
+                          href={venue.google_maps_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Google Mapsで開く"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                      {venue.is_shared && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                          <Globe className="h-3 w-3" />
+                          共有
+                        </span>
+                      )}
                       {!venue.is_active && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
                           利用停止中
@@ -390,28 +500,33 @@ export default function VenueManagement() {
                         {venue.available_courts}コート
                       </span>
                       <span>登録日: {new Date(venue.created_at).toLocaleDateString('ja-JP')}</span>
+                      {isSuperadmin && venue.created_by_name && (
+                        <span>作成者: {venue.created_by_name}</span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startEditing(venue)}
-                      className="flex items-center gap-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      編集
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(venue)}
-                      className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      削除
-                    </Button>
-                  </div>
+                  {canEditVenue(venue) && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startEditing(venue)}
+                        className="flex items-center gap-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                        編集
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(venue)}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        削除
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

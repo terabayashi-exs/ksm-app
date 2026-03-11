@@ -693,6 +693,14 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     </Link>
                   </Button>
                 )}
+                {!tournament.has_matchdays && (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
+                      <MapPin className="w-4 h-4 mr-1" />
+                      会場・コート設定
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
 

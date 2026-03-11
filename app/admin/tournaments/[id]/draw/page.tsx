@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Shuffle, Save, RotateCcw, ChevronUp, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
+import { formatTeamSourceDisplay } from '@/lib/team-source-display';
 import TournamentBracketEditor from '@/components/features/tournament/TournamentBracketEditor';
 
 interface Team {
@@ -546,6 +547,11 @@ export default function TournamentDrawPage() {
   // チームソースを解決して実際のチーム名を取得
   const resolveTeamSource = (source: string | null | undefined): string | null => {
     if (!source) return null;
+
+    // BEST パターンの場合は日本語表示に変換
+    if (source.match(/^BEST_\d+_\d+$/)) {
+      return formatTeamSourceDisplay(source);
+    }
 
     // ソース形式: "A1_winner", "Ep1_winner", "A2_loser" など
     // match_codeと勝者/敗者を抽出

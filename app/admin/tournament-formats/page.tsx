@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TournamentFormatList from "@/components/features/tournament-format/TournamentFormatList";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function TournamentFormatsPage() {
   const session = await auth();
 

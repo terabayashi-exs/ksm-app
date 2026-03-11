@@ -157,7 +157,7 @@ export function MatchCard({
       >
         <span className="text-sm truncate flex-1">
           {winnerIndex === 0 && hasResult ? "👑 " : ""}
-          {match.team1_display_name || "未確定"}
+          {match.team1_display_name || "調整中"}
         </span>
         {hasResult &&
           !match.is_draw &&
@@ -217,7 +217,7 @@ export function MatchCard({
       >
         <span className="text-sm truncate flex-1">
           {winnerIndex === 1 && hasResult ? "👑 " : ""}
-          {match.team2_display_name || "未確定"}
+          {match.team2_display_name || "調整中"}
         </span>
         {hasResult &&
           !match.is_draw &&

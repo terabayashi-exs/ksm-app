@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
     const createdTournament = await db.execute(`
       SELECT t.*, v.venue_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 

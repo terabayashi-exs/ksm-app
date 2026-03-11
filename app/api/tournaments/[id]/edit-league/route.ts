@@ -38,6 +38,7 @@ export async function GET(
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.group_id,
+        t.venue_id,
         tg.group_name,
         st.sport_name,
         tf.default_match_duration,
@@ -90,6 +91,7 @@ export async function GET(
         recruitment_end_date: String(row.recruitment_end_date || ''),
         group_id: Number(row.group_id),
         group_name: String(row.group_name || ''),
+        venue_id: row.venue_id ? String(row.venue_id) : null,
         default_match_duration: row.default_match_duration ? Number(row.default_match_duration) : null,
         default_break_duration: row.default_break_duration ? Number(row.default_break_duration) : null,
       },
@@ -143,6 +145,7 @@ export async function PUT(
     const body = await request.json();
     const {
       tournament_name,
+      venue_ids,
       match_duration_minutes,
       is_public,
       show_players_public,
@@ -181,9 +184,15 @@ export async function PUT(
       });
     }
 
+    // venue_idsをJSON配列文字列に変換
+    const venueIdJson = Array.isArray(venue_ids) && venue_ids.length > 0
+      ? JSON.stringify(venue_ids)
+      : null;
+
     await db.execute(`
       UPDATE t_tournaments SET
         tournament_name = ?,
+        venue_id = ?,
         match_duration_minutes = ?,
         break_duration_minutes = ?,
         status = ?,
@@ -196,8 +205,9 @@ export async function PUT(
       WHERE tournament_id = ?
     `, [
       tournament_name,
+      venueIdJson,
       match_duration_minutes,
-      null, // break_duration_minutes: リーグ戦では不要
+      0, // break_duration_minutes: リーグ戦では不要
       newStatus,
       is_public ? 'open' : 'preparing',
       show_players_public ? 1 : 0,

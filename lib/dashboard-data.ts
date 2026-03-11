@@ -228,7 +228,7 @@ const TOURNAMENT_SELECT_FIELDS = `
 `;
 
 const TOURNAMENT_JOINS = `
-  LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+  LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
   LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
   LEFT JOIN m_login_users a ON g.login_user_id = a.login_user_id
 `;
@@ -471,7 +471,7 @@ export async function fetchOperatorDashboardData(loginUserId: number): Promise<T
       tournament_id: tid,
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,
@@ -645,7 +645,7 @@ export async function fetchDashboardData(sessionId: string, isAdmin: boolean): P
       tournament_id: tid,
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,

@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import TournamentFormatEditForm from "@/components/features/tournament-format/TournamentFormatEditForm";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Props {
   params: Promise<{ id: string }>;
 }

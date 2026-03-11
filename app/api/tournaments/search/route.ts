@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         0 as registered_teams
         ${teamId ? ', 0 as is_joined' : ', 0 as is_joined'}
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
     `;
 

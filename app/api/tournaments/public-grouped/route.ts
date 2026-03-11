@@ -68,7 +68,7 @@ export async function GET(_request: NextRequest) {
           (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count,
           ${teamId ? 'CASE WHEN utt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
         FROM t_tournaments t
-        LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+        LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
         LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
         LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
         LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id

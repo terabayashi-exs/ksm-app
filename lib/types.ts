@@ -20,7 +20,7 @@ export interface Tournament {
   tournament_id: number;
   tournament_name: string;
   format_id: number;
-  venue_id: number;
+  venue_id: string | null;  // JSON配列 例: "[1, 3]"
   team_count: number;
   court_count: number;
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
@@ -264,6 +264,26 @@ export interface Venue {
   contact_phone?: string;
   court_count: number;
   is_active: boolean;
+  google_maps_url?: string;
+  latitude?: number;
+  longitude?: number;
+  is_shared?: boolean;
+  created_by_login_user_id?: number | null;
+}
+
+// venue_id JSON文字列をパースするヘルパー
+export function parseVenueIds(venueId: string | null | undefined): number[] {
+  if (!venueId) return [];
+  try {
+    const parsed = JSON.parse(venueId);
+    if (Array.isArray(parsed)) return parsed.map(Number).filter(n => !isNaN(n));
+    if (typeof parsed === 'number') return [parsed];
+    return [];
+  } catch {
+    // 単一の数値文字列の場合
+    const num = Number(venueId);
+    return isNaN(num) ? [] : [num];
+  }
 }
 
 export interface TournamentFormat {

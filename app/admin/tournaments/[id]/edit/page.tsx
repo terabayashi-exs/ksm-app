@@ -41,7 +41,7 @@ async function getTournament(id: string): Promise<TournamentWithExtras | null> {
         st.sport_name,
         tg.group_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
@@ -57,7 +57,7 @@ async function getTournament(id: string): Promise<TournamentWithExtras | null> {
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,

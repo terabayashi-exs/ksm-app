@@ -85,7 +85,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
   useEffect(() => {
     const fetchVenues = async () => {
       try {
-        const response = await fetch('/api/venues');
+        const response = await fetch('/api/venues?scope=available');
         const data = await response.json();
         if (data.success) {
           setVenues(data.data);

@@ -154,7 +154,7 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
   try {
     const result = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           COUNT(*) as total_matches,
           COUNT(CASE WHEN mf.match_id IS NOT NULL OR ml.match_status = 'cancelled' THEN 1 END) as completed_matches
         FROM t_matches_live ml
@@ -162,6 +162,7 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
         WHERE ml.match_block_id = ?
         AND ml.team1_tournament_team_id IS NOT NULL
         AND ml.team2_tournament_team_id IS NOT NULL
+        AND (ml.match_type IS NULL OR ml.match_type != 'FM')
       `,
       args: [matchBlockId]
     });
@@ -237,18 +238,19 @@ async function extractTopTeamsDynamic(
       args: [tournamentId, tournamentId, ...subsequentPhases]
     });
     
-    // 必要な進出パターンを抽出（ブロック_順位形式のみ、試合の勝敗は除外）
+    // 必要な進出パターンを抽出（ブロック_順位形式 + BESTパターン、試合の勝敗は除外）
     const requiredPromotions = new Set<string>();
     templateResult.rows.forEach(row => {
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
-      
-      // ブロック名_順位の形式のみを抽出（予選ブロック進出条件のみ）
+
+      // ブロック名_順位の形式を抽出（予選ブロック進出条件）
       // パターン: 単一文字ブロック名_数字順位 (例: A_1, B_2, F_3, L_4)
-      if (team1Source && team1Source.match(/^[A-Z]_\d+$/)) {
+      // BESTパターン: BEST_順位_ランク (例: BEST_3_1, BEST_4_2)
+      if (team1Source && (team1Source.match(/^[A-Z]_\d+$/) || team1Source.match(/^BEST_\d+_\d+$/))) {
         requiredPromotions.add(team1Source);
       }
-      if (team2Source && team2Source.match(/^[A-Z]_\d+$/)) {
+      if (team2Source && (team2Source.match(/^[A-Z]_\d+$/) || team2Source.match(/^BEST_\d+_\d+$/))) {
         requiredPromotions.add(team2Source);
       }
     });
@@ -308,6 +310,65 @@ async function extractTopTeamsDynamic(
       });
     });
 
+    // BEST パターンの解決（全ブロックN位中ベストM位）
+    const bestPromotions = Array.from(requiredPromotions).filter(key => key.match(/^BEST_\d+_\d+$/));
+    if (bestPromotions.length > 0) {
+      // 必要な順位ごとにグループ化 (例: BEST_3_1 と BEST_3_2 → position=3)
+      const positionGroups = new Map<number, string[]>();
+      bestPromotions.forEach(key => {
+        const [, posStr] = key.split('_');
+        const pos = parseInt(posStr);
+        if (!positionGroups.has(pos)) positionGroups.set(pos, []);
+        positionGroups.get(pos)!.push(key);
+      });
+
+      for (const [position, keys] of positionGroups) {
+        // 全ブロックから該当順位のチームを収集
+        const candidateTeams: BlockRanking[] = [];
+        blockRankings.forEach(block => {
+          const teamsAtPosition = block.rankings.filter(t => t.position === position);
+          candidateTeams.push(...teamsAtPosition);
+        });
+
+        if (candidateTeams.length === 0) {
+          console.log(`[PROMOTION] BEST_${position}_*: 対象チームなし`);
+          continue;
+        }
+
+        console.log(`[PROMOTION] BEST_${position}_* 候補チーム(${candidateTeams.length}チーム):`, candidateTeams.map(t => `${t.team_name}(勝点${t.points}, 得失点差${t.goal_difference}, 総得点${t.goals_for})`));
+
+        // 統計値でソート（勝点→得失点差→総得点）
+        const sorted = [...candidateTeams].sort((a, b) => {
+          if (a.points !== b.points) return b.points - a.points;
+          if (a.goal_difference !== b.goal_difference) return b.goal_difference - a.goal_difference;
+          if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
+          return 0;
+        });
+
+        // 各 BEST_N_M キーに対応するチームを割り当て（ランク順にソート）
+        keys.sort((a, b) => {
+          const rankA = parseInt(a.split('_')[2]);
+          const rankB = parseInt(b.split('_')[2]);
+          return rankA - rankB;
+        });
+
+        keys.forEach(key => {
+          const rank = parseInt(key.split('_')[2]);
+          const idx = rank - 1;
+          if (idx < sorted.length) {
+            promotions[key] = {
+              tournament_team_id: sorted[idx].tournament_team_id,
+              team_id: sorted[idx].team_id,
+              team_name: sorted[idx].team_name || sorted[idx].team_omission || sorted[idx].team_id
+            };
+            console.log(`[PROMOTION] ${key} 確定: ${sorted[idx].team_name}`);
+          } else {
+            console.log(`[PROMOTION] ${key}: 対象チーム不足（候補${sorted.length}チーム、要求rank=${rank}）`);
+          }
+        });
+      }
+    }
+
     // 試合の勝者・敗者もpromotionsに追加（後続フェーズ内での進出条件対応）
     try {
       const matchWinnersResult = await db.execute({
@@ -329,6 +390,7 @@ async function extractTopTeamsDynamic(
           WHERE mb.tournament_id = ?
             AND mb.phase IN (${subsequentPhasePlaceholders})
             AND mf.winner_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         `,
         args: [tournamentId, ...subsequentPhases]
       });
@@ -538,7 +600,7 @@ async function updateFinalTournamentMatches(
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
 
-      // A_1, B_1などのパターンからブロック位置を計算
+      // A_1, B_1, BEST_3_1 などのパターンからブロック位置を計算
       const assignTeamSource = (source: string) => {
         if (source && source.match(/^[A-Z]_\d+$/)) {
           const [block] = source.split('_');
@@ -549,6 +611,14 @@ async function updateFinalTournamentMatches(
             teamBlockAssignments.set(source, {
               block_name: roundName,
               position: blockPosition
+            });
+          }
+        } else if (source && source.match(/^BEST_\d+_\d+$/)) {
+          const [, , rankStr] = source.split('_');
+          if (!teamBlockAssignments.has(source)) {
+            teamBlockAssignments.set(source, {
+              block_name: roundName,
+              position: 100 + parseInt(rankStr) // 既存ブロック順序の後に配置
             });
           }
         }

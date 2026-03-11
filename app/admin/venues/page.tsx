@@ -35,7 +35,10 @@ export default async function VenuePage() {
             </Link>
           </Button>
         </div>
-        <VenueManagement />
+        <VenueManagement
+          loginUserId={session.user.loginUserId}
+          isSuperadmin={session.user.isSuperadmin}
+        />
       </div>
     </div>
   );

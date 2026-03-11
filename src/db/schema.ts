@@ -1,4 +1,4 @@
-import { sqliteTable, index, check, integer, text, numeric } from "drizzle-orm/sqlite-core"
+import { sqliteTable, index, check, integer, text, numeric, real } from "drizzle-orm/sqlite-core"
   import { sql } from "drizzle-orm"
   import type { TournamentPhases } from "../../lib/types/tournament-phases"
 
@@ -64,6 +64,8 @@ export const tMatchesFinal = sqliteTable("t_matches_final", {
 	matchday: integer("matchday"),
 	cycle: integer("cycle").default(1),
 	venueName: text("venue_name"),
+	courtName: text("court_name"),
+	venueId: integer("venue_id"),
 },
 (_table) => [
 	index("idx_matches_final_winner_tournament").on(_table.winnerTournamentTeamId),
@@ -148,6 +150,8 @@ export const tMatchesLive = sqliteTable("t_matches_live", {
 	matchday: integer("matchday"),
 	cycle: integer("cycle").default(1),
 	venueName: text("venue_name"),
+	courtName: text("court_name"),
+	venueId: integer("venue_id"),
 },
 (_table) => [
 	index("idx_matches_live_team1_tournament").on(_table.team1TournamentTeamId),
@@ -169,7 +173,12 @@ export const mVenues = sqliteTable("m_venues", {
 	address: text(),
 	prefectureId: integer("prefecture_id").references(() => mPrefectures.prefectureId),
 	availableCourts: integer("available_courts").default(4).notNull(),
+	googleMapsUrl: text("google_maps_url"),
+	latitude: real("latitude"),
+	longitude: real("longitude"),
 	isActive: integer("is_active").default(1).notNull(),
+	createdByLoginUserId: integer("created_by_login_user_id"),
+	isShared: integer("is_shared").default(0).notNull(),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 },
@@ -501,7 +510,8 @@ export const tTournaments = sqliteTable("t_tournaments", {
 	tournamentId: integer("tournament_id").primaryKey({ autoIncrement: true }),
 	tournamentName: text("tournament_name").notNull(),
 	formatId: integer("format_id").notNull().references(() => mTournamentFormats.formatId),
-	venueId: integer("venue_id").references(() => mVenues.venueId),
+	venueIdLegacy: integer("venue_id_legacy"),  // 旧venue_id（移行後、未使用）
+	venueId: text("venue_id"),  // JSON配列 例: "[1, 3]"
 	teamCount: integer("team_count").notNull(),
 	courtCount: integer("court_count").notNull(),
 	tournamentDates: text("tournament_dates").notNull(),
@@ -611,6 +621,7 @@ export const tTournamentCourts = sqliteTable("t_tournament_courts", {
 	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),
 	courtNumber: integer("court_number").notNull(),
 	courtName: text("court_name").notNull(),
+	venueId: integer("venue_id"),
 	displayOrder: integer("display_order").default(0),
 	isActive: integer("is_active").default(1),
 	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),

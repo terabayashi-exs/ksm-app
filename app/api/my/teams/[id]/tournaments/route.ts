@@ -63,7 +63,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       lu.logo_blob_url
     FROM t_tournament_teams tt
     JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
-    LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+    LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
     LEFT JOIN m_prefectures p ON v.prefecture_id = p.prefecture_id
     LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
     LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
@@ -129,7 +129,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
             AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
         ) AS started_matches_count
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_prefectures p ON v.prefecture_id = p.prefecture_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id

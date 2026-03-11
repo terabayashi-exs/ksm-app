@@ -6,11 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Tournament, Venue } from '@/lib/types';
-import { Loader2, Plus, Trash2, Building2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tournament, Venue, parseVenueIds } from '@/lib/types';
+import { Loader2, Plus, Trash2, Building2, X, ChevronsUpDown, Check } from 'lucide-react';
 import SchedulePreview from '@/components/features/tournament/SchedulePreview';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -31,9 +31,8 @@ interface TournamentDate {
 const editTournamentSchema = z.object({
   tournament_name: z.string().min(1, '部門名は必須です').max(100, '部門名は100文字以内で入力してください'),
   format_id: z.number().min(1, 'フォーマットIDが必要です'),
-  venue_id: z.number().min(1, '会場を選択してください'),
+  venue_ids: z.array(z.number()).min(1, '会場を1つ以上選択してください'),
   team_count: z.number().min(2, 'チーム数は2以上で入力してください').max(128, 'チーム数は128以下で入力してください'),
-  court_count: z.number().min(1, 'コート数は1以上で入力してください').max(20, 'コート数は20以下で入力してください'),
   tournament_dates: z.array(z.object({
     dayNumber: z.number(),
     date: z.string()
@@ -54,7 +53,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [selectedVenues, setSelectedVenues] = useState<Venue[]>([]);
+  const [venuePopoverOpen, setVenuePopoverOpen] = useState(false);
+  const [venueSearchQuery, setVenueSearchQuery] = useState('');
   const [customSchedule, setCustomSchedule] = useState<Array<{
     match_id: number;
     match_code: string;
@@ -104,9 +105,8 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
     defaultValues: {
       tournament_name: tournament.tournament_name,
       format_id: tournament.format_id,
-      venue_id: tournament.venue_id,
+      venue_ids: parseVenueIds(tournament.venue_id),
       team_count: tournament.team_count,
-      court_count: tournament.court_count,
       tournament_dates: parseTournamentDates(tournament.tournament_dates),
       match_duration_minutes: tournament.match_duration_minutes,
       break_duration_minutes: tournament.break_duration_minutes,
@@ -165,7 +165,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
   useEffect(() => {
     const fetchVenues = async () => {
       try {
-        const response = await fetch('/api/venues');
+        const response = await fetch('/api/venues?scope=available');
         const result = await response.json();
         if (result.success) {
           const rawList = result.data || result.venues;
@@ -175,8 +175,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             court_count: Number(v.court_count ?? v.available_courts ?? 0),
           }));
           setVenues(venueList);
-          const current = venueList.find((v: Venue) => v.venue_id === tournament.venue_id);
-          setSelectedVenue(current || null);
+          const venueIds = parseVenueIds(tournament.venue_id);
+          const currentVenues = venueList.filter((v: Venue) => venueIds.includes(v.venue_id));
+          setSelectedVenues(currentVenues);
         }
       } catch (error) {
         console.error('会場取得エラー:', error);
@@ -291,7 +292,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
         {errors.tournament_name && <p className="text-sm text-destructive">{errors.tournament_name.message}</p>}
       </div>
 
-      {/* 会場 */}
+      {/* 会場（複数選択） */}
       <div className="space-y-2">
         <Label>会場 <span className="text-destructive">*</span></Label>
         {loadingVenues ? (
@@ -300,53 +301,89 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             <span className="text-muted-foreground">読み込み中...</span>
           </div>
         ) : (
-          <Select
-            value={watch('venue_id')?.toString()}
-            onValueChange={(value) => {
-              const venueId = parseInt(value);
-              setValue("venue_id", venueId);
-              const venue = venues.find(v => v.venue_id === venueId);
-              setSelectedVenue(venue || null);
-              if (venue && venue.court_count) {
-                const currentCourtCount = watch('court_count') || 4;
-                if (currentCourtCount > venue.court_count) {
-                  setValue('court_count', venue.court_count);
-                }
-              }
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="会場を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {venues.map((venue: Venue) => (
-                <SelectItem key={venue.venue_id} value={venue.venue_id.toString()}>
-                  {venue.venue_name}（{venue.court_count}コート）
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            {selectedVenues.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedVenues.map((venue) => (
+                  <Badge key={venue.venue_id} variant="secondary" className="text-sm py-1 px-2 gap-1">
+                    {venue.venue_name}（{venue.court_count}コート）
+                    <button
+                      type="button"
+                      className="ml-1 hover:text-destructive"
+                      onClick={() => {
+                        const newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                        setSelectedVenues(newVenues);
+                        setValue('venue_ids', newVenues.map(v => v.venue_id));
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            <Popover open={venuePopoverOpen} onOpenChange={setVenuePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={venuePopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedVenues.length === 0
+                    ? "会場を選択..."
+                    : `${selectedVenues.length}件の会場を選択中`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-2" align="start">
+                <Input
+                  placeholder="会場名で検索..."
+                  value={venueSearchQuery}
+                  onChange={(e) => setVenueSearchQuery(e.target.value)}
+                  className="mb-2"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {venues
+                    .filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                    .map((venue) => {
+                      const isSelected = selectedVenues.some(sv => sv.venue_id === venue.venue_id);
+                      return (
+                        <button
+                          key={venue.venue_id}
+                          type="button"
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          onClick={() => {
+                            let newVenues: Venue[];
+                            if (isSelected) {
+                              newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                            } else {
+                              newVenues = [...selectedVenues, venue];
+                            }
+                            setSelectedVenues(newVenues);
+                            setValue('venue_ids', newVenues.map(v => v.venue_id));
+                          }}
+                        >
+                          <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                          <span>{venue.venue_name}</span>
+                          <span className="text-muted-foreground ml-auto text-xs">{venue.court_count}コート</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         )}
-        {errors.venue_id && <p className="text-sm text-destructive">{errors.venue_id.message}</p>}
+        {errors.venue_ids && <p className="text-sm text-destructive">{errors.venue_ids.message}</p>}
       </div>
 
-      {/* コート数 */}
-      <div className="space-y-2">
-        <Label htmlFor="court_count">使用コート数 <span className="text-destructive">*</span></Label>
-        <Input
-          id="court_count"
-          type="number"
-          className="max-w-[200px]"
-          {...register("court_count", { valueAsNumber: true })}
-          min={1}
-          max={selectedVenue ? selectedVenue.court_count : 20}
-        />
-        {selectedVenue && (
-          <p className="text-xs text-muted-foreground">
-            {selectedVenue.venue_name}は最大{selectedVenue.court_count}コート利用可能
-          </p>
-        )}
-        {errors.court_count && <p className="text-sm text-destructive">{errors.court_count.message}</p>}
+      {/* コート数（表示のみ） */}
+      <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+        <span className="text-muted-foreground">使用コート数:</span>
+        <span className="font-medium">{tournament.court_count}コート</span>
       </div>
 
       {/* 開催日程 */}
@@ -515,8 +552,8 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
         <SchedulePreview
           formatId={watch('format_id') || null}
           settings={{
-            courtCount: watch('court_count') || 4,
-            availableCourts: selectedVenue ? Array.from({length: selectedVenue.court_count}, (_, i) => i + 1) : undefined,
+            courtCount: tournament.court_count || 4,
+            availableCourts: Array.from({length: tournament.court_count || 4}, (_, i) => i + 1),
             matchDurationMinutes: watch('match_duration_minutes') || 15,
             breakDurationMinutes: watch('break_duration_minutes') || 5,
             startTime: earliestMatchTime,

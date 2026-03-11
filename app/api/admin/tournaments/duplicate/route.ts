@@ -236,7 +236,7 @@ async function duplicateTournamentBasic(sourceTournamentId: number, newTournamen
     newTournamentName,
     sourceData.format_id || 1, // デフォルト値を提供
     sourceData.format_name || null,
-    sourceData.venue_id || 1, // デフォルト値を提供
+    sourceData.venue_id || null, // JSON配列文字列をそのままコピー
     sourceData.team_count || 0,
     sourceData.recruitment_start_date,
     sourceData.recruitment_end_date,

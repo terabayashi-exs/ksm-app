@@ -76,7 +76,7 @@ export async function GET(
           THEN tt.tournament_team_id
         END) as registered_teams
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       WHERE t.group_id = ?
         AND t.visibility = 'open'

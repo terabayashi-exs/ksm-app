@@ -36,7 +36,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         0 as display_order,
         ${teamId ? 'CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       ${teamId ? 'LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?' : ''}
@@ -78,7 +78,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
         format_id: Number(row.format_id),
-        venue_id: Number(row.venue_id),
+        venue_id: row.venue_id ? String(row.venue_id) : null,
         team_count: Number(row.team_count),
         court_count: Number(row.court_count),
         tournament_dates: row.tournament_dates as string,

@@ -37,7 +37,7 @@ async function getTournamentDetails(tournamentId: number): Promise<TournamentDet
       v.venue_name
     FROM t_tournaments t
     LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-    LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+    LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
     WHERE t.tournament_id = ? AND t.visibility = 'open'
   `, [tournamentId]);
 

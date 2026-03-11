@@ -91,6 +91,7 @@ export async function getTournamentBracketData(
     LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
     WHERE mb.tournament_id = ?
       AND mb.phase = ?
+      AND (ml.match_type IS NULL OR ml.match_type != 'FM')
     ORDER BY ml.match_number, ml.match_code
   `;
 

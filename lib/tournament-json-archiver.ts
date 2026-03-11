@@ -407,16 +407,15 @@ export async function archiveTournamentAsJson(
     // その他の拡張メタデータを収集
     let extendedMetadata = null;
     try {
-      // 会場情報を取得
+      // 会場情報を取得（venue_idはJSON配列）
       const venueResult = await db.execute(`
-        SELECT 
-          v.venue_id,
-          v.venue_name,
-          v.address,
-          v.available_courts
+        SELECT v.venue_id, v.venue_name, v.address, v.available_courts
         FROM m_venues v
-        JOIN t_tournaments t ON t.venue_id = v.venue_id
-        WHERE t.tournament_id = ?
+        WHERE v.venue_id IN (
+          SELECT CAST(value AS INTEGER) FROM json_each(
+            (SELECT venue_id FROM t_tournaments WHERE tournament_id = ?)
+          )
+        )
       `, [tournamentId]);
 
       // UI表示に影響する設定情報を収集

@@ -89,6 +89,14 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
               position: position
             });
           }
+        } else if (source && source.match(/^BEST_\d+_\d+$/)) {
+          const [, , rankStr] = source.split('_');
+          if (!sourceOrderMap.has(source)) {
+            sourceOrderMap.set(source, {
+              round: roundName,
+              position: 100 + parseInt(rankStr) // 既存ブロック順序の後に配置
+            });
+          }
         }
       };
 

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { tournamentCreateSchema } from '@/lib/validations';
+import { tournamentEditSchema } from '@/lib/validations';
 import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
 import { calculateTournamentStatusSync, type TournamentStatus } from '@/lib/tournament-status';
@@ -54,7 +54,7 @@ export async function GET(
         t.final_format_type,
         t.phases
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -70,7 +70,7 @@ export async function GET(
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,
@@ -169,7 +169,7 @@ export async function PUT(
       tournament_dates: body.tournament_dates
     });
     
-    const validationResult = tournamentCreateSchema.safeParse(body);
+    const validationResult = tournamentEditSchema.safeParse(body);
     
     if (!validationResult.success) {
       console.error('[TOURNAMENT_EDIT] バリデーションエラー:', {
@@ -231,13 +231,17 @@ export async function PUT(
       console.log(`📊 大会ID:${tournamentId} ステータス再計算: ${currentStatus} → ${newStatus}`);
     }
 
+    // venue_idsをJSON配列文字列に変換
+    const venueIdJson = data.venue_ids && Array.isArray(data.venue_ids) && data.venue_ids.length > 0
+      ? JSON.stringify(data.venue_ids)
+      : data.venue_id != null ? String(data.venue_id) : null;
+
     // 大会情報を更新
     await db.execute(`
       UPDATE t_tournaments SET
         tournament_name = ?,
         venue_id = ?,
         team_count = ?,
-        court_count = ?,
         tournament_dates = ?,
         match_duration_minutes = ?,
         break_duration_minutes = ?,
@@ -251,9 +255,8 @@ export async function PUT(
       WHERE tournament_id = ?
     `, [
       data.tournament_name,
-      data.venue_id,
+      venueIdJson,
       data.team_count,
-      data.court_count,
       tournamentDatesJson,
       data.match_duration_minutes,
       data.break_duration_minutes,
@@ -360,7 +363,7 @@ export async function PUT(
         v.venue_name,
         t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -369,7 +372,7 @@ export async function PUT(
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,

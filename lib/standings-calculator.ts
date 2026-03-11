@@ -643,6 +643,7 @@ export async function calculateBlockStandings(
           LEFT JOIN t_tournament_teams tt ON ml.team1_tournament_team_id = tt.tournament_team_id
           LEFT JOIN m_teams t ON tt.team_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team1_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
           UNION
           SELECT DISTINCT
             ml.team2_display_name as display_name,
@@ -654,6 +655,7 @@ export async function calculateBlockStandings(
           LEFT JOIN t_tournament_teams tt ON ml.team2_tournament_team_id = tt.tournament_team_id
           LEFT JOIN m_teams t ON tt.team_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team2_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
           ORDER BY team_name
         `,
         args: [matchBlockId, matchBlockId]
@@ -711,9 +713,9 @@ export async function calculateBlockStandings(
                 COALESCE(tt.team_name, t.team_name) as team_name,
                 COALESCE(tt.team_omission, t.team_omission) as team_omission
               FROM (
-                SELECT team1_tournament_team_id as tournament_team_id FROM t_matches_live WHERE match_block_id = ? AND team1_tournament_team_id IS NOT NULL
+                SELECT team1_tournament_team_id as tournament_team_id FROM t_matches_live WHERE match_block_id = ? AND team1_tournament_team_id IS NOT NULL AND (match_type IS NULL OR match_type != 'FM')
                 UNION
-                SELECT team2_tournament_team_id FROM t_matches_live WHERE match_block_id = ? AND team2_tournament_team_id IS NOT NULL
+                SELECT team2_tournament_team_id FROM t_matches_live WHERE match_block_id = ? AND team2_tournament_team_id IS NOT NULL AND (match_type IS NULL OR match_type != 'FM')
               ) sub
               LEFT JOIN t_tournament_teams tt ON sub.tournament_team_id = tt.tournament_team_id
               LEFT JOIN m_teams t ON tt.team_id = t.team_id
@@ -755,6 +757,7 @@ export async function calculateBlockStandings(
           AND mf.team1_tournament_team_id IS NOT NULL
           AND mf.team2_tournament_team_id IS NOT NULL
           AND (ml.match_status IS NULL OR ml.match_status != 'cancelled' OR mf.is_walkover = 1)
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
       `,
       args: [matchBlockId]
     });
@@ -1281,16 +1284,17 @@ async function checkIfBlockAllMatchesCompleted(matchBlockId: number): Promise<bo
         WHERE ml.match_block_id = ?
         AND ml.team1_tournament_team_id IS NOT NULL
         AND ml.team2_tournament_team_id IS NOT NULL
+        AND (ml.match_type IS NULL OR ml.match_type != 'FM')
       `,
       args: [matchBlockId]
     });
-    
+
     const row = result.rows[0];
     const totalMatches = row?.total_matches as number || 0;
     const confirmedMatches = row?.confirmed_matches as number || 0;
     const cancelledMatches = row?.cancelled_matches as number || 0;
     const completedMatches = row?.completed_matches as number || 0;
-    
+
     console.log(`[PROMOTION] ブロック ${matchBlockId}: ${completedMatches}/${totalMatches} 試合完了 (確定:${confirmedMatches}, 中止:${cancelledMatches})`);
     
     // 詳細な試合状況をログ出力
@@ -1307,14 +1311,15 @@ async function checkIfBlockAllMatchesCompleted(matchBlockId: number): Promise<bo
         WHERE ml.match_block_id = ?
         AND ml.team1_tournament_team_id IS NOT NULL
         AND ml.team2_tournament_team_id IS NOT NULL
+        AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_code
       `,
       args: [matchBlockId]
     });
-    
+
     console.log(`[PROMOTION] ブロック ${matchBlockId} 試合詳細:`);
     detailResult.rows.forEach(match => {
-      const status = match.match_status === 'cancelled' ? '中止' : 
+      const status = match.match_status === 'cancelled' ? '中止' :
                     match.final_status === '確定済み' ? '確定' : '未完了';
       console.log(`[PROMOTION]   ${match.match_code}: ${match.team1_display_name} vs ${match.team2_display_name} [${status}]`);
     });
@@ -1661,6 +1666,7 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number, p
         LEFT JOIN m_teams t2 ON tt2.team_id = t2.team_id
         WHERE mb.tournament_id = ?
           AND mb.phase = ?
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_number, ml.match_code
       `,
       args: [tournamentId, phase]
@@ -1703,6 +1709,7 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number, p
           LEFT JOIN m_teams t1 ON tt1.team_id = t1.team_id
           WHERE mb.tournament_id = ? AND mb.phase = ?
             AND ml.team1_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
 
           UNION
 
@@ -1717,6 +1724,7 @@ async function calculateTemplateBasedTournamentStandings(tournamentId: number, p
           LEFT JOIN m_teams t2 ON tt2.team_id = t2.team_id
           WHERE mb.tournament_id = ? AND mb.phase = ?
             AND ml.team2_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ) all_teams
         WHERE tournament_team_id IS NOT NULL
         ORDER BY team_name
@@ -1851,6 +1859,7 @@ async function calculateLegacyTournamentStandings(tournamentId: number, phase: s
         LEFT JOIN m_teams t2 ON tt2.team_id = t2.team_id
         WHERE mb.tournament_id = ?
           AND mb.phase = ?
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_number, ml.match_code
       `,
       args: [tournamentId, phase]
@@ -2016,6 +2025,7 @@ async function calculateDetailedFinalTournamentStandings(tournamentId: number, p
         WHERE mb.tournament_id = ?
           AND mb.phase = ?
           AND ml.team1_tournament_team_id IS NOT NULL
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_code
       `,
       args: [tournamentId, phase]
@@ -2427,6 +2437,7 @@ export async function calculateMultiSportBlockStandings(
           LEFT JOIN t_tournament_teams tt ON ml.team1_tournament_team_id = tt.tournament_team_id
           LEFT JOIN m_teams t ON tt.team_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team1_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
           UNION
           SELECT DISTINCT
             ml.team2_display_name as display_name,
@@ -2437,6 +2448,7 @@ export async function calculateMultiSportBlockStandings(
           LEFT JOIN t_tournament_teams tt ON ml.team2_tournament_team_id = tt.tournament_team_id
           LEFT JOIN m_teams t ON tt.team_id = t.team_id
           WHERE ml.match_block_id = ? AND ml.team2_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
           ORDER BY team_name
         `,
         args: [matchBlockId, matchBlockId]
@@ -2864,6 +2876,7 @@ async function calculateTemplateBasedRankingsForBlock(matchBlockId: number, tour
           AND ml.team1_tournament_team_id IS NOT NULL
           AND ml.team2_tournament_team_id IS NOT NULL
           AND mf.match_id IS NOT NULL
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_code
       `,
       args: [matchBlockId]
@@ -2958,6 +2971,7 @@ async function calculateDetailedBlockTournamentStandings(matchBlockId: number, t
         LEFT JOIN m_teams t2 ON tt2.team_id = t2.team_id
         WHERE ml.match_block_id = ?
           AND ml.team1_tournament_team_id IS NOT NULL
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_code
       `,
       args: [matchBlockId]

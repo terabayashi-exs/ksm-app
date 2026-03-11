@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // 新しいテンプレートを作成
     for (const template of templates) {
       // バリデーション
-      const validation = validateMatchTeams(template.team1_display_name, template.team2_display_name);
+      const validation = validateMatchTeams(template.team1_display_name, template.team2_display_name, template.match_type);
       if (!validation.valid) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }

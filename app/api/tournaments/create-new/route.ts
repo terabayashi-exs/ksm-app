@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       tournament_name,
       sport_type_id,
       format_id,
-      venue_id,
+      venue_ids,
       team_count,
       court_count,
       tournament_dates,
@@ -58,8 +58,13 @@ export async function POST(request: NextRequest) {
       custom_schedule = []
     } = data;
 
+    // venue_idsをJSON文字列に変換
+    const venueIdJson = venue_ids && Array.isArray(venue_ids) && venue_ids.length > 0
+      ? JSON.stringify(venue_ids)
+      : null;
+
     // 入力値の基本バリデーション
-    if (!group_id || !tournament_name || !sport_type_id || !format_id || !venue_id || !team_count || !court_count) {
+    if (!group_id || !tournament_name || !sport_type_id || !format_id || !venueIdJson || !team_count || !court_count) {
       return NextResponse.json(
         { success: false, error: "必須項目が不足しています" },
         { status: 400 }
@@ -124,7 +129,7 @@ export async function POST(request: NextRequest) {
       tournament_name,
       sport_type_id,
       format_id,
-      venue_id,
+      venueIdJson,
       team_count,
       court_count,
       tournament_dates,
@@ -189,6 +194,19 @@ export async function POST(request: NextRequest) {
       typeof formatPhases === 'string' ? formatPhases : JSON.stringify(formatPhases),
       tournamentId
     ]);
+
+    // 最初の会場情報を取得（試合データに設定するため）
+    let firstVenueName: string | null = null;
+    let firstVenueId: number | null = null;
+    if (venue_ids && Array.isArray(venue_ids) && venue_ids.length > 0) {
+      const venueResult = await db.execute(`
+        SELECT venue_id, venue_name FROM m_venues WHERE venue_id = ?
+      `, [venue_ids[0]]);
+      if (venueResult.rows.length > 0) {
+        firstVenueName = String(venueResult.rows[0].venue_name);
+        firstVenueId = Number(venueResult.rows[0].venue_id);
+      }
+    }
 
     // 選択されたフォーマットの試合テンプレートを取得
     const templatesResult = await db.execute(`
@@ -483,8 +501,10 @@ export async function POST(request: NextRequest) {
           winner_position,
           is_bye_match,
           matchday,
-          cycle
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          cycle,
+          venue_name,
+          venue_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         matchBlockId,
         tournamentDate,
@@ -514,7 +534,9 @@ export async function POST(request: NextRequest) {
         template.winner_position || null,
         template.is_bye_match || 0,
         template.matchday || null,
-        template.cycle || 1
+        template.cycle || 1,
+        firstVenueName,
+        firstVenueId
       ]);
 
       // コート終了時刻を更新（次の試合のため）
@@ -585,7 +607,7 @@ export async function POST(request: NextRequest) {
         t.*,
         v.venue_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 

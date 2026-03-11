@@ -39,7 +39,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         tf.format_name,
         t.phases
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
       WHERE t.tournament_id = ?
     `,
@@ -152,6 +152,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ?
           AND mb.phase IN (${placeholders})
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_number, ml.match_code
       `,
       args: [tournamentId, ...tournamentPhaseIds]

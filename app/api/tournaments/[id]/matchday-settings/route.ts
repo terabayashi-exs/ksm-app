@@ -21,7 +21,7 @@ export async function GET(
 
     // 部門情報を取得
     const tournamentResult = await db.execute(`
-      SELECT t.tournament_id, t.tournament_name, t.format_name, t.format_id, t.match_duration_minutes
+      SELECT t.tournament_id, t.tournament_name, t.format_name, t.format_id, t.match_duration_minutes, t.venue_id
       FROM t_tournaments t
       WHERE t.tournament_id = ?
     `, [tournamentId]);
@@ -74,13 +74,40 @@ export async function GET(
       block_name: (row.block_name as string) || '',
     }));
 
-    // 会場一覧を取得
-    const venuesResult = await db.execute(`
-      SELECT venue_id, venue_name, available_courts
-      FROM m_venues
-      WHERE is_active = 1
-      ORDER BY venue_name
-    `);
+    // 部門に紐づく会場一覧を取得
+    const tournamentVenueId = tournamentResult.rows[0].venue_id
+      ? String(tournamentResult.rows[0].venue_id)
+      : null;
+
+    let venueIds: number[] = [];
+    if (tournamentVenueId) {
+      try {
+        const parsed = JSON.parse(tournamentVenueId);
+        if (Array.isArray(parsed)) {
+          venueIds = parsed.map(Number).filter((n: number) => !isNaN(n));
+        } else {
+          const num = Number(tournamentVenueId);
+          if (!isNaN(num)) venueIds = [num];
+        }
+      } catch {
+        const num = Number(tournamentVenueId);
+        if (!isNaN(num)) venueIds = [num];
+      }
+    }
+
+    let venuesResult;
+    if (venueIds.length > 0) {
+      const placeholders = venueIds.map(() => '?').join(',');
+      venuesResult = await db.execute(`
+        SELECT venue_id, venue_name, available_courts
+        FROM m_venues
+        WHERE is_active = 1 AND venue_id IN (${placeholders})
+        ORDER BY venue_name
+      `, venueIds);
+    } else {
+      // 会場未設定の場合は空配列
+      venuesResult = { rows: [] };
+    }
 
     return NextResponse.json({
       success: true,

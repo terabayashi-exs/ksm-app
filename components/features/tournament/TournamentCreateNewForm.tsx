@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Users, Sparkles, Plus, Trash2, Info, Loader2, Building2 } from "lucide-react";
+import { Users, Sparkles, Plus, Trash2, Info, Loader2, Building2, X, ChevronsUpDown, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import SchedulePreview from "@/components/features/tournament/SchedulePreview";
 import React from "react";
 
@@ -81,9 +81,8 @@ const tournamentCreateSchema = z.object({
   tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
   sport_type_id: z.number().min(1, "競技種別を選択してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
-  venue_id: z.number().min(1, "会場を選択してください"),
+  venue_ids: z.array(z.number()).min(1, "会場を1つ以上選択してください"),
   team_count: z.number().min(2, "チーム数は2以上で入力してください").max(128, "チーム数は128以下で入力してください"),
-  court_count: z.number().min(1, "コート数は1以上で入力してください").max(8, "コート数は8以下で入力してください"),
   tournament_dates: z.array(z.object({
     dayNumber: z.number(),
     date: z.string()
@@ -116,7 +115,10 @@ export default function TournamentCreateNewForm() {
   const [loadingSportTypes, setLoadingSportTypes] = useState(true);
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
   const [customSchedule, setCustomSchedule] = useState<CustomScheduleMatch[]>([]);
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [selectedVenues, setSelectedVenues] = useState<Venue[]>([]);
+  const [derivedCourtCount, setDerivedCourtCount] = useState<number>(4);
+  const [venuePopoverOpen, setVenuePopoverOpen] = useState(false);
+  const [venueSearchQuery, setVenueSearchQuery] = useState('');
 
   const {
     register,
@@ -130,7 +132,7 @@ export default function TournamentCreateNewForm() {
     defaultValues: {
       sport_type_id: 1,
       team_count: 8,
-      court_count: 4,
+      venue_ids: [],
       tournament_dates: [{
         dayNumber: 1,
         date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -167,7 +169,7 @@ export default function TournamentCreateNewForm() {
   useEffect(() => {
     const loadVenues = async () => {
       try {
-        const res = await fetch("/api/venues");
+        const res = await fetch("/api/venues?scope=available");
         const data = await res.json();
         if (data.success) {
           setVenues(data.data || data.venues);
@@ -177,7 +179,10 @@ export default function TournamentCreateNewForm() {
           if (venueIdParam) {
             const venueId = parseInt(venueIdParam);
             if (!isNaN(venueId)) {
-              setValue('venue_id', venueId);
+              setValue('venue_ids', [venueId]);
+              const venuesList = data.data || data.venues;
+              const venue = venuesList.find((v: Venue) => v.venue_id === venueId);
+              if (venue) setSelectedVenues([venue]);
             }
           }
         }
@@ -307,6 +312,12 @@ export default function TournamentCreateNewForm() {
       const result = await response.json();
 
       if (result.success && result.data.statistics) {
+        // テンプレートからコート数を自動算出
+        if (result.data.templates && result.data.templates.length > 0) {
+          const maxCourt = Math.max(...result.data.templates.map((t: { court_number?: number }) => t.court_number || 0), 1);
+          setDerivedCourtCount(maxCourt);
+        }
+
         // matchdayがあるフォーマットはリーグ戦作成画面へリダイレクト
         if (result.data.statistics.hasMatchdays) {
           const allFormats = [...(recommendation?.recommendedFormats || []), ...(recommendation?.allFormats || [])];
@@ -427,6 +438,8 @@ export default function TournamentCreateNewForm() {
         body: JSON.stringify({
           ...data,
           group_id: data.group_id,
+          venue_ids: data.venue_ids,
+          court_count: derivedCourtCount,
           tournament_dates: JSON.stringify(tournamentDatesJson),
           event_start_date: data.tournament_dates[0]?.date,
           custom_schedule: customSchedule,
@@ -772,7 +785,7 @@ export default function TournamentCreateNewForm() {
         {errors.tournament_name && <p className="text-sm text-destructive">{errors.tournament_name.message}</p>}
       </div>
 
-      {/* 会場 */}
+      {/* 会場（複数選択） */}
       <div className="space-y-2">
         <Label>会場 <span className="text-destructive">*</span></Label>
         {loadingVenues ? (
@@ -781,60 +794,98 @@ export default function TournamentCreateNewForm() {
             <span className="text-muted-foreground">読み込み中...</span>
           </div>
         ) : (
-          <Select
-            value={watch('venue_id')?.toString()}
-            onValueChange={(value) => {
-              if (value !== "no-venues") {
-                const venueId = parseInt(value);
-                setValue("venue_id", venueId);
-                const venue = venues.find(v => v.venue_id === venueId);
-                setSelectedVenue(venue || null);
-                if (venue && venue.available_courts) {
-                  const currentCourtCount = watch('court_count') || 4;
-                  if (currentCourtCount > venue.available_courts) {
-                    setValue('court_count', venue.available_courts);
-                  }
-                }
-              }
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="会場を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {venues && venues.length > 0 ? (
-                venues.map((venue: Venue) => (
-                  <SelectItem key={venue.venue_id} value={venue.venue_id.toString()}>
+          <div className="space-y-2">
+            {/* 選択済み会場をBadgeで表示 */}
+            {selectedVenues.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedVenues.map((venue) => (
+                  <Badge key={venue.venue_id} variant="secondary" className="text-sm py-1 px-2 gap-1">
                     {venue.venue_name}（{venue.available_courts}コート）
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="no-venues" disabled>会場がありません</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+                    <button
+                      type="button"
+                      className="ml-1 hover:text-destructive"
+                      onClick={() => {
+                        const newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                        setSelectedVenues(newVenues);
+                        setValue('venue_ids', newVenues.map(v => v.venue_id));
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* 会場選択Popover */}
+            <Popover open={venuePopoverOpen} onOpenChange={setVenuePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={venuePopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedVenues.length === 0
+                    ? "会場を選択..."
+                    : `${selectedVenues.length}件の会場を選択中`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-2" align="start">
+                <Input
+                  placeholder="会場名で検索..."
+                  value={venueSearchQuery}
+                  onChange={(e) => setVenueSearchQuery(e.target.value)}
+                  className="mb-2"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {venues
+                    .filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                    .map((venue) => {
+                      const isSelected = selectedVenues.some(sv => sv.venue_id === venue.venue_id);
+                      return (
+                        <button
+                          key={venue.venue_id}
+                          type="button"
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          onClick={() => {
+                            let newVenues: Venue[];
+                            if (isSelected) {
+                              newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                            } else {
+                              newVenues = [...selectedVenues, venue];
+                            }
+                            setSelectedVenues(newVenues);
+                            setValue('venue_ids', newVenues.map(v => v.venue_id));
+                          }}
+                        >
+                          <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                          <span>{venue.venue_name}</span>
+                          <span className="text-muted-foreground ml-auto text-xs">{venue.available_courts}コート</span>
+                        </button>
+                      );
+                    })}
+                  {venues.filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase())).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">会場が見つかりません</p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         )}
-        {errors.venue_id && <p className="text-sm text-destructive">{errors.venue_id.message}</p>}
+        {errors.venue_ids && <p className="text-sm text-destructive">{errors.venue_ids.message}</p>}
       </div>
 
-      {/* コート数 */}
-      <div className="space-y-2">
-        <Label htmlFor="court_count">使用コート数 <span className="text-destructive">*</span></Label>
-        <Input
-          id="court_count"
-          type="number"
-          className="max-w-[200px]"
-          {...register("court_count", { valueAsNumber: true })}
-          min={1}
-          max={selectedVenue ? selectedVenue.available_courts : 8}
-        />
-        {selectedVenue && (
-          <p className="text-xs text-muted-foreground">
-            {selectedVenue.venue_name}は最大{selectedVenue.available_courts}コート利用可能
-          </p>
-        )}
-        {errors.court_count && <p className="text-sm text-destructive">{errors.court_count.message}</p>}
-      </div>
+      {/* コート数（自動算出・表示のみ） */}
+      {selectedFormat && (
+        <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">使用コート数:</span>
+          <span className="font-medium">{derivedCourtCount}コート</span>
+          <span className="text-xs text-muted-foreground">（フォーマットから自動設定）</span>
+        </div>
+      )}
 
       {/* 開催日程 */}
       <div className="border rounded-lg p-4 space-y-4">
@@ -1003,8 +1054,8 @@ export default function TournamentCreateNewForm() {
           <p className="text-xs text-muted-foreground">各試合の時間とコート番号を個別に調整できます</p>
           <SchedulePreview
             settings={{
-              courtCount: watch('court_count') || 4,
-              availableCourts: selectedVenue ? Array.from({length: selectedVenue.available_courts}, (_, i) => i + 1) : undefined,
+              courtCount: derivedCourtCount,
+              availableCourts: Array.from({length: derivedCourtCount}, (_, i) => i + 1),
               matchDurationMinutes: watch('match_duration_minutes') || 15,
               breakDurationMinutes: watch('break_duration_minutes') || 5,
               startTime: '09:00',
