@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ArrowLeft, Mail } from "lucide-react";
 
 export default function ForgotPasswordPage() {
-  const [teamId, setTeamId] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,7 +29,7 @@ export default function ForgotPasswordPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ teamId, email }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
@@ -64,7 +63,7 @@ export default function ForgotPasswordPage() {
           <CardHeader>
             <CardTitle className="text-2xl">パスワードを忘れた方</CardTitle>
             <CardDescription>
-              チームIDと登録メールアドレスを入力してください。
+              登録メールアドレスを入力してください。
               パスワードリセット用のリンクをメールでお送りします。
             </CardDescription>
           </CardHeader>
@@ -72,23 +71,6 @@ export default function ForgotPasswordPage() {
           <CardContent>
             {!success ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="teamId">チームID</Label>
-                  <Input
-                    id="teamId"
-                    name="teamId"
-                    type="text"
-                    required
-                    placeholder="チームID（例: team001）"
-                    value={teamId}
-                    onChange={(e) => setTeamId(e.target.value)}
-                    disabled={loading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    チーム登録時に発行されたIDを入力してください
-                  </p>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="email">登録メールアドレス</Label>
                   <Input
@@ -102,7 +84,7 @@ export default function ForgotPasswordPage() {
                     disabled={loading}
                   />
                   <p className="text-xs text-muted-foreground">
-                    チーム登録時に入力したメールアドレス
+                    アカウント登録時に入力したメールアドレス
                   </p>
                 </div>
 
@@ -164,7 +146,7 @@ export default function ForgotPasswordPage() {
                   ログイン画面に戻る
                 </Link>
                 <p className="text-sm text-muted-foreground">
-                  チーム登録がお済みでない場合は{" "}
+                  アカウント登録がお済みでない場合は{" "}
                   <Link
                     href="/auth/register"
                     className="font-medium text-primary hover:text-primary/80"

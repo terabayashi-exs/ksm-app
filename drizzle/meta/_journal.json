@@ -162,6 +162,34 @@
       "when": 1741190400000,
       "tag": "0022_venue_ownership",
       "breakpoints": false
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1741276800000,
+      "tag": "0023_drop_venue_id_legacy",
+      "breakpoints": false
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1741363200000,
+      "tag": "0024_drop_tournament_courts",
+      "breakpoints": false
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1741449600000,
+      "tag": "0025_drop_format_type_legacy",
+      "breakpoints": false
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1741536000000,
+      "tag": "0026_remove_team_password_hash",
+      "breakpoints": false
     }
   ]
 }

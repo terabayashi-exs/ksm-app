@@ -185,57 +185,8 @@ const authConfig: NextAuthOptions = {
     }),
     // 注: 旧operator認証プロバイダーは削除されました。
     // 運営者は統合ログイン（login）プロバイダーを使用してください。
-    CredentialsProvider({
-      id: "team",
-      name: "チーム代表者ログイン（旧）",
-      credentials: {
-        teamId: { label: "チームID", type: "text" },
-        password: { label: "パスワード", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.teamId || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const result = await db.execute(
-            `SELECT team_id, team_name, contact_email, password_hash, is_active
-             FROM m_teams
-             WHERE team_id = ? AND is_active = 1`,
-            [credentials.teamId as string]
-          );
-
-          if (result.rows.length === 0) {
-            return null;
-          }
-
-          const team = result.rows[0];
-          const isValidPassword = await bcrypt.compare(
-            credentials.password as string,
-            team.password_hash as string
-          );
-
-          if (!isValidPassword) {
-            return null;
-          }
-
-          return {
-            id: team.team_id as string,
-            email: team.contact_email as string,
-            name: team.team_name as string,
-            loginUserId: 0, // 旧Provider用のダミー値
-            roles: ["team" as const],
-            isSuperadmin: false,
-            role: "team" as const,
-            teamId: team.team_id as string,
-            teamIds: [team.team_id as string]
-          };
-        } catch (error) {
-          console.error("Team authentication error:", error);
-          return null;
-        }
-      }
-    })
+    // 注: 旧team認証プロバイダーは削除されました。
+    // チーム代表者は統合ログイン（login）プロバイダーを使用してください。
   ],
   callbacks: {
     async jwt({ token, user }) {

@@ -1,5 +1,5 @@
 // app/api/auth/forgot-password/route.ts
-// パスワードリセット申請API
+// パスワードリセット申請API（m_login_users対応）
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -9,24 +9,24 @@ import { format } from "date-fns";
 
 export async function POST(request: Request) {
   try {
-    const { teamId, email } = await request.json();
+    const { email } = await request.json();
 
-    if (!teamId || !email) {
+    if (!email) {
       return NextResponse.json(
-        { error: "チームIDとメールアドレスを入力してください" },
+        { error: "メールアドレスを入力してください" },
         { status: 400 }
       );
     }
 
-    // チームIDとメールアドレスの組み合わせを検証
-    const teamResult = await db.execute(
-      `SELECT team_id, team_name, contact_email, is_active
-       FROM m_teams
-       WHERE team_id = ? AND contact_email = ? AND is_active = 1`,
-      [teamId, email]
+    // m_login_users からメールアドレスで検索
+    const userResult = await db.execute(
+      `SELECT login_user_id, email, display_name, is_active
+       FROM m_login_users
+       WHERE email = ? AND is_active = 1`,
+      [email]
     );
 
-    if (teamResult.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       // セキュリティ上、存在しないことを明示しない
       return NextResponse.json(
         {
@@ -37,23 +37,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const team = teamResult.rows[0];
+    const user = userResult.rows[0];
+    const loginUserId = Number(user.login_user_id);
 
     // リセットトークンの生成（セキュアなランダム文字列）
     const resetToken = crypto.randomBytes(32).toString("hex");
 
-    // 既存の未使用トークンを削除（同じチームの古いリクエストをクリーンアップ）
+    // 既存の未使用トークンを削除（同じユーザーの古いリクエストをクリーンアップ）
     await db.execute(
       `DELETE FROM t_password_reset_tokens
-       WHERE team_id = ? AND used_at IS NULL`,
-      [teamId]
+       WHERE login_user_id = ? AND used_at IS NULL`,
+      [loginUserId]
     );
 
     // 新しいトークンを保存（有効期限は1時間後、JSTで保存）
     await db.execute(
-      `INSERT INTO t_password_reset_tokens (team_id, reset_token, expires_at)
+      `INSERT INTO t_password_reset_tokens (login_user_id, reset_token, expires_at)
        VALUES (?, ?, datetime('now', '+9 hours', '+1 hour'))`,
-      [teamId, resetToken]
+      [loginUserId, resetToken]
     );
 
     // 保存した有効期限を取得
@@ -91,16 +92,15 @@ export async function POST(request: Request) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏆 大会GO</h1>
+            <h1>大会GO</h1>
             <p>パスワードリセットのご案内</p>
         </div>
         <div class="content">
-            <p>${team.team_name} 様</p>
-            <h2>🔑 パスワードリセットリクエスト</h2>
+            <p>${user.display_name} 様</p>
+            <h2>パスワードリセットリクエスト</h2>
             <p>パスワードリセットのリクエストを受け付けました。</p>
-            <p><strong>チームID:</strong> ${teamId}</p>
             <div class="info-box">
-                <h3>📋 リセット手順</h3>
+                <h3>リセット手順</h3>
                 <p>以下のボタンをクリックして、新しいパスワードを設定してください。</p>
                 <div style="text-align: center;">
                     <a href="${resetUrl}" class="button">パスワードをリセットする</a>
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
                 <p style="word-break: break-all; background: #f1f5f9; padding: 10px; border-radius: 4px;">${resetUrl}</p>
             </div>
             <div class="warning-box">
-                <h3>⚠️ 重要事項</h3>
+                <h3>重要事項</h3>
                 <ul>
                     <li><strong>有効期限:</strong> ${expiresAtFormatted} まで（1時間）</li>
                     <li><strong>セキュリティ:</strong> このリンクは1回のみ使用可能です</li>
@@ -125,12 +125,9 @@ export async function POST(request: Request) {
     const emailText = `
 【大会GO】パスワードリセットのご案内
 
-${team.team_name} 様
+${user.display_name} 様
 
 パスワードリセットのリクエストを受け付けました。
-
-■ リセット情報
-チームID: ${teamId}
 
 ■ リセット手順
 以下のURLにアクセスして、新しいパスワードを設定してください。

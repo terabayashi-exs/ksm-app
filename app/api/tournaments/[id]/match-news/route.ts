@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
           COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name) as team2_display_name,
           ml.court_number,
-          tc.court_name,
+          ml.court_name,
           ml.start_time,
           ml.match_status,
           ml.updated_at,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+
         WHERE mb.tournament_id = ?
           AND (
             ml.match_status = 'ongoing'

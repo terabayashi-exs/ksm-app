@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         ml.team1_tournament_team_id,
         ml.team2_tournament_team_id,
         ml.court_number,
-        tc.court_name,
+        ml.court_name,
         ml.start_time,
         ml.tournament_date,
         mb.tournament_id,
@@ -52,7 +52,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
       LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
-      LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       WHERE ml.match_id = ?
     `, [matchId]);
 
@@ -163,7 +162,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
-          tc.court_name,
+          ml.court_name,
           ml.start_time,
           ml.period_count,
           ml.team1_scores,
@@ -194,8 +193,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
-        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
-        LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+          LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
       `, [matchId]);
@@ -285,7 +283,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ml.team1_display_name,
           ml.team2_display_name,
           ml.court_number,
-          tc.court_name,
+          ml.court_name,
           ml.start_time,
           ml.period_count,
           ml.team1_scores,
@@ -316,8 +314,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
         LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
         LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
-        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
-        LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+          LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         WHERE ml.match_id = ?
       `, [matchId]);

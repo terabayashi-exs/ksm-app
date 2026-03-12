@@ -21,7 +21,7 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState(false);
   const [tokenError, setTokenError] = useState("");
-  const [teamInfo, setTeamInfo] = useState<{ teamId: string; teamName: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ email: string; displayName: string } | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -41,7 +41,7 @@ function ResetPasswordForm() {
 
         if (data.valid) {
           setTokenValid(true);
-          setTeamInfo({ teamId: data.teamId, teamName: data.teamName });
+          setUserInfo({ email: data.email, displayName: data.displayName });
         } else {
           setTokenError(data.error || "リセットリンクが無効です");
         }
@@ -187,10 +187,9 @@ function ResetPasswordForm() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">パスワードリセット</CardTitle>
-            {teamInfo && (
+            {userInfo && (
               <div className="mt-2 text-sm text-muted-foreground">
-                <div><strong>チーム名:</strong> {teamInfo.teamName}</div>
-                <div><strong>チームID:</strong> {teamInfo.teamId}</div>
+                <div><strong>アカウント:</strong> {userInfo.displayName}</div>
               </div>
             )}
           </CardHeader>

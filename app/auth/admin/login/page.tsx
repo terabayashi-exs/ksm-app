@@ -124,17 +124,6 @@ function AdminLoginForm() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                チーム代表者の方は{" "}
-                <Link
-                  href="/auth/team/login"
-                  className="font-medium text-primary hover:text-primary/80"
-                >
-                  チーム代表者ログイン
-                </Link>
-              </p>
-            </div>
           </CardContent>
         </Card>
 

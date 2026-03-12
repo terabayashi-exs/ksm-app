@@ -40,20 +40,20 @@ export default async function WithdrawalPage({ params }: PageProps) {
   const session = await auth();
 
   if (!session) {
-    redirect('/auth/team/login');
+    redirect('/auth/login');
   }
 
   const resolvedParams = await params;
   const tournamentId = parseInt(resolvedParams.id);
   
   if (isNaN(tournamentId)) {
-    redirect('/team');
+    redirect('/my');
   }
 
   const tournamentInfo = await getTournamentInfo(tournamentId, session.user.email);
 
   if (!tournamentInfo) {
-    redirect('/team');
+    redirect('/my');
   }
 
   return (

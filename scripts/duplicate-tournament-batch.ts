@@ -185,13 +185,13 @@ async function duplicateTournamentForUser(
           await db.execute({
             sql: `INSERT INTO m_teams (
               team_id, team_name, team_omission, contact_person, contact_email, contact_phone,
-              representative_player_id, password_hash, is_active,
+              representative_player_id, is_active,
               created_at, updated_at, registration_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)`,
             args: [
               newTeamId, teamData.team_name, teamData.team_omission, teamData.contact_person,
               teamData.contact_email, teamData.contact_phone, teamData.representative_player_id,
-              teamData.password_hash, teamData.is_active, teamData.registration_type,
+              teamData.is_active, teamData.registration_type,
             ],
           });
 

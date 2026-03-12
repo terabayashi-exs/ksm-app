@@ -235,7 +235,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                       <Link href={
                         userRole === 'team'
                           ? `/tournaments/${tournament.tournament_id}/join`
-                          : `/auth/team/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/join`)}`
+                          : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/join`)}`
                       }>
                         参加
                       </Link>

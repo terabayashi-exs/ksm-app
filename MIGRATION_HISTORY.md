@@ -16,6 +16,103 @@
 
 ---
 
+## 0026: 旧チームログイン機能の完全削除 & m_teams.password_hash 除去（2026-03-12）
+
+### 基本情報
+- **日付**: 2026年3月12日
+- **環境**: dev（stag/mainは要実行）
+- **方法**: カスタムマイグレーションスクリプト
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0026_remove_team_password_hash.sql`
+- **実行スクリプト**: `scripts/migrate-0026-remove-team-password-hash.ts`
+
+### 変更内容
+
+#### `m_teams` テーブル
+- `password_hash` カラム削除
+
+#### `t_password_reset_tokens` テーブル
+- `team_id` カラム削除
+- `login_user_id` カラム追加（`m_login_users.login_user_id` への外部キー）
+
+### 変更理由
+ログイン機能が `m_login_users` テーブルに一本化されたため、旧チーム代表者ログイン（`m_teams.password_hash` + teamId/password認証）は不要になった。パスワードリセットも `m_login_users` 経由に移行。
+
+### 影響を受けたファイル
+- `src/db/schema.ts` - mTeams.passwordHash削除、tPasswordResetTokens.teamId→loginUserId
+- `src/db/relations.ts` - tPasswordResetTokensRelationsをmLoginUsersに変更
+- `drizzle/schema.ts` - 生成スキーマの同期
+- `lib/auth.ts` - "team"プロバイダー削除
+- `middleware.ts` - /teamルート保護削除
+- `app/api/auth/forgot-password/route.ts` - m_login_users対応に書き換え
+- `app/api/auth/reset-password/route.ts` - m_login_users対応に書き換え
+- `app/api/admin/tournaments/[id]/teams/route.ts` - password_hash書き込み削除、m_login_users作成追加
+- `app/auth/forgot-password/page.tsx` - teamId入力欄削除
+- `app/auth/reset-password/page.tsx` - チーム情報表示→ユーザー情報表示
+- `app/auth/admin/login/page.tsx` - チームログインリンク削除
+- 各ページのリダイレクト先を `/auth/team/login` → `/auth/login`、`/team` → `/my` に変更
+
+### 削除されたファイル（10ファイル）
+- `app/team/page.tsx` - 旧チームダッシュボード
+- `app/auth/team/login/page.tsx` - 旧チームログインページ
+- `components/features/team/TeamProfile.tsx`
+- `components/features/team/TeamTournaments.tsx`
+- `components/features/team/TeamMembers.tsx`
+- `app/api/teams/profile/route.ts`
+- `app/api/teams/tournaments/route.ts`
+- `app/api/teams/players/route.ts`
+- `app/api/teams/register/route.ts`
+
+### 実行コマンド
+```bash
+npx tsx scripts/migrate-0026-remove-team-password-hash.ts          # dev環境
+npx tsx scripts/migrate-0026-remove-team-password-hash.ts stag     # stag環境
+npx tsx scripts/migrate-0026-remove-team-password-hash.ts main     # main環境
+```
+
+---
+
+## 0025: preliminary_format_type / final_format_type カラム削除（2026-03-12）
+
+### 基本情報
+- **日付**: 2026年3月12日
+- **環境**: dev（stag/mainは要実行）
+- **方法**: バックフィルスクリプト → カスタムマイグレーションスクリプト
+- **実行者**: Claude Code
+- **マイグレーションファイル**: `drizzle/0025_drop_format_type_legacy.sql`
+
+### 変更内容
+
+#### `m_tournament_formats` テーブル
+- `preliminary_format_type` カラム削除
+- `final_format_type` カラム削除
+
+#### `t_tournaments` テーブル
+- `preliminary_format_type` カラム削除
+- `final_format_type` カラム削除
+
+### 変更理由
+`phases` JSONフィールドへの移行が完了し、全てのビジネスロジック（ブロック生成、フェーズ解決、テンプレートマッピング等）は既に`phases`を使用している。UIフォーム・API・型定義からレガシーフィールドへの参照を除去し、`phases`を唯一のソースにする。
+
+### 実行手順
+1. `npx tsx scripts/backfill-phases-from-legacy.ts` - phases IS NULLのレコードをバックフィル
+2. `npx tsx scripts/migrate-0025-drop-format-type-legacy.ts` - カラム削除
+3. stag/main環境でも同様に実行
+
+### 影響を受けたファイル
+- `src/db/schema.ts` - 2テーブルから2フィールドずつ削除
+- `lib/types.ts` - Tournament interfaceから2フィールド削除
+- `components/features/tournament-format/TournamentFormatCreateForm.tsx` - phases直接更新に変更
+- `components/features/tournament-format/TournamentFormatEditForm.tsx` - phases直接更新に変更
+- `app/api/admin/tournament-formats/route.ts` - SELECT/INSERT/GROUP BYから除去
+- `app/api/admin/tournament-formats/[id]/route.ts` - UPDATE/destructuringから除去
+- `app/api/tournaments/create-new/route.ts` - SELECT/UPDATEから除去
+- `app/api/tournaments/create-league/route.ts` - SELECT/UPDATEから除去
+- `app/api/admin/tournaments/[id]/change-format/route.ts` - SELECT/UPDATEから除去
+- `app/api/tournaments/[id]/route.ts` - SELECT/マッピングから除去
+
+---
+
 ## 0022: 会場マスタのオーナー管理・共有フラグ対応（2026-03-11）
 
 ### 基本情報

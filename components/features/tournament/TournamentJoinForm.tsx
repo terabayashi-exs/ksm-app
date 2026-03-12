@@ -547,7 +547,7 @@ export default function TournamentJoinForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push('/team')}
+          onClick={() => router.push('/my')}
           disabled={loading}
         >
           キャンセル

@@ -50,8 +50,6 @@ export async function GET(
         t.updated_at,
         v.venue_name,
         t.format_name,
-        t.preliminary_format_type,
-        t.final_format_type,
         t.phases
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
@@ -87,8 +85,6 @@ export async function GET(
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
       format_name: row.format_name as string,
-      preliminary_format_type: row.preliminary_format_type as string | undefined,
-      final_format_type: row.final_format_type as string | undefined,
       phases: row.phases ? (typeof row.phases === 'string' ? JSON.parse(row.phases as string) : row.phases) : undefined
     };
 

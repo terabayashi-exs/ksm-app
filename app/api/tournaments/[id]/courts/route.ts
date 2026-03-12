@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getTournamentCourtSettings, saveCourtName, deleteCourtName } from '@/lib/court-name-helper';
+import { db } from '@/lib/db';
 import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
 
 /**
  * GET /api/tournaments/[id]/courts
- * 大会のコート設定一覧を取得
+ * 大会のコート設定一覧を取得（t_matches_liveから集約）
  */
 export async function GET(
   request: NextRequest,
@@ -30,7 +30,20 @@ export async function GET(
       );
     }
 
-    const courtSettings = await getTournamentCourtSettings(tournamentId);
+    const result = await db.execute(`
+      SELECT DISTINCT ml.court_number, ml.court_name
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND ml.court_number IS NOT NULL
+      ORDER BY ml.court_number
+    `, [tournamentId]);
+
+    const courtSettings = result.rows.map(row => ({
+      court_number: Number(row.court_number),
+      court_name: row.court_name ? String(row.court_name) : `コート${row.court_number}`,
+      display_order: Number(row.court_number),
+      is_active: 1,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -48,7 +61,7 @@ export async function GET(
 
 /**
  * POST /api/tournaments/[id]/courts
- * コート名を一括保存
+ * コート名を一括保存（t_matches_liveに直接反映）
  */
 export async function POST(
   request: NextRequest,
@@ -124,16 +137,16 @@ export async function POST(
       }
     }
 
-    // 保存処理
+    // t_matches_liveのcourt_nameを直接更新
     for (const court of courts) {
       const courtName = court.court_name.trim();
-
-      // 空の場合は削除（デフォルト表示に戻す）
-      if (!courtName) {
-        await deleteCourtName(tournamentId, court.court_number);
-      } else {
-        await saveCourtName(tournamentId, court.court_number, courtName);
-      }
+      await db.execute(`
+        UPDATE t_matches_live
+        SET court_name = ?, updated_at = datetime('now', '+9 hours')
+        WHERE court_number = ? AND match_block_id IN (
+          SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+        )
+      `, [courtName, court.court_number, tournamentId]);
     }
 
     return NextResponse.json({

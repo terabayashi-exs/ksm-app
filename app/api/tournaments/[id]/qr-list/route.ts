@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
-import { getCourtDisplayNames } from '@/lib/court-name-helper';
+
 import { SPORT_RULE_CONFIGS } from '@/lib/tournament-rules';
 
 export async function GET(
@@ -67,6 +67,7 @@ export async function GET(
         ml.match_id,
         ml.match_code,
         ml.court_number,
+        ml.court_name,
         ml.start_time,
         ml.tournament_date,
         ml.match_status,
@@ -95,14 +96,6 @@ export async function GET(
       AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
       ORDER BY mb.match_block_id, ml.tournament_date, ml.start_time, ml.match_code
     `, [tournamentId]);
-
-    // コート番号の一覧を取得
-    const courtNumbers = Array.from(
-      new Set(matchesResult.rows.map(match => match.court_number as number).filter(Boolean))
-    );
-
-    // コート表示名を一括取得
-    const courtDisplayNames = await getCourtDisplayNames(tournamentId, courtNumbers);
 
     // BYE試合でチーム名が取得できない場合、プレースホルダーから実チーム名を解決するためのマップを作成
     const blockPositionToTeamMap: Record<string, { block_name: string; team_name: string; team_omission: string }> = {};
@@ -280,7 +273,7 @@ export async function GET(
 
       // コート表示名を取得
       const courtNumber = match.court_number as number;
-      const courtName = courtDisplayNames[courtNumber] || String(courtNumber);
+      const courtName = match.court_name ? String(match.court_name) : (courtNumber ? `コート${courtNumber}` : '');
 
       // 会場表示の構築
       const venueName = match.venue_name ? String(match.venue_name) : null;

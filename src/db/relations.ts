@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentCourts, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners } from "./schema";
+import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners, mLoginUsers } from "./schema";
 
 export const tMatchesFinalRelations = relations(tMatchesFinal, ({one}) => ({
 	tMatchBlock: one(tMatchBlocks, {
@@ -12,7 +12,6 @@ export const mTeamsRelations = relations(mTeams, ({many}) => ({
 	tTournamentPlayers: many(tTournamentPlayers),
 	tTournamentTeams: many(tTournamentTeams),
 	mPlayers: many(mPlayers),
-	tPasswordResetTokens: many(tPasswordResetTokens),
 }));
 
 export const tMatchBlocksRelations = relations(tMatchBlocks, ({one, many}) => ({
@@ -39,7 +38,6 @@ export const tTournamentsRelations = relations(tTournaments, ({one, many}) => ({
 	}),
 	tTournamentPlayers: many(tTournamentPlayers),
 	tTournamentTeams: many(tTournamentTeams),
-	tTournamentCourts: many(tTournamentCourts),
 	tTournamentMatchOverrides: many(tTournamentMatchOverrides),
 	tTournamentRules: many(tTournamentRules),
 	tEmailSendHistories: many(tEmailSendHistory),
@@ -148,13 +146,6 @@ export const tTournamentTeamsRelations = relations(tTournamentTeams, ({one, many
 	tEmailSendHistories: many(tEmailSendHistory),
 }));
 
-export const tTournamentCourtsRelations = relations(tTournamentCourts, ({one}) => ({
-	tTournament: one(tTournaments, {
-		fields: [tTournamentCourts.tournamentId],
-		references: [tTournaments.tournamentId]
-	}),
-}));
-
 export const tTournamentMatchOverridesRelations = relations(tTournamentMatchOverrides, ({one}) => ({
 	tTournament: one(tTournaments, {
 		fields: [tTournamentMatchOverrides.tournamentId],
@@ -181,9 +172,9 @@ export const tEmailSendHistoryRelations = relations(tEmailSendHistory, ({one}) =
 }));
 
 export const tPasswordResetTokensRelations = relations(tPasswordResetTokens, ({one}) => ({
-	mTeam: one(mTeams, {
-		fields: [tPasswordResetTokens.teamId],
-		references: [mTeams.teamId]
+	loginUser: one(mLoginUsers, {
+		fields: [tPasswordResetTokens.loginUserId],
+		references: [mLoginUsers.loginUserId]
 	}),
 }));
 

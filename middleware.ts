@@ -21,8 +21,6 @@ export default async function middleware(req: NextRequest) {
 
   const hasAdminAccess = roles.includes("admin") || roles.includes("operator")
     || userRole === "admin" || userRole === "operator";
-  const hasTeamAccess = roles.includes("team") || userRole === "team";
-
   // Edge browser localStorage fix headers
   const response = NextResponse.next();
   const userAgent = req.headers.get('user-agent') || '';
@@ -34,7 +32,6 @@ export default async function middleware(req: NextRequest) {
 
   // 認証が必要なルートの定義
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
-  const isTeamRoute = nextUrl.pathname.startsWith("/team");
   const isMyRoute = nextUrl.pathname.startsWith("/my");
   const isAuthRoute = nextUrl.pathname.startsWith("/auth");
 
@@ -57,20 +54,6 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  // チームルートの保護
-  if (isTeamRoute) {
-    if (!isLoggedIn) {
-      // パスとクエリパラメータの両方を保持
-      const fullPath = nextUrl.pathname + nextUrl.search;
-      return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl)
-      );
-    }
-    if (!hasTeamAccess) {
-      return NextResponse.redirect(new URL("/auth/login", nextUrl));
-    }
-  }
-
   // マイダッシュボードの保護（ログイン済みであれば全ロール可）
   if (isMyRoute) {
     if (!isLoggedIn) {
@@ -89,7 +72,6 @@ export const config = {
   matcher: [
     // 認証が必要なルートを指定
     "/admin/:path*",
-    "/team/:path*",
     "/my/:path*",
     "/my",
     "/auth/:path*",

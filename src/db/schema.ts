@@ -89,7 +89,6 @@ export const mTeams = sqliteTable("m_teams", {
 	contactEmail: text("contact_email"),
 	contactPhone: text("contact_phone"),
 	representativePlayerId: integer("representative_player_id"),
-	passwordHash: text("password_hash"),
 	prefectureId: integer("prefecture_id"),
 	isActive: integer("is_active").default(1).notNull(),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
@@ -201,9 +200,6 @@ export const mTournamentFormats = sqliteTable("m_tournament_formats", {
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 	sportTypeId: integer("sport_type_id").default(1),
-	// 既存フィールド（後方互換性のため維持）
-	preliminaryFormatType: text("preliminary_format_type"),
-	finalFormatType: text("final_format_type"),
 	defaultMatchDuration: integer("default_match_duration"),
 	defaultBreakDuration: integer("default_break_duration"),
 	// 新規フィールド: 柔軟なフェーズ構成をJSON形式で保存
@@ -510,7 +506,6 @@ export const tTournaments = sqliteTable("t_tournaments", {
 	tournamentId: integer("tournament_id").primaryKey({ autoIncrement: true }),
 	tournamentName: text("tournament_name").notNull(),
 	formatId: integer("format_id").notNull().references(() => mTournamentFormats.formatId),
-	venueIdLegacy: integer("venue_id_legacy"),  // 旧venue_id（移行後、未使用）
 	venueId: text("venue_id"),  // JSON配列 例: "[1, 3]"
 	teamCount: integer("team_count").notNull(),
 	courtCount: integer("court_count").notNull(),
@@ -537,8 +532,6 @@ export const tTournaments = sqliteTable("t_tournaments", {
 	showPlayersPublic: integer("show_players_public").default(0),
 	// テンプレート独立化: フォーマット情報のコピー
 	formatName: text("format_name"),
-	preliminaryFormatType: text("preliminary_format_type"),
-	finalFormatType: text("final_format_type"),
 	phases: text("phases", { mode: 'json' }).$type<TournamentPhases>(),
 },
 (_table) => [
@@ -606,30 +599,6 @@ export const tTournamentTeams = sqliteTable("t_tournament_teams", {
 	participationStatus: text("participation_status").default("confirmed"),
 },
 (_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
-
-export const tTournamentCourts = sqliteTable("t_tournament_courts", {
-	tournamentCourtId: integer("tournament_court_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),
-	courtNumber: integer("court_number").notNull(),
-	courtName: text("court_name").notNull(),
-	venueId: integer("venue_id"),
-	displayOrder: integer("display_order").default(0),
-	isActive: integer("is_active").default(1),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-	updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	index("idx_tournament_courts_active").on(_table.tournamentId, _table.isActive),
-	index("idx_tournament_courts_tournament").on(_table.tournamentId),
 	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
 	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
 	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
@@ -735,7 +704,7 @@ export const tEmailSendHistory = sqliteTable("t_email_send_history", {
 
 export const tPasswordResetTokens = sqliteTable("t_password_reset_tokens", {
 	tokenId: integer("token_id").primaryKey({ autoIncrement: true }),
-	teamId: text("team_id").notNull().references(() => mTeams.teamId, { onDelete: "cascade" } ),
+	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" } ),
 	resetToken: text("reset_token").notNull(),
 	expiresAt: numeric("expires_at").notNull(),
 	usedAt: numeric("used_at"),
@@ -743,7 +712,7 @@ export const tPasswordResetTokens = sqliteTable("t_password_reset_tokens", {
 },
 (_table) => [
 	index("idx_expires_at").on(_table.expiresAt),
-	index("idx_team_reset_tokens").on(_table.teamId),
+	index("idx_login_user_reset_tokens").on(_table.loginUserId),
 	index("idx_reset_token").on(_table.resetToken),
 	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
 	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
