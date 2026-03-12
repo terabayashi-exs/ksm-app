@@ -10,37 +10,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
 import { Trophy, TrendingUp, Clock, Users, Calendar, ArrowRight, Search, Sparkles } from "lucide-react";
-
-async function getGroupedPublicTournaments(_teamId?: string) {
-  try {
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tournaments/public-grouped`, {
-      cache: 'no-store'
-    });
-    const result = await response.json();
-
-    // ステータス別にグループ化されたデータ構造に対応
-    // result.data = { recruiting: [...], before_event: [...], ongoing: [...], completed: [...] }
-    if (result.success && result.data) {
-      return {
-        ongoing: result.data.ongoing || [],
-        recruiting: result.data.recruiting || [],
-        before_event: result.data.before_event || [],
-        completed: result.data.completed || []
-      };
-    }
-
-    return { ongoing: [], recruiting: [], before_event: [], completed: [] };
-  } catch (error) {
-    console.error('Failed to fetch grouped tournaments:', error);
-    return { ongoing: [], recruiting: [], before_event: [], completed: [] };
-  }
-}
+import { fetchGroupedPublicTournaments, CategorizedTournaments } from "@/lib/public-tournaments";
 
 export default async function Home() {
   const session = await auth();
   const teamId = session?.user?.role === 'team' ? session.user.teamId : undefined;
 
-  const groupedData = await getGroupedPublicTournaments(teamId);
+  let groupedData: CategorizedTournaments = { ongoing: [], recruiting: [], before_event: [], completed: [] };
+  try {
+    groupedData = await fetchGroupedPublicTournaments(teamId);
+  } catch (error) {
+    console.error('Failed to fetch grouped tournaments:', error);
+  }
 
   // 統計データ（0でないもののみ表示用）
   const statsItems = [
