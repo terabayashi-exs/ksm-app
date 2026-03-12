@@ -64,7 +64,7 @@ export default async function Home() {
             {/* ロゴ画像（タイトル付き） */}
             <div className="mb-4 relative w-full max-w-4xl mx-auto">
               <Image
-                src="/images/taikaigo-logo-v1.4-1020-360-title.png"
+                src="/images/taikaigo-logo-main.svg"
                 alt="大会GO"
                 width={500}
                 height={176}

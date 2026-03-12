@@ -60,7 +60,7 @@ const config: Config = {
         },
       },
       backgroundImage: {
-        "hero-gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "hero-gradient": "linear-gradient(135deg, #3b82c4 0%, #68c5e8 100%)",
         "live-gradient": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
       },
       borderRadius: {

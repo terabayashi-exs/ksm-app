@@ -29,7 +29,7 @@ export default function Header() {
             <Link href="/" className="flex items-center">
               <div className="relative h-10">
                 <Image
-                  src="/images/taikaigo-logo-v1.4-1012-300.png"
+                  src="/images/taikaigo-logo-white.svg"
                   alt="大会GO"
                   width={500}
                   height={148}
