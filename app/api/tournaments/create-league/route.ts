@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       recruitment_start_date,
       recruitment_end_date,
       show_players_public = false,
+      venue_ids,
     } = data;
 
     if (!group_id || !tournament_name || !sport_type_id || !format_id || !team_count) {
@@ -78,6 +79,15 @@ export async function POST(request: NextRequest) {
       public_start_date
     });
 
+    // フォーマットからデフォルトのbreak_durationを取得
+    const formatDefaults = await db.execute(
+      `SELECT default_break_duration FROM m_tournament_formats WHERE format_id = ?`,
+      [format_id]
+    );
+    const defaultBreakDuration = formatDefaults.rows.length > 0 && formatDefaults.rows[0].default_break_duration != null
+      ? Number(formatDefaults.rows[0].default_break_duration)
+      : 0;
+
     // リーグ戦部門を作成（venue_id=NULL, court_count=1, tournament_dates=空）
     const tournamentResult = await db.execute(`
       INSERT INTO t_tournaments (
@@ -107,12 +117,12 @@ export async function POST(request: NextRequest) {
       tournament_name,
       sport_type_id,
       format_id,
-      null, // venue_id: 未定
+      venue_ids && Array.isArray(venue_ids) && venue_ids.length > 0 ? JSON.stringify(venue_ids) : null, // venue_id: JSON配列
       team_count,
       1,    // court_count: デフォルト
-      '{"1": ""}', // tournament_dates: 後で節設定から更新
+      '{"1": ""}', // tournament_dates: 後で日程・コート設定から更新
       match_duration_minutes,
-      null, // break_duration_minutes: リーグ戦では不要
+      defaultBreakDuration,
       calculatedStatus,
       is_public ? 'open' : 'preparing',
       public_start_date,

@@ -367,6 +367,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
 
         alert('大会ルール（順位決定ルールを含む）を更新しました');
         // マイダッシュボード（管理者タブ）に遷移
+        router.refresh();
         router.push('/my?tab=admin');
       } else {
         alert(`更新に失敗しました: ${result.error}`);

@@ -237,6 +237,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
 
       const result = await response.json();
       if (result.success) {
+        router.refresh();
         router.push('/my');
       } else {
         alert(`エラー: ${result.error || result.message || '更新に失敗しました'}`);

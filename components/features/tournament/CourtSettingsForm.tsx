@@ -95,6 +95,7 @@ export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSett
 
       if (result.success) {
         alert('コート名を保存しました');
+        router.refresh();
         router.push('/my?tab=admin');
       } else {
         setError(result.error || '保存に失敗しました');

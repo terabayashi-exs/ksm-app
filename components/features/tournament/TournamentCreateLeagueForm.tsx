@@ -9,7 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Loader2, Info, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar, Loader2, Info, Building2, X, ChevronsUpDown, Check } from "lucide-react";
+
+interface Venue {
+  venue_id: number;
+  venue_name: string;
+  available_courts: number;
+}
 
 interface TemplateItem {
   match_code: string;
@@ -38,6 +46,7 @@ interface LeagueContext {
 const leagueCreateSchema = z.object({
   group_id: z.number().min(1, "所属する大会が必要です"),
   tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
+  venue_ids: z.array(z.number()).min(1, "会場を1つ以上選択してください"),
   match_duration_minutes: z.number().min(5, "試合時間は5分以上").max(120, "試合時間は120分以下"),
   is_public: z.boolean(),
   show_players_public: z.boolean(),
@@ -52,6 +61,11 @@ export default function TournamentCreateLeagueForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leagueContext, setLeagueContext] = useState<LeagueContext | null>(null);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [selectedVenues, setSelectedVenues] = useState<Venue[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(true);
+  const [venuePopoverOpen, setVenuePopoverOpen] = useState(false);
+  const [venueSearchQuery, setVenueSearchQuery] = useState("");
 
   const {
     register,
@@ -63,6 +77,7 @@ export default function TournamentCreateLeagueForm() {
     resolver: zodResolver(leagueCreateSchema),
     defaultValues: {
       match_duration_minutes: 10,
+      venue_ids: [],
       is_public: true,
       show_players_public: false,
       public_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
@@ -96,6 +111,29 @@ export default function TournamentCreateLeagueForm() {
     }
   }, [router, setValue]);
 
+  // 会場データの取得
+  useEffect(() => {
+    const fetchVenues = async () => {
+      try {
+        const res = await fetch("/api/venues?scope=available");
+        const data = await res.json();
+        if (data.success) {
+          const venueList: Venue[] = (data.data || []).map((v: Record<string, unknown>) => ({
+            venue_id: Number(v.venue_id),
+            venue_name: String(v.venue_name),
+            available_courts: Number(v.available_courts ?? 0),
+          }));
+          setVenues(venueList);
+        }
+      } catch (err) {
+        console.error("会場取得エラー:", err);
+      } finally {
+        setLoadingVenues(false);
+      }
+    };
+    fetchVenues();
+  }, []);
+
   // テンプレートを節ごとにグループ化
   const templatesByMatchday = useMemo(() => {
     if (!leagueContext?.templates) return [];
@@ -123,6 +161,7 @@ export default function TournamentCreateLeagueForm() {
         sport_type_id: leagueContext.sport_type_id,
         format_id: leagueContext.format_id,
         team_count: leagueContext.team_count,
+        venue_ids: data.venue_ids,
       };
 
       const res = await fetch('/api/tournaments/create-league', {
@@ -203,6 +242,97 @@ export default function TournamentCreateLeagueForm() {
           {...register("tournament_name")}
         />
         {errors.tournament_name && <p className="text-sm text-destructive">{errors.tournament_name.message}</p>}
+      </div>
+
+      {/* 会場（複数選択） */}
+      <div className="space-y-2">
+        <Label>会場 <span className="text-destructive">*</span></Label>
+        {loadingVenues ? (
+          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-muted-foreground">読み込み中...</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {selectedVenues.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedVenues.map((venue) => (
+                  <Badge key={venue.venue_id} variant="secondary" className="text-sm py-1 px-2 gap-1">
+                    {venue.venue_name}（{venue.available_courts}コート）
+                    <button
+                      type="button"
+                      className="ml-1 hover:text-destructive"
+                      onClick={() => {
+                        const newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                        setSelectedVenues(newVenues);
+                        setValue('venue_ids', newVenues.map(v => v.venue_id));
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            <Popover open={venuePopoverOpen} onOpenChange={setVenuePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={venuePopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedVenues.length === 0
+                    ? "会場を選択..."
+                    : `${selectedVenues.length}件の会場を選択中`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-2" align="start">
+                <Input
+                  placeholder="会場名で検索..."
+                  value={venueSearchQuery}
+                  onChange={(e) => setVenueSearchQuery(e.target.value)}
+                  className="mb-2"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {venues
+                    .filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                    .map((venue) => {
+                      const isSelected = selectedVenues.some(sv => sv.venue_id === venue.venue_id);
+                      return (
+                        <button
+                          key={venue.venue_id}
+                          type="button"
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          onClick={() => {
+                            let newVenues: Venue[];
+                            if (isSelected) {
+                              newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                            } else {
+                              newVenues = [...selectedVenues, venue];
+                            }
+                            setSelectedVenues(newVenues);
+                            setValue('venue_ids', newVenues.map(v => v.venue_id));
+                          }}
+                        >
+                          <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                          <span>{venue.venue_name}</span>
+                          <span className="text-muted-foreground ml-auto text-xs">{venue.available_courts}コート</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+        {errors.venue_ids && <p className="text-sm text-destructive">{errors.venue_ids.message}</p>}
+        <p className="text-xs text-muted-foreground">
+          ここで選択した会場が、日程・コート設定の会場プルダウンに表示されます
+        </p>
       </div>
 
       {/* 試合時間 */}
@@ -325,7 +455,7 @@ export default function TournamentCreateLeagueForm() {
       {/* 注記 */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 text-sm text-blue-700 dark:text-blue-300">
         <Calendar className="w-4 h-4 inline mr-1" />
-        節ごとの会場・コート・日程は、作成後に「節設定」画面から設定できます
+        節ごとの会場・コート・日程は、作成後に「日程・コート設定」画面から設定できます
       </div>
 
       {/* 送信ボタン */}
