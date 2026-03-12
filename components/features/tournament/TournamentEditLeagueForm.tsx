@@ -168,8 +168,8 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
       const result = await res.json();
       if (result.success) {
         alert("部門情報を更新しました");
-        router.push("/my");
         router.refresh();
+        router.push("/my");
       } else {
         alert(result.error || "更新に失敗しました");
       }

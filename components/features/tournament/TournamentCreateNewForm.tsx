@@ -450,6 +450,7 @@ export default function TournamentCreateNewForm() {
 
       if (result.success) {
         // 作成後はマイダッシュボードにリダイレクト
+        router.refresh();
         router.push('/my');
       } else {
         alert(`エラー: ${result.error}`);
