@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { buildPhaseFormatMap, buildPhaseNameMap, buildTemplatePhaseMapping } from '@/lib/tournament-phases';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -71,7 +72,7 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -105,9 +106,8 @@ export async function PUT(
         t.tournament_name,
         t.status,
         t.tournament_dates,
-        f.format_name as current_format_name
+        t.format_name as current_format_name
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -168,7 +168,8 @@ export async function PUT(
 
     // 新しいフォーマットの存在確認
     const newFormat = await db.execute(`
-      SELECT format_id, format_name, target_team_count
+      SELECT format_id, format_name, target_team_count,
+        preliminary_format_type, final_format_type, phases
       FROM m_tournament_formats
       WHERE format_id = ?
     `, [new_format_id]);
@@ -302,13 +303,26 @@ export async function PUT(
     `, [tournamentId]);
     console.log(`   Reset ${resetTeams.rowsAffected || 0} team assignments`);
 
-    // === Step 6: 大会フォーマットを更新 ===
+    // === Step 6: 大会フォーマットを更新（テンプレート独立化: フォーマット情報もコピー） ===
+    const newFormatInfo = newFormat.rows[0];
+    const newFormatPhases = newFormatInfo.phases;
     await db.execute(`
       UPDATE t_tournaments SET
         format_id = ?,
+        format_name = ?,
+        preliminary_format_type = ?,
+        final_format_type = ?,
+        phases = ?,
         updated_at = datetime('now', '+9 hours')
       WHERE tournament_id = ?
-    `, [new_format_id, tournamentId]);
+    `, [
+      new_format_id,
+      newFormatInfo.format_name,
+      newFormatInfo.preliminary_format_type,
+      newFormatInfo.final_format_type,
+      typeof newFormatPhases === 'string' ? newFormatPhases : JSON.stringify(newFormatPhases),
+      tournamentId
+    ]);
     console.log(`   Updated tournament format: ${oldFormatId} → ${new_format_id}`);
 
     // === Step 7: 新しいフォーマットで試合データを再構築 ===
@@ -330,36 +344,78 @@ export async function PUT(
     const blockMap = new Map<string, number>();
     const allBlockKeys = new Set<string>();
 
-    // 全テンプレートからブロック情報を収集
+    // phasesからフェーズごとのフォーマットタイプと表示名を取得
+    const phaseFormats = buildPhaseFormatMap(newFormatPhases as string | null);
+    const phaseNames = buildPhaseNameMap(newFormatPhases as string | null);
+
+    // テンプレートのphase → phasesのidへのマッピングを構築
+    const changeTemplatePhases = templates.rows.map(t => t.phase as string);
+    const changeTemplatePhaseMapping = buildTemplatePhaseMapping(changeTemplatePhases, newFormatPhases as string | null);
+
+    // 全テンプレートからブロック情報を収集（区切り文字に :: を使用）
+    // テンプレートのphaseをactual phaseにマッピング
     for (const template of templates.rows) {
-      const blockKey = `${template.phase}_${template.block_name || 'default'}`;
+      const actualPhase = changeTemplatePhaseMapping.get(template.phase as string) || template.phase as string;
+      const blockKey = `${actualPhase}::${template.block_name || 'default'}`;
       allBlockKeys.add(blockKey);
     }
 
     // 各ブロックを作成
     for (const blockKey of allBlockKeys) {
-      const [phase, blockName] = blockKey.split('_');
+      const separatorIndex = blockKey.indexOf('::');
+      const phase = blockKey.substring(0, separatorIndex);
+      const blockName = blockKey.substring(separatorIndex + 2);
+      const formatType = phaseFormats.get(phase);
 
       // block_orderの決定
       let blockOrder: number;
-      if (phase === 'preliminary') {
-        // 予選ブロック: A=1, B=2, C=3, ...
+      if (blockName.length === 1 && blockName >= 'A' && blockName <= 'Z') {
+        // アルファベットブロック: A=1, B=2, C=3, ...
         blockOrder = blockName.charCodeAt(0) - 64;
       } else {
-        // 決勝ブロック: 順番に100, 101, 102, ...
-        blockOrder = 100 + Array.from(allBlockKeys).filter(k => k.startsWith('final_')).indexOf(blockKey);
+        // その他: 順番に100, 101, 102, ...
+        blockOrder = 100 + Array.from(allBlockKeys).indexOf(blockKey);
       }
 
-      const blockResult = await db.execute(`
-        INSERT INTO t_match_blocks (
-          tournament_id, block_name, phase, match_type, block_order
-        ) VALUES (?, ?, ?, '通常', ?)
-      `, [tournamentId, blockName, phase, blockOrder]);
+      // トーナメント形式の場合：統合ブロックを作成
+      if (formatType === 'tournament') {
+        const unifiedBlockKey = `${phase}::unified`;
+        if (!blockMap.has(unifiedBlockKey)) {
+          const unifiedBlockName = `${phase}_unified`;
+          const blockResult = await db.execute(`
+            INSERT INTO t_match_blocks (
+              tournament_id, block_name, phase, display_round_name, match_type, block_order
+            ) VALUES (?, ?, ?, ?, '通常', ?)
+          `, [tournamentId, unifiedBlockName, phase, phaseNames.get(phase) || phase, blockOrder]);
 
-      const blockId = Number(blockResult.lastInsertRowid);
-      blockMap.set(blockKey, blockId);
-      createdBlocks++;
-      console.log(`   Created block: ${blockName} (Phase: ${phase}, ID: ${blockId})`);
+          const unifiedBlockId = Number(blockResult.lastInsertRowid);
+          blockMap.set(unifiedBlockKey, unifiedBlockId);
+
+          // 同じフェーズの全ブロックを統合ブロックにマッピング
+          Array.from(allBlockKeys)
+            .filter(key => key.startsWith(`${phase}::`))
+            .forEach(key => {
+              blockMap.set(key, unifiedBlockId);
+            });
+
+          createdBlocks++;
+          console.log(`   Created unified block: ${unifiedBlockName} (Phase: ${phase}, ID: ${unifiedBlockId})`);
+        }
+      } else {
+        // リーグ形式：個別ブロックを作成
+        const displayName = blockName === 'default' ? phase : blockName;
+
+        const blockResult = await db.execute(`
+          INSERT INTO t_match_blocks (
+            tournament_id, block_name, phase, display_round_name, match_type, block_order
+          ) VALUES (?, ?, ?, ?, '通常', ?)
+        `, [tournamentId, displayName, phase, phaseNames.get(phase) || phase, blockOrder]);
+
+        const blockId = Number(blockResult.lastInsertRowid);
+        blockMap.set(blockKey, blockId);
+        createdBlocks++;
+        console.log(`   Created block: ${displayName} (Phase: ${phase}, ID: ${blockId})`);
+      }
     }
 
     // 大会日程を取得
@@ -372,7 +428,8 @@ export async function PUT(
 
     // 全試合の作成（予選・決勝共通処理）
     for (const template of templates.rows) {
-      const blockKey = `${template.phase}_${template.block_name || 'default'}`;
+      const actualTemplatePhase = changeTemplatePhaseMapping.get(template.phase as string) || template.phase as string;
+      const blockKey = `${actualTemplatePhase}::${template.block_name || 'default'}`;
       const blockId = blockMap.get(blockKey);
       if (!blockId) {
         console.error(`   Block not found for key: ${blockKey}`);
@@ -399,8 +456,24 @@ export async function PUT(
           start_time,
           team1_scores,
           team2_scores,
-          winner_tournament_team_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          winner_tournament_team_id,
+          phase,
+          match_type,
+          round_name,
+          block_name,
+          team1_source,
+          team2_source,
+          day_number,
+          execution_priority,
+          suggested_start_time,
+          loser_position_start,
+          loser_position_end,
+          position_note,
+          winner_position,
+          is_bye_match,
+          matchday,
+          cycle
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         blockId,
         tournamentDate,
@@ -414,7 +487,23 @@ export async function PUT(
         matchStartTime,
         '[0]', // team1_scores をJSON文字列で初期化
         '[0]', // team2_scores をJSON文字列で初期化
-        null  // winner_tournament_team_id は結果確定時に設定
+        null,  // winner_tournament_team_id は結果確定時に設定
+        actualTemplatePhase,
+        template.match_type,
+        template.round_name || null,
+        template.block_name || null,
+        template.team1_source || null,
+        template.team2_source || null,
+        template.day_number,
+        template.execution_priority,
+        template.suggested_start_time || null,
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.position_note || null,
+        template.winner_position || null,
+        template.is_bye_match || 0,
+        template.matchday || null,
+        template.cycle || 1
       ]);
 
       createdMatches++;
@@ -491,7 +580,7 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -508,9 +597,8 @@ export async function GET(
         t.tournament_name,
         t.status,
         t.format_id,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 

@@ -8,8 +8,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
@@ -55,13 +55,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const formatId = parseInt(resolvedParams.id);
     const body = await request.json();
-    const { format_name, sport_type_id, target_team_count, format_description, preliminary_format_type, final_format_type, templates } = body;
+    const { format_name, sport_type_id, target_team_count, format_description, default_match_duration, default_break_duration, preliminary_format_type, final_format_type, phases, templates } = body;
 
     // バリデーション
     if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
@@ -72,12 +72,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "試合テンプレートを最低1つ作成してください" }, { status: 400 });
     }
 
+    // テンプレートのフェーズバリデーション
+    if (phases?.phases) {
+      const validPhaseIds = new Set(phases.phases.map((p: { id: string }) => p.id));
+      const invalidTemplates = templates.filter((t: { phase?: string; match_number?: number; match_code?: string }) => !t.phase || !validPhaseIds.has(t.phase));
+      if (invalidTemplates.length > 0) {
+        const details = invalidTemplates.map((t: { match_number?: number; match_code?: string }) => `試合No.${t.match_number}（${t.match_code}）`).join('、');
+        return NextResponse.json({ error: `以下の試合でフェーズが未選択です: ${details}` }, { status: 400 });
+      }
+    }
+
     // フォーマット更新
     await db.execute(`
       UPDATE m_tournament_formats
-      SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, preliminary_format_type = ?, final_format_type = ?, updated_at = datetime('now', '+9 hours')
+      SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, default_match_duration = ?, default_break_duration = ?, preliminary_format_type = ?, final_format_type = ?, phases = ?, updated_at = datetime('now', '+9 hours')
       WHERE format_id = ?
-    `, [format_name, sport_type_id, target_team_count, format_description || "", preliminary_format_type || null, final_format_type || null, formatId]);
+    `, [format_name, sport_type_id, target_team_count, format_description || "", default_match_duration ?? null, default_break_duration ?? null, preliminary_format_type || null, final_format_type || null, phases ? JSON.stringify(phases) : null, formatId]);
 
     // 既存テンプレートを削除
     await db.execute(`
@@ -87,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // 新しいテンプレートを作成
     for (const template of templates) {
       // バリデーション
-      const validation = validateMatchTeams(template.team1_display_name, template.team2_display_name);
+      const validation = validateMatchTeams(template.team1_display_name, template.team2_display_name, template.match_type);
       if (!validation.valid) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
@@ -104,10 +114,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
           day_number, execution_priority, court_number, suggested_start_time,
           loser_position_start, loser_position_end, winner_position, position_note,
-          is_bye_match,
+          is_bye_match, matchday, cycle,
           created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         formatId,
         template.match_number || 1,
@@ -129,7 +139,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         template.loser_position_end || null,
         template.winner_position || null,
         template.position_note || null,
-        isByeMatch
+        isByeMatch,
+        // リーグ戦対応フィールド
+        template.matchday || null,
+        template.cycle || null
       ]);
     }
 
@@ -150,7 +163,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 

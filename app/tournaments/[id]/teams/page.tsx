@@ -37,7 +37,7 @@ async function getTournamentDetails(tournamentId: number): Promise<TournamentDet
       v.venue_name
     FROM t_tournaments t
     LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-    LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+    LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
     WHERE t.tournament_id = ? AND t.visibility = 'open'
   `, [tournamentId]);
 
@@ -150,7 +150,7 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{tournamentTeams.length}</div>
+                <div className="text-2xl font-bold text-primary">{tournamentTeams.length}</div>
                 <div className="text-sm text-muted-foreground">参加チーム数</div>
               </div>
               <div className="text-center">
@@ -184,11 +184,11 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                 {tournamentTeams.map((team, index) => (
                   <div 
                     key={team.tournament_team_id} 
-                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="border rounded-lg p-4 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
                           #{index + 1}
                         </div>
                         <div>
@@ -218,7 +218,7 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                         <Button 
                           asChild 
                           size="sm" 
-                          className="flex items-center bg-blue-600 hover:bg-blue-700"
+                          className="flex items-center bg-primary hover:bg-primary/90"
                         >
                           <Link href={`/tournaments/${tournamentId}/join?team=${team.tournament_team_id}`}>
                             <Edit className="w-4 h-4 mr-1" />
@@ -246,7 +246,7 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                 <Button 
                   asChild 
                   variant="outline" 
-                  className="border-dashed border-2 border-muted hover:border-blue-300 hover:bg-muted"
+                  className="border-dashed border-2 border-muted hover:border-primary/30 hover:bg-muted"
                 >
                   <Link href={`/tournaments/${tournamentId}/join?mode=new`}>
                     <Users className="w-4 h-4 mr-2" />

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTournamentResults } from '@/lib/match-results-calculator';
+import { buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -21,12 +22,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 大会情報を取得
     const tournamentResult = await db.execute(`
-      SELECT 
+      SELECT
         t.tournament_name,
         v.venue_name,
-        t.tournament_dates
+        t.tournament_dates,
+        t.phases
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -55,10 +57,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
     
-    // 予選リーグのみをフィルタリング
-    const preliminaryBlocks = blockResults.filter(block => 
-      block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ')
-    );
+    // リーグ形式フェーズのみをフィルタリング
+    const phaseFormatMap = buildPhaseFormatMap(tournamentRow.phases as string | null);
+    const preliminaryBlocks = blockResults.filter(block => {
+      const formatType = phaseFormatMap.get(block.phase);
+      if (formatType) return formatType === 'league';
+      // フォールバック: phases情報がない場合は従来の判定
+      return block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ');
+    });
 
     if (preliminaryBlocks.length === 0) {
       return NextResponse.json(
@@ -72,7 +78,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       block_name: block.block_name,
       phase: block.phase,
       display_round_name: block.display_round_name,
-      results: block.match_matrix as { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } },
+      results: block.match_matrix as unknown as { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } },
       teams: block.teams // Keep the full team objects instead of just IDs
     }));
 
@@ -122,11 +128,12 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
   // 結果の色分け
   const getResultColor = (result: string | null): string => {
     if (!result) return '#F3F4F6'; // gray-100
-    
+
     if (result === 'win') return '#D1FAE5'; // green-100
     if (result === 'loss') return '#FEE2E2'; // red-100
     if (result === 'draw') return '#DBEAFE'; // blue-100
-    
+    if (result === 'mixed') return '#F3F4F6'; // gray-100（勝敗混在）
+
     return '#F3F4F6'; // gray-100
   };
 
@@ -261,6 +268,7 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
           font-weight: bold;
           font-size: 11px;
           min-width: 60px;
+          white-space: pre-line;
           height: 40px;
           line-height: 40px;
         }

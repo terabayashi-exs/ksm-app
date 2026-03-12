@@ -10,11 +10,10 @@ interface RouteParams {
 
 // 個別利用者の取得
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: RouteParams
 ) {
   try {
-    // 認証チェック
     const session = await auth();
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
@@ -24,17 +23,21 @@ export async function GET(
     }
 
     const resolvedParams = await params;
-    const adminId = resolvedParams.id;
+    const loginUserId = Number(resolvedParams.id);
 
     const result = await db.execute(`
-      SELECT 
-        admin_login_id,
-        email,
-        created_at,
-        updated_at
-      FROM m_administrators
-      WHERE admin_login_id = ?
-    `, [adminId]);
+      SELECT
+        u.login_user_id,
+        u.display_name,
+        u.email,
+        u.is_active,
+        u.is_superadmin,
+        u.created_at,
+        u.updated_at
+      FROM m_login_users u
+      INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+      WHERE u.login_user_id = ? AND r.role = 'admin'
+    `, [loginUserId]);
 
     if (result.rows.length === 0) {
       return NextResponse.json(
@@ -44,26 +47,25 @@ export async function GET(
     }
 
     const row = result.rows[0];
-    const administrator = {
-      admin_id: String(row.admin_login_id),
-      admin_name: String(row.admin_login_id),
-      email: String(row.email),
-      role: 'admin',
-      is_active: true,
-      created_at: String(row.created_at),
-      updated_at: String(row.updated_at)
-    };
-
     return NextResponse.json({
       success: true,
-      data: administrator
+      data: {
+        admin_id: Number(row.login_user_id),
+        admin_name: String(row.display_name),
+        email: String(row.email),
+        role: 'admin',
+        is_active: Number(row.is_active) === 1,
+        is_superadmin: Number(row.is_superadmin) === 1,
+        created_at: String(row.created_at),
+        updated_at: String(row.updated_at)
+      }
     });
 
   } catch (error) {
     console.error('利用者取得エラー:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '利用者データの取得に失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -78,7 +80,6 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
-    // 認証チェック
     const session = await auth();
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
@@ -88,10 +89,10 @@ export async function PUT(
     }
 
     const resolvedParams = await params;
-    const adminId = resolvedParams.id;
+    const loginUserId = Number(resolvedParams.id);
 
     const body = await request.json();
-    const { admin_name, email, password } = body;
+    const { admin_name, email, password, is_active, is_superadmin } = body;
 
     // バリデーション
     if (!admin_name || !admin_name.trim()) {
@@ -115,12 +116,15 @@ export async function PUT(
       );
     }
 
-    // 利用者の存在確認
-    const existingAdmin = await db.execute(`
-      SELECT admin_login_id FROM m_administrators WHERE admin_login_id = ?
-    `, [adminId]);
+    // 存在確認
+    const existingUser = await db.execute(`
+      SELECT u.login_user_id
+      FROM m_login_users u
+      INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+      WHERE u.login_user_id = ? AND r.role = 'admin'
+    `, [loginUserId]);
 
-    if (existingAdmin.rows.length === 0) {
+    if (existingUser.rows.length === 0) {
       return NextResponse.json(
         { success: false, error: '利用者が見つかりません' },
         { status: 404 }
@@ -128,47 +132,38 @@ export async function PUT(
     }
 
     // メールアドレスの重複チェック（自分以外）
-    const duplicateAdmin = await db.execute(`
-      SELECT admin_login_id FROM m_administrators WHERE email = ? AND admin_login_id != ?
-    `, [email.trim(), adminId]);
+    const duplicateUser = await db.execute(`
+      SELECT login_user_id FROM m_login_users WHERE email = ? AND login_user_id != ?
+    `, [email.trim(), loginUserId]);
 
-    if (duplicateAdmin.rows.length > 0) {
+    if (duplicateUser.rows.length > 0) {
       return NextResponse.json(
         { success: false, error: '同じメールアドレスが既に登録されています' },
         { status: 400 }
       );
     }
 
-    // パスワード更新の場合はハッシュ化
-    let updateQuery = '';
-    let updateParams: (string | number | null)[] = [];
+    const isActiveValue = is_active === false ? 0 : 1;
+    const isSuperadminValue = is_superadmin === true ? 1 : 0;
 
     if (password && password.trim()) {
       const hashedPassword = await bcrypt.hash(password, 10);
-      updateQuery = `
-        UPDATE m_administrators 
-        SET email = ?, password_hash = ?, updated_at = datetime('now', '+9 hours')
-        WHERE admin_login_id = ?
-      `;
-      updateParams = [
-        email.trim(),
-        hashedPassword,
-        adminId
-      ];
+      await db.execute(`
+        UPDATE m_login_users
+        SET display_name = ?, email = ?, password_hash = ?, is_active = ?, is_superadmin = ?,
+            current_plan_id = COALESCE(current_plan_id, 1),
+            updated_at = datetime('now', '+9 hours')
+        WHERE login_user_id = ?
+      `, [admin_name.trim(), email.trim(), hashedPassword, isActiveValue, isSuperadminValue, loginUserId]);
     } else {
-      updateQuery = `
-        UPDATE m_administrators 
-        SET email = ?, updated_at = datetime('now', '+9 hours')
-        WHERE admin_login_id = ?
-      `;
-      updateParams = [
-        email.trim(),
-        adminId
-      ];
+      await db.execute(`
+        UPDATE m_login_users
+        SET display_name = ?, email = ?, is_active = ?, is_superadmin = ?,
+            current_plan_id = COALESCE(current_plan_id, 1),
+            updated_at = datetime('now', '+9 hours')
+        WHERE login_user_id = ?
+      `, [admin_name.trim(), email.trim(), isActiveValue, isSuperadminValue, loginUserId]);
     }
-
-    // 利用者を更新
-    await db.execute(updateQuery, updateParams);
 
     return NextResponse.json({
       success: true,
@@ -178,8 +173,8 @@ export async function PUT(
   } catch (error) {
     console.error('利用者更新エラー:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '利用者の更新に失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -190,11 +185,10 @@ export async function PUT(
 
 // 利用者の削除
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: RouteParams
 ) {
   try {
-    // 認証チェック
     const session = await auth();
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
@@ -204,42 +198,45 @@ export async function DELETE(
     }
 
     const resolvedParams = await params;
-    const adminId = resolvedParams.id;
+    const loginUserId = Number(resolvedParams.id);
 
-    // 利用者の存在確認
-    const existingAdmin = await db.execute(`
-      SELECT admin_login_id FROM m_administrators WHERE admin_login_id = ?
-    `, [adminId]);
+    // 存在確認
+    const existingUser = await db.execute(`
+      SELECT u.login_user_id
+      FROM m_login_users u
+      INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+      WHERE u.login_user_id = ? AND r.role = 'admin'
+    `, [loginUserId]);
 
-    if (existingAdmin.rows.length === 0) {
+    if (existingUser.rows.length === 0) {
       return NextResponse.json(
         { success: false, error: '利用者が見つかりません' },
         { status: 404 }
       );
     }
 
-    // 管理者の数をチェック（最低1人必要）
-    const totalAdminsCount = await db.execute(`
-      SELECT COUNT(*) as count FROM m_administrators
+    // 管理者が1人しかいない場合は削除不可
+    const adminCountResult = await db.execute(`
+      SELECT COUNT(*) as count
+      FROM m_login_user_roles
+      WHERE role = 'admin'
     `);
 
-    const totalCount = Number(totalAdminsCount.rows[0]?.count) || 0;
-
-    // 管理者が1人しかいない場合、削除を防ぐ
-    if (totalCount <= 1) {
+    const adminCount = Number(adminCountResult.rows[0]?.count) || 0;
+    if (adminCount <= 1) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: '利用者を全て削除することはできません。最低1人の管理者が必要です。'
         },
         { status: 400 }
       );
     }
 
-    // 利用者を削除
+    // m_login_users を削除（ロールは CASCADE で自動削除）
     await db.execute(`
-      DELETE FROM m_administrators WHERE admin_login_id = ?
-    `, [adminId]);
+      DELETE FROM m_login_users WHERE login_user_id = ?
+    `, [loginUserId]);
 
     return NextResponse.json({
       success: true,
@@ -249,8 +246,8 @@ export async function DELETE(
   } catch (error) {
     console.error('利用者削除エラー:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '利用者の削除に失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

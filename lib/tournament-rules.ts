@@ -4,7 +4,7 @@
 export interface TournamentRule {
   tournament_rule_id?: number;
   tournament_id: number;
-  phase: 'preliminary' | 'final';
+  phase: string;
   use_extra_time: boolean;
   use_penalty: boolean;
   active_periods: string; // JSON文字列: ["1", "2", "3", "4", "5"] など
@@ -263,15 +263,16 @@ export function stringifyWalkoverSettings(settings: WalkoverSettings): string {
   });
 }
 
-// 大会の不戦勝設定を取得
+// 大会の不戦勝設定を取得（全フェーズ共通設定のため先頭レコードを使用）
 export async function getTournamentWalkoverSettings(tournamentId: number): Promise<WalkoverSettings> {
   try {
     const { db } = await import('./db');
-    
+
     const result = await db.execute(`
-      SELECT walkover_settings 
-      FROM t_tournament_rules 
-      WHERE tournament_id = ? AND phase = 'preliminary'
+      SELECT walkover_settings
+      FROM t_tournament_rules
+      WHERE tournament_id = ?
+      ORDER BY tournament_rule_id
       LIMIT 1
     `, [tournamentId]);
     

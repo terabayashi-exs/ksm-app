@@ -22,18 +22,18 @@ export const DEFAULT_POINT_SYSTEM: PointSystem = {
 };
 
 /**
- * 大会ルール設定から勝点システムを取得
+ * 大会ルール設定から勝点システムを取得（全フェーズ共通設定のため先頭レコードを使用）
  * 設定がない場合は競技種別に応じたデフォルト値を返す
  */
 export async function getTournamentPointSystem(tournamentId: number): Promise<PointSystem> {
   try {
-    // 大会ルール設定から勝点システムを取得（予選フェーズを基準）
     const rulesResult = await db.execute(`
       SELECT tr.point_system, st.supports_point_system, st.ranking_method
       FROM t_tournament_rules tr
       JOIN t_tournaments t ON tr.tournament_id = t.tournament_id
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
-      WHERE tr.tournament_id = ? AND tr.phase = 'preliminary'
+      WHERE tr.tournament_id = ?
+      ORDER BY tr.tournament_rule_id
       LIMIT 1
     `, [tournamentId]);
 
@@ -145,7 +145,7 @@ export async function tournamentSupportsPointSystem(tournamentId: number): Promi
 }
 
 /**
- * 勝点システム設定の詳細情報を取得
+ * 勝点システム設定の詳細情報を取得（全フェーズ共通設定のため先頭レコードを使用）
  * デバッグやログ出力用
  */
 export async function getTournamentPointSystemInfo(tournamentId: number): Promise<{
@@ -156,15 +156,16 @@ export async function getTournamentPointSystemInfo(tournamentId: number): Promis
 }> {
   try {
     const rulesResult = await db.execute(`
-      SELECT 
-        tr.point_system, 
-        st.supports_point_system, 
+      SELECT
+        tr.point_system,
+        st.supports_point_system,
         st.ranking_method,
         st.sport_code
       FROM t_tournament_rules tr
       JOIN t_tournaments t ON tr.tournament_id = t.tournament_id
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
-      WHERE tr.tournament_id = ? AND tr.phase = 'preliminary'
+      WHERE tr.tournament_id = ?
+      ORDER BY tr.tournament_rule_id
       LIMIT 1
     `, [tournamentId]);
 

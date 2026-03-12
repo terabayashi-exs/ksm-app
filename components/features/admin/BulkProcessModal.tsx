@@ -189,7 +189,7 @@ export default function BulkProcessModal({
       description: `${requests.length}件の辞退申請を一括承認します`,
       buttonText: '一括承認する',
       buttonIcon: <CheckCircle className="w-4 h-4" />,
-      buttonClass: 'bg-green-600 hover:bg-green-700 text-white',
+      buttonClass: 'bg-primary hover:bg-primary/90 text-primary-foreground',
       badgeClass: 'bg-green-50 text-green-700 border-green-200'
     },
     reject: {

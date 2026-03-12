@@ -16,6 +16,20 @@ interface EmailRequest {
   preset_id?: string; // 使用したテンプレートID
 }
 
+interface TeamWithEmails {
+  tournament_team_id: number;
+  team_id: string;
+  tournament_team_name: string;
+  master_team_name: string;
+  contact_email: string | null;
+  contact_person: string | null;
+  participation_status: string;
+  tournament_name: string;
+  group_name: string | null;
+  organization_name: string | null;
+  all_emails: string[];
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,7 +37,7 @@ export async function POST(
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 });
     }
 
@@ -80,8 +94,56 @@ export async function POST(
       return NextResponse.json({ error: '指定されたチームが見つかりません' }, { status: 404 });
     }
 
+    // 各チームのメンバーメールアドレスを取得
+    const teamIds = teamsResult.rows.map(row => row.team_id);
+    const teamIdsPlaceholders = teamIds.map(() => '?').join(',');
+    const teamMembersResult = await db.execute(`
+      SELECT
+        tm.team_id,
+        u.email,
+        u.display_name,
+        tm.member_role
+      FROM m_team_members tm
+      JOIN m_login_users u ON tm.login_user_id = u.login_user_id
+      WHERE tm.is_active = 1 AND tm.team_id IN (${teamIdsPlaceholders})
+      ORDER BY tm.member_role DESC, tm.created_at ASC
+    `, teamIds);
+
+    // team_idごとにメンバー情報をグループ化
+    const membersByTeam = new Map<string, Array<{email: string; display_name: string}>>();
+    for (const row of teamMembersResult.rows) {
+      const teamId = String(row.team_id);
+      if (!membersByTeam.has(teamId)) {
+        membersByTeam.set(teamId, []);
+      }
+      membersByTeam.get(teamId)!.push({
+        email: String(row.email),
+        display_name: String(row.display_name)
+      });
+    }
+
+    // チーム情報にメンバーメールアドレスを追加
+    const teamsWithEmails = teamsResult.rows.map((team): TeamWithEmails => {
+      const teamId = String(team.team_id);
+      const members = membersByTeam.get(teamId) || [];
+
+      return {
+        tournament_team_id: Number(team.tournament_team_id),
+        team_id: String(team.team_id),
+        tournament_team_name: String(team.tournament_team_name),
+        master_team_name: String(team.master_team_name),
+        contact_email: members.length > 0 ? members[0].email : (team.contact_email ? String(team.contact_email) : null),
+        contact_person: members.length > 0 ? members[0].display_name : (team.contact_person ? String(team.contact_person) : null),
+        participation_status: String(team.participation_status),
+        tournament_name: String(team.tournament_name),
+        group_name: team.group_name ? String(team.group_name) : null,
+        organization_name: team.organization_name ? String(team.organization_name) : null,
+        all_emails: members.map(m => m.email),
+      };
+    });
+
     // 運営メールアドレス（BCC送信先）
-    const bccEmail = process.env.SMTP_BCC_EMAIL || 'rakusyo-mail@rakusyo-go.com';
+    const bccEmail = process.env.SMTP_BCC_EMAIL || 'taikaigo-mail@taikai-go.com';
 
     // {{teamName}} プレースホルダーが含まれているかチェック
     const hasTeamNamePlaceholder = emailBody.includes('{{teamName}}');
@@ -91,7 +153,7 @@ export async function POST(
       let successCount = 0;
       const errors: string[] = [];
 
-      for (const team of teamsResult.rows) {
+      for (const team of teamsWithEmails) {
         try {
           const teamName = (team.tournament_team_name || team.master_team_name || '') as string;
 
@@ -101,15 +163,18 @@ export async function POST(
           const emailTemplate = generateCustomBroadcastEmail({
             title,
             body: personalizedBody,
-            tournamentName: teamsResult.rows[0].tournament_name as string, // 部門名
-            groupName: teamsResult.rows[0].group_name as string | undefined, // 大会名
+            tournamentName: teamsWithEmails[0].tournament_name as string, // 部門名
+            groupName: teamsWithEmails[0].group_name as string | undefined, // 大会名
             organizerEmail,
-            organizationName: teamsResult.rows[0].organization_name as string | undefined, // 大会管理者の組織名
+            organizationName: teamsWithEmails[0].organization_name as string | undefined, // 大会管理者の組織名
             tournamentId,
           });
 
+          // チームメンバー全員にメール送信（最大2人、Toに設定）
+          const recipientEmails = (team.all_emails as string[]).slice(0, 2);
+
           await sendEmail({
-            to: team.contact_email as string, // 対象チームのメールアドレス
+            to: recipientEmails, // 代表者全員（最大2人）をToに設定
             subject: emailTemplate.subject,
             text: emailTemplate.text,
             html: emailTemplate.html,
@@ -156,9 +221,9 @@ export async function POST(
       return NextResponse.json({
         success: true,
         successCount,
-        teamCount: teamsResult.rows.length,
+        teamCount: teamsWithEmails.length,
         message: errors.length > 0
-          ? `${successCount}/${teamsResult.rows.length}件のメール送信に成功しました（一部失敗: ${errors.length}件）`
+          ? `${successCount}/${teamsWithEmails.length}件のメール送信に成功しました（一部失敗: ${errors.length}件）`
           : `${successCount}件のメールを個別に送信しました`,
         errors: errors.length > 0 ? errors : undefined,
       });
@@ -167,41 +232,47 @@ export async function POST(
       const emailTemplate = generateCustomBroadcastEmail({
         title,
         body: emailBody,
-        tournamentName: teamsResult.rows[0].tournament_name as string, // 部門名
-        groupName: teamsResult.rows[0].group_name as string | undefined, // 大会名
+        tournamentName: teamsWithEmails[0].tournament_name as string, // 部門名
+        groupName: teamsWithEmails[0].group_name as string | undefined, // 大会名
         organizerEmail,
-        organizationName: teamsResult.rows[0].organization_name as string | undefined, // 大会管理者の組織名
+        organizationName: teamsWithEmails[0].organization_name as string | undefined, // 大会管理者の組織名
         tournamentId,
       });
 
       // 送信先チーム数で送信方法を分岐
-      if (teamsResult.rows.length === 1) {
-        // 1件のみの場合：To = チーム代表者、BCC = 運営アドレス
+      if (teamsWithEmails.length === 1) {
+        // 1件のみの場合：To = チーム代表者全員（最大2人）、BCC = 運営アドレス
+        const recipientEmails = (teamsWithEmails[0].all_emails as string[]).slice(0, 2);
+
         await sendEmail({
-          to: teamsResult.rows[0].contact_email as string,
+          to: recipientEmails, // 代表者全員（最大2人）をToに設定
           subject: emailTemplate.subject,
           text: emailTemplate.text,
           html: emailTemplate.html,
           bcc: [bccEmail],
         });
       } else {
-        // 複数件の場合：To = 運営アドレス、BCC = チーム代表者（重複除去）
-        const bccAddresses = [...new Set(
-          teamsResult.rows.map((row) => row.contact_email as string)
-        )];
+        // 複数件の場合：To = 運営アドレス、BCC = 全チーム代表者（各チーム最大2名、重複除去）
+        const allEmails: string[] = [];
+        for (const team of teamsWithEmails) {
+          // 各チームから最大2名の代表者を取得
+          const teamEmails = (team.all_emails as string[]).slice(0, 2);
+          allEmails.push(...teamEmails);
+        }
+        const bccAddresses = [...new Set(allEmails)].slice(0, 50); // Gmail制限対策：最大50件
 
         await sendEmail({
           to: bccEmail, // 運営アドレス
           subject: emailTemplate.subject,
           text: emailTemplate.text,
           html: emailTemplate.html,
-          bcc: bccAddresses, // BCCで各チーム代表者に送信（重複除去済み）
+          bcc: bccAddresses, // BCCで各チーム代表者に送信（重複除去済み、各チーム最大2名）
         });
       }
 
       // メール送信履歴を記録（BCC一括送信でも各チームに記録）
       let historySuccessCount = 0;
-      for (const team of teamsResult.rows) {
+      for (const team of teamsWithEmails) {
         try {
           await db.execute(`
             INSERT INTO t_email_send_history (
@@ -226,16 +297,16 @@ export async function POST(
       }
 
       // 成功レスポンス
-      const successMessage = teamsResult.rows.length === 1
+      const successMessage = teamsWithEmails.length === 1
         ? '1件のメールを送信しました'
-        : `${teamsResult.rows.length}件のメールをBCCで一括送信しました`;
+        : `${teamsWithEmails.length}件のメールをBCCで一括送信しました`;
 
-      console.log(`✅ メール送信完了: ${successMessage}、${historySuccessCount}/${teamsResult.rows.length}件の履歴記録完了`);
+      console.log(`✅ メール送信完了: ${successMessage}、${historySuccessCount}/${teamsWithEmails.length}件の履歴記録完了`);
 
       return NextResponse.json({
         success: true,
-        successCount: teamsResult.rows.length,
-        teamCount: teamsResult.rows.length,
+        successCount: teamsWithEmails.length,
+        teamCount: teamsWithEmails.length,
         message: successMessage,
       });
     }

@@ -17,7 +17,7 @@ export function generateCustomBroadcastEmail(data: {
   const baseUrl = data.baseUrl ||
                   process.env.NEXT_PUBLIC_BASE_URL ||
                   process.env.NEXTAUTH_URL ||
-                  'https://rakusyo-go.com';
+                  'https://taikai-go.com';
   const tournamentUrl = data.tournamentId
     ? `${baseUrl}/public/tournaments/${data.tournamentId}`
     : null;
@@ -57,7 +57,7 @@ ${data.groupName && data.tournamentName ? `部門名: ${data.tournamentName}` : 
   const text = `
 ${processedBody}${contactFooter}
 
-${tournamentInfoText}楽勝GO大会運営システム
+${tournamentInfoText}大会GO大会運営システム
   `.trim();
 
   const html = `
@@ -160,8 +160,8 @@ ${tournamentInfoText}楽勝GO大会運営システム
     </div>
 
     <div class="footer">
-      <p>楽勝GO大会運営システム</p>
-      <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは楽勝GOシステムを利用して、${data.organizationName || '大会管理者'}が送信しています。</p>
+      <p>大会GO大会運営システム</p>
+      <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは大会GOシステムを利用して、${data.organizationName || '大会管理者'}が送信しています。</p>
     </div>
   </div>
 </body>

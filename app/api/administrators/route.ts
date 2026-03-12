@@ -17,21 +17,27 @@ export async function GET() {
     }
 
     const result = await db.execute(`
-      SELECT 
-        admin_login_id,
-        email,
-        created_at,
-        updated_at
-      FROM m_administrators
-      ORDER BY created_at DESC
+      SELECT
+        u.login_user_id,
+        u.display_name,
+        u.email,
+        u.is_active,
+        u.is_superadmin,
+        u.created_at,
+        u.updated_at
+      FROM m_login_users u
+      INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+      WHERE r.role = 'admin'
+      ORDER BY u.created_at DESC
     `);
 
     const administrators = result.rows.map(row => ({
-      admin_id: String(row.admin_login_id), // admin_login_idをadmin_idとして使用
-      admin_name: String(row.admin_login_id), // ログインIDを名前として表示
+      admin_id: Number(row.login_user_id),
+      admin_name: String(row.display_name),
       email: String(row.email),
-      role: 'admin', // 固定値
-      is_active: true, // 固定値
+      role: 'admin',
+      is_active: Number(row.is_active) === 1,
+      is_superadmin: Number(row.is_superadmin) === 1,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at)
     }));
@@ -44,8 +50,8 @@ export async function GET() {
   } catch (error) {
     console.error('利用者一覧取得エラー:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '利用者データの取得に失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { admin_name, email, password } = body;
+    const { admin_name, email, password, is_active, is_superadmin } = body;
 
     // バリデーション
     if (!admin_name || !admin_name.trim()) {
@@ -91,9 +97,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // メールアドレスとログインIDの重複チェック
+    // メールアドレスの重複チェック
     const existingByEmail = await db.execute(`
-      SELECT admin_login_id FROM m_administrators WHERE email = ?
+      SELECT login_user_id FROM m_login_users WHERE email = ?
     `, [email.trim()]);
 
     if (existingByEmail.rows.length > 0) {
@@ -103,64 +109,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ログインIDとして管理者名を使用（一意性チェック）
-    const existingByLoginId = await db.execute(`
-      SELECT admin_login_id FROM m_administrators WHERE admin_login_id = ?
-    `, [admin_name.trim()]);
-
-    if (existingByLoginId.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: '同じ管理者名（ログインID）が既に登録されています' },
-        { status: 400 }
-      );
-    }
-
     // パスワードをハッシュ化
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // freeプランのIDを取得
-    const freePlanResult = await db.execute(`
-      SELECT plan_id FROM m_subscription_plans WHERE plan_code = 'free'
-    `);
-
-    if (freePlanResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'デフォルトプランが見つかりません' },
-        { status: 500 }
-      );
-    }
-
-    const freePlanId = freePlanResult.rows[0].plan_id as number;
-
-    // 利用者を作成（freeプランで開始）
-    await db.execute(`
-      INSERT INTO m_administrators (admin_login_id, password_hash, email, current_plan_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+    // m_login_users に登録（フリープランを初期設定）
+    const insertResult = await db.execute(`
+      INSERT INTO m_login_users (email, password_hash, display_name, is_superadmin, is_active, current_plan_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
-      admin_name.trim(),
-      hashedPassword,
       email.trim(),
-      freePlanId
+      hashedPassword,
+      admin_name.trim(),
+      is_superadmin === true ? 1 : 0,
+      is_active === false ? 0 : 1
     ]);
 
-    // サブスクリプション使用状況レコードを作成
+    const loginUserId = Number(insertResult.lastInsertRowid);
+
+    // m_login_user_roles に admin ロールを付与
     await db.execute(`
-      INSERT INTO t_subscription_usage (
-        admin_login_id,
-        current_tournament_groups_count,
-        current_tournaments_count,
-        last_calculated_at
-      ) VALUES (?, 0, 0, datetime('now', '+9 hours'))
-    `, [admin_name.trim()]);
+      INSERT INTO m_login_user_roles (login_user_id, role, created_at)
+      VALUES (?, 'admin', datetime('now', '+9 hours'))
+    `, [loginUserId]);
 
     return NextResponse.json({
       success: true,
       data: {
-        admin_id: admin_name.trim(),
+        admin_id: Number(loginUserId),
         admin_name: admin_name.trim(),
         email: email.trim(),
         role: 'admin',
-        is_active: true
+        is_active: is_active !== false
       },
       message: '利用者が正常に作成されました'
     });
@@ -168,8 +147,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('利用者作成エラー:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: '利用者の作成に失敗しました',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

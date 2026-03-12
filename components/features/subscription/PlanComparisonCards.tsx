@@ -206,9 +206,9 @@ export default function PlanComparisonCards() {
   return (
     <>
       {/* 料金調整中の注意書き */}
-      <Alert className="mb-6 border-blue-500 bg-blue-50 dark:bg-blue-950/20">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800 dark:text-blue-200">
+      <Alert className="mb-6 border-primary bg-primary/5 dark:bg-primary/10">
+        <AlertCircle className="h-4 w-4 text-primary" />
+        <AlertDescription className="text-primary dark:text-primary/80">
           <strong>お知らせ:</strong> 料金体系は現在調整中です。正式な料金は今後決定いたします。
         </AlertDescription>
       </Alert>
@@ -238,11 +238,11 @@ export default function PlanComparisonCards() {
           return (
             <Card
               key={plan.plan_id}
-              className={`relative ${isCurrent ? "border-blue-500 border-2 shadow-lg" : ""}`}
+              className={`relative ${isCurrent ? "border-primary border-2 shadow-lg" : ""}`}
             >
               {isCurrent && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-blue-600 text-white">現在のプラン</Badge>
+                  <Badge className="bg-primary text-primary-foreground">現在のプラン</Badge>
                 </div>
               )}
 
@@ -344,14 +344,14 @@ export default function PlanComparisonCards() {
           </AlertDialogHeader>
           {selectedPlan && isDowngrade(selectedPlan) && (
             <div className="pb-2">
-              <div className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 rounded-md p-3">
+              <div className="border border-destructive/20 dark:border-red-800 bg-destructive/5 dark:bg-red-950/20 rounded-md p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-4 w-4 text-destructive dark:text-red-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="font-semibold text-red-800 dark:text-red-200 text-sm">
+                    <div className="font-semibold text-destructive dark:text-red-200 text-sm">
                       ダウングレードに関する注意
                     </div>
-                    <div className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    <div className="text-sm text-destructive dark:text-red-300 mt-1">
                       プラン上限を超える既存の大会は、閲覧のみ可能となり編集できなくなります。
                     </div>
                   </div>
@@ -375,7 +375,7 @@ export default function PlanComparisonCards() {
       <AlertDialog open={blockersDialogOpen} onOpenChange={setBlockersDialogOpen}>
         <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive dark:text-red-400">
               <AlertTriangle className="w-6 h-6" />
               プラン変更できません
             </AlertDialogTitle>
@@ -395,7 +395,7 @@ export default function PlanComparisonCards() {
                   <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
                     <p>現在のアクティブ大会数: <strong>{planChangeBlockers.activeGroups}</strong></p>
                     <p>新プランの上限: <strong>{planChangeBlockers.maxGroupsInNewPlan}</strong></p>
-                    <p>超過数: <strong className="text-red-700 dark:text-red-300">{planChangeBlockers.excessGroups}大会</strong></p>
+                    <p>超過数: <strong className="text-destructive dark:text-red-300">{planChangeBlockers.excessGroups}大会</strong></p>
                   </div>
                 </div>
               )}
@@ -413,7 +413,7 @@ export default function PlanComparisonCards() {
                         className="flex items-center justify-between p-2 bg-white rounded border-2 border-yellow-400 dark:bg-gray-800 dark:border-yellow-500"
                       >
                         <span className="text-sm text-gray-900 dark:text-gray-100">{item.group_name}</span>
-                        <span className="text-sm font-semibold text-red-700 dark:text-red-300">
+                        <span className="text-sm font-semibold text-destructive dark:text-red-300">
                           {item.division_count}部門 (上限: {planChangeBlockers.maxDivisionsPerTournamentInNewPlan})
                         </span>
                       </div>
@@ -423,11 +423,11 @@ export default function PlanComparisonCards() {
               )}
 
               {/* 対応方法の案内 */}
-              <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg dark:bg-blue-900/30 dark:border-blue-600">
-                <p className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              <div className="p-4 bg-primary/5 border-2 border-primary/30 rounded-lg dark:bg-primary/10 dark:border-primary/30">
+                <p className="font-semibold text-primary dark:text-primary/90 mb-2">
                   📋 対応方法
                 </p>
-                <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-2 list-decimal list-inside">
+                <ol className="text-sm text-primary dark:text-primary/80 space-y-2 list-decimal list-inside">
                   <li>完了済みの大会を<strong>アーカイブ化</strong>してください</li>
                   <li>アーカイブ化した大会は制限のカウントから除外されます</li>
                   <li>必要に応じて不要な大会を削除してください</li>

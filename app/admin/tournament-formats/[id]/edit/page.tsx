@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import TournamentFormatEditForm from "@/components/features/tournament-format/TournamentFormatEditForm";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -24,8 +27,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
   const resolvedParams = await params;
   const session = await auth();
 
-  if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
-    redirect("/auth/login");
+  if (!session || session.user.role !== "admin") {
+    redirect("/auth/admin/login");
   }
 
   // フォーマット情報を取得（競技種別も含む）
@@ -54,28 +57,26 @@ export default async function EditTournamentFormatPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/admin/tournament-formats" className="flex items-center text-gray-600 hover:text-gray-900">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  フォーマット一覧に戻る
-                </Link>
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">大会フォーマット編集</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  {String(format.format_name)} の編集
-                </p>
-              </div>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">大会フォーマット編集</h1>
+            <p className="text-sm text-white/70 mt-1">
+              {String(format.format_name)} の編集
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/tournament-formats">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              フォーマット一覧に戻る
+            </Link>
+          </Button>
+        </div>
         <TournamentFormatEditForm
           format={{
             format_id: Number(format.format_id),
@@ -83,6 +84,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             sport_type_id: Number(format.sport_type_id || 1),
             target_team_count: Number(format.target_team_count),
             format_description: String(format.format_description || ""),
+            default_match_duration: format.default_match_duration ? Number(format.default_match_duration) : null,
+            default_break_duration: format.default_break_duration ? Number(format.default_break_duration) : null,
             preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
             final_format_type: format.final_format_type ? String(format.final_format_type) : null,
             phases: format.phases ? JSON.parse(format.phases as string) : undefined
@@ -106,7 +109,9 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             loser_position_start: t.loser_position_start ? Number(t.loser_position_start) : undefined,
             loser_position_end: t.loser_position_end ? Number(t.loser_position_end) : undefined,
             winner_position: t.winner_position ? Number(t.winner_position) : undefined,
-            position_note: String(t.position_note || "")
+            position_note: String(t.position_note || ""),
+            matchday: t.matchday != null ? Number(t.matchday) : undefined,
+            cycle: t.cycle != null ? Number(t.cycle) : undefined
           }))}
         />
       </div>

@@ -1,5 +1,6 @@
 // app/api/admin/tournaments/[id]/teams/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
@@ -60,9 +61,9 @@ const adminTeamRegistrationSchema = z.object({
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    // 認証チェック（管理者権限必須）
+    // 認証チェック（管理者または運営者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -87,11 +88,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         t.recruitment_start_date,
         t.recruitment_end_date,
         t.status,
-        f.format_name,
+        t.format_name,
         v.venue_name
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -232,9 +232,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    // 管理者認証チェック
+    // 管理者または運営者認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -284,31 +284,54 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // 1. メールアドレスで既存マスターチームをチェック
-    const existingByEmail = await db.execute(`
-      SELECT team_id, team_name, team_omission FROM m_teams
-      WHERE contact_email = ?
+    // 1. m_login_users でメールアドレスを検索
+    const loginUserResult = await db.execute(`
+      SELECT login_user_id, email, display_name FROM m_login_users
+      WHERE email = ? AND is_active = 1
     `, [data.contact_email]);
 
-    // 2. マスターチームの重複チェックは削除
-    // （同じ大会内での重複のみチェックすることで、複数の大会で同じチーム名を使用可能にする）
-
-    // 3. 既存マスターチームの場合、既にこの大会に参加していないかチェック
     let teamId = '';
     let isExistingMasterTeam = false;
+    let isExistingLoginUser = false;
+    let resolutionMethod: 'login_user_with_team' | 'login_user_new_team' | 'new_team' = 'new_team';
 
-    if (existingByEmail.rows.length > 0) {
-      const existingTeam = existingByEmail.rows[0] as unknown as { team_id: string; team_name: string; team_omission: string };
-      teamId = existingTeam.team_id;
-      isExistingMasterTeam = true;
+    if (loginUserResult.rows.length > 0) {
+      const loginUser = loginUserResult.rows[0] as unknown as { login_user_id: number; email: string; display_name: string };
+      isExistingLoginUser = true;
 
-      console.log('Using existing master team (reusing password):', {
-        teamId,
-        masterTeamName: existingTeam.team_name,
-        contactEmail: data.contact_email,
-        newTournamentTeamName: data.tournament_team_name
-      });
+      // 2. m_team_members 経由でチームを検索
+      const teamMemberResult = await db.execute(`
+        SELECT tm.team_id, t.team_name, t.team_omission
+        FROM m_team_members tm
+        JOIN m_teams t ON tm.team_id = t.team_id
+        WHERE tm.login_user_id = ? AND tm.is_active = 1
+        LIMIT 1
+      `, [loginUser.login_user_id]);
+
+      if (teamMemberResult.rows.length > 0) {
+        // 既存チームを使用
+        const existingTeam = teamMemberResult.rows[0] as unknown as { team_id: string; team_name: string; team_omission: string };
+        teamId = existingTeam.team_id;
+        isExistingMasterTeam = true;
+        resolutionMethod = 'login_user_with_team';
+
+        console.log('Using existing team via login user:', {
+          teamId,
+          masterTeamName: existingTeam.team_name,
+          contactEmail: data.contact_email,
+          loginUserId: loginUser.login_user_id
+        });
+      } else {
+        // ログインユーザーはいるがチームなし → 新規チーム作成後、m_team_members も作成
+        resolutionMethod = 'login_user_new_team';
+
+        console.log('Login user found but no team, will create new team:', {
+          contactEmail: data.contact_email,
+          loginUserId: loginUser.login_user_id
+        });
+      }
     }
+    // ログインユーザーが存在しない場合は resolutionMethod = 'new_team' のまま
 
     // 4. 大会参加チーム名の重複チェック（同じ大会内で重複不可）
     const tournamentTeamNameCheck = await db.execute(`
@@ -324,57 +347,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // 5. 新規マスターチームの場合のみ、チームIDを生成して作成
+    // 5. 新規マスターチームの場合のみ、UUIDを生成して作成
     if (!isExistingMasterTeam) {
-      // 一意なチームIDを生成
-      // より識別しやすいIDを生成するため、複数のソースから抽出
-      let baseTeamId = '';
-
-      // 1. 略称から英数字を抽出
-      const omissionAlphaNum = data.team_omission.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-      if (omissionAlphaNum && omissionAlphaNum.length >= 2) {
-        baseTeamId = omissionAlphaNum.substring(0, 8);
-      } else {
-        // 2. チーム名から英数字を抽出
-        const teamNameAlphaNum = data.team_name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-        if (teamNameAlphaNum && teamNameAlphaNum.length >= 2) {
-          baseTeamId = teamNameAlphaNum.substring(0, 8);
-        } else {
-          // 3. メールアドレスのユーザー名部分を使用
-          const emailUser = data.contact_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
-          if (emailUser && emailUser.length >= 2) {
-            baseTeamId = emailUser.substring(0, 8);
-          } else {
-            // 4. 最終的に"team" + ランダム文字列
-            const randomSuffix = Math.random().toString(36).substring(2, 6);
-            baseTeamId = `team${randomSuffix}`;
-          }
-        }
-      }
-
-      teamId = baseTeamId;
-      let counter = 1;
-
-      while (true) {
-        const existingTeamCheck = await db.execute(`
-          SELECT team_id FROM m_teams WHERE team_id = ?
-        `, [teamId]);
-
-        if (existingTeamCheck.rows.length === 0) {
-          break;
-        }
-
-        // カウンターを追加して一意性を確保
-        teamId = `${baseTeamId}${counter}`;
-        counter++;
-
-        // 無限ループを防ぐため、カウンターが999を超えたらランダム文字列を使用
-        if (counter > 999) {
-          const randomSuffix = Math.random().toString(36).substring(2, 6);
-          teamId = `team${randomSuffix}`;
-          break;
-        }
-      }
+      teamId = randomUUID();
 
       // パスワードハッシュ化
       const passwordHash = await bcrypt.hash(data.temporary_password, 12);
@@ -412,6 +387,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
       ]);
 
       console.log('New master team created successfully');
+
+      // ログインユーザーが存在するがチームなしの場合、m_team_members に紐付けを作成
+      if (resolutionMethod === 'login_user_new_team' && loginUserResult.rows.length > 0) {
+        const loginUser = loginUserResult.rows[0] as unknown as { login_user_id: number };
+        await db.execute(`
+          INSERT INTO m_team_members (team_id, login_user_id, member_role, is_active, created_at, updated_at)
+          VALUES (?, ?, 'primary', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [teamId, loginUser.login_user_id]);
+        console.log('Created m_team_members link for existing login user:', loginUser.login_user_id);
+      }
     }
 
     // 選手をマスター選手テーブルに登録（選手がいる場合のみ）
@@ -516,9 +501,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
         tournament_team_id: tournamentTeamId,
         tournament_team_name: data.tournament_team_name,
         players_count: data.players.length,
-        temporary_password: isExistingMasterTeam ? null : data.temporary_password,
+        temporary_password: (isExistingMasterTeam || isExistingLoginUser) ? null : data.temporary_password,
         contact_email: data.contact_email,
-        is_existing_team: isExistingMasterTeam
+        is_existing_team: isExistingMasterTeam,
+        is_existing_login_user: isExistingLoginUser,
+        resolution_method: resolutionMethod
       }
     });
 

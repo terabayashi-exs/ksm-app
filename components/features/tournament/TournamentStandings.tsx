@@ -53,29 +53,51 @@ interface BlockStanding {
   phase: string;
   display_round_name: string;
   block_name: string;
+  round_name?: string | null;
   teams: TeamStanding[];
   remarks?: string | null;
 }
 
-interface TournamentStandingsProps {
-  tournamentId: number;
+interface StandingsInitialData {
+  standings: BlockStanding[];
+  totalMatches: number;
+  totalTeams: number;
+  phaseFormatMap: Record<string, string>;
+  phaseNameMap: Record<string, string>;
 }
 
-export default function TournamentStandings({ tournamentId }: TournamentStandingsProps) {
+interface TournamentStandingsProps {
+  tournamentId: number;
+  initialData?: StandingsInitialData;
+}
+
+export default function TournamentStandings({ tournamentId, initialData }: TournamentStandingsProps) {
   const { data: session } = useSession();
-  const [standings, setStandings] = useState<BlockStanding[]>([]);
-  const [totalMatches, setTotalMatches] = useState<number>(0);
-  const [totalTeams, setTotalTeams] = useState<number>(0);
-  const [sportConfig, setSportConfig] = useState<SportConfig | null>(null);
-  const [preliminaryFormatType, setPreliminaryFormatType] = useState<string | null>(null);
-  const [finalFormatType, setFinalFormatType] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [standings, setStandings] = useState<BlockStanding[]>(initialData?.standings || []);
+  const [totalMatches, setTotalMatches] = useState<number>(initialData?.totalMatches || 0);
+  const [totalTeams, setTotalTeams] = useState<number>(initialData?.totalTeams || 0);
+  const [sportConfig, setSportConfig] = useState<SportConfig | null>(initialData ? {
+    sport_code: 'pk_championship',
+    score_label: '得点',
+    score_against_label: '失点',
+    difference_label: '得失点差',
+    supports_pk: false
+  } : null);
+  const [phaseFormatMap, setPhaseFormatMap] = useState<Map<string, string>>(
+    initialData ? new Map(Object.entries(initialData.phaseFormatMap)) : new Map()
+  );
+  const [phaseNameMap, setPhaseNameMap] = useState<Map<string, string>>(
+    initialData ? new Map(Object.entries(initialData.phaseNameMap)) : new Map()
+  );
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
   const [recalculateMessage, setRecalculateMessage] = useState<string | null>(null);
 
-  // 順位表データの取得
+  // 順位表データの取得（initialDataが提供されていない場合のみ）
   useEffect(() => {
+    if (initialData) return;
+
     const fetchStandings = async () => {
       setLoading(true);
       setError(null);
@@ -93,8 +115,17 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
 
         if (tournamentData.success && tournamentData.data) {
           const tournament = tournamentData.data;
-          setPreliminaryFormatType(tournament.preliminary_format_type || null);
-          setFinalFormatType(tournament.final_format_type || null);
+          // phasesからformat_typeマップとnameマップを構築
+          const fmtMap = new Map<string, string>();
+          const nameMap = new Map<string, string>();
+          if (tournament.phases?.phases) {
+            for (const p of tournament.phases.phases) {
+              if (p.id && p.format_type) fmtMap.set(p.id, p.format_type);
+              if (p.id && p.name) nameMap.set(p.id, p.name);
+            }
+          }
+          setPhaseFormatMap(fmtMap);
+          setPhaseNameMap(nameMap);
         }
 
         // 順位表データを取得
@@ -139,7 +170,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     };
 
     fetchStandings();
-  }, [tournamentId]);
+  }, [tournamentId, initialData]);
 
   // 順位表の再計算
   const handleRecalculate = async () => {
@@ -193,73 +224,81 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
     }
   };
 
-  // ブロック分類関数（日程・結果ページと同じロジック）
-  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
-    if (phase === 'preliminary') {
-      if (blockName) {
-        return `予選${blockName}ブロック`;
-      }
-      // match_codeから推測（フォールバック）
-      if (matchCode) {
-        const blockMatch = matchCode.match(/([ABCD])\d+/);
-        if (blockMatch) {
-          return `予選${blockMatch[1]}ブロック`;
-        }
-      }
-      return '予選リーグ';
-    } else if (phase === 'final') {
-      // block_nameを優先的に使用（1位リーグ、2位リーグなどが入っている）
-      if (blockName && blockName !== 'final' && blockName !== 'default') {
-        return blockName;
-      }
-      // フォールバック1: display_round_name
-      if (displayRoundName && displayRoundName !== 'final') {
-        return displayRoundName;
-      }
-      // 最終フォールバック
-      return '決勝トーナメント';
-    } else {
-      return phase || 'その他';
+  // ブロック分類関数（round_name優先で動的に判定）
+  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, roundName?: string | null): string => {
+    // round_name（t_matches_liveから取得）があれば最優先で使用
+    if (roundName) return roundName;
+
+    // _unifiedブロックの場合はdisplay_round_nameを使用
+    if (blockName && blockName.endsWith('_unified')) {
+      if (displayRoundName) return displayRoundName;
+      const phaseName = phaseNameMap.get(phase);
+      if (phaseName) return phaseName;
+      return 'トーナメント';
     }
+
+    // block_nameが意味のある値（A, B, 1位リーグ等）ならそれを使用
+    if (blockName && blockName !== 'default') {
+      // 1文字のブロック名（A, B, C...）は「Xブロック」形式で表示
+      if (blockName.length === 1) {
+        return `${blockName}ブロック`;
+      }
+      // それ以外（1位リーグ等）はそのまま表示
+      return blockName;
+    }
+
+    // display_round_nameがあればそれを使用
+    if (displayRoundName) return displayRoundName;
+
+    // phaseNameMapから取得
+    const phaseName = phaseNameMap.get(phase);
+    if (phaseName) return phaseName;
+
+    return phase || 'その他';
   };
 
-  // ブロック色の取得（日程・結果ページと同じスタイル）
+  // ブロック色の取得（ブロック名ベースで動的に色分け）
+  const blockColors = [
+    'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+    'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+    'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300',
+    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
+    'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-300',
+    'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300',
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
+    'bg-lime-100 text-lime-800 dark:bg-lime-900/20 dark:text-lime-300',
+    'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+    'bg-sky-100 text-sky-800 dark:bg-sky-900/20 dark:text-sky-300',
+    'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/20 dark:text-fuchsia-300',
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300',
+    'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300',
+    'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
+  ];
   const getBlockColor = (blockKey: string): string => {
-    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    if (blockKey.includes('予選')) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
-    if (blockKey.includes('1位リーグ')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('2位リーグ')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('3位リーグ')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('リーグ')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+    // 「Xブロック」形式からブロック文字を抽出して色分け（A～Zまで対応）
+    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    if (blockMatch) {
+      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
+      return blockColors[index % blockColors.length];
+    }
+    // 「X位リーグ」形式の色分け
+    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   };
 
   // フォーマットタイプに基づいた表示判定（リーグ戦形式かどうか）
   const isLeagueFormat = (phase: string): boolean => {
-    if (phase === 'preliminary') {
-      return preliminaryFormatType === 'league';
-    } else if (phase === 'final') {
-      return finalFormatType === 'league';
-    }
-    // phaseが 'preliminary' でも 'final' でもない場合はfalseを返す
-    console.warn(`[TournamentStandings] Unexpected phase value: "${phase}"`);
-    return false;
+    return phaseFormatMap.get(phase) === 'league';
   };
 
   // トーナメント形式かどうかの判定
   const isTournamentFormat = (phase: string): boolean => {
-    if (phase === 'preliminary') {
-      return preliminaryFormatType === 'tournament';
-    } else if (phase === 'final') {
-      return finalFormatType === 'tournament';
-    }
-    // phaseが 'preliminary' でも 'final' でもない場合はfalseを返す
-    console.warn(`[TournamentStandings] Unexpected phase value: "${phase}"`);
-    return false;
+    return phaseFormatMap.get(phase) === 'tournament';
   };
 
   // 順位アイコンの取得
@@ -381,7 +420,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
               <div className="text-sm text-gray-600 dark:text-gray-300">ブロック数</div>
@@ -454,8 +493,9 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             standingsToDisplay.push({
               match_block_id: blocks[0].match_block_id, // 代表ID
               phase: phase,
-              display_round_name: phase === 'preliminary' ? '予選トーナメント' : '決勝トーナメント',
+              display_round_name: phaseNameMap.get(phase) || 'トーナメント',
               block_name: '', // 統合のためブロック名なし
+              round_name: blocks[0].round_name,
               teams: sortedTeams,
               remarks: blocks[0].remarks,
             });
@@ -472,12 +512,7 @@ export default function TournamentStandings({ tournamentId }: TournamentStanding
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 {(() => {
-                  // display_round_nameが日本語の場合はそれを使用、英語の場合はgetBlockKeyで変換
-                  const isJapaneseDisplayName = block.display_round_name &&
-                    (block.display_round_name.includes('予選') || block.display_round_name.includes('決勝'));
-                  const blockKey = isJapaneseDisplayName
-                    ? block.display_round_name
-                    : getBlockKey(block.phase, block.block_name, block.display_round_name);
+                  const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
                   return (
                     <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                       {blockKey}

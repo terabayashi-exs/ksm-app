@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
@@ -33,10 +34,12 @@ interface BlockStanding {
 
 interface TournamentResultsProps {
   tournamentId: number;
-  phase?: 'preliminary' | 'final'; // オプショナル: デフォルトは予選
+  phase?: string; // フェーズID（デフォルトは'preliminary'）
 }
 
 export default function TournamentResults({ tournamentId, phase = 'preliminary' }: TournamentResultsProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'operator';
   const [results, setResults] = useState<BlockResults[]>([]);
   const [standings, setStandings] = useState<BlockStanding[]>([]);
   const [tournamentName, setTournamentName] = useState<string>('');
@@ -45,53 +48,56 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  // ブロック分類関数（TournamentSchedule.tsxと同じロジック）
-  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, matchCode?: string): string => {
-    if (phase === 'preliminary') {
-      // 統合トーナメントブロック
-      if (blockName === 'preliminary_unified') {
-        return '予選トーナメント';
-      }
-      // 通常のリーグブロック（A, B, C...）
-      if (blockName) {
-        return `予選${blockName}ブロック`;
-      }
-      // match_codeから推測（フォールバック）
-      if (matchCode) {
-        const blockMatch = matchCode.match(/([ABCD])\d+/);
-        if (blockMatch) {
-          return `予選${blockMatch[1]}ブロック`;
-        }
-      }
-      return '予選リーグ';
-    } else if (phase === 'final') {
-      // 統合トーナメントブロック
-      if (blockName === 'final_unified') {
-        return '決勝トーナメント';
-      }
-      // 決勝リーグブロック（1位リーグ、2位リーグなど）
-      if (blockName && blockName !== 'final' && blockName !== 'default') {
-        return blockName;
-      }
-      // 最終フォールバック
-      return '決勝トーナメント';
-    } else {
-      return phase || 'その他';
+  // ブロック分類関数（round_name優先、フェーズIDに依存しない動的判定）
+  const getBlockKey = (_phase: string, blockName: string, displayRoundName?: string, roundName?: string | null): string => {
+    // _unifiedブロックの場合はdisplay_round_nameを使用
+    if (blockName && blockName.endsWith('_unified')) {
+      return displayRoundName || 'トーナメント';
     }
+    // round_name（t_matches_liveの値）があればそれを優先使用
+    if (roundName) return roundName;
+    // display_round_nameがあればそれを使用
+    if (displayRoundName) return displayRoundName;
+    // 1文字のブロック名（A, B, C...）は「Xブロック」形式
+    if (blockName && blockName.length === 1) {
+      return `${blockName}ブロック`;
+    }
+    // それ以外の意味のあるblock_name（1位リーグ等）はそのまま
+    if (blockName && blockName !== 'default') {
+      return blockName;
+    }
+    return 'その他';
   };
 
-  // ブロック色分け関数（日程・結果ページと同様）
+  // ブロック色分け関数（動的判定）
+  const blockColors = [
+    'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+    'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+    'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300',
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
+    'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-300',
+    'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300',
+    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
+    'bg-lime-100 text-lime-800 dark:bg-lime-900/20 dark:text-lime-300',
+    'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+    'bg-sky-100 text-sky-800 dark:bg-sky-900/20 dark:text-sky-300',
+    'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/20 dark:text-fuchsia-300',
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300',
+    'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300',
+    'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
+  ];
   const getBlockColor = (blockKey: string): string => {
-    if (blockKey.includes('予選A')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('予選B')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('予選C')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('予選D')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    if (blockKey.includes('予選')) return 'bg-muted text-muted-foreground';
-    if (blockKey.includes('1位リーグ')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('2位リーグ')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('3位リーグ')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('リーグ')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    if (blockKey.includes('決勝')) return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    if (blockMatch) {
+      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
+      return blockColors[index % blockColors.length];
+    }
+    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
     return 'bg-muted text-muted-foreground';
   };
 
@@ -103,7 +109,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
       try {
         // 戦績表データ、順位表データ、大会情報を並列取得（多競技対応版）
         const [resultsResponse, standingsResponse, tournamentResponse] = await Promise.all([
-          fetch(`/api/tournaments/${tournamentId}/results-enhanced`, { cache: 'no-store' }),
+          fetch(`/api/tournaments/${tournamentId}/results-enhanced${isAdmin ? '?admin=1' : ''}`, { cache: 'no-store' }),
           fetch(`/api/tournaments/${tournamentId}/standings`, { cache: 'no-store' }),
           fetch(`/api/tournaments/${tournamentId}`, { cache: 'no-store' })
         ]);
@@ -171,7 +177,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     };
 
     fetchData();
-  }, [tournamentId]);
+  }, [tournamentId, isAdmin]);
 
   // PDFダウンロード機能（ページ別生成方式）
   const handleDownloadPdf = async () => {
@@ -452,8 +458,8 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     // チーム数に基づく列幅調整
     const cellSizes = getTableCellSizes(teamCount);
     
-    // getBlockKey関数で適切なブロック名を取得（block_name優先）
-    const blockDisplayName = getBlockKey(block.phase, block.block_name, block.display_round_name);
+    // getBlockKey関数で適切なブロック名を取得（round_name優先）
+    const blockDisplayName = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
     
     return `
       <div style="margin-bottom: 40px;">
@@ -575,14 +581,9 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
 
 
   // 指定されたフェーズかどうかの判定
-  // データベースのphaseフィールド（'preliminary' or 'final'）のみで判定
+  // 動的フェーズID対応: propsで受け取ったphaseとDBのphaseフィールドを比較
   const isTargetPhase = (matchPhase: string): boolean => {
-    if (phase === 'preliminary') {
-      return matchPhase === 'preliminary';
-    } else if (phase === 'final') {
-      return matchPhase === 'final';
-    }
-    return false;
+    return matchPhase === phase;
   };
 
   // 特定ブロックの順位表データを取得
@@ -633,13 +634,20 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     );
   }
 
-  if (results.length === 0) {
+  // 対象フェーズのブロックをフィルタ
+  const phaseBlocks = results.filter(block => isTargetPhase(block.phase));
+
+  if (results.length === 0 || phaseBlocks.length === 0) {
     return (
       <Card>
         <CardContent className="text-center py-12">
           <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">戦績表</h3>
-          <p className="text-muted-foreground">まだ試合結果がないため、戦績表を表示できません。</p>
+          <p className="text-muted-foreground">
+            {results.length === 0
+              ? 'まだ試合が作成されていないため、戦績表を表示できません。'
+              : 'このフェーズの組み合わせはまだ作成されていません。予選の進出処理後に表示されます。'}
+          </p>
         </CardContent>
       </Card>
     );
@@ -668,27 +676,22 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {results.filter(block => isTargetPhase(block.phase)).length}
+                {phaseBlocks.length}
               </div>
               <div className="text-sm text-muted-foreground">ブロック数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {results
-                  .filter(block => isTargetPhase(block.phase))
-                  .reduce((sum, block) => sum + block.teams.length, 0)
-                }
+                {phaseBlocks.reduce((sum, block) => sum + block.teams.length, 0)}
               </div>
               <div className="text-sm text-muted-foreground">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {results
-                  .filter(block => isTargetPhase(block.phase))
-                  .reduce((sum, block) =>
+                {phaseBlocks.reduce((sum, block) =>
                     sum + block.matches.filter(match =>
                       match.is_confirmed &&
                       match.team1_goals !== null &&
@@ -704,15 +707,14 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
       </Card>
 
       {/* ブロック別戦績表 */}
-      {results
-        .filter(block => isTargetPhase(block.phase)) // 予選リーグのみ表示
+      {phaseBlocks
         .sort((a, b) => {
           // ブロック名でソート（A → B → C → D の順）
           return (a.block_name || '').localeCompare(b.block_name || '', undefined, { numeric: true });
         })
         .map((block) => {
-          // getBlockKey関数で適切なブロック名を取得（block_name優先）
-          const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name);
+          // getBlockKey関数で適切なブロック名を取得（round_name優先）
+          const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
 
           return (
             <Card key={block.match_block_id}>
@@ -819,7 +821,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                           {block.teams.map((opponent, opponentIndex) => (
                             <td
                               key={`${block.block_name}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
-                              className="border border-border p-1 md:p-2 text-center bg-card"
+                              className="border border-border p-1 md:p-2 text-center bg-card min-w-[4rem] md:min-w-[5.5rem]"
                             >
                               {team.tournament_team_id === opponent.tournament_team_id ? (
                                 <div className="w-full h-8 md:h-10 bg-muted flex items-center justify-center">
@@ -827,12 +829,12 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                                 </div>
                               ) : (
                                 <div
-                                  className={`w-full h-8 md:h-10 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
+                                  className={`w-full min-h-[2rem] md:min-h-[2.5rem] py-1 flex items-center justify-center text-sm md:text-lg font-medium rounded ${
                                     getResultColor(block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.result || null, block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score)
                                   }`}
                                   title={`vs ${opponent.team_name} (${block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.match_code || ''})`}
                                 >
-                                  <div className="text-center leading-tight whitespace-pre-line text-xs md:text-sm">
+                                  <div className="text-center leading-tight whitespace-pre text-xs md:text-sm">
                                     {block.match_matrix[team.tournament_team_id]?.[opponent.tournament_team_id]?.score || '-'}
                                   </div>
                                 </div>

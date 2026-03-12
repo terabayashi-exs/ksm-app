@@ -187,7 +187,7 @@ export default function TeamTournaments() {
         );
       case 'withdrawal_approved':
         return (
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-destructive/5 text-destructive border border-destructive/20 flex items-center gap-1">
             <XCircle className="w-3 h-3" />
             辞退承認済み
           </span>
@@ -218,7 +218,7 @@ export default function TeamTournaments() {
             {isJoined && (
               <div className="flex items-center space-x-2">
                 {hasMultipleTeams && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
                     {teamCount}チーム参加
                   </span>
                 )}
@@ -254,9 +254,9 @@ export default function TeamTournaments() {
               <div className="mt-3">
                 <div className="grid grid-cols-2 gap-2">
                   {/* 想定チーム数 */}
-                  <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                    <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
-                    <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{tournament.team_count || 0}</div>
+                  <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 dark:border-primary/20 text-center">
+                    <div className="text-xs text-primary dark:text-primary/80 font-medium mb-1">想定チーム数</div>
+                    <div className="text-lg font-bold text-primary dark:text-primary/80">{tournament.team_count || 0}</div>
                   </div>
                   {/* 参加申請 */}
                   <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
@@ -288,7 +288,7 @@ export default function TeamTournaments() {
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             {team.assigned_block && (
-                              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                              <span className="px-2 py-1 text-xs bg-primary/10 text-primary rounded">
                                 {team.assigned_block}ブロック
                               </span>
                             )}
@@ -318,7 +318,7 @@ export default function TeamTournaments() {
                              (tournament.status === 'planning' ||
                               tournament.status === 'recruiting' ||
                               tournament.status === 'before_event') && (
-                              <Button asChild size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
+                              <Button asChild size="sm" variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5">
                                 <Link href={`/tournaments/${tournament.tournament_id}/withdrawal?team=${team.tournament_team_id}`}>
                                   辞退申請
                                 </Link>
@@ -355,7 +355,7 @@ export default function TeamTournaments() {
           )}
           {isJoined && (
             <>
-              <div className="text-sm text-muted-foreground p-2 bg-blue-50 rounded-md">
+              <div className="text-sm text-muted-foreground p-2 bg-primary/5 rounded-md">
                 <p className="font-medium">📝 選手変更は各チーム別に行います</p>
                 <p className="text-xs mt-1">上記のチーム一覧から個別に編集してください</p>
               </div>
@@ -379,7 +379,7 @@ export default function TeamTournaments() {
               {/* 全チーム辞退済みの場合の表示 */}
               {tournament.teams && tournament.teams.every(team => team.withdrawal_status === 'withdrawal_approved') && (
                 <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md border border-border">
-                  <p className="font-medium text-red-600">⚠️ 全チーム辞退済み</p>
+                  <p className="font-medium text-destructive">⚠️ 全チーム辞退済み</p>
                   <p className="text-xs mt-1">この大会から全ての参加チームが辞退済みです</p>
                 </div>
               )}
@@ -395,7 +395,7 @@ export default function TeamTournaments() {
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <Clock className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <Clock className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">大会情報を読み込み中...</p>
         </div>
       </div>
@@ -406,7 +406,7 @@ export default function TeamTournaments() {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-destructive mb-4">{error}</p>
           <Button onClick={() => fetchTournaments()} variant="outline">
             再試行
           </Button>
@@ -486,7 +486,7 @@ export default function TeamTournaments() {
       <div>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-foreground flex items-center">
-            <Trophy className="h-6 w-6 mr-2 text-blue-600" />
+            <Trophy className="h-6 w-6 mr-2 text-primary" />
             参加可能な大会
           </h2>
         </div>
@@ -495,16 +495,16 @@ export default function TeamTournaments() {
           <div className="space-y-6">
             {/* グループ化された大会 */}
             {availableGroups.map((group) => (
-              <div key={`available-group-${group.group_id}`} className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
+              <div key={`available-group-${group.group_id}`} className="border-2 border-primary/20 rounded-lg p-4 bg-primary/5">
                 <div className="mb-4">
                   <div className="flex items-center mb-1">
-                    <Trophy className="w-5 h-5 mr-2 text-blue-600" />
-                    <h3 className="font-bold text-lg text-blue-900">
+                    <Trophy className="w-5 h-5 mr-2 text-primary" />
+                    <h3 className="font-bold text-lg text-primary">
                       {group.group_name || `グループ ${group.group_id}`}
                     </h3>
                   </div>
                   {group.group_description && (
-                    <p className="text-sm text-blue-700 ml-7">{group.group_description}</p>
+                    <p className="text-sm text-primary ml-7">{group.group_description}</p>
                   )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-2">

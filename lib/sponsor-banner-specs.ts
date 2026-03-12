@@ -37,7 +37,7 @@ export const TARGET_TABS = {
   TEAMS: 'teams',
 } as const;
 
-export type TargetTab = (typeof TARGET_TABS)[keyof typeof TARGET_TABS];
+export type TargetTab = (typeof TARGET_TABS)[keyof typeof TARGET_TABS] | (string & {});
 
 /**
  * バナーサイズ種別
@@ -227,7 +227,7 @@ export function getPositionLabel(position: BannerPosition): string {
  * ターゲットタブのラベルを取得
  */
 export function getTargetTabLabel(tab: TargetTab): string {
-  const labels: Record<TargetTab, string> = {
+  const labels: Record<string, string> = {
     all: '全タブ共通',
     overview: '概要',
     schedule: '日程・結果',
@@ -236,7 +236,7 @@ export function getTargetTabLabel(tab: TargetTab): string {
     standings: '順位表',
     teams: '参加チーム',
   };
-  return labels[tab];
+  return labels[tab] || tab;
 }
 
 /**

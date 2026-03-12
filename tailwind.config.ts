@@ -52,6 +52,16 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        base: {
+          600: "hsl(var(--base-600))",
+          700: "hsl(var(--base-700))",
+          800: "hsl(var(--base-800))",
+          900: "hsl(var(--base-900))",
+        },
+      },
+      backgroundImage: {
+        "hero-gradient": "linear-gradient(135deg, #3b82c4 0%, #68c5e8 100%)",
+        "live-gradient": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -1,5 +1,6 @@
 // テンプレートベースの順位設定ハンドラー
 import { db } from '@/lib/db';
+import { buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 interface TeamRanking {
   tournament_team_id?: number;
@@ -99,22 +100,16 @@ async function getMatchTemplateAndBlock(matchId: number): Promise<{
 } | null> {
   const result = await db.execute(`
     SELECT
-      mt.template_id,
-      mt.match_code,
+      ml.match_id as template_id,
+      ml.match_code,
       mb.match_block_id,
       mb.phase,
-      mt.loser_position_start,
-      mt.loser_position_end,
-      mt.winner_position,
-      mt.position_note
+      ml.loser_position_start,
+      ml.loser_position_end,
+      ml.winner_position,
+      ml.position_note
     FROM t_matches_live ml
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-    JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
-    JOIN m_match_templates mt ON (
-      mt.format_id = t.format_id
-      AND mt.match_code = ml.match_code
-      AND mt.phase = mb.phase
-    )
     WHERE ml.match_id = ?
     LIMIT 1
   `, [matchId]);
@@ -292,19 +287,29 @@ async function setTeamPositionByTournamentTeamId(
  * MIGRATION NOTE: 予選・決勝両方のトーナメント形式に対応
  */
 export async function hasManualRankings(tournamentId: number): Promise<boolean> {
-  const result = await db.execute(`
-    SELECT mb.team_rankings
+  // phasesからトーナメント形式のフェーズを特定
+  const phasesResult = await db.execute(`
+    SELECT t.phases FROM t_tournaments t WHERE t.tournament_id = ?
+  `, [tournamentId]);
+
+  const manualPhaseFormatMap = buildPhaseFormatMap(phasesResult.rows[0]?.phases as string | null);
+  const tournamentPhaseIds = Array.from(manualPhaseFormatMap.entries())
+    .filter(([, ft]) => ft === 'tournament')
+    .map(([id]) => id);
+
+  if (tournamentPhaseIds.length === 0) return false;
+
+  // トーナメント形式のフェーズのブロックでteam_rankingsがあるものを検索
+  const placeholders = tournamentPhaseIds.map(() => '?').join(', ');
+  const result = await db.execute(
+    `SELECT mb.team_rankings
     FROM t_match_blocks mb
-    JOIN t_tournaments t ON mb.tournament_id = t.tournament_id
-    JOIN m_tournament_formats f ON t.format_id = f.format_id
     WHERE mb.tournament_id = ?
       AND mb.team_rankings IS NOT NULL
-      AND (
-        (mb.phase = 'preliminary' AND f.preliminary_format_type = 'tournament')
-        OR (mb.phase = 'final' AND f.final_format_type = 'tournament')
-      )
-    LIMIT 1
-  `, [tournamentId]);
+      AND mb.phase IN (${placeholders})
+    LIMIT 1`,
+    [tournamentId, ...tournamentPhaseIds]
+  );
 
   if (result.rows.length === 0) return false;
 

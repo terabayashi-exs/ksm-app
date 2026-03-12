@@ -37,11 +37,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         st.supports_point_system,
         st.supports_draws,
         st.ranking_method,
-        f.preliminary_format_type,
-        f.final_format_type
+        t.phases
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
     
@@ -84,7 +82,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       rules = rulesResult.rows.map(row => ({
         tournament_rule_id: Number(row.tournament_rule_id),
         tournament_id: Number(row.tournament_id),
-        phase: row.phase as 'preliminary' | 'final',
+        phase: String(row.phase),
         use_extra_time: Boolean(row.use_extra_time),
         use_penalty: Boolean(row.use_penalty),
         active_periods: String(row.active_periods),
@@ -121,8 +119,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         supports_draws: Boolean(tournament.supports_draws),
         ranking_method: String(tournament.ranking_method),
         format_id: tournament.format_id ? Number(tournament.format_id) : null,
-        preliminary_format_type: tournament.preliminary_format_type ? String(tournament.preliminary_format_type) : null,
-        final_format_type: tournament.final_format_type ? String(tournament.final_format_type) : null
+        phases: tournament.phases ? String(tournament.phases) : null
       },
       rules,
       sport_config: sportConfig
@@ -140,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await auth();
 
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
@@ -213,7 +210,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   try {
     const session = await auth();
 
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 

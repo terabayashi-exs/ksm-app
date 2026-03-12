@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import TournamentGroupEditForm from '@/components/features/tournament/TournamentGroupEditForm';
 
 interface Props {
@@ -58,11 +61,11 @@ export default async function EditTournamentGroupPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-foreground">大会情報を編集</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h1 className="text-3xl font-bold text-white">大会情報を編集</h1>
+            <p className="text-sm text-white/70 mt-1">
               {group.group_name}
             </p>
           </div>
@@ -70,6 +73,14 @@ export default async function EditTournamentGroupPage({ params }: Props) {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/admin/tournament-groups/${id}`}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              大会詳細に戻る
+            </Link>
+          </Button>
+        </div>
         <TournamentGroupEditForm initialData={group} />
       </div>
     </div>

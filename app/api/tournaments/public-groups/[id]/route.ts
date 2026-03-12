@@ -70,14 +70,13 @@ export async function GET(
         t.recruitment_end_date,
         t.created_at,
         v.venue_name,
-        f.format_name,
+        t.format_name,
         COUNT(DISTINCT CASE
           WHEN tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active'
           THEN tt.tournament_team_id
         END) as registered_teams
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       WHERE t.group_id = ?
         AND t.visibility = 'open'

@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import CourtSettingsForm from "@/components/features/tournament/CourtSettingsForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -14,8 +14,8 @@ interface PageProps {
 export default async function TournamentCourtsPage({ params }: PageProps) {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
-    redirect("/auth/login");
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+    redirect("/auth/admin/login");
   }
 
   const { id } = await params;
@@ -36,16 +36,14 @@ export default async function TournamentCourtsPage({ params }: PageProps) {
   if (!tournamentResult.rows || tournamentResult.rows.length === 0) {
     return (
       <div className="min-h-screen bg-background p-8">
-        <Card className="max-w-2xl mx-auto border-red-200">
+        <Card className="max-w-2xl mx-auto border-destructive/20">
           <CardContent className="pt-6">
-            <p className="text-red-600 text-center">大会が見つかりません</p>
+            <p className="text-destructive text-center">大会が見つかりません</p>
           </CardContent>
         </Card>
       </div>
     );
   }
-
-  const tournament = tournamentResult.rows[0];
 
   // 試合データから使用されているコート数の最大値を取得
   const courtCountResult = await db.execute({
@@ -62,28 +60,28 @@ export default async function TournamentCourtsPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b border-border">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center py-6">
-            <Button asChild variant="ghost" size="sm" className="mr-4">
-              <Link href="/admin">
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                ダッシュボードに戻る
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                コート名設定
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {tournament.tournament_name as string}
-              </p>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">
+              コート名設定
+            </h1>
+            <p className="text-sm text-white/70 mt-1">
+              コート番号に対する表示名を設定します
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle>コート名のカスタマイズ</CardTitle>

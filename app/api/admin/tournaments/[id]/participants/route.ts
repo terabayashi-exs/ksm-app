@@ -18,7 +18,7 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -42,9 +42,8 @@ export async function GET(
         t.tournament_name,
         t.team_count as max_teams,
         t.status,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -81,7 +80,7 @@ export async function GET(
         m.contact_phone,
         (SELECT COUNT(*) FROM t_tournament_players tp
          WHERE tp.tournament_id = tt.tournament_id
-         AND tp.team_id = tt.team_id) as player_count,
+         AND tp.tournament_team_id = tt.tournament_team_id) as player_count,
         (SELECT COUNT(*) FROM t_matches_final mf
          INNER JOIN t_matches_live ml ON mf.match_id = ml.match_id
          INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -102,6 +101,33 @@ export async function GET(
         END,
         tt.created_at ASC
     `, [tournamentId]);
+
+    // 各チームのメンバーメールアドレスを取得
+    const teamMembersResult = await db.execute(`
+      SELECT
+        tm.team_id,
+        u.email,
+        u.display_name,
+        tm.member_role
+      FROM m_team_members tm
+      JOIN m_login_users u ON tm.login_user_id = u.login_user_id
+      WHERE tm.is_active = 1
+      ORDER BY tm.member_role DESC, tm.created_at ASC
+    `);
+
+    // team_idごとにメンバー情報をグループ化
+    const membersByTeam = new Map<string, Array<{email: string; display_name: string; member_role: string}>>();
+    for (const row of teamMembersResult.rows) {
+      const teamId = String(row.team_id);
+      if (!membersByTeam.has(teamId)) {
+        membersByTeam.set(teamId, []);
+      }
+      membersByTeam.get(teamId)!.push({
+        email: String(row.email),
+        display_name: String(row.display_name),
+        member_role: String(row.member_role)
+      });
+    }
 
     // 各チームのメール送信履歴を取得
     const emailHistoryResult = await db.execute(`
@@ -132,7 +158,10 @@ export async function GET(
     // 統計情報を計算
     const participants = participantsResult.rows;
     const statistics = {
-      confirmed: participants.filter(p => p.participation_status === 'confirmed').length,
+      confirmed: participants.filter(p =>
+        p.participation_status === 'confirmed' &&
+        p.withdrawal_status !== 'withdrawal_requested'
+      ).length,
       waitlisted: participants.filter(p => p.participation_status === 'waitlisted').length,
       withdrawal_requested: participants.filter(p => p.withdrawal_status === 'withdrawal_requested').length,
       cancelled: participants.filter(p => p.participation_status === 'cancelled').length,
@@ -153,10 +182,19 @@ export async function GET(
     // 試合予定数を計算（フォーマットから）
     const scheduledMatches = 8; // TODO: フォーマット別に計算
 
-    // 辞退影響度を計算し、メール送信履歴を追加
+    // 辞退影響度を計算し、メール送信履歴・メンバー情報を追加
     const participantsWithImpact = participantsWithPosition.map(p => {
       const tournamentTeamId = Number(p.tournament_team_id);
+      const teamId = String(p.team_id);
       const emailHistory = emailHistoryByTeam.get(tournamentTeamId) || [];
+      const teamMembers = membersByTeam.get(teamId) || [];
+
+      // メンバー情報を配列として保持（最大2人）
+      const team_members = teamMembers.slice(0, 2).map(m => ({
+        name: m.display_name,
+        email: m.email,
+        role: m.member_role
+      }));
 
       if (p.withdrawal_status === 'withdrawal_requested') {
         const completedRatio = Number(p.completed_matches) / scheduledMatches;
@@ -170,6 +208,7 @@ export async function GET(
 
         return {
           ...p,
+          team_members,
           scheduled_matches: scheduledMatches,
           withdrawal_impact: impact,
           email_history: emailHistory
@@ -177,17 +216,18 @@ export async function GET(
       }
       return {
         ...p,
+        team_members,
         scheduled_matches: scheduledMatches,
         email_history: emailHistory
       };
     });
 
-    // 管理者メールアドレス取得（ログイン中の管理者のメールアドレス）
+    // 管理者メールアドレス取得（ログイン中のユーザーのメールアドレス）
     let adminEmail: string | null = null;
     try {
       const adminResult = await db.execute(`
-        SELECT email FROM m_administrators WHERE admin_login_id = ?
-      `, [session.user.id]);
+        SELECT email FROM m_login_users WHERE login_user_id = ?
+      `, [session.user.loginUserId]);
       if (adminResult.rows.length > 0) {
         adminEmail = String(adminResult.rows[0].email);
       }
@@ -234,7 +274,7 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -335,6 +375,13 @@ export async function PUT(
           WHERE tournament_team_id = ?
         `;
         updateParams = [session.user.email, admin_comment || null, tournament_team_id];
+
+        // 辞退承認時に選手登録を削除（選手の重複登録を防ぐため）
+        await db.execute(`
+          DELETE FROM t_tournament_players
+          WHERE tournament_team_id = ?
+        `, [tournament_team_id]);
+
         successMessage = '辞退申請を承認しました';
         break;
 

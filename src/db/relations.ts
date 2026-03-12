@@ -32,10 +32,7 @@ export const tTournamentsRelations = relations(tTournaments, ({one, many}) => ({
 		fields: [tTournaments.groupId],
 		references: [tTournamentGroups.groupId]
 	}),
-	mVenue: one(mVenues, {
-		fields: [tTournaments.venueId],
-		references: [mVenues.venueId]
-	}),
+	// mVenue: venue_id is now JSON array text, relation removed
 	mTournamentFormat: one(mTournamentFormats, {
 		fields: [tTournaments.formatId],
 		references: [mTournamentFormats.formatId]
@@ -114,7 +111,6 @@ export const tTournamentGroupsRelations = relations(tTournamentGroups, ({one, ma
 
 export const mVenuesRelations = relations(mVenues, ({many}) => ({
 	tTournamentGroups: many(tTournamentGroups),
-	tTournaments: many(tTournaments),
 }));
 
 export const tTournamentPlayersRelations = relations(tTournamentPlayers, ({one}) => ({
@@ -233,3 +229,4 @@ export const tSponsorBannersRelations = relations(tSponsorBanners, ({one}) => ({
 		references: [tTournaments.tournamentId]
 	}),
 }));
+

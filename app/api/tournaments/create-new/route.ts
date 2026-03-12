@@ -6,12 +6,13 @@ import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from 
 import { canAddDivision } from "@/lib/subscription/plan-checker";
 import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 import { calculateTournamentStatusSync } from "@/lib/tournament-status";
+import { buildPhaseFormatMap, buildPhaseNameMap, buildTemplatePhaseMapping } from "@/lib/tournament-phases";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
 
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
       return NextResponse.json(
         { success: false, error: "管理者権限が必要です" },
         { status: 401 }
@@ -41,13 +42,13 @@ export async function POST(request: NextRequest) {
       tournament_name,
       sport_type_id,
       format_id,
-      venue_id,
+      venue_ids,
       team_count,
       court_count,
       tournament_dates,
       match_duration_minutes,
       break_duration_minutes,
-      start_time,
+      start_time: start_time_input,
       is_public,
       public_start_date,
       recruitment_start_date,
@@ -57,8 +58,13 @@ export async function POST(request: NextRequest) {
       custom_schedule = []
     } = data;
 
+    // venue_idsをJSON文字列に変換
+    const venueIdJson = venue_ids && Array.isArray(venue_ids) && venue_ids.length > 0
+      ? JSON.stringify(venue_ids)
+      : null;
+
     // 入力値の基本バリデーション
-    if (!group_id || !tournament_name || !sport_type_id || !format_id || !venue_id || !team_count || !court_count) {
+    if (!group_id || !tournament_name || !sport_type_id || !format_id || !venueIdJson || !team_count || !court_count) {
       return NextResponse.json(
         { success: false, error: "必須項目が不足しています" },
         { status: 400 }
@@ -123,7 +129,7 @@ export async function POST(request: NextRequest) {
       tournament_name,
       sport_type_id,
       format_id,
-      venue_id,
+      venueIdJson,
       team_count,
       court_count,
       tournament_dates,
@@ -154,7 +160,8 @@ export async function POST(request: NextRequest) {
         format_id,
         format_name,
         preliminary_format_type,
-        final_format_type
+        final_format_type,
+        phases
       FROM m_tournament_formats
       WHERE format_id = ?
     `, [format_id]);
@@ -169,6 +176,37 @@ export async function POST(request: NextRequest) {
     const formatInfo = formatResult.rows[0];
     const preliminaryFormatType = formatInfo.preliminary_format_type;
     const finalFormatType = formatInfo.final_format_type;
+    const formatPhases = formatInfo.phases as string | null;
+
+    // テンプレート独立化: フォーマット情報をt_tournamentsにコピー
+    await db.execute(`
+      UPDATE t_tournaments SET
+        format_name = ?,
+        preliminary_format_type = ?,
+        final_format_type = ?,
+        phases = ?,
+        updated_at = datetime('now', '+9 hours')
+      WHERE tournament_id = ?
+    `, [
+      formatInfo.format_name,
+      preliminaryFormatType,
+      finalFormatType,
+      typeof formatPhases === 'string' ? formatPhases : JSON.stringify(formatPhases),
+      tournamentId
+    ]);
+
+    // 最初の会場情報を取得（試合データに設定するため）
+    let firstVenueName: string | null = null;
+    let firstVenueId: number | null = null;
+    if (venue_ids && Array.isArray(venue_ids) && venue_ids.length > 0) {
+      const venueResult = await db.execute(`
+        SELECT venue_id, venue_name FROM m_venues WHERE venue_id = ?
+      `, [venue_ids[0]]);
+      if (venueResult.rows.length > 0) {
+        firstVenueName = String(venueResult.rows[0].venue_name);
+        firstVenueId = Number(venueResult.rows[0].venue_id);
+      }
+    }
 
     // 選択されたフォーマットの試合テンプレートを取得
     const templatesResult = await db.execute(`
@@ -187,7 +225,14 @@ export async function POST(request: NextRequest) {
         day_number,
         execution_priority,
         court_number,
-        suggested_start_time
+        suggested_start_time,
+        loser_position_start,
+        loser_position_end,
+        position_note,
+        winner_position,
+        is_bye_match,
+        matchday,
+        cycle
       FROM m_match_templates
       WHERE format_id = ?
       ORDER BY match_number
@@ -204,32 +249,39 @@ export async function POST(request: NextRequest) {
     const blockMap = new Map<string, number>();
     const uniqueBlocks = new Set<string>();
 
-    // 全テンプレートからブロック情報を収集
+    // phasesからフェーズごとのフォーマットタイプと表示名を取得
+    const phaseFormats = buildPhaseFormatMap(formatPhases);
+    const phaseNamesMap = buildPhaseNameMap(formatPhases);
+
+    // テンプレートのphase → phasesのidへのマッピングを構築
+    const templatePhases = templatesResult.rows.map(t => t.phase as string);
+    const templatePhaseMapping = buildTemplatePhaseMapping(templatePhases, formatPhases);
+
+    console.log('Phase formats map:', Object.fromEntries(phaseFormats));
+    console.log('Template phase mapping:', Object.fromEntries(templatePhaseMapping));
+
+    // 全テンプレートからブロック情報を収集（区切り文字に :: を使用）
+    // テンプレートのphaseをactual phaseにマッピングして使用
     templatesResult.rows.forEach(template => {
-      const blockKey = `${template.phase}_${template.block_name || 'default'}`;
+      const actualPhase = templatePhaseMapping.get(template.phase as string) || template.phase as string;
+      const blockKey = `${actualPhase}::${template.block_name || 'default'}`;
       uniqueBlocks.add(blockKey);
     });
 
-    // フェーズごとのフォーマットタイプを確認
-    const phaseFormats = new Map<string, string>();
-    if (preliminaryFormatType) {
-      phaseFormats.set('preliminary', String(preliminaryFormatType));
-    }
-    if (finalFormatType) {
-      phaseFormats.set('final', String(finalFormatType));
-    }
-
     // ブロックテーブルに登録
     for (const blockKey of uniqueBlocks) {
-      const [phase, blockName] = blockKey.split('_');
+      const separatorIndex = blockKey.indexOf('::');
+      const phase = blockKey.substring(0, separatorIndex);
+      const blockName = blockKey.substring(separatorIndex + 2);
       const formatType = phaseFormats.get(phase);
 
       // トーナメント形式の場合：統合ブロック1つのみ作成
       // リーグ形式の場合：各ブロック（A, B, C...）を作成
       if (formatType === 'tournament') {
         // 統合ブロックが未作成の場合のみ作成
-        const unifiedBlockKey = `${phase}_unified`;
+        const unifiedBlockKey = `${phase}::unified`;
         if (!blockMap.has(unifiedBlockKey)) {
+          const unifiedBlockName = `${phase}_unified`;
           const blockResult = await db.execute(`
             INSERT INTO t_match_blocks (
               tournament_id,
@@ -241,7 +293,7 @@ export async function POST(request: NextRequest) {
               created_at,
               updated_at
             ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-          `, [tournamentId, phase, phase, unifiedBlockKey]);
+          `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, unifiedBlockName]);
 
           const unifiedBlockId = Number(blockResult.lastInsertRowid);
 
@@ -250,12 +302,12 @@ export async function POST(request: NextRequest) {
 
           // 同じフェーズの全ブロックを統合ブロックにマッピング
           Array.from(uniqueBlocks)
-            .filter(key => key.startsWith(`${phase}_`))
+            .filter(key => key.startsWith(`${phase}::`))
             .forEach(key => {
               blockMap.set(key, unifiedBlockId);
             });
 
-          console.log(`✅ ${phase}フェーズの統合ブロック作成: ${unifiedBlockKey} (ID: ${unifiedBlockId})`);
+          console.log(`✅ ${phase}フェーズの統合ブロック作成: ${unifiedBlockName} (ID: ${unifiedBlockId})`);
         }
       } else {
         // リーグ形式：個別ブロックを作成
@@ -272,7 +324,7 @@ export async function POST(request: NextRequest) {
             created_at,
             updated_at
           ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-        `, [tournamentId, phase, phase, displayName]);
+        `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, displayName]);
 
         blockMap.set(blockKey, Number(blockResult.lastInsertRowid));
       }
@@ -310,23 +362,57 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // コート別の終了時刻を管理
-    const courtEndTimes: Record<number, string> = {};
-    for (let i = 1; i <= court_count; i++) {
-      courtEndTimes[i] = start_time;
+    // day_numberごとのデフォルト開始時刻を自動検出
+    const DEFAULT_START_TIME = "09:00";
+    const dayStartTimes: Record<string, string> = {};
+
+    // テンプレートのsuggested_start_timeからday_numberごとの最速時刻を取得
+    for (const template of templatesResult.rows) {
+      const dayKey = template.day_number?.toString() || "1";
+      const suggestedTime = template.suggested_start_time ? String(template.suggested_start_time) : null;
+      if (suggestedTime) {
+        if (!dayStartTimes[dayKey] || suggestedTime < dayStartTimes[dayKey]) {
+          dayStartTimes[dayKey] = suggestedTime;
+        }
+      }
     }
+
+    // フォームからの入力値、またはテンプレートの最速時刻、またはデフォルトの順で決定
+    const getStartTimeForDay = (dayKey: string): string => {
+      if (start_time_input) return start_time_input;
+      return dayStartTimes[dayKey] || DEFAULT_START_TIME;
+    };
+
+    // day_numberごとのコート別終了時刻を管理
+    const courtEndTimesByDay: Record<string, Record<number, string>> = {};
+
+    const getCourtEndTimes = (dayKey: string): Record<number, string> => {
+      if (!courtEndTimesByDay[dayKey]) {
+        const startTime = getStartTimeForDay(dayKey);
+        courtEndTimesByDay[dayKey] = {};
+        for (let i = 1; i <= court_count; i++) {
+          courtEndTimesByDay[dayKey][i] = startTime;
+        }
+      }
+      return courtEndTimesByDay[dayKey];
+    };
 
     // 試合作成
     let matchesCreated = 0;
-    
+
     for (const template of templatesResult.rows) {
-      const blockKey = `${template.phase}_${template.block_name || 'default'}`;
+      const actualPhase = templatePhaseMapping.get(template.phase as string) || template.phase as string;
+      const blockKey = `${actualPhase}::${template.block_name || 'default'}`;
       const matchBlockId = blockMap.get(blockKey);
-      
+
       if (!matchBlockId) {
         console.error(`ブロックID が見つかりません: ${blockKey}`);
         continue;
       }
+
+      const dayKey = template.day_number?.toString() || "1";
+      const courtEndTimes = getCourtEndTimes(dayKey);
+      const dayStartTime = getStartTimeForDay(dayKey);
 
       // 時間とコートの決定ロジック
       let assignedCourt: number;
@@ -337,7 +423,7 @@ export async function POST(request: NextRequest) {
       if (customMatch) {
         assignedCourt = customMatch.court_number;
         assignedStartTime = customMatch.start_time;
-      } 
+      }
       // 2. テンプレートのsuggested_start_timeを優先（時間指定がある場合）
       else if (template.suggested_start_time) {
         assignedStartTime = String(template.suggested_start_time);
@@ -347,10 +433,10 @@ export async function POST(request: NextRequest) {
         } else {
           // 最も早く空くコートを選択
           let earliestCourt = 1;
-          let earliestTime = courtEndTimes[1] || start_time;
-          
+          let earliestTime = courtEndTimes[1] || dayStartTime;
+
           for (let court = 2; court <= court_count; court++) {
-            const courtTime = courtEndTimes[court] || start_time;
+            const courtTime = courtEndTimes[court] || dayStartTime;
             if (courtTime < earliestTime) {
               earliestTime = courtTime;
               earliestCourt = court;
@@ -358,35 +444,32 @@ export async function POST(request: NextRequest) {
           }
           assignedCourt = earliestCourt;
         }
-      } 
+      }
       // 3. テンプレートのcourt_numberのみ指定の場合
       else if (template.court_number && Number(template.court_number) > 0) {
         assignedCourt = Number(template.court_number);
-        assignedStartTime = courtEndTimes[assignedCourt] || start_time;
-      } 
+        assignedStartTime = courtEndTimes[assignedCourt] || dayStartTime;
+      }
       // 4. 完全自動割り当て
       else {
         // 最も早く空くコートを選択
         let earliestCourt = 1;
-        let earliestTime = courtEndTimes[1] || start_time;
-        
+        let earliestTime = courtEndTimes[1] || dayStartTime;
+
         for (let court = 2; court <= court_count; court++) {
-          const courtTime = courtEndTimes[court] || start_time;
+          const courtTime = courtEndTimes[court] || dayStartTime;
           if (courtTime < earliestTime) {
             earliestTime = courtTime;
             earliestCourt = court;
           }
         }
-        
+
         assignedCourt = earliestCourt;
         assignedStartTime = earliestTime;
       }
 
       // 試合データを作成
-      const dayKey = template.day_number?.toString() || "1";
       const tournamentDate = tournamentDatesObj[dayKey] || event_start_date;
-
-      // period_countはスキーマに存在しないため、デフォルト値1を使用（変数は不要）
 
       await db.execute(`
         INSERT INTO t_matches_live (
@@ -402,8 +485,26 @@ export async function POST(request: NextRequest) {
           start_time,
           team1_scores,
           team2_scores,
-          winner_tournament_team_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          winner_tournament_team_id,
+          phase,
+          match_type,
+          round_name,
+          block_name,
+          team1_source,
+          team2_source,
+          day_number,
+          execution_priority,
+          suggested_start_time,
+          loser_position_start,
+          loser_position_end,
+          position_note,
+          winner_position,
+          is_bye_match,
+          matchday,
+          cycle,
+          venue_name,
+          venue_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         matchBlockId,
         tournamentDate,
@@ -417,25 +518,38 @@ export async function POST(request: NextRequest) {
         assignedStartTime,
         '[0]', // team1_scores をJSON文字列で初期化
         '[0]', // team2_scores をJSON文字列で初期化
-        null  // winner_tournament_team_id は結果確定時に設定
+        null,  // winner_tournament_team_id は結果確定時に設定
+        actualPhase,
+        template.match_type,
+        template.round_name || null,
+        template.block_name || null,
+        template.team1_source || null,
+        template.team2_source || null,
+        template.day_number,
+        template.execution_priority,
+        template.suggested_start_time || null,
+        template.loser_position_start || null,
+        template.loser_position_end || null,
+        template.position_note || null,
+        template.winner_position || null,
+        template.is_bye_match || 0,
+        template.matchday || null,
+        template.cycle || 1,
+        firstVenueName,
+        firstVenueId
       ]);
 
       // コート終了時刻を更新（次の試合のため）
-      // 全ての競技で設定された試合時間をそのまま使用
       const actualMatchDuration = match_duration_minutes;
-      
       const endTime = addMinutesToTime(assignedStartTime, actualMatchDuration + break_duration_minutes);
-      
+
       // テンプレートで固定時間が指定されている場合は、そのコートの時間管理を慎重に行う
       if (template.suggested_start_time) {
-        // 固定時間指定の場合は、最低限の終了時刻のみ設定
-        const currentCourtEndTime = courtEndTimes[assignedCourt] || start_time;
-        // 時間文字列を分で比較して、より遅い時刻を選択
+        const currentCourtEndTime = courtEndTimes[assignedCourt] || dayStartTime;
         const currentEndMinutes = timeToMinutes(currentCourtEndTime);
         const newEndMinutes = timeToMinutes(endTime);
         courtEndTimes[assignedCourt] = newEndMinutes > currentEndMinutes ? endTime : currentCourtEndTime;
       } else {
-        // 通常の連続スケジュールの場合
         courtEndTimes[assignedCourt] = endTime;
       }
 
@@ -489,13 +603,11 @@ export async function POST(request: NextRequest) {
 
     // 作成された大会情報を取得
     const createdTournament = await db.execute(`
-      SELECT 
+      SELECT
         t.*,
-        v.venue_name,
-        f.format_name
+        v.venue_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 

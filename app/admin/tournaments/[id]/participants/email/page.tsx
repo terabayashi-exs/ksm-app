@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -18,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, Send, AlertCircle, Loader2, Users, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Send, AlertCircle, Loader2, Users } from 'lucide-react';
+import Link from 'next/link';
 import { EMAIL_PRESETS, EmailPresetId } from '@/lib/email/templates-broadcast';
 
 // 自動送信メールのtemplate_id一覧（履歴から除外する）
@@ -33,9 +35,12 @@ interface Team {
   tournament_team_id: string; // ユニークキー（同じマスターから複数参加の場合に重複防止）
   team_id: string;
   team_name: string;
-  contact_person: string;
-  contact_email: string;
   participation_status: string;
+  team_members?: Array<{
+    name: string;
+    email: string;
+    role: string;
+  }>;
   email_history?: Array<{
     template_id: string;
     subject: string;
@@ -58,7 +63,7 @@ export default function EmailSendPage() {
   const [isSending, setIsSending] = useState(false);
 
   // フィルタリング用のステート
-  const [filterStatus, setFilterStatus] = useState<string>('all'); // all, confirmed, waitlisted, cancelled
+  const [filterStatus, setFilterStatus] = useState<string>('confirmed'); // confirmed, waitlisted, cancelled
   const [filterEmailSent, setFilterEmailSent] = useState<string>('all'); // all, sent, not_sent, not_sent_{template_id}
 
   const MAX_SELECTION = 5;
@@ -83,10 +88,10 @@ export default function EmailSendPage() {
   const getTemplateColor = (templateId: string): string => {
     const colorMap: Record<string, string> = {
       participationConfirmed: 'text-green-600', // 参加確定通知 - 緑
-      participationNotSelected: 'text-red-600', // 参加見送り通知 - 赤
+      participationNotSelected: 'text-destructive', // 参加見送り通知 - 赤
       participationCancelled: 'text-muted-foreground', // キャンセル通知 - グレー
       waitlist: 'text-muted-foreground', // キャンセル待ち通知 - グレー
-      withdrawal_approved: 'text-red-600', // 辞退承認通知 - 赤
+      withdrawal_approved: 'text-destructive', // 辞退承認通知 - 赤
       withdrawal_rejected: 'text-purple-600', // 辞退却下通知 - 紫
       scheduleAnnouncement: 'text-blue-600', // 大会日程・組合せ決定通知 - 青
       auto_application: 'text-muted-foreground', // 申請受付（自動） - グレー
@@ -168,9 +173,12 @@ export default function EmailSendPage() {
                 team_id: string;
                 tournament_team_name?: string;
                 master_team_name?: string;
-                contact_person: string;
-                contact_email: string;
                 participation_status: string;
+                team_members?: Array<{
+                  name: string;
+                  email: string;
+                  role: string;
+                }>;
                 email_history?: Array<{
                   template_id: string;
                   subject: string;
@@ -182,9 +190,8 @@ export default function EmailSendPage() {
                 tournament_team_id: String(team.tournament_team_id),
                 team_id: team.team_id,
                 team_name: team.tournament_team_name || team.master_team_name || '',
-                contact_person: team.contact_person,
-                contact_email: team.contact_email,
                 participation_status: team.participation_status,
+                team_members: team.team_members || [],
                 email_history: team.email_history || [],
               }));
               setTeams(allTeams);
@@ -296,9 +303,12 @@ export default function EmailSendPage() {
               team_id: string;
               tournament_team_name?: string;
               master_team_name?: string;
-              contact_person: string;
-              contact_email: string;
               participation_status: string;
+              team_members?: Array<{
+                name: string;
+                email: string;
+                role: string;
+              }>;
               email_history?: Array<{
                 template_id: string;
                 subject: string;
@@ -309,9 +319,8 @@ export default function EmailSendPage() {
               tournament_team_id: String(team.tournament_team_id),
               team_id: team.team_id,
               team_name: team.tournament_team_name || team.master_team_name || '',
-              contact_person: team.contact_person,
-              contact_email: team.contact_email,
               participation_status: team.participation_status,
+              team_members: team.team_members || [],
               email_history: team.email_history || [],
             }));
             setTeams(allTeams);
@@ -333,25 +342,33 @@ export default function EmailSendPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="space-y-6">
-        {/* ヘッダー */}
-        <div className="flex items-center gap-3">
-          <Mail className="h-8 w-8 text-blue-500" />
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">メール一括送信</h1>
-            <p className="text-muted-foreground mt-1">{tournamentName}</p>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">メール一括送信</h1>
+            <p className="text-sm text-white/70 mt-1">{tournamentName}</p>
           </div>
         </div>
-
-        {/* 注意事項 */}
+      </div>
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+        <div className="space-y-6">
+          {/* 注意事項 */}
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-2">
@@ -360,9 +377,6 @@ export default function EmailSendPage() {
                 <h3 className="font-semibold text-amber-800 mb-2">送信制限について</h3>
                 <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
                   <li>一度に最大{MAX_SELECTION}チームまで送信可能です</li>
-                  <li>送信元: rakusyogo-official@rakusyo-go.com</li>
-                  <li>宛先: rakusyogo-official@rakusyo-go.com（送信記録用）</li>
-                  <li>BCC: 選択したチーム代表者のメールアドレス</li>
                 </ul>
               </div>
             </div>
@@ -392,11 +406,15 @@ export default function EmailSendPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
-                    <span className="text-red-600 font-medium">参加見送り・辞退承認</span>
+                    <span className="text-destructive font-medium">参加見送り・辞退承認</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
                     <span className="text-purple-600 font-medium">辞退却下通知</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                    <span className="text-blue-600 font-medium">日程・組合せ通知</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
@@ -405,45 +423,55 @@ export default function EmailSendPage() {
                 </div>
               </div>
 
-              {/* フィルタリング */}
+              {/* メール送信履歴フィルタ */}
               <div className="mb-4 p-3 bg-white rounded-lg border space-y-3">
-                <div className="text-sm font-semibold text-foreground">🔍 フィルタリング</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="filterStatus" className="text-xs font-medium mb-1.5 block">参加ステータス</Label>
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger id="filterStatus" className="h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" className="text-sm">すべて</SelectItem>
-                        <SelectItem value="confirmed" className="text-sm">参加確定</SelectItem>
-                        <SelectItem value="waitlisted" className="text-sm">キャンセル待ち</SelectItem>
-                        <SelectItem value="cancelled" className="text-sm">キャンセル済み</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="filterEmailSent" className="text-xs font-medium mb-1.5 block">メール送信履歴</Label>
-                    <Select value={filterEmailSent} onValueChange={setFilterEmailSent}>
-                      <SelectTrigger id="filterEmailSent" className="h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" className="text-sm">すべて</SelectItem>
-                        <SelectItem value="not_sent_participationConfirmed" className="text-sm">参加確定通知 未送信</SelectItem>
-                        <SelectItem value="not_sent_participationNotSelected" className="text-sm">参加見送り通知 未送信</SelectItem>
-                        <SelectItem value="not_sent_tournamentClosing" className="text-sm">大会終了のお礼 未送信</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="text-sm font-semibold text-foreground">🔍 メール送信履歴フィルタ</div>
+                <div>
+                  <Select value={filterEmailSent} onValueChange={setFilterEmailSent}>
+                    <SelectTrigger id="filterEmailSent" className="h-9 text-sm bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all" className="text-sm">すべて</SelectItem>
+                      <SelectItem value="not_sent_participationConfirmed" className="text-sm">参加確定通知 未送信</SelectItem>
+                      <SelectItem value="not_sent_participationNotSelected" className="text-sm">参加見送り通知 未送信</SelectItem>
+                      <SelectItem value="not_sent_scheduleAnnouncement" className="text-sm">大会日程・組合せ決定通知 未送信</SelectItem>
+                      <SelectItem value="not_sent_tournamentClosing" className="text-sm">大会終了のお礼 未送信</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   表示中: {filteredTeams.length}チーム / 全{teams.length}チーム
                 </div>
               </div>
 
-              <div>
+              {/* 参加ステータスタブ */}
+              <Tabs value={filterStatus} onValueChange={setFilterStatus} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger
+                    value="confirmed"
+                    className="text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  >
+                    参加確定 ({teams.filter(t => t.participation_status === 'confirmed').length})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="waitlisted"
+                    className="text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  >
+                    キャンセル待ち ({teams.filter(t => t.participation_status === 'waitlisted').length})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="cancelled"
+                    className="text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  >
+                    キャンセル済 ({teams.filter(t => t.participation_status === 'cancelled').length})
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* すべてのタブで同じチームリストを表示（フィルタリング済み） */}
+                {['confirmed', 'waitlisted', 'cancelled'].map((status) => (
+                  <TabsContent key={status} value={status} className="mt-0">
+                    <div>
                 <div className="border rounded-lg divide-y max-h-[600px] overflow-y-auto">
                   {filteredTeams.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
@@ -453,22 +481,6 @@ export default function EmailSendPage() {
                     filteredTeams.map((team) => {
                       const isSelected = selectedTeamIds.has(team.tournament_team_id);
                       const isDisabled = !isSelected && selectedTeamIds.size >= MAX_SELECTION;
-
-                      // 参加状態の表示ラベル
-                      let statusLabel = '';
-                      switch (team.participation_status) {
-                        case 'confirmed':
-                          statusLabel = '参加確定';
-                          break;
-                        case 'waitlisted':
-                          statusLabel = 'キャンセル待ち';
-                          break;
-                        case 'cancelled':
-                          statusLabel = 'キャンセル済み';
-                          break;
-                        default:
-                          statusLabel = team.participation_status;
-                      }
 
                       return (
                         <div
@@ -489,12 +501,6 @@ export default function EmailSendPage() {
                             className={`flex-1 ${isDisabled ? '' : 'cursor-pointer'}`}
                           >
                             <div className="font-medium text-base mb-1">{team.team_name}</div>
-                            <div className="text-sm text-muted-foreground mb-0.5">
-                              {team.contact_person} ({team.contact_email})
-                            </div>
-                            <div className="text-sm text-muted-foreground mb-1">
-                              {statusLabel}
-                            </div>
                             {(() => {
                               // 自動送信メールを除外した履歴
                               const filteredHistory = team.email_history?.filter(h => !AUTO_TEMPLATE_IDS.includes(h.template_id as typeof AUTO_TEMPLATE_IDS[number])) || [];
@@ -524,7 +530,10 @@ export default function EmailSendPage() {
                     })
                   )}
                 </div>
-              </div>
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
             </CardContent>
           </Card>
 
@@ -577,7 +586,7 @@ export default function EmailSendPage() {
                     className="mt-2 font-mono text-base leading-relaxed"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    改行も反映されます。大会名は自動的に追加されます。
+                    チーム名を挿入したい場合は、本文中に「{'{{teamName}}'}」と記載してください
                   </p>
                 </div>
 
@@ -600,18 +609,19 @@ export default function EmailSendPage() {
                 {/* 送信ボタン */}
                 <Button
                   onClick={handleSend}
-                  disabled={isSending || selectedTeamIds.size === 0 || !emailTitle || !emailBody}
+                  disabled={isSending || selectedTeamIds.size === 0}
                   className="w-full h-12 text-base font-semibold"
+                  size="lg"
                 >
                   {isSending ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       送信中...
                     </>
                   ) : (
                     <>
-                      <Send className="h-5 w-5 mr-2" />
-                      {selectedTeamIds.size}チームに送信
+                      <Send className="mr-2 h-5 w-5" />
+                      メールを送信する ({selectedTeamIds.size}チーム)
                     </>
                   )}
                 </Button>
@@ -619,34 +629,7 @@ export default function EmailSendPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* プレビュー（オプション） */}
-        {emailTitle && emailBody && (
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                プレビュー
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-white p-6 rounded-lg border">
-                <div className="font-bold text-xl mb-4 border-b pb-3">{emailTitle}</div>
-                <div className="whitespace-pre-wrap text-base leading-relaxed">
-                  {emailBody.replace(
-                    /\[URLをここに記載\]/g,
-                    `${typeof window !== 'undefined' ? window.location.origin : ''}/public/tournaments/${tournamentId}`
-                  )}
-                </div>
-                {tournamentName && (
-                  <div className="mt-6 pt-4 border-t text-base text-muted-foreground">
-                    大会名: {tournamentName}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        </div>
       </div>
     </div>
   );

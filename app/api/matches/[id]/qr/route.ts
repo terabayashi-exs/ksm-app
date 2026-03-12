@@ -174,7 +174,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ms.current_period,
           mb.tournament_id,
           mb.block_name,
-          tour.format_id,
           -- 確定済み試合の情報
           mf.match_id as is_confirmed,
           mf.team1_scores as final_team1_scores,
@@ -186,8 +185,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
           COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
           -- BYE試合の勝者解決用
-          mmt.team1_source,
-          mmt.team2_source
+          ml.team1_source,
+          ml.team2_source
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
@@ -198,7 +197,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mmt ON mmt.format_id = tour.format_id AND mmt.match_code = ml.match_code AND mmt.phase = mb.phase
         WHERE ml.match_id = ?
       `, [matchId]);
 
@@ -215,7 +213,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const { resolvedTeam1Name, resolvedTeam1Omission, resolvedTeam2Name, resolvedTeam2Omission } =
         await resolveByeMatchWinners(
           match.tournament_id as number,
-          match.format_id as number,
           match.block_name as string | null,
           match.team1_real_name as string | null,
           match.team1_display_name as string | null,
@@ -299,7 +296,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
           ms.current_period,
           mb.tournament_id,
           mb.block_name,
-          tour.format_id,
           -- 確定済み試合の情報
           mf.match_id as is_confirmed,
           mf.team1_scores as final_team1_scores,
@@ -311,8 +307,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
           COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
           -- BYE試合の勝者解決用
-          mmt.team1_source,
-          mmt.team2_source
+          ml.team1_source,
+          ml.team2_source
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
@@ -323,7 +319,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mmt ON mmt.format_id = tour.format_id AND mmt.match_code = ml.match_code AND mmt.phase = mb.phase
         WHERE ml.match_id = ?
       `, [matchId]);
 
@@ -340,7 +335,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const { resolvedTeam1Name, resolvedTeam1Omission, resolvedTeam2Name, resolvedTeam2Omission } =
         await resolveByeMatchWinners(
           match.tournament_id as number,
-          match.format_id as number,
           match.block_name as string | null,
           match.team1_real_name as string | null,
           match.team1_display_name as string | null,
@@ -417,7 +411,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
  */
 async function resolveByeMatchWinners(
   tournamentId: number,
-  formatId: number,
   blockName: string | null,
   team1RealName: string | null,
   team1DisplayName: string | null,
@@ -509,9 +502,8 @@ async function resolveByeMatchWinners(
     JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
     LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
     LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-    LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
-    WHERE mb.tournament_id = ? AND mt.is_bye_match = 1
-  `, [formatId, tournamentId]);
+    WHERE mb.tournament_id = ? AND ml.is_bye_match = 1
+  `, [tournamentId]);
 
   byeMatchesResult.rows.forEach((m) => {
     let winnerName = '';

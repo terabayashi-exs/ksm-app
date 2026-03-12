@@ -42,11 +42,13 @@ export async function GET(request: NextRequest) {
 
     // 指定された競技種別のフォーマットのみを取得
     const result = await db.execute(`
-      SELECT 
+      SELECT
         tf.format_id,
         tf.format_name,
         tf.target_team_count,
         tf.format_description,
+        tf.default_match_duration,
+        tf.default_break_duration,
         tf.created_at,
         tf.updated_at,
         tf.sport_type_id,
@@ -63,6 +65,8 @@ export async function GET(request: NextRequest) {
       format_name: String(row.format_name),
       target_team_count: Number(row.target_team_count),
       format_description: row.format_description as string | undefined,
+      default_match_duration: row.default_match_duration ? Number(row.default_match_duration) : null,
+      default_break_duration: row.default_break_duration ? Number(row.default_break_duration) : null,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       sport_type_id: Number(row.sport_type_id),

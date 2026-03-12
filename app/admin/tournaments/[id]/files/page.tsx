@@ -1,15 +1,15 @@
 // app/admin/tournaments/[id]/files/page.tsx
 // 管理者ファイル管理画面
 
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import Header from '@/components/layout/Header';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import FileManagementContainer from '@/components/features/admin/FileManagementContainer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { FileText, HardDrive, Upload, Loader2, Link as LinkIcon, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowLeft, FileText, HardDrive, Upload } from 'lucide-react';
 
 // ファイルサイズを人間が読みやすい形式に変換
 function formatFileSize(bytes: number): string {
@@ -20,100 +20,102 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-interface TournamentFilesPageProps {
-  params: Promise<{ id: string }>;
-}
+export default function TournamentFilesPage() {
+  const params = useParams();
+  const router = useRouter();
+  const tournamentId = parseInt(params.id as string);
 
-export default async function TournamentFilesPage({ params }: TournamentFilesPageProps) {
-  // 認証チェック
-  const session = await auth();
-  if (!session) {
-    redirect('/auth/login');
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [uploadFiles, setUploadFiles] = useState(0);
+  const [externalLinks, setExternalLinks] = useState(0);
+  const [totalSize, setTotalSize] = useState(0);
+  const [publicCount, setPublicCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // 大会情報と統計情報を取得
+        const response = await fetch(`/api/admin/tournaments/${tournamentId}/files/stats`);
+        if (!response.ok) {
+          router.push('/my?tab=admin');
+          return;
+        }
+        const data = await response.json();
+
+        if (data.success) {
+          setTotalCount(data.total_count);
+          setUploadFiles(data.upload_files);
+          setExternalLinks(data.external_links);
+          setTotalSize(data.total_size);
+          setPublicCount(data.public_count);
+        }
+      } catch (error) {
+        console.error('データ取得エラー:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [tournamentId, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
-
-  const { id } = await params;
-  const tournamentId = parseInt(id);
-
-  if (isNaN(tournamentId)) {
-    redirect('/admin/tournaments');
-  }
-
-  // 大会情報を取得
-  const tournamentResult = await db.execute(`
-    SELECT 
-      tournament_id,
-      tournament_name,
-      format_name,
-      venue_name,
-      files_count
-    FROM t_tournaments t
-    LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-    LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-    WHERE t.tournament_id = ?
-  `, [tournamentId]);
-
-  if (tournamentResult.rows.length === 0) {
-    redirect('/admin/tournaments');
-  }
-
-  const tournament = tournamentResult.rows[0];
-
-  // ファイル統計情報を取得
-  const statsResult = await db.execute(`
-    SELECT 
-      COUNT(*) as total_files,
-      COALESCE(SUM(file_size), 0) as total_size,
-      COUNT(CASE WHEN is_public = 1 THEN 1 END) as public_files
-    FROM t_tournament_files
-    WHERE tournament_id = ?
-  `, [tournamentId]);
-
-  const stats = statsResult.rows[0];
-  const totalFiles = Number(stats.total_files);
-  const totalSize = Number(stats.total_size);
-  const publicFiles = Number(stats.public_files);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      
       {/* ヘッダー部分 */}
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
+          <div className="py-6">
               <div className="flex items-center space-x-3 mb-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/tournaments/${tournamentId}`}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    大会管理に戻る
-                  </Link>
-                </Button>
-                <div className="h-6 border-l border-border"></div>
-                <FileText className="h-6 w-6 text-blue-600" />
-                <h1 className="text-2xl font-bold text-foreground">ファイル管理</h1>
+                <FileText className="h-6 w-6 text-white" />
+                <h1 className="text-2xl font-bold text-white">ファイル管理</h1>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {String(tournament.tournament_name)} - {String(tournament.format_name)} ({String(tournament.venue_name)})
+              <p className="text-sm text-white/70">
+                大会に関連するファイルをアップロード・管理できます。公開設定で一般ユーザーへの共有も可能です。
               </p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">大会ID: {tournamentId}</div>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
+
         {/* 統計情報 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <FileText className="h-8 w-8 text-blue-600" />
+                <Upload className="h-8 w-8 text-primary" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">総ファイル数</p>
-                  <p className="text-2xl font-bold text-foreground">{totalFiles}</p>
+                  <p className="text-sm font-medium text-muted-foreground">アップロードファイル</p>
+                  <p className="text-2xl font-bold text-foreground">{uploadFiles}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <LinkIcon className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">外部URLリンク</p>
+                  <p className="text-2xl font-bold text-foreground">{externalLinks}</p>
                 </div>
               </div>
             </CardContent>
@@ -134,10 +136,10 @@ export default async function TournamentFilesPage({ params }: TournamentFilesPag
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Upload className="h-8 w-8 text-purple-600" />
+                <FileText className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">公開ファイル数</p>
-                  <p className="text-2xl font-bold text-foreground">{publicFiles} / {totalFiles}</p>
+                  <p className="text-sm font-medium text-muted-foreground">公開中</p>
+                  <p className="text-2xl font-bold text-foreground">{publicCount} / {totalCount}</p>
                 </div>
               </div>
             </CardContent>

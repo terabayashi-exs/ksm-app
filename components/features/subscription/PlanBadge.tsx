@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -24,18 +24,18 @@ interface CurrentSubscriptionInfo {
   remainingDays: number | null;
 }
 
-export default function PlanBadge() {
+interface PlanBadgeProps {
+  apiUrl?: string;
+}
+
+export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }: PlanBadgeProps) {
   const router = useRouter();
   const [subscriptionInfo, setSubscriptionInfo] = useState<CurrentSubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSubscriptionInfo();
-  }, []);
-
-  const fetchSubscriptionInfo = async () => {
+  const fetchSubscriptionInfo = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/subscription/current");
+      const res = await fetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
         setSubscriptionInfo(data);
@@ -45,7 +45,11 @@ export default function PlanBadge() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiUrl]);
+
+  useEffect(() => {
+    fetchSubscriptionInfo();
+  }, [fetchSubscriptionInfo]);
 
   if (loading || !subscriptionInfo) {
     return null;
@@ -129,7 +133,7 @@ export default function PlanBadge() {
       </div>
 
       {/* プラン変更ボタン */}
-      <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
+      <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
         プラン変更
       </Button>
     </div>

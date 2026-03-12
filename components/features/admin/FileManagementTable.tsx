@@ -126,7 +126,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
       file,
       title: file.file_title,
       description: file.file_description || '',
-      isPublic: file.is_public
+      isPublic: Boolean(file.is_public) // 数値からブール値に変換
     });
   };
 
@@ -225,7 +225,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
           file_id: file.file_id,
           file_title: file.file_title,
           file_description: file.file_description,
-          is_public: !file.is_public,
+          is_public: !Boolean(file.is_public), // ブール値に変換してから反転
           upload_order: file.upload_order
         })
       });
@@ -327,11 +327,11 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Switch
-                      checked={file.is_public}
+                      checked={Boolean(file.is_public)}
                       onCheckedChange={() => togglePublicStatus(file)}
                     />
                     <span className="text-sm">
-                      {file.is_public ? (
+                      {Boolean(file.is_public) ? (
                         <span className="flex items-center text-green-600">
                           <Eye className="h-4 w-4 mr-1" />
                           公開

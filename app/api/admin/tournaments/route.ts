@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         t.team_count,
         t.group_id,
         v.venue_name,
-        f.format_name,
+        t.format_name,
         COUNT(DISTINCT CASE
           WHEN tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active'
           THEN tt.tournament_team_id
@@ -55,8 +55,7 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT mf.match_id) as results_count
       FROM t_tournaments t
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       LEFT JOIN t_match_blocks mb ON t.tournament_id = mb.tournament_id
       LEFT JOIN t_matches_live ml ON mb.match_block_id = ml.match_block_id
@@ -121,7 +120,7 @@ export async function GET(request: NextRequest) {
     }
 
     // GROUP BY と ORDER BY を追加
-    query += ' GROUP BY t.tournament_id, t.tournament_name, t.status, t.tournament_dates, t.recruitment_start_date, t.recruitment_end_date, t.created_at, t.updated_at, t.is_archived, t.team_count, t.group_id, v.venue_name, f.format_name';
+    query += ' GROUP BY t.tournament_id, t.tournament_name, t.status, t.tournament_dates, t.recruitment_start_date, t.recruitment_end_date, t.created_at, t.updated_at, t.is_archived, t.team_count, t.group_id, v.venue_name, t.format_name';
     query += ' ORDER BY t.created_at DESC';
 
     // ページネーション

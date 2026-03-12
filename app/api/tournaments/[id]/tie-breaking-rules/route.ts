@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { 
+import {
   TieBreakingRule,
   getAvailableTieBreakingRules,
   getDefaultTieBreakingRules,
@@ -12,6 +12,7 @@ import {
   parseTieBreakingRules,
   stringifyTieBreakingRules
 } from "@/lib/tie-breaking-rules";
+import { parsePhasesJson, getPhaseLabel } from "@/lib/tournament-phases";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -118,7 +119,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
@@ -127,14 +128,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const body = await request.json();
     const { phase, rules, enabled } = body;
 
-    if (!['preliminary', 'final'].includes(phase)) {
-      return NextResponse.json({ error: "無効なフェーズです" }, { status: 400 });
-    }
-
-    // 大会の競技種別を取得
+    // 大会の競技種別とフェーズ構成を取得
     const tournamentResult = await db.execute(`
-      SELECT 
-        st.sport_code
+      SELECT
+        st.sport_code,
+        t.phases
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       WHERE t.tournament_id = ?
@@ -143,8 +141,23 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     if (tournamentResult.rows.length === 0) {
       return NextResponse.json({ error: "大会が見つかりません" }, { status: 404 });
     }
-    
+
     const sportCode = String(tournamentResult.rows[0].sport_code || 'pk_championship');
+    const tournamentPhasesJson = tournamentResult.rows[0].phases as string | null;
+
+    // フェーズの存在チェック（動的フェーズ対応）
+    const parsedPhases = parsePhasesJson(tournamentPhasesJson);
+    if (parsedPhases) {
+      const validPhaseIds = parsedPhases.phases.map(p => p.id);
+      if (!validPhaseIds.includes(phase)) {
+        return NextResponse.json({ error: "無効なフェーズです" }, { status: 400 });
+      }
+    } else {
+      // フォールバック: レガシー互換（phases未設定の大会）
+      if (!['preliminary', 'final'].includes(phase)) {
+        return NextResponse.json({ error: "無効なフェーズです" }, { status: 400 });
+      }
+    }
 
     // ルールのバリデーション
     if (enabled && Array.isArray(rules)) {
@@ -178,9 +191,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       `, [rulesJson, enabledFlag, tournamentId, phase]);
     } else {
       // 新規レコードを作成（基本的なルール設定も含む）
-      const defaultRuleConfig = phase === 'preliminary'
-        ? { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]' }
-        : { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]' };
+      const defaultRuleConfig = { use_extra_time: 0, use_penalty: 0, active_periods: '["1"]' };
 
       await db.execute(`
         INSERT INTO t_tournament_rules (
@@ -199,7 +210,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({
       success: true,
-      message: `${phase === 'preliminary' ? '予選' : '決勝'}の順位決定ルールを更新しました`,
+      message: `${getPhaseLabel(tournamentPhasesJson, phase)}の順位決定ルールを更新しました`,
       phase,
       enabled: enabled,
       rules: enabled && Array.isArray(rules) ? rules : []
@@ -216,7 +227,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 

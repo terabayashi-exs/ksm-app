@@ -105,7 +105,7 @@ export default function TournamentFormatList() {
     return (
       <div className="text-center py-12">
         <div className="text-gray-500 mb-4">登録されている大会フォーマットがありません</div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+        <Button asChild className="bg-primary hover:bg-primary/90">
           <Link href="/admin/tournament-formats/create">
             最初のフォーマットを作成
           </Link>
@@ -127,7 +127,7 @@ export default function TournamentFormatList() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   {format.format_name}
                 </h3>
-                <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                <Badge variant="default" className="bg-primary hover:bg-primary/90">
                   {format.sport_name}
                 </Badge>
                 <Badge variant="secondary" className="flex items-center space-x-1">
@@ -179,7 +179,7 @@ export default function TournamentFormatList() {
                 size="sm"
                 onClick={() => handleDelete(format.format_id, format.format_name)}
                 disabled={deletingId === format.format_id}
-                className="hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                className="hover:bg-destructive/5 hover:border-destructive/30 hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 {deletingId === format.format_id ? "削除中..." : "削除"}

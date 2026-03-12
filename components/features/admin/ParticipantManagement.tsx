@@ -124,7 +124,10 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
       case 'all':
         return data.participants;
       case 'confirmed':
-        return data.participants.filter(p => p.participation_status === 'confirmed');
+        return data.participants.filter(p =>
+          p.participation_status === 'confirmed' &&
+          p.withdrawal_status !== 'withdrawal_requested'
+        );
       case 'waitlisted':
         return data.participants.filter(p => p.participation_status === 'waitlisted');
       case 'withdrawal_requested':
@@ -166,7 +169,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
             <Users className="h-6 w-6" />
             参加チーム統計
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             {data.tournament.tournament_name} の参加チーム状況
           </CardDescription>
         </CardHeader>
@@ -238,25 +241,25 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
       {/* タブフィルター */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all" className="relative">
+          <TabsTrigger value="all" className="relative text-base">
             全て ({stats.total})
           </TabsTrigger>
-          <TabsTrigger value="confirmed" className="relative">
+          <TabsTrigger value="confirmed" className="relative text-base">
             <CheckCircle className="h-4 w-4 mr-1" />
             確定 ({stats.confirmed})
           </TabsTrigger>
-          <TabsTrigger value="waitlisted" className="relative">
+          <TabsTrigger value="waitlisted" className="relative text-base">
             <Clock className="h-4 w-4 mr-1" />
             待機 ({stats.waitlisted})
           </TabsTrigger>
-          <TabsTrigger value="withdrawal_requested" className="relative">
+          <TabsTrigger value="withdrawal_requested" className="relative text-base">
             <AlertTriangle className="h-4 w-4 mr-1" />
             辞退申請 ({stats.withdrawal_requested})
             {stats.withdrawal_requested > 0 && (
               <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
             )}
           </TabsTrigger>
-          <TabsTrigger value="cancelled" className="relative">
+          <TabsTrigger value="cancelled" className="relative text-base">
             <XCircle className="h-4 w-4 mr-1" />
             キャンセル ({stats.cancelled})
           </TabsTrigger>

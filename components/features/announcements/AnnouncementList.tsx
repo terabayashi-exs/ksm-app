@@ -42,7 +42,7 @@ export default function AnnouncementList() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-blue-600" />
+            <Bell className="h-5 w-5" />
             お知らせ
           </CardTitle>
         </CardHeader>
@@ -58,7 +58,7 @@ export default function AnnouncementList() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-blue-600" />
+            <Bell className="h-5 w-5" />
             お知らせ
           </CardTitle>
         </CardHeader>
@@ -77,19 +77,19 @@ export default function AnnouncementList() {
   }
 
   return (
-    <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+    <Card className="bg-accent/50 border-2 border-gray-200">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+        <CardTitle className="flex items-center gap-2 text-foreground">
           <Bell className="h-5 w-5" />
           お知らせ
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {announcements.map((announcement) => (
             <div
               key={announcement.announcement_id}
-              className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-blue-100 dark:border-blue-900 hover:shadow-md transition-shadow"
+              className="bg-background rounded-lg p-4 border-2 border-gray-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">

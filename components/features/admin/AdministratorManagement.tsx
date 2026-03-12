@@ -5,38 +5,60 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users } from 'lucide-react';
+import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus } from 'lucide-react';
 
 interface Administrator {
   admin_id: number;
-  admin_name: string;
+  admin_name: string; // display_name
   email: string;
   role: string;
   is_active: boolean;
+  is_superadmin: boolean;
   created_at: string;
   updated_at: string;
 }
 
 interface AdministratorFormData {
-  admin_name: string;
+  admin_name: string; // display_name
   email: string;
   password: string;
-  role: string;
   is_active: boolean;
+  is_superadmin: boolean;
 }
+
+// メールアドレス確認結果
+interface EmailCheckResult {
+  exists: boolean;
+  already_admin?: boolean;
+  user?: {
+    login_user_id: number;
+    display_name: string;
+    email: string;
+  };
+}
+
+// 新規登録フローの段階
+type CreateStep = 'email' | 'existing_confirm' | 'new_form';
 
 export default function AdministratorManagement() {
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<Administrator | null>(null);
+
+  // 新規登録フロー
   const [isCreating, setIsCreating] = useState(false);
+  const [createStep, setCreateStep] = useState<CreateStep>('email');
+  const [emailInput, setEmailInput] = useState('');
+  const [emailCheckResult, setEmailCheckResult] = useState<EmailCheckResult | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
   const [formData, setFormData] = useState<AdministratorFormData>({
     admin_name: '',
     email: '',
     password: '',
-    role: 'admin',
-    is_active: true
+    is_active: true,
+    is_superadmin: false
   });
   const [saving, setSaving] = useState(false);
 
@@ -45,9 +67,7 @@ export default function AdministratorManagement() {
     try {
       setLoading(true);
       const response = await fetch('/api/administrators');
-      if (!response.ok) {
-        throw new Error('利用者データの取得に失敗しました');
-      }
+      if (!response.ok) throw new Error('利用者データの取得に失敗しました');
       const result = await response.json();
       if (result.success) {
         setAdministrators(result.data);
@@ -55,7 +75,6 @@ export default function AdministratorManagement() {
         throw new Error(result.error || '利用者データの取得に失敗しました');
       }
     } catch (err) {
-      console.error('Error fetching administrators:', err);
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
       setLoading(false);
@@ -67,133 +86,155 @@ export default function AdministratorManagement() {
   }, []);
 
   // フォームリセット
-  const resetForm = () => {
-    setFormData({
-      admin_name: '',
-      email: '',
-      password: '',
-      role: 'admin',
-      is_active: true
-    });
+  const resetAll = () => {
+    setFormData({ admin_name: '', email: '', password: '', is_active: true, is_superadmin: false });
     setEditingAdmin(null);
     setIsCreating(false);
+    setCreateStep('email');
+    setEmailInput('');
+    setEmailCheckResult(null);
     setError(null);
   };
 
-  // 新規作成開始
-  const startCreating = () => {
-    resetForm();
-    setIsCreating(true);
-  };
+  // ── 新規登録フロー ──────────────────────────────────────────────
 
-  // 編集開始
-  const startEditing = (admin: Administrator) => {
-    setFormData({
-      admin_name: admin.admin_name,
-      email: admin.email,
-      password: '', // パスワードは空にする
-      role: admin.role,
-      is_active: admin.is_active
-    });
-    setEditingAdmin(admin);
-    setIsCreating(false);
-    setError(null);
-  };
-
-  // 保存処理
-  const handleSave = async () => {
-    if (!formData.admin_name.trim()) {
-      setError('管理者名を入力してください');
-      return;
-    }
-    if (!formData.email.trim()) {
+  // Step1: メールアドレスで確認
+  const handleCheckEmail = async () => {
+    if (!emailInput.trim()) {
       setError('メールアドレスを入力してください');
       return;
     }
-    if (!editingAdmin && !formData.password.trim()) {
-      setError('新規作成時はパスワードを入力してください');
-      return;
-    }
-    if (formData.password && formData.password.length < 6) {
-      setError('パスワードは6文字以上で入力してください');
-      return;
-    }
-
+    setError(null);
+    setCheckingEmail(true);
     try {
-      setSaving(true);
-      setError(null);
-
-      const url = editingAdmin 
-        ? `/api/administrators/${editingAdmin.admin_id}`
-        : '/api/administrators';
-      
-      const method = editingAdmin ? 'PUT' : 'POST';
-
-      const requestData: Partial<AdministratorFormData> = { ...formData };
-      // 編集時でパスワードが空の場合は削除
-      if (editingAdmin && !formData.password.trim()) {
-        delete (requestData as { password?: string }).password;
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
+      const response = await fetch('/api/administrators/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput.trim() }),
       });
-
-      if (!response.ok) {
-        throw new Error('保存に失敗しました');
-      }
-
       const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error || '保存に失敗しました');
-      }
+      if (!result.success) throw new Error(result.error);
 
-      // 一覧を再取得
-      await fetchAdministrators();
-      resetForm();
-      
+      setEmailCheckResult(result);
+
+      if (result.already_admin) {
+        setError('このメールアドレスは既に管理者として登録されています');
+      } else if (result.exists) {
+        // アカウントあり → 確認画面へ
+        setCreateStep('existing_confirm');
+      } else {
+        // アカウントなし → 新規作成フォームへ
+        setFormData(prev => ({ ...prev, email: emailInput.trim() }));
+        setCreateStep('new_form');
+      }
     } catch (err) {
-      console.error('Error saving administrator:', err);
-      setError(err instanceof Error ? err.message : '保存中にエラーが発生しました');
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Step2a: 既存ユーザーへの admin ロール付与
+  const handleAddRole = async () => {
+    if (!emailCheckResult?.user) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/administrators/add-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login_user_id: emailCheckResult.user.login_user_id }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      await fetchAdministrators();
+      resetAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
       setSaving(false);
     }
   };
 
-  // 削除処理
-  const handleDelete = async (admin: Administrator) => {
-    // 管理者が1人になる場合は削除を防ぐ
-    if (administrators.length <= 1) {
-      setError('利用者を全て削除することはできません。最低1人の利用者が必要です。');
-      return;
-    }
+  // Step2b: 新規ユーザー作成（admin ロール付き）
+  const handleCreateNew = async () => {
+    if (!formData.admin_name.trim()) { setError('管理者名を入力してください'); return; }
+    if (!formData.email.trim()) { setError('メールアドレスを入力してください'); return; }
+    if (!formData.password.trim()) { setError('パスワードを入力してください'); return; }
+    if (formData.password.length < 6) { setError('パスワードは6文字以上で入力してください'); return; }
 
-    if (!confirm(`利用者「${admin.admin_name}」を削除しますか？\n\n※この操作は取り消せません。`)) {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/administrators', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      await fetchAdministrators();
+      resetAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── 編集フロー ──────────────────────────────────────────────────
+
+  const startEditing = (admin: Administrator) => {
+    setFormData({ admin_name: admin.admin_name, email: admin.email, password: '', is_active: admin.is_active, is_superadmin: admin.is_superadmin });
+    setEditingAdmin(admin);
+    setIsCreating(false);
+    setError(null);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingAdmin) return;
+    if (!formData.admin_name.trim()) { setError('管理者名を入力してください'); return; }
+    if (!formData.email.trim()) { setError('メールアドレスを入力してください'); return; }
+    if (formData.password && formData.password.length < 6) { setError('パスワードは6文字以上で入力してください'); return; }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const requestData: Partial<AdministratorFormData> = { ...formData };
+      if (!formData.password.trim()) delete (requestData as { password?: string }).password;
+
+      const response = await fetch(`/api/administrators/${editingAdmin.admin_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      await fetchAdministrators();
+      resetAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── 削除 ────────────────────────────────────────────────────────
+
+  const handleDelete = async (admin: Administrator) => {
+    if (administrators.length <= 1) {
+      setError('利用者を全て削除することはできません。最低1人の管理者が必要です。');
       return;
     }
+    if (!confirm(`利用者「${admin.admin_name}」を削除しますか？\n\n※この操作は取り消せません。`)) return;
 
     try {
-      const response = await fetch(`/api/administrators/${admin.admin_id}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/administrators/${admin.admin_id}`, { method: 'DELETE' });
       const result = await response.json();
-      
-      if (!response.ok || !result.success) {
-        setError(result.error || '削除に失敗しました');
-        return;
-      }
-
-      // 一覧を再取得
+      if (!response.ok || !result.success) { setError(result.error || '削除に失敗しました'); return; }
       await fetchAdministrators();
       setError(null);
-      
     } catch (err) {
-      console.error('Error deleting administrator:', err);
       setError(err instanceof Error ? err.message : '削除中にエラーが発生しました');
     }
   };
@@ -224,37 +265,176 @@ export default function AdministratorManagement() {
       {/* 新規登録ボタン */}
       {!isCreating && !editingAdmin && (
         <div className="flex justify-end">
-          <Button onClick={startCreating} className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            新規利用者登録
+            管理者を追加
           </Button>
         </div>
       )}
 
-      {/* 登録・編集フォーム */}
-      {(isCreating || editingAdmin) && (
+      {/* ── 新規登録フロー ── */}
+      {isCreating && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              管理者を追加
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+
+            {/* Step 1: メールアドレス入力 */}
+            {createStep === 'email' && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  追加したい管理者のメールアドレスを入力してください。既にアカウントがある場合はそのアカウントに管理者権限を付与します。
+                </p>
+                <div>
+                  <Label htmlFor="check_email">メールアドレス *</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="check_email"
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => { setEmailInput(e.target.value); setError(null); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleCheckEmail(); }}
+                      placeholder="例: user@example.com"
+                    />
+                    <Button onClick={handleCheckEmail} disabled={checkingEmail} className="shrink-0">
+                      <Search className="h-4 w-4 mr-1" />
+                      {checkingEmail ? '確認中...' : '確認'}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2a: 既存ユーザーへのロール付与確認 */}
+            {createStep === 'existing_confirm' && emailCheckResult?.user && (
+              <>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-800 font-medium">
+                    <UserCheck className="h-5 w-5" />
+                    アカウントが見つかりました
+                  </div>
+                  <div className="text-sm text-blue-700 space-y-1 ml-7">
+                    <div><span className="font-medium">表示名：</span>{emailCheckResult.user.display_name}</div>
+                    <div><span className="font-medium">メール：</span>{emailCheckResult.user.email}</div>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  このユーザーに管理者権限を付与してよいですか？パスワードはそのまま変更されません。
+                </p>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={handleAddRole} disabled={saving}>
+                    {saving ? '処理中...' : '管理者として追加する'}
+                  </Button>
+                  <Button variant="outline" onClick={() => { setCreateStep('email'); setError(null); }}>
+                    戻る
+                  </Button>
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2b: 新規ユーザー作成フォーム */}
+            {createStep === 'new_form' && (
+              <>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-amber-800 font-medium text-sm">
+                    <User className="h-4 w-4" />
+                    「{emailInput}」のアカウントが見つかりませんでした
+                  </div>
+                  <p className="text-sm text-amber-700 ml-6">新規アカウントを作成して管理者として登録します。</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="admin_name">表示名（氏名）*</Label>
+                    <Input
+                      id="admin_name"
+                      value={formData.admin_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))}
+                      placeholder="例: 田中太郎"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email_display">メールアドレス</Label>
+                    <Input id="email_display" value={formData.email} disabled className="bg-muted" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="password">初期パスワード *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="6文字以上"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">本人に別途パスワードをお知らせください</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={formData.is_active ?? true}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                    />
+                    <Label htmlFor="is_active">利用可能</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_superadmin"
+                      checked={formData.is_superadmin ?? false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))}
+                    />
+                    <Label htmlFor="is_superadmin">スーパー管理者</Label>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={handleCreateNew} disabled={saving}>
+                    {saving ? '作成中...' : 'アカウントを作成して追加'}
+                  </Button>
+                  <Button variant="outline" onClick={() => { setCreateStep('email'); setError(null); }}>
+                    戻る
+                  </Button>
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 編集フォーム ── */}
+      {editingAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              {editingAdmin ? '利用者編集' : '新規利用者登録'}
+              利用者編集
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="admin_name">管理者名 *</Label>
+                <Label htmlFor="edit_admin_name">表示名（氏名）*</Label>
                 <Input
-                  id="admin_name"
+                  id="edit_admin_name"
                   value={formData.admin_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))}
                   placeholder="例: 田中太郎"
                 />
               </div>
               <div>
-                <Label htmlFor="email">メールアドレス *</Label>
+                <Label htmlFor="edit_email">メールアドレス *</Label>
                 <Input
-                  id="email"
+                  id="edit_email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
@@ -262,67 +442,58 @@ export default function AdministratorManagement() {
                 />
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="password">
-                  パスワード {editingAdmin ? '（変更する場合のみ入力）' : '*'}
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="6文字以上"
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">権限</Label>
-                <select
-                  id="role"
-                  value={formData.role}
-                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="admin">管理者</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+            <div>
+              <Label htmlFor="edit_password">パスワード（変更する場合のみ入力）</Label>
+              <Input
+                id="edit_password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="6文字以上"
               />
-              <Label htmlFor="is_active">利用可能</Label>
             </div>
-
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_active"
+                  checked={formData.is_active ?? true}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                />
+                <Label htmlFor="edit_is_active">利用可能</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_superadmin"
+                  checked={formData.is_superadmin ?? false}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))}
+                />
+                <Label htmlFor="edit_is_superadmin">スーパー管理者</Label>
+              </div>
+            </div>
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleSave} disabled={saving}>
+              <Button variant="outline" onClick={handleUpdate} disabled={saving}>
                 {saving ? '保存中...' : '保存'}
               </Button>
-              <Button variant="outline" onClick={resetForm}>
-                キャンセル
-              </Button>
+              <Button variant="outline" onClick={resetAll}>キャンセル</Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* 利用者一覧 */}
+      {/* ── 利用者一覧 ── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            登録済み利用者一覧
+            登録済み管理者一覧
           </CardTitle>
         </CardHeader>
         <CardContent>
           {administrators.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              登録された利用者がいません
+              登録された管理者がいません
             </div>
           ) : (
             <div className="space-y-4">
@@ -340,8 +511,13 @@ export default function AdministratorManagement() {
                         </span>
                       )}
                       <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">
-                        {admin.role === 'admin' ? '管理者' : admin.role}
+                        管理者
                       </span>
+                      {admin.is_superadmin && (
+                        <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded font-semibold">
+                          スーパー管理者
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
                       <Mail className="h-4 w-4" />

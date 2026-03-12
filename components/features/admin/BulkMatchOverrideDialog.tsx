@@ -25,6 +25,8 @@ interface BulkMatchOverrideDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tournamentId: number;
+  leagueSources: string[];
+  tournamentSources: string[];
   onSave: () => void;
 }
 
@@ -41,150 +43,28 @@ export function BulkMatchOverrideDialog({
   open,
   onOpenChange,
   tournamentId,
+  leagueSources,
+  tournamentSources,
   onSave,
 }: BulkMatchOverrideDialogProps) {
   const [fromSource, setFromSource] = useState<string>('');
   const [toSource, setToSource] = useState<string>('');
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [availableSources, setAvailableSources] = useState<string[]>([]);
   const [affectedMatches, setAffectedMatches] = useState<AffectedMatch[]>([]);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
 
-  // システム値から表示名に変換する関数
-  const formatSourceDisplay = (source: string): string => {
-    // ブロック順位パターン（A_1 → Aブロック1位）
-    const blockPositionMatch = source.match(/^([A-L])_(\d+)$/);
-    if (blockPositionMatch) {
-      const block = blockPositionMatch[1];
-      const position = blockPositionMatch[2];
-      return `${block}ブロック${position}位`;
-    }
-
-    // 試合結果パターン（M10_winner → M10試合の勝者）
-    const matchResultMatch = source.match(/^([MT])(\d+)_(winner|loser)$/);
-    if (matchResultMatch) {
-      const matchType = matchResultMatch[1];
-      const matchNum = matchResultMatch[2];
-      const result = matchResultMatch[3] === 'winner' ? '勝者' : '敗者';
-      return `${matchType}${matchNum}試合の${result}`;
-    }
-
-    return source;
+  // sourceがリーグ形式（ブロック順位: A_1等）かを判定
+  const isLeagueSource = (source: string): boolean => {
+    return /^[A-Z]_\d+$/.test(source);
   };
 
-  // 進出元候補を大会テンプレートと実際の参加チーム数から動的に生成
-  useEffect(() => {
-    const fetchAvailableSources = async () => {
-      try {
-        const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`);
-        const tournamentData = await tournamentResponse.json();
-
-        if (!tournamentData.success) {
-          console.error('大会情報の取得に失敗しました');
-          return;
-        }
-
-        const formatId = tournamentData.data.format_id;
-        const templatesResponse = await fetch(`/api/tournaments/formats/${formatId}/templates`);
-        const templatesData = await templatesResponse.json();
-
-        if (!templatesData.success || !templatesData.data?.templates) {
-          console.error('テンプレート情報の取得に失敗しました');
-          return;
-        }
-
-        const matchesResponse = await fetch(`/api/tournaments/${tournamentId}/matches`);
-        const matchesData = await matchesResponse.json();
-
-        const templates = templatesData.data.templates;
-        const sourcesSet = new Set<string>();
-
-        interface TemplateData {
-          phase?: string;
-          block_name?: string;
-          match_code?: string;
-          team1_source?: string;
-          team2_source?: string;
-        }
-
-        templates.forEach((template: TemplateData) => {
-          if (template.match_code) {
-            const code = template.match_code;
-            if (code.match(/^[MT]\d+$/)) {
-              sourcesSet.add(`${code}_winner`);
-              sourcesSet.add(`${code}_loser`);
-            }
-          }
-
-          if (template.team1_source) {
-            sourcesSet.add(template.team1_source);
-          }
-          if (template.team2_source) {
-            sourcesSet.add(template.team2_source);
-          }
-        });
-
-        const blockTeamCounts = new Map<string, number>();
-
-        interface MatchData {
-          phase?: string;
-          block_name?: string;
-          team1_id?: string;
-          team2_id?: string;
-        }
-
-        if (matchesData.success && matchesData.data) {
-          const preliminaryMatches = matchesData.data.filter(
-            (match: MatchData) => match.phase === 'preliminary'
-          );
-
-          preliminaryMatches.forEach((match: MatchData) => {
-            if (match.block_name) {
-              const blockName = match.block_name;
-              const teams = new Set<string>();
-
-              preliminaryMatches
-                .filter((m: MatchData) => m.block_name === blockName)
-                .forEach((m: MatchData) => {
-                  if (m.team1_id) teams.add(m.team1_id);
-                  if (m.team2_id) teams.add(m.team2_id);
-                });
-
-              blockTeamCounts.set(blockName, teams.size);
-            }
-          });
-        }
-
-        blockTeamCounts.forEach((teamCount, blockName) => {
-          for (let i = 1; i <= teamCount; i++) {
-            sourcesSet.add(`${blockName}_${i}`);
-          }
-        });
-
-        const sortedSources = Array.from(sourcesSet).sort((a, b) => {
-          const blockA = a.match(/^([A-L])_(\d+)$/);
-          const blockB = b.match(/^([A-L])_(\d+)$/);
-          if (blockA && blockB) {
-            if (blockA[1] !== blockB[1]) return blockA[1].localeCompare(blockB[1]);
-            return parseInt(blockA[2]) - parseInt(blockB[2]);
-          }
-          if (blockA) return -1;
-          if (blockB) return 1;
-
-          return a.localeCompare(b);
-        });
-
-        setAvailableSources(sortedSources);
-      } catch (error) {
-        console.error('進出元候補の取得エラー:', error);
-      }
-    };
-
-    if (open && tournamentId) {
-      fetchAvailableSources();
-    }
-  }, [open, tournamentId]);
+  // 選択中のfromSourceと同じ種別のソースリストを返す
+  const getFilteredToSources = (): string[] => {
+    if (!fromSource) return [...leagueSources, ...tournamentSources];
+    if (isLeagueSource(fromSource)) return leagueSources;
+    return tournamentSources;
+  };
 
   // 影響を受ける試合を検索
   useEffect(() => {
@@ -243,7 +123,7 @@ export function BulkMatchOverrideDialog({
         body: JSON.stringify({
           from_source: fromSource,
           to_source: toSource,
-          override_reason: reason || `${formatSourceDisplay(fromSource)}を${formatSourceDisplay(toSource)}に一括変更`,
+          override_reason: reason || `${fromSource}を${toSource}に一括変更`,
         }),
       });
 
@@ -286,16 +166,34 @@ export function BulkMatchOverrideDialog({
             <Label htmlFor="from-source">変更元の進出条件</Label>
             <Select
               value={fromSource}
-              onValueChange={setFromSource}
+              onValueChange={(value) => {
+                setFromSource(value);
+                setToSource('');
+              }}
               onOpenChange={setIsSelectOpen}
             >
               <SelectTrigger id="from-source">
                 <SelectValue placeholder="変更元を選択" />
               </SelectTrigger>
               <SelectContent className="max-h-60" position="popper" sideOffset={5}>
-                {availableSources.map(source => (
+                {leagueSources.length > 0 && tournamentSources.length > 0 && (
+                  <SelectItem value="__league_header__" disabled className="text-xs text-gray-400 font-semibold">
+                    ── ブロック順位 ──
+                  </SelectItem>
+                )}
+                {leagueSources.map(source => (
                   <SelectItem key={source} value={source}>
-                    {formatSourceDisplay(source)}
+                    {source}
+                  </SelectItem>
+                ))}
+                {leagueSources.length > 0 && tournamentSources.length > 0 && (
+                  <SelectItem value="__tournament_header__" disabled className="text-xs text-gray-400 font-semibold">
+                    ── 試合結果 ──
+                  </SelectItem>
+                )}
+                {tournamentSources.map(source => (
+                  <SelectItem key={source} value={source}>
+                    {source}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -314,9 +212,9 @@ export function BulkMatchOverrideDialog({
                 <SelectValue placeholder="変更先を選択" />
               </SelectTrigger>
               <SelectContent className="max-h-60" position="popper" sideOffset={5}>
-                {availableSources.map(source => (
+                {getFilteredToSources().map(source => (
                   <SelectItem key={source} value={source}>
-                    {formatSourceDisplay(source)}
+                    {source}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -326,9 +224,9 @@ export function BulkMatchOverrideDialog({
           {/* 変更内容プレビュー */}
           {fromSource && toSource && (
             <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded">
-              <span className="font-semibold text-blue-800">{formatSourceDisplay(fromSource)}</span>
+              <span className="font-semibold text-blue-800">{fromSource}</span>
               <ArrowRight className="h-5 w-5 text-blue-600" />
-              <span className="font-semibold text-blue-800">{formatSourceDisplay(toSource)}</span>
+              <span className="font-semibold text-blue-800">{toSource}</span>
             </div>
           )}
 
@@ -341,7 +239,7 @@ export function BulkMatchOverrideDialog({
                   <div key={match.match_code} className="text-sm p-2 bg-gray-50 rounded">
                     <div className="font-semibold">{match.match_code} - {match.round_name}</div>
                     <div className="text-gray-600 text-xs mt-1">
-                      {match.team1_source && formatSourceDisplay(match.team1_source)} vs {match.team2_source && formatSourceDisplay(match.team2_source)}
+                      {match.team1_source} vs {match.team2_source}
                     </div>
                   </div>
                 ))}

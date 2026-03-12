@@ -118,15 +118,15 @@ async function TournamentBracketContent({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-primary/5 border-primary/20">
             <CardContent className="pt-4">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 mt-0.5">
-                  <div className="h-2 w-2 bg-blue-400 rounded-full"></div>
+                  <div className="h-2 w-2 bg-primary rounded-full"></div>
                 </div>
-                <div className="text-sm text-blue-700">
+                <div className="text-sm text-primary">
                   <p className="font-medium mb-1">トーナメント表の見方</p>
-                  <ul className="list-disc list-inside space-y-1 text-blue-600">
+                  <ul className="list-disc list-inside space-y-1 text-primary">
                     <li>実線は勝利チームの勝ち上がり、点線は敗者の進出先（3位決定戦）</li>
                     <li>太字は勝利チーム、数字は得点を表示</li>
                     <li>［T1］などは試合コードを表示</li>

@@ -33,18 +33,21 @@ const getTeamStatus = (team: SimpleTournamentTeam) => {
 
 interface TournamentTeamsProps {
   tournamentId: number;
+  initialTeamsData?: SimpleTournamentTeamsData;
 }
 
-export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) {
-  const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(null);
+export default function TournamentTeams({ tournamentId, initialTeamsData }: TournamentTeamsProps) {
+  const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(initialTeamsData || null);
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
   const [teamPlayers, setTeamPlayers] = useState<Record<number, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialTeamsData);
   const [error, setError] = useState<string | null>(null);
   const [canViewPlayers, setCanViewPlayers] = useState(false);
 
-  // 参加チームデータの取得
+  // 参加チームデータの取得（initialTeamsDataが提供されていない場合のみ）
   useEffect(() => {
+    if (initialTeamsData) return;
+
     const fetchTeams = async () => {
       setLoading(true);
       setError(null);
@@ -75,7 +78,7 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
     };
 
     fetchTeams();
-  }, [tournamentId]);
+  }, [tournamentId, initialTeamsData]);
 
   // チーム展開の切り替え
   const toggleTeamExpansion = async (tournamentTeamId: number) => {
@@ -151,7 +154,7 @@ export default function TournamentTeams({ tournamentId }: TournamentTeamsProps) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{teamsData.total_teams}</div>
               <div className="text-sm text-muted-foreground">参加チーム数</div>

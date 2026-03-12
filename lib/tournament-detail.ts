@@ -1,7 +1,9 @@
 // lib/tournament-detail.ts
 import { db } from '@/lib/db';
+import { auth } from '@/lib/auth';
 import { Tournament } from '@/lib/types';
 import type { TournamentStatus } from '@/lib/tournament-status';
+import type { ExtendedUser } from '@/lib/auth';
 
 /**
  * アーカイブされた大会の詳細情報を取得する
@@ -29,7 +31,7 @@ async function getArchivedTournamentById(tournamentId: number): Promise<Tourname
       tournament_id: Number(tournamentData.tournament_id),
       tournament_name: String(tournamentData.tournament_name),
       format_id: Number(tournamentData.format_id),
-      venue_id: Number(tournamentData.venue_id),
+      venue_id: tournamentData.venue_id ? String(tournamentData.venue_id) : null,
       team_count: Number(tournamentData.team_count),
       status: tournamentData.status,
       court_count: Number(tournamentData.court_count),
@@ -74,12 +76,9 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       SELECT 
         t.*,
         v.venue_name,
-        v.address,
-        tf.format_name,
-        tf.format_description
+        v.address
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -94,7 +93,7 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       tournament_id: row.tournament_id as number,
       tournament_name: row.tournament_name as string,
       format_id: row.format_id as number,
-      venue_id: row.venue_id as number,
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: row.team_count as number,
       status: row.status as TournamentStatus,
       court_count: row.court_count as number,
@@ -107,7 +106,7 @@ export async function getRawTournamentById(tournamentId: number): Promise<Tourna
       recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : undefined,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
-      
+
       // Optional joined fields
       venue_name: row.venue_name as string | undefined,
       format_name: row.format_name as string | undefined,
@@ -138,12 +137,9 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
       SELECT
         t.*,
         v.venue_name,
-        v.address,
-        tf.format_name,
-        tf.format_description
+        v.address
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [tournamentId]);
 
@@ -164,7 +160,7 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
       tournament_id: row.tournament_id as number,
       tournament_name: row.tournament_name as string,
       format_id: row.format_id as number,
-      venue_id: row.venue_id as number,
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: row.team_count as number,
       status: row.status as TournamentStatus,
       court_count: row.court_count as number,
@@ -188,7 +184,10 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
 
       // アーカイブ関連
       is_archived: Boolean(row.is_archived),
-      archive_ui_version: row.archive_ui_version ? String(row.archive_ui_version) : undefined
+      archive_ui_version: row.archive_ui_version ? String(row.archive_ui_version) : undefined,
+
+      // フェーズ構成
+      phases: row.phases ? (typeof row.phases === 'string' ? JSON.parse(row.phases as string) : row.phases) : undefined,
     };
 
     return tournament;
@@ -243,19 +242,43 @@ export async function getTournamentWithGroupInfo(tournamentId: number) {
     // 同じグループに所属する他の部門を取得
     let sibling_divisions: Array<{ tournament_id: number; tournament_name: string }> = [];
     if (group) {
-      const divisionsResult = await db.execute(`
-        SELECT
-          t.tournament_id,
-          t.tournament_name,
-          t.visibility,
-          t.public_start_date
-        FROM t_tournaments t
-        WHERE t.group_id = ?
-          AND t.tournament_id != ?
-          AND t.visibility = 'open'
-          AND t.public_start_date <= date('now')
-        ORDER BY t.created_at ASC
-      `, [group.group_id, tournamentId]);
+      const session = await auth();
+      const user = session?.user as ExtendedUser | undefined;
+      const isAdmin = user?.roles?.includes('admin');
+      const isOperator = user?.roles?.includes('operator');
+
+      let divisionsResult;
+      if (isAdmin) {
+        // 管理者: すべての部門を表示
+        divisionsResult = await db.execute(`
+          SELECT t.tournament_id, t.tournament_name
+          FROM t_tournaments t
+          WHERE t.group_id = ?
+            AND t.tournament_id != ?
+          ORDER BY t.created_at ASC
+        `, [group.group_id, tournamentId]);
+      } else if (isOperator && user?.accessibleTournaments?.length) {
+        // 運営者: 割り当てられた部門 + 公開部門を表示
+        const placeholders = user.accessibleTournaments.map(() => '?').join(',');
+        divisionsResult = await db.execute(`
+          SELECT t.tournament_id, t.tournament_name
+          FROM t_tournaments t
+          WHERE t.group_id = ?
+            AND t.tournament_id != ?
+            AND (t.visibility = 'open' OR t.tournament_id IN (${placeholders}))
+          ORDER BY t.created_at ASC
+        `, [group.group_id, tournamentId, ...user.accessibleTournaments]);
+      } else {
+        // 一般ユーザー・未ログイン: 公開部門のみ
+        divisionsResult = await db.execute(`
+          SELECT t.tournament_id, t.tournament_name
+          FROM t_tournaments t
+          WHERE t.group_id = ?
+            AND t.tournament_id != ?
+            AND t.visibility = 'open'
+          ORDER BY t.created_at ASC
+        `, [group.group_id, tournamentId]);
+      }
 
       sibling_divisions = divisionsResult.rows.map(row => ({
         tournament_id: Number(row.tournament_id),

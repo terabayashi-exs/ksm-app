@@ -172,6 +172,34 @@ export async function POST(request: NextRequest) {
       }
       console.log('All players inserted successfully');
 
+      // m_login_users に同メールアドレスのユーザーが存在すれば m_team_members に primary として登録
+      const loginUserResult = await db.execute(
+        `SELECT login_user_id FROM m_login_users WHERE email = ? AND is_active = 1 LIMIT 1`,
+        [data.contact_email]
+      );
+      if (loginUserResult.rows.length > 0) {
+        const loginUserId = Number(loginUserResult.rows[0].login_user_id);
+        await db.execute(
+          `INSERT INTO m_team_members (team_id, login_user_id, member_role, is_active, created_at, updated_at)
+           VALUES (?, ?, 'member', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))`,
+          [data.team_id, loginUserId]
+        );
+        // m_login_user_roles に "team" ロールがなければ追加
+        const existingRole = await db.execute(
+          `SELECT id FROM m_login_user_roles WHERE login_user_id = ? AND role = 'team' LIMIT 1`,
+          [loginUserId]
+        );
+        if (existingRole.rows.length === 0) {
+          await db.execute(
+            `INSERT INTO m_login_user_roles (login_user_id, role, created_at) VALUES (?, 'team', datetime('now', '+9 hours'))`,
+            [loginUserId]
+          );
+        }
+        console.log('m_team_members registered for login_user_id:', loginUserId);
+      } else {
+        console.log('No m_login_users found for email:', data.contact_email, '— skipping m_team_members insert');
+      }
+
       // トークンを使用済みにする
       if (token) {
         await db.execute(`

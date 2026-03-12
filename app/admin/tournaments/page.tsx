@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { 
-  getStatusLabel, 
+import { ArrowLeft, Plus } from 'lucide-react';
+import {
+  getStatusLabel,
   getStatusColor, 
   type TournamentStatus,
   type TournamentWithStatus 
@@ -25,7 +26,6 @@ interface SearchParams {
 }
 
 export default function AdminTournamentsList() {
-  const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -160,7 +160,7 @@ export default function AdminTournamentsList() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -169,31 +169,32 @@ export default function AdminTournamentsList() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">部門一覧</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                部門の検索・管理を行います（各大会に属する部門を管理）
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/admin')}
-              >
-                ダッシュボードに戻る
-              </Button>
-              <Button asChild>
-                <Link href="/admin/tournaments/create-new">部門作成</Link>
-              </Button>
-            </div>
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">部門一覧</h1>
+            <p className="text-sm text-white/70 mt-1">
+              部門の検索・管理を行います（各大会に属する部門を管理）
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/tournaments/create-new">
+              <Plus className="h-4 w-4 mr-2" />
+              部門作成
+            </Link>
+          </Button>
+        </div>
         {/* 検索フォーム */}
         <Card className="mb-6">
           <CardHeader>
@@ -279,8 +280,8 @@ export default function AdminTournamentsList() {
 
         {/* エラー表示 */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 mb-6">
+            <p className="text-destructive">{error}</p>
           </div>
         )}
 
@@ -361,7 +362,7 @@ export default function AdminTournamentsList() {
                                       編集
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                  <Button asChild size="sm" variant="outline" className="hover:border-primary/30 hover:bg-primary/5">
                                     <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                                       参加チーム管理
                                     </Link>
@@ -371,12 +372,12 @@ export default function AdminTournamentsList() {
                                       ルール設定
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                  <Button asChild size="sm" variant="outline" className="hover:border-primary/30 hover:bg-primary/5">
                                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                                       試合結果入力
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-blue-300 hover:bg-blue-50">
+                                  <Button asChild size="sm" variant="outline" className="hover:border-primary/30 hover:bg-primary/5">
                                     <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                                       手動順位設定
                                     </Link>

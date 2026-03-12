@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { checkAndPromoteOnOverrideChange } from '@/lib/tournament-promotion';
+import { getTournamentFormatPhases } from '@/lib/tournament-phases';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -21,7 +22,7 @@ export async function POST(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -56,9 +57,9 @@ export async function POST(
       );
     }
 
-    // 大会のフォーマットを取得
+    // 大会存在確認（phases JSONも取得）
     const tournamentResult = await db.execute(`
-      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -68,19 +69,23 @@ export async function POST(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id;
+    // トーナメント形式のフェーズIDを取得
+    const phasesJson = tournamentResult.rows[0].phases as string | null;
+    const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
+    const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
 
     // 影響を受ける試合を取得
     const templatesResult = await db.execute(`
       SELECT
-        match_code,
-        team1_source,
-        team2_source
-      FROM m_match_templates
-      WHERE format_id = ?
-        AND phase = 'final'
-        AND (team1_source = ? OR team2_source = ?)
-    `, [formatId, from_source, from_source]);
+        ml.match_code,
+        ml.team1_source,
+        ml.team2_source
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND mb.phase IN (${phasePlaceholders})
+        AND (ml.team1_source = ? OR ml.team2_source = ?)
+    `, [tournamentId, ...tournamentPhaseIds, from_source, from_source]);
 
     if (templatesResult.rows.length === 0) {
       return NextResponse.json(

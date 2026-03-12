@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
-            楽勝 GO
+            大会GO
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             パスワードリセット
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 {error && (
-                  <div className="text-red-600 text-sm bg-red-50 dark:bg-red-950/20 p-3 rounded border border-red-200 dark:border-red-800">
+                  <div className="text-destructive text-sm bg-destructive/5 dark:bg-red-950/20 p-3 rounded border border-destructive/20 dark:border-red-800">
                     {error}
                   </div>
                 )}
@@ -133,11 +133,11 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">
+                <div className="bg-primary/5 dark:bg-blue-950/20 border border-primary/20 dark:border-blue-800 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-primary dark:text-blue-300 mb-2">
                     重要事項
                   </h4>
-                  <ul className="text-sm text-blue-800 dark:text-blue-400 space-y-1 list-disc list-inside">
+                  <ul className="text-sm text-primary dark:text-blue-400 space-y-1 list-disc list-inside">
                     <li>リンクの有効期限は1時間です</li>
                     <li>リンクは1回のみ使用可能です</li>
                     <li>メールが届かない場合は迷惑メールフォルダをご確認ください</li>
@@ -158,7 +158,7 @@ export default function ForgotPasswordPage() {
               <div className="mt-6 text-center space-y-2">
                 <Link
                   href="/auth/login"
-                  className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500"
+                  className="inline-flex items-center text-sm font-medium text-primary hover:text-primary/80"
                 >
                   <ArrowLeft className="h-4 w-4 mr-1" />
                   ログイン画面に戻る
@@ -167,7 +167,7 @@ export default function ForgotPasswordPage() {
                   チーム登録がお済みでない場合は{" "}
                   <Link
                     href="/auth/register"
-                    className="font-medium text-blue-600 hover:text-blue-500"
+                    className="font-medium text-primary hover:text-primary/80"
                   >
                     こちらから登録
                   </Link>

@@ -1,5 +1,10 @@
 // lib/tournament-promotion.ts
 import { db } from '@/lib/db';
+import {
+  getLeagueFormatPhases,
+  getSubsequentPhases,
+  getPhaseFormatTypeFromJson,
+} from '@/lib/tournament-phases';
 
 export interface BlockRanking {
   tournament_team_id?: number; // 複数エントリーチーム対応
@@ -54,6 +59,17 @@ export async function promoteTeamsToFinalTournament(tournamentId: number, target
 }
 
 /**
+ * 大会のphases JSONを取得するヘルパー
+ */
+async function fetchTournamentPhasesJson(tournamentId: number): Promise<string | null> {
+  const result = await db.execute({
+    sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
+    args: [tournamentId]
+  });
+  return result.rows[0]?.phases as string | null;
+}
+
+/**
  * 全ブロックの順位表を取得（完了ブロックのみ）
  * @param targetBlockId 指定された場合、そのブロックのみを取得
  */
@@ -62,6 +78,11 @@ async function getAllBlockRankings(tournamentId: number, targetBlockId?: number)
   rankings: BlockRanking[];
 }[]> {
   try {
+    // phases JSONからリーグ形式のフェーズIDを取得
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const leaguePhases = getLeagueFormatPhases(phasesJson);
+    const phasePlaceholders = leaguePhases.map(() => '?').join(',');
+
     // 特定のブロックのみを取得する場合
     const sql = targetBlockId
       ? `
@@ -72,7 +93,7 @@ async function getAllBlockRankings(tournamentId: number, targetBlockId?: number)
         FROM t_match_blocks
         WHERE tournament_id = ?
         AND match_block_id = ?
-        AND phase = 'preliminary'
+        AND phase IN (${phasePlaceholders})
         AND team_rankings IS NOT NULL
         ORDER BY block_name
       `
@@ -83,12 +104,12 @@ async function getAllBlockRankings(tournamentId: number, targetBlockId?: number)
           team_rankings
         FROM t_match_blocks
         WHERE tournament_id = ?
-        AND phase = 'preliminary'
+        AND phase IN (${phasePlaceholders})
         AND team_rankings IS NOT NULL
         ORDER BY block_name
       `;
 
-    const args = targetBlockId ? [tournamentId, targetBlockId] : [tournamentId];
+    const args = targetBlockId ? [tournamentId, targetBlockId, ...leaguePhases] : [tournamentId, ...leaguePhases];
 
     const blocks = await db.execute({
       sql,
@@ -133,7 +154,7 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
   try {
     const result = await db.execute({
       sql: `
-        SELECT 
+        SELECT
           COUNT(*) as total_matches,
           COUNT(CASE WHEN mf.match_id IS NOT NULL OR ml.match_status = 'cancelled' THEN 1 END) as completed_matches
         FROM t_matches_live ml
@@ -141,6 +162,7 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
         WHERE ml.match_block_id = ?
         AND ml.team1_tournament_team_id IS NOT NULL
         AND ml.team2_tournament_team_id IS NOT NULL
+        AND (ml.match_type IS NULL OR ml.match_type != 'FM')
       `,
       args: [matchBlockId]
     });
@@ -191,44 +213,44 @@ async function extractTopTeamsDynamic(
   const promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; } = {};
 
   try {
-    // 大会のフォーマットIDを取得
-    const formatResult = await db.execute({
-      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
-      args: [tournamentId]
-    });
-    
-    if (formatResult.rows.length === 0) {
-      throw new Error(`Tournament ${tournamentId} not found`);
+    // phases JSONから後続フェーズ（2つ目以降）のIDを取得
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const subsequentPhases = getSubsequentPhases(phasesJson);
+    const subsequentPhasePlaceholders = subsequentPhases.map(() => '?').join(',');
+
+    if (subsequentPhases.length === 0) {
+      console.log(`[PROMOTION] 後続フェーズがないため進出チーム抽出をスキップ`);
+      return promotions;
     }
-    
-    const formatId = formatResult.rows[0].format_id as number;
-    
-    // 決勝トーナメントのテンプレートから必要な進出条件を取得（オーバーライド適用）
+
+    // 後続フェーズのライブ試合から必要な進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
         SELECT DISTINCT
-          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
-        FROM m_match_templates mt
+          COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, ml.team2_source) as team2_source
+        FROM t_matches_live ml
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_tournament_match_overrides mo
-          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
-        WHERE mt.format_id = ? AND mt.phase = 'final'
+          ON ml.match_code = mo.match_code AND mo.tournament_id = ?
+        WHERE mb.tournament_id = ? AND mb.phase IN (${subsequentPhasePlaceholders})
       `,
-      args: [tournamentId, formatId]
+      args: [tournamentId, tournamentId, ...subsequentPhases]
     });
     
-    // 必要な進出パターンを抽出（ブロック_順位形式のみ、試合の勝敗は除外）
+    // 必要な進出パターンを抽出（ブロック_順位形式 + BESTパターン、試合の勝敗は除外）
     const requiredPromotions = new Set<string>();
     templateResult.rows.forEach(row => {
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
-      
-      // ブロック名_順位の形式のみを抽出（予選ブロック進出条件のみ）
+
+      // ブロック名_順位の形式を抽出（予選ブロック進出条件）
       // パターン: 単一文字ブロック名_数字順位 (例: A_1, B_2, F_3, L_4)
-      if (team1Source && team1Source.match(/^[A-Z]_\d+$/)) {
+      // BESTパターン: BEST_順位_ランク (例: BEST_3_1, BEST_4_2)
+      if (team1Source && (team1Source.match(/^[A-Z]_\d+$/) || team1Source.match(/^BEST_\d+_\d+$/))) {
         requiredPromotions.add(team1Source);
       }
-      if (team2Source && team2Source.match(/^[A-Z]_\d+$/)) {
+      if (team2Source && (team2Source.match(/^[A-Z]_\d+$/) || team2Source.match(/^BEST_\d+_\d+$/))) {
         requiredPromotions.add(team2Source);
       }
     });
@@ -288,7 +310,66 @@ async function extractTopTeamsDynamic(
       });
     });
 
-    // 試合の勝者・敗者もpromotionsに追加（決勝トーナメント内での進出条件対応）
+    // BEST パターンの解決（全ブロックN位中ベストM位）
+    const bestPromotions = Array.from(requiredPromotions).filter(key => key.match(/^BEST_\d+_\d+$/));
+    if (bestPromotions.length > 0) {
+      // 必要な順位ごとにグループ化 (例: BEST_3_1 と BEST_3_2 → position=3)
+      const positionGroups = new Map<number, string[]>();
+      bestPromotions.forEach(key => {
+        const [, posStr] = key.split('_');
+        const pos = parseInt(posStr);
+        if (!positionGroups.has(pos)) positionGroups.set(pos, []);
+        positionGroups.get(pos)!.push(key);
+      });
+
+      for (const [position, keys] of positionGroups) {
+        // 全ブロックから該当順位のチームを収集
+        const candidateTeams: BlockRanking[] = [];
+        blockRankings.forEach(block => {
+          const teamsAtPosition = block.rankings.filter(t => t.position === position);
+          candidateTeams.push(...teamsAtPosition);
+        });
+
+        if (candidateTeams.length === 0) {
+          console.log(`[PROMOTION] BEST_${position}_*: 対象チームなし`);
+          continue;
+        }
+
+        console.log(`[PROMOTION] BEST_${position}_* 候補チーム(${candidateTeams.length}チーム):`, candidateTeams.map(t => `${t.team_name}(勝点${t.points}, 得失点差${t.goal_difference}, 総得点${t.goals_for})`));
+
+        // 統計値でソート（勝点→得失点差→総得点）
+        const sorted = [...candidateTeams].sort((a, b) => {
+          if (a.points !== b.points) return b.points - a.points;
+          if (a.goal_difference !== b.goal_difference) return b.goal_difference - a.goal_difference;
+          if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
+          return 0;
+        });
+
+        // 各 BEST_N_M キーに対応するチームを割り当て（ランク順にソート）
+        keys.sort((a, b) => {
+          const rankA = parseInt(a.split('_')[2]);
+          const rankB = parseInt(b.split('_')[2]);
+          return rankA - rankB;
+        });
+
+        keys.forEach(key => {
+          const rank = parseInt(key.split('_')[2]);
+          const idx = rank - 1;
+          if (idx < sorted.length) {
+            promotions[key] = {
+              tournament_team_id: sorted[idx].tournament_team_id,
+              team_id: sorted[idx].team_id,
+              team_name: sorted[idx].team_name || sorted[idx].team_omission || sorted[idx].team_id
+            };
+            console.log(`[PROMOTION] ${key} 確定: ${sorted[idx].team_name}`);
+          } else {
+            console.log(`[PROMOTION] ${key}: 対象チーム不足（候補${sorted.length}チーム、要求rank=${rank}）`);
+          }
+        });
+      }
+    }
+
+    // 試合の勝者・敗者もpromotionsに追加（後続フェーズ内での進出条件対応）
     try {
       const matchWinnersResult = await db.execute({
         sql: `
@@ -307,10 +388,11 @@ async function extractTopTeamsDynamic(
           LEFT JOIN t_tournament_teams tt1 ON mf.team1_tournament_team_id = tt1.tournament_team_id
           LEFT JOIN t_tournament_teams tt2 ON mf.team2_tournament_team_id = tt2.tournament_team_id
           WHERE mb.tournament_id = ?
-            AND mb.phase = 'final'
+            AND mb.phase IN (${subsequentPhasePlaceholders})
             AND mf.winner_tournament_team_id IS NOT NULL
+            AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         `,
-        args: [tournamentId]
+        args: [tournamentId, ...subsequentPhases]
       });
 
       matchWinnersResult.rows.forEach(row => {
@@ -425,24 +507,37 @@ async function updateFinalTournamentMatches(
   promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; }
 ): Promise<void> {
   try {
-    // 決勝トーナメントブロックを取得
+    // phases JSONから後続フェーズ（2つ目以降）のIDを取得
+    // リーグ→リーグ、リーグ→トーナメント両方の進出に対応
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const subsequentPhases = getSubsequentPhases(phasesJson);
+    const subsequentPhasePlaceholders = subsequentPhases.map(() => '?').join(',');
+
+    if (subsequentPhases.length === 0) {
+      console.log(`[PROMOTION] 後続フェーズがありません`);
+      return;
+    }
+
+    console.log(`[PROMOTION] 後続フェーズ: ${subsequentPhases.join(', ')}`);
+
+    // 後続フェーズのブロックを取得
     const finalBlockResult = await db.execute({
       sql: `
         SELECT match_block_id
         FROM t_match_blocks
-        WHERE tournament_id = ? AND phase = 'final'
+        WHERE tournament_id = ? AND phase IN (${subsequentPhasePlaceholders})
       `,
-      args: [tournamentId]
+      args: [tournamentId, ...subsequentPhases]
     });
 
     if (finalBlockResult.rows.length === 0) {
-      console.log(`[PROMOTION] 決勝トーナメントブロックが見つかりません`);
+      console.log(`[PROMOTION] 後続フェーズのブロックが見つかりません`);
       return;
     }
 
-    console.log(`[PROMOTION] 決勝トーナメントブロック数: ${finalBlockResult.rows.length}`);
+    console.log(`[PROMOTION] 後続フェーズブロック数: ${finalBlockResult.rows.length}`);
 
-    // 全ての決勝トーナメントブロックから試合を取得（確定済み試合も含める）
+    // 後続フェーズの全試合を取得（確定済み試合も含める）
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -456,32 +551,32 @@ async function updateFinalTournamentMatches(
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        WHERE mb.tournament_id = ? AND mb.phase = 'final'
+        WHERE mb.tournament_id = ? AND mb.phase IN (${subsequentPhasePlaceholders})
         ORDER BY ml.match_code
       `,
-      args: [tournamentId]
+      args: [tournamentId, ...subsequentPhases]
     });
 
-    console.log(`[PROMOTION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
+    console.log(`[PROMOTION] 後続フェーズ試合: ${matchesResult.rows.length}件`);
 
-    // テンプレートから各試合の進出条件を取得（オーバーライド適用）
+    // ライブ試合から各試合の進出条件を取得（オーバーライド適用）
     const templateResult = await db.execute({
       sql: `
         SELECT
-          mt.match_code,
-          mt.round_name,
-          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
-          mt.team1_display_name as template_team1_name,
-          mt.team2_display_name as template_team2_name
-        FROM m_match_templates mt
-        JOIN t_tournaments t ON mt.format_id = t.format_id
+          ml.match_code,
+          ml.round_name,
+          COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, ml.team2_source) as team2_source,
+          ml.team1_display_name as template_team1_name,
+          ml.team2_display_name as template_team2_name
+        FROM t_matches_live ml
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_tournament_match_overrides mo
-          ON mt.match_code = mo.match_code AND mo.tournament_id = ?
-        WHERE t.tournament_id = ? AND mt.phase = 'final'
-        ORDER BY mt.match_code
+          ON ml.match_code = mo.match_code AND mo.tournament_id = ?
+        WHERE mb.tournament_id = ? AND mb.phase IN (${subsequentPhasePlaceholders})
+        ORDER BY ml.match_code
       `,
-      args: [tournamentId, tournamentId]
+      args: [tournamentId, tournamentId, ...subsequentPhases]
     });
 
     // テンプレート情報をマップ化
@@ -505,7 +600,7 @@ async function updateFinalTournamentMatches(
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
 
-      // A_1, B_1などのパターンからブロック位置を計算
+      // A_1, B_1, BEST_3_1 などのパターンからブロック位置を計算
       const assignTeamSource = (source: string) => {
         if (source && source.match(/^[A-Z]_\d+$/)) {
           const [block] = source.split('_');
@@ -516,6 +611,14 @@ async function updateFinalTournamentMatches(
             teamBlockAssignments.set(source, {
               block_name: roundName,
               position: blockPosition
+            });
+          }
+        } else if (source && source.match(/^BEST_\d+_\d+$/)) {
+          const [, , rankStr] = source.split('_');
+          if (!teamBlockAssignments.has(source)) {
+            teamBlockAssignments.set(source, {
+              block_name: roundName,
+              position: 100 + parseInt(rankStr) // 既存ブロック順序の後に配置
             });
           }
         }
@@ -626,6 +729,11 @@ export async function checkAndPromoteBlockWinners(
   try {
     console.log(`[PROMOTION] ブロック ${completedBlockId} 完了後の進出チェック`);
 
+    // phases JSONからリーグ形式のフェーズIDを取得
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const leaguePhases = getLeagueFormatPhases(phasesJson);
+    const leaguePhasePlaceholders = leaguePhases.map(() => '?').join(',');
+
     // 全予選ブロックの順位が確定しているかチェック
     const blocksResult = await db.execute({
       sql: `
@@ -633,9 +741,9 @@ export async function checkAndPromoteBlockWinners(
           COUNT(*) as total_blocks,
           COUNT(CASE WHEN team_rankings IS NOT NULL THEN 1 END) as completed_blocks
         FROM t_match_blocks
-        WHERE tournament_id = ? AND phase = 'preliminary'
+        WHERE tournament_id = ? AND phase IN (${leaguePhasePlaceholders})
       `,
-      args: [tournamentId]
+      args: [tournamentId, ...leaguePhases]
     });
 
     const totalBlocks = blocksResult.rows[0]?.total_blocks as number || 0;
@@ -696,25 +804,29 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
   try {
     console.log(`[PROMOTION_VALIDATION] 決勝トーナメント進出条件チェック開始: Tournament ${tournamentId}`);
 
-    // 1. 大会のフォーマットIDを取得
-    const formatResult = await db.execute({
-      sql: `SELECT format_id FROM t_tournaments WHERE tournament_id = ?`,
-      args: [tournamentId]
-    });
-
-    if (formatResult.rows.length === 0) {
-      throw new Error(`Tournament ${tournamentId} not found`);
-    }
-
-    const formatId = formatResult.rows[0].format_id as number;
-
-    // 2. 予選ブロックの順位表から進出チーム情報を取得
+    // 1. 予選ブロックの順位表から進出チーム情報を取得
     const blockRankings = await getAllBlockRankings(tournamentId);
     const promotions = await extractTopTeamsDynamic(tournamentId, blockRankings);
 
     console.log(`[PROMOTION_VALIDATION] 進出チーム情報取得完了: ${Object.keys(promotions).length}件`);
 
-    // 3. 決勝トーナメント試合のテンプレートと実際のデータを取得（オーバーライド適用）
+    // phases JSONから後続フェーズのIDを取得
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const validationSubsequentPhases = getSubsequentPhases(phasesJson);
+    const validationPhasePlaceholders = validationSubsequentPhases.map(() => '?').join(',');
+
+    if (validationSubsequentPhases.length === 0) {
+      console.log(`[PROMOTION_VALIDATION] 後続フェーズがありません`);
+      return {
+        isValid: true,
+        totalMatches: 0,
+        checkedMatches: 0,
+        issues: [],
+        summary: { errorCount: 0, warningCount: 0, placeholderCount: 0 }
+      };
+    }
+
+    // 2. 後続フェーズ試合の実際のデータを取得（オーバーライド適用）
     const matchesResult = await db.execute({
       sql: `
         SELECT
@@ -724,27 +836,26 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
           ml.team2_tournament_team_id,
           ml.team1_display_name,
           ml.team2_display_name,
-          COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-          COALESCE(mo.team2_source_override, mt.team2_source) as team2_source,
-          mt.team1_display_name as template_team1_display,
-          mt.team2_display_name as template_team2_display,
+          COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+          COALESCE(mo.team2_source_override, ml.team2_source) as team2_source,
+          ml.team1_display_name as template_team1_display,
+          ml.team2_display_name as template_team2_display,
           CASE WHEN mf.match_id IS NOT NULL THEN 1 ELSE 0 END as is_confirmed
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        LEFT JOIN m_match_templates mt ON mt.match_code = ml.match_code AND mt.format_id = ? AND mt.phase = mb.phase
-        LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = ?
+        LEFT JOIN t_tournament_match_overrides mo ON ml.match_code = mo.match_code AND mo.tournament_id = ?
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-        WHERE mb.tournament_id = ? AND mb.phase = 'final'
+        WHERE mb.tournament_id = ? AND mb.phase IN (${validationPhasePlaceholders})
         ORDER BY ml.match_code
       `,
-      args: [formatId, tournamentId, tournamentId]
+      args: [tournamentId, tournamentId, ...validationSubsequentPhases]
     });
 
-    console.log(`[PROMOTION_VALIDATION] 決勝トーナメント試合: ${matchesResult.rows.length}件`);
+    console.log(`[PROMOTION_VALIDATION] 後続フェーズ試合: ${matchesResult.rows.length}件`);
 
-    // 4. 各試合の進出条件をチェック
+    // 3. 各試合の進出条件をチェック
     for (const match of matchesResult.rows) {
       const matchId = match.match_id as number;
       const matchCode = match.match_code as string;
@@ -829,7 +940,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
       }
     }
 
-    // 5. チェック結果のサマリー
+    // 4. チェック結果のサマリー
     const errorCount = issues.filter(i => i.severity === 'error').length;
     const warningCount = issues.filter(i => i.severity === 'warning').length;
     const placeholderCount = issues.filter(i => i.is_placeholder).length;
@@ -965,12 +1076,12 @@ export async function checkAndPromoteOnOverrideChange(tournamentId: number, over
       const sourceResult = await db.execute({
         sql: `
           SELECT
-            COALESCE(mo.team1_source_override, mt.team1_source) as team1_source,
-            COALESCE(mo.team2_source_override, mt.team2_source) as team2_source
-          FROM m_match_templates mt
-          INNER JOIN t_tournaments t ON t.format_id = mt.format_id
-          LEFT JOIN t_tournament_match_overrides mo ON mt.match_code = mo.match_code AND mo.tournament_id = t.tournament_id
-          WHERE t.tournament_id = ? AND mt.match_code = ?
+            COALESCE(mo.team1_source_override, ml.team1_source) as team1_source,
+            COALESCE(mo.team2_source_override, ml.team2_source) as team2_source
+          FROM t_matches_live ml
+          JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_tournament_match_overrides mo ON ml.match_code = mo.match_code AND mo.tournament_id = mb.tournament_id
+          WHERE mb.tournament_id = ? AND ml.match_code = ?
         `,
         args: [tournamentId, matchCode]
       });
@@ -993,15 +1104,20 @@ export async function checkAndPromoteOnOverrideChange(tournamentId: number, over
 
     console.log(`[OVERRIDE_AUTO_PROMOTE] 進出元予選ブロック: ${Array.from(sourceBlocks).join(', ')}`);
 
+    // phases JSONからリーグ形式のフェーズIDを取得
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const leaguePhases = getLeagueFormatPhases(phasesJson);
+    const leaguePhasePlaceholders = leaguePhases.map(() => '?').join(',');
+
     // 各進出元ブロックの試合が全て確定しているかチェック
     for (const blockName of sourceBlocks) {
       const blockResult = await db.execute({
         sql: `
           SELECT match_block_id, block_name
           FROM t_match_blocks
-          WHERE tournament_id = ? AND phase = 'preliminary' AND block_name = ?
+          WHERE tournament_id = ? AND phase IN (${leaguePhasePlaceholders}) AND block_name = ?
         `,
-        args: [tournamentId, blockName]
+        args: [tournamentId, ...leaguePhases, blockName]
       });
 
       if (blockResult.rows.length === 0) {
@@ -1077,15 +1193,19 @@ export async function checkAndPromoteOnMatchConfirm(
     const phase = String(blockInfoResult.rows[0].phase);
     const blockName = String(blockInfoResult.rows[0].block_name);
 
-    if (phase === 'final') {
-      // 決勝トーナメントの場合は、この試合の勝者を使って次の試合を更新
-      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 決勝トーナメントの試合確定、次の試合への進出処理を実行します`);
+    // phases JSONからformat_typeを動的に判定
+    const phasesJson = await fetchTournamentPhasesJson(tournamentId);
+    const phaseFormatType = getPhaseFormatTypeFromJson(phasesJson, phase);
+
+    if (phaseFormatType === 'tournament') {
+      // トーナメント形式の場合は、この試合の勝者を使って次の試合を更新
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] トーナメント形式フェーズの試合確定、次の試合への進出処理を実行します`);
       await promoteTeamsToFinalTournament(tournamentId);
       return;
     }
 
-    if (phase !== 'preliminary') {
-      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] 予選でも決勝でもないため、自動進出チェックをスキップします`);
+    if (phaseFormatType !== 'league') {
+      console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] リーグでもトーナメントでもないため、自動進出チェックをスキップします`);
       return;
     }
 
@@ -1110,21 +1230,25 @@ export async function checkAndPromoteOnMatchConfirm(
       // 全試合が確定または中止されている場合
       console.log(`[MATCH_CONFIRM_AUTO_PROMOTE] ブロック ${blockName} の全試合が完了しました`);
 
-      // このブロックを進出元とする決勝トーナメント試合にオーバーライドがあるかチェック
+      // このブロックを進出元とする後続フェーズ試合にオーバーライドがあるかチェック
+      const autoPromoteSubsequentPhases = getSubsequentPhases(phasesJson);
+      const autoPromotePhasePlaceholders = autoPromoteSubsequentPhases.map(() => '?').join(',');
+
       const overrideCheckResult = await db.execute({
         sql: `
           SELECT COUNT(*) as override_count
           FROM t_tournament_match_overrides mo
-          INNER JOIN m_match_templates mt ON mt.match_code = mo.match_code
-          INNER JOIN t_tournaments t ON t.tournament_id = mo.tournament_id AND t.format_id = mt.format_id
+          INNER JOIN t_matches_live ml ON ml.match_code = mo.match_code
+          INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           WHERE mo.tournament_id = ?
-            AND mt.phase = 'final'
+            AND mb.tournament_id = ?
+            AND mb.phase IN (${autoPromotePhasePlaceholders})
             AND (
-              COALESCE(mo.team1_source_override, mt.team1_source) LIKE ? OR
-              COALESCE(mo.team2_source_override, mt.team2_source) LIKE ?
+              COALESCE(mo.team1_source_override, ml.team1_source) LIKE ? OR
+              COALESCE(mo.team2_source_override, ml.team2_source) LIKE ?
             )
         `,
-        args: [tournamentId, `${blockName}_%`, `${blockName}_%`]
+        args: [tournamentId, tournamentId, ...autoPromoteSubsequentPhases, `${blockName}_%`, `${blockName}_%`]
       });
 
       const overrideCount = Number(overrideCheckResult.rows[0]?.override_count || 0);

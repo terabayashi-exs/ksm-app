@@ -530,7 +530,7 @@ export class TieBreakingEngine {
  */
 export async function getTournamentTieBreakingRules(
   tournamentId: number,
-  phase: 'preliminary' | 'final'
+  phase: string
 ): Promise<TieBreakingRule[]> {
   try {
     const result = await db.execute(`

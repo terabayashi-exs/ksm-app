@@ -21,7 +21,7 @@ export async function GET(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -61,14 +61,14 @@ export async function GET(
         mo.override_reason,
         mo.overridden_by,
         mo.overridden_at,
-        mt.team1_source as original_team1_source,
-        mt.team2_source as original_team2_source,
-        mt.team1_display_name as original_team1_display_name,
-        mt.team2_display_name as original_team2_display_name,
-        mt.round_name
+        ml.team1_source as original_team1_source,
+        ml.team2_source as original_team2_source,
+        ml.team1_display_name as original_team1_display_name,
+        ml.team2_display_name as original_team2_display_name,
+        ml.round_name
       FROM t_tournament_match_overrides mo
-      INNER JOIN m_match_templates mt ON mt.match_code = mo.match_code
-      INNER JOIN t_tournaments t ON t.tournament_id = mo.tournament_id AND t.format_id = mt.format_id
+      INNER JOIN t_matches_live ml ON ml.match_code = mo.match_code
+      INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id AND mb.tournament_id = mo.tournament_id
       WHERE mo.tournament_id = ?
       ORDER BY mo.match_code
     `, [tournamentId]);
@@ -117,7 +117,7 @@ export async function POST(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }
@@ -152,17 +152,18 @@ export async function POST(
       );
     }
 
-    // 試合テンプレート存在確認
+    // 試合存在確認（選出条件が設定されている試合のみ対象）
     const templateCheck = await db.execute(`
-      SELECT mt.match_code
-      FROM m_match_templates mt
-      INNER JOIN t_tournaments t ON t.format_id = mt.format_id
-      WHERE t.tournament_id = ? AND mt.match_code = ? AND mt.phase = 'final'
+      SELECT ml.match_code
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND ml.match_code = ?
+        AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
     `, [tournamentId, match_code]);
 
     if (templateCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: '指定された試合コードが見つかりません' },
+        { success: false, error: '指定された試合コードが見つかりません、または選出条件が設定されていません' },
         { status: 404 }
       );
     }
@@ -233,7 +234,7 @@ export async function DELETE(
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
         { status: 401 }

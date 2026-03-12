@@ -4,8 +4,7 @@ import { getSimpleTournamentTeams } from '@/lib/tournament-teams-simple';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-// APIルートは動的に実行する（静的最適化を無効化）
-export const dynamic = 'force-dynamic';
+// キャッシュはCache-Controlヘッダーで制御
 
 export async function GET(
   request: NextRequest,
@@ -45,12 +44,17 @@ export async function GET(
     // 参加チーム情報を取得
     const teamsData = await getSimpleTournamentTeams(tournamentId);
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       data: teamsData,
       canViewPlayers,
       showPlayersPublic,
       message: '参加チーム情報を正常に取得しました'
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
     });
 
   } catch (error) {

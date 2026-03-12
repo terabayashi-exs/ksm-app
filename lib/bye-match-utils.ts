@@ -12,11 +12,21 @@ export interface MatchTeamsValidation {
 
 /**
  * 試合のチーム名をバリデーションし、不戦勝試合かどうかを判定する
+ * @param matchType - 試合種別（"FM"の場合、両方空欄を許容）
  */
 export function validateMatchTeams(
   team1: string | null | undefined,
-  team2: string | null | undefined
+  team2: string | null | undefined,
+  matchType?: string
 ): MatchTeamsValidation {
+  // FM（フレンドリーマッチ）の場合、両方空欄を許容（不戦勝ではない）
+  if (matchType === "FM") {
+    return {
+      valid: true,
+      isByeMatch: false
+    };
+  }
+
   // 両方がnullまたは空の場合はエラー
   if ((!team1 || team1.trim() === '') && (!team2 || team2.trim() === '')) {
     return {

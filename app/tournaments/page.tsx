@@ -18,7 +18,7 @@ import {
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
-import { Calendar, MapPin, Users, ChevronRight, Search, X } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, ChevronRight, Search, X } from 'lucide-react';
 import {
   getStatusLabel,
   getStatusColor,
@@ -243,32 +243,30 @@ function TournamentsContent() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <div className="bg-card shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{getPageTitle()}</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {getPageDescription()}
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                asChild
-              >
-                <Link href="/">トップページに戻る</Link>
-              </Button>
-            </div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">{getPageTitle()}</h1>
+            <p className="text-sm text-white/70 mt-1">
+              {getPageDescription()}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              トップページに戻る
+            </Link>
+          </Button>
+        </div>
         {/* エラー表示 */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 mb-6">
+            <p className="text-destructive">{error}</p>
           </div>
         )}
 
@@ -429,7 +427,7 @@ function TournamentsContent() {
                       {divisions.map((division) => (
                         <Card
                           key={division.tournament_id}
-                          className="hover:shadow-md transition-shadow cursor-pointer"
+                          className="hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer"
                           onClick={() => window.location.href = `/public/tournaments/${division.tournament_id}`}
                         >
                           <CardContent className="p-4">

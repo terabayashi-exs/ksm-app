@@ -246,7 +246,7 @@ export default function TeamMembers() {
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
                           {player.jersey_number ? (
-                            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                            <div className="w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                               {player.jersey_number}
                             </div>
                           ) : (

@@ -83,7 +83,7 @@ export async function GET() {
         v.venue_name
       FROM t_tournaments t
       JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE tt.team_id = ?
       ORDER BY t.created_at DESC
     `, [teamId]);

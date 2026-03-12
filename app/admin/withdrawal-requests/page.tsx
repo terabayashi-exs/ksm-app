@@ -18,28 +18,31 @@ export default async function WithdrawalRequestsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="space-y-6">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
-              辞退申請管理
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              チームからの大会辞退申請を確認・承認・却下することができます
-            </p>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                <AlertTriangle className="h-8 w-8 text-white" />
+                辞退申請管理
+              </h1>
+              <p className="text-sm text-white/70 mt-1">
+                チームからの大会辞退申請を確認・承認・却下することができます
+              </p>
+            </div>
+            <Button asChild variant="outline" className="text-white border-white/30 hover:bg-white/10 hover:text-white">
+              <Link href="/admin" className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                ダッシュボードに戻る
+              </Link>
+            </Button>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/admin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              ダッシュボードに戻る
-            </Link>
-          </Button>
         </div>
-
-        {/* 辞退申請管理コンポーネント */}
+      </div>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="space-y-6">
+          {/* 辞退申請管理コンポーネント */}
         <Suspense fallback={
           <Card>
             <CardContent className="pt-6">
@@ -53,10 +56,10 @@ export default async function WithdrawalRequestsPage() {
         </Suspense>
 
         {/* 注意事項 */}
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
-            <h3 className="font-semibold text-blue-800 mb-2">💡 辞退申請処理について</h3>
-            <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+            <h3 className="font-semibold text-primary mb-2">💡 辞退申請処理について</h3>
+            <ul className="text-sm text-primary space-y-1 list-disc list-inside">
               <li>承認された辞退申請は取り消すことができません</li>
               <li>辞退承認後は、該当チームの試合結果に影響を与える可能性があります</li>
               <li>却下された申請について、チームには別途連絡することをお勧めします</li>
@@ -65,6 +68,7 @@ export default async function WithdrawalRequestsPage() {
             </ul>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

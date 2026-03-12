@@ -227,15 +227,16 @@ async function duplicateTournamentBasic(sourceTournamentId: number, newTournamen
   
   const insertResult = await db.execute(`
     INSERT INTO t_tournaments (
-      tournament_name, format_id, venue_id, team_count,
+      tournament_name, format_id, format_name, venue_id, team_count,
       recruitment_start_date, recruitment_end_date, tournament_dates,
       status, visibility, public_start_date, court_count, match_duration_minutes, break_duration_minutes,
       sport_type_id, created_by, archive_ui_version, group_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
   `, [
     newTournamentName,
     sourceData.format_id || 1, // デフォルト値を提供
-    sourceData.venue_id || 1, // デフォルト値を提供
+    sourceData.format_name || null,
+    sourceData.venue_id || null, // JSON配列文字列をそのままコピー
     sourceData.team_count || 0,
     sourceData.recruitment_start_date,
     sourceData.recruitment_end_date,

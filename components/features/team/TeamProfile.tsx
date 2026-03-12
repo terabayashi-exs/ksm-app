@@ -60,9 +60,9 @@ export default function TeamProfile() {
 
   if (!profileData) {
     return (
-      <Card className="border-red-200 bg-red-50">
+      <Card className="border-destructive/20 bg-destructive/5">
         <CardContent className="p-6">
-          <p className="text-red-600 text-center">チーム情報が見つかりません</p>
+          <p className="text-destructive text-center">チーム情報が見つかりません</p>
         </CardContent>
       </Card>
     );
@@ -72,9 +72,9 @@ export default function TeamProfile() {
     <div className="space-y-6">
       {/* エラーメッセージ */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/5">
           <CardContent className="p-4">
-            <p className="text-red-600">{error}</p>
+            <p className="text-destructive">{error}</p>
           </CardContent>
         </Card>
       )}

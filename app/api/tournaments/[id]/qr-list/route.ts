@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { getCourtDisplayNames } from '@/lib/court-name-helper';
+import { SPORT_RULE_CONFIGS } from '@/lib/tournament-rules';
 
 export async function GET(
   request: NextRequest,
@@ -20,9 +21,9 @@ export async function GET(
       ? "ml.match_status IN ('scheduled', 'ongoing', 'completed')"
       : "ml.match_status IN ('scheduled', 'ongoing')";
 
-    // 大会のformat_idを取得
+    // 大会の存在確認
     const tournamentResult = await db.execute(`
-      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -32,7 +33,33 @@ export async function GET(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id;
+    // 競技種別とルール情報を取得（ピリオド名表示用）
+    const sportResult = await db.execute(`
+      SELECT st.sport_code
+      FROM t_tournaments t
+      INNER JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+      WHERE t.tournament_id = ?
+    `, [tournamentId]);
+    const sportCode = sportResult.rows.length > 0 ? String(sportResult.rows[0].sport_code) : 'pk';
+    const sportConfig = SPORT_RULE_CONFIGS[sportCode];
+
+    // フェーズ別のルール設定を取得（active_periodsからピリオド名リストを生成）
+    const rulesResult = await db.execute(`
+      SELECT phase, active_periods FROM t_tournament_rules WHERE tournament_id = ?
+    `, [tournamentId]);
+    const phasePeriodsMap: Record<string, string[]> = {};
+    rulesResult.rows.forEach(row => {
+      const phase = String(row.phase);
+      try {
+        const activePeriodNums: number[] = JSON.parse(String(row.active_periods || '[]')).map(Number);
+        const periodNames = activePeriodNums
+          .map(num => sportConfig?.default_periods.find(p => p.period_number === num)?.period_name || `P${num}`)
+          .filter(Boolean);
+        phasePeriodsMap[phase] = periodNames;
+      } catch {
+        phasePeriodsMap[phase] = [];
+      }
+    });
 
     // 試合一覧を取得（BYE試合を除外）
     const matchesResult = await db.execute(`
@@ -45,26 +72,29 @@ export async function GET(
         ml.match_status,
         ml.team1_display_name,
         ml.team2_display_name,
+        ml.venue_name,
+        ml.matchday,
         mb.match_block_id,
         mb.block_name,
         mb.phase,
+        mb.display_round_name,
+        ml.round_name,
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
         tt1.team_omission as team1_real_omission,
         tt2.team_omission as team2_real_omission,
-        mt.is_bye_match,
-        mt.team1_source,
-        mt.team2_source
+        ml.is_bye_match,
+        ml.team1_source,
+        ml.team2_source
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       WHERE mb.tournament_id = ?
       AND ${statusCondition}
-      AND (mt.is_bye_match IS NULL OR mt.is_bye_match != 1)
+      AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
       ORDER BY mb.match_block_id, ml.tournament_date, ml.start_time, ml.match_code
-    `, [formatId, tournamentId]);
+    `, [tournamentId]);
 
     // コート番号の一覧を取得
     const courtNumbers = Array.from(
@@ -119,15 +149,14 @@ export async function GET(
         tt2.team_name as team2_real_name,
         tt1.team_omission as team1_real_omission,
         tt2.team_omission as team2_real_omission,
-        mt.team1_source,
-        mt.team2_source
+        ml.team1_source,
+        ml.team2_source
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
-      WHERE mb.tournament_id = ? AND mt.is_bye_match = 1
-    `, [formatId, tournamentId]);
+      WHERE mb.tournament_id = ? AND ml.is_bye_match = 1
+    `, [tournamentId]);
 
     byeMatchesResult.rows.forEach((m) => {
       // BYE試合の勝者を特定（空でない方のチーム）
@@ -253,23 +282,53 @@ export async function GET(
       const courtNumber = match.court_number as number;
       const courtName = courtDisplayNames[courtNumber] || String(courtNumber);
 
+      // 会場表示の構築
+      const venueName = match.venue_name ? String(match.venue_name) : null;
+      const hasMatchday = match.matchday !== null && match.matchday !== undefined;
+
+      // コート/会場表示ロジック
+      // 節ありの場合: コート名があれば括弧付きで表示
+      // 節なしの場合: コート名のみ
+      let locationDisplay: string;
+      if (hasMatchday) {
+        if (venueName && courtName && courtName !== String(courtNumber)) {
+          locationDisplay = `${venueName}(${courtName})`;
+        } else if (venueName) {
+          locationDisplay = venueName;
+        } else {
+          locationDisplay = courtName;
+        }
+      } else {
+        locationDisplay = courtName;
+      }
+
+      // フェーズに対応するピリオド名リスト
+      const matchPhase = String(match.phase);
+      const periodLabels = phasePeriodsMap[matchPhase] || [];
+
       return {
         match_id: match.match_id,
         match_code: match.match_code,
         match_block_id: match.match_block_id,
         court_number: match.court_number,
         court_name: courtName,
+        location_display: locationDisplay,
         start_time: typeof match.start_time === 'string' ? match.start_time.substring(0, 5) : '--:--',
         tournament_date: match.tournament_date || '',
         match_status: match.match_status,
         block_name: match.block_name,
         phase: match.phase,
+        phase_name: match.display_round_name ? String(match.display_round_name) : String(match.phase),
+        round_name: match.round_name ? String(match.round_name) : null,
         team1_name: resolvedTeam1Name,
         team2_name: resolvedTeam2Name,
         team1_omission: resolvedTeam1Omission,
         team2_omission: resolvedTeam2Omission,
         referee_url: refereeUrl,
         qr_image_url: qrImageUrl,
+        venue_name: venueName,
+        matchday: match.matchday ? Number(match.matchday) : null,
+        period_labels: periodLabels,
       };
     });
 

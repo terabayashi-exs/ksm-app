@@ -48,12 +48,11 @@ export async function GET(_request: NextRequest) {
           t.group_id,
           t.group_order,
           v.venue_name,
-          f.format_name,
+          t.format_name,
           g.group_name,
           g.event_description as group_description
         FROM t_tournaments t
-        LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-        LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+        LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
         LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
         WHERE ${whereConditions.join(' AND ')}
         ORDER BY t.group_order, t.created_at DESC

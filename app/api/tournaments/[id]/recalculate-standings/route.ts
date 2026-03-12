@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { getTournamentSportCode } from '@/lib/sport-standings-calculator';
 import { calculateBlockStandings, calculateMultiSportBlockStandings } from '@/lib/standings-calculator';
 import { validateFinalTournamentPromotions, autoFixPromotionIssues } from '@/lib/tournament-promotion';
+import { buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 /**
  * 大会の全ブロックの順位表を強制的に再計算するAPI
@@ -71,19 +72,13 @@ export async function POST(
 
     console.log(`[RECALCULATE_STANDINGS] 対象ブロック数: ${blocks.rows.length}`);
 
-    // フォーマットタイプを取得
+    // phasesからフォーマットタイプマップを取得
     const formatResult = await db.execute({
-      sql: `
-        SELECT f.preliminary_format_type, f.final_format_type
-        FROM t_tournaments t
-        JOIN m_tournament_formats f ON t.format_id = f.format_id
-        WHERE t.tournament_id = ?
-      `,
+      sql: `SELECT t.phases FROM t_tournaments t WHERE t.tournament_id = ?`,
       args: [tournamentId]
     });
 
-    const preliminaryFormatType = formatResult.rows[0]?.preliminary_format_type as string;
-    const finalFormatType = formatResult.rows[0]?.final_format_type as string;
+    const recalcPhaseFormatMap = buildPhaseFormatMap(formatResult.rows[0]?.phases as string | null);
 
     // 競技種別を取得
     const sportCode = await getTournamentSportCode(tournamentId);
@@ -107,7 +102,7 @@ export async function POST(
 
       try {
         // 現在のフェーズに応じたフォーマットタイプを取得
-        const currentFormatType = phase === 'final' ? finalFormatType : preliminaryFormatType;
+        const currentFormatType = recalcPhaseFormatMap.get(phase) || null;
 
         // トーナメント形式の場合は専用の処理
         if (currentFormatType === 'tournament') {

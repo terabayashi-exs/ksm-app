@@ -24,23 +24,36 @@ function AdminLoginForm() {
     setError("");
 
     const formData = new FormData(e.currentTarget);
+    const loginId = formData.get("loginId") as string;
+    const password = formData.get("password") as string;
 
     try {
-      const result = await signIn("admin", {
+      // まず管理者としてログイン試行
+      let result = await signIn("admin", {
         redirect: false,
-        loginId: formData.get("loginId") as string,
-        password: formData.get("password") as string,
+        loginId,
+        password,
       });
+
+      // 管理者ログインが失敗したら運営者として試行
+      if (result?.error) {
+        result = await signIn("operator", {
+          redirect: false,
+          loginId,
+          password,
+        });
+      }
 
       if (result?.error) {
         setError("ログインに失敗しました。認証情報を確認してください。");
       } else if (result?.ok) {
         // セッション情報を取得してリダイレクト
         const session = await getSession();
-        if (session?.user?.role === "admin") {
+        if (session?.user?.role === "admin" || session?.user?.role === "operator") {
           router.push(callbackUrl);
+          router.refresh();
         } else {
-          setError("管理者権限がありません。");
+          setError("権限がありません。");
         }
       }
     } catch (error) {
@@ -56,15 +69,15 @@ function AdminLoginForm() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-              <Shield className="h-12 w-12 text-blue-600" />
+            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+              <Shield className="h-12 w-12 text-primary" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
-            管理者ログイン
+            管理者・運営者ログイン
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            管理者専用ログインページ
+            管理者・運営者専用ログインページ
           </p>
         </div>
 
@@ -82,7 +95,7 @@ function AdminLoginForm() {
                   name="loginId"
                   type="text"
                   required
-                  placeholder="管理者ログインID"
+                  placeholder="ログインID"
                   disabled={loading}
                   autoComplete="username"
                 />
@@ -101,7 +114,7 @@ function AdminLoginForm() {
               </div>
 
               {error && (
-                <div className="text-red-600 text-sm text-center bg-red-50 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -116,7 +129,7 @@ function AdminLoginForm() {
                 チーム代表者の方は{" "}
                 <Link
                   href="/auth/team/login"
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-primary hover:text-primary/80"
                 >
                   チーム代表者ログイン
                 </Link>
@@ -128,7 +141,7 @@ function AdminLoginForm() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            className="text-sm font-medium text-primary hover:text-primary/80"
           >
             ← トップページに戻る
           </Link>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ interface CourtSettingsFormProps {
 }
 
 export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSettingsFormProps) {
+  const router = useRouter();
   const [courtSettings, setCourtSettings] = useState<CourtSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,7 +94,8 @@ export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSett
       const result = await response.json();
 
       if (result.success) {
-        setSuccessMessage('コート名を保存しました');
+        alert('コート名を保存しました');
+        router.push('/my?tab=admin');
       } else {
         setError(result.error || '保存に失敗しました');
       }
@@ -185,7 +188,7 @@ export default function CourtSettingsForm({ tournamentId, maxCourts }: CourtSett
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {saving ? (
             <>

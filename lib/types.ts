@@ -9,6 +9,7 @@
  */
 
 import type { TournamentStatus } from './tournament-status';
+import type { TournamentPhases } from './types/tournament-phases';
 
 /**
  * 部門（旧：大会）
@@ -19,7 +20,7 @@ export interface Tournament {
   tournament_id: number;
   tournament_name: string;
   format_id: number;
-  venue_id: number;
+  venue_id: string | null;  // JSON配列 例: "[1, 3]"
   team_count: number;
   court_count: number;
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
@@ -40,6 +41,7 @@ export interface Tournament {
   format_name?: string;
   preliminary_format_type?: string; // 予選の形式 ('league' | 'tournament')
   final_format_type?: string; // 決勝の形式 ('league' | 'tournament')
+  phases?: TournamentPhases; // フェーズ構成（テンプレート独立化）
   // 後方互換性のため (ダッシュボードで使用)
   is_public?: boolean;
   event_start_date?: string;
@@ -67,6 +69,25 @@ export interface Tournament {
   applied_count?: number;
   withdrawal_requested_count?: number;
   cancelled_count?: number;
+  // リーグ戦 節設定の有無
+  has_matchdays?: boolean;
+  // 運営者権限情報（運営者タブでのみ使用）
+  operator_permissions?: {
+    canManageCourts?: boolean;
+    canManageRules?: boolean;
+    canRegisterTeams?: boolean;
+    canCreateDraws?: boolean;
+    canChangeFormat?: boolean;
+    canManageParticipants?: boolean;
+    canInputResults?: boolean;
+    canConfirmResults?: boolean;
+    canSetManualRankings?: boolean;
+    canChangePromotionRules?: boolean;
+    canManageFiles?: boolean;
+    canManageSponsors?: boolean;
+    canPrintRefereeCards?: boolean;
+    canSendEmails?: boolean;
+  } | null;
 }
 
 /**
@@ -217,6 +238,23 @@ export interface Match {
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   result_status: 'none' | 'pending' | 'confirmed';
   remarks?: string;
+  // テンプレート独立化: m_match_templatesからコピーされたフィールド
+  phase?: string;
+  match_type?: string;
+  round_name?: string;
+  block_name?: string;
+  team1_source?: string;
+  team2_source?: string;
+  day_number?: number;
+  execution_priority?: number;
+  suggested_start_time?: string;
+  loser_position_start?: number;
+  loser_position_end?: number;
+  position_note?: string;
+  winner_position?: number;
+  is_bye_match?: number;
+  matchday?: number;
+  cycle?: number;
 }
 
 export interface Venue {
@@ -226,6 +264,26 @@ export interface Venue {
   contact_phone?: string;
   court_count: number;
   is_active: boolean;
+  google_maps_url?: string;
+  latitude?: number;
+  longitude?: number;
+  is_shared?: boolean;
+  created_by_login_user_id?: number | null;
+}
+
+// venue_id JSON文字列をパースするヘルパー
+export function parseVenueIds(venueId: string | null | undefined): number[] {
+  if (!venueId) return [];
+  try {
+    const parsed = JSON.parse(venueId);
+    if (Array.isArray(parsed)) return parsed.map(Number).filter(n => !isNaN(n));
+    if (typeof parsed === 'number') return [parsed];
+    return [];
+  } catch {
+    // 単一の数値文字列の場合
+    const num = Number(venueId);
+    return isNaN(num) ? [] : [num];
+  }
 }
 
 export interface TournamentFormat {
@@ -256,6 +314,8 @@ export interface MatchTemplate {
   suggested_start_time?: string;
   period_count?: number;
   is_bye_match: number;  // 0: 通常試合, 1: 不戦勝試合
+  matchday?: number;     // 節番号（リーグ戦用）
+  cycle?: number;        // 巡目（リーグ戦用、デフォルト1）
   created_at: string;
   updated_at?: string;
 }
@@ -264,7 +324,7 @@ export interface MatchBlock {
   match_block_id: number;
   tournament_id: number;
   block_name: string;
-  block_type: 'preliminary' | 'final';
+  block_type: string; // Phase ID (e.g. 'preliminary', 'final', or custom phase IDs)
   display_order: number;
   is_active: boolean;
 }

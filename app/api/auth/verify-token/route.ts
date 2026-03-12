@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
     }
 
     // メールアドレスの重複チェック（念のため再確認）
-    const existingTeam = await db.execute(`
-      SELECT team_id FROM m_teams WHERE contact_email = ?
+    const existingLoginUser = await db.execute(`
+      SELECT login_user_id FROM m_login_users WHERE email = ?
     `, [tokenData.email]);
 
-    if (existingTeam.rows.length > 0) {
+    if (existingLoginUser.rows.length > 0) {
       return NextResponse.json(
         { success: false, error: 'このメールアドレスは既に登録されています。別のメールアドレスで再度お申し込みください。' },
         { status: 400 }

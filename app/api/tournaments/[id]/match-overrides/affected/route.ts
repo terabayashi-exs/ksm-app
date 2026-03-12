@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { getTournamentFormatPhases } from '@/lib/tournament-phases';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -48,9 +49,9 @@ export async function GET(
       );
     }
 
-    // 大会のフォーマットを取得
+    // 大会存在確認（phases JSONも取得）
     const tournamentResult = await db.execute(`
-      SELECT format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -60,23 +61,27 @@ export async function GET(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id;
+    // トーナメント形式のフェーズIDを取得
+    const phasesJson = tournamentResult.rows[0].phases as string | null;
+    const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
+    const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
 
-    // 指定された進出条件を使用しているテンプレートを検索
+    // 指定された進出条件を使用している試合を検索
     const templatesResult = await db.execute(`
       SELECT
-        match_code,
-        round_name,
-        team1_source,
-        team2_source,
-        team1_display_name,
-        team2_display_name
-      FROM m_match_templates
-      WHERE format_id = ?
-        AND phase = 'final'
-        AND (team1_source = ? OR team2_source = ?)
-      ORDER BY execution_priority, match_code
-    `, [formatId, source, source]);
+        ml.match_code,
+        ml.round_name,
+        ml.team1_source,
+        ml.team2_source,
+        ml.team1_display_name,
+        ml.team2_display_name
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ?
+        AND mb.phase IN (${phasePlaceholders})
+        AND (ml.team1_source = ? OR ml.team2_source = ?)
+      ORDER BY ml.execution_priority, ml.match_code
+    `, [tournamentId, ...tournamentPhaseIds, source, source]);
 
     const affectedMatches = templatesResult.rows.map(row => ({
       match_code: String(row.match_code),

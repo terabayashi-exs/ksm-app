@@ -5,8 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shuffle, Save, RotateCcw, Users, Calendar, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import { Shuffle, Save, RotateCcw, ChevronUp, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import type { SimpleTournamentTeam } from '@/lib/tournament-teams-simple';
+import { formatTeamSourceDisplay } from '@/lib/team-source-display';
 import TournamentBracketEditor from '@/components/features/tournament/TournamentBracketEditor';
 
 interface Team {
@@ -28,7 +30,9 @@ interface Tournament {
   team_count: number;
   tournament_dates: string;
   tournament_period: string;
-  preliminary_format_type?: string;
+  phases?: {
+    phases: Array<{ id: string; order: number; name: string; format_type: string }>;
+  };
 }
 
 interface Match {
@@ -53,6 +57,9 @@ interface Match {
   start_time?: string;
   court_number?: number;
   is_bye_match?: number;
+  matchday?: number | null;
+  cycle?: number | null;
+  venue_name?: string | null;
 }
 
 interface Block {
@@ -99,6 +106,16 @@ export default function TournamentDrawPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasExistingDraw, setHasExistingDraw] = useState<boolean>(false);
+  const [isTeamListExpanded, setIsTeamListExpanded] = useState(false); // 参加チーム一覧の開閉状態
+
+  // phasesから最初のフェーズ（組合せ対象）のIDを取得
+  const getFirstPhaseId = useCallback((): string => {
+    if (tournament?.phases?.phases?.length) {
+      const sorted = [...tournament.phases.phases].sort((a, b) => a.order - b.order);
+      return sorted[0].id;
+    }
+    return 'preliminary'; // フォールバック
+  }, [tournament]);
 
   // 大会情報と参加チーム、試合データの取得
   useEffect(() => {
@@ -115,6 +132,15 @@ export default function TournamentDrawPage() {
         }
         
         setTournament(tournamentData.data);
+
+        // phasesから最初のフェーズIDを取得
+        let firstPhaseId = 'preliminary';
+        const tData = tournamentData.data;
+        if (tData.phases?.phases?.length) {
+          const sorted = [...tData.phases.phases].sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+          firstPhaseId = sorted[0].id;
+        }
+        console.log('[Draw] First phase ID:', firstPhaseId);
 
         // 参加チーム一覧を取得
         const teamsResponse = await fetch(`/api/tournaments/${tournamentId}/teams`);
@@ -329,7 +355,7 @@ export default function TournamentDrawPage() {
         }
 
         // ブロック初期化
-        await initializeBlocks(formattedTeams, matchesData.data);
+        await initializeBlocks(formattedTeams, matchesData.data, firstPhaseId);
 
       } catch (err) {
         console.error('データ取得エラー:', err);
@@ -345,11 +371,11 @@ export default function TournamentDrawPage() {
   }, [tournamentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ブロック構造の初期化
-  const initializeBlocks = useCallback(async (_teams: Team[], matches: Match[]) => {
-    // 予選ブロックを抽出
+  const initializeBlocks = useCallback(async (_teams: Team[], matches: Match[], firstPhaseId: string = 'preliminary') => {
+    // 最初のフェーズのブロックを抽出
     const preliminaryBlocks = new Set<string>();
     matches.forEach(match => {
-      if (match.phase === 'preliminary' && match.block_name) {
+      if (match.phase === firstPhaseId && match.block_name) {
         preliminaryBlocks.add(match.block_name);
       }
     });
@@ -422,7 +448,7 @@ export default function TournamentDrawPage() {
         // ブロック構造を作成（既存の振分け情報を反映）
         const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
           block_name: blockName,
-          phase: 'preliminary',
+          phase: firstPhaseId,
           teams: blockTeamMap[blockName] // undefinedも含めて位置を保持
         }));
 
@@ -436,7 +462,7 @@ export default function TournamentDrawPage() {
         // エラーの場合は空のブロックを作成
         const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
           block_name: blockName,
-          phase: 'preliminary',
+          phase: firstPhaseId,
           teams: []
         }));
 
@@ -444,11 +470,11 @@ export default function TournamentDrawPage() {
       }
     } catch (error) {
       console.error('振分け情報の取得に失敗:', error);
-      
+
       // エラーの場合は空のブロックを作成
       const initialBlocks: Block[] = Array.from(preliminaryBlocks).sort().map(blockName => ({
         block_name: blockName,
-        phase: 'preliminary',
+        phase: firstPhaseId,
         teams: []
       }));
 
@@ -462,9 +488,13 @@ export default function TournamentDrawPage() {
     return blockCount ? blockCount.expected_team_count : null;
   };
 
-  // 予選形式がトーナメントかどうかを判定
+  // 最初のフェーズの形式がトーナメントかどうかを判定
   const isTournamentFormat = (): boolean => {
-    return tournament?.preliminary_format_type === 'tournament';
+    if (tournament?.phases?.phases?.length) {
+      const sorted = [...tournament.phases.phases].sort((a, b) => a.order - b.order);
+      return sorted[0].format_type === 'tournament';
+    }
+    return false;
   };
 
   // 第1ラウンドのスロット情報を取得
@@ -474,7 +504,7 @@ export default function TournamentDrawPage() {
     // - team1_sourceとteam2_sourceが空の試合も第1ラウンド
     const firstRoundMatches = matches.filter(
       m =>
-        m.phase === 'preliminary' &&
+        m.phase === getFirstPhaseId() &&
         m.block_name === blockName &&
         (
           m.is_bye_match === 1 || // BYE試合（シード枠）は常に含める
@@ -485,7 +515,7 @@ export default function TournamentDrawPage() {
 
     console.log(`[getFirstRoundSlots] Block ${blockName}:`, {
       totalMatches: matches.length,
-      preliminaryMatches: matches.filter(m => m.phase === 'preliminary' && m.block_name === blockName).length,
+      preliminaryMatches: matches.filter(m => m.phase === getFirstPhaseId() && m.block_name === blockName).length,
       firstRoundMatches: firstRoundMatches.length,
       firstRoundMatchCodes: firstRoundMatches.map(m => m.match_code),
       byeMatches: firstRoundMatches.filter(m => m.is_bye_match === 1).map(m => m.match_code)
@@ -517,6 +547,11 @@ export default function TournamentDrawPage() {
   // チームソースを解決して実際のチーム名を取得
   const resolveTeamSource = (source: string | null | undefined): string | null => {
     if (!source) return null;
+
+    // BEST パターンの場合は日本語表示に変換
+    if (source.match(/^BEST_\d+_\d+$/)) {
+      return formatTeamSourceDisplay(source);
+    }
 
     // ソース形式: "A1_winner", "Ep1_winner", "A2_loser" など
     // match_codeと勝者/敗者を抽出
@@ -564,7 +599,7 @@ export default function TournamentDrawPage() {
       case 'insufficient':
         return 'bg-yellow-50 border-yellow-300 text-yellow-900';
       case 'excess':
-        return 'bg-red-50 border-red-300 text-red-900';
+        return 'bg-destructive/5 border-destructive/30 text-destructive';
       default:
         return '';
     }
@@ -617,7 +652,7 @@ export default function TournamentDrawPage() {
         // フォールバック: matchesのチーム割り当てをクリア
         const newMatches = matches.map(m => {
           // 第1ラウンドの試合: チームIDと名前をクリア
-          if (m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
+          if (m.phase === getFirstPhaseId() && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
             return {
               ...m,
               team1_tournament_team_id: undefined,
@@ -627,7 +662,7 @@ export default function TournamentDrawPage() {
             };
           }
           // 次のラウンド以降の試合: team1_name/team2_nameのみクリア（ソースから解決された名前を削除）
-          if (m.phase === 'preliminary' && (m.team1_source || m.team2_source)) {
+          if (m.phase === getFirstPhaseId() && (m.team1_source || m.team2_source)) {
             return {
               ...m,
               team1_name: undefined,
@@ -646,6 +681,43 @@ export default function TournamentDrawPage() {
       teams: [] as Team[]
     }));
     setBlocks(newBlocks);
+  };
+
+  // ブロック割り当てに基づいて試合のチーム名を更新する
+  const updateMatchesFromBlocks = (currentMatches: Match[], updatedBlocks: Block[]): Match[] => {
+    // ブロック割り当てマップを構築: "A1チーム" → 実際のチーム名
+    const blockAssignmentMap: Record<string, { team_name: string; tournament_team_id: number }> = {};
+    updatedBlocks.forEach(block => {
+      block.teams.forEach((team, index) => {
+        if (team && team.team_id && team.team_name) {
+          const key = `${block.block_name}${index + 1}チーム`;
+          blockAssignmentMap[key] = {
+            team_name: team.team_name,
+            tournament_team_id: team.tournament_team_id
+          };
+        }
+      });
+    });
+
+    return currentMatches.map(m => {
+      const newMatch = { ...m };
+
+      // team1_display_name からチーム解決
+      if (m.team1_display_name && blockAssignmentMap[m.team1_display_name]) {
+        const assigned = blockAssignmentMap[m.team1_display_name];
+        newMatch.team1_name = assigned.team_name;
+        newMatch.team1_tournament_team_id = assigned.tournament_team_id;
+      }
+
+      // team2_display_name からチーム解決
+      if (m.team2_display_name && blockAssignmentMap[m.team2_display_name]) {
+        const assigned = blockAssignmentMap[m.team2_display_name];
+        newMatch.team2_name = assigned.team_name;
+        newMatch.team2_tournament_team_id = assigned.tournament_team_id;
+      }
+
+      return newMatch;
+    });
   };
 
   // ランダム振付実行
@@ -672,7 +744,7 @@ export default function TournamentDrawPage() {
         // 第1ラウンドの試合を直接取得（割り当て前の状態）
         const firstRoundMatches = newMatches.filter(
           m =>
-            m.phase === 'preliminary' &&
+            m.phase === getFirstPhaseId() &&
             m.block_name === block.block_name &&
             (!m.team1_source || m.team1_source === '') &&
             (!m.team2_source || m.team2_source === '')
@@ -762,6 +834,7 @@ export default function TournamentDrawPage() {
         });
 
         setBlocks(newBlocks);
+        setMatches(updateMatchesFromBlocks(matches, newBlocks));
       } else {
         // 想定チーム数が取得できない場合は均等に振分
         const teamsPerBlock = Math.ceil(shuffledTeams.length / blocks.length);
@@ -776,6 +849,7 @@ export default function TournamentDrawPage() {
         });
 
         setBlocks(newBlocks);
+        setMatches(updateMatchesFromBlocks(matches, newBlocks));
       }
     }
   };
@@ -801,6 +875,9 @@ export default function TournamentDrawPage() {
     }
 
     setBlocks(newBlocks);
+    if (!isTournamentFormat()) {
+      setMatches(updateMatchesFromBlocks(matches, newBlocks));
+    }
   };
 
   // ブロック内でチームの順番を変更
@@ -825,6 +902,9 @@ export default function TournamentDrawPage() {
     }
 
     setBlocks(newBlocks);
+    if (!isTournamentFormat()) {
+      setMatches(updateMatchesFromBlocks(matches, newBlocks));
+    }
   };
 
   // トーナメント形式: チーム単位で移動
@@ -951,7 +1031,7 @@ export default function TournamentDrawPage() {
         blocks.forEach(block => {
           const firstRoundMatches = matches.filter(
             m =>
-              m.phase === 'preliminary' &&
+              m.phase === getFirstPhaseId() &&
               m.block_name === block.block_name &&
               (!m.team1_source || m.team1_source === '') &&
               (!m.team2_source || m.team2_source === '')
@@ -1013,7 +1093,7 @@ export default function TournamentDrawPage() {
       const requestBody = {
         blocks: drawData,
         matches: matches
-          .filter(m => m.phase === 'preliminary' && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
+          .filter(m => m.phase === getFirstPhaseId() && (!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === ''))
           .map(m => ({
             match_id: m.match_id,
             team1_tournament_team_id: m.team1_tournament_team_id,
@@ -1035,7 +1115,8 @@ export default function TournamentDrawPage() {
         throw new Error(errorMessage + detailsMessage);
       }
 
-      router.push('/admin');
+      alert('振分結果を保存しました');
+      router.push('/my?tab=admin');
 
     } catch (err) {
       console.error('保存エラー:', err);
@@ -1050,7 +1131,7 @@ export default function TournamentDrawPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -1062,8 +1143,8 @@ export default function TournamentDrawPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md mx-auto">
           <CardContent className="p-6 text-center">
-            <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={() => router.push('/admin')} variant="outline">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => router.push('/my?tab=admin')} variant="outline">
               ダッシュボードに戻る
             </Button>
           </CardContent>
@@ -1082,62 +1163,29 @@ export default function TournamentDrawPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b">
+      <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
+          <div className="py-6">
+              <h1 className="text-3xl font-bold text-white">
                 {hasExistingDraw ? '組合せ編集' : '組合せ作成'}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-white/70 mt-1">
                 {tournament.tournament_name}
                 {hasExistingDraw && <span className="ml-2 text-green-600">※ 既存の組合せを編集中</span>}
               </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/admin')}
-              >
-                ダッシュボードに戻る
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 大会情報サマリー */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>大会情報</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">開催期間</p>
-                  <p className="font-medium">{tournament.tournament_period}</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <MapPin className="w-5 h-5 mr-2 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">会場</p>
-                  <p className="font-medium">{tournament.venue_name}</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <Users className="w-5 h-5 mr-2 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">参加チーム</p>
-                  <p className="font-medium">{registeredTeams.length} / {tournament.team_count}チーム</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my?tab=admin">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+        </div>
 
         {/* 操作ボタン */}
         <Card className="mb-6">
@@ -1173,33 +1221,52 @@ export default function TournamentDrawPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 参加チーム一覧 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex flex-col gap-2">
-                <span>参加チーム一覧 ({registeredTeams.length}チーム)</span>
-                <span className="text-sm font-normal text-blue-600">
-                  ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
-                </span>
-                {hasExistingDraw && (
-                  <span className="text-sm font-normal text-green-600">
-                    ※ 振分け済みチームは各ブロックに表示されています
+        {/* 参加チーム一覧（折りたたみ可能） */}
+        <Card>
+          <CardHeader
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setIsTeamListExpanded(!isTeamListExpanded)}
+          >
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  {isTeamListExpanded ? (
+                    <ChevronDown className="h-5 w-5" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5" />
+                  )}
+                  <span>参加チーム一覧 ({registeredTeams.length}チーム)</span>
+                </div>
+                {!isTeamListExpanded && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    クリックして展開
                   </span>
                 )}
-              </CardTitle>
-            </CardHeader>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          {isTeamListExpanded && (
             <CardContent>
+              <div className="mb-3 space-y-1">
+                <p className="text-sm text-primary">
+                  ※ 参加確定チームのみ表示しています（キャンセル済・待機中のチームは含まれません）
+                </p>
+                {hasExistingDraw && (
+                  <p className="text-sm text-green-600">
+                    ※ 振分け済みチームは各ブロックに表示されています
+                  </p>
+                )}
+              </div>
               {registeredTeams.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
                   参加チームがありません
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {registeredTeams.map((team) => {
                     // team_idが存在することを確認
                     if (!team || !team.team_id) return null;
-                    
+
                     // このチームが既にブロックに振分けされているかチェック
                     const isAssigned = blocks.some(block =>
                       block.teams && block.teams.some(blockTeam => blockTeam && blockTeam.tournament_team_id === team.tournament_team_id)
@@ -1219,7 +1286,7 @@ export default function TournamentDrawPage() {
                               {isAssigned && <span className="text-xs text-green-600 ml-2">(振分け済み)</span>}
                             </p>
                             <p className={`text-sm ${isAssigned ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
-                              代表者: {team.contact_person}
+                              {team.team_omission || ''}
                             </p>
                           </div>
                           <Badge variant={isAssigned ? "secondary" : "outline"}>
@@ -1232,10 +1299,11 @@ export default function TournamentDrawPage() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          )}
+        </Card>
 
-          {/* ブロック振分結果 */}
-          <div className="space-y-4">
+        {/* ブロック振分結果 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {blocks.filter(block => {
               const expectedCount = getExpectedTeamCount(block.block_name);
               // 割り当てる枠が0のブロック（team1_source/team2_sourceのみのブロック）を除外
@@ -1251,13 +1319,13 @@ export default function TournamentDrawPage() {
               const isTournament = isTournamentFormat();
 
               return (
-                <Card key={block.block_name}>
+                <Card key={block.block_name} className="h-full flex flex-col">
                   <CardHeader className={headerClass}>
                     <CardTitle className="text-lg">
                       {block.block_name}ブロック ({currentCount}{expectedCount !== null ? `/${expectedCount}` : ''}チーム)
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1">
                   {isTournament ? (
                     /* トーナメント形式の表示 */
                     <TournamentBracketEditor
@@ -1283,15 +1351,12 @@ export default function TournamentDrawPage() {
                         return (
                           <div
                             key={team.tournament_team_id}
-                            className="p-4 bg-blue-50 border border-blue-200 rounded-lg"
+                            className="p-4 bg-primary/5 border border-primary/20 rounded-lg"
                           >
                             {/* チーム情報エリア */}
                             <div className="mb-3">
-                              <p className="font-medium text-blue-900 text-base leading-relaxed">
+                              <p className="font-medium text-primary text-base leading-relaxed">
                                 {block.block_name}{teamIndex + 1}. {team.team_name}
-                              </p>
-                              <p className="text-sm text-blue-700 mt-1">
-                                {team.contact_person || '連絡先不明'}
                               </p>
                             </div>
                             
@@ -1351,116 +1416,128 @@ export default function TournamentDrawPage() {
               );
             })}
           </div>
-        </div>
 
         {/* 試合スケジュールプレビュー */}
-        {matches.length > 0 && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>試合スケジュールプレビュー</CardTitle>
-              <p className="text-sm text-gray-500">
-                チーム振分後の試合対戦表です
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="border-b bg-muted">
-                      <th className="px-4 py-3 text-left">試合</th>
-                      <th className="px-4 py-3 text-left">フェーズ</th>
-                      <th className="px-4 py-3 text-left">対戦カード</th>
-                      <th className="px-4 py-3 text-left">日程</th>
-                      <th className="px-4 py-3 text-left">コート</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matches
-                      .filter(match => match.is_bye_match !== 1) // 不戦勝試合を除外
-                      .map((match, index, filteredMatches) => {
-                      // ラウンド名の境界線を表示するかチェック
-                      const showRoundHeader = index === 0 || filteredMatches[index - 1].round_name !== match.round_name;
+        {matches.length > 0 && (() => {
+          const firstPhaseMatches = matches.filter(m => m.is_bye_match !== 1 && m.phase === getFirstPhaseId());
+          const hasMatchday = firstPhaseMatches.some(m => m.matchday != null && m.matchday > 0);
 
-                      const rows = [];
+          return (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>試合スケジュールプレビュー</CardTitle>
+                <p className="text-sm text-gray-500">
+                  チーム振分後の試合対戦表です
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto">
+                    <thead>
+                      <tr className="border-b bg-muted">
+                        <th className="px-4 py-3 text-left">試合</th>
+                        <th className="px-4 py-3 text-left">対戦カード</th>
+                        <th className="px-4 py-3 text-left">日程</th>
+                        {hasMatchday ? (
+                          <>
+                            <th className="px-4 py-3 text-left">会場</th>
+                            <th className="px-4 py-3 text-left">巡目</th>
+                          </>
+                        ) : (
+                          <th className="px-4 py-3 text-left">コート</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {firstPhaseMatches.map((match, index, filteredMatches) => {
+                        const rows = [];
 
-                      // ラウンド名ヘッダー行を追加
-                      if (showRoundHeader) {
+                        if (hasMatchday) {
+                          // 節ごとにグルーピング
+                          const showMatchdayHeader = index === 0 || filteredMatches[index - 1].matchday !== match.matchday;
+                          if (showMatchdayHeader) {
+                            rows.push(
+                              <tr key={`matchday-header-${match.matchday}-${index}`}>
+                                <td colSpan={5} className="px-4 py-2 bg-primary/5 border-b">
+                                  <div className="flex items-center">
+                                    <Badge variant="secondary" className="mr-2">
+                                      第{match.matchday}節
+                                    </Badge>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+                        } else {
+                          // ブロック/ラウンドごとにグルーピング
+                          const showRoundHeader = index === 0 || filteredMatches[index - 1].round_name !== match.round_name;
+                          if (showRoundHeader) {
+                            rows.push(
+                              <tr key={`round-header-${match.round_name}-${index}`}>
+                                <td colSpan={4} className="px-4 py-2 bg-primary/5 border-b">
+                                  <div className="flex items-center">
+                                    <Badge variant="secondary" className="mr-2">
+                                      {match.round_name || match.block_name || '予選リーグ'}
+                                    </Badge>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+                        }
+
+                        // 試合行
                         rows.push(
-                          <tr key={`round-header-${match.round_name}-${index}`}>
-                            <td colSpan={5} className="px-4 py-2 bg-blue-50 border-b">
-                              <div className="flex items-center">
-                                <Badge variant="secondary" className="mr-2">
-                                  {match.round_name || match.block_name || (match.phase === 'preliminary' ? '予選リーグ' : '決勝トーナメント')}
-                                </Badge>
+                          <tr key={`match-${match.match_id}`} className="border-b hover:bg-muted">
+                            <td className="px-4 py-3 font-medium">{match.match_code}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center space-x-2">
+                                <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
+                                  {match.team1_name || resolveTeamSource(match.team1_source) || match.team1_display_name}
+                                </span>
+                                <span className="text-muted-foreground font-bold">vs</span>
+                                <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
+                                  {match.team2_name || resolveTeamSource(match.team2_source) || match.team2_display_name}
+                                </span>
                               </div>
                             </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div>
+                                <p>{new Date(match.tournament_date).toLocaleDateString('ja-JP')}</p>
+                                {match.start_time && (
+                                  <p className="text-muted-foreground">{match.start_time}</p>
+                                )}
+                              </div>
+                            </td>
+                            {hasMatchday ? (
+                              <>
+                                <td className="px-4 py-3 text-sm">
+                                  {match.venue_name || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  {match.cycle ? `${match.cycle}巡目` : '-'}
+                                </td>
+                              </>
+                            ) : (
+                              <td className="px-4 py-3 text-sm">
+                                {match.court_number ? `コート${match.court_number}` : '-'}
+                              </td>
+                            )}
                           </tr>
                         );
-                      }
 
-                      // 試合行を追加
-                      rows.push(
-                        <tr key={`match-${match.match_id}`} className="border-b hover:bg-muted">
-                          <td className="px-4 py-3 font-medium">{match.match_code}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="text-xs">
-                              {match.phase === 'preliminary' ? '予選' : '決勝'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center space-x-2">
-                              <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
-                                {(() => {
-                                  const team1 = match.team1_name || resolveTeamSource(match.team1_source) || match.team1_display_name;
-                                  if (match.match_code === 'A3') {
-                                    console.log(`[Preview A3] team1: name="${match.team1_name}", source="${match.team1_source}", display="${match.team1_display_name}", resolved="${team1}"`);
-                                  }
-                                  return team1;
-                                })()}
-                              </span>
-                              <span className="text-muted-foreground font-bold">vs</span>
-                              <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
-                                {(() => {
-                                  const team2 = match.team2_name || resolveTeamSource(match.team2_source) || match.team2_display_name;
-                                  if (match.match_code === 'A3') {
-                                    console.log(`[Preview A3] team2: name="${match.team2_name}", source="${match.team2_source}", display="${match.team2_display_name}", resolved="${team2}"`);
-                                  }
-                                  return team2;
-                                })()}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div>
-                              <p>{new Date(match.tournament_date).toLocaleDateString('ja-JP')}</p>
-                              {match.start_time && (
-                                <p className="text-muted-foreground">{match.start_time}</p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {match.court_number ? `コート${match.court_number}` : '-'}
-                          </td>
-                        </tr>
-                      );
-
-                      return rows;
-                    })}
-                  </tbody>
-                </table>
-                <div className="mt-4 text-sm text-muted-foreground text-center">
-                  全 {matches.filter(m => m.is_bye_match !== 1).length} 試合
-                  <span className="ml-4">
-                    予選: {matches.filter(m => m.phase === 'preliminary' && m.is_bye_match !== 1).length}試合
-                  </span>
-                  <span className="ml-4">
-                    決勝: {matches.filter(m => m.phase === 'final' && m.is_bye_match !== 1).length}試合
-                  </span>
+                        return rows;
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="mt-4 text-sm text-muted-foreground text-center">
+                    全 {firstPhaseMatches.length} 試合
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { parsePhasesJson } from '@/lib/tournament-phases';
 
 // キャッシュを無効化
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,8 @@ export async function GET(
       userRole: session?.user?.role,
       userId: session?.user?.id
     });
-    
-    if (!session || session.user.role !== 'admin') {
+
+    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
       console.log('Authentication failed:', { session: !!session, role: session?.user?.role });
       return NextResponse.json(
         { success: false, error: '管理者権限が必要です' },
@@ -47,9 +48,9 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const includeBye = searchParams.get('includeBye') === 'true';
 
-    // 大会の存在確認とformat_id取得
+    // 大会の存在確認（フェーズ構成も取得）
     const tournamentResult = await db.execute(`
-      SELECT tournament_id, format_id FROM t_tournaments WHERE tournament_id = ?
+      SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
     `, [tournamentId]);
 
     if (tournamentResult.rows.length === 0) {
@@ -59,7 +60,16 @@ export async function GET(
       );
     }
 
-    const formatId = tournamentResult.rows[0].format_id;
+    // フェーズ構成からphase順序マップとformat_typeマップを構築
+    const tournamentPhases = parsePhasesJson(tournamentResult.rows[0].phases as string | null);
+    const phaseOrderMap = new Map<string, number>();
+    const phaseFormatTypeMap = new Map<string, string>();
+    if (tournamentPhases) {
+      for (const p of tournamentPhases.phases) {
+        phaseOrderMap.set(p.id, p.order);
+        phaseFormatTypeMap.set(p.id, p.format_type);
+      }
+    }
 
     // 組み合わせ作成状況を判定
     console.log('Checking team assignment status...');
@@ -81,6 +91,16 @@ export async function GET(
     console.log(`Fetching matches for tournament ${tournamentId}...`);
     // 全ての試合を取得（不戦勝試合のフィルタリングはフロントエンド側で実施）
     const teamFilter = '';
+
+    // フェーズ順序のCASE文を動的に構築
+    let phaseOrderSql = 'mb.block_order';
+    if (phaseOrderMap.size > 0) {
+      const caseParts = Array.from(phaseOrderMap.entries())
+        .map(([phaseId, order]) => `WHEN mb.phase = '${phaseId}' THEN ${order}`)
+        .join(' ');
+      phaseOrderSql = `CASE ${caseParts} ELSE 999 END`;
+    }
+
     const matchesResult = await db.execute(`
       SELECT
         ml.match_id,
@@ -103,18 +123,23 @@ export async function GET(
         ml.confirmed_by,
         mb.phase,
         mb.display_round_name,
-        COALESCE(NULLIF(mt.block_name, ''), mb.block_name) as block_name,
+        COALESCE(NULLIF(ml.block_name, ''), mb.block_name) as block_name,
         mb.match_type,
         mb.block_order,
-        -- m_match_templatesからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
-        mt.round_name,
-        mt.day_number,
-        mt.team1_source,
-        mt.team2_source,
-        mt.is_bye_match,
+        -- t_matches_liveからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
+        ml.round_name,
+        ml.day_number,
+        ml.team1_source,
+        ml.team2_source,
+        ml.is_bye_match,
+        ml.matchday,
+        ml.cycle,
+        ml.venue_name,
         -- 実際のチーム名を取得（tournament_team_idで一意に取得）
         tt1.team_name as team1_real_name,
         tt2.team_name as team2_real_name,
+        tt1.team_omission as team1_omission,
+        tt2.team_omission as team2_omission,
         -- 試合状態テーブルから情報取得
         ms.match_status,
         ms.current_period as status_current_period,
@@ -132,7 +157,6 @@ export async function GET(
         mf.updated_at as final_updated_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN m_match_templates mt ON mt.format_id = ? AND mt.match_code = ml.match_code AND mt.phase = mb.phase
       LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
@@ -141,10 +165,10 @@ export async function GET(
       WHERE mb.tournament_id = ?
       ${teamFilter}
       ORDER BY
-        CASE WHEN mb.phase = 'preliminary' THEN 1 WHEN mb.phase = 'final' THEN 2 ELSE 3 END,
-        mt.round_name ASC,
+        ${phaseOrderSql},
+        ml.round_name ASC,
         ml.match_number ASC
-    `, [formatId, tournamentId]);
+    `, [tournamentId]);
 
     console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);
 
@@ -241,6 +265,8 @@ export async function GET(
         team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
         team1_name: resolvedTeam1Name, // BYE試合対応：プレースホルダーから実チーム名に解決
         team2_name: resolvedTeam2Name, // BYE試合対応：プレースホルダーから実チーム名に解決
+        team1_omission: row.team1_omission ? String(row.team1_omission) : '',
+        team2_omission: row.team2_omission ? String(row.team2_omission) : '',
         court_number: row.court_number ? Number(row.court_number) : null,
         court_name: row.court_name ? String(row.court_name) : null,
         scheduled_time: row.start_time ? String(row.start_time) : null, // scheduled_timeに統一
@@ -264,6 +290,7 @@ export async function GET(
         remarks: row.remarks ? String(row.remarks) : null,
         // ブロック情報
         phase: String(row.phase),
+        format_type: phaseFormatTypeMap.get(String(row.phase)) || 'league',
         display_round_name: String(row.round_name || row.display_round_name),
         round_name: row.round_name ? String(row.round_name) : null,
         block_name: row.block_name ? String(row.block_name) : null,
@@ -274,7 +301,10 @@ export async function GET(
         team2_source: row.team2_source ? String(row.team2_source) : null,
         is_bye_match: row.is_bye_match ? Number(row.is_bye_match) : 0,
         team1_display_name: String(row.team1_display_name || ''),
-        team2_display_name: String(row.team2_display_name || '')
+        team2_display_name: String(row.team2_display_name || ''),
+        matchday: row.matchday ? Number(row.matchday) : null,
+        cycle: row.cycle ? Number(row.cycle) : null,
+        venue_name: row.venue_name ? String(row.venue_name) : null
       };
     });
 

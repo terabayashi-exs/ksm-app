@@ -58,9 +58,9 @@ export async function GET(_request: NextRequest) {
           t.updated_at,
           t.created_by,
           v.venue_name,
-          f.format_name,
-          a.logo_blob_url,
-          a.organization_name,
+          t.format_name,
+          lu.logo_blob_url,
+          lu.organization_name,
           COUNT(DISTINCT CASE
             WHEN tt.participation_status = 'confirmed' AND tt.withdrawal_status = 'active'
             THEN tt.tournament_team_id
@@ -68,9 +68,9 @@ export async function GET(_request: NextRequest) {
           (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count,
           ${teamId ? 'CASE WHEN utt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
         FROM t_tournaments t
-        LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-        LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
-        LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+        LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
+        LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+        LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
         LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
         ${teamId ? 'LEFT JOIN t_tournament_teams utt ON t.tournament_id = utt.tournament_id AND utt.team_id = ?' : ''}
         WHERE t.group_id = ?

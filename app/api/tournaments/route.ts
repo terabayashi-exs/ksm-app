@@ -7,6 +7,7 @@ import { Tournament, MatchTemplate } from '@/lib/types';
 import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 import type { TournamentStatus } from '@/lib/tournament-status';
+import { getPhaseFormatTypeFromJson, buildPhaseFormatMap } from '@/lib/tournament-phases';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,11 +48,18 @@ export async function POST(request: NextRequest) {
     // 現在のアーカイブUIバージョンを取得
     const currentArchiveVersion = ArchiveVersionManager.getCurrentVersion();
 
+    // フォーマット名を取得
+    const formatResult = await db.execute(`
+      SELECT format_name FROM m_tournament_formats WHERE format_id = ?
+    `, [data.format_id]);
+    const formatName = formatResult.rows[0]?.format_name as string || null;
+
     // 大会作成
     const result = await db.execute(`
       INSERT INTO t_tournaments (
         tournament_name,
         format_id,
+        format_name,
         venue_id,
         team_count,
         court_count,
@@ -67,11 +75,12 @@ export async function POST(request: NextRequest) {
         archive_ui_version,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       data.tournament_name,
       data.format_id,
-      data.venue_id,
+      formatName,
+      data.venue_id ?? null,
       data.team_count,
       data.court_count,
       tournamentDatesJson,
@@ -131,10 +140,9 @@ export async function POST(request: NextRequest) {
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
     `, [Number(tournamentId)]);
 
@@ -143,7 +151,7 @@ export async function POST(request: NextRequest) {
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,
@@ -207,10 +215,9 @@ export async function GET(request: NextRequest) {
         t.created_at,
         t.updated_at,
         v.venue_name,
-        f.format_name
+        t.format_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
-      LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
     `;
 
     const params: (string | number)[] = [];
@@ -242,7 +249,7 @@ export async function GET(request: NextRequest) {
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       format_id: Number(row.format_id),
-      venue_id: Number(row.venue_id),
+      venue_id: row.venue_id ? String(row.venue_id) : null,
       team_count: Number(row.team_count),
       court_count: Number(row.court_count),
       tournament_dates: row.tournament_dates as string,
@@ -336,77 +343,90 @@ async function generateMatchesFromTemplate(
       return acc;
     }, {} as Record<number, string>);
 
+    // 大会のフェーズ構成を取得（動的フェーズ対応）
+    const tournamentPhasesResult = await db.execute(`
+      SELECT phases FROM t_tournaments WHERE tournament_id = ?
+    `, [tournamentId]);
+    const tournamentPhasesJson = (tournamentPhasesResult.rows[0]?.phases as string | null) ?? null;
+    const phaseFormatMap = buildPhaseFormatMap(tournamentPhasesJson);
+
     // 順位管理単位としてのブロックを作成
-    // 1. 予選ブロック（A, B, C, D など）
-    // 2. 決勝トーナメント（1つのブロック）
+    // リーグ形式のフェーズ: ブロック別（A, B, C, D など）
+    // トーナメント形式のフェーズ: round_nameまたはblock_nameでグループ化
     const blockIdMapping = new Map<string, number>();
     let blockOrder = 0;
 
-    // 予選ブロックを抽出・作成
-    const preliminaryBlocks = new Set<string>();
-    templates.forEach(template => {
-      if (template.phase === 'preliminary' && template.block_name) {
-        preliminaryBlocks.add(template.block_name);
+    // 全フェーズのブロックを動的に抽出・作成
+    const phaseIds = [...new Set(templates.map(t => t.phase))];
+
+    for (const phaseId of phaseIds) {
+      const formatType = phaseFormatMap.get(phaseId) || getPhaseFormatTypeFromJson(tournamentPhasesJson, phaseId);
+
+      if (formatType === 'league') {
+        // リーグ形式: ブロック別に登録
+        const leagueBlocks = new Set<string>();
+        templates.forEach(template => {
+          if (template.phase === phaseId && template.block_name) {
+            leagueBlocks.add(template.block_name);
+          }
+        });
+
+        for (const blockName of Array.from(leagueBlocks).sort()) {
+          const blockResult = await db.execute(`
+            INSERT INTO t_match_blocks (
+              tournament_id,
+              phase,
+              display_round_name,
+              block_name,
+              match_type,
+              block_order
+            ) VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            tournamentId,
+            phaseId,
+            `${blockName}ブロック`,
+            blockName,
+            '通常',
+            blockOrder++
+          ]);
+
+          const blockId = Number(blockResult.lastInsertRowid);
+          blockIdMapping.set(`${phaseId}_${blockName}`, blockId);
+        }
+      } else {
+        // トーナメント形式: round_nameまたはblock_nameでグループ化
+        const tournamentBlocks = new Map<string, string>(); // key: ユニークキー, value: 表示名
+        templates.forEach(template => {
+          if (template.phase === phaseId) {
+            const displayName = template.round_name || template.block_name || 'トーナメント';
+            const blockKey = template.block_name || displayName;
+            tournamentBlocks.set(blockKey, displayName);
+          }
+        });
+
+        for (const [blockKey, displayName] of Array.from(tournamentBlocks.entries()).sort()) {
+          const tBlockResult = await db.execute(`
+            INSERT INTO t_match_blocks (
+              tournament_id,
+              phase,
+              display_round_name,
+              block_name,
+              match_type,
+              block_order
+            ) VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            tournamentId,
+            phaseId,
+            displayName,
+            blockKey,
+            '通常',
+            blockOrder++
+          ]);
+
+          const tBlockId = Number(tBlockResult.lastInsertRowid);
+          blockIdMapping.set(`${phaseId}_${blockKey}`, tBlockId);
+        }
       }
-    });
-
-    // 予選ブロック毎にt_match_blocksに登録
-    for (const blockName of Array.from(preliminaryBlocks).sort()) {
-      const blockResult = await db.execute(`
-        INSERT INTO t_match_blocks (
-          tournament_id,
-          phase,
-          display_round_name,
-          block_name,
-          match_type,
-          block_order
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        tournamentId,
-        'preliminary',
-        `予選${blockName}ブロック`,
-        blockName,
-        '通常',
-        blockOrder++
-      ]);
-
-      const blockId = Number(blockResult.lastInsertRowid);
-      blockIdMapping.set(`preliminary_${blockName}`, blockId);
-    }
-
-    // 決勝ブロックを抽出・作成（round_nameまたはblock_nameでグループ化）
-    const finalBlocks = new Map<string, string>(); // key: ユニークキー, value: 表示名
-    templates.forEach(template => {
-      if (template.phase === 'final') {
-        // round_nameを優先、なければblock_name、どちらもなければデフォルト
-        const displayName = template.round_name || template.block_name || '決勝トーナメント';
-        const blockKey = template.block_name || displayName;
-        finalBlocks.set(blockKey, displayName);
-      }
-    });
-
-    // 決勝ブロック毎にt_match_blocksに登録
-    for (const [blockKey, displayName] of Array.from(finalBlocks.entries()).sort()) {
-      const finalBlockResult = await db.execute(`
-        INSERT INTO t_match_blocks (
-          tournament_id,
-          phase,
-          display_round_name,
-          block_name,
-          match_type,
-          block_order
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        tournamentId,
-        'final',
-        displayName,
-        blockKey,
-        '通常',
-        blockOrder++
-      ]);
-
-      const finalBlockId = Number(finalBlockResult.lastInsertRowid);
-      blockIdMapping.set(`final_${blockKey}`, finalBlockId);
     }
 
     // スケジュール情報の準備
@@ -467,15 +487,16 @@ async function generateMatchesFromTemplate(
 
     // マッチを作成
     for (const template of templates) {
-      // 新しいブロック構造に合わせてブロックIDを取得
+      // 新しいブロック構造に合わせてブロックIDを取得（動的フェーズ対応）
       let blockId: number | undefined;
+      const templateFormatType = phaseFormatMap.get(template.phase) || getPhaseFormatTypeFromJson(tournamentPhasesJson, template.phase);
 
-      if (template.phase === 'preliminary') {
-        blockId = blockIdMapping.get(`preliminary_${template.block_name}`);
-      } else if (template.phase === 'final') {
-        // block_nameを使ってブロックIDを取得（round_nameまたはblock_nameでグループ化されたブロック）
-        const blockKey = template.block_name || (template.round_name || '決勝トーナメント');
-        blockId = blockIdMapping.get(`final_${blockKey}`);
+      if (templateFormatType === 'league') {
+        blockId = blockIdMapping.get(`${template.phase}_${template.block_name}`);
+      } else {
+        // トーナメント形式: block_nameを使ってブロックIDを取得
+        const blockKey = template.block_name || (template.round_name || 'トーナメント');
+        blockId = blockIdMapping.get(`${template.phase}_${blockKey}`);
       }
 
       if (!blockId) {
@@ -517,10 +538,11 @@ async function generateMatchesFromTemplate(
           team1_scores,
           team2_scores,
           period_count,
+          match_type,
           winner_team_id,
           winner_tournament_team_id,
           remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         blockId,
         tournamentDate,
@@ -537,6 +559,7 @@ async function generateMatchesFromTemplate(
         null, // team1_scores は初期状態でnull
         null, // team2_scores は初期状態でnull
         periodCount, // テンプレートから取得したperiod_count
+        template.match_type || "通常", // テンプレートの試合種別
         null, // winner_team_id は結果確定時に設定
         null, // winner_tournament_team_id は結果確定時に設定
         null  // remarks

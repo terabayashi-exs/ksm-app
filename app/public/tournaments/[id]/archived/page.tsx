@@ -110,8 +110,23 @@ interface ResultData {
 interface StandingData {
   block_name: string;
   phase: string;
+  format_type?: string;
   team_rankings?: string;
   remarks?: string;
+}
+
+/**
+ * 順位データがリーグ形式（勝点・試合数等の統計あり）かどうかを判定
+ * format_typeがあればそれを使用、なければデータ構造とphase文字列からフォールバック判定
+ */
+function isLeagueStandings(block: StandingData, rankings: TeamRanking[]): boolean {
+  if (block.format_type) return block.format_type === 'league';
+  // データ構造で判定: matches_playedやpointsがあればリーグ形式
+  if (rankings.length > 0 && rankings[0].matches_played !== undefined && rankings[0].matches_played > 0) {
+    return true;
+  }
+  // フォールバック: phase文字列で判定（レガシー互換）
+  return block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ');
 }
 
 interface TeamRanking {
@@ -411,7 +426,8 @@ function ArchivedTournamentStandings({ standings }: { standings: StandingData[] 
     <div className="space-y-6">
       {standings.map(block => {
         const rankings: TeamRanking[] = block.team_rankings ? JSON.parse(block.team_rankings) : [];
-        
+        const isLeague = isLeagueStandings(block, rankings);
+
         return (
           <Card key={block.block_name}>
             <CardHeader>
@@ -441,7 +457,7 @@ function ArchivedTournamentStandings({ standings }: { standings: StandingData[] 
                     <tr className="border-b">
                       <th className="text-center py-2 px-3 font-medium text-gray-700">順位</th>
                       <th className="text-left py-2 px-4 font-medium text-gray-700">チーム名</th>
-                      {block.phase === 'preliminary' ? (
+                      {isLeague ? (
                         <>
                           <th className="text-center py-2 px-3 font-medium text-gray-700">勝点</th>
                           <th className="text-center py-2 px-3 font-medium text-gray-700">試合</th>
@@ -466,12 +482,12 @@ function ArchivedTournamentStandings({ standings }: { standings: StandingData[] 
                         <td className="py-3 px-4">
                           <div className="flex items-center">
                             <span className="font-medium">{team.team_name}</span>
-                            {team.position <= 2 && block.phase === 'preliminary' && (
+                            {team.position <= 2 && isLeague && (
                               <span className="ml-2 text-yellow-500">👑</span>
                             )}
                           </div>
                         </td>
-                        {block.phase === 'preliminary' ? (
+                        {isLeague ? (
                           <>
                             <td className="text-center py-3 px-3 font-bold text-blue-600">{team.points}</td>
                             <td className="text-center py-3 px-3">{team.matches_played}</td>
@@ -567,8 +583,8 @@ function ArchivedTournamentTeams({ teams }: { teams: TeamData[] }) {
                     )}
                     
                     {team.withdrawal_status !== 'active' && (
-                      <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
-                        <span className="text-red-700 font-medium">
+                      <div className="mt-3 p-2 bg-destructive/5 border border-destructive/20 rounded">
+                        <span className="text-destructive font-medium">
                           {team.withdrawal_status === 'withdrawal_approved' ? '辞退済み' : '辞退申請中'}
                         </span>
                       </div>
@@ -684,12 +700,12 @@ function renderInlineComponent(archived: ReturnType<typeof getArchivedTournament
 
         {/* エラー通知 */}
         <div className="mb-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
             <div className="flex items-center">
-              <Archive className="h-5 w-5 text-red-600 mr-2" />
+              <Archive className="h-5 w-5 text-destructive mr-2" />
               <div className="flex-1">
-                <p className="font-medium text-red-800">アーカイブコンポーネント読み込みエラー</p>
-                <p className="text-sm text-red-700 mt-1">
+                <p className="font-medium text-destructive">アーカイブコンポーネント読み込みエラー</p>
+                <p className="text-sm text-destructive mt-1">
                   アーカイブ表示コンポーネントの読み込みに失敗しました。管理者にお問い合わせください。
                 </p>
               </div>

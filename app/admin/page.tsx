@@ -16,8 +16,26 @@ import { getCurrentSubscriptionInfo } from "@/lib/subscription/subscription-serv
 export default async function AdminDashboard() {
   const session = await auth();
 
-  if (!session || session.user.role !== "admin") {
-    redirect("/auth/login");
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+    redirect("/auth/admin/login");
+  }
+
+  const isOperator = session.user.role === "operator";
+
+  // 運営者の権限情報を取得
+  const operatorPermissions: Record<number, Record<string, boolean>> = {};
+  if (isOperator && session.user.operatorId) {
+    const permissionsResult = await db.execute(`
+      SELECT tournament_id, permissions
+      FROM t_operator_tournament_access
+      WHERE operator_id = ?
+    `, [session.user.operatorId]);
+
+    permissionsResult.rows.forEach((row) => {
+      const tournamentId = Number(row.tournament_id);
+      const permissions = row.permissions ? JSON.parse(String(row.permissions)) : {};
+      operatorPermissions[tournamentId] = permissions;
+    });
   }
 
   // 作成中の大会（部門がない大会）の数を取得
@@ -30,8 +48,8 @@ export default async function AdminDashboard() {
   `);
   const hasIncompleteGroups = Number(incompleteGroupsResult.rows[0]?.count || 0) > 0;
 
-  // サブスクリプション情報を取得
-  const subscriptionInfo = await getCurrentSubscriptionInfo(session.user.id);
+  // サブスクリプション情報を取得（運営者は取得しない）
+  const subscriptionInfo = isOperator ? null : await getCurrentSubscriptionInfo(session.user.id);
   const canCreateTournament = subscriptionInfo?.canCreateTournament ?? true;
   const isTrialExpired = subscriptionInfo?.isTrialExpired ?? false;
 
@@ -41,13 +59,15 @@ export default async function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">管理者ダッシュボード</h1>
+              <h1 className="text-3xl font-bold text-foreground">
+                {isOperator ? "運営者ダッシュボード" : "管理者ダッシュボード"}
+              </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 ようこそ、{session.user.name}さん
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <PlanBadge />
+              {!isOperator && <PlanBadge />}
               <SignOutButton />
             </div>
           </div>
@@ -55,8 +75,8 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 期限切れ警告 */}
-        {isTrialExpired && (
+        {/* 期限切れ警告（管理者のみ） */}
+        {!isOperator && isTrialExpired && (
           <Alert variant="destructive" className="mb-6 border-2">
             <AlertTriangle className="h-5 w-5" />
             <AlertTitle className="text-lg font-bold">無料トライアル期間が終了しました</AlertTitle>
@@ -90,12 +110,17 @@ export default async function AdminDashboard() {
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-foreground mb-6">大会状況</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            各大会の部門別状況を確認できます
+            {isOperator ? "アクセス可能な部門の状況を確認できます" : "各大会の部門別状況を確認できます"}
           </p>
-          <TournamentDashboardList isTrialExpired={isTrialExpired} />
+          <TournamentDashboardList
+            isTrialExpired={isTrialExpired}
+            accessibleTournamentIds={isOperator ? session.user.accessibleTournaments : undefined}
+            operatorPermissions={isOperator ? operatorPermissions : undefined}
+          />
         </div>
 
-        {/* 大会作成セクション */}
+        {/* 大会作成セクション（管理者のみ） */}
+        {!isOperator && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground mb-6">大会作成</h2>
 
@@ -162,8 +187,11 @@ export default async function AdminDashboard() {
             </Card>
           )}
         </div>
+        )}
 
-        {/* 管理メニューセクション */}
+        {/* 管理メニューセクション（管理者のみ） */}
+        {!isOperator && (
+        <>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-foreground mb-6">管理メニュー</h2>
         </div>
@@ -335,6 +363,8 @@ export default async function AdminDashboard() {
           )}
 
         </div>
+        </>
+        )}
       </div>
     </div>
   );

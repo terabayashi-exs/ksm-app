@@ -71,10 +71,10 @@ export default function AdminLogoUpload() {
       return;
     }
 
-    // ファイルサイズチェック（5MB）
-    const maxSize = 5 * 1024 * 1024;
+    // ファイルサイズチェック（1MB）
+    const maxSize = 1 * 1024 * 1024;
     if (file.size > maxSize) {
-      setAlert({ type: 'error', message: 'ファイルサイズは5MB以下にしてください' });
+      setAlert({ type: 'error', message: 'ファイルサイズは1MB以下にしてください' });
       return;
     }
 
@@ -211,7 +211,7 @@ export default function AdminLogoUpload() {
           管理者ロゴ設定
         </CardTitle>
         <CardDescription>
-          大会カードに表示される組織ロゴを設定できます。推奨サイズ: 200x200px以下、5MB以下
+          大会カードに表示される組織ロゴを設定できます。推奨サイズ: 256x256px以下、1MB以下
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -275,6 +275,20 @@ export default function AdminLogoUpload() {
         {/* 新しいロゴアップロード */}
         <div className="space-y-4">
           <div>
+            <Label htmlFor="logo-file">ロゴファイル</Label>
+            <div className="mt-1">
+              <Input
+                id="logo-file"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                className="cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div>
             <Label htmlFor="organization-name" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               組織名（任意）
@@ -287,20 +301,6 @@ export default function AdminLogoUpload() {
               placeholder="例: ○○スポーツクラブ"
               className="mt-1"
             />
-          </div>
-
-          <div>
-            <Label htmlFor="logo-file">ロゴファイル</Label>
-            <div className="mt-1">
-              <Input
-                id="logo-file"
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-                className="cursor-pointer"
-              />
-            </div>
           </div>
 
           {/* プレビュー */}
@@ -336,7 +336,7 @@ export default function AdminLogoUpload() {
           {/* アクションボタン */}
           {selectedFile && (
             <div className="flex gap-2">
-              <Button onClick={handleUpload} disabled={isUploading}>
+              <Button onClick={handleUpload} disabled={isUploading} className="border-2">
                 {isUploading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 ) : (
@@ -344,7 +344,7 @@ export default function AdminLogoUpload() {
                 )}
                 {logoData?.has_logo ? 'ロゴを更新' : 'ロゴをアップロード'}
               </Button>
-              <Button variant="outline" onClick={handleCancel}>
+              <Button variant="outline" onClick={handleCancel} className="border-2">
                 キャンセル
               </Button>
             </div>
@@ -355,9 +355,8 @@ export default function AdminLogoUpload() {
         <div className="border-t pt-4">
           <h3 className="font-medium text-gray-900 mb-2">ロゴの表示場所</h3>
           <ul className="text-sm text-gray-600 space-y-1">
-            <li>• トップページの大会カード背景</li>
-            <li>• 大会詳細ページのヘッダー部分</li>
-            <li>• 管理者が作成した大会の識別表示</li>
+            <li>• トップページの大会カード</li>
+            <li>• マイダッシュボードの大会カード</li>
           </ul>
         </div>
       </CardContent>

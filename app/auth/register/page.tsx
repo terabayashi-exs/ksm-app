@@ -1,57 +1,192 @@
+// app/auth/register/page.tsx
 'use client';
 
 import { useState, Suspense, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, UserPlus, AlertCircle, CheckCircle, Plus, Trash2, Users, Eye, EyeOff } from 'lucide-react';
-import { teamWithPlayersRegisterSchema, type TeamWithPlayersRegisterForm } from '@/lib/validations';
+import { Loader2, ArrowLeft, UserPlus, AlertCircle, CheckCircle, Eye, EyeOff, Mail } from 'lucide-react';
 
-function TeamRegisterForm() {
+// ─── メールアドレス入力フォーム（トークンなし） ───────────────────────────────
+function EmailInputForm() {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/request-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess(true);
+      } else {
+        setError(data.error || 'メール送信に失敗しました');
+      }
+    } catch (err) {
+      console.error('Email submission error:', err);
+      setError('エラーが発生しました。もう一度お試しください。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+                <Mail className="h-12 w-12 text-green-600" />
+              </div>
+            </div>
+            <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+              メールを送信しました
+            </h2>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <p className="text-foreground">
+                  <strong>{email}</strong> に登録用のリンクを送信しました。
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  メールボックスをご確認いただき、メール内のリンクをクリックして登録を完了してください。
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  リンクの有効期限は10分です。
+                </p>
+                <div className="pt-4">
+                  <Button variant="outline" asChild>
+                    <Link href="/">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      トップページに戻る
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+              <Mail className="h-12 w-12 text-primary" />
+            </div>
+          </div>
+          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+            アカウント登録申請
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            メールアドレスを入力してください
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>メールアドレス確認</CardTitle>
+            <CardDescription>
+              入力されたメールアドレスに認証用のリンクをお送りします
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">メールアドレス</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="example@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  autoComplete="email"
+                />
+                <p className="text-xs text-muted-foreground">
+                  登録に使用するメールアドレスを入力してください
+                </p>
+              </div>
+
+              {error && (
+                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
+                  {error}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? '送信中...' : '認証メールを送信'}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                既にアカウントをお持ちの方は{' '}
+                <Link
+                  href="/auth/login"
+                  className="font-medium text-primary hover:text-primary/80"
+                >
+                  こちらからログイン
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="text-center">
+          <Link
+            href="/"
+            className="text-sm font-medium text-primary hover:text-primary/80"
+          >
+            ← トップページに戻る
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── アカウント登録フォーム（トークンあり） ───────────────────────────────────
+function AccountRegisterForm({ token }: { token: string }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
-  const token = searchParams.get('token');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [isVerifying, setIsVerifying] = useState(true);
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
-
-  const form = useForm<TeamWithPlayersRegisterForm>({
-    resolver: zodResolver(teamWithPlayersRegisterSchema),
-    defaultValues: {
-      team_id: '',
-      team_name: '',
-      team_omission: '',
-      contact_person: '',
-      contact_email: '',
-      contact_phone: '',
-      password: '',
-      password_confirmation: '',
-      players: []
-    }
-  });
-
-  const watchedPlayers = form.watch('players');
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   // トークン検証
   useEffect(() => {
     const verifyToken = async () => {
-      if (!token) {
-        // トークンがない場合はメールアドレス入力ページにリダイレクト
-        router.push('/auth/register/email');
-        return;
-      }
-
       try {
         const response = await fetch('/api/auth/verify-token', {
           method: 'POST',
@@ -62,28 +197,26 @@ function TeamRegisterForm() {
         const data = await response.json();
 
         if (data.success) {
-          // メールアドレスをフォームにセット
-          form.setValue('contact_email', data.email);
+          setEmail(data.email);
           setIsVerifying(false);
         } else {
           setError(data.error || 'トークンの検証に失敗しました');
           setTimeout(() => {
-            router.push('/auth/register/email');
+            router.push('/auth/register');
           }, 3000);
         }
-      } catch (error) {
-        console.error('Token verification error:', error);
+      } catch (err) {
+        console.error('Token verification error:', err);
         setError('トークンの検証中にエラーが発生しました');
         setTimeout(() => {
-          router.push('/auth/register/email');
+          router.push('/auth/register');
         }, 3000);
       }
     };
 
     verifyToken();
-  }, [token, router, form]);
+  }, [token, router]);
 
-  // トークン検証中の表示
   if (isVerifying) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -95,267 +228,121 @@ function TeamRegisterForm() {
     );
   }
 
-  // 選手の追加
-  const addPlayer = () => {
-    const currentPlayers = form.getValues('players');
-    form.setValue('players', [
-      ...currentPlayers,
-      { player_name: '', player_number: undefined }
-    ]);
-  };
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+              <CheckCircle className="h-12 w-12 text-green-600" />
+            </div>
+          </div>
+          <h2 className="text-3xl font-extrabold text-foreground">登録完了</h2>
+          <p className="text-muted-foreground">
+            アカウントの登録が完了しました。<br />
+            ログインページからログインしてください。
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/auth/login">ログインページへ</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  // 選手の削除
-  const removePlayer = (index: number) => {
-    const currentPlayers = form.getValues('players');
-    form.setValue('players', currentPlayers.filter((_, i) => i !== index));
-  };
-
-  const onSubmit = async (data: TeamWithPlayersRegisterForm) => {
-    setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
-    setSuccess('');
 
+    if (password !== passwordConfirmation) {
+      setError('パスワードが一致しません');
+      return;
+    }
+    if (password.length < 6) {
+      setError('パスワードは6文字以上で入力してください');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/teams/register', {
+      const response = await fetch('/api/auth/register-account', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...data, token }), // トークンを含める
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, display_name: displayName, password }),
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
-      if (result.success) {
-        const playerCount = result.data?.players_count || 0;
-        const playerMessage = playerCount > 0 ? `${playerCount}人の選手が登録されました。` : '選手は後から追加できます。';
-        setSuccess(`チーム登録が完了しました。${playerMessage}自動ログインしています...`);
-        
-        // 自動ログイン処理
-        try {
-          console.log('Attempting auto login with:', { teamId: data.team_id, callbackUrl });
-          const signInResult = await signIn('team', {
-            redirect: false,
-            teamId: data.team_id,
-            password: data.password,
-          });
-
-          console.log('Auto login result:', signInResult);
-
-          if (signInResult?.ok) {
-            // ログイン成功 - 遷移先を決定
-            if (callbackUrl !== '/' && callbackUrl.includes('/tournaments/')) {
-              setSuccess(`チーム登録が完了しました。${playerMessage}大会参加画面に移動します...`);
-            } else {
-              setSuccess(`チーム登録が完了しました。${playerMessage}チームダッシュボードに移動します...`);
-            }
-            setTimeout(() => {
-              // 大会参加用のコールバックURLがある場合は大会参加画面へ
-              // そうでなければチームダッシュボードへ
-              if (callbackUrl !== '/' && callbackUrl.includes('/tournaments/')) {
-                router.push(callbackUrl);
-              } else {
-                router.push('/team');
-              }
-            }, 1500);
-          } else {
-            // ログイン失敗 - 手動ログインページに遷移
-            console.warn('Auto login failed:', signInResult?.error);
-            setSuccess(`チーム登録が完了しました。${playerMessage}ログインページに移動します...`);
-            setTimeout(() => {
-              router.push(`/auth/team/login${callbackUrl !== '/' ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`);
-            }, 2000);
-          }
-        } catch (loginError) {
-          console.error('Auto login error:', loginError);
-          // 自動ログイン失敗 - 手動ログインページに遷移
-          setSuccess(`チーム登録が完了しました。${playerMessage}ログインページに移動します...`);
-          setTimeout(() => {
-            // 大会参加用の場合はコールバックURL付き、そうでなければ通常のログインページ
-            if (callbackUrl !== '/' && callbackUrl.includes('/tournaments/')) {
-              router.push(`/auth/team/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-            } else {
-              router.push('/auth/team/login');
-            }
-          }, 2000);
-        }
+      if (data.success) {
+        setSuccess(true);
       } else {
-        console.error('Registration failed:', result);
-        if (result.field) {
-          // 特定のフィールドエラーの場合
-          form.setError(result.field as keyof TeamWithPlayersRegisterForm, {
-            type: 'server',
-            message: result.error
-          });
-        } else {
-          const errorMessage = result.error || '登録に失敗しました';
-          const detailMessage = result.details ? ` (詳細: ${result.details})` : '';
-          setError(errorMessage + detailMessage);
-        }
+        setError(data.error || '登録に失敗しました');
       }
-    } catch (error) {
-      console.error('Registration error:', error);
-      setError('ネットワークエラーが発生しました: ' + (error instanceof Error ? error.message : String(error)));
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError('エラーが発生しました。もう一度お試しください。');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        {/* ヘッダー */}
         <div className="text-center">
-          <div className="bg-blue-600 text-white p-3 rounded-lg mx-auto w-fit mb-4">
-            <UserPlus className="h-8 w-8" />
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+              <UserPlus className="h-12 w-12 text-primary" />
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">チーム登録</h1>
+          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+            アカウント登録
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            表示名とパスワードを設定してください
+          </p>
         </div>
 
-        {/* 戻るリンク */}
-        <div className="text-center">
-          <Button variant="ghost" asChild>
-            <Link href="/" className="inline-flex items-center">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              TOPページに戻る
-            </Link>
-          </Button>
-        </div>
-
-        {/* エラー・成功メッセージ */}
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800 dark:text-green-200">{success}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* 登録フォーム */}
         <Card>
           <CardHeader>
-            <CardTitle>チーム情報入力</CardTitle>
+            <CardTitle>アカウント情報入力</CardTitle>
             <CardDescription>
-              以下の情報を入力してチーム登録を行ってください
+              以下の情報を入力してアカウントを作成してください
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* チームID */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* メールアドレス（読み取り専用） */}
               <div className="space-y-2">
-                <Label htmlFor="team_id">チームID *</Label>
+                <Label htmlFor="email">メールアドレス</Label>
                 <Input
-                  id="team_id"
-                  type="text"
-                  placeholder="例: team001"
-                  {...form.register('team_id')}
-                  className={form.formState.errors.team_id ? 'border-red-500' : ''}
-                />
-                <p className="text-xs text-muted-foreground">
-                  ログイン時に使用します。英数字、ハイフン、アンダースコアが使用可能です
-                </p>
-                {form.formState.errors.team_id && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.team_id.message}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* チーム名 */}
-              <div className="space-y-2">
-                <Label htmlFor="team_name">チーム名 *</Label>
-                <Input
-                  id="team_name"
-                  type="text"
-                  placeholder="例: サッカークラブ"
-                  {...form.register('team_name')}
-                  className={form.formState.errors.team_name ? 'border-red-500' : ''}
-                />
-                <p className="text-xs text-muted-foreground">
-                  ※ これは管理用の名称です。大会に参加する際には、別途参加チーム名とチーム略称を登録する必要があります。
-                </p>
-                {form.formState.errors.team_name && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.team_name.message}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* 連絡担当者名 */}
-              <div className="space-y-2">
-                <Label htmlFor="contact_person">連絡担当者名 *</Label>
-                <Input
-                  id="contact_person"
-                  type="text"
-                  placeholder="例: 山田太郎"
-                  {...form.register('contact_person')}
-                  className={form.formState.errors.contact_person ? 'border-red-500' : ''}
-                />
-                {form.formState.errors.contact_person && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.contact_person.message}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* メールアドレス */}
-              <div className="space-y-2">
-                <Label htmlFor="contact_email">メールアドレス *</Label>
-                <Input
-                  id="contact_email"
+                  id="email"
                   type="email"
-                  placeholder="例: team@example.com"
-                  {...form.register('contact_email')}
-                  className={`bg-muted ${form.formState.errors.contact_email ? 'border-red-500' : ''}`}
+                  value={email}
                   readOnly
                   disabled
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
                   ※ メール認証済みのアドレスです（変更不可）
                 </p>
-                {form.formState.errors.contact_email && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.contact_email.message}
-                    </p>
-                  </div>
-                )}
               </div>
 
-              {/* 電話番号 */}
+              {/* 表示名 */}
               <div className="space-y-2">
-                <Label htmlFor="contact_phone">電話番号</Label>
+                <Label htmlFor="display_name">表示名 *</Label>
                 <Input
-                  id="contact_phone"
-                  type="tel"
-                  placeholder="例: 090-1234-5678"
-                  {...form.register('contact_phone')}
-                  className={form.formState.errors.contact_phone ? 'border-red-500' : ''}
+                  id="display_name"
+                  type="text"
+                  required
+                  placeholder="例: 山田太郎"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  disabled={isLoading}
                 />
-                {form.formState.errors.contact_phone && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.contact_phone.message}
-                    </p>
-                  </div>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  ダッシュボードやログイン後に表示される名前です
+                </p>
               </div>
 
               {/* パスワード */}
@@ -364,158 +351,58 @@ function TeamRegisterForm() {
                 <div className="relative">
                   <Input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
+                    required
                     placeholder="6文字以上で入力してください"
-                    {...form.register('password')}
-                    className={`pr-10 ${form.formState.errors.password ? 'border-red-500' : ''}`}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="pr-10"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {form.formState.errors.password && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.password.message}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* パスワード確認 */}
               <div className="space-y-2">
-                <Label htmlFor="password_confirmation">パスワード確認 *</Label>
+                <Label htmlFor="password_confirmation">パスワード（確認） *</Label>
                 <div className="relative">
                   <Input
                     id="password_confirmation"
-                    type={showPasswordConfirmation ? "text" : "password"}
+                    type={showPasswordConfirmation ? 'text' : 'password'}
+                    required
                     placeholder="パスワードを再度入力してください"
-                    {...form.register('password_confirmation')}
-                    className={`pr-10 ${form.formState.errors.password_confirmation ? 'border-red-500' : ''}`}
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
+                    disabled={isLoading}
+                    className="pr-10"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPasswordConfirmation((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
                   >
                     {showPasswordConfirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {form.formState.errors.password_confirmation && (
-                  <div className="flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {form.formState.errors.password_confirmation.message}
-                    </p>
-                  </div>
-                )}
               </div>
 
-              {/* 選手登録 */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">選手登録（任意）</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addPlayer}
-                    className="flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    選手追加
-                  </Button>
+              {error && (
+                <div className="flex items-center space-x-2 p-2 bg-destructive/5 dark:bg-red-950/20 border border-destructive/20 dark:border-red-800 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                  <p className="text-sm text-destructive dark:text-red-400">{error}</p>
                 </div>
+              )}
 
-                <div className="space-y-4">
-                  {watchedPlayers?.map((_, index) => (
-                    <Card key={index} className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-sm">選手 {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removePlayer(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* 選手名 */}
-                        <div className="space-y-1">
-                          <Label htmlFor={`player_name_${index}`}>選手名 *</Label>
-                          <Input
-                            id={`player_name_${index}`}
-                            type="text"
-                            placeholder="例: 山田太郎"
-                            {...form.register(`players.${index}.player_name`)}
-                            className={form.formState.errors.players?.[index]?.player_name ? 'border-red-500' : ''}
-                          />
-                          {form.formState.errors.players?.[index]?.player_name && (
-                            <p className="text-xs text-red-600 dark:text-red-400">
-                              {form.formState.errors.players[index]?.player_name?.message}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* 背番号 */}
-                        <div className="space-y-1">
-                          <Label htmlFor={`player_number_${index}`}>背番号（任意）</Label>
-                          <Input
-                            id={`player_number_${index}`}
-                            type="number"
-                            min="1"
-                            max="99"
-                            placeholder="未入力可"
-                            {...form.register(`players.${index}.player_number`, { 
-                              setValueAs: (value) => {
-                                if (value === '' || value === null || value === undefined) {
-                                  return undefined;
-                                }
-                                const num = parseInt(value, 10);
-                                return isNaN(num) ? undefined : num;
-                              }
-                            })}
-                            className={form.formState.errors.players?.[index]?.player_number ? 'border-red-500' : ''}
-                          />
-                          {form.formState.errors.players?.[index]?.player_number && (
-                            <p className="text-xs text-red-600 dark:text-red-400">
-                              {form.formState.errors.players[index]?.player_number?.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-
-                {form.formState.errors.players?.root && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {form.formState.errors.players.root.message}
-                  </p>
-                )}
-
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    📝 選手登録は任意です。後から追加することも可能です。背番号は空白でも登録可能です。背番号を設定する場合は重複しないようにしてください。
-                  </p>
-                </div>
-              </div>
-
-              {/* 送信ボタン */}
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -523,33 +410,51 @@ function TeamRegisterForm() {
                   </>
                 ) : (
                   <>
-                    <Users className="mr-2 h-4 w-4" />
-                    チーム・選手登録
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    アカウントを作成する
                   </>
                 )}
               </Button>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                既にアカウントをお持ちの方は{' '}
+                <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
+                  こちらからログイン
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        {/* ログインリンク */}
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            既にアカウントをお持ちの方は{' '}
-            <Link href="/auth/team/login" className="text-blue-600 hover:text-blue-500 font-medium">
-              こちらからログイン
-            </Link>
-          </p>
+          <Link href="/" className="text-sm font-medium text-primary hover:text-primary/80">
+            <ArrowLeft className="inline h-3 w-3 mr-1" />
+            トップページに戻る
+          </Link>
         </div>
       </div>
     </div>
   );
 }
 
-export default function TeamRegisterPage() {
+// ─── ルーティングコンポーネント ────────────────────────────────────────────────
+function RegisterPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+
+  if (token) {
+    return <AccountRegisterForm token={token} />;
+  }
+
+  return <EmailInputForm />;
+}
+
+export default function RegisterPageWrapper() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <TeamRegisterForm />
+      <RegisterPage />
     </Suspense>
   );
 }

@@ -112,8 +112,8 @@ export default function TournamentGroupPage() {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800">{error || '大会が見つかりません'}</p>
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+            <p className="text-destructive">{error || '大会が見つかりません'}</p>
             <Button
               className="mt-4"
               asChild

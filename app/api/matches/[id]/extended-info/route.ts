@@ -24,8 +24,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // 試合の拡張情報を取得（競技種別・ルール設定含む）
+    // 試合のphaseに対応するルール設定を動的にJOIN
     const result = await db.execute(`
-      SELECT 
+      SELECT
         ml.match_id,
         ml.match_code,
         ml.period_count,
@@ -35,13 +36,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         sport.sport_name,
         -- 現在のピリオド設定
         ms.current_period,
-        -- 大会ルール設定
-        tr_pre.active_periods as preliminary_periods,
-        tr_pre.use_extra_time as preliminary_use_extra_time,
-        tr_pre.use_penalty as preliminary_use_penalty,
-        tr_final.active_periods as final_periods,
-        tr_final.use_extra_time as final_use_extra_time,
-        tr_final.use_penalty as final_use_penalty,
+        -- 試合フェーズに対応するルール設定
+        tr.active_periods as rule_periods,
+        tr.use_extra_time as rule_use_extra_time,
+        tr.use_penalty as rule_use_penalty,
         -- ブロック情報でフェーズ判定
         mb.phase as match_phase
       FROM t_matches_live ml
@@ -49,8 +47,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
       INNER JOIN m_sport_types sport ON tour.sport_type_id = sport.sport_type_id
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-      LEFT JOIN t_tournament_rules tr_pre ON tour.tournament_id = tr_pre.tournament_id AND tr_pre.phase = 'preliminary'
-      LEFT JOIN t_tournament_rules tr_final ON tour.tournament_id = tr_final.tournament_id AND tr_final.phase = 'final'
+      LEFT JOIN t_tournament_rules tr ON tour.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       WHERE ml.match_id = ?
     `, [matchId]);
 
@@ -62,16 +59,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const match = result.rows[0];
-    
+
     // 競技種別設定を取得（インライン化でWebpackエラー回避）
-    const sportConfig = Object.values(SPORT_RULE_CONFIGS).find(config => 
+    const sportConfig = Object.values(SPORT_RULE_CONFIGS).find(config =>
       config.sport_type_id === Number(match.sport_type_id)
     ) || null;
-    
-    // 現在の試合フェーズに応じたルール設定を決定
-    const isPreliminay = match.match_phase === 'preliminary';
-    const activePeriodsJson = isPreliminay ? match.preliminary_periods : match.final_periods;
-    
+
+    // 試合フェーズに対応するルール設定を使用
+    const activePeriodsJson = match.rule_periods;
+
     // 使用可能ピリオドを解析
     let activePeriods: number[] = [1];
     try {
@@ -103,8 +99,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       // ルール設定
       rules: {
         phase: match.match_phase,
-        use_extra_time: isPreliminay ? match.preliminary_use_extra_time : match.final_use_extra_time,
-        use_penalty: isPreliminay ? match.preliminary_use_penalty : match.final_use_penalty,
+        use_extra_time: match.rule_use_extra_time,
+        use_penalty: match.rule_use_penalty,
         active_periods_json: activePeriodsJson
       }
     };

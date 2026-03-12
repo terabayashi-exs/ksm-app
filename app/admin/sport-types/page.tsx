@@ -2,16 +2,16 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { Plus, Edit, Trash2, Trophy, Timer, Target } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Trophy, Timer, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function SportTypesPage() {
   const session = await auth();
-  
-  if (!session || session.user.role !== "admin" || session.user.id !== "admin") {
-    redirect("/auth/login");
+
+  if (!session || session.user.role !== "admin") {
+    redirect("/auth/admin/login");
   }
 
   // 競技種別一覧を取得
@@ -32,23 +32,33 @@ export default async function SportTypesPage() {
   const sportTypes = sportTypesResult.rows;
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">競技種別マスタ管理</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            大会で使用する競技種別の管理を行います
-          </p>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">競技種別マスタ管理</h1>
+            <p className="text-sm text-white/70 mt-1">
+              大会で使用する競技種別の管理を行います
+            </p>
+          </div>
         </div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <Link href="/admin/sport-types/create">
-            <Plus className="h-4 w-4 mr-2" />
-            新規競技種別
-          </Link>
-        </Button>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="flex items-center justify-between mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/my">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              ダッシュボードに戻る
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/sport-types/create">
+              <Plus className="h-4 w-4 mr-2" />
+              新規競技種別
+            </Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sportTypes.map((sport) => {
           const periodDefinitions = JSON.parse(String(sport.period_definitions));
           const scoreTypeIcon = sport.score_type === 'time' ? <Timer className="h-4 w-4" /> : 
@@ -60,8 +70,8 @@ export default async function SportTypesPage() {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                      <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-primary/10 dark:bg-blue-900 rounded-lg">
+                      <Trophy className="h-5 w-5 text-primary dark:text-blue-400" />
                     </div>
                     <div>
                       <CardTitle className="text-xl">{String(sport.sport_name)}</CardTitle>
@@ -85,7 +95,7 @@ export default async function SportTypesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/5 dark:hover:bg-red-900/20"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -140,18 +150,19 @@ export default async function SportTypesPage() {
         })}
       </div>
 
-      {sportTypes.length === 0 && (
-        <div className="text-center py-12">
-          <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">競技種別が登録されていません</p>
-          <Button asChild className="mt-4">
-            <Link href="/admin/sport-types/create">
-              <Plus className="h-4 w-4 mr-2" />
-              競技種別を作成
-            </Link>
-          </Button>
-        </div>
-      )}
+        {sportTypes.length === 0 && (
+          <div className="text-center py-12">
+            <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">競技種別が登録されていません</p>
+            <Button asChild className="mt-4">
+              <Link href="/admin/sport-types/create">
+                <Plus className="h-4 w-4 mr-2" />
+                競技種別を作成
+              </Link>
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

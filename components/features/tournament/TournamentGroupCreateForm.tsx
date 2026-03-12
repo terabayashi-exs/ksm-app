@@ -67,7 +67,7 @@ export default function TournamentGroupCreateForm() {
   useEffect(() => {
     const fetchVenues = async () => {
       try {
-        const response = await fetch('/api/venues');
+        const response = await fetch('/api/venues?scope=available');
         const data = await response.json();
         if (data.success) {
           setVenues(data.data);
@@ -308,7 +308,7 @@ export default function TournamentGroupCreateForm() {
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" variant="outline" disabled={isSubmitting}>
           {isSubmitting ? '作成中...' : '🏆 大会を作成'}
         </Button>
       </div>

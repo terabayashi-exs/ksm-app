@@ -293,7 +293,7 @@ async function handleTournamentJoin(
         v.venue_name,
         g.group_name
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON t.venue_id = v.venue_id
+      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       WHERE t.tournament_id = ? AND t.visibility = 'open'
     `, [tournamentId]);
@@ -599,7 +599,7 @@ async function handleTournamentJoin(
             categoryName: String(tournament.tournament_name), // tournament_nameを部門名として使用
             tournamentDate: tournamentDateStr,
             venueName: tournament.venue_name ? String(tournament.venue_name) : undefined,
-            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'rakusyogo-official@rakusyo-go.com',
+            contactEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'taikaigo-official@taikai-go.com',
             playerCount: data.players.length,
             tournamentUrl: tournamentUrl
           });

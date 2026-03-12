@@ -4,9 +4,17 @@ import "next-auth/jwt";
 
 declare module "next-auth" {
   interface User {
-    role: "admin" | "team";
+    loginUserId: number;
+    roles: ("admin" | "team" | "operator")[];
+    isSuperadmin: boolean;
+    // 後方互換
+    role: "admin" | "team" | "operator";
     teamId?: string;
+    teamIds?: string[];
     administratorId?: string;
+    operatorId?: string;
+    accessibleTournaments?: number[];
+    authorities?: { tournamentId: number; permissions: string }[];
   }
 
   interface Session {
@@ -14,17 +22,33 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      role: "admin" | "team";
+      loginUserId: number;
+      roles: ("admin" | "team" | "operator")[];
+      isSuperadmin: boolean;
+      // 後方互換
+      role: "admin" | "team" | "operator";
       teamId?: string;
+      teamIds?: string[];
       administratorId?: string;
+      operatorId?: string;
+      accessibleTournaments?: number[];
+      authorities?: { tournamentId: number; permissions: string }[];
     };
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role: "admin" | "team";
+    loginUserId: number;
+    roles: ("admin" | "team" | "operator")[];
+    isSuperadmin: boolean;
+    // 後方互換
+    role: "admin" | "team" | "operator";
     teamId?: string;
+    teamIds?: string[];
     administratorId?: string;
+    operatorId?: string;
+    accessibleTournaments?: number[];
+    authorities?: { tournamentId: number; permissions: string }[];
   }
 }

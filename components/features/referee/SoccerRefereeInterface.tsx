@@ -24,14 +24,14 @@ interface ExtendedMatchData {
   sport_type_id: number;
   sport_code: string;
   sport_name: string;
-  match_phase: 'preliminary' | 'final';
+  match_phase: string;
   current_period: number;
   period_count: number;
   active_periods: number[];
   max_periods: number;
   sport_config: SportRuleConfig | null;
   rules: {
-    phase: 'preliminary' | 'final';
+    phase: string;
     use_extra_time: boolean;
     use_penalty: boolean;
     active_periods_json: string;

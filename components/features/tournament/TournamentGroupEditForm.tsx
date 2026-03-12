@@ -81,14 +81,19 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
 
   const selectedVisibility = watch('visibility');
 
-  // 会場一覧取得
+  // 会場一覧取得（取得後に venue_id を再セットして選択状態を正しく反映）
   useEffect(() => {
     const fetchVenues = async () => {
       try {
-        const response = await fetch('/api/venues');
+        const response = await fetch('/api/venues?scope=available');
         const data = await response.json();
         if (data.success) {
           setVenues(data.data);
+          // 会場リストが揃ったタイミングで初期値を再セット
+          setValue(
+            'venue_id',
+            initialData.venue_id ? String(initialData.venue_id) : 'none'
+          );
         }
       } catch (error) {
         console.error('会場一覧の取得に失敗:', error);
@@ -96,6 +101,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
     };
 
     fetchVenues();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onSubmit = async (data: TournamentGroupFormData) => {
@@ -292,7 +298,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" variant="outline" disabled={isSubmitting}>
           {isSubmitting ? '更新中...' : '✏️ 大会を更新'}
         </Button>
       </div>
