@@ -1,0 +1,38 @@
+CREATE TABLE t_tournaments_new (
+    tournament_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tournament_name TEXT NOT NULL,
+    format_id INTEGER NOT NULL,
+    team_count INTEGER NOT NULL,
+    court_count INTEGER NOT NULL,
+    tournament_dates TEXT NOT NULL,
+    match_duration_minutes INTEGER NOT NULL,
+    break_duration_minutes INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'planning',
+    visibility TEXT NOT NULL DEFAULT 'draft',
+    public_start_date TEXT,
+    recruitment_start_date TEXT,
+    recruitment_end_date TEXT,
+    sport_type_id INTEGER,
+    created_by TEXT,
+    archive_ui_version TEXT,
+    is_archived INTEGER DEFAULT 0,
+    archived_at DATETIME,
+    archived_by TEXT,
+    created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+    updated_at DATETIME DEFAULT (datetime('now', '+9 hours')),
+    files_count INTEGER DEFAULT 0,
+    group_order INTEGER,
+    category_name TEXT,
+    group_id INTEGER,
+    show_players_public INTEGER DEFAULT 0,
+    preliminary_format_type TEXT,
+    final_format_type TEXT,
+    phases TEXT,
+    format_name TEXT,
+    venue_id TEXT,
+    FOREIGN KEY (format_id) REFERENCES m_tournament_formats(format_id),
+    FOREIGN KEY (group_id) REFERENCES t_tournament_groups(group_id)
+);
+INSERT INTO t_tournaments_new SELECT tournament_id, tournament_name, format_id, team_count, court_count, tournament_dates, match_duration_minutes, break_duration_minutes, status, visibility, public_start_date, recruitment_start_date, recruitment_end_date, sport_type_id, created_by, archive_ui_version, is_archived, archived_at, archived_by, created_at, updated_at, files_count, group_order, category_name, group_id, show_players_public, preliminary_format_type, final_format_type, phases, format_name, venue_id FROM t_tournaments;
+DROP TABLE t_tournaments;
+ALTER TABLE t_tournaments_new RENAME TO t_tournaments;

@@ -159,8 +159,6 @@ export async function POST(request: NextRequest) {
       SELECT
         format_id,
         format_name,
-        preliminary_format_type,
-        final_format_type,
         phases
       FROM m_tournament_formats
       WHERE format_id = ?
@@ -174,23 +172,17 @@ export async function POST(request: NextRequest) {
     }
 
     const formatInfo = formatResult.rows[0];
-    const preliminaryFormatType = formatInfo.preliminary_format_type;
-    const finalFormatType = formatInfo.final_format_type;
     const formatPhases = formatInfo.phases as string | null;
 
     // テンプレート独立化: フォーマット情報をt_tournamentsにコピー
     await db.execute(`
       UPDATE t_tournaments SET
         format_name = ?,
-        preliminary_format_type = ?,
-        final_format_type = ?,
         phases = ?,
         updated_at = datetime('now', '+9 hours')
       WHERE tournament_id = ?
     `, [
       formatInfo.format_name,
-      preliminaryFormatType,
-      finalFormatType,
       typeof formatPhases === 'string' ? formatPhases : JSON.stringify(formatPhases),
       tournamentId
     ]);

@@ -53,20 +53,21 @@ export async function GET(
       }));
     }
 
-    // コート設定を取得
+    // コート設定を試合データから取得
     const courtsResult = await db.execute(`
-      SELECT tournament_court_id, court_number, court_name, venue_id, display_order
-      FROM t_tournament_courts
-      WHERE tournament_id = ? AND is_active = 1
-      ORDER BY court_number
+      SELECT DISTINCT ml.court_number, ml.court_name, ml.venue_id
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND ml.court_number IS NOT NULL
+      ORDER BY ml.court_number
     `, [tournamentId]);
 
-    const courtSettings = courtsResult.rows.map(r => ({
-      tournament_court_id: Number(r.tournament_court_id),
+    const courtSettings = courtsResult.rows.map((r, i) => ({
+      tournament_court_id: i + 1,
       court_number: Number(r.court_number),
-      court_name: String(r.court_name),
+      court_name: r.court_name ? String(r.court_name) : `コート${r.court_number}`,
       venue_id: r.venue_id ? Number(r.venue_id) : null,
-      display_order: Number(r.display_order),
+      display_order: Number(r.court_number),
     }));
 
     // コート番号別に試合を取得（チーム略称をJOINで取得）
@@ -164,48 +165,12 @@ export async function PUT(
           )
         `, [dcs.court_name, dcs.venue_id || null, venueName, dcs.court_number, dcs.date, tournamentId]);
 
-        // t_tournament_courts も upsert（最後の日付の設定で上書き）
-        const existing = await db.execute(`
-          SELECT tournament_court_id FROM t_tournament_courts
-          WHERE tournament_id = ? AND court_number = ?
-        `, [tournamentId, dcs.court_number]);
-
-        if (existing.rows.length > 0) {
-          await db.execute(`
-            UPDATE t_tournament_courts
-            SET court_name = ?, venue_id = ?, updated_at = datetime('now', '+9 hours')
-            WHERE tournament_id = ? AND court_number = ?
-          `, [dcs.court_name, dcs.venue_id || null, tournamentId, dcs.court_number]);
-        } else {
-          await db.execute(`
-            INSERT INTO t_tournament_courts (tournament_id, court_number, court_name, venue_id, display_order, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-          `, [tournamentId, dcs.court_number, dcs.court_name, dcs.venue_id || null, dcs.court_number]);
-        }
       }
     }
 
     // 旧方式（courtSettings）との後方互換
     if (courtSettings && Array.isArray(courtSettings) && !dateCourtSettings) {
       for (const cs of courtSettings) {
-        const existing = await db.execute(`
-          SELECT tournament_court_id FROM t_tournament_courts
-          WHERE tournament_id = ? AND court_number = ?
-        `, [tournamentId, cs.court_number]);
-
-        if (existing.rows.length > 0) {
-          await db.execute(`
-            UPDATE t_tournament_courts
-            SET court_name = ?, venue_id = ?, updated_at = datetime('now', '+9 hours')
-            WHERE tournament_id = ? AND court_number = ?
-          `, [cs.court_name, cs.venue_id || null, tournamentId, cs.court_number]);
-        } else {
-          await db.execute(`
-            INSERT INTO t_tournament_courts (tournament_id, court_number, court_name, venue_id, display_order, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-          `, [tournamentId, cs.court_number, cs.court_name, cs.venue_id || null, cs.court_number]);
-        }
-
         let venueName: string | null = null;
         if (cs.venue_id) {
           const venueResult = await db.execute(`SELECT venue_name FROM m_venues WHERE venue_id = ?`, [cs.venue_id]);

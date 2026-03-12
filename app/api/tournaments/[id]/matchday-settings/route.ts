@@ -46,13 +46,9 @@ export async function GET(
         ml.team1_display_name,
         ml.team2_display_name,
         ml.block_name,
-        tc.court_name
+        ml.court_name
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN t_tournament_courts tc
-        ON mb.tournament_id = tc.tournament_id
-        AND ml.court_number = tc.court_number
-        AND tc.is_active = 1
       WHERE mb.tournament_id = ? AND ml.matchday IS NOT NULL
       ORDER BY ml.matchday ASC, ml.match_number ASC
     `, [tournamentId]);
@@ -204,19 +200,19 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // コート名→番号のマッピングを管理
+    // コート名→番号のマッピングを管理（既存の試合データから取得）
     const courtNameToNumber = new Map<string, number>();
     let nextCourtNumber = 1;
 
-    // 既存のコート設定を取得
-    const existingCourts = await db.execute(`
-      SELECT court_number, court_name
-      FROM t_tournament_courts
-      WHERE tournament_id = ? AND is_active = 1
-      ORDER BY court_number ASC
+    const existingMatches = await db.execute(`
+      SELECT DISTINCT ml.court_number, ml.court_name
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND ml.court_number IS NOT NULL
+      ORDER BY ml.court_number ASC
     `, [tournamentId]);
 
-    for (const row of existingCourts.rows) {
+    for (const row of existingMatches.rows) {
       const name = String(row.court_name || '');
       const num = Number(row.court_number);
       if (name) courtNameToNumber.set(name, num);
@@ -232,14 +228,9 @@ export async function PUT(
         if (courtNameToNumber.has(courtName)) {
           courtNumber = courtNameToNumber.get(courtName)!;
         } else {
-          // 新しいコート名 → 新しいcourt_numberを割り当てて t_tournament_courts に登録
+          // 新しいコート名 → 新しいcourt_numberを割り当て
           courtNumber = nextCourtNumber++;
           courtNameToNumber.set(courtName, courtNumber);
-
-          await db.execute(`
-            INSERT INTO t_tournament_courts (tournament_id, court_number, court_name, display_order, is_active)
-            VALUES (?, ?, ?, ?, 1)
-          `, [tournamentId, courtNumber, courtName, courtNumber]);
         }
       }
 
@@ -248,6 +239,7 @@ export async function PUT(
           tournament_date = ?,
           start_time = ?,
           court_number = ?,
+          court_name = ?,
           venue_name = ?,
           updated_at = datetime('now', '+9 hours')
         WHERE match_id = ?
@@ -255,6 +247,7 @@ export async function PUT(
         match.tournament_date || '',
         match.start_time || null,
         courtNumber,
+        courtName || null,
         match.venue_name || null,
         match.match_id,
       ]);

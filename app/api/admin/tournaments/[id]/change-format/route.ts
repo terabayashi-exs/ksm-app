@@ -168,8 +168,7 @@ export async function PUT(
 
     // 新しいフォーマットの存在確認
     const newFormat = await db.execute(`
-      SELECT format_id, format_name, target_team_count,
-        preliminary_format_type, final_format_type, phases
+      SELECT format_id, format_name, target_team_count, phases
       FROM m_tournament_formats
       WHERE format_id = ?
     `, [new_format_id]);
@@ -310,16 +309,12 @@ export async function PUT(
       UPDATE t_tournaments SET
         format_id = ?,
         format_name = ?,
-        preliminary_format_type = ?,
-        final_format_type = ?,
         phases = ?,
         updated_at = datetime('now', '+9 hours')
       WHERE tournament_id = ?
     `, [
       new_format_id,
       newFormatInfo.format_name,
-      newFormatInfo.preliminary_format_type,
-      newFormatInfo.final_format_type,
       typeof newFormatPhases === 'string' ? newFormatPhases : JSON.stringify(newFormatPhases),
       tournamentId
     ]);

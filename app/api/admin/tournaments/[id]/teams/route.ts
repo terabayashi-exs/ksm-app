@@ -351,9 +351,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!isExistingMasterTeam) {
       teamId = randomUUID();
 
-      // パスワードハッシュ化
-      const passwordHash = await bcrypt.hash(data.temporary_password, 12);
-
       console.log('Creating new admin proxy team registration:', {
         teamId,
         teamName: data.team_name,
@@ -370,32 +367,50 @@ export async function POST(request: NextRequest, context: RouteContext) {
           contact_person,
           contact_email,
           contact_phone,
-          password_hash,
           registration_type,
           is_active,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'admin_proxy', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        ) VALUES (?, ?, ?, ?, ?, ?, 'admin_proxy', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
       `, [
         teamId,
         data.team_name,
         data.team_omission,
         data.contact_person,
         data.contact_email,
-        data.contact_phone || null,
-        passwordHash
+        data.contact_phone || null
       ]);
 
       console.log('New master team created successfully');
 
-      // ログインユーザーが存在するがチームなしの場合、m_team_members に紐付けを作成
       if (resolutionMethod === 'login_user_new_team' && loginUserResult.rows.length > 0) {
+        // ログインユーザーが存在するがチームなしの場合、m_team_members に紐付けを作成
         const loginUser = loginUserResult.rows[0] as unknown as { login_user_id: number };
         await db.execute(`
           INSERT INTO m_team_members (team_id, login_user_id, member_role, is_active, created_at, updated_at)
           VALUES (?, ?, 'primary', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [teamId, loginUser.login_user_id]);
         console.log('Created m_team_members link for existing login user:', loginUser.login_user_id);
+      } else if (resolutionMethod === 'new_team') {
+        // ログインユーザーも存在しない場合、m_login_users + m_login_user_roles + m_team_members を作成
+        const passwordHash = await bcrypt.hash(data.temporary_password, 12);
+        const newLoginUserResult = await db.execute(`
+          INSERT INTO m_login_users (email, password_hash, display_name, is_active, created_at, updated_at)
+          VALUES (?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [data.contact_email, passwordHash, data.contact_person]);
+        const newLoginUserId = Number(newLoginUserResult.lastInsertRowid);
+
+        await db.execute(`
+          INSERT INTO m_login_user_roles (login_user_id, role, created_at)
+          VALUES (?, 'team', datetime('now', '+9 hours'))
+        `, [newLoginUserId]);
+
+        await db.execute(`
+          INSERT INTO m_team_members (team_id, login_user_id, member_role, is_active, created_at, updated_at)
+          VALUES (?, ?, 'primary', 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+        `, [teamId, newLoginUserId]);
+
+        console.log('Created new login user and team member link:', newLoginUserId);
       }
     }
 

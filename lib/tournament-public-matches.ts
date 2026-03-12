@@ -120,7 +120,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             tt2.team_name as team2_real_name,
             tt2.team_omission as team2_real_omission,
             ml.court_number,
-            tc.court_name,
+            ml.court_name,
             ml.venue_name,
             ml.venue_id,
             ml.start_time,
@@ -143,7 +143,6 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             ml.team2_scores as live_team2_scores
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-          LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
           LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
           LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
           WHERE mb.tournament_id = ?
@@ -178,7 +177,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               tt2.team_name as team2_real_name,
               tt2.team_omission as team2_real_omission,
               ml.court_number,
-              tc.court_name,
+              ml.court_name,
               ml.venue_name,
               ml.venue_id,
               ml.start_time,
@@ -205,7 +204,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             FROM t_matches_live ml
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
             LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-            LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+
             LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
             LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
             WHERE mb.tournament_id = ?
@@ -230,7 +229,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               tt2.team_name as team2_real_name,
               tt2.team_omission as team2_real_omission,
               ml.court_number,
-              tc.court_name,
+              ml.court_name,
               ml.venue_name,
               ml.venue_id,
               ml.start_time,
@@ -260,7 +259,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
             LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
             LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-            LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+
             LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
             LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
             WHERE mb.tournament_id = ?
@@ -288,7 +287,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           tt2.team_name as team2_real_name,
           tt2.team_omission as team2_real_omission,
           ml.court_number,
-          tc.court_name,
+          ml.court_name,
           ml.venue_name,
           ml.venue_id,
           ml.start_time,
@@ -312,7 +311,6 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-        LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ?

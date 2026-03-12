@@ -281,6 +281,25 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
               </div>
             </CardContent>
           </Card>
+
+          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
+            <CardHeader>
+              <CardTitle className="text-green-800 dark:text-green-200 flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                大会データ複製
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-700 dark:text-green-300 mb-4">
+                既存の大会を複製してデモ用データを作成できます
+              </p>
+              <div className="space-y-2">
+                <Button asChild variant="outline" className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-100 dark:border-green-700 dark:hover:border-green-600 dark:hover:bg-green-950/30">
+                  <Link href="/admin/tournaments/duplicate">複製機能を開く</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

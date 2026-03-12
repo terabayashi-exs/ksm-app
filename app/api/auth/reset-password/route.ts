@@ -1,5 +1,5 @@
 // app/api/auth/reset-password/route.ts
-// パスワードリセット実行API
+// パスワードリセット実行API（m_login_users対応）
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // トークンの検証
     const tokenResult = await db.execute(
-      `SELECT token_id, team_id, expires_at, used_at
+      `SELECT token_id, login_user_id, expires_at, used_at
        FROM t_password_reset_tokens
        WHERE reset_token = ?`,
       [token]
@@ -55,13 +55,6 @@ export async function POST(request: Request) {
     const nowJST = nowJSTResult.rows[0].now_jst as string;
     const expiresAtJST = resetToken.expires_at as string;
 
-    // デバッグログ
-    console.log('Token expiration check:', {
-      nowJST,
-      expiresAtJST,
-      isExpired: nowJST > expiresAtJST,
-    });
-
     if (nowJST > expiresAtJST) {
       return NextResponse.json(
         { error: "リセットリンクの有効期限が切れています。再度パスワードリセットを申請してください。" },
@@ -72,12 +65,12 @@ export async function POST(request: Request) {
     // パスワードのハッシュ化
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // パスワードの更新
+    // m_login_users のパスワードを更新
     await db.execute(
-      `UPDATE m_teams
-       SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE team_id = ?`,
-      [passwordHash, resetToken.team_id]
+      `UPDATE m_login_users
+       SET password_hash = ?, updated_at = datetime('now', '+9 hours')
+       WHERE login_user_id = ?`,
+      [passwordHash, resetToken.login_user_id]
     );
 
     // トークンを使用済みにマーク（JSTで保存）
@@ -120,7 +113,7 @@ export async function GET(request: Request) {
 
     // トークンの検証
     const tokenResult = await db.execute(
-      `SELECT token_id, team_id, expires_at, used_at
+      `SELECT token_id, login_user_id, expires_at, used_at
        FROM t_password_reset_tokens
        WHERE reset_token = ?`,
       [token]
@@ -144,17 +137,9 @@ export async function GET(request: Request) {
     }
 
     // トークンの有効期限チェック
-    // データベースに保存されている時刻はJST、現在時刻もJSTで取得して比較
     const nowJSTResult = await db.execute(`SELECT datetime('now', '+9 hours') as now_jst`);
     const nowJST = nowJSTResult.rows[0].now_jst as string;
     const expiresAtJST = resetToken.expires_at as string;
-
-    // デバッグログ
-    console.log('Token validation check:', {
-      nowJST,
-      expiresAtJST,
-      isExpired: nowJST > expiresAtJST,
-    });
 
     if (nowJST > expiresAtJST) {
       return NextResponse.json(
@@ -163,26 +148,26 @@ export async function GET(request: Request) {
       );
     }
 
-    // チーム情報の取得
-    const teamResult = await db.execute(
-      `SELECT team_id, team_name FROM m_teams WHERE team_id = ?`,
-      [resetToken.team_id]
+    // ユーザー情報の取得
+    const userResult = await db.execute(
+      `SELECT login_user_id, email, display_name FROM m_login_users WHERE login_user_id = ?`,
+      [resetToken.login_user_id]
     );
 
-    if (teamResult.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       return NextResponse.json(
-        { valid: false, error: "チーム情報が見つかりません" },
+        { valid: false, error: "ユーザー情報が見つかりません" },
         { status: 200 }
       );
     }
 
-    const team = teamResult.rows[0];
+    const user = userResult.rows[0];
 
     return NextResponse.json(
       {
         valid: true,
-        teamId: team.team_id,
-        teamName: team.team_name
+        email: user.email,
+        displayName: user.display_name
       },
       { status: 200 }
     );

@@ -128,7 +128,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
         
         // 成功時にチームページに戻る（遅延をつけてメッセージを表示）
         setTimeout(() => {
-          router.push('/team');
+          router.push('/my');
         }, 2000);
       } else {
         setError(result.error || '辞退申請に失敗しました');

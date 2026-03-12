@@ -39,8 +39,6 @@ export interface Tournament {
   // Optional joined fields
   venue_name?: string;
   format_name?: string;
-  preliminary_format_type?: string; // 予選の形式 ('league' | 'tournament')
-  final_format_type?: string; // 決勝の形式 ('league' | 'tournament')
   phases?: TournamentPhases; // フェーズ構成（テンプレート独立化）
   // 後方互換性のため (ダッシュボードで使用)
   is_public?: boolean;

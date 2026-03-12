@@ -24,7 +24,7 @@ import {
   Layers
 } from "lucide-react";
 import type { TournamentPhases } from "@/lib/types/tournament-phases";
-import { generatePhasesFromLegacy, validatePhases } from "@/lib/tournament-phases";
+import { validatePhases } from "@/lib/tournament-phases";
 import { PhaseConfigurationSection } from "./PhaseConfigurationSection";
 import ScheduleSimulator from "./ScheduleSimulator";
 
@@ -74,8 +74,6 @@ interface TournamentFormatFormData {
   format_description: string;
   default_match_duration: number | null;
   default_break_duration: number | null;
-  preliminary_format_type: string | null;
-  final_format_type: string | null;
   phases?: TournamentPhases;
   templates: MatchTemplate[];
 }
@@ -139,8 +137,6 @@ export default function TournamentFormatCreateForm() {
       format_description: "",
       default_match_duration: null,
       default_break_duration: null,
-      preliminary_format_type: "league",
-      final_format_type: "tournament",
       templates: [{
         match_number: 1,
         match_code: "A1",
@@ -174,9 +170,13 @@ export default function TournamentFormatCreateForm() {
   });
 
   const selectedSportTypeId = watch("sport_type_id");
-  const preliminaryFormatType = watch("preliminary_format_type", "league");
-  const finalFormatType = watch("final_format_type", "tournament");
   const watchedTemplates = watch("templates");
+
+  // シンプルモード用: phasesステートから予選・決勝の形式を導出
+  const preliminaryPhase = phases.phases.find(p => p.id === 'preliminary');
+  const finalPhase = phases.phases.find(p => p.id === 'final');
+  const preliminaryFormatType = preliminaryPhase ? preliminaryPhase.format_type : null;
+  const finalFormatType = finalPhase ? finalPhase.format_type : null;
 
   // 競技種別データの取得
   useEffect(() => {
@@ -324,27 +324,8 @@ export default function TournamentFormatCreateForm() {
     setIsSubmitting(true);
 
     try {
-      // フェーズ設定を準備
-      let phasesToSave: TournamentPhases;
-      let preliminaryType: string | null = null;
-      let finalType: string | null = null;
-
-      if (!useAdvancedPhases) {
-        // シンプルモード: 既存の2フェーズから自動生成
-        preliminaryType = data.preliminary_format_type;
-        finalType = data.final_format_type;
-        phasesToSave = generatePhasesFromLegacy(preliminaryType, finalType);
-      } else {
-        // 詳細モード: phasesをそのまま使用
-        phasesToSave = phases;
-
-        // 後方互換性のため、legacy fieldsも自動設定
-        const prelimPhase = phases.phases.find(p => p.id === 'preliminary');
-        const finalPhase = phases.phases.find(p => p.id === 'final');
-
-        preliminaryType = prelimPhase ? prelimPhase.format_type : null;
-        finalType = finalPhase ? finalPhase.format_type : null;
-      }
+      // フェーズ設定を準備（phasesステートをそのまま使用）
+      const phasesToSave: TournamentPhases = phases;
 
       // バリデーション
       const validation = validatePhases(phasesToSave);
@@ -367,8 +348,6 @@ export default function TournamentFormatCreateForm() {
       // 前後の空白をトリミング（不戦勝試合は空文字列のまま）
       const processedData = {
         ...data,
-        preliminary_format_type: preliminaryType,
-        final_format_type: finalType,
         phases: phasesToSave,
         templates: data.templates.map(template => ({
           ...template,
@@ -533,7 +512,20 @@ export default function TournamentFormatCreateForm() {
                 </Label>
                 <Select
                   value={preliminaryFormatType || "none"}
-                  onValueChange={(value) => setValue("preliminary_format_type", value === "none" ? null : value)}
+                  onValueChange={(value) => {
+                    const newType = value === "none" ? null : value;
+                    setPhases(prev => {
+                      const otherPhases = prev.phases.filter(p => p.id !== 'preliminary');
+                      if (newType) {
+                        const prelimPhase = { id: 'preliminary' as const, order: 1, name: '予選', format_type: newType as 'league' | 'tournament' };
+                        // orderを再計算
+                        const allPhases = [prelimPhase, ...otherPhases.map((p, i) => ({ ...p, order: i + 2 }))];
+                        return { phases: allPhases };
+                      } else {
+                        return { phases: otherPhases.map((p, i) => ({ ...p, order: i + 1 })) };
+                      }
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="予選形式を選択" />
@@ -571,7 +563,18 @@ export default function TournamentFormatCreateForm() {
                 </Label>
                 <Select
                   value={finalFormatType || "none"}
-                  onValueChange={(value) => setValue("final_format_type", value === "none" ? null : value)}
+                  onValueChange={(value) => {
+                    const newType = value === "none" ? null : value;
+                    setPhases(prev => {
+                      const otherPhases = prev.phases.filter(p => p.id !== 'final');
+                      if (newType) {
+                        const finalPhase = { id: 'final' as const, order: otherPhases.length + 1, name: '決勝トーナメント', format_type: newType as 'league' | 'tournament' };
+                        return { phases: [...otherPhases, finalPhase] };
+                      } else {
+                        return { phases: otherPhases };
+                      }
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="決勝形式を選択" />

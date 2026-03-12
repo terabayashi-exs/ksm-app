@@ -113,7 +113,7 @@ export async function GET(
         ml.team1_display_name,
         ml.team2_display_name,
         ml.court_number,
-        tc.court_name,
+        ml.court_name,
         ml.start_time,
         ml.team1_scores,
         ml.team2_scores,
@@ -157,7 +157,7 @@ export async function GET(
         mf.updated_at as final_updated_at
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-      LEFT JOIN t_tournament_courts tc ON mb.tournament_id = tc.tournament_id AND ml.court_number = tc.court_number AND tc.is_active = 1
+
       LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
       LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
