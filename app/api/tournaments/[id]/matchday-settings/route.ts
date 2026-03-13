@@ -200,6 +200,34 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    // 会場名→venue_idのマッピングを構築（Google Mapsリンク用）
+    const venueNameToId = new Map<string, number>();
+    // match_duration_minutes 取得のクエリにvenue_idが含まれていないため再取得
+    const tournamentVenueResult = await db.execute(
+      `SELECT venue_id FROM t_tournaments WHERE tournament_id = ?`,
+      [tournamentId]
+    );
+    const venueIdJson = tournamentVenueResult.rows[0]?.venue_id
+      ? String(tournamentVenueResult.rows[0].venue_id)
+      : null;
+    if (venueIdJson) {
+      let venueIds: number[] = [];
+      try {
+        const parsed = JSON.parse(venueIdJson.startsWith('[') ? venueIdJson : `[${venueIdJson}]`);
+        if (Array.isArray(parsed)) venueIds = parsed.map(Number).filter((n: number) => !isNaN(n));
+      } catch { /* ignore */ }
+      if (venueIds.length > 0) {
+        const placeholders = venueIds.map(() => '?').join(',');
+        const venuesResult = await db.execute(
+          `SELECT venue_id, venue_name FROM m_venues WHERE venue_id IN (${placeholders})`,
+          venueIds
+        );
+        for (const v of venuesResult.rows) {
+          venueNameToId.set(String(v.venue_name), Number(v.venue_id));
+        }
+      }
+    }
+
     // コート名→番号のマッピングを管理（既存の試合データから取得）
     const courtNameToNumber = new Map<string, number>();
     let nextCourtNumber = 1;
@@ -234,6 +262,10 @@ export async function PUT(
         }
       }
 
+      // 会場名からvenue_idを解決
+      const venueName = (match.venue_name || '').trim();
+      const venueId = venueName ? (venueNameToId.get(venueName) || null) : null;
+
       await db.execute(`
         UPDATE t_matches_live SET
           tournament_date = ?,
@@ -241,6 +273,7 @@ export async function PUT(
           court_number = ?,
           court_name = ?,
           venue_name = ?,
+          venue_id = ?,
           updated_at = datetime('now', '+9 hours')
         WHERE match_id = ?
       `, [
@@ -248,7 +281,8 @@ export async function PUT(
         match.start_time || null,
         courtNumber,
         courtName || null,
-        match.venue_name || null,
+        venueName || null,
+        venueId,
         match.match_id,
       ]);
     }

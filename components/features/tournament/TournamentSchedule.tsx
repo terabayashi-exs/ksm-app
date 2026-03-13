@@ -501,15 +501,15 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   <span className="text-sm">{formatTime(match.start_time)}</span>
                                 </td>
                                 <td className="py-2 px-1.5 whitespace-nowrap">
-                                  <div className="text-sm font-medium">{match.match_code}</div>
+                                  <div className={`text-sm font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
                                 </td>
                                 <td className="py-2 px-1.5">
                                   <div className="text-sm space-y-0.5">
-                                    <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
+                                    <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
                                       {match.team1_display_name || "調整中"}
                                     </div>
                                     <div className="text-xs text-muted-foreground">vs</div>
-                                    <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
+                                    <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
                                       {match.team2_display_name || "調整中"}
                                     </div>
                                   </div>
@@ -623,15 +623,15 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               <div className="text-sm">{formatTime(match.start_time)}</div>
                             </td>
                             <td className="py-2 px-1.5 whitespace-nowrap align-top">
-                              <div className="text-sm font-medium">{match.match_code}</div>
+                              <div className={`text-sm font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
                             </td>
                             <td className="py-2 px-1.5">
                               <div className="text-sm space-y-0.5">
-                                <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
+                                <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
                                   {match.team1_display_name || "調整中"}
                                 </div>
                                 <div className="text-xs text-muted-foreground">vs</div>
-                                <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
+                                <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
                                   {match.team2_display_name || "調整中"}
                                 </div>
                               </div>
