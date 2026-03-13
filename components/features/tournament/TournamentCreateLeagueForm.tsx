@@ -331,7 +331,7 @@ export default function TournamentCreateLeagueForm() {
         )}
         {errors.venue_ids && <p className="text-sm text-destructive">{errors.venue_ids.message}</p>}
         <p className="text-xs text-muted-foreground">
-          ここで選択した会場が、日程・コート設定の会場プルダウンに表示されます
+          ここで選択した会場が、日程・会場設定の会場プルダウンに表示されます
         </p>
       </div>
 
@@ -455,7 +455,7 @@ export default function TournamentCreateLeagueForm() {
       {/* 注記 */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 text-sm text-blue-700 dark:text-blue-300">
         <Calendar className="w-4 h-4 inline mr-1" />
-        節ごとの会場・コート・日程は、作成後に「日程・コート設定」画面から設定できます
+        節ごとの会場・コート・日程は、作成後に「日程・会場設定」画面から設定できます
       </div>
 
       {/* 送信ボタン */}

@@ -476,7 +476,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         phase: String(row.phase || 'preliminary'),
         display_round_name: String(row.display_round_name || '予選'),
         block_name: row.block_name ? String(row.block_name) : 'A',
-        match_type: String(row.match_type || '通常'),
+        match_type: String(row.live_match_type || row.match_type || '通常'),
         block_order: Number(row.block_order || 1),
         round_name: row.round_name ? String(row.round_name) : null,
         matchday: row.matchday ? Number(row.matchday) : null,

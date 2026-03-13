@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       venue_ids && Array.isArray(venue_ids) && venue_ids.length > 0 ? JSON.stringify(venue_ids) : null, // venue_id: JSON配列
       team_count,
       1,    // court_count: デフォルト
-      '{"1": ""}', // tournament_dates: 後で日程・コート設定から更新
+      '{"1": ""}', // tournament_dates: 後で日程・会場設定から更新
       match_duration_minutes,
       defaultBreakDuration,
       calculatedStatus,

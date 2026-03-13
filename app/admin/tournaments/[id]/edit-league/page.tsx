@@ -48,7 +48,7 @@ export default async function EditLeagueTournamentPage({ params }: EditLeaguePag
           <CardHeader>
             <CardTitle>リーグ戦 部門編集</CardTitle>
             <p className="text-sm text-muted-foreground">
-              部門の基本情報を編集できます。節ごとの会場・日程は「日程・コート設定」画面から設定してください。
+              部門の基本情報を編集できます。節ごとの会場・日程は「日程・会場設定」画面から設定してください。
             </p>
           </CardHeader>
           <CardContent>
