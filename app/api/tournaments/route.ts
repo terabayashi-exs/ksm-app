@@ -378,15 +378,13 @@ async function generateMatchesFromTemplate(
               phase,
               display_round_name,
               block_name,
-              match_type,
               block_order
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
           `, [
             tournamentId,
             phaseId,
             `${blockName}ブロック`,
             blockName,
-            '通常',
             blockOrder++
           ]);
 
@@ -411,15 +409,13 @@ async function generateMatchesFromTemplate(
               phase,
               display_round_name,
               block_name,
-              match_type,
               block_order
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
           `, [
             tournamentId,
             phaseId,
             displayName,
             blockKey,
-            '通常',
             blockOrder++
           ]);
 

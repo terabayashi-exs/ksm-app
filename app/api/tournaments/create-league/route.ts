@@ -216,9 +216,9 @@ export async function POST(request: NextRequest) {
           const unifiedBlockName = `${phase}_unified`;
           const blockResult = await db.execute(`
             INSERT INTO t_match_blocks (
-              tournament_id, phase, display_round_name, block_name, match_type, block_order,
+              tournament_id, phase, display_round_name, block_name, block_order,
               created_at, updated_at
-            ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+            ) VALUES (?, ?, ?, ?, 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
           `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, unifiedBlockName]);
 
           const unifiedBlockId = Number(blockResult.lastInsertRowid);
@@ -232,9 +232,9 @@ export async function POST(request: NextRequest) {
         const displayName = blockName === 'default' ? phase : blockName;
         const blockResult = await db.execute(`
           INSERT INTO t_match_blocks (
-            tournament_id, phase, display_round_name, block_name, match_type, block_order,
+            tournament_id, phase, display_round_name, block_name, block_order,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, displayName]);
 
         blockMap.set(blockKey, Number(blockResult.lastInsertRowid));

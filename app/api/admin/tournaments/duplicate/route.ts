@@ -356,15 +356,14 @@ async function duplicateMatchBlocks(
 
     const insertResult = await db.execute(`
       INSERT INTO t_match_blocks (
-        tournament_id, phase, display_round_name, block_name, match_type, block_order,
+        tournament_id, phase, display_round_name, block_name, block_order,
         team_rankings, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
       newTournamentId,
       blockData.phase,
       blockData.display_round_name,
       blockData.block_name,
-      blockData.match_type || '通常', // match_type フィールドを追加
       blockData.block_order,
       mappedTeamRankings, // マッピング済みのteam_rankings
       blockData.remarks

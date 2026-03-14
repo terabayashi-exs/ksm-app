@@ -71,7 +71,6 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         mb.phase,
         mb.display_round_name,
         mb.block_name,
-        mb.match_type,
         mb.team_rankings,
         mb.remarks
       FROM t_match_blocks mb

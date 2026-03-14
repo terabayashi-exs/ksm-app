@@ -124,7 +124,7 @@ export async function GET(
         mb.phase,
         mb.display_round_name,
         COALESCE(NULLIF(ml.block_name, ''), mb.block_name) as block_name,
-        mb.match_type,
+        ml.match_type,
         mb.block_order,
         -- t_matches_liveからround_name、day_number、team1_source、team2_source、is_bye_matchを取得
         ml.round_name,
@@ -163,6 +163,7 @@ export async function GET(
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       WHERE mb.tournament_id = ?
+      AND (ml.match_type IS NULL OR ml.match_type != 'FM')
       ${teamFilter}
       ORDER BY
         ${phaseOrderSql},

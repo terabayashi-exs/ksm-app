@@ -76,7 +76,7 @@ export async function getTournamentBracketData(
       ml.match_number as execution_priority,
       ml.start_time,
       ml.court_number,
-      mb.match_type,
+      ml.match_type,
       mb.block_name,
       mb.display_round_name,
       ml.position_note,

@@ -352,7 +352,7 @@ export async function recalculateAllTournamentProgression(tournamentId: number):
       FROM t_matches_final mf
       INNER JOIN t_match_blocks mb ON mf.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
-        AND mb.match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
+        AND mf.match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
       ORDER BY mb.block_order ASC, mf.execution_priority ASC, mf.match_code ASC
     `, [tournamentId]);
 

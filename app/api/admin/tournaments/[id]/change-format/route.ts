@@ -379,8 +379,8 @@ export async function PUT(
           const unifiedBlockName = `${phase}_unified`;
           const blockResult = await db.execute(`
             INSERT INTO t_match_blocks (
-              tournament_id, block_name, phase, display_round_name, match_type, block_order
-            ) VALUES (?, ?, ?, ?, '通常', ?)
+              tournament_id, block_name, phase, display_round_name, block_order
+            ) VALUES (?, ?, ?, ?, ?)
           `, [tournamentId, unifiedBlockName, phase, phaseNames.get(phase) || phase, blockOrder]);
 
           const unifiedBlockId = Number(blockResult.lastInsertRowid);
@@ -402,8 +402,8 @@ export async function PUT(
 
         const blockResult = await db.execute(`
           INSERT INTO t_match_blocks (
-            tournament_id, block_name, phase, display_round_name, match_type, block_order
-          ) VALUES (?, ?, ?, ?, '通常', ?)
+            tournament_id, block_name, phase, display_round_name, block_order
+          ) VALUES (?, ?, ?, ?, ?)
         `, [tournamentId, displayName, phase, phaseNames.get(phase) || phase, blockOrder]);
 
         const blockId = Number(blockResult.lastInsertRowid);

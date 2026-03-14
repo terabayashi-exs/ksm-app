@@ -280,11 +280,10 @@ export async function POST(request: NextRequest) {
               phase,
               display_round_name,
               block_name,
-              match_type,
               block_order,
               created_at,
               updated_at
-            ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+            ) VALUES (?, ?, ?, ?, 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
           `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, unifiedBlockName]);
 
           const unifiedBlockId = Number(blockResult.lastInsertRowid);
@@ -311,11 +310,10 @@ export async function POST(request: NextRequest) {
             phase,
             display_round_name,
             block_name,
-            match_type,
             block_order,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, '通常', 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          ) VALUES (?, ?, ?, ?, 0, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
         `, [tournamentId, phase, phaseNamesMap.get(phase) || phase, displayName]);
 
         blockMap.set(blockKey, Number(blockResult.lastInsertRowid));
