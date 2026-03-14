@@ -16,6 +16,44 @@
 
 ---
 
+## 0027: m_teams から contact_person / contact_email カラム削除（2026-03-13）
+
+### 基本情報
+- **日付**: 2026年3月13日
+- **環境**: dev（stag/mainは要実行）
+- **方法**: 手動 ALTER TABLE DROP COLUMN
+- **実行者**: Claude Code
+
+### 変更内容
+- `m_teams` テーブルから `contact_person` カラムを削除
+- `m_teams` テーブルから `contact_email` カラムを削除
+- `contact_phone` は引き続き保持
+
+### 変更理由
+管理者代行登録の簡略化に伴い、チーム代表者名とメールアドレスは `m_team_members` + `m_login_users` 経由で取得する設計に変更。`m_teams` に直接保持する必要がなくなったため削除。
+
+### 影響範囲（主要ファイル）
+- `src/db/schema.ts` / `drizzle/schema.ts` — スキーマ定義から削除
+- `lib/types.ts` / `lib/validations.ts` / `lib/withdrawal-processor.ts` — 型・バリデーション
+- `lib/email-templates.ts` — テンプレート宛名を `{{teamName}} ご担当者 様` に変更
+- `lib/withdrawal-notifications.ts` — メール送信先を `m_team_members` + `m_login_users` 経由に変更
+- `lib/tournament-teams-calculator.ts` / `lib/tournament-teams-simple.ts` — SQL・マッピング
+- `lib/tournament-json-archiver.ts` / `lib/tournament-blob-archiver.ts` / `lib/dashboard-data.ts`
+- `app/api/admin/tournaments/[id]/teams/route.ts` — Zodスキーマ・INSERT・レスポンス
+- `app/api/admin/tournaments/[id]/participants/email/route.ts` — フォールバック変更
+- `app/api/tournaments/[id]/join/route.ts` — メール送信先変更
+- `app/api/tournaments/[id]/withdrawal/route.ts` — チーム特定ロジック変更
+- `app/tournaments/[id]/withdrawal/page.tsx` — チーム特定ロジック変更
+- 各種UIページ・コンポーネント（admin/teams, admin/tournaments, my/teams, archived等）
+
+### stag/main環境への適用手順
+```sql
+ALTER TABLE m_teams DROP COLUMN contact_person;
+ALTER TABLE m_teams DROP COLUMN contact_email;
+```
+
+---
+
 ## 0026: 旧チームログイン機能の完全削除 & m_teams.password_hash 除去（2026-03-12）
 
 ### 基本情報
