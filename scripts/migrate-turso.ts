@@ -71,11 +71,17 @@ async function executeMigrationFile(filePath: string, tag: string): Promise<void
   // SQLをセミコロンで分割（空白行やコメントを除外）
   const statements = sql
     .split(';')
-    .map(s => s.trim())
+    .map(s => {
+      // 各文からコメント行を除去して実際のSQLのみ抽出
+      const lines = s.split('\n').filter(line => {
+        const trimmed = line.trim();
+        return trimmed.length > 0 && !trimmed.startsWith('--');
+      });
+      return lines.join('\n').trim();
+    })
     .filter(s => {
-      // 空白、コメント行、SELECTプレースホルダーを除外
+      // 空白、SELECTプレースホルダーを除外
       return s.length > 0 &&
-             !s.startsWith('--') &&
              s !== 'SELECT 1';
     });
 
@@ -93,7 +99,15 @@ async function executeMigrationFile(filePath: string, tag: string): Promise<void
       const ignorableErrors = [
         'already exists',
         'duplicate',
+        'no such column',
       ];
+
+      // DROP/ALTER文で「no such table」の場合もスキップ（既に削除/リネーム済み）
+      const isDropOrAlterTable = /^\s*(DROP|ALTER)\s+TABLE/i.test(statement);
+      if (isDropOrAlterTable && error.message?.includes('no such table')) {
+        console.log(`  ⊘ スキップ: ${statement.substring(0, 60).replace(/\n/g, ' ')}... (既に適用済み)`);
+        continue;
+      }
 
       const shouldIgnore = ignorableErrors.some(msg => error.message?.includes(msg));
 
