@@ -1445,8 +1445,6 @@ interface TeamInfo {
   team_id: string;
   team_name: string;
   team_omission: string | null;
-  contact_person: string | null;
-  contact_email: string | null;
   contact_phone: string | null;
   prefecture_id: number | null;
   is_active: boolean;
@@ -2282,6 +2280,82 @@ function TeamExpandedPanel({ team }: {
   );
 }
 
+// ── チームID紐付けセクション ──────────────────────────────
+function TeamLinkSection({ onLinked }: { onLinked: () => void }) {
+  const [linkTeamId, setLinkTeamId] = useState('');
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
+  const handleLink = async () => {
+    if (!linkTeamId.trim()) {
+      setLinkError('チームIDを入力してください');
+      return;
+    }
+
+    setLinking(true);
+    setLinkError('');
+
+    try {
+      const res = await fetch('/api/my/teams/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: linkTeamId.trim() }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        alert(result.message);
+        setLinkTeamId('');
+        onLinked();
+      } else {
+        setLinkError(result.error || '紐付けに失敗しました');
+      }
+    } catch {
+      setLinkError('通信エラーが発生しました');
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  return (
+    <Card className="border-dashed border-2 border-orange-300 dark:border-orange-700">
+      <CardContent className="p-4">
+        <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+          <Target className="w-4 h-4 text-orange-600" />
+          チームIDで紐付ける
+        </h4>
+        <p className="text-xs text-muted-foreground mb-3">
+          管理者から伝えられたチームIDを入力して、チームを自分のアカウントに紐付けます。
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={linkTeamId}
+            onChange={(e) => { setLinkTeamId(e.target.value); setLinkError(''); }}
+            placeholder="チームIDを入力"
+            className="text-sm"
+          />
+          <Button
+            onClick={handleLink}
+            disabled={linking}
+            size="sm"
+            variant="outline"
+            className="border-orange-400 text-orange-700 hover:bg-orange-50 whitespace-nowrap"
+          >
+            {linking ? '紐付け中...' : '紐付ける'}
+          </Button>
+        </div>
+        {linkError && (
+          <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {linkError}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── チームタブコンテンツ ──────────────────────────────
 function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
   teamIds: string[];
@@ -2289,6 +2363,7 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
 }) {
   const [teams, setTeams] = useState<TeamInfo[]>((initialTeamData ?? []) as TeamInfo[]);
   const [loading, setLoading] = useState(!initialTeamData);
+  const [showLinkConfirm, setShowLinkConfirm] = useState(false);
 
   const fetchTeams = useCallback(async () => {
     try {
@@ -2324,18 +2399,21 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
 
   if (teams.length === 0) {
     return (
-      <div className="max-w-md mx-auto text-center py-12">
-        <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
-        <p className="text-lg font-medium text-foreground mb-2">チーム情報が未登録です</p>
-        <p className="text-sm text-muted-foreground mb-6">
-          大会に参加するには、チームを登録する必要があります。
-        </p>
-        <Button asChild variant="outline" className="border-2 border-blue-400 hover:border-blue-500 hover:bg-blue-50 dark:border-blue-500 dark:hover:border-blue-400 dark:hover:bg-blue-950/30">
-          <Link href="/my/teams/new">
-            <UserPlus className="mr-2 h-4 w-4" />
-            チームを登録する
-          </Link>
-        </Button>
+      <div className="max-w-md mx-auto text-center py-12 space-y-6">
+        <div>
+          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+          <p className="text-lg font-medium text-foreground mb-2">チーム情報が未登録です</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            大会に参加するには、チームを登録するか、管理者から伝えられたチームIDで紐付けてください。
+          </p>
+          <Button asChild variant="outline" className="border-2 border-blue-400 hover:border-blue-500 hover:bg-blue-50 dark:border-blue-500 dark:hover:border-blue-400 dark:hover:bg-blue-950/30">
+            <Link href="/my/teams/new">
+              <UserPlus className="mr-2 h-4 w-4" />
+              チームを登録する
+            </Link>
+          </Button>
+        </div>
+        <TeamLinkSection onLinked={fetchTeams} />
       </div>
     );
   }
@@ -2391,6 +2469,39 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
           </Card>
         );
       })}
+
+      {/* チームIDで紐付けるセクション（既存チームの上書き） */}
+      {!showLinkConfirm ? (
+        <div className="text-center pt-4">
+          <button
+            onClick={() => setShowLinkConfirm(true)}
+            className="text-sm text-orange-600 hover:text-orange-800 underline"
+          >
+            別のチームIDで紐付け直す
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Card className="border-orange-300 bg-orange-50 dark:border-orange-700 dark:bg-orange-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-orange-800 dark:text-orange-200">
+                  別のチームIDで紐付けると、現在のチーム紐付けが解除されます。
+                  チームのデータ（選手・大会参加情報）は削除されません。
+                </p>
+              </div>
+              <TeamLinkSection onLinked={fetchTeams} />
+              <button
+                onClick={() => setShowLinkConfirm(false)}
+                className="text-xs text-muted-foreground hover:text-foreground mt-2 underline"
+              >
+                キャンセル
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
