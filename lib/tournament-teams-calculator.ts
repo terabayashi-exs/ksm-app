@@ -20,8 +20,6 @@ export interface TournamentTeam {
   display_name: string; // 略称優先の表示名
   assigned_block?: string;
   block_position?: number;
-  contact_person: string;
-  contact_email: string;
   contact_phone?: string;
   players: TournamentPlayer[];
   player_count: number;
@@ -67,8 +65,6 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
           tt.block_position,
           t.team_name,
           t.team_omission,
-          t.contact_person,
-          t.contact_email,
           t.contact_phone
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
@@ -122,8 +118,6 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
           display_name: (teamRow.team_omission as string) || (teamRow.team_name as string),
           assigned_block: teamRow.assigned_block ? (teamRow.assigned_block as string) : undefined,
           block_position: teamRow.block_position ? (teamRow.block_position as number) : undefined,
-          contact_person: teamRow.contact_person as string,
-          contact_email: teamRow.contact_email as string,
           contact_phone: teamRow.contact_phone ? (teamRow.contact_phone as string) : undefined,
           players,
           player_count: players.length

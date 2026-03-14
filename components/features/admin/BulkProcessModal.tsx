@@ -43,7 +43,6 @@ interface WithdrawalRequest {
   tournament_team_name: string;
   tournament_name: string;
   withdrawal_reason: string | null;
-  contact_person: string;
   assigned_block: string | null;
 }
 
@@ -312,7 +311,6 @@ export default function BulkProcessModal({
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500">{request.contact_person}</div>
                     </div>
                   </div>
                 ))}

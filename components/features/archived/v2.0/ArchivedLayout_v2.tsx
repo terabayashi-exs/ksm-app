@@ -171,8 +171,6 @@ interface TeamData {
   block_position?: number;
   withdrawal_status?: string;
   player_count?: number;
-  contact_person?: string;
-  contact_email?: string;
   players?: PlayerData[];
 }
 
@@ -540,9 +538,11 @@ const BlockStructureCard = ({ extendedMetadata }: { extendedMetadata?: ExtendedM
                       <span className="font-medium">{block.matches_count}試合</span>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {block.match_type}
-                  </div>
+                  {block.match_type && (
+                    <div className="text-xs text-muted-foreground">
+                      {block.match_type}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -59,11 +59,8 @@ export async function POST(request: NextRequest) {
         tt.team_name,
         tt.withdrawal_status,
         t.tournament_name,
-        mt.contact_email,
-        mt.contact_person
       FROM t_tournament_teams tt
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
-      INNER JOIN m_teams mt ON tt.team_id = mt.team_id
       WHERE tt.tournament_team_id IN (${tournament_team_ids.map(() => '?').join(',')})
     `, tournament_team_ids);
 
@@ -121,9 +118,7 @@ export async function POST(request: NextRequest) {
             withdrawal_reason: null,
             withdrawal_requested_at: null,
             tournament_name: String(row.tournament_name),
-            tournament_status: 'ongoing',
-            contact_email: String(row.contact_email),
-            contact_person: String(row.contact_person)
+            tournament_status: 'ongoing'
           });
         }
 

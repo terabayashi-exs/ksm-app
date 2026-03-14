@@ -27,8 +27,6 @@ interface TeamData {
   block_position?: number;
   withdrawal_status?: string;
   player_count?: number;
-  contact_person?: string;
-  contact_email?: string;
   players?: PlayerData[];
 }
 

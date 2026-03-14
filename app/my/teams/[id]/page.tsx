@@ -16,8 +16,6 @@ interface TeamInfo {
   team_id: string;
   team_name: string;
   team_omission: string | null;
-  contact_person: string | null;
-  contact_email: string | null;
   is_active: boolean;
   member_role: string;
   player_count: number;

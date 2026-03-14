@@ -18,8 +18,6 @@ import {
   XCircle, 
   AlertTriangle,
   X,
-  User,
-  Mail,
   Phone,
   Trophy,
   Users,
@@ -46,8 +44,6 @@ interface WithdrawalRequest {
   withdrawal_reason: string | null;
   withdrawal_requested_at: string | null;
   tournament_name: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone: string | null;
   player_count: number;
   assigned_block: string | null;
@@ -240,15 +236,6 @@ export default function WithdrawalProcessModal({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium">代表者:</span>
-                    <span>{request.contact_person}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-gray-500" />
-                    <span>{request.contact_email}</span>
-                  </div>
                   {request.contact_phone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="w-4 h-4 text-gray-500" />

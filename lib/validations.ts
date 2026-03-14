@@ -190,14 +190,6 @@ export const teamRegisterSchema = z.object({
     .max(5, 'チーム略称は5文字以内で入力してください')
     .optional(),
   
-  contact_person: z.string()
-    .min(1, '連絡担当者名は必須です')
-    .max(50, '連絡担当者名は50文字以内で入力してください'),
-  
-  contact_email: z.string()
-    .email('正しいメールアドレスを入力してください')
-    .max(100, 'メールアドレスは100文字以内で入力してください'),
-  
   contact_phone: z.string()
     .regex(/^[0-9-+()[\]\s]*$/, '電話番号の形式が正しくありません')
     .max(20, '電話番号は20文字以内で入力してください')

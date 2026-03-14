@@ -19,7 +19,7 @@ export async function GET(
   const { id: teamId } = await params;
 
   const teamResult = await db.execute(
-    `SELECT team_id, team_name, contact_email FROM m_teams WHERE team_id = ?`,
+    `SELECT team_id, team_name FROM m_teams WHERE team_id = ?`,
     [teamId]
   );
   if (teamResult.rows.length === 0) {
@@ -45,7 +45,6 @@ export async function GET(
     team: {
       team_id: String(teamResult.rows[0].team_id),
       team_name: String(teamResult.rows[0].team_name),
-      contact_email: String(teamResult.rows[0].contact_email),
     },
     managers: managersResult.rows.map(row => ({
       login_user_id: Number(row.login_user_id),

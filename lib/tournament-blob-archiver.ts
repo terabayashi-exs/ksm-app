@@ -304,8 +304,6 @@ export class TournamentBlobArchiver {
           tt.withdrawal_status,
           (SELECT COUNT(*) FROM t_tournament_players tp 
            WHERE tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id) as player_count,
-          t.contact_person,
-          t.contact_email
         FROM t_tournament_teams tt
         LEFT JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ?
@@ -350,7 +348,7 @@ export class TournamentBlobArchiver {
           mb.phase,
           mb.display_round_name,
           mb.block_name,
-          mb.match_type,
+          ml.match_type,
           mb.block_order,
           mf.team1_scores,
           mf.team2_scores,

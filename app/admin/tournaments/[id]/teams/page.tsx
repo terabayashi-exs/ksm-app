@@ -31,8 +31,6 @@ interface Tournament {
 interface TeamRegistration {
   team_name: string;
   team_omission: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone: string;
   tournament_team_name: string;
   tournament_team_omission: string;
@@ -53,8 +51,6 @@ interface TeamData {
   team_name: string;
   team_omission: string;
   master_team_name: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone?: string;
   registration_type: 'self_registered' | 'admin_proxy';
   player_count: number;
@@ -64,11 +60,7 @@ interface TeamData {
 interface RegistrationResult {
   teamName: string;
   teamId: string;
-  contactEmail: string;
-  tempPassword: string | null;
   isExistingTeam: boolean;
-  isExistingLoginUser: boolean;
-  resolutionMethod: string;
   success: boolean;
   error?: string;
 }
@@ -87,8 +79,6 @@ export default function TeamRegistrationPage() {
   const [manualForm, setManualForm] = useState<TeamRegistration>({
     team_name: '',
     team_omission: '',
-    contact_person: '',
-    contact_email: '',
     contact_phone: '',
     tournament_team_name: '',
     tournament_team_omission: '',
@@ -135,24 +125,17 @@ export default function TeamRegistrationPage() {
     }
   }, [tournamentId]);
 
-  // 仮パスワード生成
-  const generateTemporaryPassword = (): string => {
-    const prefix = 'temp';
-    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}${suffix}`;
-  };
-
   // 手動登録フォームの処理
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      const tempPassword = generateTemporaryPassword();
-      const teamData = { 
-        ...manualForm,
-        tournament_team_name: manualForm.team_name, // 大会参加チーム名として同じ値を使用
-        tournament_team_omission: manualForm.team_omission, // 大会参加チーム略称として同じ値を使用
-        temporary_password: tempPassword,
+      const teamData = {
+        team_name: manualForm.team_name,
+        team_omission: manualForm.team_omission,
+        contact_phone: manualForm.contact_phone,
+        tournament_team_name: manualForm.team_name,
+        tournament_team_omission: manualForm.team_omission,
         players: manualForm.players.map(p => ({
           player_name: p.player_name,
           uniform_number: p.uniform_number,
@@ -190,9 +173,7 @@ export default function TeamRegistrationPage() {
           team_name: result.data.tournament_team_name,
           team_omission: teamData.tournament_team_omission,
           master_team_name: result.data.team_name,
-          contact_person: teamData.contact_person,
-          contact_email: teamData.contact_email,
-          contact_phone: teamData.contact_phone,
+          contact_phone: teamData.contact_phone || '',
           registration_type: 'admin_proxy', // 管理者代行登録として設定
           player_count: teamData.players.length,
           created_at: new Date().toISOString()
@@ -203,22 +184,13 @@ export default function TeamRegistrationPage() {
         setManualForm({
           team_name: '',
           team_omission: '',
-          contact_person: '',
-          contact_email: '',
           contact_phone: '',
           tournament_team_name: '',
           tournament_team_omission: '',
           players: []
         });
 
-        const passwordInfo = result.data.is_existing_team
-          ? '既存のパスワードを使用'
-          : `${tempPassword}`;
-        const passwordNote = result.data.is_existing_team
-          ? ''
-          : '\n\n※代表者には初回ログイン時のパスワード変更をお願いしてください。';
-
-        alert(`チーム「${result.data.team_name}」の管理者代行登録が完了しました。\n\n【重要】以下の情報をチーム代表者にお伝えください：\n\n- ログインID: ${result.data.team_id}\n- パスワード: ${passwordInfo}\n- メールアドレス: ${result.data.contact_email}${passwordNote}`);
+        alert(`チーム「${result.data.team_name}」の管理者代行登録が完了しました。\n\n【チームID】${result.data.team_id}\n\nこのチームIDをチーム代表者にお伝えください。\n代表者はマイダッシュボードの「チームIDで紐付ける」機能で\n自分のアカウントにチームを紐付けできます。`);
       } else {
         throw new Error(result.error || '登録に失敗しました');
       }
@@ -244,54 +216,8 @@ export default function TeamRegistrationPage() {
     }));
   };
 
-  // CSV テンプレートダウンロード（マルチ行形式）
-  const downloadCsvTemplate = () => {
-    const template = [
-      // ヘッダー行
-      '行種別,チーム名,略称,代表者名,メールアドレス,電話番号,選手名,背番号,ポジション',
-      '',
-      // サンプルチーム1
-      'TEAM,サンプルFC,サンプル,山田太郎,yamada@example.com,090-1234-5678,,,',
-      'PLAYER,,,,,,田中一郎,1,GK',
-      'PLAYER,,,,,,佐藤次郎,2,DF', 
-      'PLAYER,,,,,,鈴木三郎,3,MF',
-      'PLAYER,,,,,,高橋四郎,,FW',
-      '',
-      // サンプルチーム2
-      'TEAM,テストユナイテッド,テスト,鈴木花子,suzuki@example.com,080-9876-5432,,,',
-      'PLAYER,,,,,,中村太一,10,GK',
-      'PLAYER,,,,,,小林次郎,11,DF',
-      'PLAYER,,,,,,伊藤三郎,,MF',
-      '',
-      // 空のチーム（入力用）
-      'TEAM,,,,,,,,',
-      'PLAYER,,,,,,,',
-      'PLAYER,,,,,,,',
-      'PLAYER,,,,,,,',
-      '',
-      // 使用方法の説明（コメント行として）
-      '# 使用方法:',
-      '# 1. TEAM行: チーム基本情報を入力（選手名・背番号・ポジションは空欄）',
-      '# 2. PLAYER行: 選手情報を入力（チーム名・代表者情報は空欄）',
-      '# 3. 背番号・ポジションは任意項目（空欄可）',
-      '# 4. 電話番号は任意項目',
-      '# 5. 選手なしでもチーム登録可能（TEAM行のみでOK）',
-      '# 6. 1チームにつき最大20人まで選手登録可能',
-      '# 7. #で始まる行は無視されます'
-    ].join('\n');
-
-    // BOMを追加してExcelでの文字化けを防ぐ
-    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-    const blob = new Blob([bom, template], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'team_registration_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  // CSVテンプレートダウンロードURL（サーバーサイドAPI経由）
+  const csvTemplateUrl = `/api/admin/tournaments/${tournamentId}/teams/csv-template`;
 
   // CSVファイル解析
   const parseCsvFile = async (file: File): Promise<{ teams: TeamRegistration[], errors: string[] }> => {
@@ -317,14 +243,14 @@ export default function TeamRegistrationPage() {
           // カンマで分割（末尾の空カラムも考慮）
           const columns = line.split(',');
           
-          // 9列必要（行種別,チーム名,略称,代表者名,メール,電話,選手名,背番号,ポジション）
-          if (columns.length < 9) {
-            errors.push(`行${actualLineNumber}: 列数が不足しています（${columns.length}列 < 9列）→${line}`);
+          // 6列必要（行種別,チーム名,略称,電話番号,選手名,背番号）
+          if (columns.length < 6) {
+            errors.push(`行${actualLineNumber}: 列数が不足しています（${columns.length}列 < 6列）→${line}`);
             continue;
           }
 
           // カラムの前後の空白を除去
-          const [rowType, teamName, teamOmission, contactPerson, contactEmail, contactPhone, playerName, jerseyNumber, position] = columns.map(col => col.trim());
+          const [rowType, teamName, teamOmission, contactPhone, playerName, jerseyNumber] = columns.map(col => col.trim());
 
           if (rowType === 'TEAM') {
             // 前のチームを保存
@@ -336,8 +262,6 @@ export default function TeamRegistrationPage() {
             currentTeam = {
               team_name: teamName || '',
               team_omission: teamOmission || '',
-              contact_person: contactPerson || '',
-              contact_email: contactEmail || '',
               contact_phone: contactPhone || '',
               players: [],
               tournament_team_name: teamName || '', // 同じ値を使用
@@ -347,11 +271,6 @@ export default function TeamRegistrationPage() {
             // チーム情報のバリデーション
             if (!teamName) errors.push(`行${actualLineNumber}: チーム名が必須です`);
             if (!teamOmission) errors.push(`行${actualLineNumber}: チーム略称が必須です`);
-            if (!contactPerson) errors.push(`行${actualLineNumber}: 代表者名が必須です`);
-            if (!contactEmail) errors.push(`行${actualLineNumber}: メールアドレスが必須です`);
-            if (contactEmail && !contactEmail.includes('@')) {
-              errors.push(`行${actualLineNumber}: 有効なメールアドレスを入力してください`);
-            }
 
           } else if (rowType === 'PLAYER') {
             if (!currentTeam) {
@@ -363,7 +282,7 @@ export default function TeamRegistrationPage() {
               const player: Player = {
                 player_name: playerName,
                 uniform_number: jerseyNumber ? parseInt(jerseyNumber) : undefined,
-                position: position || ''
+                position: ''
               };
 
               // 背番号のバリデーション
@@ -440,10 +359,8 @@ export default function TeamRegistrationPage() {
       const results = [];
       
       for (const team of csvPreview) {
-        const tempPassword = generateTemporaryPassword();
         const teamData = {
-          ...team,
-          temporary_password: tempPassword
+          ...team
         };
 
         try {
@@ -469,11 +386,7 @@ export default function TeamRegistrationPage() {
               success: false,
               teamName: team.team_name,
               teamId: '',
-              contactEmail: team.contact_email,
-              tempPassword: null,
               isExistingTeam: false,
-              isExistingLoginUser: false,
-              resolutionMethod: 'new_team',
               error: errorMessage
             });
             continue;
@@ -486,22 +399,14 @@ export default function TeamRegistrationPage() {
               success: true,
               teamName: team.team_name,
               teamId: result.data.team_id,
-              contactEmail: team.contact_email,
-              tempPassword: result.data.temporary_password || tempPassword,
-              isExistingTeam: result.data.is_existing_team,
-              isExistingLoginUser: result.data.is_existing_login_user || false,
-              resolutionMethod: result.data.resolution_method || 'new_team'
+              isExistingTeam: result.data.is_existing_team
             });
           } else {
             results.push({
               success: false,
               teamName: team.team_name,
               teamId: '',
-              contactEmail: team.contact_email,
-              tempPassword: null,
               isExistingTeam: false,
-              isExistingLoginUser: false,
-              resolutionMethod: 'new_team',
               error: result.error
             });
           }
@@ -510,11 +415,7 @@ export default function TeamRegistrationPage() {
             success: false,
             teamName: team.team_name,
             teamId: '',
-            contactEmail: team.contact_email,
-            tempPassword: null,
             isExistingTeam: false,
-            isExistingLoginUser: false,
-            resolutionMethod: 'new_team',
             error: error instanceof Error ? error.message : 'API呼び出しエラー'
           });
         }
@@ -540,7 +441,7 @@ export default function TeamRegistrationPage() {
       }
 
       if (successCount > 0) {
-        message += '\n\n結果CSVダウンロードボタンが表示されます。\nダウンロードしてチーム代表者に仮パスワード等をお伝えください。';
+        message += '\n\n結果CSVダウンロードボタンが表示されます。\nダウンロードしてチーム代表者にチームIDをお伝えください。';
       }
 
       alert(message);
@@ -611,19 +512,12 @@ export default function TeamRegistrationPage() {
 
   // 結果CSVダウンロード
   const downloadResultsCsv = () => {
-    const header = 'チーム名,ログインID,メールアドレス,仮パスワード,アカウント状態,処理方法\n';
+    const header = 'チーム名,チームID,状態\n';
     const rows = registrationResults
       .filter(r => r.success)
       .map(r => {
-        const status = r.isExistingLoginUser ? '既存アカウント' : (r.isExistingTeam ? '既存チーム' : '新規作成');
-        const password = r.tempPassword || '既存パスワード使用';
-        const methodMap: Record<string, string> = {
-          'login_user_with_team': '既存アカウントのチーム使用',
-          'login_user_new_team': '既存アカウントに新規チーム作成',
-          'new_team': '新規チーム作成'
-        };
-        const method = methodMap[r.resolutionMethod] || r.resolutionMethod;
-        return `"${r.teamName}","${r.teamId}","${r.contactEmail}","${password}","${status}","${method}"`;
+        const status = r.isExistingTeam ? '既存チーム使用' : '新規作成';
+        return `"${r.teamName}","${r.teamId}","${status}"`;
       })
       .join('\n');
 
@@ -685,17 +579,18 @@ export default function TeamRegistrationPage() {
           </Button>
         </div>
 
-        {/* パスワード管理についての注意書き */}
+        {/* チームID紐付けについての注意書き */}
         <Card className="mb-6 border-primary/20 bg-primary/5">
           <CardContent className="p-4">
             <div className="flex items-start space-x-3">
               <Key className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-medium text-primary mb-1">パスワード管理について</h3>
+                <h3 className="font-medium text-primary mb-1">代行登録の流れ</h3>
                 <p className="text-sm text-primary">
-                  管理者代行でのチーム登録では、仮パスワードが自動生成されます。
-                  登録完了後に表示される仮パスワードを、チーム代表者にお伝えください。
-                  チーム代表者は初回ログイン時にパスワード変更が必要です。
+                  チーム登録後に表示されるチームIDをチーム代表者にお伝えください。
+                  代表者は自身のアカウントでログイン後、マイダッシュボードの「チームIDで紐付ける」機能で
+                  チームを自分のアカウントに紐付けることができます。
+                  メールアドレス・代表者名は任意です。
                 </p>
               </div>
             </div>
@@ -742,7 +637,7 @@ export default function TeamRegistrationPage() {
                 <CardContent>
                   <form onSubmit={handleManualSubmit} className="space-y-6">
                     {/* チーム基本情報 */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="team_name">チーム名 *</Label>
                         <Input
@@ -763,45 +658,15 @@ export default function TeamRegistrationPage() {
                           placeholder="例: サンプル"
                         />
                       </div>
-                    </div>
-
-                    {/* 連絡先情報 */}
-                    <div className="border-t pt-6">
-                    <div className="space-y-4">
-                      <h3 className="font-medium">代表者・連絡先情報</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="contact_person">代表者名 *</Label>
-                          <Input
-                            id="contact_person"
-                            value={manualForm.contact_person}
-                            onChange={(e) => setManualForm(prev => ({ ...prev, contact_person: e.target.value }))}
-                            required
-                            placeholder="例: 山田太郎"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_email">メールアドレス *</Label>
-                          <Input
-                            id="contact_email"
-                            type="email"
-                            value={manualForm.contact_email}
-                            onChange={(e) => setManualForm(prev => ({ ...prev, contact_email: e.target.value }))}
-                            required
-                            placeholder="例: yamada@example.com"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_phone">電話番号</Label>
-                          <Input
-                            id="contact_phone"
-                            value={manualForm.contact_phone}
-                            onChange={(e) => setManualForm(prev => ({ ...prev, contact_phone: e.target.value }))}
-                            placeholder="例: 090-1234-5678"
-                          />
-                        </div>
+                      <div>
+                        <Label htmlFor="contact_phone">電話番号</Label>
+                        <Input
+                          id="contact_phone"
+                          value={manualForm.contact_phone}
+                          onChange={(e) => setManualForm(prev => ({ ...prev, contact_phone: e.target.value }))}
+                          placeholder="例: 090-1234-5678"
+                        />
                       </div>
-                    </div>
                     </div>
 
                     {/* 選手登録 */}
@@ -834,7 +699,7 @@ export default function TeamRegistrationPage() {
                               削除
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
                               <Label htmlFor={`player_name_${index}`}>選手名 *</Label>
                               <Input
@@ -866,19 +731,6 @@ export default function TeamRegistrationPage() {
                                 placeholder="未設定の場合は空欄"
                               />
                             </div>
-                            <div>
-                              <Label htmlFor={`position_${index}`}>ポジション</Label>
-                              <Input
-                                id={`position_${index}`}
-                                value={player.position}
-                                onChange={(e) => {
-                                  const newPlayers = [...manualForm.players];
-                                  newPlayers[index].position = e.target.value;
-                                  setManualForm(prev => ({ ...prev, players: newPlayers }));
-                                }}
-                                placeholder="例: GK, DF, MF, FW"
-                              />
-                            </div>
                           </div>
                         </div>
                       ))}
@@ -886,7 +738,7 @@ export default function TeamRegistrationPage() {
                     </div>
 
                     <div className="flex justify-end space-x-4">
-                      <Button type="button" variant="outline" onClick={() => router.push('/admin')}>
+                      <Button type="button" variant="outline" onClick={() => router.push('/my?tab=admin')}>
                         キャンセル
                       </Button>
                       <Button type="submit" variant="outline" className="border-2 border-green-600 text-green-600 hover:bg-green-50 hover:border-green-700">
@@ -917,9 +769,11 @@ export default function TeamRegistrationPage() {
                         <p className="text-sm text-primary mb-3">
                           まず、CSVテンプレートをダウンロードして、チーム情報を入力してください。
                         </p>
-                        <Button variant="outline" onClick={downloadCsvTemplate} size="sm">
-                          <Download className="w-4 h-4 mr-2" />
-                          CSVテンプレートをダウンロード
+                        <Button asChild variant="outline" size="sm">
+                          <a href={csvTemplateUrl} download="team_registration_template.csv">
+                            <Download className="w-4 h-4 mr-2" />
+                            CSVテンプレートをダウンロード
+                          </a>
                         </Button>
                       </div>
                     </div>
@@ -984,8 +838,7 @@ export default function TeamRegistrationPage() {
                                 {team.players.length}人
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600">代表者: {team.contact_person}</p>
-                            <p className="text-sm text-gray-600">メール: {team.contact_email}</p>
+                            {team.contact_phone && <p className="text-sm text-gray-600">電話番号: {team.contact_phone}</p>}
                             <div className="mt-2">
                               <p className="text-xs text-gray-500">
                                 選手: {team.players.map(p => `${p.player_name}${p.uniform_number ? `(${p.uniform_number})` : ''}`).join(', ')}
@@ -1026,7 +879,7 @@ export default function TeamRegistrationPage() {
                         <div className="flex-1">
                           <h3 className="font-medium text-blue-900 mb-2">登録結果CSVダウンロード</h3>
                           <p className="text-sm text-blue-800 mb-3">
-                            登録結果（ログインID・仮パスワード含む）をCSVファイルでダウンロードできます。
+                            登録結果（チームID含む）をCSVファイルでダウンロードできます。
                             チーム代表者への通知にご利用ください。
                           </p>
                           <Button variant="outline" onClick={downloadResultsCsv} size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100">
@@ -1106,8 +959,19 @@ export default function TeamRegistrationPage() {
                             </div>
                           </div>
                           <p className="text-sm text-muted-foreground">略称: {team.team_omission}</p>
-                          <p className="text-sm text-muted-foreground">マスター: {team.master_team_name}</p>
-                          <p className="text-sm text-muted-foreground">代表者: {team.contact_person}</p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-sm text-muted-foreground">ID: <code className="text-xs bg-muted px-1 py-0.5 rounded select-all">{team.team_id}</code></p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(team.team_id);
+                                alert('チームIDをコピーしました');
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline"
+                            >
+                              コピー
+                            </button>
+                          </div>
                           <p className="text-sm text-muted-foreground">選手数: {team.player_count}名</p>
                           <p className="text-sm text-muted-foreground">登録日: {new Date(team.created_at).toLocaleDateString('ja-JP')}</p>
                           {isAdminProxy && (

@@ -141,8 +141,6 @@ export async function archiveTournamentAsJson(
         tt.withdrawal_status,
         (SELECT COUNT(*) FROM t_tournament_players tp 
          WHERE tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id) as player_count,
-        t.contact_person,
-        t.contact_email
       FROM t_tournament_teams tt
       LEFT JOIN m_teams t ON tt.team_id = t.team_id
       WHERE tt.tournament_id = ?
@@ -164,7 +162,7 @@ export async function archiveTournamentAsJson(
         mb.phase,
         mb.display_round_name,
         mb.block_name,
-        mb.match_type,
+        ml.match_type,
         mb.block_order,
         mf.team1_scores,
         mf.team2_scores,
@@ -311,14 +309,13 @@ export async function archiveTournamentAsJson(
           mb.block_name,
           mb.display_round_name,
           mb.block_order,
-          mb.match_type,
           COUNT(DISTINCT tt.team_id) as teams_in_block,
           COUNT(DISTINCT ml.match_id) as matches_in_block
         FROM t_match_blocks mb
         LEFT JOIN t_tournament_teams tt ON tt.assigned_block = mb.block_name AND tt.tournament_id = mb.tournament_id
         LEFT JOIN t_matches_live ml ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ?
-        GROUP BY mb.match_block_id, mb.phase, mb.block_name, mb.display_round_name, mb.block_order, mb.match_type
+        GROUP BY mb.match_block_id, mb.phase, mb.block_name, mb.display_round_name, mb.block_order
         ORDER BY mb.phase, mb.block_order
       `, [tournamentId]);
 
@@ -358,7 +355,6 @@ export async function archiveTournamentAsJson(
           block_name: block.block_name,
           display_round_name: block.display_round_name,
           block_order: block.block_order,
-          match_type: block.match_type,
           teams_count: block.teams_in_block,
           matches_count: block.matches_in_block
         })),

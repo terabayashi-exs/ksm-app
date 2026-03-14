@@ -15,13 +15,11 @@ import {
   Clock, 
   CheckCircle, 
   XCircle, 
-  User, 
-  Calendar, 
-  MapPin, 
+  Calendar,
+  MapPin,
   Users,
   AlertTriangle,
   Phone,
-  Mail,
   Trophy,
   Zap,
   BarChart3
@@ -46,8 +44,6 @@ interface WithdrawalRequest {
   format_name: string | null;
   venue_name: string | null;
   master_team_name: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone: string | null;
   player_count: number;
 }
@@ -311,18 +307,6 @@ export default function WithdrawalRequestManagement() {
       <CardContent className="space-y-4">
         {/* チーム連絡先 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <User className="w-4 h-4 text-gray-500" />
-              <span className="font-medium">代表者:</span>
-              <span>{request.contact_person}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="w-4 h-4 text-gray-500" />
-              <span className="font-medium">メール:</span>
-              <span>{request.contact_email}</span>
-            </div>
-          </div>
           <div className="space-y-2">
             {request.contact_phone && (
               <div className="flex items-center gap-2 text-sm">

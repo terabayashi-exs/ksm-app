@@ -61,8 +61,6 @@ interface TeamData {
   block_position?: number;
   withdrawal_status?: string;
   player_count?: number;
-  contact_person?: string;
-  contact_email?: string;
 }
 
 interface MatchData {
@@ -569,18 +567,6 @@ function ArchivedTournamentTeams({ teams }: { teams: TeamData[] }) {
                       <Users className="h-4 w-4 mr-2" />
                       <span>登録選手数: {team.player_count}名</span>
                     </div>
-                    
-                    {team.contact_person && (
-                      <div>
-                        <span className="font-medium">代表者:</span> {team.contact_person}
-                      </div>
-                    )}
-                    
-                    {team.contact_email && (
-                      <div>
-                        <span className="font-medium">連絡先:</span> {team.contact_email}
-                      </div>
-                    )}
                     
                     {team.withdrawal_status !== 'active' && (
                       <div className="mt-3 p-2 bg-destructive/5 border border-destructive/20 rounded">

@@ -222,6 +222,10 @@ export default function EmailSendPage() {
 
   // チーム選択/解除
   const handleTeamToggle = (tournamentTeamId: string) => {
+    // 担当者がいないチームは選択不可
+    const team = teams.find(t => t.tournament_team_id === tournamentTeamId);
+    if (!team?.team_members || team.team_members.length === 0) return;
+
     setSelectedTeamIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(tournamentTeamId)) {
@@ -479,14 +483,15 @@ export default function EmailSendPage() {
                     </div>
                   ) : (
                     filteredTeams.map((team) => {
+                      const hasNoMembers = !team.team_members || team.team_members.length === 0;
                       const isSelected = selectedTeamIds.has(team.tournament_team_id);
-                      const isDisabled = !isSelected && selectedTeamIds.size >= MAX_SELECTION;
+                      const isDisabled = hasNoMembers || (!isSelected && selectedTeamIds.size >= MAX_SELECTION);
 
                       return (
                         <div
                           key={team.tournament_team_id}
                           className={`p-4 flex items-start gap-3 transition-colors ${
-                            isDisabled ? 'opacity-40' : 'hover:bg-muted/50'
+                            hasNoMembers ? '' : isDisabled ? 'opacity-40' : 'hover:bg-muted/50'
                           }`}
                         >
                           <Checkbox
@@ -501,6 +506,11 @@ export default function EmailSendPage() {
                             className={`flex-1 ${isDisabled ? '' : 'cursor-pointer'}`}
                           >
                             <div className="font-medium text-base mb-1">{team.team_name}</div>
+                            {hasNoMembers && (
+                              <div className="text-sm text-destructive font-medium mb-1">
+                                担当者が設定されていないため、メール送信できません
+                              </div>
+                            )}
                             {(() => {
                               // 自動送信メールを除外した履歴
                               const filteredHistory = team.email_history?.filter(h => !AUTO_TEMPLATE_IDS.includes(h.template_id as typeof AUTO_TEMPLATE_IDS[number])) || [];

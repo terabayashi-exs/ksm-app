@@ -14,9 +14,7 @@ import {
   MapPin,
   Search,
   UserCheck,
-  Mail,
   Phone,
-  Crown,
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
@@ -50,8 +48,6 @@ interface TeamData {
   team_id: string;
   team_name: string;
   team_omission?: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone?: string;
   registration_type: 'self_registered' | 'admin_proxy';
   withdrawal_status: string;
@@ -249,10 +245,8 @@ export default function AdminTeamsPage() {
   };
 
   // チーム検索フィルタリング
-  const filteredTeams = teams.filter(team => 
-    team.team_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    team.contact_email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTeams = teams.filter(team =>
+    team.team_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // 大会検索フィルタリング
@@ -500,7 +494,7 @@ export default function AdminTeamsPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input
-                      placeholder="チーム名・代表者・メールアドレスで検索..."
+                      placeholder="チーム名で検索..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -565,23 +559,15 @@ export default function AdminTeamsPage() {
                           </div>
                         </div>
 
-                        {/* 代表者情報 */}
-                        <div className="space-y-2 mb-3">
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Crown className="w-4 h-4 mr-2 text-amber-500" />
-                            代表者: {team.contact_person}
-                          </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Mail className="w-4 h-4 mr-2" />
-                            {team.contact_email}
-                          </div>
-                          {team.contact_phone && (
+                        {/* 連絡先情報 */}
+                        {team.contact_phone && (
+                          <div className="space-y-2 mb-3">
                             <div className="flex items-center text-sm text-muted-foreground">
                               <Phone className="w-4 h-4 mr-2" />
                               {team.contact_phone}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {/* 選手情報 */}
                         <div className="pt-3 border-t">

@@ -75,8 +75,6 @@ export async function GET(
         tt.block_position,
         tt.created_at,
         m.team_name as master_team_name,
-        m.contact_person,
-        m.contact_email,
         m.contact_phone,
         (SELECT COUNT(*) FROM t_tournament_players tp
          WHERE tp.tournament_id = tt.tournament_id
@@ -305,8 +303,6 @@ export async function PUT(
     const teamResult = await db.execute(`
       SELECT
         tt.*,
-        m.contact_email,
-        m.contact_person,
         t.tournament_name
       FROM t_tournament_teams tt
       LEFT JOIN m_teams m ON tt.team_id = m.team_id

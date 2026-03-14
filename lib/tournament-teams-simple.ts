@@ -11,8 +11,6 @@ export interface SimpleTournamentTeam {
   assigned_block?: string;
   block_position?: number;
   display_block?: string;  // 表示用ブロック名（決勝進出チームは1位リーグ等、予選チームはassigned_block）
-  contact_person: string;
-  contact_email: string;
   contact_phone?: string;
   player_count: number;
 }
@@ -170,8 +168,6 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
           tt.block_position,
           COALESCE(tt.team_name, t.team_name) as team_name,
           COALESCE(tt.team_omission, t.team_omission) as team_omission,
-          t.contact_person,
-          t.contact_email,
           t.contact_phone
         FROM t_tournament_teams tt
         JOIN m_teams t ON tt.team_id = t.team_id
@@ -218,8 +214,6 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
           assigned_block: teamRow.assigned_block ? String(teamRow.assigned_block) : undefined,
           block_position: teamRow.block_position ? Number(teamRow.block_position) : undefined,
           display_block: displayBlock,
-          contact_person: teamRow.contact_person as string,
-          contact_email: teamRow.contact_email as string,
           contact_phone: teamRow.contact_phone ? String(teamRow.contact_phone) : undefined,
           player_count: playerCount
         });
