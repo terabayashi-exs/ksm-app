@@ -94,6 +94,7 @@ export async function GET(
       WHERE mb.tournament_id = ?
       AND ${statusCondition}
       AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
+      AND (ml.match_type IS NULL OR ml.match_type != 'FM')
       ORDER BY mb.match_block_id, ml.tournament_date, ml.start_time, ml.match_code
     `, [tournamentId]);
 

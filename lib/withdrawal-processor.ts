@@ -14,8 +14,6 @@ interface WithdrawalInfo {
   withdrawal_requested_at: string | null;
   tournament_name: string;
   tournament_status: string;
-  contact_email: string;
-  contact_person: string;
 }
 
 /**

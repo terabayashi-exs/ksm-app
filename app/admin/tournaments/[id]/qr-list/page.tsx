@@ -309,64 +309,67 @@ export default function QRListPage() {
                     </CardHeader>
 
                     <CardContent className="pt-0">
-                      {/* 対戦カード（1行表示） */}
+                      {/* 対戦カード + スコア記入欄（縦配置） */}
                       <div className="mb-3 p-2 bg-gray-50 rounded-md matchup-area">
-                        <div className="flex items-center justify-center gap-3">
-                          <span className="font-bold text-lg team-name text-right flex-1 truncate">{match.team1_omission}</span>
+                        {/* チーム名（1行） */}
+                        <div className="flex items-center justify-center gap-3 mb-2">
+                          <span className="font-bold text-lg team-name text-center flex-1 truncate max-w-[40%]">{match.team1_name}</span>
                           <span className="text-gray-500 text-sm font-medium shrink-0">vs</span>
-                          <span className="font-bold text-lg team-name text-left flex-1 truncate">{match.team2_omission}</span>
+                          <span className="font-bold text-lg team-name text-center flex-1 truncate max-w-[40%]">{match.team2_name}</span>
                         </div>
+
+                        {/* ピリオド別スコア記入欄（縦配置） */}
+                        {match.period_labels.length > 0 && (
+                          <div className="score-vertical-area">
+                            {match.period_labels.map((label, i) => (
+                              <div key={i} className="flex items-center justify-center gap-3 score-row">
+                                <div className="flex items-center gap-1 flex-1 justify-end">
+                                  <span className="text-xs text-gray-500 period-label">{label}</span>
+                                  <div className="border border-gray-300 bg-white w-10 h-6 score-input-box"></div>
+                                </div>
+                                <span className="text-gray-300 text-xs shrink-0 score-separator">-</span>
+                                <div className="flex items-center gap-1 flex-1 justify-start">
+                                  <div className="border border-gray-300 bg-white w-10 h-6 score-input-box"></div>
+                                  <span className="text-xs text-gray-500 period-label">{label}</span>
+                                </div>
+                              </div>
+                            ))}
+                            {/* 合計行 */}
+                            <div className="flex items-center justify-center gap-3 score-row mt-1 pt-1 border-t border-gray-300">
+                              <div className="flex items-center gap-1 flex-1 justify-end">
+                                <span className="text-xs font-bold text-gray-700 period-label">計</span>
+                                <div className="border-2 border-gray-400 bg-white w-10 h-6 score-input-box"></div>
+                              </div>
+                              <span className="text-gray-300 text-xs shrink-0 score-separator">-</span>
+                              <div className="flex items-center gap-1 flex-1 justify-start">
+                                <div className="border-2 border-gray-400 bg-white w-10 h-6 score-input-box"></div>
+                                <span className="text-xs font-bold text-gray-700 period-label">計</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* ピリオド別スコア記入欄 */}
-                      {match.period_labels.length > 0 && (
-                        <div className="mb-3 score-table-area">
-                          <table className="w-full border-collapse text-sm">
-                            <thead>
-                              <tr>
-                                <th className="border border-gray-300 bg-gray-100 px-2 py-1 text-left font-medium text-xs w-[35%]"></th>
-                                {match.period_labels.map((label, i) => (
-                                  <th key={i} className="border border-gray-300 bg-gray-100 px-2 py-1 text-center font-medium text-xs">
-                                    {label}
-                                  </th>
-                                ))}
-                                <th className="border border-gray-300 bg-gray-200 px-2 py-1 text-center font-medium text-xs">計</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="border border-gray-300 px-2 py-1 text-xs font-medium truncate">{match.team1_omission}</td>
-                                {match.period_labels.map((_, i) => (
-                                  <td key={i} className="border border-gray-300 px-2 py-2.5 text-center score-cell">&nbsp;</td>
-                                ))}
-                                <td className="border border-gray-300 px-2 py-2.5 text-center bg-gray-50 score-cell">&nbsp;</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 px-2 py-1 text-xs font-medium truncate">{match.team2_omission}</td>
-                                {match.period_labels.map((_, i) => (
-                                  <td key={i} className="border border-gray-300 px-2 py-2.5 text-center score-cell">&nbsp;</td>
-                                ))}
-                                <td className="border border-gray-300 px-2 py-2.5 text-center bg-gray-50 score-cell">&nbsp;</td>
-                              </tr>
-                            </tbody>
-                          </table>
+                      {/* QRコード + 備考欄（横並び） */}
+                      <div className="flex items-start gap-3 qr-remarks-area">
+                        <div className="shrink-0">
+                          <Image
+                            src={match.qr_image_url}
+                            alt={`QRコード: ${match.match_code}`}
+                            width={192}
+                            height={192}
+                            className="border-2 border-gray-300 rounded-md qr-code-image"
+                            loading="lazy"
+                            unoptimized
+                          />
+                          <p className="text-xs text-gray-500 mt-1 text-center no-print">
+                            QRスキャンで結果入力
+                          </p>
                         </div>
-                      )}
-
-                      {/* QRコード */}
-                      <div className="text-center">
-                        <Image
-                          src={match.qr_image_url}
-                          alt={`QRコード: ${match.match_code}`}
-                          width={192}
-                          height={192}
-                          className="mx-auto border-2 border-gray-300 rounded-md qr-code-image"
-                          loading="lazy"
-                          unoptimized
-                        />
-                        <p className="text-xs text-gray-500 mt-2 no-print">
-                          審判はこのQRコードをスキャンして結果を入力
-                        </p>
+                        <div className="flex-1 border border-gray-300 rounded-md p-1 remarks-box">
+                          <div className="text-xs text-gray-400 mb-1 remarks-title">備考（得点者・警告等）</div>
+                          <div className="min-h-[60px] remarks-content"></div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -478,47 +481,64 @@ export default function QRListPage() {
             height: 10px !important;
           }
 
-          /* 対戦カード */
+          /* 対戦カード + スコア欄 */
           .matchup-area {
-            margin-bottom: 1.5mm !important;
+            margin-bottom: 1mm !important;
             padding: 1mm 2mm !important;
           }
 
           .team-name {
-            font-size: 13px !important;
+            font-size: 12px !important;
             line-height: 1.2 !important;
             font-weight: bold !important;
+            max-width: 40% !important;
           }
 
-          /* スコア記入表 */
-          .score-table-area {
-            margin-bottom: 1.5mm !important;
+          /* スコア記入欄（縦配置） */
+          .score-vertical-area {
+            margin-top: 1mm !important;
           }
 
-          .score-table-area table {
-            font-size: 9px !important;
+          .score-row {
+            margin-bottom: 0.5mm !important;
+            gap: 2mm !important;
           }
 
-          .score-table-area th {
-            padding: 0.5mm 1mm !important;
-            font-size: 8px !important;
-          }
-
-          .score-table-area td {
-            padding: 0.5mm 1mm !important;
-            font-size: 8px !important;
-          }
-
-          .score-cell {
-            min-height: 5mm !important;
+          .score-input-box {
+            width: 10mm !important;
             height: 5mm !important;
           }
 
-          /* QRコード */
+          .period-label {
+            font-size: 7px !important;
+          }
+
+          .score-separator {
+            font-size: 8px !important;
+          }
+
+          /* QRコード + 備考欄 */
+          .qr-remarks-area {
+            gap: 2mm !important;
+          }
+
           .qr-code-image {
-            width: 60px !important;
-            height: 60px !important;
-            margin: 1mm auto !important;
+            width: 50px !important;
+            height: 50px !important;
+          }
+
+          .remarks-box {
+            min-height: 50px !important;
+            padding: 1mm !important;
+          }
+
+          .remarks-title {
+            font-size: 7px !important;
+            margin-bottom: 0 !important;
+          }
+
+          .remarks-content {
+            min-height: 40px !important;
           }
 
           /* アイコンサイズ */

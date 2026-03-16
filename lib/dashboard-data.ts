@@ -10,8 +10,6 @@ export interface TeamDashboardItem {
   team_id: string;
   team_name: string;
   team_omission: string | null;
-  contact_person: string | null;
-  contact_email: string | null;
   contact_phone: string | null;
   prefecture_id: number | null;
   is_active: boolean;
@@ -33,8 +31,6 @@ export async function fetchTeamData(loginUserId: number): Promise<TeamDashboardI
       t.team_id,
       t.team_name,
       t.team_omission,
-      t.contact_person,
-      t.contact_email,
       t.contact_phone,
       t.prefecture_id,
       t.is_active,
@@ -60,8 +56,6 @@ export async function fetchTeamData(loginUserId: number): Promise<TeamDashboardI
     team_id: String(row.team_id),
     team_name: String(row.team_name),
     team_omission: row.team_omission ? String(row.team_omission) : null,
-    contact_person: row.contact_person ? String(row.contact_person) : null,
-    contact_email: row.contact_email ? String(row.contact_email) : null,
     contact_phone: row.contact_phone ? String(row.contact_phone) : null,
     prefecture_id: row.prefecture_id ? Number(row.prefecture_id) : null,
     is_active: Number(row.is_active) === 1,

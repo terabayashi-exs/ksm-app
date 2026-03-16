@@ -12,7 +12,6 @@ export interface WithdrawalEmailVariables {
   tournamentName: string;
   groupName?: string;
   categoryName?: string;
-  contactPerson: string;
   adminComment?: string;
   withdrawalReason?: string;
   processedDate: string;
@@ -59,7 +58,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
         </div>
         
         <div class="content">
-            <p>{{contactPerson}} 様</p>
+            <p>{{teamName}} ご担当者 様</p>
             <p>いつもお世話になっております。</p>
             
             <div class="highlight">
@@ -128,7 +127,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
     textBody: `
 【{{tournamentName}}】辞退申請承認のお知らせ
 
-{{contactPerson}} 様
+{{teamName}} ご担当者 様
 
 いつもお世話になっております。
 大会GO 運営事務局です。
@@ -217,7 +216,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
         </div>
         
         <div class="content">
-            <p>{{contactPerson}} 様</p>
+            <p>{{teamName}} ご担当者 様</p>
             <p>いつもお世話になっております。</p>
             
             <div class="highlight">
@@ -285,7 +284,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
     textBody: `
 【{{tournamentName}}】辞退申請についてのお知らせ
 
-{{contactPerson}} 様
+{{teamName}} ご担当者 様
 
 いつもお世話になっております。
 大会GO 運営事務局です。

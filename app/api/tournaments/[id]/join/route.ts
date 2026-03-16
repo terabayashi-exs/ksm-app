@@ -549,11 +549,15 @@ async function handleTournamentJoin(
           nodeEnv: process.env.NODE_ENV
         });
 
-        // チーム代表者のメールアドレスを取得
+        // チーム代表者のメールアドレスを m_team_members + m_login_users 経由で取得
         const teamInfoResult = await db.execute(`
-          SELECT contact_email, team_name
-          FROM m_teams
-          WHERE team_id = ?
+          SELECT lu.email as contact_email, mt.team_name
+          FROM m_team_members tm
+          INNER JOIN m_login_users lu ON tm.login_user_id = lu.login_user_id
+          INNER JOIN m_teams mt ON tm.team_id = mt.team_id
+          WHERE tm.team_id = ? AND tm.is_active = 1
+          ORDER BY tm.member_role DESC
+          LIMIT 1
         `, [teamId]);
 
         if (teamInfoResult.rows.length > 0) {

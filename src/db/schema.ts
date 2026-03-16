@@ -85,8 +85,6 @@ export const mTeams = sqliteTable("m_teams", {
 	teamId: text("team_id").primaryKey(),
 	teamName: text("team_name").notNull(),
 	teamOmission: text("team_omission"),
-	contactPerson: text("contact_person"),
-	contactEmail: text("contact_email"),
 	contactPhone: text("contact_phone"),
 	representativePlayerId: integer("representative_player_id"),
 	prefectureId: integer("prefecture_id"),
@@ -204,6 +202,8 @@ export const mTournamentFormats = sqliteTable("m_tournament_formats", {
 	defaultBreakDuration: integer("default_break_duration"),
 	// 新規フィールド: 柔軟なフェーズ構成をJSON形式で保存
 	phases: text("phases", { mode: 'json' }).$type<TournamentPhases>(),
+	// フォーマット公開制御: "public" = 全ユーザー使用可能, "restricted" = アクセス権を持つユーザーのみ
+	visibility: text("visibility").default("public").notNull(),
 },
 (_table) => [
 	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
@@ -222,7 +222,6 @@ export const tMatchBlocks = sqliteTable("t_match_blocks", {
 	phase: text().notNull(),
 	displayRoundName: text("display_round_name"),
 	blockName: text("block_name").notNull(),
-	matchType: text("match_type").notNull(),
 	blockOrder: integer("block_order").default(0).notNull(),
 	teamRankings: text("team_rankings"),
 	remarks: text(),
@@ -880,6 +879,24 @@ export const tOperatorTournamentAccess = sqliteTable("t_operator_tournament_acce
 	index("idx_operator_access_operator").on(_table.operatorId),
 	index("idx_operator_access_tournament").on(_table.tournamentId),
 	index("idx_operator_access_assigned_by").on(_table.assignedByLoginUserId),
+]);
+
+// ==========================================
+// フォーマットアクセス付与テーブル
+// ==========================================
+
+export const tFormatAccessGrants = sqliteTable("t_format_access_grants", {
+	grantId: integer("grant_id").primaryKey({ autoIncrement: true }),
+	formatId: integer("format_id").notNull().references(() => mTournamentFormats.formatId, { onDelete: "cascade" }),
+	loginUserId: integer("login_user_id").notNull(),
+	grantedByLoginUserId: integer("granted_by_login_user_id"),
+	grantedAt: numeric("granted_at").default(sql`(datetime('now', '+9 hours'))`),
+	expiresAt: numeric("expires_at"),  // NULL = 無期限、将来の課金連動用
+	notes: text("notes"),
+},
+(_table) => [
+	index("idx_format_grants_format").on(_table.formatId),
+	index("idx_format_grants_user").on(_table.loginUserId),
 ]);
 
 // ==========================================

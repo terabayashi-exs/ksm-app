@@ -54,7 +54,6 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
       tournamentName: teamInfo.tournament_name,  // 部門名（t_tournaments.tournament_name）
       groupName: teamInfo.group_name || undefined,  // グループ大会名（t_tournament_groups.group_name）
       categoryName: teamInfo.tournament_name, // tournament_nameを部門名として使用（後方互換性のため）
-      contactPerson: teamInfo.contact_person,
       adminComment: data.adminComment,
       withdrawalReason: teamInfo.withdrawal_reason || undefined,
       processedDate: new Date().toLocaleString('ja-JP', {
@@ -137,6 +136,12 @@ export async function sendWithdrawalNotification(data: WithdrawalNotificationDat
 
       return processed;
     };
+
+    // メール送信先がない場合はスキップ
+    if (!teamInfo.contact_email) {
+      console.log(`📧 送信先メールアドレスなし: チーム ${teamInfo.team_name} にはm_team_members経由のユーザーが紐付いていないためスキップ`);
+      return { success: true, messageId: `withdrawal-${data.action}-skipped-no-email` };
+    }
 
     // メール送信
     try {
@@ -234,16 +239,12 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
       tg.group_name,
       t.tournament_dates,
       v.venue_name,
-      mt.contact_person,
-      mt.contact_email,
-      mt.contact_phone,
       a.email as admin_email,
       a.organization_name
     FROM t_tournament_teams tt
     INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
     LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
     LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-    INNER JOIN m_teams mt ON tt.team_id = mt.team_id
     LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
     WHERE tt.tournament_team_id = ?
   `, [tournamentTeamId]);
@@ -253,6 +254,20 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
   }
 
   const row = result.rows[0];
+
+  // チームに紐付くユーザーのメールアドレスを m_team_members + m_login_users 経由で取得
+  const emailResult = await db.execute(`
+    SELECT lu.email
+    FROM m_team_members tm
+    INNER JOIN m_login_users lu ON tm.login_user_id = lu.login_user_id
+    INNER JOIN t_tournament_teams tt ON tt.team_id = tm.team_id
+    WHERE tt.tournament_team_id = ? AND tm.is_active = 1
+    ORDER BY tm.member_role DESC
+    LIMIT 1
+  `, [tournamentTeamId]);
+
+  const contactEmail = emailResult.rows.length > 0 ? String(emailResult.rows[0].email) : null;
+
   return {
     team_name: String(row.team_name),
     withdrawal_reason: row.withdrawal_reason ? String(row.withdrawal_reason) : null,
@@ -261,9 +276,7 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
     group_name: row.group_name ? String(row.group_name) : null,
     tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
     venue_name: row.venue_name ? String(row.venue_name) : null,
-    contact_person: String(row.contact_person),
-    contact_email: String(row.contact_email),
-    contact_phone: row.contact_phone ? String(row.contact_phone) : null,
+    contact_email: contactEmail,
     admin_email: row.admin_email ? String(row.admin_email) : null,
     organization_name: row.organization_name ? String(row.organization_name) : null
   };
@@ -344,10 +357,8 @@ async function logNotificationSent(
     // チーム・大会情報を取得
     const teamInfoResult = await db.execute(`
       SELECT
-        tt.tournament_id,
-        mt.contact_email
+        tt.tournament_id
       FROM t_tournament_teams tt
-      INNER JOIN m_teams mt ON tt.team_id = mt.team_id
       WHERE tt.tournament_team_id = ?
     `, [tournamentTeamId]);
 

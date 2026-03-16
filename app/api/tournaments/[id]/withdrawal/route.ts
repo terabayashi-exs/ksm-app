@@ -34,28 +34,23 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // 権限チェック: 申請者がそのチームの代表者かどうか確認
+    // 権限チェック: 申請者がそのチームのメンバーかどうか確認（m_team_members + m_login_users経由）
+    const loginUserId = session.user.id;
     const teamCheck = await db.execute(`
-      SELECT tt.team_id, tt.withdrawal_status, t.contact_email
+      SELECT tt.team_id, tt.withdrawal_status
       FROM t_tournament_teams tt
-      INNER JOIN m_teams t ON tt.team_id = t.team_id
-      WHERE tt.tournament_team_id = ? AND tt.tournament_id = ?
-    `, [tournament_team_id, tournamentId]);
+      INNER JOIN m_team_members tm ON tt.team_id = tm.team_id AND tm.is_active = 1
+      INNER JOIN m_login_users u ON tm.login_user_id = u.login_user_id
+      WHERE tt.tournament_team_id = ? AND tt.tournament_id = ? AND u.login_user_id = ?
+    `, [tournament_team_id, tournamentId, loginUserId]);
 
     if (teamCheck.rows.length === 0) {
-      return NextResponse.json({ 
-        error: '指定された大会参加情報が見つかりません' 
+      return NextResponse.json({
+        error: '指定された大会参加情報が見つからないか、このチームの辞退申請権限がありません'
       }, { status: 404 });
     }
 
     const teamData = teamCheck.rows[0];
-    
-    // チーム代表者のメールアドレスと一致するかチェック
-    if (teamData.contact_email !== session.user.email) {
-      return NextResponse.json({ 
-        error: 'このチームの辞退申請権限がありません' 
-      }, { status: 403 });
-    }
 
     // 既に辞退申請済みか確認
     if (teamData.withdrawal_status !== 'active') {
@@ -146,10 +141,13 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const tournamentTeamIdParam = searchParams.get('team');
 
-    // ユーザーのチームIDを取得
+    // ユーザーのチームIDを取得（m_team_members + m_login_users経由）
+    const loginUserId = session.user.id;
     const teamCheck = await db.execute(`
-      SELECT team_id FROM m_teams WHERE contact_email = ?
-    `, [session.user.email]);
+      SELECT tm.team_id FROM m_team_members tm
+      INNER JOIN m_login_users u ON tm.login_user_id = u.login_user_id
+      WHERE u.login_user_id = ? AND tm.is_active = 1
+    `, [loginUserId]);
 
     if (teamCheck.rows.length === 0) {
       return NextResponse.json({

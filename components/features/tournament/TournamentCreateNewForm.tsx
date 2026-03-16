@@ -10,10 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Users, Sparkles, Plus, Trash2, Info, Loader2, Building2, X, ChevronsUpDown, Check } from "lucide-react";
+import { Users, Sparkles, Plus, Trash2, Info, Loader2, Building2, X, ChevronsUpDown, Check, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import SchedulePreview from "@/components/features/tournament/SchedulePreview";
+import FormatDetailBadges, { getSportIcon } from "@/components/features/tournament-format/FormatDetailBadges";
 import React from "react";
 
 // 型定義
@@ -37,8 +38,13 @@ interface Format {
   target_team_count: number;
   format_description?: string;
   sport_type_id?: number;
+  sport_code?: string;
   default_match_duration?: number | null;
   default_break_duration?: number | null;
+  matchday_count?: number;
+  phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }>;
+  visibility?: string;
+  isAccessible?: boolean;
 }
 
 interface SportType {
@@ -294,6 +300,9 @@ export default function TournamentCreateNewForm() {
   const handleFormatSelect = async (formatId: number) => {
     const allFormats = [...(recommendation?.recommendedFormats || []), ...(recommendation?.allFormats || [])];
     const format = allFormats.find(f => f.format_id === formatId);
+
+    // アクセス不可のフォーマットは選択不可
+    if (format && format.isAccessible === false) return;
 
     setSelectedFormat(format || null);
     setValue("format_id", formatId);
@@ -672,48 +681,98 @@ export default function TournamentCreateNewForm() {
                   <Sparkles className="h-4 w-4 mr-2" />
                   おすすめフォーマット
                 </h3>
-                {recommendation.recommendedFormats.map((format) => (
-                  <Card key={format.format_id} className="border-green-200 hover:border-green-300 cursor-pointer" onClick={() => handleFormatSelect(format.format_id)}>
+                {recommendation.recommendedFormats.map((format) => {
+                  const locked = format.isAccessible === false;
+                  return (
+                  <Card key={format.format_id} className={`${locked ? 'opacity-50 cursor-not-allowed' : 'border-green-200 hover:border-green-300 cursor-pointer'}`} onClick={() => !locked && handleFormatSelect(format.format_id)}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            <h4 className="font-medium">{format.format_name}</h4>
+                            <h4 className="font-medium">
+                              {format.sport_code && <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>}
+                              {format.format_name}
+                            </h4>
                             <Badge className="bg-green-100 text-green-800 text-xs">
                               {format.matchType === 'exact' ? '完全一致' : format.matchType === 'close' ? '近似' : '代替案'}
                             </Badge>
+                            {locked && (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                                <Lock className="h-3 w-3 mr-1" />
+                                利用するには購入が必要です
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-gray-600">{format.format_description}</p>
                           <p className="text-xs text-green-600 mt-1">{format.recommendationReason}</p>
+                          <div className="mt-2">
+                            <FormatDetailBadges
+                              default_match_duration={format.default_match_duration}
+                              default_break_duration={format.default_break_duration}
+                              matchday_count={format.matchday_count}
+                              phase_stats={format.phase_stats}
+                            />
+                          </div>
                         </div>
-                        <Button size="sm" className="ml-4">
-                          選択
-                        </Button>
+                        {locked ? (
+                          <Lock className="h-5 w-5 text-gray-400 ml-4" />
+                        ) : (
+                          <Button size="sm" className="ml-4">
+                            選択
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {recommendation?.allFormats && recommendation.allFormats.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-lg font-medium text-gray-700">その他のフォーマット</h3>
-                {recommendation.allFormats.filter(f => !f.isRecommended).map((format) => (
-                  <Card key={format.format_id} className="hover:border-gray-300 cursor-pointer" onClick={() => handleFormatSelect(format.format_id)}>
+                {recommendation.allFormats.filter(f => !f.isRecommended).map((format) => {
+                  const locked = format.isAccessible === false;
+                  return (
+                  <Card key={format.format_id} className={`${locked ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 cursor-pointer'}`} onClick={() => !locked && handleFormatSelect(format.format_id)}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium">{format.format_name}</h4>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className="font-medium">
+                              {format.sport_code && <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>}
+                              {format.format_name}
+                            </h4>
+                            {locked && (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                                <Lock className="h-3 w-3 mr-1" />
+                                利用するには購入が必要です
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">{format.format_description}</p>
+                          <div className="mt-2">
+                            <FormatDetailBadges
+                              default_match_duration={format.default_match_duration}
+                              default_break_duration={format.default_break_duration}
+                              matchday_count={format.matchday_count}
+                              phase_stats={format.phase_stats}
+                            />
+                          </div>
                         </div>
-                        <Button variant="outline" size="sm" className="ml-4">
-                          選択
-                        </Button>
+                        {locked ? (
+                          <Lock className="h-5 w-5 text-gray-400 ml-4" />
+                        ) : (
+                          <Button variant="outline" size="sm" className="ml-4">
+                            選択
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

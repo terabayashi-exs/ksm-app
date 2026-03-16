@@ -8,6 +8,7 @@ import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-ca
 import { ArchiveVersionManager } from '@/lib/archive-version-manager';
 import type { TournamentStatus } from '@/lib/tournament-status';
 import { getPhaseFormatTypeFromJson, buildPhaseFormatMap } from '@/lib/tournament-phases';
+import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from '@/lib/tournament-rules';
 
 export async function POST(request: NextRequest) {
   try {
@@ -378,15 +379,13 @@ async function generateMatchesFromTemplate(
               phase,
               display_round_name,
               block_name,
-              match_type,
               block_order
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
           `, [
             tournamentId,
             phaseId,
             `${blockName}ブロック`,
             blockName,
-            '通常',
             blockOrder++
           ]);
 
@@ -411,15 +410,13 @@ async function generateMatchesFromTemplate(
               phase,
               display_round_name,
               block_name,
-              match_type,
               block_order
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
           `, [
             tournamentId,
             phaseId,
             displayName,
             blockKey,
-            '通常',
             blockOrder++
           ]);
 
@@ -689,7 +686,49 @@ async function generateMatchesFromTemplate(
 
     console.log('[TOURNAMENT_CREATE] BYE match winners propagation completed');
 
-    // Tournament matches and blocks generated successfully
+    // 大会ルールのデフォルト設定を作成（未作成のフェーズのみ）
+    try {
+      const sportResult = await db.execute(`
+        SELECT sport_type_id FROM t_tournaments WHERE tournament_id = ?
+      `, [tournamentId]);
+      const sportTypeId = Number(sportResult.rows[0]?.sport_type_id || 1);
+      const actualPhaseIds = Array.from(phaseFormatMap.keys());
+
+      // 既存ルールを確認
+      const existingRulesResult = await db.execute(`
+        SELECT phase FROM t_tournament_rules WHERE tournament_id = ?
+      `, [tournamentId]);
+      const existingPhases = new Set(existingRulesResult.rows.map(r => String(r.phase)));
+
+      const missingPhases = actualPhaseIds.filter(p => !existingPhases.has(p));
+
+      if (missingPhases.length > 0) {
+        let newRules;
+        if (isLegacyTournament(tournamentId, sportTypeId)) {
+          newRules = getLegacyDefaultRules(tournamentId, missingPhases);
+        } else {
+          newRules = generateDefaultRules(tournamentId, sportTypeId, missingPhases, phaseFormatMap);
+        }
+
+        const defaultPointSystem = JSON.stringify({ win: 3, draw: 1, loss: 0 });
+        for (const rule of newRules) {
+          await db.execute(`
+            INSERT INTO t_tournament_rules (
+              tournament_id, phase, use_extra_time, use_penalty,
+              active_periods, notes, point_system,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          `, [
+            rule.tournament_id, rule.phase,
+            rule.use_extra_time ? 1 : 0, rule.use_penalty ? 1 : 0,
+            rule.active_periods, rule.notes || null, defaultPointSystem
+          ]);
+        }
+        console.log(`✅ ${missingPhases.length}件の大会ルールを設定: ${missingPhases.join(', ')}`);
+      }
+    } catch (ruleError) {
+      console.error("大会ルール設定エラー:", ruleError);
+    }
 
   } catch (error) {
     console.error('マッチ生成エラー:', error);

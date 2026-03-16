@@ -129,8 +129,6 @@ export interface Team {
   team_id: string;
   team_name: string;
   team_omission?: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone?: string;
   is_active: boolean;
 }
@@ -170,8 +168,6 @@ export interface TournamentTeam {
   withdrawal_processed_by?: string; // 辞退処理者（管理者ID）
   // Optional joined fields
   master_team_name?: string; // マスターチームの元々の名前
-  contact_person?: string;
-  contact_email?: string;
   contact_phone?: string;
   player_count?: number; // 登録選手数
 }
@@ -186,8 +182,6 @@ export interface WithdrawalRequest {
 export interface WithdrawalDetail extends TournamentTeam {
   tournament_name: string;
   master_team_name: string;
-  contact_person: string;
-  contact_email: string;
   format_name?: string;
   venue_name?: string;
   recruitment_end_date?: string;

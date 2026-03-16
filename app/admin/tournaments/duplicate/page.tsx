@@ -1,23 +1,47 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Shield, Database, Users, Calendar, CheckCircle, XCircle, Trophy, ArrowLeft } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Copy, Search, ChevronRight, ChevronLeft, CheckCircle, XCircle, ArrowLeft, Users, X, Plus, Building2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
-interface Tournament {
+interface SportType {
+  sport_type_id: number;
+  sport_name: string;
+  sport_code: string;
+}
+
+interface Prefecture {
+  prefecture_id: number;
+  prefecture_name: string;
+}
+
+interface Division {
   tournament_id: number;
   tournament_name: string;
-  status: string;
+  format_name: string | null;
+  sport_type_id: number | null;
+  sport_name: string | null;
+  sport_code: string | null;
   team_count: number;
-  match_count: number;
-  results_count: number;
-  created_at: string;
+  registered_teams: number;
+  status: string;
+  tournament_dates: string | null;
+}
+
+interface SearchGroup {
+  group_id: number;
+  group_name: string;
+  organizer: string | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
+  divisions: Division[];
 }
 
 interface TournamentGroup {
@@ -28,16 +52,6 @@ interface TournamentGroup {
   event_end_date: string | null;
 }
 
-interface DuplicateLevel {
-  level: 'level1' | 'level2' | 'level3' | 'level4';
-  name: string;
-  description: string;
-  stage: string;
-  icon: string;
-  details: string[];
-  dataIncluded: string[];
-}
-
 interface DuplicateResult {
   success: boolean;
   message: string;
@@ -45,532 +59,952 @@ interface DuplicateResult {
     original_tournament_id: number;
     new_tournament_id: number;
     new_tournament_name: string;
-    level_applied: string;
-    teams_copied: number;
-    matches_copied: number;
+    group_id: number;
+    new_group_created: boolean;
   };
   error?: string;
 }
 
-const DUPLICATE_LEVELS: DuplicateLevel[] = [
-  {
-    level: 'level1',
-    name: '基本設定のみ',
-    description: '大会の基本情報・ルール・フォーマット設定のみ',
-    stage: 'チーム登録前状態',
-    icon: '⚙️',
-    details: [
-      '大会基本情報（名前、日程、会場など）',
-      '競技種別設定とルール',
-      'フォーマット設定（チーム数、ブロック構成）',
-      'マッチテンプレート構造'
-    ],
-    dataIncluded: ['大会情報', 'ルール設定', 'テンプレート']
-  },
-  {
-    level: 'level2',
-    name: '基本設定 + チーム',
-    description: '基本設定 + 登録済みチーム・選手データ',
-    stage: '組合せ作成前状態',
-    icon: '👥',
-    details: [
-      'レベル1のすべて',
-      '登録済みチーム情報',
-      '各チームの選手登録',
-      'チーム別の参加設定'
-    ],
-    dataIncluded: ['大会情報', 'ルール設定', 'テンプレート', 'チーム', '選手']
-  },
-  {
-    level: 'level3',
-    name: '基本設定 + チーム + 組合せ',
-    description: '基本設定 + チーム + 組合せ・試合スケジュール',
-    stage: '大会進行前状態',
-    icon: '📋',
-    details: [
-      'レベル2のすべて',
-      'チームの組合せ（ブロック分け）',
-      '試合スケジュール構成',
-      '試合開始時刻設定'
-    ],
-    dataIncluded: ['大会情報', 'ルール設定', 'テンプレート', 'チーム', '選手', '組合せ', 'スケジュール']
-  },
-  {
-    level: 'level4',
-    name: 'すべてのデータ',
-    description: 'すべてのデータ（進行中の試合状況を含む）',
-    stage: '大会完了前状態',
-    icon: '🏆',
-    details: [
-      'レベル3のすべて',
-      '進行中の試合データ',
-      '試合結果・スコア（確定前）',
-      '現在の順位状況'
-    ],
-    dataIncluded: ['大会情報', 'ルール設定', 'テンプレート', 'チーム', '選手', '組合せ', 'スケジュール', '試合進行データ']
+interface TournamentDateEntry {
+  dayNumber: number;
+  date: string;
+}
+
+const getSportIcon = (sportCode: string | null) => {
+  switch (sportCode) {
+    case 'soccer': return '\u26BD';
+    case 'futsal': return '\u{1F3C3}';
+    case 'basketball': return '\u{1F3C0}';
+    default: return '\u{1F3C6}';
   }
-];
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'planning': return '準備中';
+    case 'recruiting': return '募集中';
+    case 'ongoing': return '開催中';
+    case 'completed': return '完了';
+    default: return status;
+  }
+};
+
+/**
+ * 複製元のtournament_datesが節設定（複数Day）を持つか判定
+ */
+function hasMultipleDays(tournamentDatesJson: string | null): boolean {
+  if (!tournamentDatesJson) return false;
+  try {
+    const parsed = JSON.parse(tournamentDatesJson);
+    if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return Object.keys(parsed).length > 1;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 export default function TournamentDuplicatePage() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
-  const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<'level1' | 'level2' | 'level3' | 'level4' | null>(null);
+  const [step, setStep] = useState(1);
+
+  // Step 1: 検索・選択
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedPrefecture, setSelectedPrefecture] = useState('');
+  const [selectedSportType, setSelectedSportType] = useState('');
+  const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
+  const [sportTypes, setSportTypes] = useState<SportType[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchGroup[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [selectedDivision, setSelectedDivision] = useState<Division | null>(null);
+  const [selectedGroupName, setSelectedGroupName] = useState('');
+
+  // Step 2: 複製先設定
+  const [destinationType, setDestinationType] = useState<'new' | 'existing'>('new');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupOrganizer, setNewGroupOrganizer] = useState('');
+  const [existingGroupId, setExistingGroupId] = useState<number | null>(null);
+  const [existingGroups, setExistingGroups] = useState<TournamentGroup[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const [newTournamentName, setNewTournamentName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadingGroups, setLoadingGroups] = useState(true);
+
+  // 開催日程
+  const [tournamentDates, setTournamentDates] = useState<TournamentDateEntry[]>([
+    { dayNumber: 1, date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+  ]);
+
+  // 公開設定
+  const [publicStartDate, setPublicStartDate] = useState(
+    new Date().toISOString().split('T')[0] + 'T00:00'
+  );
+  const [recruitmentStartDate, setRecruitmentStartDate] = useState(
+    new Date().toISOString().split('T')[0] + 'T00:00'
+  );
+  const [recruitmentEndDate, setRecruitmentEndDate] = useState(
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00'
+  );
+  const [isPublic, setIsPublic] = useState(false);
+  const [showPlayersPublic, setShowPlayersPublic] = useState(false);
+
+  // Step 3: 確認・実行
   const [duplicating, setDuplicating] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
 
+  // 複製元が節設定を持つかどうか
+  const sourceHasMultipleDays = selectedDivision ? hasMultipleDays(selectedDivision.tournament_dates) : false;
+
+  // マスタデータ取得
   useEffect(() => {
-    fetchTournaments();
-    fetchTournamentGroups();
+    const fetchMasters = async () => {
+      try {
+        const [prefRes, sportRes] = await Promise.all([
+          fetch('/api/prefectures'),
+          fetch('/api/sport-types'),
+        ]);
+        const prefData = await prefRes.json();
+        const sportData = await sportRes.json();
+        if (prefData.success) setPrefectures(prefData.prefectures || []);
+        if (sportData.success) setSportTypes(sportData.data || sportData.sport_types || []);
+      } catch (error) {
+        console.error('マスタデータ取得エラー:', error);
+      }
+    };
+    fetchMasters();
   }, []);
 
-  const fetchTournaments = async () => {
+  // 検索実行
+  const handleSearch = useCallback(async () => {
+    setSearching(true);
+    setHasSearched(true);
     try {
-      const response = await fetch('/api/admin/tournaments');
-      const data = await response.json();
+      const params = new URLSearchParams();
+      if (searchKeyword) params.set('keyword', searchKeyword);
+      if (selectedPrefecture) params.set('prefecture_id', selectedPrefecture);
+      if (selectedSportType) params.set('sport_type_id', selectedSportType);
 
+      const res = await fetch(`/api/admin/tournaments/search?${params}`);
+      const data = await res.json();
       if (data.success) {
-        // APIレスポンスの構造を確認してから適切に設定
-        const tournaments = data.data.tournaments || data.data || [];
-
-        // Tournament インターフェースに合うようにデータを変換
-        const formattedTournaments = tournaments.map((tournament: any) => {
-          if (!tournament || typeof tournament.tournament_id === 'undefined') {
-            console.warn('Invalid tournament data:', tournament);
-            return null;
-          }
-
-          return {
-            tournament_id: tournament.tournament_id,
-            tournament_name: tournament.tournament_name || '名前なし',
-            status: tournament.calculated_status || tournament.status || 'unknown',
-            team_count: tournament.registered_teams || tournament.team_count || 0,
-            match_count: tournament.match_count || 0,
-            results_count: tournament.results_count || 0,
-            created_at: tournament.created_at || new Date().toISOString()
-          };
-        }).filter(Boolean); // null値を除外
-
-        setTournaments(formattedTournaments);
-      } else {
-        console.error('データ取得エラー:', data.error);
+        setSearchResults(data.data || []);
       }
     } catch (error) {
-      console.error('データ取得エラー:', error);
+      console.error('検索エラー:', error);
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
+  }, [searchKeyword, selectedPrefecture, selectedSportType]);
+
+  // 検索クリア
+  const handleClearSearch = () => {
+    setSearchKeyword('');
+    setSelectedPrefecture('');
+    setSelectedSportType('');
+    setSearchResults([]);
+    setHasSearched(false);
   };
 
-  const fetchTournamentGroups = async () => {
-    try {
-      setLoadingGroups(true);
-      const response = await fetch('/api/tournament-groups');
-      const data = await response.json();
+  // 部門選択 → Step 2 へ
+  const handleSelectDivision = (division: Division, groupName: string) => {
+    setSelectedDivision(division);
+    setSelectedGroupName(groupName);
+    setNewTournamentName(`${division.tournament_name} (複製)`);
+    setStep(2);
+  };
 
+  // 既存大会グループ取得
+  const fetchExistingGroups = useCallback(async () => {
+    setLoadingGroups(true);
+    try {
+      const res = await fetch('/api/tournament-groups?include_inactive=true');
+      const data = await res.json();
       if (data.success) {
-        setTournamentGroups(data.data || []);
-      } else {
-        console.error('大会グループ取得エラー:', data.error);
+        setExistingGroups(data.data || []);
       }
     } catch (error) {
       console.error('大会グループ取得エラー:', error);
     } finally {
       setLoadingGroups(false);
     }
-  };
+  }, []);
 
-  const handleTournamentSelect = (tournamentId: number) => {
-    const tournament = tournaments.find(t => t.tournament_id === tournamentId);
-    setSelectedTournament(tournamentId);
-    if (tournament) {
-      setNewTournamentName(`${tournament.tournament_name} (複製)`);
+  useEffect(() => {
+    if (step === 2 && destinationType === 'existing') {
+      fetchExistingGroups();
     }
+  }, [step, destinationType, fetchExistingGroups]);
+
+  // 日程追加
+  const addTournamentDate = () => {
+    const nextDayNumber = Math.max(...tournamentDates.map(d => d.dayNumber), 0) + 1;
+    const lastDate = tournamentDates.length > 0
+      ? new Date(Math.max(...tournamentDates.map(d => new Date(d.date).getTime())))
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const nextDate = new Date(lastDate);
+    nextDate.setDate(lastDate.getDate() + 1);
+    setTournamentDates([...tournamentDates, { dayNumber: nextDayNumber, date: nextDate.toISOString().split('T')[0] }]);
   };
 
+  // 日程削除
+  const removeTournamentDate = (index: number) => {
+    setTournamentDates(tournamentDates.filter((_, i) => i !== index));
+  };
+
+  // 日程更新
+  const updateTournamentDate = (index: number, field: 'date' | 'dayNumber', value: string | number) => {
+    const updated = [...tournamentDates];
+    if (field === 'date') {
+      updated[index] = { ...updated[index], date: value as string };
+    } else {
+      updated[index] = { ...updated[index], dayNumber: value as number };
+    }
+    setTournamentDates(updated);
+  };
+
+  // tournament_datesをJSON形式に変換
+  const buildTournamentDatesJson = (): string => {
+    const json: Record<string, string> = {};
+    tournamentDates.forEach((entry) => {
+      json[entry.dayNumber.toString()] = entry.date;
+    });
+    return JSON.stringify(json);
+  };
+
+  // 複製実行
   const handleDuplicate = async () => {
-    if (!selectedTournament || !selectedLevel || !newTournamentName.trim() || !selectedGroupId) return;
+    if (!selectedDivision) return;
 
     setDuplicating(true);
     try {
-      const response = await fetch('/api/admin/tournaments/duplicate', {
+      const sortedDates = [...tournamentDates].sort((a, b) => a.date.localeCompare(b.date));
+      const eventStartDate = sortedDates[0]?.date || undefined;
+      const eventEndDate = sortedDates[sortedDates.length - 1]?.date || undefined;
+
+      const body: Record<string, unknown> = {
+        source_tournament_id: selectedDivision.tournament_id,
+        new_tournament_name: newTournamentName.trim(),
+        is_public: isPublic,
+        show_players_public: showPlayersPublic,
+        public_start_date: publicStartDate,
+        recruitment_start_date: recruitmentStartDate,
+        recruitment_end_date: recruitmentEndDate,
+      };
+
+      // 節設定がない場合のみ日程を送信
+      if (!sourceHasMultipleDays) {
+        body.tournament_dates = buildTournamentDatesJson();
+        body.event_start_date = eventStartDate;
+        body.event_end_date = eventEndDate;
+      }
+
+      if (destinationType === 'new') {
+        body.new_group = {
+          group_name: newGroupName.trim(),
+          organizer: newGroupOrganizer.trim() || undefined,
+          event_start_date: eventStartDate,
+          event_end_date: eventEndDate,
+        };
+      } else {
+        body.group_id = existingGroupId;
+      }
+
+      const res = await fetch('/api/admin/tournaments/duplicate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          source_tournament_id: selectedTournament,
-          new_tournament_name: newTournamentName.trim(),
-          duplicate_level: selectedLevel,
-          group_id: selectedGroupId
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
 
-      const result = await response.json();
+      const result = await res.json();
       setDuplicateResult(result);
-
       if (result.success) {
-        // 成功時は最新データを再取得
-        await fetchTournaments();
+        setStep(3);
       }
     } catch (error) {
       console.error('複製エラー:', error);
       setDuplicateResult({
         success: false,
         message: '複製処理中にエラーが発生しました',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       setDuplicating(false);
-      setShowConfirm(false);
     }
   };
 
-  const getStageColor = (stage: string) => {
-    if (stage.includes('チーム登録前')) return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (stage.includes('組合せ作成前')) return 'bg-green-100 text-green-800 border-green-200';
-    if (stage.includes('大会進行前')) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    if (stage.includes('大会完了前')) return 'bg-purple-100 text-purple-800 border-purple-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
-  const canExecuteDuplicate = selectedTournament && selectedLevel && newTournamentName.trim() && selectedGroupId;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    );
-  }
+  // バリデーション
+  const canProceedToStep3 =
+    selectedDivision &&
+    newTournamentName.trim() &&
+    (destinationType === 'new' ? newGroupName.trim() : existingGroupId) &&
+    publicStartDate &&
+    recruitmentStartDate &&
+    recruitmentEndDate &&
+    (sourceHasMultipleDays || tournamentDates.every(d => d.date && d.dayNumber > 0));
 
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-              <h1 className="text-3xl font-bold text-white">部門データ複製</h1>
-              <p className="text-sm text-white/70 mt-1">
-                既存の部門を複製してデモ用データを効率的に作成できます
-              </p>
+            <h1 className="text-3xl font-bold text-white">大会・部門複製</h1>
+            <p className="text-sm text-white/70 mt-1">
+              既存の部門設定を複製して、新しい大会や部門を効率的に作成できます
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin">
+            <Link href="/my">
               <ArrowLeft className="h-4 w-4 mr-1" />
               ダッシュボードに戻る
             </Link>
           </Button>
         </div>
 
-        {/* 情報カード */}
-        <Card className="border-green-200 bg-green-50 mb-6">
-          <CardHeader>
-            <CardTitle className="text-green-800 flex items-center">
-              <Copy className="w-5 h-5 mr-2" />
-              📋 部門複製機能について
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-green-700 space-y-2">
-              <p>• 既存の部門データを新しいIDで複製し、デモ用データを効率的に作成できます</p>
-              <p>• 複製レベルを選択することで、デモしたい段階に応じたデータを準備できます</p>
-              <p>• 新しい部門として独立するため、元の部門に影響はありません</p>
-              <p>• チーム登録前、組合せ前、進行前、完了前の4段階から選択可能です</p>
+        {/* ステップインジケーター */}
+        <div className="flex items-center justify-center mb-8 gap-2">
+          {[
+            { num: 1, label: '複製元を選択' },
+            { num: 2, label: '複製先と設定' },
+            { num: 3, label: '確認・完了' },
+          ].map((s, i) => (
+            <div key={s.num} className="flex items-center">
+              {i > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground mx-1" />}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                step === s.num
+                  ? 'bg-primary text-primary-foreground'
+                  : step > s.num
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-muted text-muted-foreground'
+              }`}>
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                  {step > s.num ? <CheckCircle className="w-4 h-4" /> : s.num}
+                </span>
+                <span className="hidden sm:inline">{s.label}</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
 
-        {/* 結果表示 */}
-        {duplicateResult && (
-          <Card className={`mb-6 ${duplicateResult.success ? 'border-green-200 bg-green-50' : 'border-destructive/20 bg-destructive/5'}`}>
-            <CardHeader>
-              <CardTitle className={`flex items-center ${duplicateResult.success ? 'text-green-800' : 'text-destructive'}`}>
-                {duplicateResult.success ? <CheckCircle className="w-5 h-5 mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
-                {duplicateResult.success ? '複製完了' : '複製失敗'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className={duplicateResult.success ? 'text-green-700' : 'text-destructive'}>
-                {duplicateResult.message}
-              </p>
-              {duplicateResult.success && duplicateResult.details && (
-                <div className="mt-3 text-green-700 space-y-1">
-                  <p>• 複製元大会ID: {duplicateResult.details.original_tournament_id}</p>
-                  <p>• 新しい大会ID: {duplicateResult.details.new_tournament_id}</p>
-                  <p>• 大会名: {duplicateResult.details.new_tournament_name}</p>
-                  <p>• 複製レベル: {duplicateResult.details.level_applied}</p>
-                  {duplicateResult.details.teams_copied > 0 && (
-                    <p>• 複製したチーム: {duplicateResult.details.teams_copied}チーム</p>
-                  )}
-                  {duplicateResult.details.matches_copied > 0 && (
-                    <p>• 複製した試合: {duplicateResult.details.matches_copied}試合</p>
-                  )}
+        {/* Step 1: 複製元の部門を検索・選択 */}
+        {step === 1 && (
+          <div className="space-y-6">
+            {/* 検索フォーム */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  複製元の部門を検索
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* フリーワード検索 */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">フリーワード検索</Label>
+                  <Input
+                    type="text"
+                    placeholder="大会名・部門名で検索"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
                 </div>
-              )}
-              {duplicateResult.error && (
-                <p className="mt-2 text-destructive text-sm">エラー詳細: {duplicateResult.error}</p>
-              )}
-            </CardContent>
-          </Card>
+
+                {/* 地域 */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">地域で絞り込み</Label>
+                  <Select value={selectedPrefecture || 'all'} onValueChange={(value) => setSelectedPrefecture(value === 'all' ? '' : value)}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="都道府県を選択" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      <SelectItem value="all">指定しない</SelectItem>
+                      {prefectures.map((pref) => (
+                        <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)}>
+                          {pref.prefecture_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 競技種別 */}
+                {sportTypes.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">競技から絞り込み</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedSportType('')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm ${
+                          selectedSportType === ''
+                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                            : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                        }`}
+                      >
+                        <span>&#x1F3C6;</span>
+                        <span>全て</span>
+                      </button>
+                      {sportTypes.map((sport) => (
+                        <button
+                          key={sport.sport_type_id}
+                          onClick={() => setSelectedSportType(String(sport.sport_type_id))}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm ${
+                            selectedSportType === String(sport.sport_type_id)
+                              ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                          }`}
+                        >
+                          <span>{getSportIcon(sport.sport_code)}</span>
+                          <span>{sport.sport_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 検索・クリアボタン */}
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={handleSearch} disabled={searching} className="flex-1">
+                    <Search className="w-4 h-4 mr-1" />
+                    {searching ? '検索中...' : '検索'}
+                  </Button>
+                  <Button variant="outline" onClick={handleClearSearch} className="flex-1">
+                    <X className="w-4 h-4 mr-1" />
+                    クリア
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 検索結果 */}
+            {hasSearched && (
+              <div className="space-y-4">
+                {searchResults.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      検索条件に一致する部門が見つかりませんでした
+                    </CardContent>
+                  </Card>
+                ) : (
+                  searchResults.map((group) => (
+                    <Card key={group.group_id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-base">{group.group_name}</CardTitle>
+                            {group.organizer && (
+                              <p className="text-sm text-muted-foreground mt-0.5">主催: {group.organizer}</p>
+                            )}
+                          </div>
+                          {group.event_start_date && (
+                            <Badge variant="outline" className="text-xs">
+                              {group.event_start_date}
+                              {group.event_end_date && group.event_end_date !== group.event_start_date && ` 〜 ${group.event_end_date}`}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-2">
+                        <div className="space-y-2">
+                          {group.divisions.map((division) => (
+                            <button
+                              key={division.tournament_id}
+                              onClick={() => handleSelectDivision(division, group.group_name)}
+                              className={`w-full text-left p-3 border rounded-lg transition-colors hover:border-primary hover:bg-primary/5 ${
+                                selectedDivision?.tournament_id === division.tournament_id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span>{getSportIcon(division.sport_code)}</span>
+                                  <span className="font-medium">{division.tournament_name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getStatusLabel(division.status)}
+                                  </Badge>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
+                                {division.format_name && <span>{division.format_name}</span>}
+                                {division.sport_name && <span>{division.sport_name}</span>}
+                                <span className="flex items-center gap-1">
+                                  <Users className="w-3 h-3" />
+                                  {division.registered_teams}/{division.team_count}チーム
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* 左側: 複製元大会選択 */}
+        {/* Step 2: 複製先と設定 */}
+        {step === 2 && selectedDivision && (
+          <div className="space-y-6">
+            {/* 選択中の複製元 */}
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">複製元</p>
+                    <p className="font-medium">{selectedDivision.tournament_name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedGroupName}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
+                    変更
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 複製先選択 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">複製先 <span className="text-destructive">*</span></CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setDestinationType('new')}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      destinationType === 'new'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Plus className="w-4 h-4" />
+                      <span className="font-medium text-sm">新しい大会を作成</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">新しい大会グループを作成して複製</p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDestinationType('existing');
+                      fetchExistingGroups();
+                    }}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      destinationType === 'existing'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="w-4 h-4" />
+                      <span className="font-medium text-sm">既存の大会に追加</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">既存の大会に部門を追加</p>
+                  </button>
+                </div>
+
+                {/* 新規大会の場合 */}
+                {destinationType === 'new' && (
+                  <div className="space-y-3 pt-2">
+                    <div>
+                      <Label htmlFor="new-group-name">大会名 <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="new-group-name"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        placeholder="例: 第2回 PK選手権大会"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new-group-organizer">主催者</Label>
+                      <Input
+                        id="new-group-organizer"
+                        value={newGroupOrganizer}
+                        onChange={(e) => setNewGroupOrganizer(e.target.value)}
+                        placeholder="例: PK選手権実行委員会"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 既存大会の場合 */}
+                {destinationType === 'existing' && (
+                  <div className="pt-2">
+                    {loadingGroups ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">読込中...</p>
+                    ) : existingGroups.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">既存の大会がありません</p>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {existingGroups.map((group) => (
+                          <button
+                            key={group.group_id}
+                            onClick={() => setExistingGroupId(group.group_id)}
+                            className={`w-full text-left p-3 border rounded-lg transition-colors ${
+                              existingGroupId === group.group_id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <p className="font-medium text-sm">{group.group_name}</p>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              {group.organizer && <span>主催: {group.organizer}</span>}
+                              {group.event_start_date && <span>{group.event_start_date}</span>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 部門設定 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">部門設定</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="new-tournament-name">部門名 <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="new-tournament-name"
+                    value={newTournamentName}
+                    onChange={(e) => setNewTournamentName(e.target.value)}
+                    placeholder="例: U-12部門"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                  <p className="font-medium mb-1">複製元から引き継がれる設定:</p>
+                  <ul className="list-disc list-inside space-y-0.5 text-xs">
+                    <li>フォーマット設定（{selectedDivision.format_name || '未設定'}）</li>
+                    <li>競技種別（{selectedDivision.sport_name || '未設定'}）</li>
+                    <li>チーム数、コート数、試合時間等</li>
+                    <li>ルール設定（ポイントシステム、タイブレーク等）</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 開催日程（節設定がない場合のみ表示） */}
+            {!sourceHasMultipleDays && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold">開催日程 <span className="text-destructive">*</span></h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addTournamentDate}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        日程追加
+                      </Button>
+                    </div>
+                    {tournamentDates.map((entry, index) => (
+                      <div key={index} className="flex items-end gap-3">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs text-muted-foreground">開催日 {index + 1}</Label>
+                          <Input
+                            type="date"
+                            value={entry.date}
+                            onChange={(e) => updateTournamentDate(index, 'date', e.target.value)}
+                          />
+                        </div>
+                        <div className="w-24 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Day番号</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={entry.dayNumber}
+                            onChange={(e) => updateTournamentDate(index, 'dayNumber', parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        {tournamentDates.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 px-2"
+                            onClick={() => removeTournamentDate(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {sourceHasMultipleDays && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    複製元の部門は節（複数Day）設定を持つため、開催日程は複製元からそのまま引き継がれます。
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 公開設定 */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="border rounded-lg p-4 space-y-4">
+                  <h3 className="text-sm font-semibold">公開設定</h3>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="public_start_date">公開開始日時 <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="public_start_date"
+                      type="datetime-local"
+                      value={publicStartDate}
+                      onChange={(e) => setPublicStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="recruitment_start_date">募集開始日時 <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="recruitment_start_date"
+                      type="datetime-local"
+                      value={recruitmentStartDate}
+                      onChange={(e) => setRecruitmentStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="recruitment_end_date">募集終了日時 <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="recruitment_end_date"
+                      type="datetime-local"
+                      value={recruitmentEndDate}
+                      onChange={(e) => setRecruitmentEndDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="is_public" className="cursor-pointer">公開する</Label>
+                    <Switch
+                      id="is_public"
+                      checked={isPublic}
+                      onCheckedChange={setIsPublic}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show_players_public" className="cursor-pointer">選手情報を一般公開する</Label>
+                      <Switch
+                        id="show_players_public"
+                        checked={showPlayersPublic}
+                        onCheckedChange={setShowPlayersPublic}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
+                      チェックを外すと、大会運営者のみが閲覧可能になります。
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ナビゲーションボタン */}
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                戻る
+              </Button>
+              <Button
+                onClick={() => setStep(3)}
+                disabled={!canProceedToStep3}
+                className="flex-1"
+              >
+                確認へ
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: 確認・実行 */}
+        {step === 3 && selectedDivision && !duplicateResult && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Database className="w-5 h-5 mr-2" />
-                  複製元部門選択
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">複製したい部門を選択してください</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {tournaments.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>複製可能な大会がありません</p>
-                  </div>
-                ) : (
-                  tournaments.map((tournament) => (
-                    <div
-                      key={`tournament-${tournament.tournament_id}`}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedTournament === tournament.tournament_id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => handleTournamentSelect(tournament.tournament_id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">
-                            大会ID {tournament.tournament_id}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {tournament.tournament_name}
-                          </p>
-                          <div className="flex space-x-4 mt-2">
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Users className="w-3 h-3 mr-1" />
-                              {tournament.team_count}チーム
-                            </div>
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Calendar className="w-3 h-3 mr-1" />
-                              {tournament.match_count}試合
-                            </div>
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Trophy className="w-3 h-3 mr-1" />
-                              {tournament.results_count}結果
-                            </div>
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <Badge variant={tournament.status === 'ongoing' ? 'default' : 'secondary'}>
-                            {tournament.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* 所属大会選択 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>所属大会選択 (必須)</CardTitle>
-                <p className="text-sm text-muted-foreground">複製する部門が所属する大会を選択してください</p>
+                <CardTitle className="text-base">複製内容の確認</CardTitle>
               </CardHeader>
               <CardContent>
-                {loadingGroups ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-center text-muted-foreground">読込中...</div>
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">複製元の部門</span>
+                    <span className="text-sm font-medium">{selectedDivision.tournament_name}</span>
                   </div>
-                ) : tournamentGroups.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    大会グループが見つかりません
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">複製元の大会</span>
+                    <span className="text-sm font-medium">{selectedGroupName}</span>
                   </div>
-                ) : (
-                  tournamentGroups.map((group) => (
-                    <div
-                      key={group.group_id}
-                      className={`p-4 mb-2 border rounded-lg cursor-pointer transition-colors ${
-                        selectedGroupId === group.group_id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => setSelectedGroupId(group.group_id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {group.group_name}
-                          </p>
-                          {group.organizer && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              主催: {group.organizer}
-                            </p>
-                          )}
-                          {group.event_start_date && group.event_end_date && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {group.event_start_date} 〜 {group.event_end_date}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">複製先</span>
+                    <span className="text-sm font-medium">
+                      {destinationType === 'new'
+                        ? `${newGroupName}（新規作成）`
+                        : existingGroups.find(g => g.group_id === existingGroupId)?.group_name || ''
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">新しい部門名</span>
+                    <span className="text-sm font-medium">{newTournamentName}</span>
+                  </div>
+                  {!sourceHasMultipleDays && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-sm text-muted-foreground">開催日程</span>
+                      <span className="text-sm font-medium">
+                        {tournamentDates.map(d => `Day${d.dayNumber}: ${d.date}`).join('、')}
+                      </span>
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* 新しい部門名入力 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>新しい部門名</CardTitle>
-                <p className="text-sm text-muted-foreground">複製後の部門名を入力してください</p>
-              </CardHeader>
-              <CardContent>
-                <Label htmlFor="tournament-name">部門名</Label>
-                <Input
-                  id="tournament-name"
-                  value={newTournamentName}
-                  onChange={(e) => setNewTournamentName(e.target.value)}
-                  placeholder="例: サンプル部門 (複製)"
-                  className="mt-2"
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 右側: 複製レベル選択 */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="w-5 h-5 mr-2" />
-                  複製レベル選択
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">デモしたい段階に応じて複製レベルを選択してください</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {DUPLICATE_LEVELS.map((level) => (
-                  <div
-                    key={level.level}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedLevel === level.level
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedLevel(level.level)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <span className="text-lg mr-2">{level.icon}</span>
-                          <p className="font-medium text-foreground">{level.name}</p>
-                          <Badge className={`ml-2 ${getStageColor(level.stage)}`} variant="outline">
-                            {level.stage}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{level.description}</p>
-                        <div className="mt-2">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">含まれるデータ:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {level.dataIncluded.map((data, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {data}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <ul className="text-xs text-muted-foreground mt-2 space-y-1">
-                          {level.details.map((detail, index) => (
-                            <li key={index}>• {detail}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                  )}
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">公開開始日時</span>
+                    <span className="text-sm font-medium">{publicStartDate.replace('T', ' ')}</span>
                   </div>
-                ))}
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">募集開始日時</span>
+                    <span className="text-sm font-medium">{recruitmentStartDate.replace('T', ' ')}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">募集終了日時</span>
+                    <span className="text-sm font-medium">{recruitmentEndDate.replace('T', ' ')}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-sm text-muted-foreground">公開設定</span>
+                    <Badge variant={isPublic ? 'default' : 'secondary'}>
+                      {isPublic ? '公開' : '非公開'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-sm text-muted-foreground">選手情報の一般公開</span>
+                    <Badge variant={showPlayersPublic ? 'default' : 'secondary'}>
+                      {showPlayersPublic ? '公開' : '非公開'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4 text-sm text-amber-800">
+                  チーム・選手データ、試合データは複製されません。基本設定とルールのみが複製されます。
+                </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
 
-        {/* 実行ボタン */}
-        <div className="mt-8 flex justify-center">
-          <Button
-            onClick={() => setShowConfirm(true)}
-            disabled={!canExecuteDuplicate || duplicating}
-            size="lg"
-            className="min-w-48"
-          >
-            <Copy className="w-4 h-4 mr-2" />
-            {duplicating ? '複製中...' : '部門を複製'}
-          </Button>
-        </div>
-      </div>
-
-      {/* 確認ダイアログ */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">複製実行の確認</h3>
-
-            <div className="space-y-3 mb-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">以下の内容で部門を複製します：</p>
-              <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded space-y-2">
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>所属大会:</strong> {tournamentGroups.find(g => g.group_id === selectedGroupId)?.group_name}
-                </p>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>複製元部門:</strong> {tournaments.find(t => t.tournament_id === selectedTournament)?.tournament_name}
-                </p>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>新しい部門名:</strong> {newTournamentName}
-                </p>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>複製レベル:</strong> {DUPLICATE_LEVELS.find(l => l.level === selectedLevel)?.name}
-                </p>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  <strong>作成される状態:</strong> {DUPLICATE_LEVELS.find(l => l.level === selectedLevel)?.stage}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowConfirm(false)}
-                className="flex-1"
-              >
-                キャンセル
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                戻る
               </Button>
               <Button
                 onClick={handleDuplicate}
                 disabled={duplicating}
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="flex-1"
               >
-                {duplicating ? '複製中...' : '複製実行'}
+                <Copy className="w-4 h-4 mr-1" />
+                {duplicating ? '複製中...' : '複製を実行'}
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* 結果表示 */}
+        {duplicateResult && (
+          <Card className={`${duplicateResult.success ? 'border-green-200 bg-green-50' : 'border-destructive/20 bg-destructive/5'}`}>
+            <CardHeader>
+              <CardTitle className={`flex items-center gap-2 ${duplicateResult.success ? 'text-green-800' : 'text-destructive'}`}>
+                {duplicateResult.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                {duplicateResult.success ? '複製完了' : '複製失敗'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className={`mb-4 ${duplicateResult.success ? 'text-green-700' : 'text-destructive'}`}>
+                {duplicateResult.message}
+              </p>
+              {duplicateResult.success && duplicateResult.details && (
+                <div className="space-y-3">
+                  <div className="text-sm text-green-700 space-y-1">
+                    <p>新しい部門ID: {duplicateResult.details.new_tournament_id}</p>
+                    <p>部門名: {duplicateResult.details.new_tournament_name}</p>
+                    {duplicateResult.details.new_group_created && (
+                      <p>新しい大会グループも作成されました</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/tournaments/${duplicateResult.details.new_tournament_id}`}>
+                        新しい部門を開く
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDuplicateResult(null);
+                        setSelectedDivision(null);
+                        setNewTournamentName('');
+                        setNewGroupName('');
+                        setNewGroupOrganizer('');
+                        setExistingGroupId(null);
+                        setTournamentDates([
+                          { dayNumber: 1, date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+                        ]);
+                        setPublicStartDate(new Date().toISOString().split('T')[0] + 'T00:00');
+                        setRecruitmentStartDate(new Date().toISOString().split('T')[0] + 'T00:00');
+                        setRecruitmentEndDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00');
+                        setIsPublic(false);
+                        setShowPlayersPublic(false);
+                        setStep(1);
+                      }}
+                    >
+                      続けて複製する
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {duplicateResult.error && (
+                <p className="mt-2 text-sm text-destructive">エラー詳細: {duplicateResult.error}</p>
+              )}
+              {!duplicateResult.success && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    setDuplicateResult(null);
+                    setStep(3);
+                  }}
+                >
+                  やり直す
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

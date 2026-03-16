@@ -13,10 +13,10 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getTournamentInfo(tournamentId: number, userEmail: string) {
-  // 大会情報と参加状況を取得
+async function getTournamentInfo(tournamentId: number, loginUserId: number) {
+  // 大会情報と参加状況を取得（m_team_members + m_login_users 経由）
   const result = await db.execute(`
-    SELECT 
+    SELECT
       t.tournament_name,
       t.status as tournament_status,
       tt.tournament_team_id,
@@ -24,10 +24,11 @@ async function getTournamentInfo(tournamentId: number, userEmail: string) {
       tt.withdrawal_status
     FROM t_tournaments t
     LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
-    LEFT JOIN m_teams mt ON tt.team_id = mt.team_id
-    WHERE t.tournament_id = ? AND (mt.contact_email = ? OR tt.tournament_team_id IS NULL)
+    LEFT JOIN m_team_members tm ON tt.team_id = tm.team_id AND tm.is_active = 1
+    LEFT JOIN m_login_users lu ON tm.login_user_id = lu.login_user_id
+    WHERE t.tournament_id = ? AND (lu.login_user_id = ? OR tt.tournament_team_id IS NULL)
     LIMIT 1
-  `, [tournamentId, userEmail]);
+  `, [tournamentId, loginUserId]);
 
   if (result.rows.length === 0) {
     return null;
@@ -50,7 +51,12 @@ export default async function WithdrawalPage({ params }: PageProps) {
     redirect('/my');
   }
 
-  const tournamentInfo = await getTournamentInfo(tournamentId, session.user.email);
+  const loginUserId = session.user.loginUserId;
+  if (!loginUserId || loginUserId === 0) {
+    redirect('/my');
+  }
+
+  const tournamentInfo = await getTournamentInfo(tournamentId, loginUserId);
 
   if (!tournamentInfo) {
     redirect('/my');

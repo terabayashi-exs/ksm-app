@@ -48,11 +48,8 @@ export async function POST(
         tt.withdrawal_requested_at,
         t.tournament_name,
         t.status as tournament_status,
-        mt.contact_email,
-        mt.contact_person
       FROM t_tournament_teams tt
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
-      INNER JOIN m_teams mt ON tt.team_id = mt.team_id
       WHERE tt.tournament_team_id = ?
     `, [tournamentTeamId]);
 
@@ -81,9 +78,7 @@ export async function POST(
       withdrawal_reason: withdrawalRow.withdrawal_reason as string | null,
       withdrawal_requested_at: withdrawalRow.withdrawal_requested_at as string | null,
       tournament_name: withdrawalRow.tournament_name as string,
-      tournament_status: withdrawalRow.tournament_status as string,
-      contact_email: withdrawalRow.contact_email as string,
-      contact_person: withdrawalRow.contact_person as string
+      tournament_status: withdrawalRow.tournament_status as string
     };
 
     // 処理実行
@@ -213,14 +208,12 @@ export async function GET(
         t.format_name,
         v.venue_name,
         mt.team_name as master_team_name,
-        mt.contact_person,
-        mt.contact_email,
         mt.contact_phone,
         (SELECT COUNT(*) FROM t_tournament_players tp WHERE tp.tournament_id = tt.tournament_id AND tp.team_id = tt.team_id) as player_count
       FROM t_tournament_teams tt
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-      INNER JOIN m_teams mt ON tt.team_id = mt.team_id
+      LEFT JOIN m_teams mt ON tt.team_id = mt.team_id
       WHERE tt.tournament_team_id = ?
     `, [tournamentTeamId]);
 
@@ -254,8 +247,6 @@ export async function GET(
         format_name: detail.format_name ? String(detail.format_name) : null,
         venue_name: detail.venue_name ? String(detail.venue_name) : null,
         master_team_name: String(detail.master_team_name),
-        contact_person: String(detail.contact_person),
-        contact_email: String(detail.contact_email),
         contact_phone: detail.contact_phone ? String(detail.contact_phone) : null,
         player_count: Number(detail.player_count)
       }

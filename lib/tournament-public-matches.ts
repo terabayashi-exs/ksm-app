@@ -127,8 +127,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             mb.phase,
             mb.display_round_name,
             mb.block_name,
-            mb.match_type,
-            ml.match_type as live_match_type,
+            ml.match_type,
             mb.block_order,
             ml.round_name,
             ml.matchday,
@@ -184,8 +183,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               mb.phase,
               mb.display_round_name,
               mb.block_name,
-              mb.match_type,
-            ml.match_type as live_match_type,
+              ml.match_type,
               mb.block_order,
               ml.round_name,
               ml.matchday,
@@ -236,8 +234,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               mb.phase,
               mb.display_round_name,
               mb.block_name,
-              mb.match_type,
-            ml.match_type as live_match_type,
+              ml.match_type,
               mb.block_order,
               ml.round_name,
               ml.matchday,
@@ -294,8 +291,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           mb.phase,
           mb.display_round_name,
           mb.block_name,
-          mb.match_type,
-            ml.match_type as live_match_type,
+          ml.match_type,
           mb.block_order,
           ml.round_name,
           ml.matchday,
@@ -420,7 +416,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
 
       // チーム名の決定（t_tournament_teamsの略称を優先、なければ正式名称、なければプレースホルダーから解決）
       // エキシビジョンマッチ(FM)の場合、実チームが未割当なら「調整中」と表示
-      const isExhibition = String(row.live_match_type || '') === 'FM';
+      const isExhibition = String(row.match_type || '') === 'FM';
       const hasTeam1Assigned = !!(row.team1_real_omission || row.team1_real_name);
       const hasTeam2Assigned = !!(row.team2_real_omission || row.team2_real_name);
       let team1DisplayName = hasTeam1Assigned
@@ -476,7 +472,7 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         phase: String(row.phase || 'preliminary'),
         display_round_name: String(row.display_round_name || '予選'),
         block_name: row.block_name ? String(row.block_name) : 'A',
-        match_type: String(row.live_match_type || row.match_type || '通常'),
+        match_type: String(row.match_type || '通常'),
         block_order: Number(row.block_order || 1),
         round_name: row.round_name ? String(row.round_name) : null,
         matchday: row.matchday ? Number(row.matchday) : null,
@@ -539,8 +535,8 @@ export async function getTournamentPublicMatches(tournamentId: number) {
 
   console.log('[public-matches] 不戦勝マップ:', byeMatchWinners);
 
-  // 不戦勝試合を除外
-  let filteredMatches = matches.filter(match => match.is_bye_match !== 1);
+  // 不戦勝試合・エキシビジョン(FM)試合を除外
+  let filteredMatches = matches.filter(match => match.is_bye_match !== 1 && match.match_type !== 'FM');
 
   // 次の試合のteam1_display_name/team2_display_nameを解決
   filteredMatches = filteredMatches.map((m) => {

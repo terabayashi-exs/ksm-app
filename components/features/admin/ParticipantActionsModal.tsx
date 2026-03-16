@@ -33,8 +33,6 @@ export interface ParticipantTeam {
   withdrawal_impact?: 'low' | 'medium' | 'high';
   scheduled_matches?: number;
   completed_matches?: number;
-  contact_email?: string;
-  contact_person?: string;
   contact_phone?: string | null;
   waitlist_position?: number;
   assigned_block?: string | null;

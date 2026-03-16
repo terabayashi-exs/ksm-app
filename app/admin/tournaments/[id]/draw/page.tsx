@@ -16,8 +16,6 @@ interface Team {
   team_id: string;
   team_name: string;
   team_omission?: string;
-  contact_person: string;
-  contact_email: string;
   registered_players_count: number;
   player_count?: number; // SimpleTournamentTeam互換性のため
 }
@@ -174,11 +172,9 @@ export default function TournamentDrawPage() {
             team_id: team.team_id || '',
             team_name: team.team_name || '',
             team_omission: team.team_omission || '',
-            contact_person: team.contact_person || '',
-            contact_email: team.contact_email || '',
             registered_players_count: team.player_count || 0
           }));
-        
+
         setRegisteredTeams(formattedTeams);
         
         // デバッグ情報
@@ -414,8 +410,6 @@ export default function TournamentDrawPage() {
           team_id: string;
           team_name: string;
           team_omission?: string;
-          contact_person?: string;
-          contact_email?: string;
           player_count?: number;
           assigned_block: string;
           block_position: string
@@ -431,8 +425,6 @@ export default function TournamentDrawPage() {
                 team_id: team.team_id,
                 team_name: team.team_name,
                 team_omission: team.team_omission || '',
-                contact_person: team.contact_person || '',
-                contact_email: team.contact_email || '',
                 registered_players_count: team.player_count || 0
               };
 

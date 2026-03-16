@@ -51,8 +51,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         tt.team_id,
         tt.team_name as tournament_team_name,
         m.team_name as master_team_name,
-        m.registration_type,
-        m.contact_email
+        m.registration_type
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
       WHERE tt.tournament_id = ? AND tt.tournament_team_id = ?
@@ -114,19 +113,50 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     `, [tournamentTeamId]);
     console.log('Deleted tournament team');
 
-    // 注: マスターデータ（m_teams、m_players）は削除しない
-    // チーム代表者がチーム代表者ダッシュボードから削除可能
+    // 4. m_team_members に紐付くアカウントがないマスターチームは孤立するため削除
+    const teamId = String(teamInfo.team_id);
+    let masterTeamDeleted = false;
+
+    const linkedMembers = await db.execute(`
+      SELECT COUNT(*) AS cnt FROM m_team_members
+      WHERE team_id = ? AND is_active = 1
+    `, [teamId]);
+
+    if (Number(linkedMembers.rows[0]?.cnt ?? 0) === 0) {
+      // 他の大会にも参加していないことを確認
+      const otherEntries = await db.execute(`
+        SELECT COUNT(*) AS cnt FROM t_tournament_teams
+        WHERE team_id = ?
+      `, [teamId]);
+
+      if (Number(otherEntries.rows[0]?.cnt ?? 0) === 0) {
+        // m_players（このチーム所属の選手）を削除
+        await db.execute(`
+          DELETE FROM m_players WHERE current_team_id = ?
+        `, [teamId]);
+        console.log('Deleted orphan master players for team:', teamId);
+
+        // m_teams を削除
+        await db.execute(`
+          DELETE FROM m_teams WHERE team_id = ?
+        `, [teamId]);
+        console.log('Deleted orphan master team:', teamId);
+        masterTeamDeleted = true;
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'チームを正常に削除しました',
+      message: masterTeamDeleted
+        ? 'チームを正常に削除しました（紐付けのないマスターチーム・選手も削除済み）'
+        : 'チームを正常に削除しました',
       data: {
         deletedTeam: {
           tournament_team_id: tournamentTeamId,
-          team_id: String(teamInfo.team_id),
+          team_id: teamId,
           tournament_team_name: String(teamInfo.tournament_team_name),
           master_team_name: String(teamInfo.master_team_name),
-          contact_email: String(teamInfo.contact_email)
+          master_team_deleted: masterTeamDeleted
         }
       }
     });

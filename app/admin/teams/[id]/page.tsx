@@ -19,7 +19,6 @@ interface Manager {
 interface TeamInfo {
   team_id: string;
   team_name: string;
-  contact_email: string;
 }
 
 export default function AdminTeamManagerPage() {

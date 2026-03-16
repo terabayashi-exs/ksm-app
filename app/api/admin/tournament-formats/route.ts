@@ -23,20 +23,85 @@ export async function GET() {
         tf.sport_type_id,
         tf.target_team_count,
         tf.format_description,
+        tf.default_match_duration,
+        tf.default_break_duration,
+        tf.phases,
+        tf.visibility,
         tf.created_at,
         st.sport_name,
         st.sport_code,
-        COUNT(mt.template_id) as template_count
+        COUNT(mt.template_id) as template_count,
+        COUNT(DISTINCT mt.matchday) as matchday_count,
+        COUNT(DISTINCT mt.block_name) as block_count,
+        MAX(mt.court_number) as max_court_number
       FROM m_tournament_formats tf
       LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
       LEFT JOIN m_match_templates mt ON tf.format_id = mt.format_id
-      GROUP BY tf.format_id, tf.format_name, tf.sport_type_id, tf.target_team_count, tf.format_description, tf.created_at, st.sport_name, st.sport_code
+      GROUP BY tf.format_id, tf.format_name, tf.sport_type_id, tf.target_team_count, tf.format_description, tf.default_match_duration, tf.default_break_duration, tf.phases, tf.visibility, tf.created_at, st.sport_name, st.sport_code
       ORDER BY tf.created_at DESC
     `);
 
+    // フェーズごとのブロック数・コート数を取得
+    const phaseStatsResult = await db.execute(`
+      SELECT
+        mt.format_id,
+        mt.phase,
+        COUNT(DISTINCT mt.block_name) as block_count,
+        MAX(mt.court_number) as max_court_number
+      FROM m_match_templates mt
+      GROUP BY mt.format_id, mt.phase
+      ORDER BY mt.format_id, mt.phase
+    `);
+
+    // フォーマットごとにフェーズ統計をマッピング
+    const phaseStatsMap = new Map<number, Array<{ phase: string; block_count: number; max_court_number: number | null }>>();
+    for (const row of phaseStatsResult.rows) {
+      const formatId = Number(row.format_id);
+      if (!phaseStatsMap.has(formatId)) {
+        phaseStatsMap.set(formatId, []);
+      }
+      phaseStatsMap.get(formatId)!.push({
+        phase: String(row.phase || ''),
+        block_count: Number(row.block_count || 0),
+        max_court_number: row.max_court_number != null ? Number(row.max_court_number) : null,
+      });
+    }
+
+    // フォーマットにフェーズ統計を追加（phases JSONからフェーズ名・orderを解決）
+    const formatsWithPhaseStats = result.rows.map(format => {
+      const rawStats = phaseStatsMap.get(Number(format.format_id)) || [];
+
+      // phases JSONをパースしてフェーズ名・order情報を取得
+      const phaseLookup: Record<string, { name: string; order: number }> = {};
+      if (format.phases) {
+        try {
+          const parsed = JSON.parse(String(format.phases));
+          if (parsed?.phases && Array.isArray(parsed.phases)) {
+            for (const p of parsed.phases) {
+              phaseLookup[p.id] = { name: p.name || p.id, order: p.order ?? 0 };
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      // phase_statsにフェーズ名・orderを付与し、order順にソート
+      const phaseStats = rawStats
+        .map(ps => ({
+          ...ps,
+          phase_name: phaseLookup[ps.phase]?.name || ps.phase,
+          order: phaseLookup[ps.phase]?.order ?? 999,
+        }))
+        .sort((a, b) => a.order - b.order);
+
+      return {
+        ...format,
+        phase_stats: phaseStats,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      formats: result.rows
+      formats: formatsWithPhaseStats
     });
 
   } catch (error) {

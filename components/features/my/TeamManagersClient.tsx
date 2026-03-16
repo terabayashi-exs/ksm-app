@@ -142,7 +142,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
 
     try {
       const res = await fetch(`/api/my/teams/${teamId}/leave`, {
-        method: "POST",
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ loginUserId })
       });
@@ -152,14 +152,10 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
       if (data.success) {
         setMessage({ type: 'success', text: data.message || '脱退しました' });
 
-        // チームが削除された場合はマイダッシュボードに戻る
-        if (data.teamDeleted) {
-          setTimeout(() => {
-            router.push("/my?tab=team");
-          }, 1500);
-        } else {
-          await fetchManagers();
-        }
+        // 脱退後はマイダッシュボードのチーム管理タブに戻る
+        setTimeout(() => {
+          router.push("/my?tab=team");
+        }, 1500);
       } else {
         setMessage({ type: 'error', text: data.error || '脱退に失敗しました' });
       }

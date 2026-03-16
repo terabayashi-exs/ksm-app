@@ -3,7 +3,7 @@
  * ダッシュボードのボタンと連動した権限管理
  */
 export interface OperatorPermissions {
-  canManageCourts: boolean;          // コート名設定
+  canManageCourts: boolean;          // 日程・会場設定 / 会場・コート設定
   canManageRules: boolean;           // ルール設定
   canRegisterTeams: boolean;         // チーム登録
   canCreateDraws: boolean;           // 組合せ作成・編集
@@ -53,7 +53,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
     label: '事前準備',
     description: 'ルール設定、チーム登録、組合せ作成など大会開催前の準備作業',
     permissions: {
-      canManageCourts: true,           // コート名設定
+      canManageCourts: true,           // 日程・会場設定 / 会場・コート設定
       canManageRules: true,            // ルール設定
       canRegisterTeams: true,          // チーム登録
       canCreateDraws: true,            // 組合せ作成・編集

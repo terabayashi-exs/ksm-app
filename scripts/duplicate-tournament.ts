@@ -323,15 +323,14 @@ async function duplicateTournament() {
         const b: any = block;
         const insertBlock = await db.execute({
           sql: `INSERT INTO t_match_blocks (
-            tournament_id, phase, display_round_name, block_name, match_type,
+            tournament_id, phase, display_round_name, block_name,
             block_order, team_rankings, remarks, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
           args: [
             newTournamentId,
             b.phase,
             b.display_round_name,
             b.block_name,
-            b.match_type,
             b.block_order,
             b.team_rankings,
             b.remarks,

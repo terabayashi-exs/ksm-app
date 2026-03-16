@@ -21,8 +21,6 @@ interface TeamWithEmails {
   team_id: string;
   tournament_team_name: string;
   master_team_name: string;
-  contact_email: string | null;
-  contact_person: string | null;
   participation_status: string;
   tournament_name: string;
   group_name: string | null;
@@ -74,8 +72,6 @@ export async function POST(
         tt.team_id,
         tt.team_name as tournament_team_name,
         m.team_name as master_team_name,
-        m.contact_email,
-        m.contact_person,
         tt.participation_status,
         t.tournament_name,
         tg.group_name,
@@ -132,8 +128,6 @@ export async function POST(
         team_id: String(team.team_id),
         tournament_team_name: String(team.tournament_team_name),
         master_team_name: String(team.master_team_name),
-        contact_email: members.length > 0 ? members[0].email : (team.contact_email ? String(team.contact_email) : null),
-        contact_person: members.length > 0 ? members[0].display_name : (team.contact_person ? String(team.contact_person) : null),
         participation_status: String(team.participation_status),
         tournament_name: String(team.tournament_name),
         group_name: team.group_name ? String(team.group_name) : null,

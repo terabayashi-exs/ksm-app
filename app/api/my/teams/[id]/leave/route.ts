@@ -46,7 +46,8 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    // チーム削除（カスケードで関連データも削除）
+    // チーム削除（m_playersはON DELETE NO ACTIONのため先に削除）
+    await db.execute(`DELETE FROM m_players WHERE current_team_id = ?`, [teamId]);
     await db.execute(`DELETE FROM m_teams WHERE team_id = ?`, [teamId]);
 
     // ロールから "team" を削除（他にチームがなければ）

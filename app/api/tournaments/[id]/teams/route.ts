@@ -4,7 +4,7 @@ import { getSimpleTournamentTeams } from '@/lib/tournament-teams-simple';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-// キャッシュはCache-Controlヘッダーで制御
+// 管理画面から利用するためキャッシュ無効
 
 export async function GET(
   request: NextRequest,
@@ -53,7 +53,7 @@ export async function GET(
     }), {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'no-store',
       },
     });
 

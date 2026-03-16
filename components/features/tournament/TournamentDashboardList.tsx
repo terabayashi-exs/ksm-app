@@ -779,30 +779,6 @@ export default function TournamentDashboardList({
                 );
               })()}
 
-              {/* コート名設定ボタン */}
-              {(() => {
-                const btnState = getButtonState(tournament.tournament_id, 'canManageCourts');
-                return btnState.disabled ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled
-                    className="text-sm cursor-not-allowed opacity-50"
-                    title={btnState.title}
-                  >
-                    <Lock className="w-4 h-4 mr-1" />
-                    コート名設定
-                  </Button>
-                ) : (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                    <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
-                      <MapPin className="w-4 h-4 mr-1" />
-                      コート名設定
-                    </Link>
-                  </Button>
-                );
-              })()}
-
               {/* ルール設定ボタン */}
               {(() => {
                 const btnState = getButtonState(tournament.tournament_id, 'canManageRules');
