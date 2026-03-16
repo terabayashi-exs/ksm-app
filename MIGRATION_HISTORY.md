@@ -16,6 +16,61 @@
 
 ---
 
+## 0029: フォーマット公開制御（visibility + t_format_access_grants）（2026-03-16）
+
+### 基本情報
+- **日付**: 2026年3月16日
+- **環境**: dev（stag/mainは要実行）
+- **方法**: 手動 ALTER TABLE + CREATE TABLE
+- **実行者**: Claude Code
+
+### 変更内容
+- `m_tournament_formats` テーブルに `visibility TEXT NOT NULL DEFAULT 'public'` カラム追加
+- `t_format_access_grants` テーブル新設（フォーマットアクセス付与管理）
+  - `grant_id`, `format_id`, `login_user_id`, `granted_by_login_user_id`, `granted_at`, `expires_at`, `notes`
+  - インデックス: `idx_format_grants_format`, `idx_format_grants_user`, `idx_format_grants_unique`
+
+### 変更理由
+特殊フォーマット（27チーム、29チーム等）を特定の管理者にだけ公開するためのアクセス制御機能。将来的に課金と連動させる想定。
+
+### 影響範囲（主要ファイル）
+- `src/db/schema.ts` — visibility カラム追加、tFormatAccessGrants テーブル追加
+- `src/db/relations.ts` — tFormatAccessGrants リレーション追加
+- `lib/format-access.ts` — **新規** アクセスチェックヘルパー
+- `app/api/tournaments/formats/recommend/route.ts` — visibility注釈・セッション取得追加
+- `app/api/tournaments/formats/route.ts` — visibility注釈追加
+- `app/api/admin/tournament-formats/route.ts` — visibilityフィールド追加
+- `app/api/tournaments/create-new/route.ts` — フォーマットアクセスガード追加
+- `app/api/tournaments/create-league/route.ts` — フォーマットアクセスガード追加
+- `app/api/admin/tournaments/[id]/change-format/route.ts` — フォーマットアクセスガード追加
+- `app/api/admin/tournament-formats/[id]/visibility/route.ts` — **新規** visibility変更API
+- `app/api/admin/format-access-grants/route.ts` — **新規** grant管理API
+- `components/features/tournament/TournamentCreateNewForm.tsx` — グレーアウト表示
+- `components/features/tournament/FormatSelectionModal.tsx` — グレーアウト表示
+- `components/features/tournament-format/TournamentFormatList.tsx` — visibilityバッジ・管理ボタン
+- `components/features/tournament-format/FormatAccessModal.tsx` — **新規** アクセス付与モーダル
+
+### stag/main環境への適用手順
+```sql
+ALTER TABLE m_tournament_formats ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public';
+
+CREATE TABLE t_format_access_grants (
+  grant_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  format_id INTEGER NOT NULL REFERENCES m_tournament_formats(format_id) ON DELETE CASCADE,
+  login_user_id INTEGER NOT NULL,
+  granted_by_login_user_id INTEGER,
+  granted_at NUMERIC DEFAULT (datetime('now', '+9 hours')),
+  expires_at NUMERIC,
+  notes TEXT
+);
+
+CREATE INDEX idx_format_grants_format ON t_format_access_grants(format_id);
+CREATE INDEX idx_format_grants_user ON t_format_access_grants(login_user_id);
+CREATE UNIQUE INDEX idx_format_grants_unique ON t_format_access_grants(format_id, login_user_id);
+```
+
+---
+
 ## 0027: m_teams から contact_person / contact_email カラム削除（2026-03-13）
 
 ### 基本情報

@@ -204,6 +204,13 @@
       "when": 1741708800000,
       "tag": "0028_remove_match_blocks_match_type",
       "breakpoints": false
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1741795200000,
+      "tag": "0029_add_format_visibility_and_access_grants",
+      "breakpoints": false
     }
   ]
 }

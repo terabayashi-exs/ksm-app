@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners, mLoginUsers } from "./schema";
+import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners, mLoginUsers, tFormatAccessGrants } from "./schema";
 
 export const tMatchesFinalRelations = relations(tMatchesFinal, ({one}) => ({
 	tMatchBlock: one(tMatchBlocks, {
@@ -68,6 +68,18 @@ export const mMatchTemplatesRelations = relations(mMatchTemplates, ({one}) => ({
 export const mTournamentFormatsRelations = relations(mTournamentFormats, ({many}) => ({
 	mMatchTemplates: many(mMatchTemplates),
 	tTournaments: many(tTournaments),
+	tFormatAccessGrants: many(tFormatAccessGrants),
+}));
+
+export const tFormatAccessGrantsRelations = relations(tFormatAccessGrants, ({one}) => ({
+	format: one(mTournamentFormats, {
+		fields: [tFormatAccessGrants.formatId],
+		references: [mTournamentFormats.formatId]
+	}),
+	loginUser: one(mLoginUsers, {
+		fields: [tFormatAccessGrants.loginUserId],
+		references: [mLoginUsers.loginUserId]
+	}),
 }));
 
 export const tTournamentFilesRelations = relations(tTournamentFiles, ({one}) => ({
