@@ -490,7 +490,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                       .filter(([_, value]) => value === true)
                       .map(([key]) => {
                         const labels: Record<string, string> = {
-                          canManageCourts: 'コート名設定',
+                          canManageCourts: '日程・会場・コート設定',
                           canManageRules: 'ルール設定',
                           canRegisterTeams: 'チーム登録',
                           canCreateDraws: '組合せ作成・編集',

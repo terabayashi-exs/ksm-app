@@ -30,7 +30,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
               }
             />
             <Label htmlFor="canManageCourts" className="cursor-pointer text-base">
-              コート名設定
+              日程・会場・コート設定
             </Label>
           </div>
 

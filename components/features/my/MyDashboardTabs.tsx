@@ -384,7 +384,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
   const [formatChangeCheckResult, setFormatChangeCheckResult] = useState<FormatChangeCheckResponse['data'] | null>(null);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [isFormatChanging, setIsFormatChanging] = useState(false);
-  const [availableFormats, setAvailableFormats] = useState<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number }>>([]);
+  const [availableFormats, setAvailableFormats] = useState<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number; sport_type_id?: number; sport_code?: string; default_match_duration?: number | null; default_break_duration?: number | null; matchday_count?: number; phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }> }>>([]);
   const [selectedNewFormatId, setSelectedNewFormatId] = useState<number | null>(null);
   const [selectedNewFormatName, setSelectedNewFormatName] = useState<string>('');
 
@@ -416,7 +416,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
 
   // フォーマット一覧は初回レンダー時に取得
   const [formatsLoaded, setFormatsLoaded] = useState(false);
-  const loadFormats = async (): Promise<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number }>> => {
+  const loadFormats = async (): Promise<typeof availableFormats> => {
     if (formatsLoaded && availableFormats.length > 0) return availableFormats;
     try {
       const res = await fetch('/api/admin/tournament-formats');
@@ -511,12 +511,17 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
       const checkResult = await checkFormatChangeEligibility(tournament.tournament_id);
       if (checkResult.success && checkResult.data) {
         setFormatChangeCheckResult(checkResult.data);
-        const otherFormats = formats.filter(f => f.format_id !== checkResult.data!.current_format_id);
+        const tournamentSportTypeId = Number(tournament.sport_type_id);
+        const otherFormats = formats.filter(f =>
+          f.format_id !== checkResult.data!.current_format_id &&
+          (!tournamentSportTypeId || Number(f.sport_type_id) === tournamentSportTypeId)
+        );
         if (otherFormats.length === 0) {
           alert(`変更可能な他のフォーマットが見つかりません。`);
           setIsFormatChanging(false);
           return;
         }
+        setAvailableFormats(otherFormats);
         setShowFormatSelectionModal(true);
       } else {
         alert(`変更可否チェックエラー: ${checkResult.error}`);
@@ -747,14 +752,6 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         審判カード印刷
                       </Link>
                     </Button>
-                    {!tournament.has_matchdays && (
-                      <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                        <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
-                          <MapPin className="w-4 h-4 mr-1" />
-                          コート名設定
-                        </Link>
-                      </Button>
-                    )}
                   </>
                 ) : (
                   /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
@@ -785,14 +782,6 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         審判カード印刷
                       </Link>
                     </Button>
-                    {!tournament.has_matchdays && (
-                      <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
-                        <Link href={`/admin/tournaments/${tournament.tournament_id}/courts`}>
-                          <MapPin className="w-4 h-4 mr-1" />
-                          コート名設定
-                        </Link>
-                      </Button>
-                    )}
                   </>
                 )}
               </div>
@@ -1223,8 +1212,73 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     公開画面を見る
                   </Link>
                 </Button>
+                {permissions.canManageCourts && tournament.has_matchdays && (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
+                      <Calendar className="w-4 h-4 mr-1" />
+                      日程・会場設定
+                    </Link>
+                  </Button>
+                )}
+                {permissions.canManageCourts && !tournament.has_matchdays && (
+                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
+                      <MapPin className="w-4 h-4 mr-1" />
+                      会場・コート設定
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
+
+            {/* ── 事前準備 ── */}
+            {(permissions.canManageRules || permissions.canRegisterTeams || permissions.canCreateDraws || permissions.canManageParticipants || permissions.canPrintRefereeCards) && (
+              <div>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">事前準備</p>
+                <div className="flex gap-2 flex-wrap">
+                  {permissions.canManageRules && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                        <Settings className="w-4 h-4 mr-1" />
+                        ルール設定
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canRegisterTeams && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
+                        <UserPlus className="w-4 h-4 mr-1" />
+                        チーム登録
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canCreateDraws && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
+                        <Shuffle className="w-4 h-4 mr-1" />
+                        組合せ作成
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canManageParticipants && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                        <Users className="w-4 h-4 mr-1" />
+                        参加チーム管理
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canPrintRefereeCards && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
+                        <QrCode className="w-4 h-4 mr-1" />
+                        審判カード印刷
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── 当日運営 ── */}
             {(permissions.canInputResults || permissions.canConfirmResults || permissions.canSetManualRankings || permissions.canChangePromotionRules) && (
@@ -1252,6 +1306,23 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
                         <Target className="w-4 h-4 mr-1" />
                         選出条件変更
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── 管理・その他 ── */}
+            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors) && (
+              <div>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
+                <div className="flex gap-2 flex-wrap">
+                  {permissions.canSendEmails && (
+                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
+                        <Mail className="w-4 h-4 mr-1" />
+                        メール送信
                       </Link>
                     </Button>
                   )}

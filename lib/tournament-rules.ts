@@ -173,22 +173,47 @@ export function getSportRuleConfigById(sportTypeId: number): SportRuleConfig | n
 }
 
 // デフォルトルールを生成
-export function generateDefaultRules(tournamentId: number, sportTypeId: number): TournamentRule[] {
+// phaseIds が指定された場合、実際のフェーズIDに合わせてルールを生成
+// formatTypes が指定された場合、フェーズのformat_typeに応じたルールを適用
+export function generateDefaultRules(
+  tournamentId: number,
+  sportTypeId: number,
+  phaseIds?: string[],
+  formatTypes?: Map<string, string>
+): TournamentRule[] {
   const config = getSportRuleConfigById(sportTypeId);
   if (!config) {
     throw new Error(`競技種別ID ${sportTypeId} の設定が見つかりません`);
   }
-  
-  return [
-    {
+
+  // フェーズIDが指定されていない場合は従来通り preliminary/final で生成
+  if (!phaseIds || phaseIds.length === 0) {
+    return [
+      {
+        tournament_id: tournamentId,
+        ...config.default_preliminary_rules
+      },
+      {
+        tournament_id: tournamentId,
+        ...config.default_final_rules
+      }
+    ];
+  }
+
+  // 実際のフェーズIDに合わせてルールを生成
+  return phaseIds.map(phaseId => {
+    // format_typeが tournament ならfinalルール、それ以外はpreliminaryルール
+    const ft = formatTypes?.get(phaseId);
+    const baseRule = ft === 'tournament'
+      ? config.default_final_rules
+      : config.default_preliminary_rules;
+
+    return {
       tournament_id: tournamentId,
-      ...config.default_preliminary_rules
-    },
-    {
-      tournament_id: tournamentId,
-      ...config.default_final_rules
-    }
-  ];
+      ...baseRule,
+      phase: phaseId
+    };
+  });
 }
 
 // ピリオド設定の解析
@@ -213,23 +238,15 @@ export function isLegacyTournament(tournamentId: number, sportTypeId: number): b
 }
 
 // 既存大会用のデフォルトルール（後方互換性）
-export function getLegacyDefaultRules(tournamentId: number): TournamentRule[] {
-  return [
-    {
-      tournament_id: tournamentId,
-      phase: 'preliminary',
-      use_extra_time: false,
-      use_penalty: false,
-      active_periods: '["1"]'
-    },
-    {
-      tournament_id: tournamentId,
-      phase: 'final',
-      use_extra_time: false,
-      use_penalty: false,
-      active_periods: '["1"]'
-    }
-  ];
+export function getLegacyDefaultRules(tournamentId: number, phaseIds?: string[]): TournamentRule[] {
+  const phases = (phaseIds && phaseIds.length > 0) ? phaseIds : ['preliminary', 'final'];
+  return phases.map(phase => ({
+    tournament_id: tournamentId,
+    phase,
+    use_extra_time: false,
+    use_penalty: false,
+    active_periods: '["1"]'
+  }));
 }
 
 // 不戦勝設定の型定義
