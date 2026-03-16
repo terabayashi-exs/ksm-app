@@ -7,6 +7,7 @@ import { canAddDivision } from "@/lib/subscription/plan-checker";
 import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 import { calculateTournamentStatusSync } from "@/lib/tournament-status";
 import { buildPhaseFormatMap, buildPhaseNameMap, buildTemplatePhaseMapping } from "@/lib/tournament-phases";
+import { getGrantedFormatIds, isFormatAccessible } from "@/lib/format-access";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,6 +70,26 @@ export async function POST(request: NextRequest) {
         { success: false, error: "必須項目が不足しています" },
         { status: 400 }
       );
+    }
+
+    // フォーマットアクセスチェック
+    const formatVisibilityResult = await db.execute(
+      `SELECT format_id, visibility FROM m_tournament_formats WHERE format_id = ?`,
+      [format_id]
+    );
+    if (formatVisibilityResult.rows.length > 0) {
+      const fmt = formatVisibilityResult.rows[0];
+      const grantedIds = await getGrantedFormatIds(session.user.loginUserId);
+      if (!isFormatAccessible(
+        { format_id: Number(fmt.format_id), visibility: String(fmt.visibility || 'public') },
+        session.user.isSuperadmin ?? false,
+        grantedIds
+      )) {
+        return NextResponse.json(
+          { success: false, error: "このフォーマットへのアクセス権がありません" },
+          { status: 403 }
+        );
+      }
     }
 
     // 部門追加可否チェック（サブスクリプションプラン制限）
@@ -550,14 +571,16 @@ export async function POST(request: NextRequest) {
 
     // 大会ルールのデフォルト設定を作成
     try {
+      // 実際のフェーズIDリストを使用してルールを生成
+      const actualPhaseIds = Array.from(phaseFormats.keys());
       let tournamentRules;
-      
+
       if (isLegacyTournament(Number(tournamentId), sport_type_id)) {
         // 既存のPK戦大会との互換性を保持
-        tournamentRules = getLegacyDefaultRules(Number(tournamentId));
+        tournamentRules = getLegacyDefaultRules(Number(tournamentId), actualPhaseIds);
       } else {
-        // 新しい大会の場合は競技種別に応じたデフォルト
-        tournamentRules = generateDefaultRules(Number(tournamentId), sport_type_id);
+        // 新しい大会の場合は競技種別に応じたデフォルト（フェーズIDとformat_typeを渡す）
+        tournamentRules = generateDefaultRules(Number(tournamentId), sport_type_id, actualPhaseIds, phaseFormats);
       }
       
       // デフォルト勝点システム設定

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import { buildPhaseFormatMap, buildPhaseNameMap, buildTemplatePhaseMapping } from '@/lib/tournament-phases';
+import { generateDefaultRules, isLegacyTournament, getLegacyDefaultRules } from '@/lib/tournament-rules';
+import { getGrantedFormatIds, isFormatAccessible } from '@/lib/format-access';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -106,7 +108,8 @@ export async function PUT(
         t.tournament_name,
         t.status,
         t.tournament_dates,
-        t.format_name as current_format_name
+        t.format_name as current_format_name,
+        t.sport_type_id
       FROM t_tournaments t
       WHERE t.tournament_id = ?
     `, [tournamentId]);
@@ -168,7 +171,7 @@ export async function PUT(
 
     // 新しいフォーマットの存在確認
     const newFormat = await db.execute(`
-      SELECT format_id, format_name, target_team_count, phases
+      SELECT format_id, format_name, target_team_count, phases, visibility
       FROM m_tournament_formats
       WHERE format_id = ?
     `, [new_format_id]);
@@ -177,6 +180,20 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: '指定されたフォーマットが見つかりません' },
         { status: 404 }
+      );
+    }
+
+    // フォーマットアクセスチェック
+    const newFmt = newFormat.rows[0];
+    const grantedIds = await getGrantedFormatIds(session.user.loginUserId);
+    if (!isFormatAccessible(
+      { format_id: Number(newFmt.format_id), visibility: String(newFmt.visibility || 'public') },
+      session.user.isSuperadmin ?? false,
+      grantedIds
+    )) {
+      return NextResponse.json(
+        { success: false, error: 'このフォーマットへのアクセス権がありません' },
+        { status: 403 }
       );
     }
 
@@ -505,6 +522,59 @@ export async function PUT(
     }
 
     console.log(`   ✅ Recreated ${createdBlocks} blocks and ${createdMatches} matches`);
+
+    // === Step 8: 新しいフェーズ構成に合わせてルール設定を更新 ===
+    try {
+      const sportTypeId = Number(tournament.sport_type_id);
+      const actualPhaseIds = Array.from(phaseFormats.keys());
+
+      // 既存ルールで存在するフェーズを確認
+      const existingRulesResult = await db.execute(`
+        SELECT phase FROM t_tournament_rules WHERE tournament_id = ?
+      `, [tournamentId]);
+      const existingPhases = new Set(existingRulesResult.rows.map(r => String(r.phase)));
+
+      // 新しいフェーズで不足しているルールを追加
+      const missingPhases = actualPhaseIds.filter(p => !existingPhases.has(p));
+
+      if (missingPhases.length > 0) {
+        let newRules;
+        if (isLegacyTournament(tournamentId, sportTypeId)) {
+          newRules = getLegacyDefaultRules(tournamentId, missingPhases);
+        } else {
+          newRules = generateDefaultRules(tournamentId, sportTypeId, missingPhases, phaseFormats);
+        }
+
+        const defaultPointSystem = JSON.stringify({ win: 3, draw: 1, loss: 0 });
+        for (const rule of newRules) {
+          await db.execute(`
+            INSERT INTO t_tournament_rules (
+              tournament_id, phase, use_extra_time, use_penalty,
+              active_periods, notes, point_system,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+          `, [
+            rule.tournament_id, rule.phase,
+            rule.use_extra_time ? 1 : 0, rule.use_penalty ? 1 : 0,
+            rule.active_periods, rule.notes || null, defaultPointSystem
+          ]);
+        }
+        console.log(`   ✅ ${missingPhases.length}件の不足ルール設定を追加: ${missingPhases.join(', ')}`);
+      }
+
+      // 不要になったフェーズのルールを削除
+      const obsoletePhases = Array.from(existingPhases).filter(p => !actualPhaseIds.includes(p));
+      if (obsoletePhases.length > 0) {
+        for (const phase of obsoletePhases) {
+          await db.execute(`
+            DELETE FROM t_tournament_rules WHERE tournament_id = ? AND phase = ?
+          `, [tournamentId, phase]);
+        }
+        console.log(`   ✅ ${obsoletePhases.length}件の不要ルール設定を削除: ${obsoletePhases.join(', ')}`);
+      }
+    } catch (ruleError) {
+      console.error("ルール設定更新エラー:", ruleError);
+    }
 
     // 成功メッセージの構築
     let successMessage = `フォーマット変更が完了しました。新しいフォーマットで${createdBlocks}ブロック、${createdMatches}試合が作成されました。`;
