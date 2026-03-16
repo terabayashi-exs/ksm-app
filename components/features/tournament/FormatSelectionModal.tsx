@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Info, Users, Trophy } from 'lucide-react';
+import { Check, Info, Users, Trophy, Lock } from 'lucide-react';
+import FormatDetailBadges, { getSportIcon } from '@/components/features/tournament-format/FormatDetailBadges';
 
 interface TournamentFormat {
   format_id: number;
@@ -9,6 +10,13 @@ interface TournamentFormat {
   target_team_count: number;
   format_description?: string;
   template_count?: number;
+  sport_code?: string;
+  default_match_duration?: number | null;
+  default_break_duration?: number | null;
+  matchday_count?: number;
+  phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }>;
+  visibility?: string;
+  isAccessible?: boolean;
 }
 
 interface FormatSelectionModalProps {
@@ -88,35 +96,52 @@ export function FormatSelectionModal({
               <div className="space-y-3">
                 {sortedFormats.map((format) => {
                   const isSelected = selectedFormatId === format.format_id;
+                  const locked = format.isAccessible === false;
 
                   return (
                     <button
                       key={format.format_id}
-                      onClick={() => setSelectedFormatId(format.format_id)}
+                      onClick={() => !locked && setSelectedFormatId(format.format_id)}
+                      disabled={locked}
                       className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-50 shadow-md'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                        locked
+                          ? 'opacity-50 cursor-not-allowed border-gray-200 bg-gray-50'
+                          : isSelected
+                            ? 'border-blue-500 bg-blue-50 shadow-md'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        {/* チェックマーク */}
-                        <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-500'
-                            : 'border-gray-300'
-                        }`}>
-                          {isSelected && <Check className="h-4 w-4 text-white" />}
-                        </div>
+                        {/* チェックマーク / ロック */}
+                        {locked ? (
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mt-1">
+                            <Lock className="h-3 w-3 text-gray-400" />
+                          </div>
+                        ) : (
+                          <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {isSelected && <Check className="h-4 w-4 text-white" />}
+                          </div>
+                        )}
 
                         {/* フォーマット情報 */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className={`font-bold text-lg ${
-                              isSelected ? 'text-blue-900' : 'text-gray-900'
+                              locked ? 'text-gray-500' : isSelected ? 'text-blue-900' : 'text-gray-900'
                             }`}>
+                              {format.sport_code && <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>}
                               {format.format_name}
                             </h3>
+                            {locked && (
+                              <span className="inline-flex items-center text-xs text-orange-600 border border-orange-300 rounded px-1.5 py-0.5">
+                                <Lock className="h-3 w-3 mr-1" />
+                                利用するには購入が必要です
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
@@ -133,12 +158,19 @@ export function FormatSelectionModal({
                           </div>
 
                           {format.format_description && (
-                            <p className={`text-sm ${
+                            <p className={`text-sm mb-2 ${
                               isSelected ? 'text-blue-700' : 'text-gray-600'
                             }`}>
                               {format.format_description}
                             </p>
                           )}
+
+                          <FormatDetailBadges
+                            default_match_duration={format.default_match_duration}
+                            default_break_duration={format.default_break_duration}
+                            matchday_count={format.matchday_count}
+                            phase_stats={format.phase_stats}
+                          />
                         </div>
                       </div>
                     </button>
