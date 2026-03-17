@@ -12,6 +12,33 @@ import { getBannersForTab } from '@/lib/sponsor-banner-loader';
 import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
 import PublicFilesList from '@/components/features/tournament/PublicFilesList';
 import type { Tournament } from '@/lib/types';
+import { parseVenueIds } from '@/lib/types';
+import { db } from '@/lib/db';
+
+interface VenueInfo {
+  venue_id: number;
+  venue_name: string;
+  google_maps_url: string | null;
+}
+
+async function getVenuesForTournament(venueIdJson: string | null): Promise<VenueInfo[]> {
+  const venueIds = parseVenueIds(venueIdJson);
+  if (venueIds.length === 0) return [];
+  try {
+    const placeholders = venueIds.map(() => '?').join(',');
+    const result = await db.execute(
+      `SELECT venue_id, venue_name, google_maps_url FROM m_venues WHERE venue_id IN (${placeholders})`,
+      venueIds
+    );
+    return (result.rows || []).map(r => ({
+      venue_id: Number(r.venue_id),
+      venue_name: String(r.venue_name),
+      google_maps_url: r.google_maps_url ? String(r.google_maps_url) : null,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -35,12 +62,15 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
   }
   const { bracketPdfExists, resultsPdfExists } = pdfFiles;
 
+  const venues = await getVenuesForTournament(tournament.venue_id);
+
   return (
     <TabContentWithSidebarSSR banners={banners}>
       <TournamentOverview
         tournament={tournament}
         bracketPdfExists={bracketPdfExists}
         resultsPdfExists={resultsPdfExists}
+        venues={venues}
       />
     </TabContentWithSidebarSSR>
   );
@@ -50,10 +80,12 @@ function TournamentOverview({
   tournament,
   bracketPdfExists,
   resultsPdfExists,
+  venues,
 }: {
   tournament: Tournament;
   bracketPdfExists: boolean;
   resultsPdfExists: boolean;
+  venues: VenueInfo[];
 }) {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -101,7 +133,29 @@ function TournamentOverview({
                 <MapPin className="h-4 w-4 mr-1" />
                 会場
               </h4>
-              <p className="text-foreground">{tournament.venue_name || '未設定'}</p>
+              {venues.length > 0 ? (
+                <div className="space-y-1">
+                  {venues.map(v => (
+                    <div key={v.venue_id}>
+                      {v.google_maps_url ? (
+                        <a
+                          href={v.google_maps_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          {v.venue_name}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <p className="text-foreground">{v.venue_name}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-foreground">未設定</p>
+              )}
             </div>
             <div>
               <h4 className="font-medium text-muted-foreground mb-2 flex items-center">
