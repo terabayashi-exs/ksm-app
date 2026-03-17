@@ -1,5 +1,6 @@
 // lib/blob-storage.ts
 import { put, del, head, list, type PutBlobResult } from '@vercel/blob';
+import { getBlobToken } from './blob-config';
 
 /**
  * Vercel Blob ストレージ操作のラッパー
@@ -17,7 +18,7 @@ export class BlobStorage {
     }
   ): Promise<PutBlobResult> {
     const startTime = performance.now();
-    
+
     try {
       // データサイズを計算
       let dataSize = 0;
@@ -29,12 +30,14 @@ export class BlobStorage {
         dataSize = data.size;
       }
 
+      const token = getBlobToken();
       const result = await put(pathname, data, {
         access: 'public',
         addRandomSuffix: false,
         allowOverwrite: true,
         contentType: options?.contentType || 'application/json',
         cacheControlMaxAge: options?.cacheControlMaxAge || 31536000, // 1 year
+        ...(token ? { token } : {}),
       });
       
       const duration = Math.round(performance.now() - startTime);
@@ -117,7 +120,8 @@ export class BlobStorage {
    */
   static async exists(pathname: string): Promise<boolean> {
     try {
-      await head(pathname);
+      const token = getBlobToken();
+      await head(pathname, { ...(token ? { token } : {}) });
       return true;
     } catch {
       return false;
@@ -131,7 +135,8 @@ export class BlobStorage {
     const startTime = performance.now();
     
     try {
-      await del(pathname);
+      const token = getBlobToken();
+      await del(pathname, { ...(token ? { token } : {}) });
       const duration = Math.round(performance.now() - startTime);
       console.log(`✅ Blob deleted: ${pathname} (${duration}ms)`);
     } catch (error) {
@@ -149,9 +154,11 @@ export class BlobStorage {
     limit?: number;
   }): Promise<string[]> {
     try {
+      const token = getBlobToken();
       const { blobs } = await list({
         prefix: options?.prefix,
         limit: options?.limit || 1000,
+        ...(token ? { token } : {}),
       });
       
       return blobs.map(blob => blob.pathname);
@@ -165,14 +172,16 @@ export class BlobStorage {
    * BlobのURLを取得（内部メソッド）
    */
   private static async getBlobUrl(pathname: string): Promise<string> {
+    const token = getBlobToken();
+    const opts = token ? { token } : {};
     try {
       // headでメタデータを取得してURLを取得
-      const metadata = await head(pathname);
+      const metadata = await head(pathname, opts);
       return metadata.url;
     } catch {
       // head操作が失敗した場合は再試行（ログなし）
       await new Promise(resolve => setTimeout(resolve, 200));
-      const metadata = await head(pathname);
+      const metadata = await head(pathname, opts);
       return metadata.url;
     }
   }

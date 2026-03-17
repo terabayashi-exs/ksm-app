@@ -1,6 +1,5 @@
 // app/public/tournaments/[id]/layout.tsx
 import { ReactNode } from 'react';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -37,8 +36,10 @@ export default async function TournamentDetailLayout({ children, params }: Layou
   const data = await getTournamentWithGroupInfo(tournamentId);
   const { tournament, group, sibling_divisions } = data;
 
+  // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
+  // layout のUI（タブ等）はスキップして children をそのまま返す
   if (tournament.is_archived) {
-    redirect(`/public/tournaments/${resolvedParams.id}/archived`);
+    return <>{children}</>;
   }
 
   const phaseList = getPhaseList(tournament);

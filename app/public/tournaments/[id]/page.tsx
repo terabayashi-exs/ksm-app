@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Calendar, MapPin, Trophy, Users, Clock, Target, BarChart3, FileText, ExternalLink } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
@@ -27,6 +28,11 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
   ]);
 
   const { tournament } = data;
+
+  // アーカイブ済みの場合はアーカイブページにリダイレクト
+  if (tournament.is_archived) {
+    redirect(`/public/tournaments/${resolvedParams.id}/archived`);
+  }
   const { bracketPdfExists, resultsPdfExists } = pdfFiles;
 
   return (

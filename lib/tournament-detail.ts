@@ -5,66 +5,6 @@ import { Tournament } from '@/lib/types';
 import type { TournamentStatus } from '@/lib/tournament-status';
 import type { ExtendedUser } from '@/lib/auth';
 
-/**
- * アーカイブされた大会の詳細情報を取得する
- */
-async function getArchivedTournamentById(tournamentId: number): Promise<Tournament> {
-  try {
-    console.log(`🔍 アーカイブされた大会データを検索: tournament_id=${tournamentId}`);
-    
-    const result = await db.execute(`
-      SELECT tournament_data
-      FROM t_archived_tournament_json
-      WHERE tournament_id = ?
-    `, [tournamentId]);
-
-    console.log(`📊 検索結果: ${result.rows ? result.rows.length : 0} 件`);
-
-    if (!result.rows || result.rows.length === 0) {
-      console.error(`❌ アーカイブデータが見つからない: tournament_id=${tournamentId}`);
-      throw new Error('アーカイブされた大会が見つかりません');
-    }
-
-    const tournamentData = JSON.parse(result.rows[0].tournament_data as string);
-    
-    const tournament: Tournament = {
-      tournament_id: Number(tournamentData.tournament_id),
-      tournament_name: String(tournamentData.tournament_name),
-      format_id: Number(tournamentData.format_id),
-      venue_id: tournamentData.venue_id ? String(tournamentData.venue_id) : null,
-      team_count: Number(tournamentData.team_count),
-      status: tournamentData.status,
-      court_count: Number(tournamentData.court_count),
-      tournament_dates: tournamentData.tournament_dates,
-      match_duration_minutes: Number(tournamentData.match_duration_minutes),
-      break_duration_minutes: Number(tournamentData.break_duration_minutes),
-      visibility: Number(tournamentData.visibility),
-      public_start_date: tournamentData.public_start_date,
-      recruitment_start_date: tournamentData.recruitment_start_date,
-      recruitment_end_date: tournamentData.recruitment_end_date,
-      created_at: String(tournamentData.created_at),
-      updated_at: String(tournamentData.updated_at),
-      
-      // Optional joined fields
-      venue_name: tournamentData.venue_name,
-      format_name: tournamentData.format_name,
-      
-      // 後方互換性のため
-      is_public: Boolean(tournamentData.is_public || tournamentData.visibility),
-      start_time: tournamentData.start_time,
-      
-      // アーカイブ関連
-      is_archived: true,
-      archive_ui_version: tournamentData.archive_ui_version
-    };
-
-    return tournament;
-    
-  } catch (error) {
-    console.error('getArchivedTournamentById error:', error);
-    throw error;
-  }
-}
 
 /**
  * アーカイブフラグに関係なく大会の生データを取得する（アーカイブ処理用）
@@ -149,13 +89,7 @@ export async function getTournamentById(tournamentId: number): Promise<Tournamen
 
     const row = result.rows[0];
 
-    // アーカイブされた大会かどうかをチェック
-    if (row.is_archived) {
-      console.log(`大会ID:${tournamentId} はアーカイブされています。アーカイブデータを使用します。`);
-      return await getArchivedTournamentById(tournamentId);
-    }
-
-    // 通常の大会データを返す
+    // 通常の大会データを返す（アーカイブ済みの場合もt_tournamentsの生データを使用）
     const tournament: Tournament = {
       tournament_id: row.tournament_id as number,
       tournament_name: row.tournament_name as string,

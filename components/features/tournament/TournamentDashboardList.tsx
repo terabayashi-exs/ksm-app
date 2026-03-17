@@ -513,18 +513,15 @@ export default function TournamentDashboardList({
     }
   };
 
+  // アーカイブハンドラ（HTML版アーカイブのみ。DBレコード削除は行わない）
   const handleArchiveTournament = async (tournament: Tournament) => {
-    const confirmMessage = `大会「${tournament.tournament_name}」をアーカイブしますか？\n\nアーカイブすると：\n1. 現在のデータが完全に保存されます\n2. 関連するデータベースのデータが削除されます\n3. アーカイブページからのみ表示可能になります\n\n⚠️ この操作は取り消せません。\n事前にバックアップを作成することを推奨します。`;
-    
-    if (!confirm(confirmMessage)) {
+    if (!confirm(`大会「${tournament.tournament_name}」をアーカイブしますか？\n\nHTMLアーカイブが作成され、is_archivedフラグが設定されます。\nDBレコードは削除されません。`)) {
       return;
     }
 
     setArchiving(tournament.tournament_id);
 
     try {
-      // Step 1: アーカイブ作成
-      console.log('Step 1: アーカイブ作成開始...');
       const archiveResponse = await fetch(`/api/tournaments/${tournament.tournament_id}/archive`, {
         method: 'POST',
       });
@@ -536,29 +533,14 @@ export default function TournamentDashboardList({
         return;
       }
 
-      console.log('Step 1: アーカイブ作成完了');
+      const sizeKb = archiveResult.data?.file_size ? `${(archiveResult.data.file_size / 1024).toFixed(2)} KB` : '';
+      alert(`✅ HTMLアーカイブが完了しました。${sizeKb ? `\nファイルサイズ: ${sizeKb}` : ''}`);
 
-      // Step 2: アーカイブ後クリーンアップ実行（大会メインレコードは保持）
-      console.log('Step 2: アーカイブ後クリーンアップ開始...');
-      const deleteResponse = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/archive-cleanup`, {
-        method: 'DELETE',
-      });
-
-      const deleteResult = await deleteResponse.json();
-
-      if (deleteResult.success) {
-        alert(`✅ アーカイブとクリーンアップが完了しました。\n\n【アーカイブ情報】\n• 大会名: ${tournament.tournament_name}\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【クリーンアップ情報】\n• 削除されたレコード数: ${deleteResult.deletionSummary.totalDeletedRecords}\n• 削除ステップ: ${deleteResult.deletionSummary.successfulSteps}/${deleteResult.deletionSummary.totalSteps}\n• 実行時間: ${(deleteResult.deletionSummary.totalExecutionTime / 1000).toFixed(1)}秒\n• 大会メインレコード: 保持\n\n📄 アーカイブページ: /public/tournaments/${tournament.tournament_id}/archived`);
-      } else {
-        // アーカイブは成功したが削除に失敗
-        alert(`⚠️ アーカイブは完了しましたが、クリーンアップでエラーが発生しました。\n\n【アーカイブ完了】\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【クリーンアップエラー】\n${deleteResult.error}\n\n大会はアーカイブ状態になっていますが、関連データが残存している可能性があります。\n管理者ダッシュボードで「削除」ボタンから後で関連データを削除してください。`);
-      }
-      
-      // いずれの場合もリストを更新
+      // リストを更新
       const fetchTournaments = async () => {
         try {
           const response = await fetch('/api/tournaments/dashboard');
           const result: ApiResponse = await response.json();
-          
           if (result.success && result.data) {
             setTournaments(result.data);
           }
@@ -571,7 +553,6 @@ export default function TournamentDashboardList({
         try {
           const response = await fetch('/api/admin/notifications/counts');
           const result = await response.json();
-          
           if (result.success) {
             setNotificationCounts(result.data);
           }
@@ -579,12 +560,12 @@ export default function TournamentDashboardList({
           console.error('通知件数取得エラー:', err);
         }
       };
-      
+
       fetchTournaments();
       fetchNotificationCounts();
     } catch (err) {
-      console.error('アーカイブ・削除エラー:', err);
-      alert('アーカイブ・削除処理中にエラーが発生しました');
+      console.error('アーカイブエラー:', err);
+      alert('アーカイブ処理中にエラーが発生しました');
     } finally {
       setArchiving(null);
     }

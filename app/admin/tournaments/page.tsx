@@ -142,7 +142,8 @@ export default function AdminTournamentsList() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`アーカイブが完了しました。\n保存先: ${data.storage_type}\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB`);
+        const sizeKb = data.data?.file_size ? `\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB` : '';
+        alert(`HTMLアーカイブが完了しました。\n保存先: ${data.storage_type}${sizeKb}`);
         // 大会一覧を再読み込み
         fetchTournaments();
       } else {
@@ -151,6 +152,37 @@ export default function AdminTournamentsList() {
     } catch (error) {
       console.error('アーカイブエラー:', error);
       alert('アーカイブ中にエラーが発生しました');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // アンアーカイブ処理（テスト用）
+  const handleUnarchiveTournament = async (tournamentId: number) => {
+    if (!confirm('アーカイブを解除しますか？\n大会が通常の編集可能状態に戻ります。\n（Blob上のHTMLデータは保持されます）')) {
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/unarchive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('アーカイブを解除しました。');
+        fetchTournaments();
+      } else {
+        alert(`アーカイブ解除に失敗しました: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('アンアーカイブエラー:', error);
+      alert('アーカイブ解除中にエラーが発生しました');
     } finally {
       setSearching(false);
     }
@@ -401,11 +433,27 @@ export default function AdminTournamentsList() {
                                 </>
                               )}
                               {tournament.is_archived && (
-                                <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                                  <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
-                                    アーカイブ表示
-                                  </Link>
-                                </Button>
+                                <>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                                    <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                                      アーカイブ表示
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                                    <Link href={`/api/tournaments/${tournament.tournament_id}/archived-html`} target="_blank">
+                                      HTMLプレビュー
+                                    </Link>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-orange-300 hover:bg-orange-50"
+                                    onClick={() => handleUnarchiveTournament(tournament.tournament_id)}
+                                    disabled={searching}
+                                  >
+                                    アーカイブ解除
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </td>

@@ -468,19 +468,16 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
     }
   };
 
-  // アーカイブハンドラ
+  // アーカイブハンドラ（HTML版アーカイブのみ。DBレコード削除は行わない）
   const handleArchiveTournament = async (tournament: Tournament) => {
-    if (!confirm(`大会「${tournament.tournament_name}」をアーカイブしますか？\n\n⚠️ この操作は取り消せません。`)) return;
+    if (!confirm(`大会「${tournament.tournament_name}」をアーカイブしますか？\n\nHTMLアーカイブが作成され、is_archivedフラグが設定されます。\nDBレコードは削除されません。`)) return;
     setArchiving(tournament.tournament_id);
     try {
       const archiveRes = await fetch(`/api/tournaments/${tournament.tournament_id}/archive`, { method: 'POST' });
       const archiveResult = await archiveRes.json();
       if (!archiveResult.success) { alert(`アーカイブエラー: ${archiveResult.error}`); return; }
-      const cleanupRes = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/archive-cleanup`, { method: 'DELETE' });
-      const cleanupResult = await cleanupRes.json();
-      alert(cleanupResult.success
-        ? `✅ アーカイブとクリーンアップが完了しました。`
-        : `⚠️ アーカイブは完了しましたが、クリーンアップでエラーが発生しました。\n${cleanupResult.error}`);
+      const sizeKb = archiveResult.data?.file_size ? `${(archiveResult.data.file_size / 1024).toFixed(2)} KB` : '';
+      alert(`✅ HTMLアーカイブが完了しました。${sizeKb ? `\nファイルサイズ: ${sizeKb}` : ''}`);
       router.refresh();
     } catch (err) {
       console.error('アーカイブエラー:', err);
