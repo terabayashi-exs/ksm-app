@@ -61,7 +61,7 @@ export function MultiBlockBracket({
       {blocks.map((block) => (
         <div
           key={block.blockId}
-          className="border border-border rounded-lg p-4 bg-card"
+          className="border border-gray-200 rounded-lg p-4 bg-white"
         >
           <TournamentBlock
             blockId={block.blockId}
@@ -78,7 +78,7 @@ export function MultiBlockBracket({
 
       {/* 決勝ブロック */}
       {finalBlockMatches.length > 0 && (
-        <div className="border border-border rounded-lg p-4 bg-card">
+        <div className="border border-gray-200 rounded-lg p-4 bg-white">
           <TournamentBlock
             blockId="FINAL"
             title={finalBlockTitle}

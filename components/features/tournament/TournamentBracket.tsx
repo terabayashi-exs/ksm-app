@@ -84,7 +84,7 @@ const response = await fetch(
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-muted-foreground">
+        <span className="ml-3 text-gray-500">
           トーナメント表を読み込み中...
         </span>
       </div>
@@ -94,9 +94,9 @@ const response = await fetch(
   if (error) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground text-lg mb-2">{error}</p>
-        <p className="text-muted-foreground text-sm">
+        <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-500 text-lg mb-2">{error}</p>
+        <p className="text-gray-500 text-sm">
           この大会は予選リーグ戦のみで構成されています。
         </p>
       </div>
@@ -109,8 +109,8 @@ const response = await fetch(
   if (mainMatches.length === 0) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground text-lg">
+        <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-500 text-lg">
           トーナメント表データがありません
         </p>
       </div>
@@ -398,7 +398,7 @@ const response = await fetch(
         }
       `}</style>
 
-      <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
+      <div className="print-container relative bg-white border border-gray-200 rounded-lg p-6 shadow-sm overflow-x-auto">
         <div className="space-y-8">
           {/* 試合数に応じて表示方法を切り替え */}
           {shouldUseMultiBlock ? (

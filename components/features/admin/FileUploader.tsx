@@ -310,7 +310,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
               placeholder="https://example.com/photos"
               className="mt-1"
             />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               写真アルバムや外部資料のURLを入力してください
             </p>
           </div>

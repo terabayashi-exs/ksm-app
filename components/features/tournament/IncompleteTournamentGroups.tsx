@@ -105,7 +105,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
 
   if (loading) {
     return (
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-gray-500">
         読み込み中...
       </div>
     );
@@ -113,7 +113,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
 
   if (incompleteGroups.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-gray-500">
         作成中の大会はありません
       </div>
     );
@@ -124,22 +124,22 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
       {incompleteGroups.map((group) => (
         <div
           key={group.group_id}
-          className="p-4 border-2 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 rounded-lg"
+          className="p-4 border-2 border-amber-200 bg-amber-50 rounded-lg"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <h3 className="font-semibold text-amber-900 dark:text-amber-100">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <h3 className="font-semibold text-amber-900">
                   {group.group_name}
                 </h3>
               </div>
               {group.event_description && (
-                <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                <p className="text-sm text-amber-700 mb-2">
                   {group.event_description}
                 </p>
               )}
-              <div className="flex items-center gap-4 text-xs text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-4 text-xs text-amber-600">
                 {group.organizer && (
                   <span>主催: {group.organizer}</span>
                 )}
@@ -153,14 +153,14 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                   <Button
                     asChild
                     size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground dark:bg-primary dark:hover:bg-primary/90"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     <Link href={`/admin/tournaments/${group.original_tournament_id}/edit`}>
                       <Plus className="w-4 h-4 mr-1" />
                       部門設定
                     </Link>
                   </Button>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                  <p className="text-xs text-amber-600">
                     ※大会編集画面で部門を設定できます
                   </p>
                 </>
@@ -192,7 +192,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                         asChild
                         size="sm"
                         variant="outline"
-                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 text-xs"
+                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 text-xs"
                       >
                         <Link href="/admin/subscription/plans">
                           プラン変更
@@ -204,7 +204,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                     asChild
                     size="sm"
                     variant="outline"
-                    className="border-amber-300 hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                    className="border-amber-300 hover:bg-amber-100"
                   >
                     <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
                       編集
@@ -213,7 +213,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600 dark:border-red-800 dark:hover:bg-red-950/30 dark:text-red-400"
+                    className="border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600"
                     onClick={() => handleDelete(group.group_id, group.group_name)}
                     disabled={deleting === group.group_id}
                   >

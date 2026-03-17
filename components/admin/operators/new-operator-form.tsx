@@ -297,13 +297,13 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
           {existingUser && (
             <Alert className={existingUser.hasOperatorRole
-              ? "bg-primary/5 dark:bg-primary/10 border-primary/20 dark:border-primary/20"
-              : "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+              ? "bg-primary/5 border-primary/20"
+              : "bg-green-50 border-green-200"
             }>
               <UserCheck className={`h-4 w-4 ${existingUser.hasOperatorRole ? 'text-primary' : 'text-green-600'}`} />
               <AlertDescription className={existingUser.hasOperatorRole
-                ? "text-primary dark:text-primary/80"
-                : "text-green-800 dark:text-green-300"
+                ? "text-primary"
+                : "text-green-800"
               }>
                 <strong>
                   {existingUser.hasOperatorRole
@@ -333,9 +333,9 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
           )}
 
           {isNewUser && (
-            <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+            <Alert className="bg-yellow-50 border-yellow-200">
               <Mail className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800 dark:text-yellow-300">
+              <AlertDescription className="text-yellow-800">
                 <strong>新規ユーザーです</strong>
                 <div className="mt-1 text-sm">
                   招待メールを送信します。受信者がアカウント登録を完了すると運営者として登録されます。
@@ -392,7 +392,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                         className={`relative rounded-lg border-2 p-4 transition-all ${
                           isSelected && !useCustomPermissions
                             ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
+                            : 'border-gray-200 hover:border-primary/50'
                         } ${useCustomPermissions ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         onClick={() => !useCustomPermissions && togglePreset(preset)}
                       >
@@ -414,7 +414,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                                 {PERMISSION_PRESETS[preset].label}
                               </Label>
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-500">
                               {PERMISSION_PRESETS[preset].description}
                             </p>
                           </div>
@@ -431,7 +431,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                   className={`relative rounded-lg border-2 p-4 transition-all ${
                     useCustomPermissions
                       ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
+                      : 'border-gray-200 hover:border-primary/50'
                   } cursor-pointer`}
                   onClick={() => {
                     const newValue = !useCustomPermissions;
@@ -463,7 +463,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                           {PERMISSION_PRESETS.custom.label}
                         </Label>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-500">
                         {PERMISSION_PRESETS.custom.description}
                       </p>
                     </div>
@@ -472,7 +472,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
                 {/* カスタム選択時のみ詳細設定を表示 */}
                 {useCustomPermissions && (
-                  <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                  <div className="mt-4 rounded-lg border bg-gray-50/30 p-4">
                     <PermissionEditor
                       permissions={commonPermissions}
                       onChange={setCommonPermissions}
@@ -512,11 +512,11 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
                         let badgeClass = 'bg-primary/10 text-primary';
                         if (preparationPerms.includes(key)) {
-                          badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400';
+                          badgeClass = 'bg-blue-100 text-blue-700';
                         } else if (eventDayPerms.includes(key)) {
-                          badgeClass = 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400';
+                          badgeClass = 'bg-green-100 text-green-700';
                         } else if (managementPerms.includes(key)) {
-                          badgeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400';
+                          badgeClass = 'bg-purple-100 text-purple-700';
                         }
 
                         return (
@@ -585,9 +585,9 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
       {/* 成功メッセージ */}
       {success && (
-        <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+        <Alert className="bg-green-50 border-green-200">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 dark:text-green-300">
+          <AlertDescription className="text-green-800">
             <strong>
               {existingUser
                 ? existingUser.hasOperatorRole

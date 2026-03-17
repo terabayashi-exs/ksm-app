@@ -246,8 +246,8 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">読み込み中...</span>
+        <RefreshCw className="h-6 w-6 animate-spin text-gray-500" />
+        <span className="ml-2 text-gray-500">読み込み中...</span>
       </div>
     );
   }
@@ -255,9 +255,9 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
   if (files.length === 0) {
     return (
       <div className="text-center py-8">
-        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">まだファイル・リンクが登録されていません</p>
-        <p className="text-sm text-muted-foreground mt-2">
+        <FileText className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-500">まだファイル・リンクが登録されていません</p>
+        <p className="text-sm text-gray-500 mt-2">
           上記のフォームを使用してファイルのアップロードまたは外部URLリンクを追加してください
         </p>
       </div>
@@ -268,7 +268,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
     <div className="space-y-4">
       {/* 更新ボタン */}
       <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">{files.length}件のファイル</p>
+        <p className="text-sm text-gray-500">{files.length}件のファイル</p>
         <Button variant="outline" size="sm" onClick={fetchFiles}>
           <RefreshCw className="h-4 w-4 mr-2" />
           更新
@@ -302,7 +302,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
                       </span>
                       <span className="font-medium">{file.file_title}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground ml-6">
+                    <div className="text-sm text-gray-500 ml-6">
                       {file.link_type === 'external' ? (
                         <a href={file.external_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                           {file.external_url}
@@ -313,7 +313,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
                       )}
                     </div>
                     {file.file_description && (
-                      <div className="text-sm text-muted-foreground mt-1 ml-6">
+                      <div className="text-sm text-gray-500 mt-1 ml-6">
                         {file.file_description}
                       </div>
                     )}

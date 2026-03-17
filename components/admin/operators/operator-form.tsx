@@ -244,7 +244,7 @@ export default function OperatorForm({
               </Button>
             </div>
             {passwordValue && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 現在のパスワード: <span className="font-mono font-semibold">{passwordValue}</span>
               </p>
             )}
@@ -315,7 +315,7 @@ export default function OperatorForm({
             <div className="space-y-2">
               <Label className="text-sm font-medium">ログインID</Label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
+                <div className="flex-1 p-3 bg-gray-50 rounded-md font-mono text-sm">
                   {createdCredentials?.loginId}
                 </div>
                 <Button
@@ -341,7 +341,7 @@ export default function OperatorForm({
             <div className="space-y-2">
               <Label className="text-sm font-medium">パスワード</Label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
+                <div className="flex-1 p-3 bg-gray-50 rounded-md font-mono text-sm">
                   {createdCredentials?.password}
                 </div>
                 <Button

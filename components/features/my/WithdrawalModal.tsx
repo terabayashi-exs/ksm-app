@@ -125,10 +125,10 @@ export default function WithdrawalModal({
           <DialogDescription asChild>
             <div className="space-y-2 pt-2">
               <div className="text-sm">
-                <span className="font-medium text-foreground">大会名:</span> {tournamentName}
+                <span className="font-medium text-gray-900">大会名:</span> {tournamentName}
               </div>
               <div className="text-sm">
-                <span className="font-medium text-foreground">参加チーム名:</span> {tournamentTeamName}
+                <span className="font-medium text-gray-900">参加チーム名:</span> {tournamentTeamName}
               </div>
             </div>
           </DialogDescription>
@@ -154,7 +154,7 @@ export default function WithdrawalModal({
                   </p>
                 )}
               </div>
-              <p className={`text-xs ${charCount < 5 ? 'text-red-500' : charCount > 50 ? 'text-red-500' : 'text-muted-foreground'}`}>
+              <p className={`text-xs ${charCount < 5 ? 'text-red-500' : charCount > 50 ? 'text-red-500' : 'text-gray-500'}`}>
                 {charCount} / 50文字
               </p>
             </div>

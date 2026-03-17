@@ -90,12 +90,12 @@ function TournamentOverview({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ongoing':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">開催中</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">開催中</span>;
       case 'completed':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted text-foreground">完了</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-50 text-gray-900">完了</span>;
       case 'planning':
       default:
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">開催予定</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">開催予定</span>;
     }
   };
 
@@ -117,19 +117,19 @@ function TournamentOverview({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">大会名</h4>
+              <h4 className="font-medium text-gray-500 mb-2">大会名</h4>
               <p className="text-lg font-semibold">{tournament.tournament_name}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">ステータス</h4>
+              <h4 className="font-medium text-gray-500 mb-2">ステータス</h4>
               {getStatusBadge(tournament.status)}
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">フォーマット</h4>
-              <p className="text-foreground">{tournament.format_name || '未設定'}</p>
+              <h4 className="font-medium text-gray-500 mb-2">フォーマット</h4>
+              <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2 flex items-center">
+              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
                 <MapPin className="h-4 w-4 mr-1" />
                 会場
               </h4>
@@ -148,25 +148,25 @@ function TournamentOverview({
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       ) : (
-                        <p className="text-foreground">{v.venue_name}</p>
+                        <p className="text-gray-900">{v.venue_name}</p>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-foreground">未設定</p>
+                <p className="text-gray-900">未設定</p>
               )}
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2 flex items-center">
+              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
                 <Users className="h-4 w-4 mr-1" />
                 参加チーム数
               </h4>
-              <p className="text-foreground">{tournament.team_count}チーム</p>
+              <p className="text-gray-900">{tournament.team_count}チーム</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">コート数</h4>
-              <p className="text-foreground">{tournament.court_count}コート</p>
+              <h4 className="font-medium text-gray-500 mb-2">コート数</h4>
+              <p className="text-gray-900">{tournament.court_count}コート</p>
             </div>
           </div>
         </CardContent>
@@ -183,10 +183,10 @@ function TournamentOverview({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col space-y-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex flex-col space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex-1">
-                    <h4 className="font-medium text-green-800 dark:text-green-200 mb-1">PDFでトーナメント表を表示</h4>
-                    <p className="text-sm text-green-700 dark:text-green-300">
+                    <h4 className="font-medium text-green-800 mb-1">PDFでトーナメント表を表示</h4>
+                    <p className="text-sm text-green-700">
                       手動作成されたトーナメント表をPDF形式でご覧いただけます。印刷や詳細確認に最適です。
                     </p>
                   </div>
@@ -212,10 +212,10 @@ function TournamentOverview({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col space-y-3 p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg border border-primary/20 dark:border-blue-800">
+                <div className="flex flex-col space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
                   <div className="flex-1">
-                    <h4 className="font-medium text-primary dark:text-blue-200 mb-1">PDFで結果表を表示</h4>
-                    <p className="text-sm text-primary dark:text-blue-300">
+                    <h4 className="font-medium text-primary mb-1">PDFで結果表を表示</h4>
+                    <p className="text-sm text-primary">
                       手動作成された結果表をPDF形式でご覧いただけます。順位・戦績の確認に最適です。
                     </p>
                   </div>
@@ -252,13 +252,13 @@ function TournamentOverview({
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {dateEntries.map(([dayNumber, date]) => (
-                <div key={dayNumber} className="flex items-center p-3 bg-muted/50 rounded-lg">
+                <div key={dayNumber} className="flex items-center p-3 bg-gray-50/50 rounded-lg">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold mr-3">
                     {dayNumber}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">第{dayNumber}日</p>
-                    <p className="font-medium text-foreground">{formatDateOnly(date as string)}</p>
+                    <p className="text-sm text-gray-500">第{dayNumber}日</p>
+                    <p className="font-medium text-gray-900">{formatDateOnly(date as string)}</p>
                   </div>
                 </div>
               ))}
@@ -276,13 +276,13 @@ function TournamentOverview({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg">
+            <div className="text-center p-4 bg-primary/5 rounded-lg">
               <p className="text-2xl font-bold text-primary">{tournament.match_duration_minutes}</p>
-              <p className="text-sm text-muted-foreground">試合時間（分）</p>
+              <p className="text-sm text-gray-500">試合時間（分）</p>
             </div>
-            <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+            <div className="text-center p-4 bg-green-50 rounded-lg">
               <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
-              <p className="text-sm text-muted-foreground">休憩時間（分）</p>
+              <p className="text-sm text-gray-500">休憩時間（分）</p>
             </div>
           </div>
         </CardContent>
@@ -297,17 +297,17 @@ function TournamentOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
               <div>
-                <p className="text-sm text-orange-700 dark:text-orange-300">開始</p>
-                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDateOnly(tournament.recruitment_start_date)}</p>
+                <p className="text-sm text-orange-700">開始</p>
+                <p className="font-medium text-orange-800">{formatDateOnly(tournament.recruitment_start_date)}</p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-0.5 bg-orange-300 dark:bg-orange-600"></div>
+                <div className="w-12 h-0.5 bg-orange-300"></div>
               </div>
               <div>
-                <p className="text-sm text-orange-700 dark:text-orange-300">終了</p>
-                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDateOnly(tournament.recruitment_end_date)}</p>
+                <p className="text-sm text-orange-700">終了</p>
+                <p className="font-medium text-orange-800">{formatDateOnly(tournament.recruitment_end_date)}</p>
               </div>
             </div>
           </CardContent>

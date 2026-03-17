@@ -9,15 +9,15 @@ import Link from 'next/link';
  */
 export function ArchiveLoadingState() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto">
           <CardContent className="pt-8 pb-6 text-center">
             <div className="flex justify-center mb-4">
-              <Archive className="h-12 w-12 text-muted-foreground animate-pulse" />
+              <Archive className="h-12 w-12 text-gray-500 animate-pulse" />
             </div>
             <h2 className="text-lg font-semibold mb-2">アーカイブを読み込み中...</h2>
-            <p className="text-muted-foreground">
+            <p className="text-gray-500">
               大会データを取得しています
             </p>
             <div className="mt-4">
@@ -70,21 +70,21 @@ export function ArchiveErrorState({ error, tournamentId, onRetry }: ArchiveError
   const errorDetails = getErrorDetails(error);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-lg mx-auto">
           <CardContent className="pt-8 pb-6 text-center">
             <div className="flex justify-center mb-4">
               {errorDetails.icon}
             </div>
-            <h2 className="text-lg font-semibold mb-2 text-foreground">
+            <h2 className="text-lg font-semibold mb-2 text-gray-900">
               {errorDetails.title}
             </h2>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-gray-500 mb-4">
               {errorDetails.description}
             </p>
             
-            <div className="text-sm text-muted-foreground mb-6 p-3 bg-muted rounded-lg">
+            <div className="text-sm text-gray-500 mb-6 p-3 bg-gray-50 rounded-lg">
               <p className="font-medium mb-1">詳細エラー:</p>
               <p className="break-words">{error}</p>
               <p className="mt-2">大会ID: {tournamentId}</p>

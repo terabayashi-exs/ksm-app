@@ -55,7 +55,7 @@ function ComboInput({
               <button
                 key={name}
                 type="button"
-                className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent cursor-pointer"
+                className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 cursor-pointer"
                 onMouseDown={e => {
                   e.preventDefault();
                   onChange(name);
@@ -453,11 +453,11 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">{tournament.tournament_name}</CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             {tournament.format_name} / {matchesByMatchday.length}節 / 全{totalMatchCount}試合
           </p>
           {configuredMatchCount < totalMatchCount && (
-            <p className="text-sm text-amber-600 dark:text-amber-400">
+            <p className="text-sm text-amber-600">
               未設定の試合: {totalMatchCount - configuredMatchCount}試合
             </p>
           )}
@@ -474,7 +474,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
         </CardHeader>
         {showBulk && (
           <CardContent className="pt-0 space-y-3">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               チェックを入れた項目のみ一括適用します。試合時間: {matchDuration}分
             </p>
             <div className="space-y-3">
@@ -537,7 +537,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                       <option key={v.venue_id} value={v.venue_name} />
                     ))}
                   </datalist>
-                  <p className="text-xs text-muted-foreground">※ 会場を設定するとコート名にも同じ名称が自動設定されます</p>
+                  <p className="text-xs text-gray-500">※ 会場を設定するとコート名にも同じ名称が自動設定されます</p>
                 </div>
               </div>
               {/* コート名 */}
@@ -586,9 +586,9 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <button type="button" className="text-xs text-primary hover:underline" onClick={selectAllBulkMatchdays}>全選択</button>
-                    <span className="text-xs text-muted-foreground">/</span>
+                    <span className="text-xs text-gray-500">/</span>
                     <button type="button" className="text-xs text-primary hover:underline" onClick={deselectAllBulkMatchdays}>全解除</button>
-                    <span className="text-xs text-muted-foreground ml-1">
+                    <span className="text-xs text-gray-500 ml-1">
                       ({bulkSelectedMatchdays.size}/{matchesByMatchday.length}節選択中)
                     </span>
                   </div>
@@ -629,7 +629,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground ml-6">
+            <p className="text-xs text-gray-500 ml-6">
               同じコートでは{matchDuration}分以上の間隔が必要です。時刻またはコート名を変更してください。
             </p>
           </CardContent>
@@ -644,7 +644,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
           const noneConfigured = mdMatches.every(m => !m.tournament_date);
 
           return (
-            <Card key={matchday} className={noneConfigured ? "border-dashed border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10" : ""}>
+            <Card key={matchday} className={noneConfigured ? "border-dashed border-amber-300 bg-amber-50/30" : ""}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <button
@@ -654,15 +654,15 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                     <Calendar className="w-4 h-4" />
                     <CardTitle className="text-sm font-medium">
                       第{matchday}節
-                      <span className="text-xs text-muted-foreground font-normal ml-2">
+                      <span className="text-xs text-gray-500 font-normal ml-2">
                         ({mdMatches.length}試合)
                       </span>
                     </CardTitle>
                     {noneConfigured && (
-                      <span className="text-xs text-amber-600 dark:text-amber-400">未設定</span>
+                      <span className="text-xs text-amber-600">未設定</span>
                     )}
                     {allConfigured && (
-                      <span className="text-xs text-green-600 dark:text-green-400">設定済</span>
+                      <span className="text-xs text-green-600">設定済</span>
                     )}
                     {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
                   </button>
@@ -689,24 +689,24 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                     return (
                       <div
                         key={match.match_id}
-                        className={`rounded-md border p-3 space-y-2 ${hasConflict ? 'border-destructive bg-destructive/5' : !hasDate ? 'border-dashed border-amber-200 dark:border-amber-800' : 'border-border'}`}
+                        className={`rounded-md border p-3 space-y-2 ${hasConflict ? 'border-destructive bg-destructive/5' : !hasDate ? 'border-dashed border-amber-200' : 'border-gray-200'}`}
                       >
                         {/* 試合情報ヘッダー */}
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="font-medium text-sm">{match.match_code}</span>
-                            <span className="text-xs text-muted-foreground ml-2">{match.match_type}</span>
+                            <span className="text-xs text-gray-500 ml-2">{match.match_type}</span>
                           </div>
                           <span className="text-sm">
                             {match.team1_display_name}
-                            <span className="text-muted-foreground mx-1.5">vs</span>
+                            <span className="text-gray-500 mx-1.5">vs</span>
                             {match.team2_display_name}
                           </span>
                         </div>
                         {/* 設定フィールド */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">日付</Label>
+                            <Label className="text-xs text-gray-500">日付</Label>
                             <Input
                               className="h-8 text-sm"
                               type="date"
@@ -715,7 +715,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">時刻</Label>
+                            <Label className="text-xs text-gray-500">時刻</Label>
                             <Input
                               className="h-8 text-sm"
                               type="time"
@@ -724,7 +724,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">会場</Label>
+                            <Label className="text-xs text-gray-500">会場</Label>
                             <Select
                               value={match.venue_name || "__empty__"}
                               onValueChange={(v) => {
@@ -747,7 +747,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                             </Select>
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">コート名</Label>
+                            <Label className="text-xs text-gray-500">コート名</Label>
                             <ComboInput
                               className="h-8 text-sm"
                               value={match.court_name}
@@ -768,7 +768,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       </div>
 
       {/* 保存ボタン（画面下部固定） */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-end gap-3">
           <Button variant="outline" onClick={() => router.push('/my')}>
             キャンセル

@@ -210,26 +210,26 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* 読み取り専用情報 */}
-      <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+      <div className="rounded-lg border bg-gray-50/50 p-4 space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
           <Info className="w-4 h-4" />
           フォーマット情報
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-muted-foreground">競技種別:</span>{" "}
+            <span className="text-gray-500">競技種別:</span>{" "}
             <span className="font-medium">{tournament.sport_name}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">フォーマット:</span>{" "}
+            <span className="text-gray-500">フォーマット:</span>{" "}
             <span className="font-medium">{tournament.format_name}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">チーム数:</span>{" "}
+            <span className="text-gray-500">チーム数:</span>{" "}
             <span className="font-medium">{tournament.team_count}チーム</span>
           </div>
           <div>
-            <span className="text-muted-foreground">節数:</span>{" "}
+            <span className="text-gray-500">節数:</span>{" "}
             <span className="font-medium">{matchesByMatchday.length}節（全{totalMatches}試合）</span>
           </div>
         </div>
@@ -238,8 +238,8 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
       {/* 所属する大会（読み取り専用） */}
       <div className="space-y-2">
         <Label>所属する大会</Label>
-        <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-          <Building2 className="w-4 h-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
+          <Building2 className="w-4 h-4 text-gray-500" />
           <span className="font-medium">{tournament.group_name || "未設定"}</span>
         </div>
       </div>
@@ -259,9 +259,9 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
       <div className="space-y-2">
         <Label>会場 <span className="text-destructive">*</span></Label>
         {loadingVenues ? (
-          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-muted-foreground">読み込み中...</span>
+            <span className="text-gray-500">読み込み中...</span>
           </div>
         ) : (
           <div className="space-y-2">
@@ -317,7 +317,7 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
                         <button
                           key={venue.venue_id}
                           type="button"
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? 'bg-gray-100/50' : ''}`}
                           onClick={() => {
                             let newVenues: Venue[];
                             if (isSelected) {
@@ -331,7 +331,7 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
                         >
                           <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
                           <span>{venue.venue_name}</span>
-                          <span className="text-muted-foreground ml-auto text-xs">{venue.available_courts}コート</span>
+                          <span className="text-gray-500 ml-auto text-xs">{venue.available_courts}コート</span>
                         </button>
                       );
                     })}
@@ -341,7 +341,7 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
           </div>
         )}
         {errors.venue_ids && <p className="text-sm text-destructive">{errors.venue_ids.message}</p>}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-gray-500">
           ここで選択した会場が、日程・会場設定の会場プルダウンに表示されます
         </p>
       </div>
@@ -352,14 +352,14 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
         <Input
           id="match_duration_minutes"
           type="number"
-          className={`max-w-[200px] ${tournament?.default_match_duration != null ? "bg-muted" : ""}`}
+          className={`max-w-[200px] ${tournament?.default_match_duration != null ? "bg-gray-50" : ""}`}
           {...register("match_duration_minutes", { valueAsNumber: true })}
           disabled={tournament?.default_match_duration != null}
         />
         {tournament?.default_match_duration != null ? (
-          <p className="text-xs text-muted-foreground">フォーマットで設定済み</p>
+          <p className="text-xs text-gray-500">フォーマットで設定済み</p>
         ) : (
-          <p className="text-xs text-muted-foreground">節設定で日時の重複チェックに使用されます</p>
+          <p className="text-xs text-gray-500">節設定で日時の重複チェックに使用されます</p>
         )}
         {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
       </div>
@@ -416,7 +416,7 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
               onCheckedChange={(checked) => setValue("show_players_public", checked)}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-gray-500">
             チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
             チェックを外すと、大会運営者のみが閲覧可能になります。
           </p>
@@ -432,7 +432,7 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
               <p className="font-medium text-primary">
                 第{matchday}節
                 {mdMatches[0]?.cycle > 1 && (
-                  <span className="text-sm text-muted-foreground ml-1">（{mdMatches[0].cycle}巡目）</span>
+                  <span className="text-sm text-gray-500 ml-1">（{mdMatches[0].cycle}巡目）</span>
                 )}
               </p>
               <div className="overflow-x-auto">
@@ -445,10 +445,10 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
                   </thead>
                   <tbody>
                     {mdMatches.map((m) => (
-                      <tr key={m.match_code} className="border-b hover:bg-muted">
+                      <tr key={m.match_code} className="border-b hover:bg-gray-50">
                         <td className="py-2 px-3">
                           <div className="font-medium">{m.match_code}</div>
-                          <div className="text-xs text-muted-foreground">{m.match_type}</div>
+                          <div className="text-xs text-gray-500">{m.match_type}</div>
                         </td>
                         <td className="py-2 px-3 text-sm">
                           {m.team1_display_name} vs {m.team2_display_name}

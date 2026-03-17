@@ -47,7 +47,7 @@ export default function AnnouncementList() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">読み込み中...</div>
+          <div className="text-center py-8 text-gray-500">読み込み中...</div>
         </CardContent>
       </Card>
     );
@@ -77,9 +77,9 @@ export default function AnnouncementList() {
   }
 
   return (
-    <Card className="bg-accent/50 border-2 border-gray-200">
+    <Card className="bg-gray-100/50 border-2 border-gray-200">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground">
+        <CardTitle className="flex items-center gap-2 text-gray-900">
           <Bell className="h-5 w-5" />
           お知らせ
         </CardTitle>
@@ -89,12 +89,12 @@ export default function AnnouncementList() {
           {announcements.map((announcement) => (
             <div
               key={announcement.announcement_id}
-              className="bg-background rounded-lg p-4 border-2 border-gray-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+              className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-foreground">{announcement.title}</h3>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
                     {new Date(announcement.created_at).toLocaleDateString('ja-JP', {
                       year: 'numeric',
                       month: '2-digit',
@@ -102,7 +102,7 @@ export default function AnnouncementList() {
                     })}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm text-gray-500 whitespace-pre-wrap">
                   {announcement.content}
                 </p>
               </div>

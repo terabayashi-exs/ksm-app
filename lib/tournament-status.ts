@@ -397,12 +397,26 @@ export function getStatusLabel(status: TournamentStatus): string {
  */
 export function getStatusColor(status: TournamentStatus): string {
   switch (status) {
-    case 'planning': return 'bg-gray-100 !text-black border border-gray-400';
-    case 'recruiting': return 'bg-blue-100 !text-black border border-blue-400';
-    case 'before_event': return 'bg-yellow-100 !text-black border border-yellow-400';
-    case 'ongoing': return 'bg-green-100 !text-black border border-green-400';
-    case 'completed': return 'bg-red-100 !text-black border border-red-400';
-    default: return 'bg-gray-100 !text-black border border-gray-400';
+    case 'planning': return 'bg-gray-100 text-gray-800 border border-gray-400';
+    case 'recruiting': return 'bg-blue-100 text-blue-800 border border-blue-400';
+    case 'before_event': return 'bg-yellow-100 text-yellow-800 border border-yellow-400';
+    case 'ongoing': return 'bg-green-100 text-green-800 border border-green-400';
+    case 'completed': return 'bg-red-100 text-red-800 border border-red-400';
+    default: return 'bg-gray-100 text-gray-800 border border-gray-400';
+  }
+}
+
+/**
+ * ステータスに対応するBadgeバリアントを取得
+ */
+export function getStatusBadgeVariant(status: TournamentStatus): "muted" | "info" | "warning" | "success" | "error" {
+  switch (status) {
+    case 'planning': return 'muted';
+    case 'recruiting': return 'info';
+    case 'before_event': return 'warning';
+    case 'ongoing': return 'success';
+    case 'completed': return 'error';
+    default: return 'muted';
   }
 }
 

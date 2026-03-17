@@ -48,13 +48,13 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             大会GO
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-gray-500">
             パスワードリセット
           </p>
         </div>
@@ -83,13 +83,13 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     アカウント登録時に入力したメールアドレス
                   </p>
                 </div>
 
                 {error && (
-                  <div className="text-destructive text-sm bg-destructive/5 dark:bg-red-950/20 p-3 rounded border border-destructive/20 dark:border-red-800">
+                  <div className="text-destructive text-sm bg-destructive/5 p-3 rounded border border-destructive/20">
                     {error}
                   </div>
                 )}
@@ -100,14 +100,14 @@ export default function ForgotPasswordPage() {
               </form>
             ) : (
               <div className="space-y-4">
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-start">
-                    <Mail className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 mr-3" />
+                    <Mail className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
+                      <h3 className="text-sm font-medium text-green-800">
                         メールを送信しました
                       </h3>
-                      <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+                      <p className="mt-2 text-sm text-green-700">
                         登録されているメールアドレスにパスワードリセット用のリンクを送信しました。
                         メールをご確認ください。
                       </p>
@@ -115,11 +115,11 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                <div className="bg-primary/5 dark:bg-blue-950/20 border border-primary/20 dark:border-blue-800 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-primary dark:text-blue-300 mb-2">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-primary mb-2">
                     重要事項
                   </h4>
-                  <ul className="text-sm text-primary dark:text-blue-400 space-y-1 list-disc list-inside">
+                  <ul className="text-sm text-primary space-y-1 list-disc list-inside">
                     <li>リンクの有効期限は1時間です</li>
                     <li>リンクは1回のみ使用可能です</li>
                     <li>メールが届かない場合は迷惑メールフォルダをご確認ください</li>
@@ -145,7 +145,7 @@ export default function ForgotPasswordPage() {
                   <ArrowLeft className="h-4 w-4 mr-1" />
                   ログイン画面に戻る
                 </Link>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-500">
                   アカウント登録がお済みでない場合は{" "}
                   <Link
                     href="/auth/register"

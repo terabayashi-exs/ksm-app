@@ -247,14 +247,14 @@ export default function BlobMigrationPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">移行進捗</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <BarChart3 className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold mb-2 text-blue-600">
               {status.overview.migration_progress_percent}%
             </div>
             <Progress value={status.overview.migration_progress_percent} className="mb-2" />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               {status.categories.migrated.length} / {status.overview.total_db_archives} 完了
             </p>
           </CardContent>
@@ -263,13 +263,13 @@ export default function BlobMigrationPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">データ整合性</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <Shield className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold mb-2 ${getStatusColor(status.overview.data_consistency_score)}`}>
               {status.overview.data_consistency_score}%
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               データ検証は「データ検証実行」で確認
             </p>
           </CardContent>
@@ -278,13 +278,13 @@ export default function BlobMigrationPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ストレージ使用量</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <HardDrive className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold mb-2">
               {status.storage_analysis.db_storage_mb}MB
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               Blob: {status.storage_analysis.blob_storage_mb}MB
             </p>
           </CardContent>
@@ -293,13 +293,13 @@ export default function BlobMigrationPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">未移行データ</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <Database className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold mb-2 text-orange-600">
               {status.categories.not_migrated.length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               {status.storage_analysis.potential_savings_mb}MB 削減可能
             </p>
           </CardContent>

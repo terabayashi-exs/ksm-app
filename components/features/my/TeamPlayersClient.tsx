@@ -140,14 +140,14 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
           <CardTitle className="text-2xl">
             選手管理
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             {teamName}{teamOmission && `（${teamOmission}）`}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {message && (
-            <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200'}`}>
+            <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
               {message.text}
             </div>
           )}
@@ -163,13 +163,13 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                   <Users className="w-5 h-5 text-blue-600" />
                   <span className="font-medium">登録選手：{players.length}名</span>
                 </div>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-gray-500">
                   （最大20名まで）
                 </span>
               </div>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-[1fr_100px_40px] gap-2 text-sm font-medium text-muted-foreground px-1">
+                <div className="grid grid-cols-[1fr_100px_40px] gap-2 text-sm font-medium text-gray-500 px-1">
                   <span>選手名 <span className="text-red-500">*</span></span>
                   <span>背番号</span>
                   <span></span>
@@ -197,7 +197,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                       variant="ghost"
                       size="sm"
                       onClick={() => removePlayer(idx)}
-                      className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 p-2"
+                      className="text-gray-500 hover:text-red-500 hover:bg-red-50 p-2"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -205,7 +205,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                 ))}
 
                 {formPlayers.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>選手が登録されていません</p>
                     <p className="text-sm mt-1">「選手を追加」ボタンから登録してください</p>
@@ -244,7 +244,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                 </Button>
               </div>
 
-              <div className="text-sm text-muted-foreground space-y-1 pt-4 border-t">
+              <div className="text-sm text-gray-500 space-y-1 pt-4 border-t">
                 <p>• 選手名は必須項目です</p>
                 <p>• 背番号は任意です（1〜99の範囲で設定できます）</p>
                 <p>• 背番号を設定する場合は、重複しないようにしてください</p>

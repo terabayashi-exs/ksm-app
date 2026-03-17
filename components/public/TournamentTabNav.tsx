@@ -101,7 +101,7 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
             flex items-center justify-center py-3 text-xs sm:text-sm rounded-md font-medium transition-colors
             ${isActive(tab)
               ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+              : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }
           `}
         >

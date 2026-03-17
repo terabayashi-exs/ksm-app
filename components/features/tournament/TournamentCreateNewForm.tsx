@@ -477,8 +477,8 @@ export default function TournamentCreateNewForm() {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">競技種別を選択</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">競技種別を選択</h2>
+          <p className="text-gray-600">
             大会で実施する競技を選択してください
           </p>
         </div>
@@ -787,9 +787,9 @@ export default function TournamentCreateNewForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* フォーマット情報（読み取り専用） */}
-      <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+      <div className="rounded-lg border bg-gray-50/50 p-4 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
             <Info className="w-4 h-4" />
             フォーマット情報
           </div>
@@ -804,15 +804,15 @@ export default function TournamentCreateNewForm() {
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-muted-foreground">競技種別:</span>{" "}
+            <span className="text-gray-500">競技種別:</span>{" "}
             <span className="font-medium">{selectedSportType?.sport_name}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">フォーマット:</span>{" "}
+            <span className="text-gray-500">フォーマット:</span>{" "}
             <span className="font-medium">{selectedFormat?.format_name}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">チーム数:</span>{" "}
+            <span className="text-gray-500">チーム数:</span>{" "}
             <span className="font-medium">{teamCount}チーム</span>
           </div>
         </div>
@@ -822,13 +822,13 @@ export default function TournamentCreateNewForm() {
       <div className="space-y-2">
         <Label>所属する大会</Label>
         {loadingTournamentGroups ? (
-          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-muted-foreground">読み込み中...</span>
+            <span className="text-gray-500">読み込み中...</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-            <Building2 className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
+            <Building2 className="w-4 h-4 text-gray-500" />
             <span>{tournamentGroups.find(g => g.group_id === watch('group_id'))?.group_name || '未選択'}</span>
           </div>
         )}
@@ -849,9 +849,9 @@ export default function TournamentCreateNewForm() {
       <div className="space-y-2">
         <Label>会場 <span className="text-destructive">*</span></Label>
         {loadingVenues ? (
-          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-muted-foreground">読み込み中...</span>
+            <span className="text-gray-500">読み込み中...</span>
           </div>
         ) : (
           <div className="space-y-2">
@@ -909,7 +909,7 @@ export default function TournamentCreateNewForm() {
                         <button
                           key={venue.venue_id}
                           type="button"
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? 'bg-gray-100/50' : ''}`}
                           onClick={() => {
                             let newVenues: Venue[];
                             if (isSelected) {
@@ -923,12 +923,12 @@ export default function TournamentCreateNewForm() {
                         >
                           <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
                           <span>{venue.venue_name}</span>
-                          <span className="text-muted-foreground ml-auto text-xs">{venue.available_courts}コート</span>
+                          <span className="text-gray-500 ml-auto text-xs">{venue.available_courts}コート</span>
                         </button>
                       );
                     })}
                   {venues.filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase())).length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">会場が見つかりません</p>
+                    <p className="text-sm text-gray-500 text-center py-2">会場が見つかりません</p>
                   )}
                 </div>
               </PopoverContent>
@@ -940,10 +940,10 @@ export default function TournamentCreateNewForm() {
 
       {/* コート数（自動算出・表示のみ） */}
       {selectedFormat && (
-        <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-          <span className="text-muted-foreground">使用コート数:</span>
+        <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
+          <span className="text-gray-500">使用コート数:</span>
           <span className="font-medium">{derivedCourtCount}コート</span>
-          <span className="text-xs text-muted-foreground">（フォーマットから自動設定）</span>
+          <span className="text-xs text-gray-500">（フォーマットから自動設定）</span>
         </div>
       )}
 
@@ -976,14 +976,14 @@ export default function TournamentCreateNewForm() {
         {(watch('tournament_dates') || []).map((_, index) => (
           <div key={index} className="flex items-end gap-3">
             <div className="flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">開催日 {index + 1}</Label>
+              <Label className="text-xs text-gray-500">開催日 {index + 1}</Label>
               <Input
                 type="date"
                 {...register(`tournament_dates.${index}.date`)}
               />
             </div>
             <div className="w-24 space-y-1">
-              <Label className="text-xs text-muted-foreground">Day番号</Label>
+              <Label className="text-xs text-gray-500">Day番号</Label>
               <Input
                 type="number"
                 min="1"
@@ -1061,7 +1061,7 @@ export default function TournamentCreateNewForm() {
               onCheckedChange={(checked) => setValue("show_players_public", checked)}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-gray-500">
             チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
             チェックを外すと、大会運営者のみが閲覧可能になります。
           </p>
@@ -1079,10 +1079,10 @@ export default function TournamentCreateNewForm() {
             min={5}
             max={120}
             disabled={selectedFormat?.default_match_duration != null}
-            className={selectedFormat?.default_match_duration != null ? "bg-muted" : ""}
+            className={selectedFormat?.default_match_duration != null ? "bg-gray-50" : ""}
           />
           {selectedFormat?.default_match_duration != null && (
-            <p className="text-xs text-muted-foreground">フォーマットで設定済み</p>
+            <p className="text-xs text-gray-500">フォーマットで設定済み</p>
           )}
           {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
         </div>
@@ -1095,10 +1095,10 @@ export default function TournamentCreateNewForm() {
             min={0}
             max={30}
             disabled={selectedFormat?.default_break_duration != null}
-            className={selectedFormat?.default_break_duration != null ? "bg-muted" : ""}
+            className={selectedFormat?.default_break_duration != null ? "bg-gray-50" : ""}
           />
           {selectedFormat?.default_break_duration != null && (
-            <p className="text-xs text-muted-foreground">フォーマットで設定済み</p>
+            <p className="text-xs text-gray-500">フォーマットで設定済み</p>
           )}
           {errors.break_duration_minutes && <p className="text-sm text-destructive">{errors.break_duration_minutes.message}</p>}
         </div>
@@ -1111,7 +1111,7 @@ export default function TournamentCreateNewForm() {
             <h3 className="text-sm font-semibold">スケジュールプレビュー</h3>
             <Badge variant="secondary" className="text-xs">個別編集可能</Badge>
           </div>
-          <p className="text-xs text-muted-foreground">各試合の時間とコート番号を個別に調整できます</p>
+          <p className="text-xs text-gray-500">各試合の時間とコート番号を個別に調整できます</p>
           <SchedulePreview
             settings={{
               courtCount: derivedCourtCount,

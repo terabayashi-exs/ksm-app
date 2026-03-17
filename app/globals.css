@@ -26,28 +26,9 @@
   --base-700: 210 26% 29%;
   --base-800: 210 29% 24%;
   --base-900: 210 31% 14%;
-}
-
-.dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 204 70% 53%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 25%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 204 70% 53%;
+  --success: 145 63% 42%;
+  --warning: 36 90% 52%;
+  --info: 204 70% 53%;
 }
 
 * {
@@ -98,4 +79,14 @@ body {
   .tournament-block {
     page-break-inside: avoid;
   }
+}
+
+/* インタラクティブカード — クリック可能なカードに適用 */
+.card-interactive {
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.card-interactive:hover {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }

@@ -104,12 +104,12 @@ function ResetPasswordForm() {
 
   if (validating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center space-y-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">リセットリンクを確認中...</p>
+              <p className="text-sm text-gray-500">リセットリンクを確認中...</p>
             </div>
           </CardContent>
         </Card>
@@ -119,10 +119,10 @@ function ResetPasswordForm() {
 
   if (!tokenValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               大会GO
             </h2>
           </div>
@@ -135,13 +135,13 @@ function ResetPasswordForm() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-destructive/5 dark:bg-red-950/20 border border-destructive/20 dark:border-red-800 rounded-lg p-4">
-                <p className="text-sm text-destructive dark:text-red-400">
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+                <p className="text-sm text-destructive">
                   {tokenError}
                 </p>
               </div>
 
-              <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="space-y-2 text-sm text-gray-500">
                 <p>考えられる理由：</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
                   <li>リンクの有効期限（1時間）が切れている</li>
@@ -173,13 +173,13 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             大会GO
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-gray-500">
             新しいパスワードの設定
           </p>
         </div>
@@ -188,7 +188,7 @@ function ResetPasswordForm() {
           <CardHeader>
             <CardTitle className="text-2xl">パスワードリセット</CardTitle>
             {userInfo && (
-              <div className="mt-2 text-sm text-muted-foreground">
+              <div className="mt-2 text-sm text-gray-500">
                 <div><strong>アカウント:</strong> {userInfo.displayName}</div>
               </div>
             )}
@@ -214,12 +214,12 @@ function ResetPasswordForm() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     8文字以上で設定してください
                   </p>
                 </div>
@@ -241,7 +241,7 @@ function ResetPasswordForm() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900"
                     >
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -249,7 +249,7 @@ function ResetPasswordForm() {
                 </div>
 
                 {error && (
-                  <div className="text-destructive text-sm bg-destructive/5 dark:bg-red-950/20 p-3 rounded border border-destructive/20 dark:border-red-800">
+                  <div className="text-destructive text-sm bg-destructive/5 p-3 rounded border border-destructive/20">
                     {error}
                   </div>
                 )}
@@ -260,14 +260,14 @@ function ResetPasswordForm() {
               </form>
             ) : (
               <div className="space-y-4">
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-start">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 mr-3" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
+                      <h3 className="text-sm font-medium text-green-800">
                         パスワードを変更しました
                       </h3>
-                      <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+                      <p className="mt-2 text-sm text-green-700">
                         新しいパスワードでログインできます。
                         3秒後にログイン画面に移動します...
                       </p>
@@ -304,7 +304,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>

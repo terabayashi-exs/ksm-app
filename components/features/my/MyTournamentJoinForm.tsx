@@ -251,7 +251,7 @@ export default function MyTournamentJoinForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             この大会での参加チーム名と略称を入力してください。既存のチームと重複しない名前を指定する必要があります。
           </p>
 
@@ -276,7 +276,7 @@ export default function MyTournamentJoinForm({
                 {...control.register('tournament_team_omission')}
                 placeholder="例: SPA"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 全角4文字以内で入力してください
               </p>
               {errors.tournament_team_omission && (
@@ -295,7 +295,7 @@ export default function MyTournamentJoinForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             登録済みの選手から、この大会に参加する選手を選択してください。
           </p>
           {alreadyParticipatingPlayerIds.length > 0 && (
@@ -383,7 +383,7 @@ export default function MyTournamentJoinForm({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             チームに未登録の選手を、この大会のみ参加させたい場合に追加してください。
           </p>
 

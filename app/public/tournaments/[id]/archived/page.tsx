@@ -73,14 +73,14 @@ async function ArchivedTournamentContent({ params }: PageProps) {
   if (hasHtmlArchive) {
     // HTML版: iframe で表示
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="mb-4">
             <div className="flex items-center gap-4">
               <BackButton />
               <Button variant="ghost" asChild>
-                <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
+                <Link href="/" className="flex items-center text-gray-500 hover:text-gray-900">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   TOPページに戻る
                 </Link>
@@ -90,7 +90,7 @@ async function ArchivedTournamentContent({ params }: PageProps) {
 
           <div className="mb-2 flex items-center gap-2">
             <Archive className="h-4 w-4 text-purple-600" />
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-gray-500">
               アーカイブ表示（静的HTML版）
             </span>
           </div>
@@ -107,12 +107,12 @@ async function ArchivedTournamentContent({ params }: PageProps) {
 
   if (!archived) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-4">アーカイブデータが見つかりません</h1>
-            <p className="text-muted-foreground mb-8">指定された大会のアーカイブデータが存在しません。</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">アーカイブデータが見つかりません</h1>
+            <p className="text-gray-500 mb-8">指定された大会のアーカイブデータが存在しません。</p>
             <Button asChild>
               <Link href="/">TOPページに戻る</Link>
             </Button>
@@ -169,14 +169,14 @@ async function ArchivedTournamentContent({ params }: PageProps) {
 // フォールバック用のインラインレンダリング関数
 function renderInlineError(archived: { tournament: { tournament_name: string }; archived_at?: string }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
             <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
+              <Link href="/" className="flex items-center text-gray-500 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 TOPページに戻る
               </Link>
@@ -197,8 +197,8 @@ function renderInlineError(archived: { tournament: { tournament_name: string }; 
           </div>
         </div>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">{archived.tournament.tournament_name}</h1>
-          <p className="text-muted-foreground">アーカイブ日時: {formatDate(archived.archived_at as string)}</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{archived.tournament.tournament_name}</h1>
+          <p className="text-gray-500">アーカイブ日時: {formatDate(archived.archived_at as string)}</p>
         </div>
       </div>
       <Footer />

@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { User, LogOut, Menu, X, Search } from "lucide-react";
 
 export default function TopNavBar() {
@@ -32,8 +31,6 @@ export default function TopNavBar() {
 
           {/* デスクトップ: CTAボタン + ユーザーメニュー */}
           <div className="hidden sm:flex items-center space-x-3">
-            <ThemeToggle />
-
             {status === "loading" ? (
               <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : session?.user ? (
@@ -47,9 +44,9 @@ export default function TopNavBar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b border-border">
-                    <p className="font-medium text-foreground">{session.user.name}</p>
-                    <p className="text-sm text-muted-foreground">{session.user.email}</p>
+                  <div className="px-3 py-2 border-b border-gray-200">
+                    <p className="font-medium text-gray-900">{session.user.name}</p>
+                    <p className="text-sm text-gray-500">{session.user.email}</p>
                   </div>
 
                   <DropdownMenuItem asChild>
@@ -87,7 +84,6 @@ export default function TopNavBar() {
 
           {/* モバイル: ハンバーガーメニューボタン */}
           <div className="flex sm:hidden items-center gap-2">
-            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"

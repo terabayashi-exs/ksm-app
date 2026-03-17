@@ -274,7 +274,7 @@ export default function SportTypeCreateForm() {
         <CardContent>
           <div className="space-y-3">
             {fields.map((field, index) => (
-              <div key={field.id} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+              <div key={field.id} className="border rounded-lg p-4 bg-gray-50">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div className="space-y-2">
@@ -347,8 +347,8 @@ export default function SportTypeCreateForm() {
             ))}
           </div>
           
-          <div className="mt-4 p-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/20 rounded-lg">
-            <p className="text-sm text-primary dark:text-primary/80 flex items-center">
+          <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <p className="text-sm text-primary flex items-center">
               <AlertTriangle className="h-4 w-4 mr-2" />
               通常ピリオドは必須で、延長・PK戦は大会ごとに使用可否を設定できます
             </p>

@@ -173,7 +173,7 @@ export default function AnnouncementManagement() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="text-muted-foreground">読み込み中...</div>
+        <div className="text-gray-500">読み込み中...</div>
       </div>
     );
   }
@@ -262,7 +262,7 @@ export default function AnnouncementManagement() {
                     }
                     placeholder="0"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     大きい順に表示されます（同順位は新しい順）
                   </p>
                 </div>
@@ -292,7 +292,7 @@ export default function AnnouncementManagement() {
         {announcements.length === 0 ? (
           <Card>
             <CardContent className="py-12">
-              <div className="text-center text-muted-foreground">
+              <div className="text-center text-gray-500">
                 <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>お知らせが登録されていません</p>
               </div>
@@ -322,10 +322,10 @@ export default function AnnouncementManagement() {
                         </Badge>
                         <Badge variant="outline">順序: {announcement.display_order}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      <p className="text-sm text-gray-500 whitespace-pre-wrap">
                         {announcement.content}
                       </p>
-                      <div className="text-xs text-muted-foreground flex gap-4">
+                      <div className="text-xs text-gray-500 flex gap-4">
                         <span>作成者: {announcement.created_by}</span>
                         <span>作成: {new Date(announcement.created_at).toLocaleString('ja-JP')}</span>
                         <span>更新: {new Date(announcement.updated_at).toLocaleString('ja-JP')}</span>

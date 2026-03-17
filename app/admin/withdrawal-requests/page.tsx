@@ -47,7 +47,7 @@ export default async function WithdrawalRequestsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">辞退申請を読み込み中...</div>
+                <div className="text-gray-500">辞退申請を読み込み中...</div>
               </div>
             </CardContent>
           </Card>

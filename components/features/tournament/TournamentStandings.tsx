@@ -259,22 +259,22 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
 
   // ブロック色の取得（ブロック名ベースで動的に色分け）
   const blockColors = [
-    'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
-    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
-    'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
-    'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300',
-    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
-    'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-300',
-    'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300',
-    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
-    'bg-lime-100 text-lime-800 dark:bg-lime-900/20 dark:text-lime-300',
-    'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
-    'bg-sky-100 text-sky-800 dark:bg-sky-900/20 dark:text-sky-300',
-    'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/20 dark:text-fuchsia-300',
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300',
-    'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300',
-    'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300',
+    'bg-blue-100 text-blue-800900/20300',
+    'bg-green-100 text-green-800900/20300',
+    'bg-yellow-100 text-yellow-800900/20300',
+    'bg-purple-100 text-purple-800900/20300',
+    'bg-orange-100 text-orange-800900/20300',
+    'bg-cyan-100 text-cyan-800900/20300',
+    'bg-rose-100 text-rose-800900/20300',
+    'bg-teal-100 text-teal-800900/20300',
+    'bg-indigo-100 text-indigo-800900/20300',
+    'bg-lime-100 text-lime-800900/20300',
+    'bg-amber-100 text-amber-800900/20300',
+    'bg-sky-100 text-sky-800900/20300',
+    'bg-fuchsia-100 text-fuchsia-800900/20300',
+    'bg-emerald-100 text-emerald-800900/20300',
+    'bg-violet-100 text-violet-800900/20300',
+    'bg-red-100 text-red-800900/20300',
   ];
   const getBlockColor = (blockKey: string): string => {
     // 「Xブロック」形式からブロック文字を抽出して色分け（A～Zまで対応）
@@ -284,11 +284,11 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
       return blockColors[index % blockColors.length];
     }
     // 「X位リーグ」形式の色分け
-    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
-    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800900/20300';
+    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800900/20300';
+    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800900/20300';
+    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800900/20300';
+    return 'bg-gray-100 text-gray-800800200';
   };
 
   // フォーマットタイプに基づいた表示判定（リーグ戦形式かどうか）
@@ -319,13 +319,13 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
   const getPositionBgColor = (position: number): string => {
     switch (position) {
       case 1:
-        return 'bg-yellow-50 border-l-4 border-yellow-400 dark:bg-yellow-950/20 dark:border-yellow-500';
+        return 'bg-yellow-50 border-l-4 border-yellow-400950/20500';
       case 2:
-        return 'bg-gray-50 border-l-4 border-gray-400 dark:bg-gray-800 dark:border-gray-500';
+        return 'bg-gray-50 border-l-4 border-gray-400800500';
       case 3:
-        return 'bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-950/20 dark:border-amber-500';
+        return 'bg-amber-50 border-l-4 border-amber-400950/20500';
       default:
-        return 'hover:bg-gray-50 dark:hover:bg-gray-800';
+        return 'hover:bg-gray-50:bg-gray-800';
     }
   };
 
@@ -355,7 +355,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
       <Card>
         <CardContent className="text-center py-12">
           <TrendingUp className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600 dark:text-gray-300">順位表を読み込み中...</p>
+          <p className="text-gray-600300">順位表を読み込み中...</p>
         </CardContent>
       </Card>
     );
@@ -377,8 +377,8 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
       <Card>
         <CardContent className="text-center py-12">
           <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">順位表</h3>
-          <p className="text-gray-600 dark:text-gray-300">まだ試合結果がないため、順位表を表示できません。</p>
+          <h3 className="text-lg font-medium text-gray-900100 mb-2">順位表</h3>
+          <p className="text-gray-600300">まだ試合結果がないため、順位表を表示できません。</p>
         </CardContent>
       </Card>
     );
@@ -423,19 +423,19 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{standings.length}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">ブロック数</div>
+              <div className="text-sm text-gray-600300">ブロック数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
                 {totalTeams}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">参加チーム数</div>
+              <div className="text-sm text-gray-600300">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {totalMatches}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">実施済み試合数</div>
+              <div className="text-sm text-gray-600300">実施済み試合数</div>
             </div>
           </div>
         </CardContent>
@@ -519,7 +519,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                     </span>
                   );
                 })()}
-                <span className="text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                <span className="text-sm text-gray-600300 flex items-center">
                   <Users className="h-4 w-4 mr-1" />
                   {block.teams.length}チーム
                 </span>
@@ -529,7 +529,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
           <CardContent>
             {/* トーナメント形式でチームがない場合の表示 */}
             {isTournamentFormat(block.phase) && block.teams.length === 0 ? (
-              <div className="text-center py-8 text-gray-600 dark:text-gray-300">
+              <div className="text-center py-8 text-gray-600300">
                 <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-lg font-medium mb-2">順位未確定</p>
                 <p className="text-sm">試合結果が確定次第、順位が表示されます。</p>
@@ -538,38 +538,38 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[700px] md:min-w-0">
                 <thead>
-                  <tr className="border-b bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
-                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
+                  <tr className="border-b bg-gray-50800">
+                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
                     {isLeagueFormat(block.phase) && (
                       <>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">点</span>
                           <span className="hidden md:inline">勝点</span>
                         </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">試</span>
                           <span className="hidden md:inline">試合数</span>
                         </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">勝</th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">分</th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">敗</th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">勝</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">分</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">敗</th>
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">得</span>
                           <span className="hidden md:inline">総{scoreLabels.scoreFor}</span>
                         </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">失</span>
                           <span className="hidden md:inline">総{scoreLabels.scoreAgainst}</span>
                         </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
                           <span className="md:hidden">差</span>
                           <span className="hidden md:inline">{scoreLabels.scoreDifference}</span>
                         </th>
                       </>
                     )}
                     {isTournamentFormat(block.phase) && (
-                      <th className="text-center py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 dark:text-gray-200 text-sm md:text-base min-w-[80px] md:min-w-[100px]">備考</th>
+                      <th className="text-center py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[80px] md:min-w-[100px]">備考</th>
                     )}
                   </tr>
                 </thead>
@@ -579,7 +579,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                       key={`${block.block_name}-${team.tournament_team_id || team.team_id}-${teamIndex}`} 
                       className={`border-b transition-colors ${
                         team.position === 0 
-                          ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                          ? 'bg-gray-100 hover:bg-gray-200700:bg-gray-600' 
                           : team.position > 0 
                             ? getPositionBgColor(team.position) 
                             : 'hover:bg-gray-50'
@@ -608,7 +608,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                       <td className="py-2 md:py-3 px-2 md:px-3">
                         <div>
                           {/* モバイルでは略称優先、デスクトップでは正式名称 */}
-                          <div className="font-medium text-gray-900 dark:text-gray-100 text-sm md:text-base">
+                          <div className="font-medium text-gray-900100 text-sm md:text-base">
                             <span className="md:hidden">
                               {(team.team_omission || team.team_name).substring(0, 6)}
                             </span>
@@ -617,7 +617,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                             </span>
                           </div>
                           {team.team_omission && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 hidden md:block">({team.team_omission})</div>
+                            <div className="text-xs text-gray-500400 hidden md:block">({team.team_omission})</div>
                           )}
                         </div>
                       </td>
@@ -649,7 +649,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                                     <div className="text-center">
                                       <div>{soccerData.regular_goals_for || 0}</div>
                                       {soccerData.pk_goals_for !== undefined && (
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        <div className="text-xs text-gray-500400">
                                           +PK{soccerData.pk_goals_for}
                                         </div>
                                       )}
@@ -671,7 +671,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                                     <div className="text-center">
                                       <div>{soccerData.regular_goals_against || 0}</div>
                                       {soccerData.pk_goals_against !== undefined && (
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        <div className="text-xs text-gray-500400">
                                           +PK{soccerData.pk_goals_against}
                                         </div>
                                       )}
@@ -693,7 +693,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                                       ? 'text-green-600'
                                       : scoreDiff < 0
                                       ? 'text-red-600'
-                                      : 'text-gray-600 dark:text-gray-300'
+                                      : 'text-gray-600300'
                                   }`}
                                 >
                                   {(scoreDiff > 0 ? '+' : '') + scoreDiff}
@@ -705,7 +705,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                       )}
                       {isTournamentFormat(block.phase) && (
                         <td className="py-2 md:py-3 px-2 md:px-3 text-center">
-                          <span className="text-xs md:text-sm text-gray-600 dark:text-gray-300">
+                          <span className="text-xs md:text-sm text-gray-600300">
                             {team.position_note || (() => {
                               // フォールバック: テンプレートベース順位説明がない場合のレガシー表示
                               switch (team.position) {

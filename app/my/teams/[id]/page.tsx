@@ -83,8 +83,8 @@ function MessageBanner({ message, onClose }: {
   return (
     <div className={`flex items-start justify-between gap-2 p-4 rounded-lg text-sm ${
       message.type === 'success'
-        ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-300'
-        : 'bg-destructive/5 border border-destructive/20 text-destructive dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
+        ? 'bg-green-50 border border-green-200 text-green-800'
+        : 'bg-destructive/5 border border-destructive/20 text-destructive'
     }`}>
       <div className="flex items-start gap-2">
         {message.type === 'success'
@@ -176,15 +176,15 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
         <CardContent className="space-y-3">
           {managers.map((manager) => (
             <div key={manager.login_user_id}
-              className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
-              <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-green-700 dark:text-green-400" />
+              className="flex items-center gap-3 p-3 bg-gray-50/40 rounded-lg">
+              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-green-700" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">{manager.display_name}</span>
+                  <span className="font-medium text-gray-900">{manager.display_name}</span>
                 </div>
-                <div className="text-sm text-muted-foreground">{manager.email}</div>
+                <div className="text-sm text-gray-500">{manager.email}</div>
               </div>
             </div>
           ))}
@@ -193,28 +193,28 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
 
       {/* 招待中 */}
       {pendingInvites.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800">
+        <Card className="border-amber-200">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-amber-800 dark:text-amber-200">
+            <CardTitle className="flex items-center gap-2 text-lg text-amber-800">
               <Clock className="w-5 h-5" />招待中（承認待ち）
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {pendingInvites.map((inv) => (
               <div key={inv.id}
-                className="flex items-center justify-between p-3 bg-amber-50/60 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                className="flex items-center justify-between p-3 bg-amber-50/60 rounded-lg border border-amber-200">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <Mail className="w-4 h-4 text-amber-600" />
                   <div>
-                    <div className="font-medium text-foreground">{inv.invited_email}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="font-medium text-gray-900">{inv.invited_email}</div>
+                    <div className="text-xs text-gray-500">
                       有効期限: {new Date(inv.expires_at).toLocaleString('ja-JP')}
                     </div>
                   </div>
                 </div>
                 <Button
                   size="sm" variant="outline"
-                  className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                  className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50"
                   onClick={() => handleCancelInvite(inv.id)}
                   disabled={cancelling === inv.id}
                 >
@@ -236,14 +236,14 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
         </CardHeader>
         <CardContent>
           {!canInvite ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-500">
               {managerCount >= 2
                 ? 'すでに2名の担当者が登録されています。'
                 : '承認待ちの招待があります。先に現在の招待をキャンセルしてください。'}
             </p>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 招待したい方のメールアドレスを入力してください。72時間有効な招待メールが送信されます。
               </p>
               <div className="flex gap-2">
@@ -395,7 +395,7 @@ function PlayersTab({ teamId, setMessage }: {
         {!editMode ? (
           // 表示モード
           players.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-gray-500">
               <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">選手が登録されていません</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={startEdit}>
@@ -406,8 +406,8 @@ function PlayersTab({ teamId, setMessage }: {
             <div className="space-y-2">
               {players.map(player => (
                 <div key={player.player_id}
-                  className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary dark:text-blue-300">
+                  className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50/30">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
                     {player.jersey_number != null ? player.jersey_number : '—'}
                   </div>
                   <span className="text-sm font-medium">{player.player_name}</span>
@@ -420,7 +420,7 @@ function PlayersTab({ teamId, setMessage }: {
           <div className="space-y-4">
             <div className="space-y-2">
               {/* ヘッダー */}
-              <div className="grid grid-cols-[1fr_80px_32px] gap-2 text-xs text-muted-foreground px-1">
+              <div className="grid grid-cols-[1fr_80px_32px] gap-2 text-xs text-gray-500 px-1">
                 <span>選手名 <span className="text-destructive">*</span></span>
                 <span>背番号</span>
                 <span />
@@ -446,7 +446,7 @@ function PlayersTab({ teamId, setMessage }: {
                   <button
                     onClick={() => removePlayer(idx)}
                     disabled={formPlayers.length <= 1}
-                    className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed rounded"
+                    className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed rounded"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -506,9 +506,9 @@ function TournamentsTab({ teamId }: { teamId: string }) {
 
   const statusLabel = (status: string) => {
     switch (status) {
-      case 'confirmed': return { label: '参加確定', cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' };
-      case 'waitlisted': return { label: 'キャンセル待ち', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' };
-      case 'cancelled': return { label: 'キャンセル', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      case 'confirmed': return { label: '参加確定', cls: 'bg-green-100 text-green-800' };
+      case 'waitlisted': return { label: 'キャンセル待ち', cls: 'bg-amber-100 text-amber-800' };
+      case 'cancelled': return { label: 'キャンセル', cls: 'bg-gray-100 text-gray-600' };
       default: return { label: status, cls: 'bg-gray-100 text-gray-600' };
     }
   };
@@ -532,17 +532,17 @@ function TournamentsTab({ teamId }: { teamId: string }) {
         </CardHeader>
         <CardContent>
           {available.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
+            <p className="text-sm text-gray-500 py-4 text-center">
               現在、参加申込できる大会はありません
             </p>
           ) : (
             <div className="space-y-3">
               {available.map(t => (
                 <div key={t.tournament_id}
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg">
                   <div>
-                    <div className="font-medium text-foreground">{t.tournament_name}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5 space-x-2">
+                    <div className="font-medium text-gray-900">{t.tournament_name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5 space-x-2">
                       {t.event_start_date && <span>開催: {t.event_start_date}</span>}
                       {t.venue_name && <span>会場: {t.venue_name}</span>}
                       {t.recruitment_end_date && <span>締切: {t.recruitment_end_date}</span>}
@@ -569,7 +569,7 @@ function TournamentsTab({ teamId }: { teamId: string }) {
         </CardHeader>
         <CardContent>
           {joined.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
+            <p className="text-sm text-gray-500 py-4 text-center">
               参加申込した大会はありません
             </p>
           ) : (
@@ -578,18 +578,18 @@ function TournamentsTab({ teamId }: { teamId: string }) {
                 const { label, cls } = statusLabel(t.participation_status);
                 return (
                   <div key={t.tournament_team_id}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg">
                     <div>
-                      <div className="font-medium text-foreground">{t.tournament_name}</div>
+                      <div className="font-medium text-gray-900">{t.tournament_name}</div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
                           {label}
                         </span>
                         {t.assigned_block && (
-                          <span className="text-xs text-muted-foreground">ブロック: {t.assigned_block}</span>
+                          <span className="text-xs text-gray-500">ブロック: {t.assigned_block}</span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
+                      <div className="text-xs text-gray-500 mt-0.5">
                         エントリー名: {t.tournament_team_name}
                         {t.event_start_date && ` ／ 開催: ${t.event_start_date}`}
                       </div>
@@ -662,7 +662,7 @@ export default function TeamManagePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">

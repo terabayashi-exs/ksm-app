@@ -95,7 +95,7 @@ export default function TournamentAccessSelector({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             大会一覧から特定の大会を選択し、その大会の「運営者管理」ボタンから運営者を追加してください。
           </p>
         </CardContent>
@@ -142,7 +142,7 @@ export default function TournamentAccessSelector({
           })}
 
           {tournaments.length === 0 && (
-            <p className="text-sm text-muted-foreground">部門が見つかりません</p>
+            <p className="text-sm text-gray-500">部門が見つかりません</p>
           )}
         </div>
       </CardContent>

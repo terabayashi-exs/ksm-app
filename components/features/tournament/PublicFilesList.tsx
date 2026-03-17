@@ -107,8 +107,8 @@ export default function PublicFilesList({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-        <span className="text-sm text-muted-foreground">ファイルを読み込み中...</span>
+        <RefreshCw className="h-5 w-5 animate-spin text-gray-500 mr-2" />
+        <span className="text-sm text-gray-500">ファイルを読み込み中...</span>
       </div>
     );
   }
@@ -142,7 +142,7 @@ export default function PublicFilesList({
               📎 大会資料
             </h3>
             {maxFiles && data.total_files > maxFiles && (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-gray-500">
                 {maxFiles}件表示 / 全{data.total_files}件
               </span>
             )}
@@ -166,12 +166,12 @@ export default function PublicFilesList({
               </CardHeader>
               <CardContent className="pt-0">
                 {file.file_description && (
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">
                     {file.file_description}
                   </p>
                 )}
 
-                <div className="text-xs text-muted-foreground space-y-1 mb-4">
+                <div className="text-xs text-gray-500 space-y-1 mb-4">
                   {file.link_type === 'external' ? (
                     <>
                       <div className="flex items-center">
@@ -261,7 +261,7 @@ export default function PublicFilesList({
             📎 大会資料
           </h3>
           {maxFiles && data.total_files > maxFiles && (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-gray-500">
               {maxFiles}件表示 / 全{data.total_files}件
             </span>
           )}
@@ -272,7 +272,7 @@ export default function PublicFilesList({
         {data.files.map((file) => (
           <div
             key={file.file_id}
-            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50/50 transition-colors"
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               {file.link_type === 'external' ? (
@@ -282,14 +282,14 @@ export default function PublicFilesList({
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{file.file_title}</div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-500">
                   {file.link_type === 'external'
                     ? `外部リンク • ${formatDate(file.uploaded_at)}`
                     : `${formatFileSize(file.file_size)} • ${formatDate(file.uploaded_at)}`
                   }
                 </div>
                 {file.file_description && (
-                  <div className="text-sm text-muted-foreground truncate">
+                  <div className="text-sm text-gray-500 truncate">
                     {file.file_description}
                   </div>
                 )}

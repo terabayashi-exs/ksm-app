@@ -59,7 +59,7 @@ function ComboInput({
               <button
                 key={name}
                 type="button"
-                className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent cursor-pointer"
+                className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 cursor-pointer"
                 onMouseDown={e => {
                   e.preventDefault();
                   onChange(name);
@@ -291,14 +291,14 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
 
   if (!tournament) {
     return (
-      <div className="text-center py-16 text-muted-foreground">
+      <div className="text-center py-16 text-gray-500">
         部門が見つかりません
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-white pb-20">
       {/* ページタイトル */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -344,7 +344,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                   <MapPin className="w-4 h-4" />
                   コート設定
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   ※ 会場を選択するとコート名にも同じ名称が自動設定されます
                 </p>
               </CardHeader>
@@ -353,7 +353,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                   const setting = getDateCourtSetting(date, court_number);
                   return (
                     <div key={court_number} className="p-3 border rounded-lg space-y-2">
-                      <span className="text-xs font-medium text-muted-foreground">コート {court_number}</span>
+                      <span className="text-xs font-medium text-gray-500">コート {court_number}</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <Label className="text-xs">会場</Label>
@@ -361,10 +361,10 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                             value={setting?.venue_id?.toString() || 'none'}
                             onValueChange={(value) => handleVenueChange(date, court_number, value)}
                           >
-                            <SelectTrigger className="bg-background h-9">
+                            <SelectTrigger className="bg-white h-9">
                               <SelectValue placeholder="会場を選択" />
                             </SelectTrigger>
-                            <SelectContent className="bg-background border border-border">
+                            <SelectContent className="bg-white border border-gray-200">
                               <SelectItem value="none">未設定</SelectItem>
                               {venues.map(v => (
                                 <SelectItem key={v.venue_id} value={v.venue_id.toString()}>
@@ -413,7 +413,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                       </thead>
                       <tbody>
                         {courtMatches.map(match => (
-                          <tr key={match.match_id} className="border-b hover:bg-muted/50">
+                          <tr key={match.match_id} className="border-b hover:bg-gray-50/50">
                             <td className="py-2 px-2 font-medium">{match.match_code}</td>
                             <td className="py-2 px-2">{match.start_time || '-'}</td>
                             <td className="py-2 px-2">
@@ -439,7 +439,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                       <div key={match.match_id} className="border rounded-md p-2.5 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm">{match.match_code}</span>
-                          <span className="text-xs text-muted-foreground">{match.start_time || '-'}</span>
+                          <span className="text-xs text-gray-500">{match.start_time || '-'}</span>
                         </div>
                         <div className="text-sm">
                           {match.team1_display_name} vs {match.team2_display_name}
@@ -462,7 +462,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
       </div>
 
       {/* 保存ボタン（画面下部固定） */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-end gap-3">
           <Button variant="outline" asChild>
             <Link href="/my">キャンセル</Link>

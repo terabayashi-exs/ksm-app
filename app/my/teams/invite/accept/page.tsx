@@ -85,7 +85,7 @@ function AcceptInviteContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
@@ -104,7 +104,7 @@ function AcceptInviteContent() {
         <CardContent className="space-y-4">
           {accepted ? (
             <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 チーム「<strong>{inviteInfo?.team_name}</strong>」の担当者として登録されました。
               </p>
               <Button asChild className="w-full">
@@ -113,9 +113,9 @@ function AcceptInviteContent() {
             </div>
           ) : error ? (
             <div className="space-y-4">
-              <div className="flex items-start gap-2 p-3 bg-destructive/5 dark:bg-red-950/20 rounded-lg border border-destructive/20 dark:border-red-800">
+              <div className="flex items-start gap-2 p-3 bg-destructive/5 rounded-lg border border-destructive/20">
                 <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-destructive dark:text-red-300">{error}</p>
+                <p className="text-sm text-destructive">{error}</p>
               </div>
               <Button asChild variant="outline" className="w-full">
                 <Link href="/my">マイダッシュボードへ</Link>
@@ -123,24 +123,24 @@ function AcceptInviteContent() {
             </div>
           ) : inviteInfo ? (
             <div className="space-y-4">
-              <div className="p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg border border-primary/20 dark:border-blue-800 space-y-2">
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
                 <div className="text-sm">
-                  <span className="text-muted-foreground">チーム名：</span>
+                  <span className="text-gray-500">チーム名：</span>
                   <span className="font-semibold">{inviteInfo.team_name}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-muted-foreground">招待者：</span>
+                  <span className="text-gray-500">招待者：</span>
                   <span className="font-medium">{inviteInfo.invited_by_name}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-muted-foreground">招待先：</span>
+                  <span className="text-gray-500">招待先：</span>
                   <span className="font-medium">{inviteInfo.invited_email}</span>
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-gray-500">
                   有効期限: {new Date(inviteInfo.expires_at).toLocaleString('ja-JP')}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 上記チームの担当者として登録されます。承認するには、招待先のメールアドレスでログインしている必要があります。
               </p>
               <Button

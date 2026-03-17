@@ -133,7 +133,7 @@ export default function SponsorBannersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -176,13 +176,13 @@ export default function SponsorBannersPage() {
           <div className="space-y-4">
             <div>
               <div className="font-semibold mb-2">大バナー（1200×200px）</div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 全ての表示位置（タブ上部・サイドバー・タブ下部）に配置可能。1枚ずつ縦に表示されます。
               </p>
             </div>
             <div>
               <div className="font-semibold mb-2">小バナー（250×64px）</div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 タブ上部・タブ下部のみ配置可能。画面幅に応じて複数列で横に並びます。
               </p>
             </div>
@@ -194,7 +194,7 @@ export default function SponsorBannersPage() {
       {banners.length === 0 ? (
         <Card>
           <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">
+            <div className="text-center text-gray-500">
               <p>登録されているバナーはありません</p>
             </div>
           </CardContent>
@@ -217,7 +217,7 @@ export default function SponsorBannersPage() {
                       return (
                         <div
                           key={banner.banner_id}
-                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                          className="border rounded-lg p-4 hover:bg-gray-50/50 transition-colors"
                         >
                           <div className="flex gap-4">
                             {/* バナー画像プレビュー */}
@@ -261,7 +261,7 @@ export default function SponsorBannersPage() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
+                              <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-3">
                                 <div>サイズ: {getRecommendedSizeText(banner.banner_size, banner.display_position)}</div>
                                 <div>表示タブ: {getTargetTabLabel(banner.target_tab)}</div>
                                 <div>表示順序: {banner.display_order}</div>

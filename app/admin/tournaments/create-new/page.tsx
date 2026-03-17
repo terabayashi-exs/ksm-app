@@ -28,7 +28,7 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -51,15 +51,15 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
         </div>
         {/* 部門追加制限に達している場合のエラー表示 */}
         {divisionCheckResult && !divisionCheckResult.allowed ? (
-          <Card className="border-2 border-destructive/30 bg-destructive/5 dark:border-red-800 dark:bg-red-950/20">
+          <Card className="border-2 border-destructive/30 bg-destructive/5">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-destructive dark:text-red-200">
+              <CardTitle className="flex items-center space-x-2 text-destructive">
                 <AlertTriangle className="w-6 h-6" />
                 <span>部門作成制限に達しています</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-destructive dark:text-red-300">
+              <div className="text-destructive">
                 <p className="font-semibold mb-2">{divisionCheckResult.reason}</p>
                 <div className="space-y-1 text-sm">
                   <p>現在の部門数: {divisionCheckResult.current}部門</p>
@@ -87,7 +87,7 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
                 <span>🏆</span>
                 <span>新規部門作成</span>
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 大会に属する部門をテンプレートシステムで作成します
               </p>
             </CardHeader>

@@ -34,21 +34,21 @@ const getUniversalBlockColor = (blockKey: string, blockStructure?: BlockStructur
       if (phase === 'preliminary') {
         // 予選ブロック用の色分け
         const colors = [
-          'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
-          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
-          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
-          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
+          'bg-blue-100 text-blue-800',
+          'bg-green-100 text-green-800',
+          'bg-yellow-100 text-yellow-800',
+          'bg-purple-100 text-purple-800'
         ];
         return colors[blockOrder % colors.length];
       } else if (phase === 'final') {
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+        return 'bg-red-100 text-red-800';
       }
     }
   }
   
   // フォールバック：従来のパターンマッチング
   if (blockKey.includes('決勝') || blockKey.toLowerCase().includes('final')) {
-    return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+    return 'bg-red-100 text-red-800';
   }
   
   // 予選・リーグ戦の場合
@@ -57,14 +57,14 @@ const getUniversalBlockColor = (blockKey: string, blockStructure?: BlockStructur
       blockKey.includes('リーグ') || /^[A-Z0-9]+$/.test(blockKey)) {
     
     const colors = [
-      'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
-      'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
-      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
-      'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
-      'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300',
-      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300',
-      'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300',
-      'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300'
+      'bg-blue-100 text-blue-800',
+      'bg-green-100 text-green-800',
+      'bg-yellow-100 text-yellow-800',
+      'bg-purple-100 text-purple-800',
+      'bg-pink-100 text-pink-800',
+      'bg-indigo-100 text-indigo-800',
+      'bg-cyan-100 text-cyan-800',
+      'bg-orange-100 text-orange-800'
     ];
     
     // ハッシュベースの安定した色分け
@@ -78,7 +78,7 @@ const getUniversalBlockColor = (blockKey: string, blockStructure?: BlockStructur
     return colors[colorIndex];
   }
   
-  return 'bg-muted text-muted-foreground';
+  return 'bg-gray-50 text-gray-500';
 };
 
 // データ型定義
@@ -347,42 +347,42 @@ const SportSettingsCard = ({ tournament, extendedMetadata }: { tournament: Tourn
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
             <p className="text-2xl font-bold text-blue-600">{tournament.match_duration_minutes}</p>
-            <p className="text-sm text-muted-foreground">試合時間（分）</p>
+            <p className="text-sm text-gray-500">試合時間（分）</p>
           </div>
-          <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+          <div className="text-center p-4 bg-green-50 rounded-lg">
             <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
-            <p className="text-sm text-muted-foreground">休憩時間（分）</p>
+            <p className="text-sm text-gray-500">休憩時間（分）</p>
           </div>
           {sportSettings && (
             <>
-              <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <p className="text-lg font-bold text-purple-600">{sportSettings.sport_code?.toUpperCase() || 'SOCCER'}</p>
-                <p className="text-sm text-muted-foreground">競技種目</p>
+                <p className="text-sm text-gray-500">競技種目</p>
               </div>
-              <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
                 <p className="text-lg font-bold text-orange-600">{sportSettings.period_count || 2}ピリオド</p>
-                <p className="text-sm text-muted-foreground">試合構成</p>
+                <p className="text-sm text-gray-500">試合構成</p>
               </div>
-              <div className="text-center p-4 bg-cyan-50 dark:bg-cyan-950/20 rounded-lg">
+              <div className="text-center p-4 bg-cyan-50 rounded-lg">
                 <p className="text-lg font-bold text-cyan-600">{sportSettings.has_extra_time ? 'あり' : 'なし'}</p>
-                <p className="text-sm text-muted-foreground">延長戦</p>
+                <p className="text-sm text-gray-500">延長戦</p>
               </div>
-              <div className="text-center p-4 bg-rose-50 dark:bg-rose-950/20 rounded-lg">
+              <div className="text-center p-4 bg-rose-50 rounded-lg">
                 <p className="text-lg font-bold text-rose-600">{sportSettings.supports_pk ? 'あり' : 'なし'}</p>
-                <p className="text-sm text-muted-foreground">PK戦</p>
+                <p className="text-sm text-gray-500">PK戦</p>
               </div>
             </>
           )}
         </div>
         
         {sportSettings?.tie_breaking_rules && (
-          <div className="mt-4 p-4 bg-muted/30 rounded-lg">
-            <h4 className="font-medium text-muted-foreground mb-2">順位決定ルール</h4>
+          <div className="mt-4 p-4 bg-gray-50/30 rounded-lg">
+            <h4 className="font-medium text-gray-500 mb-2">順位決定ルール</h4>
             <div className="flex flex-wrap gap-2">
               {sportSettings.tie_breaking_rules.map((rule: string, index: number) => (
-                <span key={index} className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs">
+                <span key={index} className="px-2 py-1 bg-gray-50 text-gray-500 rounded text-xs">
                   {index + 1}. {rule}
                 </span>
               ))}
@@ -414,57 +414,57 @@ const FormatDetailsCard = ({ formatDetails }: { formatDetails: FormatDetails | n
           {/* フォーマット基本情報 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <h4 className="font-medium text-muted-foreground mb-1">フォーマット名</h4>
-              <p className="text-foreground font-medium">{formatInfo.format_name}</p>
+              <h4 className="font-medium text-gray-500 mb-1">フォーマット名</h4>
+              <p className="text-gray-900 font-medium">{formatInfo.format_name}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-1">対象チーム数</h4>
-              <p className="text-foreground">{formatInfo.target_team_count}チーム</p>
+              <h4 className="font-medium text-gray-500 mb-1">対象チーム数</h4>
+              <p className="text-gray-900">{formatInfo.target_team_count}チーム</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-1">進出チーム数</h4>
-              <p className="text-foreground">{formatInfo.preliminary_advance_count || 0}チーム</p>
+              <h4 className="font-medium text-gray-500 mb-1">進出チーム数</h4>
+              <p className="text-gray-900">{formatInfo.preliminary_advance_count || 0}チーム</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-1">予選形式</h4>
-              <p className="text-foreground">{formatInfo.preliminary_format}</p>
+              <h4 className="font-medium text-gray-500 mb-1">予選形式</h4>
+              <p className="text-gray-900">{formatInfo.preliminary_format}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-1">決勝形式</h4>
-              <p className="text-foreground">{formatInfo.final_format}</p>
+              <h4 className="font-medium text-gray-500 mb-1">決勝形式</h4>
+              <p className="text-gray-900">{formatInfo.final_format}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-1">3位決定戦</h4>
-              <p className="text-foreground">{formatInfo.has_third_place_match ? 'あり' : 'なし'}</p>
+              <h4 className="font-medium text-gray-500 mb-1">3位決定戦</h4>
+              <p className="text-gray-900">{formatInfo.has_third_place_match ? 'あり' : 'なし'}</p>
             </div>
           </div>
           
           {/* フォーマット説明 */}
           {formatInfo.format_description && (
-            <div className="p-4 bg-muted/30 rounded-lg">
-              <h4 className="font-medium text-muted-foreground mb-2">フォーマット説明</h4>
-              <p className="text-foreground text-sm">{formatInfo.format_description}</p>
+            <div className="p-4 bg-gray-50/30 rounded-lg">
+              <h4 className="font-medium text-gray-500 mb-2">フォーマット説明</h4>
+              <p className="text-gray-900 text-sm">{formatInfo.format_description}</p>
             </div>
           )}
           
           {/* 試合テンプレート統計 */}
           {templates.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <p className="text-lg font-bold text-blue-600">{templates.length}</p>
-                <p className="text-xs text-muted-foreground">総試合数</p>
+                <p className="text-xs text-gray-500">総試合数</p>
               </div>
-              <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+              <div className="text-center p-3 bg-green-50 rounded-lg">
                 <p className="text-lg font-bold text-green-600">
                   {templates.filter((t) => t.phase === 'preliminary').length}
                 </p>
-                <p className="text-xs text-muted-foreground">予選試合</p>
+                <p className="text-xs text-gray-500">予選試合</p>
               </div>
-              <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+              <div className="text-center p-3 bg-red-50 rounded-lg">
                 <p className="text-lg font-bold text-red-600">
                   {templates.filter((t) => t.phase === 'final').length}
                 </p>
-                <p className="text-xs text-muted-foreground">決勝試合</p>
+                <p className="text-xs text-gray-500">決勝試合</p>
               </div>
             </div>
           )}
@@ -494,29 +494,29 @@ const BlockStructureCard = ({ extendedMetadata }: { extendedMetadata?: ExtendedM
         <div className="space-y-4">
           {/* ブロック統計 */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg">
+            <div className="text-center p-3 bg-emerald-50 rounded-lg">
               <p className="text-lg font-bold text-emerald-600">{blockStructure.total_blocks_count}</p>
-              <p className="text-xs text-muted-foreground">総ブロック数</p>
+              <p className="text-xs text-gray-500">総ブロック数</p>
             </div>
-            <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
               <p className="text-lg font-bold text-blue-600">{blockStructure.preliminary_blocks_count}</p>
-              <p className="text-xs text-muted-foreground">予選ブロック</p>
+              <p className="text-xs text-gray-500">予選ブロック</p>
             </div>
-            <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+            <div className="text-center p-3 bg-red-50 rounded-lg">
               <p className="text-lg font-bold text-red-600">{blockStructure.final_blocks_count}</p>
-              <p className="text-xs text-muted-foreground">決勝ブロック</p>
+              <p className="text-xs text-gray-500">決勝ブロック</p>
             </div>
-            <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+            <div className="text-center p-3 bg-purple-50 rounded-lg">
               <p className="text-lg font-bold text-purple-600">
                 {Object.values(blockStructure.block_assignments).reduce((total: number, teams) => total + teams.length, 0)}
               </p>
-              <p className="text-xs text-muted-foreground">参加チーム</p>
+              <p className="text-xs text-gray-500">参加チーム</p>
             </div>
           </div>
           
           {/* ブロック詳細情報 */}
           <div className="space-y-3">
-            <h4 className="font-medium text-muted-foreground">ブロック詳細</h4>
+            <h4 className="font-medium text-gray-500">ブロック詳細</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {blockStructure.blocks_info.map((block, index: number) => (
                 <div key={index} className="p-3 border rounded-lg space-y-2">
@@ -524,22 +524,22 @@ const BlockStructureCard = ({ extendedMetadata }: { extendedMetadata?: ExtendedM
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getUniversalBlockColor(block.block_name, blockStructure)}`}>
                       {block.display_round_name || block.block_name}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-gray-500">
                       {block.phase === 'preliminary' ? '予選' : '決勝'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground">チーム：</span>
+                      <span className="text-gray-500">チーム：</span>
                       <span className="font-medium">{block.teams_count}チーム</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">試合：</span>
+                      <span className="text-gray-500">試合：</span>
                       <span className="font-medium">{block.matches_count}試合</span>
                     </div>
                   </div>
                   {block.match_type && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-gray-500">
                       {block.match_type}
                     </div>
                   )}
@@ -551,25 +551,25 @@ const BlockStructureCard = ({ extendedMetadata }: { extendedMetadata?: ExtendedM
           {/* チーム配置詳細 */}
           {Object.keys(blockStructure.block_assignments).length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium text-muted-foreground">ブロック別チーム配置</h4>
+              <h4 className="font-medium text-gray-500">ブロック別チーム配置</h4>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {Object.entries(blockStructure.block_assignments).map(([blockName, teams]) => (
-                  <div key={blockName} className="p-3 bg-muted/30 rounded-lg">
+                  <div key={blockName} className="p-3 bg-gray-50/30 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${getUniversalBlockColor(blockName, blockStructure)}`}>
                         {blockName}
                       </span>
-                      <span className="text-xs text-muted-foreground">{teams.length}チーム</span>
+                      <span className="text-xs text-gray-500">{teams.length}チーム</span>
                     </div>
                     <div className="space-y-1">
                       {teams.slice(0, 4).map((team, index: number) => (
                         <div key={index} className="flex items-center justify-between text-xs">
                           <span className="font-medium">{team.team_omission || team.team_name}</span>
-                          <span className="text-muted-foreground">{team.player_count}名</span>
+                          <span className="text-gray-500">{team.player_count}名</span>
                         </div>
                       ))}
                       {teams.length > 4 && (
-                        <div className="text-xs text-muted-foreground text-center">
+                        <div className="text-xs text-gray-500 text-center">
                           他 {teams.length - 4}チーム...
                         </div>
                       )}
@@ -600,12 +600,12 @@ function ArchivedTournamentOverview({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ongoing':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">開催中</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">開催中</span>;
       case 'completed':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted text-foreground">完了</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-50 text-gray-900">完了</span>;
       case 'planning':
       default:
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">開催予定</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">開催予定</span>;
     }
   };
 
@@ -639,34 +639,34 @@ function ArchivedTournamentOverview({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">大会名</h4>
+              <h4 className="font-medium text-gray-500 mb-2">大会名</h4>
               <p className="text-lg font-semibold">{tournament.tournament_name}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">ステータス</h4>
+              <h4 className="font-medium text-gray-500 mb-2">ステータス</h4>
               {getStatusBadge(tournament.status)}
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">フォーマット</h4>
-              <p className="text-foreground">{tournament.format_name || '未設定'}</p>
+              <h4 className="font-medium text-gray-500 mb-2">フォーマット</h4>
+              <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2 flex items-center">
+              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
                 <MapPin className="h-4 w-4 mr-1" />
                 会場
               </h4>
-              <p className="text-foreground">{tournament.venue_name || '未設定'}</p>
+              <p className="text-gray-900">{tournament.venue_name || '未設定'}</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2 flex items-center">
+              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
                 <Users className="h-4 w-4 mr-1" />
                 参加チーム数
               </h4>
-              <p className="text-foreground">{tournament.team_count}チーム</p>
+              <p className="text-gray-900">{tournament.team_count}チーム</p>
             </div>
             <div>
-              <h4 className="font-medium text-muted-foreground mb-2">コート数</h4>
-              <p className="text-foreground">{tournament.court_count}コート</p>
+              <h4 className="font-medium text-gray-500 mb-2">コート数</h4>
+              <p className="text-gray-900">{tournament.court_count}コート</p>
             </div>
           </div>
         </CardContent>
@@ -684,13 +684,13 @@ function ArchivedTournamentOverview({
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {dateEntries.map(([dayNumber, date]) => (
-                <div key={dayNumber} className="flex items-center p-3 bg-muted/50 rounded-lg">
+                <div key={dayNumber} className="flex items-center p-3 bg-gray-50/50 rounded-lg">
                   <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
                     {dayNumber}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">第{dayNumber}日</p>
-                    <p className="font-medium text-foreground">{formatDateOnly(date as string)}</p>
+                    <p className="text-sm text-gray-500">第{dayNumber}日</p>
+                    <p className="font-medium text-gray-900">{formatDateOnly(date as string)}</p>
                   </div>
                 </div>
               ))}
@@ -718,17 +718,17 @@ function ArchivedTournamentOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
               <div>
-                <p className="text-sm text-orange-700 dark:text-orange-300">開始</p>
-                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDateOnly(tournament.recruitment_start_date)}</p>
+                <p className="text-sm text-orange-700">開始</p>
+                <p className="font-medium text-orange-800">{formatDateOnly(tournament.recruitment_start_date)}</p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-0.5 bg-orange-300 dark:bg-orange-600"></div>
+                <div className="w-12 h-0.5 bg-orange-300"></div>
               </div>
               <div>
-                <p className="text-sm text-orange-700 dark:text-orange-300">終了</p>
-                <p className="font-medium text-orange-800 dark:text-orange-200">{formatDateOnly(tournament.recruitment_end_date)}</p>
+                <p className="text-sm text-orange-700">終了</p>
+                <p className="font-medium text-orange-800">{formatDateOnly(tournament.recruitment_end_date)}</p>
               </div>
             </div>
           </CardContent>
@@ -796,8 +796,8 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
         default:
           return {
             status: 'scheduled',
-            display: <span className="text-muted-foreground text-sm">未実施</span>,
-            icon: <Clock className="h-4 w-4 text-muted-foreground" />
+            display: <span className="text-gray-500 text-sm">未実施</span>,
+            icon: <Clock className="h-4 w-4 text-gray-500" />
           };
       }
     }
@@ -887,9 +887,9 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">試合スケジュール</h3>
-          <p className="text-muted-foreground">まだ試合スケジュールが作成されていません。</p>
+          <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">試合スケジュール</h3>
+          <p className="text-gray-500">まだ試合スケジュールが作成されていません。</p>
         </CardContent>
       </Card>
     );
@@ -978,7 +978,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">{filteredMatches.length}</div>
-            <div className="text-sm text-muted-foreground">試合数</div>
+            <div className="text-sm text-gray-500">試合数</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
@@ -987,19 +987,19 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                 return acc;
               }, {} as Record<string, boolean>)).length}
             </div>
-            <div className="text-sm text-muted-foreground">開催日数</div>
+            <div className="text-sm text-gray-500">開催日数</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
               {filteredMatches.filter(m => m.has_result).length}
             </div>
-            <div className="text-sm text-muted-foreground">実施済み</div>
+            <div className="text-sm text-gray-500">実施済み</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">
               {Math.max(...filteredMatches.map(m => m.court_number || 0), 0)}
             </div>
-            <div className="text-sm text-muted-foreground">コート数</div>
+            <div className="text-sm text-gray-500">コート数</div>
           </div>
         </div>
       </CardContent>
@@ -1044,7 +1044,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                       <Calendar className="h-5 w-5 mr-2" />
                       開催日 {dateIndex + 1}: {formatDateOnly(date)}
                     </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
+                    <div className="flex items-center text-sm text-gray-500">
                       <Clock className="h-4 w-4 mr-1" />
                       {dayMatches.length}試合
                     </div>
@@ -1060,7 +1060,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                       <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                         {blockKey}
                       </span>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-gray-500">
                         {blockMatches.length}試合
                       </span>
                     </CardTitle>
@@ -1086,16 +1086,16 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                               const result = getMatchResult(match);
                               
                               return (
-                                <tr key={match.match_id} className="border-b hover:bg-muted">
+                                <tr key={match.match_id} className="border-b hover:bg-gray-50">
                                   <td className="py-2 px-2">
                                     <div className="flex items-center text-xs md:text-sm">
-                                      <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
+                                      <Clock className="h-3 w-3 mr-1 text-gray-500" />
                                       <span className="truncate">{formatTime(match.start_time || null)}</span>
                                     </div>
                                   </td>
                                   <td className="py-2 px-2">
                                     <div className="font-medium text-xs md:text-sm">{match.match_code}</div>
-                                    <div className="text-xs text-muted-foreground hidden md:block">{match.match_type}</div>
+                                    <div className="text-xs text-gray-500 hidden md:block">{match.match_type}</div>
                                   </td>
                                   <td className="py-2 px-2">
                                     <div className="text-xs md:text-sm">
@@ -1104,7 +1104,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                                         <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
                                           {teamMap.get(match.team1_id!)?.team_name || match.team1_display_name}
                                         </div>
-                                        <div className="text-xs text-muted-foreground">vs</div>
+                                        <div className="text-xs text-gray-500">vs</div>
                                         <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
                                           {teamMap.get(match.team2_id!)?.team_name || match.team2_display_name}
                                         </div>
@@ -1115,7 +1115,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                                           <span className={`truncate max-w-[3.5rem] ${result.winner === 'team1' ? 'font-bold text-green-600' : ''}`}>
                                             {teamMap.get(match.team1_id!)?.team_name || match.team1_display_name}
                                           </span>
-                                          <span className="text-muted-foreground text-xs">vs</span>
+                                          <span className="text-gray-500 text-xs">vs</span>
                                           <span className={`truncate max-w-[3.5rem] ${result.winner === 'team2' ? 'font-bold text-green-600' : ''}`}>
                                             {teamMap.get(match.team2_id!)?.team_name || match.team2_display_name}
                                           </span>
@@ -1129,7 +1129,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                                       <div className="text-xs md:text-sm">{result.display}</div>
                                     </div>
                                     {match.remarks && (
-                                      <div className="text-xs text-muted-foreground mt-1 hidden md:block">
+                                      <div className="text-xs text-gray-500 mt-1 hidden md:block">
                                         {match.remarks}
                                       </div>
                                     )}
@@ -1137,12 +1137,12 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
                                   <td className="py-2 px-2">
                                     {match.court_number ? (
                                       <div className="flex items-center text-xs md:text-sm">
-                                        <MapPin className="h-3 w-3 mr-1 text-muted-foreground hidden md:inline" />
+                                        <MapPin className="h-3 w-3 mr-1 text-gray-500 hidden md:inline" />
                                         <span className="md:hidden">C{match.court_number}</span>
                                         <span className="hidden md:inline">コート{match.court_number}</span>
                                       </div>
                                     ) : (
-                                      <span className="text-muted-foreground text-xs">-</span>
+                                      <span className="text-gray-500 text-xs">-</span>
                                     )}
                                   </td>
                                 </tr>
@@ -1166,7 +1166,7 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
       {/* ブロック別タブ */}
       <Tabs defaultValue="all" className="w-full">
         <div className="relative">
-          <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 overflow-x-auto">
+          <TabsList className="w-full justify-start h-auto p-1 bg-gray-50/50 overflow-x-auto">
             <div className="flex space-x-1 min-w-max">
               <TabsTrigger 
                 value="all" 
@@ -1491,25 +1491,25 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
       if (['T5', 'T6'].includes(matchCode)) return 'bg-purple-100 text-purple-800';
       if (matchCode === 'T7') return 'bg-yellow-100 text-yellow-800';
       if (matchCode === 'T8') return 'bg-red-100 text-red-800';
-      return 'bg-muted text-muted-foreground';
+      return 'bg-gray-50 text-gray-500';
     };
 
     const winnerIndex = getWinnerTeam();
 
     return (
-      <div className={`relative bg-card border border-border rounded-lg p-3 shadow-sm ${className}`} {...props}>
+      <div className={`relative bg-white border border-gray-200 rounded-lg p-3 shadow-sm ${className}`} {...props}>
         <div className={`absolute -top-2 left-3 border px-2 py-1 rounded-full text-xs font-medium ${getMatchCodeColor(match.match_code)}`}>
           {match.match_code}
         </div>
         
-        <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-border rounded cursor-default transition-all ${
+        <div className={`flex items-center justify-between h-8 px-3 mb-2 border border-gray-200 rounded cursor-default transition-all ${
           winnerIndex === 0 
             ? 'bg-green-50 text-green-600 border-green-300 font-medium' 
             : hasResult && winnerIndex === 1
             ? 'bg-red-50 text-red-600 border-red-300' 
             : hasResult && match.is_draw
             ? 'bg-blue-50 text-blue-600 border-blue-300'
-            : 'bg-muted text-muted-foreground'
+            : 'bg-gray-50 text-gray-500'
         }`}>
           <span className="text-sm truncate flex-1">
             {winnerIndex === 0 && hasResult ? '👑 ' : ''}{match.team1_display_name || '未確定'}
@@ -1522,7 +1522,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
                 {scoreData.isPkMatch ? (
                   <span className="flex flex-col items-end text-xs">
                     <span>{scoreData.regular}</span>
-                    <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                    <span className="text-[10px] text-gray-500">PK{scoreData.pk}</span>
                   </span>
                 ) : (
                   scoreData.regular
@@ -1538,7 +1538,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
                 {scoreData.isPkMatch ? (
                   <span className="flex flex-col items-end text-xs">
                     <span>{scoreData.regular}</span>
-                    <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                    <span className="text-[10px] text-gray-500">PK{scoreData.pk}</span>
                   </span>
                 ) : (
                   scoreData.regular
@@ -1548,14 +1548,14 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
           })()}
         </div>
 
-        <div className={`flex items-center justify-between h-8 px-3 border border-border rounded cursor-default transition-all ${
+        <div className={`flex items-center justify-between h-8 px-3 border border-gray-200 rounded cursor-default transition-all ${
           winnerIndex === 1 
             ? 'bg-green-50 text-green-600 border-green-300 font-medium' 
             : hasResult && winnerIndex === 0
             ? 'bg-red-50 text-red-600 border-red-300' 
             : hasResult && match.is_draw
             ? 'bg-blue-50 text-blue-600 border-blue-300'
-            : 'bg-muted text-muted-foreground'
+            : 'bg-gray-50 text-gray-500'
         }`}>
           <span className="text-sm truncate flex-1">
             {winnerIndex === 1 && hasResult ? '👑 ' : ''}{match.team2_display_name || '未確定'}
@@ -1568,7 +1568,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
                 {scoreData.isPkMatch ? (
                   <span className="flex flex-col items-end text-xs">
                     <span>{scoreData.regular}</span>
-                    <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                    <span className="text-[10px] text-gray-500">PK{scoreData.pk}</span>
                   </span>
                 ) : (
                   scoreData.regular
@@ -1584,7 +1584,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
                 {scoreData.isPkMatch ? (
                   <span className="flex flex-col items-end text-xs">
                     <span>{scoreData.regular}</span>
-                    <span className="text-[10px] text-muted-foreground">PK{scoreData.pk}</span>
+                    <span className="text-[10px] text-gray-500">PK{scoreData.pk}</span>
                   </span>
                 ) : (
                   scoreData.regular
@@ -1608,7 +1608,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
               試合完了
             </span>
           ) : (
-            <span className="text-xs bg-muted text-muted-foreground border border-border px-2 py-1 rounded-full">
+            <span className="text-xs bg-gray-50 text-gray-500 border border-gray-200 px-2 py-1 rounded-full">
               未実施
             </span>
           )}
@@ -1894,9 +1894,9 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
   if (bracketMatches.length === 0) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground text-lg mb-2">この大会にはトーナメント戦がありません</p>
-        <p className="text-muted-foreground text-sm">この大会は予選リーグ戦のみで構成されています。</p>
+        <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-500 text-lg mb-2">この大会にはトーナメント戦がありません</p>
+        <p className="text-gray-500 text-sm">この大会は予選リーグ戦のみで構成されています。</p>
       </div>
     );
   }
@@ -1982,7 +1982,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
         <div className="text-center no-print">
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-            <h2 className="text-2xl font-bold text-foreground">決勝トーナメント</h2>
+            <h2 className="text-2xl font-bold text-gray-900">決勝トーナメント</h2>
             <Button
               onClick={handlePrint}
               variant="outline"
@@ -1993,10 +1993,10 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
               PDF出力（印刷）
             </Button>
           </div>
-          <p className="text-muted-foreground">各ブロック上位2チームによるトーナメント表</p>
+          <p className="text-gray-500">各ブロック上位2チームによるトーナメント表</p>
         </div>
 
-        <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
+        <div className="print-container relative bg-white border border-gray-200 rounded-lg p-6 shadow-sm overflow-x-auto">
         <div 
           ref={bracketRef}
           className="relative grid gap-10 min-w-fit"
@@ -2026,7 +2026,7 @@ const ArchivedTournamentBracket = ({ matches, teams, archived }: {
               if (groupName.includes('準決勝')) return 'bg-purple-100 text-purple-800';
               if (groupName.includes('3位決定戦')) return 'bg-yellow-100 text-yellow-800';
               if (groupName.includes('決勝')) return 'bg-red-100 text-red-800';
-              return 'bg-muted text-muted-foreground';
+              return 'bg-gray-50 text-gray-500';
             };
 
             return (
@@ -2265,11 +2265,11 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
       case 1:
         return <Trophy className="h-4 w-4 text-yellow-500" />;
       case 2:
-        return <Medal className="h-4 w-4 text-muted-foreground" />;
+        return <Medal className="h-4 w-4 text-gray-500" />;
       case 3:
         return <Award className="h-4 w-4 text-amber-600" />;
       default:
-        return <Hash className="h-4 w-4 text-muted-foreground" />;
+        return <Hash className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -2536,9 +2536,9 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">戦績表</h3>
-          <p className="text-muted-foreground">まだ試合結果がないため、戦績表を表示できません。</p>
+          <Award className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">戦績表</h3>
+          <p className="text-gray-500">まだ試合結果がないため、戦績表を表示できません。</p>
         </CardContent>
       </Card>
     );
@@ -2580,13 +2580,13 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{blockResults.length}</div>
-              <div className="text-sm text-muted-foreground">ブロック数</div>
+              <div className="text-sm text-gray-500">ブロック数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
                 {blockResults.reduce((sum, block) => sum + block.teams.length, 0)}
               </div>
-              <div className="text-sm text-muted-foreground">参加チーム数</div>
+              <div className="text-sm text-gray-500">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
@@ -2603,7 +2603,7 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                   return '-';
                 })()}
               </div>
-              <div className="text-sm text-muted-foreground">実施済み試合数</div>
+              <div className="text-sm text-gray-500">実施済み試合数</div>
             </div>
           </div>
         </CardContent>
@@ -2630,7 +2630,7 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                     <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
                       {blockKey}
                     </span>
-                    <span className="text-sm text-muted-foreground flex items-center">
+                    <span className="text-sm text-gray-500 flex items-center">
                       <Users className="h-4 w-4 mr-1" />
                       {block.teams.length}チーム
                     </span>
@@ -2641,17 +2641,17 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
             {block.teams.length > 0 ? (
               <div className="overflow-x-auto">
                 {/* 統合された戦績表（順位表情報 + 対戦結果） */}
-                <table className="w-full border-collapse border border-border min-w-[800px] md:min-w-0">
+                <table className="w-full border-collapse border border-gray-200 min-w-[800px] md:min-w-0">
                   <thead>
                     <tr>
-                      <th className="border border-border p-2 md:p-3 bg-muted text-sm md:text-base font-medium text-muted-foreground min-w-[70px] md:min-w-[90px]">
+                      <th className="border border-gray-200 p-2 md:p-3 bg-gray-50 text-sm md:text-base font-medium text-gray-500 min-w-[70px] md:min-w-[90px]">
                         チーム
                       </th>
                       {/* 対戦結果の列ヘッダー（チーム略称を縦書き表示） */}
                       {block.teams.map((opponent, opponentIndex) => (
                         <th
                           key={`${block.block_name}-header-${opponent.team_id}-${opponentIndex}`}
-                          className="border border-border p-1 md:p-2 bg-green-50 dark:bg-green-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
+                          className="border border-gray-200 p-1 md:p-2 bg-green-50 text-xs md:text-base font-medium text-gray-500 min-w-[50px] md:min-w-[70px] max-w-[70px] md:max-w-[90px]"
                         >
                           <div 
                             className="flex flex-col items-center justify-center h-16 md:h-20 overflow-hidden"
@@ -2678,36 +2678,36 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                       {/* 予選リーグの場合は順位表の列を追加 */}
                       {isPreliminaryPhase(block.phase) && (
                         <>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[40px] md:min-w-[55px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[40px] md:min-w-[55px]">
                             <span className="md:hidden">順</span>
                             <span className="hidden md:inline">順位</span>
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[40px] md:min-w-[55px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[40px] md:min-w-[55px]">
                             <span className="md:hidden">点</span>
                             <span className="hidden md:inline">勝点</span>
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[35px] md:min-w-[50px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[35px] md:min-w-[50px]">
                             <span className="md:hidden">試</span>
                             <span className="hidden md:inline">試合数</span>
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[30px] md:min-w-[45px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[30px] md:min-w-[45px]">
                             勝
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[30px] md:min-w-[45px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[30px] md:min-w-[45px]">
                             分
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[30px] md:min-w-[45px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[30px] md:min-w-[45px]">
                             敗
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[35px] md:min-w-[50px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[35px] md:min-w-[50px]">
                             <span className="md:hidden">{(sportConfig?.score_label || '得点').charAt(0)}</span>
                             <span className="hidden md:inline">{sportConfig?.score_label || '得点'}</span>
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[35px] md:min-w-[50px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[35px] md:min-w-[50px]">
                             <span className="md:hidden">{(sportConfig?.score_against_label || '失点').charAt(0)}</span>
                             <span className="hidden md:inline">{sportConfig?.score_against_label || '失点'}</span>
                           </th>
-                          <th className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-xs md:text-base font-medium text-muted-foreground min-w-[40px] md:min-w-[55px]">
+                          <th className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-xs md:text-base font-medium text-gray-500 min-w-[40px] md:min-w-[55px]">
                             <span className="md:hidden">差</span>
                             <span className="hidden md:inline">{sportConfig?.difference_label || '得失差'}</span>
                           </th>
@@ -2722,7 +2722,7 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                       return (
                         <tr key={`${block.block_name}-row-${team.team_id}-${teamIndex}`}>
                           {/* チーム名（略称優先） */}
-                          <td className="border border-border p-2 md:p-3 bg-muted font-medium text-sm md:text-base">
+                          <td className="border border-gray-200 p-2 md:p-3 bg-gray-50 font-medium text-sm md:text-base">
                             <div 
                               className="truncate max-w-[60px] md:max-w-[80px]" 
                               title={team.team_name}
@@ -2740,11 +2740,11 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                           {block.teams.map((opponent, opponentIndex) => (
                             <td
                               key={`${block.block_name}-cell-${team.team_id}-${opponent.team_id}-${opponentIndex}`}
-                              className="border border-border p-1 md:p-2 text-center bg-card"
+                              className="border border-gray-200 p-1 md:p-2 text-center bg-white"
                             >
                               {team.team_id === opponent.team_id ? (
-                                <div className="w-full h-8 md:h-10 bg-muted flex items-center justify-center">
-                                  <span className="text-muted-foreground text-sm md:text-base">-</span>
+                                <div className="w-full h-8 md:h-10 bg-gray-50 flex items-center justify-center">
+                                  <span className="text-gray-500 text-sm md:text-base">-</span>
                                 </div>
                               ) : (
                                 <div className="w-full h-8 md:h-10 flex items-center justify-center text-sm md:text-lg font-medium rounded"
@@ -2762,7 +2762,7 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                           {isPreliminaryPhase(block.phase) && (
                             <>
                               {/* 順位 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <div className="flex items-center justify-center">
                                   {teamStanding ? (
                                     <>
@@ -2772,60 +2772,60 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
                                       </span>
                                     </>
                                   ) : (
-                                    <span className="text-muted-foreground text-xs md:text-sm">-</span>
+                                    <span className="text-gray-500 text-xs md:text-sm">-</span>
                                   )}
                                 </div>
                               </td>
                               
                               {/* 勝点 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="font-bold text-sm md:text-lg text-black">
                                   {teamStanding?.points || 0}
                                 </span>
                               </td>
                               
                               {/* 試合数 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="text-xs md:text-base text-black">{teamStanding?.matches_played || 0}</span>
                               </td>
                               
                               {/* 勝利 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="text-black font-medium text-xs md:text-base">
                                   {teamStanding?.wins || 0}
                                 </span>
                               </td>
                               
                               {/* 引分 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="text-black font-medium text-xs md:text-base">
                                   {teamStanding?.draws || 0}
                                 </span>
                               </td>
                               
                               {/* 敗北 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="text-black font-medium text-xs md:text-base">
                                   {teamStanding?.losses || 0}
                                 </span>
                               </td>
                               
                               {/* 総得点 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="font-medium text-xs md:text-base text-black">
                                   {teamStanding?.goals_for || 0}
                                 </span>
                               </td>
                               
                               {/* 総失点 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="font-medium text-xs md:text-base text-black">
                                   {teamStanding?.goals_against || 0}
                                 </span>
                               </td>
                               
                               {/* 得失差 */}
-                              <td className="border border-border p-1 md:p-2 bg-blue-50 dark:bg-blue-950/20 text-center">
+                              <td className="border border-gray-200 p-1 md:p-2 bg-blue-50 text-center">
                                 <span className="font-bold text-xs md:text-base text-black">
                                   {teamStanding ? (
                                     `${(teamStanding.goal_difference || 0) > 0 ? '+' : ''}${teamStanding.goal_difference || 0}`
@@ -2842,38 +2842,38 @@ const ArchivedTournamentResults = ({ _results, teams, standings, blockStructure 
 
                 {/* 凡例 */}
                 <div className="mt-4 space-y-3">
-                  <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap gap-6 text-xs text-gray-500">
                     <div className="flex items-center">
-                      <div className="w-4 h-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 rounded mr-2"></div>
+                      <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded mr-2"></div>
                       順位表情報
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-700 rounded mr-2"></div>
+                      <div className="w-4 h-4 bg-green-50 border border-green-200 rounded mr-2"></div>
                       対戦結果
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
+                  <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-4 text-xs md:text-sm text-gray-500">
                     <div className="flex items-center">
-                      <div className="w-4 h-4 md:w-5 md:h-5 bg-card border border-border text-foreground rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-white border border-gray-200 text-gray-900 rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
                         〇
                       </div>
                       勝利
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 md:w-5 md:h-5 bg-card border border-border text-muted-foreground rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-white border border-gray-200 text-gray-500 rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
                         ×
                       </div>
                       敗北
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 md:w-5 md:h-5 bg-card border border-border text-foreground rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-white border border-gray-200 text-gray-900 rounded mr-1 md:mr-2 flex items-center justify-center text-xs">
                         △
                       </div>
                       引分
                     </div>
                     <div className="flex items-center col-span-2 md:col-span-1">
-                      <div className="w-4 h-4 md:w-5 md:h-5 bg-muted text-muted-foreground rounded mr-1 md:mr-2 flex items-center justify-center text-xs font-medium">
+                      <div className="w-4 h-4 md:w-5 md:h-5 bg-gray-50 text-gray-500 rounded mr-1 md:mr-2 flex items-center justify-center text-xs font-medium">
                         A1
                       </div>
                       未実施試合（試合コード表示）
@@ -3076,9 +3076,9 @@ const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sport
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">順位表</h3>
-          <p className="text-muted-foreground">まだ試合結果がないため、順位表を表示できません。</p>
+          <TrendingUp className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">順位表</h3>
+          <p className="text-gray-500">まだ試合結果がないため、順位表を表示できません。</p>
         </CardContent>
       </Card>
     );
@@ -3137,13 +3137,13 @@ const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sport
   const getPositionBgColor = (position: number): string => {
     switch (position) {
       case 1:
-        return 'bg-yellow-50 border-l-4 border-yellow-400 dark:bg-yellow-950/20 dark:border-yellow-500';
+        return 'bg-yellow-50 border-l-4 border-yellow-400';
       case 2:
-        return 'bg-gray-50 border-l-4 border-gray-400 dark:bg-gray-800 dark:border-gray-500';
+        return 'bg-gray-50 border-l-4 border-gray-400';
       case 3:
-        return 'bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-950/20 dark:border-amber-500';
+        return 'bg-amber-50 border-l-4 border-amber-400';
       default:
-        return 'hover:bg-gray-50 dark:hover:bg-gray-800';
+        return 'hover:bg-gray-50';
     }
   };
 
@@ -3278,10 +3278,10 @@ const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sport
                     })()}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-center py-8 text-muted-foreground">
+                <CardContent className="text-center py-8 text-gray-500">
                   {isFinalPhase ? (
                     <div>
-                      <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-500" />
                       <p className="text-lg font-medium mb-2">決勝トーナメント順位未確定</p>
                       <p className="text-sm">決勝トーナメントの結果が確定していないか、データの読み込みに失敗しました。</p>
                     </div>
@@ -3338,7 +3338,7 @@ const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sport
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse min-w-[700px] md:min-w-0">
                   <thead>
-                    <tr className="border-b bg-gray-50 dark:bg-gray-800">
+                    <tr className="border-b bg-gray-50">
                       <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
                       <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
                       {isPreliminaryPhase(block.phase) && (
@@ -3379,7 +3379,7 @@ const ArchivedTournamentStandings = ({ standings, matches, blockStructure, sport
                         key={`${block.block_name}-${team.team_id}-${teamIndex}`} 
                         className={`border-b transition-colors ${ 
                           team.position === 0 
-                            ? 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                            ? 'bg-gray-100 hover:bg-gray-200' 
                             : team.position > 0 
                               ? getPositionBgColor(team.position) 
                               : 'hover:bg-gray-50'
@@ -3589,9 +3589,9 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">参加チーム</h3>
-          <p className="text-muted-foreground">まだ参加チームが登録されていません。</p>
+          <Users className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">参加チーム</h3>
+          <p className="text-gray-500">まだ参加チームが登録されていません。</p>
         </CardContent>
       </Card>
     );
@@ -3611,13 +3611,13 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{teams.length}</div>
-              <div className="text-sm text-muted-foreground">参加チーム数</div>
+              <div className="text-sm text-gray-500">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
                 {teams.reduce((total, team) => total + (team.player_count || 0), 0)}
               </div>
-              <div className="text-sm text-muted-foreground">参加選手数</div>
+              <div className="text-sm text-gray-500">参加選手数</div>
             </div>
           </div>
         </CardContent>
@@ -3637,7 +3637,7 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                     </span>
                   );
                 })()}
-                <span className="text-sm text-muted-foreground flex items-center">
+                <span className="text-sm text-gray-500 flex items-center">
                   <Users className="h-4 w-4 mr-1" />
                   {blockTeams.length}チーム
                 </span>
@@ -3661,24 +3661,24 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                   <div key={`team-list-${team.team_id}-${teamIndex}`} className="border rounded-lg">
                     {/* チーム基本情報 */}
                     <div 
-                      className="p-4 cursor-pointer hover:bg-muted transition-colors"
+                      className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() => toggleTeamExpansion(team.team_id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center">
                             {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
                             ) : (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <ChevronRight className="h-4 w-4 text-gray-500" />
                             )}
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-foreground">
+                            <h3 className="text-lg font-semibold text-gray-900">
                               {team.team_name}
                             </h3>
                             {team.team_omission && team.team_omission !== team.team_name && (
-                              <p className="text-sm text-muted-foreground">({team.team_omission})</p>
+                              <p className="text-sm text-gray-500">({team.team_omission})</p>
                             )}
                           </div>
                         </div>
@@ -3687,7 +3687,7 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                             {teamStatus.statusText}
                           </span>
                           {team.block_position && (
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm text-gray-500">
                               #{team.block_position}
                             </span>
                           )}
@@ -3697,11 +3697,11 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
 
                     {/* 展開時の詳細情報 */}
                     {isExpanded && (
-                      <div className="border-t bg-muted">
+                      <div className="border-t bg-gray-50">
                         <div className="p-4 space-y-4">
                           {/* ブロック情報 */}
                           {team.assigned_block && (
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-gray-500">
                               所属ブロック: {team.assigned_block}
                             </div>
                           )}
@@ -3709,7 +3709,7 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                           {/* 選手一覧 */}
                           {team.players && Array.isArray(team.players) && team.players.length > 0 ? (
                             <div>
-                              <h4 className="font-medium text-muted-foreground mb-3 flex items-center">
+                              <h4 className="font-medium text-gray-500 mb-3 flex items-center">
                                 <Users className="h-4 w-4 mr-1" />
                                 参加選手一覧
                               </h4>
@@ -3728,11 +3728,11 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                                         <td className="py-2 px-3">
                                           {player.jersey_number ? (
                                             <span className="flex items-center">
-                                              <Hash className="h-3 w-3 mr-1 text-muted-foreground" />
+                                              <Hash className="h-3 w-3 mr-1 text-gray-500" />
                                               {player.jersey_number}
                                             </span>
                                           ) : (
-                                            <span className="text-muted-foreground">-</span>
+                                            <span className="text-gray-500">-</span>
                                           )}
                                         </td>
                                         <td className="py-2 px-3 font-medium">{player.player_name}</td>
@@ -3748,8 +3748,8 @@ const ArchivedTournamentTeams = ({ teams, blockStructure, extendedMetadata: _ext
                               </div>
                             </div>
                           ) : (
-                            <div className="text-center py-6 text-muted-foreground">
-                              <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <div className="text-center py-6 text-gray-500">
+                              <Users className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                               <p>
                                 {team.player_count && team.player_count > 0 
                                   ? `選手${team.player_count}名（詳細情報は旧版アーカイブデータで非表示）`
@@ -3796,7 +3796,7 @@ function ArchivedLayout_v2({ archived, uiVersion, versionInfo }: { archived: Arc
   }
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -3805,7 +3805,7 @@ function ArchivedLayout_v2({ archived, uiVersion, versionInfo }: { archived: Arc
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
             <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
+              <Link href="/" className="flex items-center text-gray-500 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 TOPページに戻る
               </Link>
@@ -3815,8 +3815,8 @@ function ArchivedLayout_v2({ archived, uiVersion, versionInfo }: { archived: Arc
 
         {/* ページヘッダー */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">{archived.tournament.tournament_name}</h1>
-          <p className="text-muted-foreground">大会の詳細情報をご覧いただけます</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{archived.tournament.tournament_name}</h1>
+          <p className="text-gray-500">大会の詳細情報をご覧いただけます</p>
         </div>
 
         {/* タブナビゲーション */}

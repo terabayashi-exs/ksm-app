@@ -12,7 +12,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Users, Trophy } from 'lucide-react';
 import {
   getStatusLabel,
-  getStatusColor,
+  getStatusBadgeVariant,
   type TournamentStatus
 } from '@/lib/tournament-status';
 
@@ -94,12 +94,12 @@ export default function TournamentGroupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">読み込み中...</p>
+            <p className="mt-4 text-gray-500">読み込み中...</p>
           </div>
         </div>
         <Footer />
@@ -109,7 +109,7 @@ export default function TournamentGroupPage() {
 
   if (error || !group) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
@@ -128,11 +128,11 @@ export default function TournamentGroupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Header />
 
       {/* ページヘッダー */}
-      <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 shadow-sm border-b">
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center gap-4 mb-4">
@@ -143,9 +143,9 @@ export default function TournamentGroupPage() {
                 </Link>
               </Button>
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">{group.group_name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{group.group_name}</h1>
             {group.organizer && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 主催: {group.organizer}
               </p>
             )}
@@ -165,13 +165,13 @@ export default function TournamentGroupPage() {
                 {/* 会場 */}
                 {group.venue_name && (
                   <div>
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                    <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                       <MapPin className="w-4 h-4 mr-2" />
                       会場
                     </div>
                     <p className="text-sm">{group.venue_name}</p>
                     {group.venue_address && (
-                      <p className="text-xs text-muted-foreground mt-1">{group.venue_address}</p>
+                      <p className="text-xs text-gray-500 mt-1">{group.venue_address}</p>
                     )}
                   </div>
                 )}
@@ -179,7 +179,7 @@ export default function TournamentGroupPage() {
                 {/* 大会期間 */}
                 {(group.event_start_date || group.event_end_date) && (
                   <div>
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                    <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                       <Calendar className="w-4 h-4 mr-2" />
                       大会期間
                     </div>
@@ -192,7 +192,7 @@ export default function TournamentGroupPage() {
                 {/* 募集期間 */}
                 {(group.recruitment_start_date || group.recruitment_end_date) && (
                   <div>
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                    <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                       <Users className="w-4 h-4 mr-2" />
                       募集期間
                     </div>
@@ -204,7 +204,7 @@ export default function TournamentGroupPage() {
 
                 {/* 部門数 */}
                 <div>
-                  <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                  <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                     <Trophy className="w-4 h-4 mr-2" />
                     部門数
                   </div>
@@ -214,7 +214,7 @@ export default function TournamentGroupPage() {
                 {/* 説明 */}
                 {group.event_description && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-1">説明</div>
+                    <div className="text-sm font-medium text-gray-500 mb-1">説明</div>
                     <p className="text-sm whitespace-pre-wrap">{group.event_description}</p>
                   </div>
                 )}
@@ -231,7 +231,7 @@ export default function TournamentGroupPage() {
               <CardContent>
                 {divisions.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground">
+                    <p className="text-gray-500">
                       現在公開中の部門はありません。
                     </p>
                   </div>
@@ -247,22 +247,22 @@ export default function TournamentGroupPage() {
                           <div className="space-y-3">
                             {/* 部門名とステータス */}
                             <div className="flex items-start justify-between">
-                              <h3 className="font-bold text-lg text-foreground">
+                              <h3 className="font-bold text-lg text-gray-900">
                                 {division.tournament_name}
                               </h3>
-                              <Badge className={getStatusColor(division.status)}>
+                              <Badge variant={getStatusBadgeVariant(division.status)}>
                                 {getStatusLabel(division.status)}
                               </Badge>
                             </div>
 
                             {/* フォーマット */}
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-500">
                               {division.format_name}
                             </p>
 
                             {/* 会場（大会と異なる場合のみ表示） */}
                             {division.venue_name && division.venue_name !== group.venue_name && (
-                              <div className="flex items-center text-xs text-muted-foreground">
+                              <div className="flex items-center text-xs text-gray-500">
                                 <MapPin className="h-3 w-3 mr-1" />
                                 {division.venue_name}
                               </div>
@@ -270,7 +270,7 @@ export default function TournamentGroupPage() {
 
                             {/* チーム数 */}
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
+                              <span className="text-gray-500">
                                 {division.registered_teams}/{division.team_count}チーム
                               </span>
                               <Button size="sm" variant="outline" asChild>
@@ -285,7 +285,7 @@ export default function TournamentGroupPage() {
                              division.event_end_date &&
                              (division.event_start_date !== group.event_start_date ||
                               division.event_end_date !== group.event_end_date) && (
-                              <div className="flex items-center text-xs text-muted-foreground pt-2 border-t">
+                              <div className="flex items-center text-xs text-gray-500 pt-2 border-t">
                                 <Calendar className="h-3 w-3 mr-1" />
                                 {formatDateRange(division.event_start_date, division.event_end_date)}
                               </div>

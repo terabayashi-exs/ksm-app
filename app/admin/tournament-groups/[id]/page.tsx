@@ -95,10 +95,10 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
 
   if (loading || !resolvedParams) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <p className="mt-4 text-gray-500">読み込み中...</p>
         </div>
       </div>
     );
@@ -106,7 +106,7 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
 
   if (error || !group) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
             <p className="text-destructive">{error || '大会が見つかりません'}</p>
@@ -123,7 +123,7 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -168,20 +168,20 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                 {/* 会場 */}
                 {group.venue_name && (
                   <div>
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                    <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                       <MapPin className="w-4 h-4 mr-2" />
                       会場
                     </div>
                     <p className="text-sm">{group.venue_name}</p>
                     {group.venue_address && (
-                      <p className="text-xs text-muted-foreground mt-1">{group.venue_address}</p>
+                      <p className="text-xs text-gray-500 mt-1">{group.venue_address}</p>
                     )}
                   </div>
                 )}
 
                 {/* 大会期間 */}
                 <div>
-                  <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                  <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                     <Calendar className="w-4 h-4 mr-2" />
                     大会期間
                   </div>
@@ -193,7 +193,7 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                 {/* 募集期間 */}
                 {(group.recruitment_start_date || group.recruitment_end_date) && (
                   <div>
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
+                    <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                       <Users className="w-4 h-4 mr-2" />
                       募集期間
                     </div>
@@ -206,13 +206,13 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                 {/* 説明 */}
                 {group.event_description && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-1">説明</div>
+                    <div className="text-sm font-medium text-gray-500 mb-1">説明</div>
                     <p className="text-sm">{group.event_description}</p>
                   </div>
                 )}
 
                 {/* 作成日・更新日 */}
-                <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+                <div className="text-xs text-gray-500 border-t pt-2 space-y-1">
                   <div>作成日: {formatDate(group.created_at)}</div>
                   <div>更新日: {formatDate(group.updated_at)}</div>
                 </div>
@@ -237,7 +237,7 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
               <CardContent>
                 {group.divisions.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground">
+                    <p className="text-gray-500">
                       この大会にはまだ部門が作成されていません
                     </p>
                   </div>
@@ -253,10 +253,10 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                           <div className="flex items-start justify-between">
                             <div className="space-y-2 flex-1">
                               <div>
-                                <h4 className="font-bold text-foreground">{division.tournament_name}</h4>
-                                <p className="text-sm text-muted-foreground">{division.format_name}</p>
+                                <h4 className="font-bold text-gray-900">{division.tournament_name}</h4>
+                                <p className="text-sm text-gray-500">{division.format_name}</p>
                               </div>
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <div className="flex items-center space-x-4 text-sm text-gray-500">
                                 <span>{division.registered_teams}/{division.team_count}チーム</span>
                                 <span>{division.court_count}コート</span>
                                 <Badge variant={division.visibility === 'open' ? 'default' : 'secondary'}>

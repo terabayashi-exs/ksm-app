@@ -103,17 +103,17 @@ export default function TournamentGroupsList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <p className="mt-4 text-gray-500">読み込み中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -150,7 +150,7 @@ export default function TournamentGroupsList() {
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>大会一覧</span>
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className="text-sm font-normal text-gray-500">
                 全{tournamentGroups.length}件
               </span>
             </CardTitle>
@@ -158,7 +158,7 @@ export default function TournamentGroupsList() {
           <CardContent>
             {tournamentGroups.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">大会が登録されていません</p>
+                <p className="text-gray-500 mb-4">大会が登録されていません</p>
                 <Button asChild>
                   <Link href="/admin/tournament-groups/create">
                     <Plus className="w-4 h-4 mr-2" />
@@ -177,7 +177,7 @@ export default function TournamentGroupsList() {
                     <CardContent className="p-6">
                       <div className="space-y-3">
                         <div className="flex items-start justify-between">
-                          <h3 className="text-lg font-bold text-foreground">
+                          <h3 className="text-lg font-bold text-gray-900">
                             {group.group_name}
                           </h3>
                           <div className="flex items-center space-x-2">
@@ -201,29 +201,29 @@ export default function TournamentGroupsList() {
                         </div>
 
                         {group.organizer && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-gray-500">
                             主催: {group.organizer}
                           </p>
                         )}
 
                         {group.venue_name && (
-                          <div className="flex items-center text-sm text-muted-foreground">
+                          <div className="flex items-center text-sm text-gray-500">
                             <MapPin className="w-4 h-4 mr-2" />
                             {group.venue_name}
                           </div>
                         )}
 
-                        <div className="flex items-center text-sm text-muted-foreground">
+                        <div className="flex items-center text-sm text-gray-500">
                           <Calendar className="w-4 h-4 mr-2" />
                           {formatDateRange(group.event_start_date, group.event_end_date)}
                         </div>
 
-                        <div className="flex items-center text-sm text-muted-foreground">
+                        <div className="flex items-center text-sm text-gray-500">
                           <Users className="w-4 h-4 mr-2" />
                           {group.division_count}部門
                         </div>
 
-                        <div className="text-xs text-muted-foreground border-t pt-2">
+                        <div className="text-xs text-gray-500 border-t pt-2">
                           作成日: {formatDate(group.created_at)}
                         </div>
                       </div>

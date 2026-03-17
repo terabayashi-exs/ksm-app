@@ -286,7 +286,7 @@ export default function AdministratorManagement() {
             {/* Step 1: メールアドレス入力 */}
             {createStep === 'email' && (
               <>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-500">
                   追加したい管理者のメールアドレスを入力してください。既にアカウントがある場合はそのアカウントに管理者権限を付与します。
                 </p>
                 <div>
@@ -325,7 +325,7 @@ export default function AdministratorManagement() {
                     <div><span className="font-medium">メール：</span>{emailCheckResult.user.email}</div>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-500">
                   このユーザーに管理者権限を付与してよいですか？パスワードはそのまま変更されません。
                 </p>
                 <div className="flex gap-2 pt-2">
@@ -362,7 +362,7 @@ export default function AdministratorManagement() {
                   </div>
                   <div>
                     <Label htmlFor="email_display">メールアドレス</Label>
-                    <Input id="email_display" value={formData.email} disabled className="bg-muted" />
+                    <Input id="email_display" value={formData.email} disabled className="bg-gray-50" />
                   </div>
                 </div>
                 <div>
@@ -374,7 +374,7 @@ export default function AdministratorManagement() {
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     placeholder="6文字以上"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">本人に別途パスワードをお知らせください</p>
+                  <p className="text-xs text-gray-500 mt-1">本人に別途パスワードをお知らせください</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">

@@ -342,7 +342,7 @@ export default function TournamentDuplicatePage() {
     (sourceHasMultipleDays || tournamentDates.every(d => d.date && d.dayNumber > 0));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -373,13 +373,13 @@ export default function TournamentDuplicatePage() {
             { num: 3, label: '確認・完了' },
           ].map((s, i) => (
             <div key={s.num} className="flex items-center">
-              {i > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground mx-1" />}
+              {i > 0 && <ChevronRight className="w-4 h-4 text-gray-500 mx-1" />}
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
                 step === s.num
                   ? 'bg-primary text-primary-foreground'
                   : step > s.num
                     ? 'bg-green-100 text-green-800'
-                    : 'bg-muted text-muted-foreground'
+                    : 'bg-gray-50 text-gray-500'
               }`}>
                 <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">
                   {step > s.num ? <CheckCircle className="w-4 h-4" /> : s.num}
@@ -418,10 +418,10 @@ export default function TournamentDuplicatePage() {
                 <div>
                   <Label className="text-sm font-medium mb-2 block">地域で絞り込み</Label>
                   <Select value={selectedPrefecture || 'all'} onValueChange={(value) => setSelectedPrefecture(value === 'all' ? '' : value)}>
-                    <SelectTrigger className="bg-background">
+                    <SelectTrigger className="bg-white">
                       <SelectValue placeholder="都道府県を選択" />
                     </SelectTrigger>
-                    <SelectContent className="bg-background">
+                    <SelectContent className="bg-white">
                       <SelectItem value="all">指定しない</SelectItem>
                       {prefectures.map((pref) => (
                         <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)}>
@@ -441,8 +441,8 @@ export default function TournamentDuplicatePage() {
                         onClick={() => setSelectedSportType('')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                           selectedSportType === ''
-                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                            : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
                         }`}
                       >
                         <span>&#x1F3C6;</span>
@@ -454,8 +454,8 @@ export default function TournamentDuplicatePage() {
                           onClick={() => setSelectedSportType(String(sport.sport_type_id))}
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                             selectedSportType === String(sport.sport_type_id)
-                              ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                              : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                              ? 'border-blue-600 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
                           }`}
                         >
                           <span>{getSportIcon(sport.sport_code)}</span>
@@ -485,7 +485,7 @@ export default function TournamentDuplicatePage() {
               <div className="space-y-4">
                 {searchResults.length === 0 ? (
                   <Card>
-                    <CardContent className="py-8 text-center text-muted-foreground">
+                    <CardContent className="py-8 text-center text-gray-500">
                       検索条件に一致する部門が見つかりませんでした
                     </CardContent>
                   </Card>
@@ -497,7 +497,7 @@ export default function TournamentDuplicatePage() {
                           <div>
                             <CardTitle className="text-base">{group.group_name}</CardTitle>
                             {group.organizer && (
-                              <p className="text-sm text-muted-foreground mt-0.5">主催: {group.organizer}</p>
+                              <p className="text-sm text-gray-500 mt-0.5">主催: {group.organizer}</p>
                             )}
                           </div>
                           {group.event_start_date && (
@@ -517,7 +517,7 @@ export default function TournamentDuplicatePage() {
                               className={`w-full text-left p-3 border rounded-lg transition-colors hover:border-primary hover:bg-primary/5 ${
                                 selectedDivision?.tournament_id === division.tournament_id
                                   ? 'border-primary bg-primary/5'
-                                  : 'border-border'
+                                  : 'border-gray-200'
                               }`}
                             >
                               <div className="flex items-center justify-between">
@@ -529,10 +529,10 @@ export default function TournamentDuplicatePage() {
                                   <Badge variant="secondary" className="text-xs">
                                     {getStatusLabel(division.status)}
                                   </Badge>
-                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                  <ChevronRight className="w-4 h-4 text-gray-500" />
                                 </div>
                               </div>
-                              <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500">
                                 {division.format_name && <span>{division.format_name}</span>}
                                 {division.sport_name && <span>{division.sport_name}</span>}
                                 <span className="flex items-center gap-1">
@@ -560,9 +560,9 @@ export default function TournamentDuplicatePage() {
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">複製元</p>
+                    <p className="text-xs text-gray-500 mb-1">複製元</p>
                     <p className="font-medium">{selectedDivision.tournament_name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedGroupName}</p>
+                    <p className="text-sm text-gray-500">{selectedGroupName}</p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
                     変更
@@ -583,14 +583,14 @@ export default function TournamentDuplicatePage() {
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
                       destinationType === 'new'
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                        : 'border-gray-200 hover:border-primary/50'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Plus className="w-4 h-4" />
                       <span className="font-medium text-sm">新しい大会を作成</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">新しい大会グループを作成して複製</p>
+                    <p className="text-xs text-gray-500">新しい大会グループを作成して複製</p>
                   </button>
                   <button
                     onClick={() => {
@@ -600,14 +600,14 @@ export default function TournamentDuplicatePage() {
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
                       destinationType === 'existing'
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                        : 'border-gray-200 hover:border-primary/50'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Building2 className="w-4 h-4" />
                       <span className="font-medium text-sm">既存の大会に追加</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">既存の大会に部門を追加</p>
+                    <p className="text-xs text-gray-500">既存の大会に部門を追加</p>
                   </button>
                 </div>
 
@@ -641,9 +641,9 @@ export default function TournamentDuplicatePage() {
                 {destinationType === 'existing' && (
                   <div className="pt-2">
                     {loadingGroups ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">読込中...</p>
+                      <p className="text-sm text-gray-500 text-center py-4">読込中...</p>
                     ) : existingGroups.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">既存の大会がありません</p>
+                      <p className="text-sm text-gray-500 text-center py-4">既存の大会がありません</p>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {existingGroups.map((group) => (
@@ -653,11 +653,11 @@ export default function TournamentDuplicatePage() {
                             className={`w-full text-left p-3 border rounded-lg transition-colors ${
                               existingGroupId === group.group_id
                                 ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-primary/50'
+                                : 'border-gray-200 hover:border-primary/50'
                             }`}
                           >
                             <p className="font-medium text-sm">{group.group_name}</p>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                               {group.organizer && <span>主催: {group.organizer}</span>}
                               {group.event_start_date && <span>{group.event_start_date}</span>}
                             </div>
@@ -687,7 +687,7 @@ export default function TournamentDuplicatePage() {
                   />
                 </div>
 
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                <div className="bg-gray-50/50 rounded-lg p-3 text-sm text-gray-500">
                   <p className="font-medium mb-1">複製元から引き継がれる設定:</p>
                   <ul className="list-disc list-inside space-y-0.5 text-xs">
                     <li>フォーマット設定（{selectedDivision.format_name || '未設定'}）</li>
@@ -719,7 +719,7 @@ export default function TournamentDuplicatePage() {
                     {tournamentDates.map((entry, index) => (
                       <div key={index} className="flex items-end gap-3">
                         <div className="flex-1 space-y-1">
-                          <Label className="text-xs text-muted-foreground">開催日 {index + 1}</Label>
+                          <Label className="text-xs text-gray-500">開催日 {index + 1}</Label>
                           <Input
                             type="date"
                             value={entry.date}
@@ -727,7 +727,7 @@ export default function TournamentDuplicatePage() {
                           />
                         </div>
                         <div className="w-24 space-y-1">
-                          <Label className="text-xs text-muted-foreground">Day番号</Label>
+                          <Label className="text-xs text-gray-500">Day番号</Label>
                           <Input
                             type="number"
                             min="1"
@@ -756,7 +756,7 @@ export default function TournamentDuplicatePage() {
             {sourceHasMultipleDays && (
               <Card>
                 <CardContent className="pt-6">
-                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                  <div className="bg-gray-50/50 rounded-lg p-3 text-sm text-gray-500">
                     複製元の部門は節（複数Day）設定を持つため、開催日程は複製元からそのまま引き継がれます。
                   </div>
                 </CardContent>
@@ -817,7 +817,7 @@ export default function TournamentDuplicatePage() {
                         onCheckedChange={setShowPlayersPublic}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-gray-500">
                       チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
                       チェックを外すと、大会運営者のみが閲覧可能になります。
                     </p>
@@ -854,15 +854,15 @@ export default function TournamentDuplicatePage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">複製元の部門</span>
+                    <span className="text-sm text-gray-500">複製元の部門</span>
                     <span className="text-sm font-medium">{selectedDivision.tournament_name}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">複製元の大会</span>
+                    <span className="text-sm text-gray-500">複製元の大会</span>
                     <span className="text-sm font-medium">{selectedGroupName}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">複製先</span>
+                    <span className="text-sm text-gray-500">複製先</span>
                     <span className="text-sm font-medium">
                       {destinationType === 'new'
                         ? `${newGroupName}（新規作成）`
@@ -871,37 +871,37 @@ export default function TournamentDuplicatePage() {
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">新しい部門名</span>
+                    <span className="text-sm text-gray-500">新しい部門名</span>
                     <span className="text-sm font-medium">{newTournamentName}</span>
                   </div>
                   {!sourceHasMultipleDays && (
                     <div className="flex justify-between py-2 border-b">
-                      <span className="text-sm text-muted-foreground">開催日程</span>
+                      <span className="text-sm text-gray-500">開催日程</span>
                       <span className="text-sm font-medium">
                         {tournamentDates.map(d => `Day${d.dayNumber}: ${d.date}`).join('、')}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">公開開始日時</span>
+                    <span className="text-sm text-gray-500">公開開始日時</span>
                     <span className="text-sm font-medium">{publicStartDate.replace('T', ' ')}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">募集開始日時</span>
+                    <span className="text-sm text-gray-500">募集開始日時</span>
                     <span className="text-sm font-medium">{recruitmentStartDate.replace('T', ' ')}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">募集終了日時</span>
+                    <span className="text-sm text-gray-500">募集終了日時</span>
                     <span className="text-sm font-medium">{recruitmentEndDate.replace('T', ' ')}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-sm text-muted-foreground">公開設定</span>
+                    <span className="text-sm text-gray-500">公開設定</span>
                     <Badge variant={isPublic ? 'default' : 'secondary'}>
                       {isPublic ? '公開' : '非公開'}
                     </Badge>
                   </div>
                   <div className="flex justify-between py-2">
-                    <span className="text-sm text-muted-foreground">選手情報の一般公開</span>
+                    <span className="text-sm text-gray-500">選手情報の一般公開</span>
                     <Badge variant={showPlayersPublic ? 'default' : 'secondary'}>
                       {showPlayersPublic ? '公開' : '非公開'}
                     </Badge>

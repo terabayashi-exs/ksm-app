@@ -21,7 +21,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, MapPin, Users, ChevronRight, Search, X } from 'lucide-react';
 import {
   getStatusLabel,
-  getStatusColor,
+  getStatusBadgeVariant,
   type TournamentStatus
 } from '@/lib/tournament-status';
 
@@ -195,12 +195,12 @@ function TournamentsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">読み込み中...</p>
+            <p className="mt-4 text-gray-500">読み込み中...</p>
           </div>
         </div>
         <Footer />
@@ -240,7 +240,7 @@ function TournamentsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <div className="bg-base-800 border-b-[3px] border-primary">
@@ -334,8 +334,8 @@ function TournamentsContent() {
 
             {/* ボタンエリア */}
             <div className="flex gap-3">
-              <Button onClick={handleSearch} className="flex items-center">
-                <Search className="h-4 w-4 mr-2" />
+              <Button onClick={handleSearch} className="group flex items-center">
+                <Search className="h-4 w-4 mr-2 transition-transform group-hover:scale-110" />
                 検索
               </Button>
               <Button onClick={handleClearSearch} variant="outline" className="flex items-center">
@@ -346,7 +346,7 @@ function TournamentsContent() {
 
             {/* 検索結果件数 */}
             {tournamentGroups.length !== allTournamentGroups.length && (
-              <div className="mt-4 text-sm text-muted-foreground">
+              <div className="mt-4 text-sm text-gray-500">
                 {tournamentGroups.length}件の大会が見つかりました（全{allTournamentGroups.length}件中）
               </div>
             )}
@@ -358,7 +358,7 @@ function TournamentsContent() {
           <Card>
             <CardContent className="py-12">
               <div className="text-center">
-                <p className="text-muted-foreground">
+                <p className="text-gray-500">
                   {allTournamentGroups.length === 0
                     ? '現在公開中の大会はありません。'
                     : '検索条件に一致する大会が見つかりませんでした。'}
@@ -375,40 +375,40 @@ function TournamentsContent() {
           <div className="space-y-6">
             {tournamentGroups.map(({ group, divisions }) => (
               <Card key={group.group_id} className="overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-2xl mb-2">{group.group_name}</CardTitle>
                       {group.organizer && (
-                        <p className="text-sm text-muted-foreground mb-3">
+                        <p className="text-sm text-gray-500 mb-3">
                           主催: {group.organizer}
                         </p>
                       )}
 
                       <div className="flex flex-wrap gap-4 text-sm">
                         {group.venue_name && (
-                          <div className="flex items-center text-muted-foreground">
+                          <div className="flex items-center text-gray-500">
                             <MapPin className="h-4 w-4 mr-1" />
                             {group.venue_name}
                           </div>
                         )}
                         {(group.event_start_date || group.event_end_date) && (
-                          <div className="flex items-center text-muted-foreground">
+                          <div className="flex items-center text-gray-500">
                             <Calendar className="h-4 w-4 mr-1" />
                             {formatDateRange(group.event_start_date, group.event_end_date)}
                           </div>
                         )}
-                        <div className="flex items-center text-muted-foreground">
+                        <div className="flex items-center text-gray-500">
                           <Users className="h-4 w-4 mr-1" />
                           {group.division_count}部門
                         </div>
                       </div>
                     </div>
 
-                    <Button asChild>
+                    <Button asChild className="group">
                       <Link href={`/public/tournaments/groups/${group.group_id}`}>
                         大会を見る
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        <ChevronRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
                       </Link>
                     </Button>
                   </div>
@@ -416,30 +416,30 @@ function TournamentsContent() {
 
                 <CardContent className="pt-6">
                   {group.event_description && (
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-gray-500 mb-4">
                       {group.event_description}
                     </p>
                   )}
 
                   <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                    <h4 className="text-sm font-medium text-gray-900">所属部門</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {divisions.map((division) => (
                         <Card
                           key={division.tournament_id}
-                          className="hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                          className="card-interactive cursor-pointer"
                           onClick={() => window.location.href = `/public/tournaments/${division.tournament_id}`}
                         >
                           <CardContent className="p-4">
                             <div className="space-y-2">
                               <div className="flex items-start justify-between">
-                                <h5 className="font-medium text-foreground">{division.tournament_name}</h5>
-                                <Badge className={getStatusColor(division.status)}>
+                                <h5 className="font-medium text-gray-900">{division.tournament_name}</h5>
+                                <Badge variant={getStatusBadgeVariant(division.status)}>
                                   {getStatusLabel(division.status)}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-muted-foreground">{division.format_name}</p>
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <p className="text-xs text-gray-500">{division.format_name}</p>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
                                 <span>{division.registered_teams}/{division.team_count}チーム</span>
                                 {division.is_joined && (
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -468,12 +468,12 @@ function TournamentsContent() {
 export default function TournamentsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">読み込み中...</p>
+            <p className="mt-4 text-gray-500">読み込み中...</p>
           </div>
         </div>
         <Footer />
