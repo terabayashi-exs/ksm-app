@@ -147,9 +147,9 @@ export function MatchCard({
       <div
         className={`flex items-center justify-between h-8 px-3 mb-2 border rounded cursor-default transition-all ${
           winnerIndex === 0
-            ? "bg-green-500/20 text-green-500 border-green-500 font-medium"
+            ? "bg-red-500/20 text-red-500 border-red-500 font-medium"
             : hasResult && winnerIndex === 1
-            ? "bg-red-500/20 text-red-500 border-red-500"
+            ? "bg-gray-200/60 text-gray-400 border-gray-300"
             : hasResult && match.is_draw
             ? "bg-blue-500/20 text-blue-500 border-blue-500"
             : "bg-gray-50 text-gray-500 border-gray-200"
@@ -207,9 +207,9 @@ export function MatchCard({
       <div
         className={`flex items-center justify-between h-8 px-3 border rounded cursor-default transition-all ${
           winnerIndex === 1
-            ? "bg-green-500/20 text-green-500 border-green-500 font-medium"
+            ? "bg-red-500/20 text-red-500 border-red-500 font-medium"
             : hasResult && winnerIndex === 0
-            ? "bg-red-500/20 text-red-500 border-red-500"
+            ? "bg-gray-200/60 text-gray-400 border-gray-300"
             : hasResult && match.is_draw
             ? "bg-blue-500/20 text-blue-500 border-blue-500"
             : "bg-gray-50 text-gray-500 border-gray-200"
@@ -261,27 +261,6 @@ export function MatchCard({
               </span>
             );
           })()}
-      </div>
-
-      {/* 状態表示 */}
-      <div className="mt-2 text-center">
-        {match.match_status === "completed" && match.is_confirmed ? (
-          <span className="text-xs bg-blue-50 text-blue-600 border border-blue-300 px-2 py-1 rounded-full">
-            結果確定
-          </span>
-        ) : match.match_status === "ongoing" ? (
-          <span className="text-xs bg-orange-50 text-orange-600 border border-orange-300 px-2 py-1 rounded-full animate-pulse">
-            試合中
-          </span>
-        ) : match.match_status === "completed" ? (
-          <span className="text-xs bg-purple-50 text-purple-600 border border-purple-300 px-2 py-1 rounded-full">
-            試合完了
-          </span>
-        ) : (
-          <span className="text-xs bg-gray-50 text-gray-500 border border-gray-200 px-2 py-1 rounded-full">
-            未実施
-          </span>
-        )}
       </div>
     </div>
   );

@@ -934,15 +934,9 @@ export default function AdminMatchesPage() {
     }
   };
 
-  // 時間表示
+  // 時間表示（常に予め設定された試合開始時間を表示）
   const getTimeDisplay = (match: MatchData) => {
-    if (match.actual_start_time && match.actual_end_time) {
-      return `${new Date(match.actual_start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}-${new Date(match.actual_end_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (match.actual_start_time) {
-      return `${new Date(match.actual_start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}～`;
-    } else {
-      return match.scheduled_time;
-    }
+    return match.scheduled_time;
   };
 
   // 日付表示

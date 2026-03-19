@@ -5,6 +5,8 @@ import {
   getSubsequentPhases,
   getPhaseFormatTypeFromJson,
 } from '@/lib/tournament-phases';
+import { getTournamentPointSystem } from '@/lib/point-system-loader';
+import { parseTotalScore } from '@/lib/score-parser';
 
 export interface BlockRanking {
   tournament_team_id?: number; // 複数エントリーチーム対応
@@ -75,6 +77,7 @@ async function fetchTournamentPhasesJson(tournamentId: number): Promise<string |
  */
 async function getAllBlockRankings(tournamentId: number, targetBlockId?: number): Promise<{
   block_name: string;
+  match_block_id: number;
   rankings: BlockRanking[];
 }[]> {
   try {
@@ -116,7 +119,7 @@ async function getAllBlockRankings(tournamentId: number, targetBlockId?: number)
       args
     });
 
-    const blockRankings: { block_name: string; rankings: BlockRanking[]; }[] = [];
+    const blockRankings: { block_name: string; match_block_id: number; rankings: BlockRanking[]; }[] = [];
 
     for (const block of blocks.rows) {
       if (block.team_rankings) {
@@ -128,6 +131,7 @@ async function getAllBlockRankings(tournamentId: number, targetBlockId?: number)
             const rankings = JSON.parse(block.team_rankings as string) as BlockRanking[];
             blockRankings.push({
               block_name: block.block_name as string,
+              match_block_id: block.match_block_id as number,
               rankings: rankings
             });
             console.log(`[PROMOTION] ${block.block_name}ブロック: 完了済み、進出処理対象`);
@@ -208,7 +212,7 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
  */
 async function extractTopTeamsDynamic(
   tournamentId: number,
-  blockRankings: { block_name: string; rankings: BlockRanking[]; }[]
+  blockRankings: { block_name: string; match_block_id: number; rankings: BlockRanking[]; }[]
 ): Promise<{ [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; }> {
   const promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; } = {};
 
@@ -323,12 +327,10 @@ async function extractTopTeamsDynamic(
       });
 
       for (const [position, keys] of positionGroups) {
-        // 全ブロックから該当順位のチームを収集
-        const candidateTeams: BlockRanking[] = [];
-        blockRankings.forEach(block => {
-          const teamsAtPosition = block.rankings.filter(t => t.position === position);
-          candidateTeams.push(...teamsAtPosition);
-        });
+        // 正規化してから比較（ブロック間チーム数が異なる場合に対応）
+        const candidateTeams = await normalizeStatsForBestComparison(
+          tournamentId, blockRankings, position
+        );
 
         if (candidateTeams.length === 0) {
           console.log(`[PROMOTION] BEST_${position}_*: 対象チームなし`);
@@ -454,7 +456,7 @@ async function extractTopTeamsDynamic(
 /**
  * 部分進出対応：確定したブロックのみから上位チームを抽出（フォールバック用）
  */
-function extractTopTeamsPartial(blockRankings: { block_name: string; rankings: BlockRanking[]; }[]): {
+function extractTopTeamsPartial(blockRankings: { block_name: string; match_block_id: number; rankings: BlockRanking[]; }[]): {
   [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; };
 } {
   const promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; } = {};
@@ -495,6 +497,195 @@ function extractTopTeamsPartial(blockRankings: { block_name: string; rankings: B
   });
 
   return promotions;
+}
+
+/**
+ * BEST比較時にブロック間のチーム数不均等を正規化する
+ * 最小ブロックのチーム数に合わせて、チーム数の多いブロックでは下位チームとの対戦成績を除外して再計算する
+ * （UEFA Euro / FIFA W杯と同じ方式）
+ */
+async function normalizeStatsForBestComparison(
+  tournamentId: number,
+  blockRankings: { block_name: string; match_block_id: number; rankings: BlockRanking[] }[],
+  position: number
+): Promise<BlockRanking[]> {
+  // 各ブロックのチーム数から最小値を算出
+  const blockSizes = blockRankings.map(b => b.rankings.length);
+  const minSize = Math.min(...blockSizes);
+
+  // 全ブロックから該当順位のチームを収集
+  const candidateTeams: BlockRanking[] = [];
+  const allSameSize = blockSizes.every(s => s === minSize);
+
+  if (allSameSize) {
+    // 全ブロック同サイズなら正規化不要（早期リターン）
+    blockRankings.forEach(block => {
+      candidateTeams.push(...block.rankings.filter(t => t.position === position));
+    });
+    return candidateTeams;
+  }
+
+  console.log(`[PROMOTION] BEST正規化: ブロックサイズ不均等を検出 (${blockSizes.join(', ')}), 最小=${minSize}に正規化`);
+
+  // 勝点・不戦勝設定を取得
+  const pointSystem = await getTournamentPointSystem(tournamentId);
+  const { getTournamentWalkoverSettings } = await import('./tournament-rules');
+  const walkoverSettings = await getTournamentWalkoverSettings(tournamentId);
+
+  for (const block of blockRankings) {
+    const teamsAtPosition = block.rankings.filter(t => t.position === position);
+    if (teamsAtPosition.length === 0) continue;
+
+    if (block.rankings.length <= minSize) {
+      // このブロックは最小サイズ以下 → そのまま使用
+      candidateTeams.push(...teamsAtPosition);
+      continue;
+    }
+
+    // このブロックはチーム数が多い → 下位チームとの試合を除外して再計算
+    // position > minSize の全チームの tournament_team_id を除外対象として収集
+    const excludedOpponentIds = new Set<number>();
+    block.rankings.forEach(t => {
+      if (t.position > minSize && t.tournament_team_id) {
+        excludedOpponentIds.add(t.tournament_team_id);
+      }
+    });
+
+    console.log(`[PROMOTION] BEST正規化: ${block.block_name}ブロック(${block.rankings.length}チーム) → ${excludedOpponentIds.size}チーム分の試合を除外`);
+
+    // ブロックの全確定試合を取得
+    const matchesResult = await db.execute({
+      sql: `
+        SELECT
+          mf.match_id,
+          mf.match_block_id,
+          mf.team1_tournament_team_id,
+          mf.team2_tournament_team_id,
+          mf.team1_scores as team1_goals,
+          mf.team2_scores as team2_goals,
+          mf.winner_tournament_team_id,
+          mf.is_draw,
+          mf.is_walkover
+        FROM t_matches_final mf
+        LEFT JOIN t_matches_live ml ON mf.match_id = ml.match_id
+        WHERE mf.match_block_id = ?
+          AND mf.team1_tournament_team_id IS NOT NULL
+          AND mf.team2_tournament_team_id IS NOT NULL
+          AND (ml.match_status IS NULL OR ml.match_status != 'cancelled' OR mf.is_walkover = 1)
+          AND (ml.match_type IS NULL OR ml.match_type != 'FM')
+      `,
+      args: [block.match_block_id]
+    });
+
+    const matches = matchesResult.rows.map(row => ({
+      team1_tournament_team_id: row.team1_tournament_team_id as number,
+      team2_tournament_team_id: row.team2_tournament_team_id as number,
+      team1_goals: row.team1_goals,
+      team2_goals: row.team2_goals,
+      winner_tournament_team_id: row.winner_tournament_team_id as number | null,
+      is_draw: Boolean(row.is_draw),
+      is_walkover: Boolean(row.is_walkover)
+    }));
+
+    // 各候補チームの成績を除外対象を省いて再計算
+    for (const team of teamsAtPosition) {
+      if (!team.tournament_team_id) {
+        candidateTeams.push(team);
+        continue;
+      }
+
+      const recalculated = recalculateStatsExcludingOpponents(
+        team.tournament_team_id,
+        matches,
+        excludedOpponentIds,
+        pointSystem,
+        walkoverSettings
+      );
+
+      const normalizedTeam: BlockRanking = {
+        ...team,
+        points: recalculated.points,
+        wins: recalculated.wins,
+        draws: recalculated.draws,
+        losses: recalculated.losses,
+        goals_for: recalculated.goals_for,
+        goals_against: recalculated.goals_against,
+        goal_difference: recalculated.goal_difference,
+      };
+
+      console.log(`[PROMOTION] BEST正規化: ${team.team_name} 正規化前(勝点${team.points}, 得失${team.goal_difference}, 得点${team.goals_for}) → 正規化後(勝点${normalizedTeam.points}, 得失${normalizedTeam.goal_difference}, 得点${normalizedTeam.goals_for})`);
+
+      candidateTeams.push(normalizedTeam);
+    }
+  }
+
+  return candidateTeams;
+}
+
+/**
+ * 指定チームの成績を、除外対象の対戦相手との試合を省いて再計算する
+ */
+function recalculateStatsExcludingOpponents(
+  teamTournamentTeamId: number,
+  matches: {
+    team1_tournament_team_id: number;
+    team2_tournament_team_id: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    team1_goals: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    team2_goals: any;
+    winner_tournament_team_id: number | null;
+    is_draw: boolean;
+    is_walkover: boolean;
+  }[],
+  excludedOpponentIds: Set<number>,
+  pointSystem: { win: number; draw: number; loss: number },
+  walkoverSettings: { winner_goals: number; loser_goals: number }
+): { points: number; wins: number; draws: number; losses: number; goals_for: number; goals_against: number; goal_difference: number } {
+  let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0, points = 0;
+
+  for (const match of matches) {
+    const isTeam1 = match.team1_tournament_team_id === teamTournamentTeamId;
+    const isTeam2 = match.team2_tournament_team_id === teamTournamentTeamId;
+    if (!isTeam1 && !isTeam2) continue;
+
+    // 対戦相手が除外対象ならスキップ
+    const opponentId = isTeam1 ? match.team2_tournament_team_id : match.team1_tournament_team_id;
+    if (excludedOpponentIds.has(opponentId)) continue;
+
+    let teamGoals: number;
+    let opponentGoals: number;
+
+    if (match.is_walkover) {
+      if (match.is_draw) {
+        teamGoals = 0;
+        opponentGoals = 0;
+      } else {
+        const isWinner = match.winner_tournament_team_id === teamTournamentTeamId;
+        teamGoals = isWinner ? walkoverSettings.winner_goals : walkoverSettings.loser_goals;
+        opponentGoals = isWinner ? walkoverSettings.loser_goals : walkoverSettings.winner_goals;
+      }
+    } else {
+      teamGoals = isTeam1 ? parseTotalScore(match.team1_goals) : parseTotalScore(match.team2_goals);
+      opponentGoals = isTeam1 ? parseTotalScore(match.team2_goals) : parseTotalScore(match.team1_goals);
+    }
+
+    goalsFor += teamGoals;
+    goalsAgainst += opponentGoals;
+
+    if (match.is_draw) {
+      draws++;
+      points += pointSystem.draw;
+    } else if (teamGoals > opponentGoals) {
+      wins++;
+      points += pointSystem.win;
+    } else {
+      losses++;
+      points += pointSystem.loss;
+    }
+  }
+
+  return { points, wins, draws, losses, goals_for: goalsFor, goals_against: goalsAgainst, goal_difference: goalsFor - goalsAgainst };
 }
 
 /**

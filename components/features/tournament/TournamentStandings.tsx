@@ -259,36 +259,41 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
 
   // ブロック色の取得（ブロック名ベースで動的に色分け）
   const blockColors = [
-    'bg-blue-100 text-blue-800900/20300',
-    'bg-green-100 text-green-800900/20300',
-    'bg-yellow-100 text-yellow-800900/20300',
-    'bg-purple-100 text-purple-800900/20300',
-    'bg-orange-100 text-orange-800900/20300',
-    'bg-cyan-100 text-cyan-800900/20300',
-    'bg-rose-100 text-rose-800900/20300',
-    'bg-teal-100 text-teal-800900/20300',
-    'bg-indigo-100 text-indigo-800900/20300',
-    'bg-lime-100 text-lime-800900/20300',
-    'bg-amber-100 text-amber-800900/20300',
-    'bg-sky-100 text-sky-800900/20300',
-    'bg-fuchsia-100 text-fuchsia-800900/20300',
-    'bg-emerald-100 text-emerald-800900/20300',
-    'bg-violet-100 text-violet-800900/20300',
-    'bg-red-100 text-red-800900/20300',
+    'bg-blue-100 text-blue-800',
+    'bg-green-100 text-green-800',
+    'bg-yellow-100 text-yellow-800',
+    'bg-purple-100 text-purple-800',
+    'bg-orange-100 text-orange-800',
+    'bg-cyan-100 text-cyan-800',
+    'bg-rose-100 text-rose-800',
+    'bg-teal-100 text-teal-800',
+    'bg-indigo-100 text-indigo-800',
+    'bg-lime-100 text-lime-800',
+    'bg-amber-100 text-amber-800',
+    'bg-sky-100 text-sky-800',
+    'bg-fuchsia-100 text-fuchsia-800',
+    'bg-emerald-100 text-emerald-800',
+    'bg-violet-100 text-violet-800',
+    'bg-red-100 text-red-800',
   ];
   const getBlockColor = (blockKey: string): string => {
-    // 「Xブロック」形式からブロック文字を抽出して色分け（A～Zまで対応）
-    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    // 「Xブロック」「予選Xブロック」等からブロック文字を抽出して色分け（A～Zまで対応）
+    const blockMatch = blockKey.match(/([A-Z])ブロック/);
     if (blockMatch) {
       const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
       return blockColors[index % blockColors.length];
     }
     // 「X位リーグ」形式の色分け
-    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800900/20300';
-    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800900/20300';
-    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800900/20300';
-    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800900/20300';
-    return 'bg-gray-100 text-gray-800800200';
+    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800';
+    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800';
+    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800';
+    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800';
+    // 「交流ブロック」「決勝ブロック」等、A-Z以外のブロック名は文字コード合計で色分け
+    if (blockKey.includes('ブロック') || blockKey.length > 0) {
+      const charSum = Array.from(blockKey).reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+      return blockColors[charSum % blockColors.length];
+    }
+    return 'bg-gray-50 text-gray-500';
   };
 
   // フォーマットタイプに基づいた表示判定（リーグ戦形式かどうか）

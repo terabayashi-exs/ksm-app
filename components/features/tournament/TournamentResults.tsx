@@ -89,15 +89,22 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
     'bg-red-100 text-red-800',
   ];
   const getBlockColor = (blockKey: string): string => {
-    const blockMatch = blockKey.match(/^([A-Z])ブロック$/);
+    // 「Xブロック」「予選Xブロック」等からブロック文字（A～Z）を抽出して色分け
+    const blockMatch = blockKey.match(/([A-Z])ブロック/);
     if (blockMatch) {
       const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
       return blockColors[index % blockColors.length];
     }
+    // 「X位リーグ」形式の色分け
     if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800';
     if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800';
     if (blockKey.includes('3位')) return 'bg-green-100 text-green-800';
     if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800';
+    // 「交流ブロック」「決勝ブロック」等、A-Z以外のブロック名は文字コード合計で色分け
+    if (blockKey.includes('ブロック') || blockKey.length > 0) {
+      const charSum = Array.from(blockKey).reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+      return blockColors[charSum % blockColors.length];
+    }
     return 'bg-gray-50 text-gray-500';
   };
 
