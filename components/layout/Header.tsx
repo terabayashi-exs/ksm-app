@@ -82,7 +82,7 @@ export default function Header() {
             ) : (
               <>
                 <Button asChild size="sm">
-                  <Link href="/tournaments" className="flex items-center">
+                  <Link href="/" className="flex items-center">
                     <Search className="mr-1.5 h-3.5 w-3.5" />
                     大会を探す
                   </Link>
@@ -145,7 +145,7 @@ export default function Header() {
             ) : (
               <>
                 <Link
-                  href="/tournaments"
+                  href="/"
                   className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
                   onClick={() => setMobileMenuOpen(false)}
                 >

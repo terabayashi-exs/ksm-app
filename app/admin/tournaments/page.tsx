@@ -215,7 +215,7 @@ export default function AdminTournamentsList() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <Button asChild variant="outline" size="sm" className="group">
-            <Link href="/admin">
+            <Link href="/my">
               <ArrowLeft className="h-4 w-4 mr-1 transition-transform group-hover:-translate-x-1" />
               ダッシュボードに戻る
             </Link>

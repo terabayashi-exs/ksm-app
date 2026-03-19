@@ -55,7 +55,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
             <Home className="h-4 w-4" />
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <Link href="/tournaments" className="hover:text-gray-900">
+          <Link href="/" className="hover:text-gray-900">
             大会一覧
           </Link>
           {group && (

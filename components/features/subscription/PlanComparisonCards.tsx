@@ -439,7 +439,7 @@ export default function PlanComparisonCards() {
 
           <AlertDialogFooter>
             <Button asChild variant="default" onClick={() => setBlockersDialogOpen(false)}>
-              <a href="/admin">大会を整理する</a>
+              <a href="/my">大会を整理する</a>
             </Button>
             <AlertDialogCancel>閉じる</AlertDialogCancel>
           </AlertDialogFooter>

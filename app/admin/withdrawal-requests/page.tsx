@@ -32,7 +32,7 @@ export default async function WithdrawalRequestsPage() {
               </p>
             </div>
             <Button asChild variant="outline" className="text-white border-white/30 hover:bg-white/10 hover:text-white">
-              <Link href="/admin" className="flex items-center gap-2">
+              <Link href="/my" className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 ダッシュボードに戻る
               </Link>

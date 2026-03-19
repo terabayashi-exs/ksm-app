@@ -38,8 +38,10 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
 
   // 速報データの取得
   useEffect(() => {
+    let isFirstFetch = true;
+
     const fetchNewsMatches = async () => {
-      setLoading(true);
+      if (isFirstFetch) setLoading(true);
       try {
         const response = await fetch(`/api/tournaments/${tournamentId}/match-news`, {
           cache: 'no-store'
@@ -54,15 +56,18 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
       } catch (error) {
         console.error('速報データ取得エラー:', error);
       } finally {
-        setLoading(false);
+        if (isFirstFetch) {
+          setLoading(false);
+          isFirstFetch = false;
+        }
       }
     };
 
     fetchNewsMatches();
-    
+
     // 30秒ごとに更新
     const interval = setInterval(fetchNewsMatches, 30000);
-    
+
     return () => clearInterval(interval);
   }, [tournamentId]);
 
@@ -315,7 +320,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                     <div className={`text-sm ${winnerDisplay.team1Style}`}>
                       {match.team1_display_name}
                     </div>
-                    <div className="text-xs text-gray-500 my-1">vs</div>
+                    <div className="text-xs text-gray-500 my-1">×</div>
                     <div className={`text-sm ${winnerDisplay.team2Style}`}>
                       {match.team2_display_name}
                     </div>

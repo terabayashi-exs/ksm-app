@@ -118,7 +118,7 @@ export default function TournamentGroupPage() {
               className="mt-4"
               asChild
             >
-              <Link href="/tournaments">大会一覧に戻る</Link>
+              <Link href="/">大会一覧に戻る</Link>
             </Button>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function TournamentGroupPage() {
           <div className="py-6">
             <div className="flex items-center gap-4 mb-4">
               <Button variant="outline" asChild>
-                <Link href="/tournaments" className="flex items-center">
+                <Link href="/" className="flex items-center">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   大会一覧に戻る
                 </Link>

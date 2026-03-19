@@ -107,7 +107,7 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin">
+            <Link href="/my">
               <ArrowLeft className="h-4 w-4 mr-1" />
               ダッシュボードに戻る
             </Link>
@@ -148,7 +148,7 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
 
           <div className="mt-8">
             <Button variant="outline" asChild>
-              <Link href="/admin">
+              <Link href="/my">
                 ダッシュボードに戻る
               </Link>
             </Button>

@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, Menu, X, Search } from "lucide-react";
+import { User, LogOut, Menu, X } from "lucide-react";
 
 export default function TopNavBar() {
   const { data: session, status } = useSession();
@@ -66,19 +66,11 @@ export default function TopNavBar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <>
-                <Button asChild size="sm">
-                  <Link href="/tournaments" className="flex items-center">
-                    <Search className="mr-1.5 h-3.5 w-3.5" />
-                    大会を探す
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
-                  <Link href="/auth/login" className="flex items-center">
-                    ログイン
-                  </Link>
-                </Button>
-              </>
+              <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
+                <Link href="/auth/login" className="flex items-center">
+                  ログイン
+                </Link>
+              </Button>
             )}
           </div>
 
@@ -130,14 +122,6 @@ export default function TopNavBar() {
               </>
             ) : (
               <>
-                <Link
-                  href="/tournaments"
-                  className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Search className="h-4 w-4" />
-                  大会を探す
-                </Link>
                 <Link
                   href="/auth/login"
                   className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"

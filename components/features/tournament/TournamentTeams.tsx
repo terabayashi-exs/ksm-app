@@ -34,15 +34,16 @@ const getTeamStatus = (team: SimpleTournamentTeam) => {
 interface TournamentTeamsProps {
   tournamentId: number;
   initialTeamsData?: SimpleTournamentTeamsData;
+  initialCanViewPlayers?: boolean;
 }
 
-export default function TournamentTeams({ tournamentId, initialTeamsData }: TournamentTeamsProps) {
+export default function TournamentTeams({ tournamentId, initialTeamsData, initialCanViewPlayers }: TournamentTeamsProps) {
   const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(initialTeamsData || null);
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
   const [teamPlayers, setTeamPlayers] = useState<Record<number, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
   const [loading, setLoading] = useState(!initialTeamsData);
   const [error, setError] = useState<string | null>(null);
-  const [canViewPlayers, setCanViewPlayers] = useState(false);
+  const [canViewPlayers, setCanViewPlayers] = useState(initialCanViewPlayers ?? false);
 
   // 参加チームデータの取得（initialTeamsDataが提供されていない場合のみ）
   useEffect(() => {

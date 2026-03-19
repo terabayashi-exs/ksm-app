@@ -25,7 +25,7 @@ export async function GET(
 
     // セッション情報を取得
     const session = await auth();
-    const isAdmin = session?.user?.role === 'admin';
+    const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'operator';
 
     // 大会の選手情報公開設定を取得
     const tournamentResult = await db.execute({

@@ -131,7 +131,7 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                 variant="outline"
                 asChild
               >
-                <Link href="/tournaments">大会一覧に戻る</Link>
+                <Link href="/">大会一覧に戻る</Link>
               </Button>
             </div>
           </div>

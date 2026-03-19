@@ -300,7 +300,7 @@ export default function AdminTeamsPage() {
               <Button
                 variant="outline"
                 className="text-white border-white/30 hover:bg-white/10 hover:text-white"
-                onClick={() => router.push('/admin')}
+                onClick={() => router.push('/my')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 管理者ダッシュボードに戻る

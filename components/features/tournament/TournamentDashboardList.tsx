@@ -8,7 +8,7 @@ import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, UserCog } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, UserCog, QrCode } from 'lucide-react';
 import { getStatusLabel } from '@/lib/tournament-status';
 import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from '@/lib/format-change';
 import { FormatChangeDialog } from './FormatChangeDialog';
@@ -643,7 +643,20 @@ export default function TournamentDashboardList({
               </div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
+                window.open(qrPageUrl, '_blank', 'width=500,height=700');
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer shadow-sm"
+              title="部門詳細ページのQRコードを表示"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              QR
+            </button>
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
               tournament.status === 'planning'
                 ? 'bg-gray-100 text-gray-800'

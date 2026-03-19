@@ -72,6 +72,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
   const [loading, setLoading] = useState(!initialMatches);
   const [error, setError] = useState<string | null>(null);
   const [filterTeamId, setFilterTeamId] = useState<string>('all');
+  const [filterCourtNumber, setFilterCourtNumber] = useState<string>('all');
   const [confirmedTeams, setConfirmedTeams] = useState<TeamOption[]>([]);
 
   // 試合データの取得（initialMatchesが提供されていない場合のみ）
@@ -136,14 +137,34 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
     return matches.some(m => m.team1_tournament_team_id || m.team2_tournament_team_id);
   }, [matches]);
 
+  // コート選択肢を生成
+  const courtOptions = useMemo(() => {
+    const courtMap = new Map<number, string>();
+    matches.forEach(m => {
+      if (m.court_number != null) {
+        courtMap.set(m.court_number, m.court_name || `コート${m.court_number}`);
+      }
+    });
+    return Array.from(courtMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([num, name]) => ({ court_number: num, display_name: name }));
+  }, [matches]);
+
   // フィルタリングされた試合一覧
   const filteredMatches = useMemo(() => {
-    if (filterTeamId === 'all') return matches;
-    const teamId = parseInt(filterTeamId);
-    return matches.filter(m =>
-      m.team1_tournament_team_id === teamId || m.team2_tournament_team_id === teamId
-    );
-  }, [matches, filterTeamId]);
+    let result = matches;
+    if (filterTeamId !== 'all') {
+      const teamId = parseInt(filterTeamId);
+      result = result.filter(m =>
+        m.team1_tournament_team_id === teamId || m.team2_tournament_team_id === teamId
+      );
+    }
+    if (filterCourtNumber !== 'all') {
+      const courtNum = parseInt(filterCourtNumber);
+      result = result.filter(m => m.court_number === courtNum);
+    }
+    return result;
+  }, [matches, filterTeamId, filterCourtNumber]);
 
   // リーグ戦モード判定（matchdayが設定されている試合があるか）
   const isLeagueMode = useMemo(() => {
@@ -511,7 +532,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                     <span className="text-lg font-medium">{formatTime(match.start_time)}</span>
                                   </td>
                                   <td className="py-2 px-1 whitespace-nowrap align-middle">
-                                    <div className={`text-sm font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
+                                    <div className={`text-lg font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
                                   </td>
                                   <td className="py-2 px-1">
                                     {/* PC: 1行表示 */}
@@ -540,7 +561,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                       <div className="text-base">{result.display}</div>
                                     </div>
                                     {match.remarks && !match.is_walkover && (
-                                      <div className="text-xs text-gray-500 mt-1 hidden md:block text-right">
+                                      <div className="text-xs text-gray-500 mt-1 text-right">
                                         {match.remarks}
                                       </div>
                                     )}
@@ -660,7 +681,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   <div className="text-lg font-medium">{formatTime(match.start_time)}</div>
                                 </td>
                                 <td className="py-2 px-1 whitespace-nowrap align-middle">
-                                  <div className={`text-sm font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
+                                  <div className={`text-lg font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
                                 </td>
                                 <td className="py-2 px-1">
                                   {/* PC: 1行表示 */}
@@ -757,24 +778,46 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       {/* 試合速報エリア */}
       <MatchNewsArea tournamentId={tournamentId} />
 
-      {/* チームフィルター（チームが割り当て済みで確定チームがある場合のみ表示） */}
-      {hasAssignedTeams && confirmedTeams.length > 0 && (
-        <div className="flex items-center gap-3">
-          <Users className="h-4 w-4 text-gray-500 shrink-0" />
-          <Select value={filterTeamId} onValueChange={setFilterTeamId}>
-            <SelectTrigger className="w-full sm:w-[280px]">
-              <SelectValue placeholder="チームで絞り込み" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべてのチーム</SelectItem>
-              {confirmedTeams.map((team) => (
-                <SelectItem key={team.tournament_team_id} value={team.tournament_team_id.toString()}>
-                  {team.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {filterTeamId !== 'all' && (
+      {/* フィルター */}
+      {(hasAssignedTeams && confirmedTeams.length > 0 || courtOptions.length > 1) && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {hasAssignedTeams && confirmedTeams.length > 0 && (
+            <div className="flex items-center gap-2 min-w-0">
+              <Users className="h-4 w-4 text-gray-500 shrink-0" />
+              <Select value={filterTeamId} onValueChange={setFilterTeamId}>
+                <SelectTrigger className="w-full sm:w-[280px]">
+                  <SelectValue placeholder="チームで絞り込み" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべてのチーム</SelectItem>
+                  {confirmedTeams.map((team) => (
+                    <SelectItem key={team.tournament_team_id} value={team.tournament_team_id.toString()}>
+                      {team.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {courtOptions.length > 1 && (
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin className="h-4 w-4 text-gray-500 shrink-0" />
+              <Select value={filterCourtNumber} onValueChange={setFilterCourtNumber}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <SelectValue placeholder="コートで絞り込み" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべてのコート</SelectItem>
+                  {courtOptions.map((court) => (
+                    <SelectItem key={court.court_number} value={court.court_number.toString()}>
+                      {court.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {(filterTeamId !== 'all' || filterCourtNumber !== 'all') && (
             <span className="text-sm text-gray-500 shrink-0">
               {filteredMatches.length}試合
             </span>
