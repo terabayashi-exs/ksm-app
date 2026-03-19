@@ -662,31 +662,10 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">手動順位設定</h2>
-          <p className="text-sm text-gray-600">
-            同着順位を設定する場合は、同じ順位番号を入力してください（例：1位、2位、2位、4位）
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={resetAll}
-            disabled={saving || !hasChanges}
-          >
-            <RotateCcw className="w-4 h-4 mr-1" />
-            全てリセット
-          </Button>
-          <Button
-            onClick={saveChanges}
-            disabled={saving || !hasChanges}
-            className="border-2 border-primary bg-primary hover:bg-primary/90 hover:border-primary/90 text-primary-foreground"
-          >
-            <Save className="w-4 h-4 mr-1" />
-            {saving ? '保存中...' : '変更を保存'}
-          </Button>
-        </div>
+      <div>
+        <p className="text-sm text-gray-600">
+          同着順位を設定する場合は、同じ順位番号を入力してください（例：1位、2位、2位、4位）
+        </p>
       </div>
 
       {/* メッセージ */}
@@ -719,6 +698,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
               <div className="grid gap-6 lg:grid-cols-2">
                 {editedBlocks
                   .filter(block => block.phase === phase.id && !block.block_name.endsWith('_unified'))
+                  .sort((a, b) => a.block_name.localeCompare(b.block_name))
                   .map((block) => {
                     const blockIndex = editedBlocks.findIndex(b => b.match_block_id === block.match_block_id);
                     const needsAdjustment = hasManualAdjustmentNeeded(block.team_rankings, block);
@@ -821,13 +801,6 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
             {/* トーナメント形式の順位調整 */}
             {getPhaseFormatType(phase.id) === 'tournament' && finalMatches.length > 0 && (
               <div className="space-y-4">
-                <div className="border-t border-gray-200 pt-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{phase.name}順位調整</h2>
-                  <p className="text-sm text-gray-600 mb-4">
-                    トーナメントの結果に基づいて自動計算された順位を手動で調整できます
-                  </p>
-                </div>
-
                 <Card className="h-fit">
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -936,6 +909,32 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
           </div>
         </CardContent>
       </Card>
+
+      {/* 固定ボタン分のスペーサー */}
+      <div className="h-16" />
+
+      {/* ボタン（画面下部固定） */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex gap-3">
+          <Button
+            variant="outline"
+            onClick={resetAll}
+            disabled={saving || !hasChanges}
+            className="flex-shrink-0"
+          >
+            <RotateCcw className="w-4 h-4 mr-1" />
+            全てリセット
+          </Button>
+          <Button
+            onClick={saveChanges}
+            disabled={saving || !hasChanges}
+            className="flex-1"
+          >
+            <Save className="w-4 h-4 mr-1" />
+            {saving ? '保存中...' : '変更を保存'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -457,10 +457,10 @@ export default function TournamentCreateNewForm() {
 
       const result = await response.json();
 
-      if (result.success) {
-        // 作成後はマイダッシュボードにリダイレクト
-        router.refresh();
-        router.push('/my');
+      if (result.success && result.tournament) {
+        // 作成後は会場・コート設定画面にリダイレクト
+        const tournamentId = result.tournament.tournament_id;
+        router.push(`/admin/tournaments/${tournamentId}/court-venue-settings`);
       } else {
         alert(`エラー: ${result.error}`);
       }

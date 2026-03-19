@@ -566,14 +566,21 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
         />
       </div>
 
-      {/* 送信ボタン */}
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />更新中...</>
-        ) : (
-          "更新する"
-        )}
-      </Button>
+      {/* 固定ボタン分のスペーサー */}
+      <div className="h-16" />
+
+      {/* 保存ボタン（画面下部固定） */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />更新中...</>
+            ) : (
+              "保存する"
+            )}
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

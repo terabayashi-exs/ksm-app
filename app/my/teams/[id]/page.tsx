@@ -675,16 +675,16 @@ export default function TeamManagePage() {
         </div>
 
         {/* タブ */}
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="flex gap-1 border-b border-transparent -mb-px">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-3">
+          <div className="grid grid-cols-3 gap-1">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => { setActiveTab(tab.key); setMessage(null); }}
-                className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   activeTab === tab.key
-                    ? 'border-white text-white'
-                    : 'border-transparent text-white/60 hover:text-white hover:border-white/40'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
                 }`}
               >
                 {tab.icon}

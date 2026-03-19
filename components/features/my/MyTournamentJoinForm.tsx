@@ -220,6 +220,7 @@ export default function MyTournamentJoinForm({
       const result = await response.json();
 
       if (result.success) {
+        router.refresh();
         router.push(`/my?tab=team&teamId=${teamId}&teamTab=joined&${isEditMode ? 'updated' : 'joined'}=${tournamentId}`);
       } else {
         let errorMessage = result.error || (isEditMode ? '参加選手の変更に失敗しました' : '参加申し込みに失敗しました');

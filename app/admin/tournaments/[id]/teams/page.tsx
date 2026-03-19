@@ -598,13 +598,13 @@ export default function TeamRegistrationPage() {
         </Card>
 
         {/* タブ切り替え */}
-        <div className="flex space-x-2 mb-6 border-b border-gray-200">
+        <div className="grid grid-cols-2 gap-1 mb-6">
           <button
             onClick={() => setActiveTab('manual')}
-            className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors ${
+            className={`flex items-center justify-center gap-2 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'manual'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }`}
           >
             <UserPlus className="w-4 h-4" />
@@ -612,10 +612,10 @@ export default function TeamRegistrationPage() {
           </button>
           <button
             onClick={() => setActiveTab('csv')}
-            className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors ${
+            className={`flex items-center justify-center gap-2 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'csv'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }`}
           >
             <Upload className="w-4 h-4" />

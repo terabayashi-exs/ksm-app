@@ -331,7 +331,7 @@ export default function BlobMigrationPage() {
 
       {/* 詳細タブ */}
       <Tabs defaultValue="migrated" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid-cols-3">
           <TabsTrigger value="migrated">
             移行済み ({status.categories.migrated.length})
           </TabsTrigger>

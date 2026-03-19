@@ -1166,8 +1166,8 @@ const ArchivedTournamentSchedule = ({ matches, teams, blockStructure }: { matche
       {/* ブロック別タブ */}
       <Tabs defaultValue="all" className="w-full">
         <div className="relative">
-          <TabsList className="w-full justify-start h-auto p-1 bg-gray-50/50 overflow-x-auto">
-            <div className="flex space-x-1 min-w-max">
+          <TabsList className="flex gap-1 w-full justify-start h-auto overflow-x-auto">
+            <div className="flex gap-1 min-w-max">
               <TabsTrigger 
                 value="all" 
                 className="flex items-center px-3 py-2 text-xs sm:text-sm whitespace-nowrap"

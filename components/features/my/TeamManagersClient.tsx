@@ -154,6 +154,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
 
         // 脱退後はマイダッシュボードのチーム管理タブに戻る
         setTimeout(() => {
+          router.refresh();
           router.push("/my?tab=team");
         }, 1500);
       } else {

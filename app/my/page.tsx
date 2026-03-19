@@ -9,6 +9,8 @@ import PlanBadge from "@/components/features/subscription/PlanBadge";
 import { fetchDashboardData, fetchOperatorDashboardData, fetchTeamData, TournamentDashboardData, TeamDashboardItem } from "@/lib/dashboard-data";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function MyDashboardPage() {
   const session = await auth();
 
