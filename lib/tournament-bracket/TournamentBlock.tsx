@@ -102,6 +102,7 @@ export function TournamentBlock({
         className="relative flex gap-16 w-full"
         style={{
           height: `${blockHeight}px`,
+          minWidth: "750px",
         }}
       >
         {/* SVG接続線 */}

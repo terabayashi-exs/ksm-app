@@ -526,59 +526,73 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               const result = getMatchResult(match);
                               const isEvenRow = matchIndex % 2 === 1;
 
+                              const hasRemarksMobile = match.remarks && !match.is_walkover;
+
                               return (
-                                <tr key={match.match_id} className={`border-b hover:bg-gray-50/50 ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
-                                  <td className="py-2 px-1 whitespace-nowrap align-middle">
-                                    <span className="text-lg font-medium">{formatTime(match.start_time)}</span>
-                                  </td>
-                                  <td className="py-2 px-1 whitespace-nowrap align-middle">
-                                    <div className={`text-lg font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
-                                  </td>
-                                  <td className="py-2 px-1">
-                                    {/* PC: 1行表示 */}
-                                    <div className="hidden md:block text-base">
-                                      <span className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                        {match.team1_display_name || "調整中"}
-                                      </span>
-                                      <span className="text-gray-500 mx-2">&times;</span>
-                                      <span className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                        {match.team2_display_name || "調整中"}
-                                      </span>
-                                    </div>
-                                    {/* スマホ: 縦並び表示 */}
-                                    <div className="md:hidden text-base space-y-0.5">
-                                      <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                        {match.team1_display_name || "調整中"}
+                                <React.Fragment key={match.match_id}>
+                                  <tr className={`${hasRemarksMobile ? 'border-b md:border-b' : 'border-b'} hover:bg-gray-50/50 ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                    <td className="py-2 px-1 whitespace-nowrap align-middle">
+                                      <span className="text-lg font-medium">{formatTime(match.start_time)}</span>
+                                    </td>
+                                    <td className="py-2 px-1 whitespace-nowrap align-middle">
+                                      <div className={`text-lg font-medium ${match.match_type === 'FM' ? 'text-rose-400' : ''}`}>{match.match_code}</div>
+                                    </td>
+                                    <td className="py-2 px-1">
+                                      {/* PC: 1行表示 */}
+                                      <div className="hidden md:block text-base">
+                                        <span className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                          {match.team1_display_name || "調整中"}
+                                        </span>
+                                        <span className="text-gray-500 mx-2">&times;</span>
+                                        <span className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                          {match.team2_display_name || "調整中"}
+                                        </span>
                                       </div>
-                                      <div className="text-sm text-gray-500">&times;</div>
-                                      <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                        {match.team2_display_name || "調整中"}
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
-                                    <div className="flex items-center justify-end">
-                                      <div className="text-base">{result.display}</div>
-                                    </div>
-                                    {match.remarks && !match.is_walkover && (
-                                      <div className="text-xs text-gray-500 mt-1 text-right">
-                                        {match.remarks}
-                                      </div>
-                                    )}
-                                  </td>
-                                  {!hasMultipleCourts && (
-                                    <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
-                                      {match.court_number ? (
-                                        <div className="flex items-center justify-end text-sm">
-                                          <MapPin className="h-3 w-3 mr-1 text-gray-500 hidden md:inline" />
-                                          <span>{match.court_name || match.court_number}</span>
+                                      {/* スマホ: 縦並び表示 */}
+                                      <div className="md:hidden text-base space-y-0.5">
+                                        <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                          {match.team1_display_name || "調整中"}
                                         </div>
-                                      ) : (
-                                        <span className="text-gray-500 text-sm">-</span>
+                                        <div className="text-sm text-gray-500">&times;</div>
+                                        <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                          {match.team2_display_name || "調整中"}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
+                                      <div className="flex items-center justify-end">
+                                        <div className="text-base">{result.display}</div>
+                                      </div>
+                                      {hasRemarksMobile && (
+                                        <div className="text-xs text-gray-500 mt-1 hidden md:block text-right">
+                                          {match.remarks}
+                                        </div>
                                       )}
                                     </td>
+                                    {!hasMultipleCourts && (
+                                      <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
+                                        {match.court_number ? (
+                                          <div className="flex items-center justify-end text-sm">
+                                            <MapPin className="h-3 w-3 mr-1 text-gray-500 hidden md:inline" />
+                                            <span>{match.court_name || match.court_number}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-500 text-sm">-</span>
+                                        )}
+                                      </td>
+                                    )}
+                                  </tr>
+                                  {/* スマホ: 備考を全列結合で表示 */}
+                                  {hasRemarksMobile && (
+                                    <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                      <td colSpan={hasMultipleCourts ? 4 : 5} className="pb-2 px-1 pt-0">
+                                        <div className="text-xs text-gray-500 text-right">
+                                          備考: {match.remarks}
+                                        </div>
+                                      </td>
+                                    </tr>
                                   )}
-                                </tr>
+                                </React.Fragment>
                               );
                             })}
                           </tbody>
@@ -672,10 +686,13 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                           const courtDiffersFromVenue = match.court_name && match.venue_name && match.court_name !== match.venue_name;
                           const matchVenue = match.venue_id ? venues.find(v => v.venue_id === match.venue_id) : null;
                           const isEvenRow = matchIndex % 2 === 1;
+                          const hasRemarks = match.remarks && !match.is_walkover;
+                          // モバイルでは会場行・備考行が続く場合、最後の行にborder-bをつける
+                          const mainRowBorder = hasVenue || hasRemarks ? 'md:border-b' : 'border-b';
 
                           return (
                             <React.Fragment key={match.match_id}>
-                              <tr className={`hover:bg-gray-50/50 ${hasVenue ? 'md:border-b' : 'border-b'} ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                              <tr className={`hover:bg-gray-50/50 ${mainRowBorder} ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                 <td className="py-2 px-1 whitespace-nowrap align-top">
                                   <div className="text-lg font-medium">{formatShortDate(match.tournament_date)}</div>
                                   <div className="text-lg font-medium">{formatTime(match.start_time)}</div>
@@ -716,6 +733,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   )}
                                 </td>
                                 {/* PC: 会場列 */}
+
                                 <td className="py-2 px-1 text-right align-top hidden md:table-cell">
                                   {hasVenue ? (
                                     <div className="text-sm">
@@ -740,7 +758,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               </tr>
                               {/* スマホ: 全列結合の会場行 */}
                               {hasVenue && (
-                                <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                <tr className={`${!hasRemarks ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                   <td colSpan={4} className="pb-2 px-1 pt-0">
                                     <div className="flex items-center text-xs text-gray-500">
                                       <MapPin className="h-3 w-3 mr-0.5 shrink-0" />
@@ -754,6 +772,16 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                       {courtDiffersFromVenue && (
                                         <span className="ml-1">/ {match.court_name}</span>
                                       )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              {/* スマホ: 備考を全列結合で表示 */}
+                              {hasRemarks && (
+                                <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                  <td colSpan={4} className="pb-2 px-1 pt-0">
+                                    <div className="text-xs text-gray-500">
+                                      備考: {match.remarks}
                                     </div>
                                   </td>
                                 </tr>
