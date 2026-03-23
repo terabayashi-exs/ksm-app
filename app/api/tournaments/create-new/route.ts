@@ -362,10 +362,11 @@ export async function POST(request: NextRequest) {
       tournamentDatesObj = { "1": event_start_date };
     }
 
-    // カスタムスケジュールのマップを作成
+    // カスタムスケジュールのマップを作成（template_idをキーに使用）
     const customScheduleMap = new Map<number, { start_time: string; court_number: number }>();
     if (Array.isArray(custom_schedule)) {
       custom_schedule.forEach((customMatch: { match_id: number; match_code: string; start_time: string; court_number: number }) => {
+        // match_idにはtemplate_idが格納されている（match_numberは重複可能性があるため）
         customScheduleMap.set(customMatch.match_id, {
           start_time: customMatch.start_time,
           court_number: customMatch.court_number
@@ -430,7 +431,8 @@ export async function POST(request: NextRequest) {
       let assignedStartTime: string;
 
       // 1. カスタムスケジュール（スケジュールプレビューからの手動調整）を最優先
-      const customMatch = customScheduleMap.get(Number(template.match_number));
+      // template_idで検索（match_numberは重複可能性があるためtemplate_idを使用）
+      const customMatch = customScheduleMap.get(Number(template.template_id));
       if (customMatch) {
         assignedCourt = customMatch.court_number;
         assignedStartTime = customMatch.start_time;

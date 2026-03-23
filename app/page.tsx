@@ -417,9 +417,9 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { image: "bg-hero-gradient", title: "富山県サッカー協会様", result: "運営スタッフ50%削減！", text: "年間10大会以上を運営する当協会にとって、革命的でした。QRコード入力機能により、審判への説明が不要になり、スタッフ配置を大幅に削減できました。" },
-              { image: "bg-live-gradient", title: "PK選手権実行委員会様", result: "保護者満足度95%以上", text: "リアルタイム更新により、会場に来られない保護者も子供の試合をスマホで追えるようになりました。「次いつ？」の問い合わせがゼロに。" },
-              { image: "bg-gradient-to-br from-emerald-400 to-cyan-500", title: "イベント企画会社様", result: "準備時間が1/3に短縮", text: "従来はExcelでトーナメント表を手作業で作成していましたが、自動生成機能で準備時間が劇的に短縮。複数大会の同時運営も可能になりました。" },
+              { image: "bg-hero-gradient", title: "富山市サッカー協会様", result: "運営スタッフ大幅削減！", text: "年間を通じ複数大会の運営に関与する当協会にとって、革命的でした。管理側での結果入力機能や、一般閲覧側での日程・結果速報表示により、当日スタッフ業務を大幅に削減できました。" },
+              { image: "bg-live-gradient", title: "PK選手権実行委員会様", result: "保護者満足度大幅向上", text: "リアルタイム更新により、会場に来られない保護者も子供の試合をスマホで追えるようになりました。参加者の「次いつ？」の問い合わせがゼロに。" },
+              { image: "bg-gradient-to-br from-emerald-400 to-cyan-500", title: "イベント企画担当者様", result: "準備時間が1/3に短縮", text: "従来はExcelでトーナメント表を手作業で作成していましたが、自動生成機能で準備時間が劇的に短縮。複数カテゴリーの同時運営も非常に楽になりました。" },
             ].map((study, i) => (
               <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
                 <div className={`h-36 ${study.image} flex items-center justify-center`}>

@@ -527,10 +527,10 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
       // Initial match times loaded for edit mode
       onScheduleChange(initialMatches);
     } else if (!editMode && schedule && schedule.days.length > 0) {
-      // 新規作成モード: 初回のみ計算されたスケジュールを送信
-      const initialMatches = schedule.days.flatMap(day => 
+      // 新規作成モード: 初回のみ計算されたスケジュールを送信（template_idをキーに使用）
+      const initialMatches = schedule.days.flatMap(day =>
         day.matches.map(match => ({
-          match_id: match.template.match_number,
+          match_id: match.template.template_id,
           start_time: match.startTime,
           court_number: match.courtNumber
         }))
@@ -631,15 +631,15 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
         // Notifying parent of time change in edit mode
         onScheduleChange(customMatches);
       } else {
-        // 新規作成モード: match_numberを使用（match_idフィールドにmatch_numberを格納）
-        const customMatches = newSchedule.days.flatMap(day => 
+        // 新規作成モード: template_idを使用（match_numberは重複可能性があるため）
+        const customMatches = newSchedule.days.flatMap(day =>
           day.matches.map(match => ({
-            match_id: match.template.match_number, // 新規作成時はmatch_numberを使用
+            match_id: match.template.template_id,
             start_time: match.startTime,
             court_number: match.courtNumber
           }))
         );
-        
+
         // Schedule updated, notifying parent component
         onScheduleChange(customMatches);
       }
@@ -660,11 +660,11 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
     // 親コンポーネントにリセット済みスケジュールを通知
     if (onScheduleChange) {
-      const resetMatches = initialSchedule.days.flatMap(day => 
+      const resetMatches = initialSchedule.days.flatMap(day =>
         day.matches.map(match => ({
           match_id: editMode && actualMatches.length > 0
             ? actualMatches.find(am => am.match_number === match.template.match_number)?.match_id || match.template.match_number
-            : match.template.match_number,
+            : match.template.template_id,
           start_time: match.startTime,
           court_number: match.courtNumber
         }))
@@ -772,10 +772,10 @@ export default function SchedulePreview({ formatId, settings, tournamentId, edit
 
         onScheduleChange(customMatches);
       } else {
-        // 新規作成モード: match_numberを使用
+        // 新規作成モード: template_idを使用
         const customMatches = newSchedule.days.flatMap(day =>
           day.matches.map(match => ({
-            match_id: match.template.match_number,
+            match_id: match.template.template_id,
             start_time: match.startTime,
             court_number: match.courtNumber
           }))

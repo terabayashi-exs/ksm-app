@@ -125,8 +125,20 @@ function TournamentOverview({
               {getStatusBadge(tournament.status)}
             </div>
             <div>
-              <h4 className="font-medium text-gray-500 mb-2">フォーマット</h4>
-              <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
+              <h4 className="font-medium text-gray-500 mb-2">大会形式</h4>
+              {tournament.phases?.phases && tournament.phases.phases.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {tournament.phases.phases
+                    .sort((a, b) => a.order - b.order)
+                    .map((phase) => (
+                      <span key={phase.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        {phase.display_name || phase.name}
+                      </span>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
+              )}
             </div>
             <div>
               <h4 className="font-medium text-gray-500 mb-2 flex items-center">
