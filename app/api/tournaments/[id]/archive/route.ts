@@ -1,12 +1,12 @@
 // app/api/tournaments/[id]/archive/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { archiveTournamentAsJson } from '@/lib/tournament-json-archiver';
+import { TournamentHtmlArchiver } from '@/lib/tournament-html-archiver';
 import { TournamentBlobArchiver } from '@/lib/tournament-blob-archiver';
 
 /**
- * 大会をJSONアーカイブとして保存
- * Phase 2: DBとBlobの両方に保存（並行運用）
+ * 大会をアーカイブとして保存
+ * HTML版（新方式）のみ。失敗時はエラーを返す（DB保存にフォールバックしない）
  */
 export async function POST(
   request: NextRequest,
@@ -34,60 +34,43 @@ export async function POST(
 
     const archivedBy = session.user.id || session.user.email || 'admin';
 
-    // 並行運用: Blob Storageが利用可能な場合は使用
-    const useBlobStorage = !!process.env.BLOB_READ_WRITE_TOKEN;
-    
-    if (useBlobStorage) {
-      console.log('📦 Blob Storageを使用してアーカイブを作成します...');
-      
-      try {
-        // Blobにアーカイブを保存
-        const blobResult = await TournamentBlobArchiver.archiveTournament(
-          tournamentId,
-          archivedBy
-        );
-        
-        if (blobResult.success) {
-          // 成功時は従来のDB保存も実行（バックアップとして）
-          await archiveTournamentAsJson(tournamentId, archivedBy);
-          
-          return NextResponse.json({
-            success: true,
-            message: 'アーカイブが正常に作成されました（Blob Storage使用）',
-            data: blobResult.data,
-            storage_type: 'blob'
-          });
-        } else {
-          // Blob保存に失敗した場合は従来のDB保存にフォールバック
-          console.warn('Blob保存に失敗しました。DBに保存します:', blobResult.error);
-        }
-      } catch (blobError) {
-        console.error('Blob保存エラー:', blobError);
-        // エラーが発生してもDB保存に進む
-      }
-    }
-
-    // 従来のDBベースのアーカイブ（Blobが無効またはエラー時）
-    console.log('💾 データベースを使用してアーカイブを作成します...');
-    const result = await archiveTournamentAsJson(
-      tournamentId,
-      archivedBy
-    );
-
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: 'アーカイブが正常に作成されました',
-        data: result.data,
-        storage_type: 'database'
-      });
-    } else {
+    const { isBlobStorageAvailable } = await import('@/lib/blob-config');
+    if (!isBlobStorageAvailable()) {
       return NextResponse.json(
-        { success: false, error: result.error },
+        { success: false, error: 'Blob Storageが設定されていません' },
         { status: 500 }
       );
     }
 
+    console.log('📦 HTMLアーカイブを作成します...');
+
+    // HTML版アーカイブを作成
+    const htmlResult = await TournamentHtmlArchiver.archiveTournamentAsHtml(
+      tournamentId,
+      archivedBy
+    );
+
+    if (!htmlResult.success) {
+      return NextResponse.json(
+        { success: false, error: htmlResult.error || 'HTMLアーカイブ作成に失敗しました' },
+        { status: 500 }
+      );
+    }
+
+    // JSON版もバックアップ保存（失敗しても無視）
+    try {
+      await TournamentBlobArchiver.archiveTournament(tournamentId, archivedBy);
+      console.log('✅ JSON版アーカイブもバックアップ保存しました');
+    } catch (jsonError) {
+      console.warn('⚠️ JSON版バックアップ保存スキップ:', jsonError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'HTMLアーカイブが正常に作成されました',
+      data: htmlResult.data,
+      storage_type: 'html',
+    });
   } catch (error) {
     console.error('アーカイブ作成エラー:', error);
     return NextResponse.json(

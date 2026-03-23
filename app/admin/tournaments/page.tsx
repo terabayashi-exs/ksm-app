@@ -12,9 +12,9 @@ import Link from 'next/link';
 import { ArrowLeft, Plus } from 'lucide-react';
 import {
   getStatusLabel,
-  getStatusColor, 
+  getStatusBadgeVariant,
   type TournamentStatus,
-  type TournamentWithStatus 
+  type TournamentWithStatus
 } from '@/lib/tournament-status';
 
 interface SearchParams {
@@ -142,7 +142,8 @@ export default function AdminTournamentsList() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`アーカイブが完了しました。\n保存先: ${data.storage_type}\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB`);
+        const sizeKb = data.data?.file_size ? `\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB` : '';
+        alert(`HTMLアーカイブが完了しました。\n保存先: ${data.storage_type}${sizeKb}`);
         // 大会一覧を再読み込み
         fetchTournaments();
       } else {
@@ -156,19 +157,50 @@ export default function AdminTournamentsList() {
     }
   };
 
+  // アンアーカイブ処理（テスト用）
+  const handleUnarchiveTournament = async (tournamentId: number) => {
+    if (!confirm('アーカイブを解除しますか？\n大会が通常の編集可能状態に戻ります。\n（Blob上のHTMLデータは保持されます）')) {
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/unarchive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('アーカイブを解除しました。');
+        fetchTournaments();
+      } else {
+        alert(`アーカイブ解除に失敗しました: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('アンアーカイブエラー:', error);
+      alert('アーカイブ解除中にエラーが発生しました');
+    } finally {
+      setSearching(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <p className="mt-4 text-gray-500">読み込み中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -182,15 +214,15 @@ export default function AdminTournamentsList() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin">
-              <ArrowLeft className="h-4 w-4 mr-1" />
+          <Button asChild variant="outline" size="sm" className="group">
+            <Link href="/my">
+              <ArrowLeft className="h-4 w-4 mr-1 transition-transform group-hover:-translate-x-1" />
               ダッシュボードに戻る
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="group">
             <Link href="/admin/tournaments/create-new">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
               部門作成
             </Link>
           </Button>
@@ -290,7 +322,7 @@ export default function AdminTournamentsList() {
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>検索結果</span>
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className="text-sm font-normal text-gray-500">
                 {pagination.total}件中 {pagination.offset + 1}-{Math.min(pagination.offset + tournaments.length, pagination.total)}件
               </span>
             </CardTitle>
@@ -298,7 +330,7 @@ export default function AdminTournamentsList() {
           <CardContent>
             {tournaments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">該当する大会が見つかりませんでした。</p>
+                <p className="text-gray-500">該当する大会が見つかりませんでした。</p>
               </div>
             ) : (
               <>
@@ -317,35 +349,35 @@ export default function AdminTournamentsList() {
                     </thead>
                     <tbody>
                       {tournaments.map((tournament) => (
-                        <tr key={tournament.tournament_id} className="border-b hover:bg-muted">
+                        <tr key={tournament.tournament_id} className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div>
                               <div className="flex items-center">
-                                <span className="font-medium text-foreground">{tournament.tournament_name}</span>
+                                <span className="font-medium text-gray-900">{tournament.tournament_name}</span>
                                 {tournament.is_archived && (
-                                  <Badge className="ml-2 bg-purple-100 !text-black border border-purple-400">
+                                  <Badge className="ml-2 bg-purple-100 text-purple-800 border border-purple-400">
                                     アーカイブ済み
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground">{tournament.format_name}</p>
+                              <p className="text-sm text-gray-500">{tournament.format_name}</p>
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <Badge className={getStatusColor(tournament.calculated_status)}>
+                            <Badge variant={getStatusBadgeVariant(tournament.calculated_status)}>
                               {getStatusLabel(tournament.calculated_status)}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <td className="px-4 py-3 text-sm text-gray-500">
                             {tournament.tournament_period}
                           </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <td className="px-4 py-3 text-sm text-gray-500">
                             {tournament.venue_name}
                           </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <td className="px-4 py-3 text-sm text-gray-500">
                             {tournament.registered_teams}チーム
                           </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <td className="px-4 py-3 text-sm text-gray-500">
                             {new Date(tournament.created_at).toLocaleDateString('ja-JP')}
                           </td>
                           <td className="px-4 py-3">
@@ -401,11 +433,27 @@ export default function AdminTournamentsList() {
                                 </>
                               )}
                               {tournament.is_archived && (
-                                <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                                  <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
-                                    アーカイブ表示
-                                  </Link>
-                                </Button>
+                                <>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                                    <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                                      アーカイブ表示
+                                    </Link>
+                                  </Button>
+                                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
+                                    <Link href={`/api/tournaments/${tournament.tournament_id}/archived-html`} target="_blank">
+                                      HTMLプレビュー
+                                    </Link>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-orange-300 hover:bg-orange-50"
+                                    onClick={() => handleUnarchiveTournament(tournament.tournament_id)}
+                                    disabled={searching}
+                                  >
+                                    アーカイブ解除
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </td>
@@ -425,7 +473,7 @@ export default function AdminTournamentsList() {
                     >
                       前のページ
                     </Button>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-gray-500">
                       ページ {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
                     </span>
                     <Button

@@ -104,7 +104,7 @@ export default function OperatorList({ groupId }: OperatorListProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div className="text-base text-muted-foreground">
+        <div className="text-base text-gray-500">
           {operators.length}名の運営者が登録されています
         </div>
         <Button
@@ -136,7 +136,7 @@ export default function OperatorList({ groupId }: OperatorListProps) {
           <TableBody>
             {operators.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-base">
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500 text-base">
                   運営者が登録されていません
                 </TableCell>
               </TableRow>
@@ -150,7 +150,7 @@ export default function OperatorList({ groupId }: OperatorListProps) {
                   <TableCell>
                     <div className="text-base">
                       {getTournamentCount(operator) === 0 ? (
-                        <span className="text-muted-foreground">なし</span>
+                        <span className="text-gray-500">なし</span>
                       ) : (
                         <span>{getTournamentCount(operator)}部門</span>
                       )}

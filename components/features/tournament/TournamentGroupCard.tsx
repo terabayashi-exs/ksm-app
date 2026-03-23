@@ -60,17 +60,17 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
   const getStatusBadge = (status: TournamentStatus) => {
     switch (status) {
       case 'planning':
-        return 'bg-muted text-muted-foreground';
+        return 'bg-gray-50 text-gray-500';
       case 'recruiting':
         return 'bg-primary/10 text-primary';
       case 'before_event':
-        return 'bg-accent text-accent-foreground';
+        return 'bg-gray-100 text-gray-900';
       case 'ongoing':
         return 'bg-primary/10 text-primary';
       case 'completed':
-        return 'bg-muted text-muted-foreground';
+        return 'bg-gray-50 text-gray-500';
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-gray-50 text-gray-500';
     }
   };
 
@@ -83,7 +83,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
   const representativeOrganization = tournaments.find(t => t.organization_name)?.organization_name;
 
   return (
-    <Card className="border-2 border-gray-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden">
+    <Card className="border-2 border-gray-200 card-interactive relative overflow-hidden">
       {/* グループカラーの左ボーダー */}
       <div
         className="absolute left-0 top-0 bottom-0 w-1"
@@ -106,7 +106,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
       <CardHeader className="relative z-10">
         <div className="flex items-center justify-between mb-2">
           <CardTitle className="text-xl font-bold">{group.group_name}</CardTitle>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-gray-500">
             {tournaments.length}部門
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
         )}
 
         {/* 大会情報 */}
-        <div className="flex flex-wrap gap-3 mt-3 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-500">
           {group.organizer && (
             <span className="flex items-center gap-1">
               <Building2 className="h-4 w-4" />
@@ -146,7 +146,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
             {tournaments.map((tournament) => (
             <div
               key={tournament.tournament_id}
-              className="border-2 border-gray-200 rounded-lg p-4 bg-card hover:border-primary hover:shadow-md transition-all duration-300"
+              className="border-2 border-gray-200 rounded-lg p-4 bg-white hover:border-primary hover:shadow-md transition-all duration-300"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
@@ -166,12 +166,12 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                   </div>
 
                   {tournament.category_name && (
-                    <p className="text-sm text-muted-foreground mb-2">
+                    <p className="text-sm text-gray-500 mb-2">
                       {tournament.tournament_name}
                     </p>
                   )}
 
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
+                  <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-3">
                     <span className="flex items-center gap-1">
                       <Trophy className="h-3 w-3" />
                       {tournament.format_name}
@@ -193,14 +193,14 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                     <div className="mb-2">
                       <div className="grid grid-cols-2 gap-2">
                         {/* 想定チーム数 */}
-                        <div className="p-2 bg-muted rounded-lg border border-border text-center">
-                          <div className="text-xs text-muted-foreground font-medium mb-1">想定チーム数</div>
-                          <div className="text-base font-bold text-foreground">{tournament.team_count || 0}</div>
+                        <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                          <div className="text-xs text-gray-500 font-medium mb-1">想定チーム数</div>
+                          <div className="text-base font-bold text-gray-900">{tournament.team_count || 0}</div>
                         </div>
                         {/* 参加申請 */}
-                        <div className="p-2 bg-muted rounded-lg border border-border text-center">
-                          <div className="text-xs text-muted-foreground font-medium mb-1">参加申請</div>
-                          <div className="text-base font-bold text-foreground">{tournament.applied_count || 0}</div>
+                        <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                          <div className="text-xs text-gray-500 font-medium mb-1">参加申請</div>
+                          <div className="text-base font-bold text-gray-900">{tournament.applied_count || 0}</div>
                         </div>
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-gray-500 hover:text-gray-900"
             >
               {isExpanded ? (
                 <>

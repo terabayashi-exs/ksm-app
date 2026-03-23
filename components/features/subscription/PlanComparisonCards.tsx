@@ -206,18 +206,18 @@ export default function PlanComparisonCards() {
   return (
     <>
       {/* 料金調整中の注意書き */}
-      <Alert className="mb-6 border-primary bg-primary/5 dark:bg-primary/10">
+      <Alert className="mb-6 border-primary bg-primary/5">
         <AlertCircle className="h-4 w-4 text-primary" />
-        <AlertDescription className="text-primary dark:text-primary/80">
+        <AlertDescription className="text-primary">
           <strong>お知らせ:</strong> 料金体系は現在調整中です。正式な料金は今後決定いたします。
         </AlertDescription>
       </Alert>
 
       {/* 成功メッセージ */}
       {successMessage && (
-        <Alert className="mb-6 border-green-500 bg-green-50 dark:bg-green-950/20">
+        <Alert className="mb-6 border-green-500 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 dark:text-green-200">
+          <AlertDescription className="text-green-800">
             {successMessage}
           </AlertDescription>
         </Alert>
@@ -263,7 +263,7 @@ export default function PlanComparisonCards() {
                     <>
                       <div className="text-3xl font-bold">無料</div>
                       {plan.plan_code === "free" && freeTrialEndDate && isCurrent && (
-                        <div className="text-sm text-muted-foreground mt-2">
+                        <div className="text-sm text-gray-500 mt-2">
                           有効期限: {new Date(freeTrialEndDate).toLocaleDateString("ja-JP", {
                             year: "numeric",
                             month: "long",
@@ -275,9 +275,9 @@ export default function PlanComparisonCards() {
                   ) : (
                     <>
                       <div className="text-3xl font-bold">¥{plan.monthly_price.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">/月</div>
+                      <div className="text-sm text-gray-500">/月</div>
                       {plan.yearly_price > 0 && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-gray-500">
                           年払い: ¥{plan.yearly_price.toLocaleString()}/年
                         </div>
                       )}
@@ -329,12 +329,12 @@ export default function PlanComparisonCards() {
 
       {/* 確認ダイアログ */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent className="bg-white dark:bg-gray-900">
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
+            <AlertDialogTitle className="text-gray-900">
               プラン変更の確認
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-700 dark:text-gray-300">
+            <AlertDialogDescription className="text-gray-700">
               {selectedPlan && (
                 <>
                   <strong>{selectedPlan.plan_name}</strong>に変更しますか？
@@ -344,14 +344,14 @@ export default function PlanComparisonCards() {
           </AlertDialogHeader>
           {selectedPlan && isDowngrade(selectedPlan) && (
             <div className="pb-2">
-              <div className="border border-destructive/20 dark:border-red-800 bg-destructive/5 dark:bg-red-950/20 rounded-md p-3">
+              <div className="border border-destructive/20 bg-destructive/5 rounded-md p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-destructive dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="font-semibold text-destructive dark:text-red-200 text-sm">
+                    <div className="font-semibold text-destructive text-sm">
                       ダウングレードに関する注意
                     </div>
-                    <div className="text-sm text-destructive dark:text-red-300 mt-1">
+                    <div className="text-sm text-destructive mt-1">
                       プラン上限を超える既存の大会は、閲覧のみ可能となり編集できなくなります。
                     </div>
                   </div>
@@ -360,7 +360,7 @@ export default function PlanComparisonCards() {
             </div>
           )}
           <div className="pb-2">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-gray-600">
               ※現時点では課金機能は実装されていないため、プラン変更は即座に反映されます。
             </div>
           </div>
@@ -373,13 +373,13 @@ export default function PlanComparisonCards() {
 
       {/* ブロッカーダイアログ */}
       <AlertDialog open={blockersDialogOpen} onOpenChange={setBlockersDialogOpen}>
-        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900">
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive dark:text-red-400">
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-6 h-6" />
               プラン変更できません
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+            <AlertDialogDescription className="text-gray-600">
               アクティブな大会・部門数が新プランの上限を超えています。
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -388,32 +388,32 @@ export default function PlanComparisonCards() {
             <div className="space-y-4 py-4">
               {/* 大会数超過の場合 */}
               {planChangeBlockers.excessGroups > 0 && (
-                <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg dark:bg-yellow-900/30 dark:border-yellow-600">
-                  <p className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                  <p className="font-semibold text-yellow-900 mb-2">
                     大会数が上限を超えています
                   </p>
-                  <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+                  <div className="text-sm text-yellow-800 space-y-1">
                     <p>現在のアクティブ大会数: <strong>{planChangeBlockers.activeGroups}</strong></p>
                     <p>新プランの上限: <strong>{planChangeBlockers.maxGroupsInNewPlan}</strong></p>
-                    <p>超過数: <strong className="text-destructive dark:text-red-300">{planChangeBlockers.excessGroups}大会</strong></p>
+                    <p>超過数: <strong className="text-destructive">{planChangeBlockers.excessGroups}大会</strong></p>
                   </div>
                 </div>
               )}
 
               {/* 部門数超過の場合 */}
               {planChangeBlockers.excessDivisions && planChangeBlockers.excessDivisions.length > 0 && (
-                <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg dark:bg-yellow-900/30 dark:border-yellow-600">
-                  <p className="font-semibold text-yellow-900 dark:text-yellow-100 mb-3">
+                <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                  <p className="font-semibold text-yellow-900 mb-3">
                     以下の大会で部門数が上限を超えています
                   </p>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {planChangeBlockers.excessDivisions.map((item) => (
                       <div
                         key={item.group_id}
-                        className="flex items-center justify-between p-2 bg-white rounded border-2 border-yellow-400 dark:bg-gray-800 dark:border-yellow-500"
+                        className="flex items-center justify-between p-2 bg-white rounded border-2 border-yellow-400"
                       >
-                        <span className="text-sm text-gray-900 dark:text-gray-100">{item.group_name}</span>
-                        <span className="text-sm font-semibold text-destructive dark:text-red-300">
+                        <span className="text-sm text-gray-900">{item.group_name}</span>
+                        <span className="text-sm font-semibold text-destructive">
                           {item.division_count}部門 (上限: {planChangeBlockers.maxDivisionsPerTournamentInNewPlan})
                         </span>
                       </div>
@@ -423,11 +423,11 @@ export default function PlanComparisonCards() {
               )}
 
               {/* 対応方法の案内 */}
-              <div className="p-4 bg-primary/5 border-2 border-primary/30 rounded-lg dark:bg-primary/10 dark:border-primary/30">
-                <p className="font-semibold text-primary dark:text-primary/90 mb-2">
+              <div className="p-4 bg-primary/5 border-2 border-primary/30 rounded-lg">
+                <p className="font-semibold text-primary mb-2">
                   📋 対応方法
                 </p>
-                <ol className="text-sm text-primary dark:text-primary/80 space-y-2 list-decimal list-inside">
+                <ol className="text-sm text-primary space-y-2 list-decimal list-inside">
                   <li>完了済みの大会を<strong>アーカイブ化</strong>してください</li>
                   <li>アーカイブ化した大会は制限のカウントから除外されます</li>
                   <li>必要に応じて不要な大会を削除してください</li>
@@ -439,7 +439,7 @@ export default function PlanComparisonCards() {
 
           <AlertDialogFooter>
             <Button asChild variant="default" onClick={() => setBlockersDialogOpen(false)}>
-              <a href="/admin">大会を整理する</a>
+              <a href="/my">大会を整理する</a>
             </Button>
             <AlertDialogCancel>閉じる</AlertDialogCancel>
           </AlertDialogFooter>

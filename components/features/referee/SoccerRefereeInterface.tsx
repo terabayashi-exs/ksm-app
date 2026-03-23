@@ -442,7 +442,7 @@ export default function SoccerRefereeInterface({
   return (
     <div className="space-y-6">
       {/* サッカー専用ピリオド制御 */}
-      <Card className="border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20">
+      <Card className="border-green-200 bg-green-50/30">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Timer className="w-5 h-5 text-green-600" />
@@ -452,7 +452,7 @@ export default function SoccerRefereeInterface({
         <CardContent>
           <div className="space-y-4">
             {/* 現在ピリオド表示 */}
-            <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2">
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2">
               <div className="flex items-center space-x-3">
                 <div className="text-2xl font-bold text-green-600">
                   {getPeriodName(currentPeriod)}
@@ -463,7 +463,7 @@ export default function SoccerRefereeInterface({
                   <Badge variant="secondary" className="bg-yellow-500 text-white">規定外</Badge>
                 )}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-gray-500">
                 {currentPeriod}/{extendedData.max_periods}
               </div>
             </div>
@@ -503,10 +503,10 @@ export default function SoccerRefereeInterface({
                     key={period.period_number}
                     className={`p-2 rounded border text-center text-sm ${
                       isCurrent 
-                        ? 'border-green-500 bg-green-100 dark:bg-green-900/30' 
+                        ? 'border-green-500 bg-green-100' 
                         : isAvailable
-                        ? 'border-blue-200 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 bg-gray-50 dark:bg-gray-800'
+                        ? 'border-blue-200 bg-blue-50'
+                        : 'border-gray-200 bg-gray-50'
                     }`}
                   >
                     <div className="font-medium">{period.period_name}</div>
@@ -537,7 +537,7 @@ export default function SoccerRefereeInterface({
               
               return (
                 <div key={periodNumber} className={`border rounded-lg p-4 ${
-                  isCurrent ? 'border-green-500 bg-green-50/50 dark:bg-green-950/20' : 'border-border'
+                  isCurrent ? 'border-green-500 bg-green-50/50' : 'border-gray-200'
                 }`}>
                   <Label className="block text-sm font-medium mb-3">
                     {periodName}
@@ -552,7 +552,7 @@ export default function SoccerRefereeInterface({
                   <div className="grid grid-cols-2 gap-4">
                     {/* チーム1 */}
                     <div className="text-center">
-                      <div className="text-xs text-muted-foreground mb-2">{match.team1_name}</div>
+                      <div className="text-xs text-gray-500 mb-2">{match.team1_name}</div>
                       <div className="flex items-center justify-center space-x-2 mb-2">
                         <Button
                           variant="outline"
@@ -587,7 +587,7 @@ export default function SoccerRefereeInterface({
 
                     {/* チーム2 */}
                     <div className="text-center">
-                      <div className="text-xs text-muted-foreground mb-2">{match.team2_name}</div>
+                      <div className="text-xs text-gray-500 mb-2">{match.team2_name}</div>
                       <div className="flex items-center justify-center space-x-2 mb-2">
                         <Button
                           variant="outline"
@@ -625,9 +625,9 @@ export default function SoccerRefereeInterface({
             })}
 
             {/* 合計スコア表示 */}
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+            <div className="mt-6 p-4 bg-gray-50/50 rounded-lg">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-foreground">合計スコア</h4>
+                <h4 className="text-sm font-medium text-gray-900">合計スコア</h4>
                 {!pkMode && (
                   <Button
                     size="sm"
@@ -645,7 +645,7 @@ export default function SoccerRefereeInterface({
                 // 通常モード表示（PK戦ピリオドを除く）
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
-                    <div className="text-xs text-muted-foreground">{match.team1_name}</div>
+                    <div className="text-xs text-gray-500">{match.team1_name}</div>
                     <div className="text-3xl font-bold text-blue-600">
                       {extendedData.active_periods.filter(p => {
                         const periodName = getPeriodName(p);
@@ -654,7 +654,7 @@ export default function SoccerRefereeInterface({
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground">{match.team2_name}</div>
+                    <div className="text-xs text-gray-500">{match.team2_name}</div>
                     <div className="text-3xl font-bold text-red-600">
                       {extendedData.active_periods.filter(p => {
                         const periodName = getPeriodName(p);
@@ -668,16 +668,16 @@ export default function SoccerRefereeInterface({
                 <div className="space-y-4">
                   {/* 通常ゴール */}
                   <div>
-                    <div className="text-xs text-muted-foreground mb-2 text-center">通常ゴール</div>
+                    <div className="text-xs text-gray-500 mb-2 text-center">通常ゴール</div>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div>
-                        <div className="text-xs text-muted-foreground">{match.team1_name}</div>
+                        <div className="text-xs text-gray-500">{match.team1_name}</div>
                         <div className="text-2xl font-bold text-blue-600">
                           {regularScores.team1}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs text-muted-foreground">{match.team2_name}</div>
+                        <div className="text-xs text-gray-500">{match.team2_name}</div>
                         <div className="text-2xl font-bold text-red-600">
                           {regularScores.team2}
                         </div>
@@ -688,7 +688,7 @@ export default function SoccerRefereeInterface({
                   {/* PKゴール */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-center mb-2">
-                      <div className="text-xs text-muted-foreground">PKゴール</div>
+                      <div className="text-xs text-gray-500">PKゴール</div>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -700,13 +700,13 @@ export default function SoccerRefereeInterface({
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div>
-                        <div className="text-xs text-muted-foreground">{match.team1_name}</div>
+                        <div className="text-xs text-gray-500">{match.team1_name}</div>
                         <div className="text-2xl font-bold text-orange-600">
                           {pkScores.team1}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs text-muted-foreground">{match.team2_name}</div>
+                        <div className="text-xs text-gray-500">{match.team2_name}</div>
                         <div className="text-2xl font-bold text-orange-600">
                           {pkScores.team2}
                         </div>
@@ -715,17 +715,17 @@ export default function SoccerRefereeInterface({
                   </div>
                   
                   {/* 総合結果 */}
-                  <div className="border-t pt-4 bg-slate-50 dark:bg-slate-800 p-3 rounded">
-                    <div className="text-xs text-muted-foreground mb-2 text-center">総合結果</div>
+                  <div className="border-t pt-4 bg-slate-50 p-3 rounded">
+                    <div className="text-xs text-gray-500 mb-2 text-center">総合結果</div>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div>
-                        <div className="text-xs text-muted-foreground">{match.team1_name}</div>
+                        <div className="text-xs text-gray-500">{match.team1_name}</div>
                         <div className="text-xl font-bold text-blue-600">
                           {regularScores.team1} ({pkScores.team1})
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs text-muted-foreground">{match.team2_name}</div>
+                        <div className="text-xs text-gray-500">{match.team2_name}</div>
                         <div className="text-xl font-bold text-red-600">
                           {regularScores.team2} ({pkScores.team2})
                         </div>
@@ -738,9 +738,9 @@ export default function SoccerRefereeInterface({
 
             {/* PK戦専用入力UI */}
             {pkMode && (match.match_status === 'ongoing' || match.match_status === 'completed') && (
-              <Card className="border-orange-200 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20">
+              <Card className="border-orange-200 bg-orange-50/30">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-orange-700 dark:text-orange-300">
+                  <CardTitle className="flex items-center space-x-2 text-orange-700">
                     <div className="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center">
                       <span className="text-white text-xs font-bold">PK</span>
                     </div>
@@ -751,7 +751,7 @@ export default function SoccerRefereeInterface({
                   <div className="grid grid-cols-2 gap-6">
                     {/* チーム1 PK */}
                     <div className="text-center">
-                      <div className="text-sm font-medium text-muted-foreground mb-3">{match.team1_name}</div>
+                      <div className="text-sm font-medium text-gray-500 mb-3">{match.team1_name}</div>
                       <div className="flex items-center justify-center space-x-3 mb-3">
                         <Button
                           variant="outline"
@@ -811,7 +811,7 @@ export default function SoccerRefereeInterface({
 
                     {/* チーム2 PK */}
                     <div className="text-center">
-                      <div className="text-sm font-medium text-muted-foreground mb-3">{match.team2_name}</div>
+                      <div className="text-sm font-medium text-gray-500 mb-3">{match.team2_name}</div>
                       <div className="flex items-center justify-center space-x-3 mb-3">
                         <Button
                           variant="outline"
@@ -871,9 +871,9 @@ export default function SoccerRefereeInterface({
                   </div>
                   
                   <div className="mt-4 text-center">
-                    <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+                    <Alert className="border-orange-200 bg-orange-50">
                       <AlertCircle className="h-4 w-4 text-orange-600" />
-                      <AlertDescription className="text-orange-800 dark:text-orange-200">
+                      <AlertDescription className="text-orange-800">
                         PK戦のスコアは通常ゴールとは分離して記録されます。「スコア・結果を保存」ボタンで両方のデータが保存されます。
                       </AlertDescription>
                     </Alert>
@@ -902,7 +902,7 @@ export default function SoccerRefereeInterface({
                       size="sm"
                       onClick={() => setWinnerTeam(null)}
                       disabled={isConfirmed}
-                      className={winnerTeam === null ? 'bg-secondary text-white hover:bg-secondary/80 border-secondary' : 'hover:bg-muted border-border'}
+                      className={winnerTeam === null ? 'bg-gray-100 text-white hover:bg-gray-100/80 border-secondary' : 'hover:bg-gray-50 border-gray-200'}
                     >
                       引分
                     </Button>
@@ -928,7 +928,7 @@ export default function SoccerRefereeInterface({
                     value={matchRemarks}
                     onChange={(e) => setMatchRemarks(e.target.value)}
                     disabled={match.match_status !== 'ongoing' || isConfirmed}
-                    className="mt-1 w-full px-3 py-2 border border-input bg-background text-foreground rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-muted disabled:text-muted-foreground"
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 bg-white text-gray-900 rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                     rows={2}
                     placeholder="延長戦・PK戦での決着、その他特記事項など..."
                   />

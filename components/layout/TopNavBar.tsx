@@ -12,8 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { User, LogOut, Menu, X, Search } from "lucide-react";
+import { User, LogOut, Menu, X } from "lucide-react";
 
 export default function TopNavBar() {
   const { data: session, status } = useSession();
@@ -32,8 +31,6 @@ export default function TopNavBar() {
 
           {/* デスクトップ: CTAボタン + ユーザーメニュー */}
           <div className="hidden sm:flex items-center space-x-3">
-            <ThemeToggle />
-
             {status === "loading" ? (
               <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : session?.user ? (
@@ -47,9 +44,9 @@ export default function TopNavBar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b border-border">
-                    <p className="font-medium text-foreground">{session.user.name}</p>
-                    <p className="text-sm text-muted-foreground">{session.user.email}</p>
+                  <div className="px-3 py-2 border-b border-gray-200">
+                    <p className="font-medium text-gray-900">{session.user.name}</p>
+                    <p className="text-sm text-gray-500">{session.user.email}</p>
                   </div>
 
                   <DropdownMenuItem asChild>
@@ -69,25 +66,16 @@ export default function TopNavBar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <>
-                <Button asChild size="sm">
-                  <Link href="/tournaments" className="flex items-center">
-                    <Search className="mr-1.5 h-3.5 w-3.5" />
-                    大会を探す
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
-                  <Link href="/auth/login" className="flex items-center">
-                    ログイン
-                  </Link>
-                </Button>
-              </>
+              <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
+                <Link href="/auth/login" className="flex items-center">
+                  ログイン
+                </Link>
+              </Button>
             )}
           </div>
 
           {/* モバイル: ハンバーガーメニューボタン */}
           <div className="flex sm:hidden items-center gap-2">
-            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
@@ -134,14 +122,6 @@ export default function TopNavBar() {
               </>
             ) : (
               <>
-                <Link
-                  href="/tournaments"
-                  className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Search className="h-4 w-4" />
-                  大会を探す
-                </Link>
                 <Link
                   href="/auth/login"
                   className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"

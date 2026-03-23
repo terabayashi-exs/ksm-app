@@ -26,9 +26,10 @@ interface CurrentSubscriptionInfo {
 
 interface PlanBadgeProps {
   apiUrl?: string;
+  showChangeButton?: boolean;
 }
 
-export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }: PlanBadgeProps) {
+export default function PlanBadge({ apiUrl = "/api/admin/subscription/current", showChangeButton = true }: PlanBadgeProps) {
   const router = useRouter();
   const [subscriptionInfo, setSubscriptionInfo] = useState<CurrentSubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +95,7 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border whitespace-nowrap ${
           isTrialExpired
             ? "bg-destructive/10 border-destructive/30 text-destructive"
-            : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
+            : "bg-blue-50 border-blue-200 text-blue-800"
         }`}>
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span className="text-xs font-medium">
@@ -115,16 +116,16 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
         </Badge>
 
         {isFree && remainingDays !== null && remainingDays > 0 && !isTrialExpired && (
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
+          <span className="text-sm text-gray-500 whitespace-nowrap">
             残り{remainingDays}日
           </span>
         )}
 
         {!isFree && plan.max_tournaments !== -1 && (
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
+          <span className="text-sm text-gray-500 whitespace-nowrap">
             大会: {usage.current_tournament_groups_count}/{plan.max_tournaments}
             {tournamentUsagePercent >= 80 && (
-              <span className="text-orange-600 dark:text-orange-400 font-semibold ml-1">
+              <span className="text-orange-600 font-semibold ml-1">
                 ({tournamentUsagePercent}%)
               </span>
             )}
@@ -133,9 +134,11 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
       </div>
 
       {/* プラン変更ボタン */}
-      <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
-        プラン変更
-      </Button>
+      {showChangeButton && (
+        <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
+          プラン変更
+        </Button>
+      )}
     </div>
   );
 }

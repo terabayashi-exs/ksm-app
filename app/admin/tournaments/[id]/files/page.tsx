@@ -62,14 +62,14 @@ export default function TournamentFilesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー部分 */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -102,8 +102,8 @@ export default function TournamentFilesPage() {
               <div className="flex items-center">
                 <Upload className="h-8 w-8 text-primary" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">アップロードファイル</p>
-                  <p className="text-2xl font-bold text-foreground">{uploadFiles}</p>
+                  <p className="text-sm font-medium text-gray-500">アップロードファイル</p>
+                  <p className="text-2xl font-bold text-gray-900">{uploadFiles}</p>
                 </div>
               </div>
             </CardContent>
@@ -114,8 +114,8 @@ export default function TournamentFilesPage() {
               <div className="flex items-center">
                 <LinkIcon className="h-8 w-8 text-purple-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">外部URLリンク</p>
-                  <p className="text-2xl font-bold text-foreground">{externalLinks}</p>
+                  <p className="text-sm font-medium text-gray-500">外部URLリンク</p>
+                  <p className="text-2xl font-bold text-gray-900">{externalLinks}</p>
                 </div>
               </div>
             </CardContent>
@@ -126,8 +126,8 @@ export default function TournamentFilesPage() {
               <div className="flex items-center">
                 <HardDrive className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">総容量</p>
-                  <p className="text-2xl font-bold text-foreground">{formatFileSize(totalSize)}</p>
+                  <p className="text-sm font-medium text-gray-500">総容量</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatFileSize(totalSize)}</p>
                 </div>
               </div>
             </CardContent>
@@ -138,8 +138,8 @@ export default function TournamentFilesPage() {
               <div className="flex items-center">
                 <FileText className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">公開中</p>
-                  <p className="text-2xl font-bold text-foreground">{publicCount} / {totalCount}</p>
+                  <p className="text-sm font-medium text-gray-500">公開中</p>
+                  <p className="text-2xl font-bold text-gray-900">{publicCount} / {totalCount}</p>
                 </div>
               </div>
             </CardContent>

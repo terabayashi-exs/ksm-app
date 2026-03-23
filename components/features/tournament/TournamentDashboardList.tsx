@@ -8,7 +8,7 @@ import { Tournament } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, UserCog } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Clock, Trophy, Trash2, Archive, Plus, Settings, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, UserCog, QrCode } from 'lucide-react';
 import { getStatusLabel } from '@/lib/tournament-status';
 import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckResponse } from '@/lib/format-change';
 import { FormatChangeDialog } from './FormatChangeDialog';
@@ -513,18 +513,15 @@ export default function TournamentDashboardList({
     }
   };
 
+  // アーカイブハンドラ（HTML版アーカイブのみ。DBレコード削除は行わない）
   const handleArchiveTournament = async (tournament: Tournament) => {
-    const confirmMessage = `大会「${tournament.tournament_name}」をアーカイブしますか？\n\nアーカイブすると：\n1. 現在のデータが完全に保存されます\n2. 関連するデータベースのデータが削除されます\n3. アーカイブページからのみ表示可能になります\n\n⚠️ この操作は取り消せません。\n事前にバックアップを作成することを推奨します。`;
-    
-    if (!confirm(confirmMessage)) {
+    if (!confirm(`大会「${tournament.tournament_name}」をアーカイブしますか？\n\nHTMLアーカイブが作成され、is_archivedフラグが設定されます。\nDBレコードは削除されません。`)) {
       return;
     }
 
     setArchiving(tournament.tournament_id);
 
     try {
-      // Step 1: アーカイブ作成
-      console.log('Step 1: アーカイブ作成開始...');
       const archiveResponse = await fetch(`/api/tournaments/${tournament.tournament_id}/archive`, {
         method: 'POST',
       });
@@ -536,29 +533,14 @@ export default function TournamentDashboardList({
         return;
       }
 
-      console.log('Step 1: アーカイブ作成完了');
+      const sizeKb = archiveResult.data?.file_size ? `${(archiveResult.data.file_size / 1024).toFixed(2)} KB` : '';
+      alert(`✅ HTMLアーカイブが完了しました。${sizeKb ? `\nファイルサイズ: ${sizeKb}` : ''}`);
 
-      // Step 2: アーカイブ後クリーンアップ実行（大会メインレコードは保持）
-      console.log('Step 2: アーカイブ後クリーンアップ開始...');
-      const deleteResponse = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/archive-cleanup`, {
-        method: 'DELETE',
-      });
-
-      const deleteResult = await deleteResponse.json();
-
-      if (deleteResult.success) {
-        alert(`✅ アーカイブとクリーンアップが完了しました。\n\n【アーカイブ情報】\n• 大会名: ${tournament.tournament_name}\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【クリーンアップ情報】\n• 削除されたレコード数: ${deleteResult.deletionSummary.totalDeletedRecords}\n• 削除ステップ: ${deleteResult.deletionSummary.successfulSteps}/${deleteResult.deletionSummary.totalSteps}\n• 実行時間: ${(deleteResult.deletionSummary.totalExecutionTime / 1000).toFixed(1)}秒\n• 大会メインレコード: 保持\n\n📄 アーカイブページ: /public/tournaments/${tournament.tournament_id}/archived`);
-      } else {
-        // アーカイブは成功したが削除に失敗
-        alert(`⚠️ アーカイブは完了しましたが、クリーンアップでエラーが発生しました。\n\n【アーカイブ完了】\n• データサイズ: ${(archiveResult.data.file_size / 1024).toFixed(2)} KB\n• アーカイブ日時: ${archiveResult.data.archived_at}\n\n【クリーンアップエラー】\n${deleteResult.error}\n\n大会はアーカイブ状態になっていますが、関連データが残存している可能性があります。\n管理者ダッシュボードで「削除」ボタンから後で関連データを削除してください。`);
-      }
-      
-      // いずれの場合もリストを更新
+      // リストを更新
       const fetchTournaments = async () => {
         try {
           const response = await fetch('/api/tournaments/dashboard');
           const result: ApiResponse = await response.json();
-          
           if (result.success && result.data) {
             setTournaments(result.data);
           }
@@ -571,7 +553,6 @@ export default function TournamentDashboardList({
         try {
           const response = await fetch('/api/admin/notifications/counts');
           const result = await response.json();
-          
           if (result.success) {
             setNotificationCounts(result.data);
           }
@@ -579,12 +560,12 @@ export default function TournamentDashboardList({
           console.error('通知件数取得エラー:', err);
         }
       };
-      
+
       fetchTournaments();
       fetchNotificationCounts();
     } catch (err) {
-      console.error('アーカイブ・削除エラー:', err);
-      alert('アーカイブ・削除処理中にエラーが発生しました');
+      console.error('アーカイブエラー:', err);
+      alert('アーカイブ処理中にエラーが発生しました');
     } finally {
       setArchiving(null);
     }
@@ -662,22 +643,35 @@ export default function TournamentDashboardList({
               </div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
+                window.open(qrPageUrl, '_blank', 'width=500,height=700');
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer shadow-sm"
+              title="部門詳細ページのQRコードを表示"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              QR
+            </button>
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
               tournament.status === 'planning'
-                ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                ? 'bg-gray-100 text-gray-800'
                 : tournament.status === 'recruiting'
-                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                ? 'bg-blue-100 text-blue-800'
                 : tournament.status === 'before_event'
-                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                ? 'bg-yellow-100 text-yellow-800'
                 : tournament.status === 'ongoing'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
             }`}>
               {getStatusLabel(tournament.status)}
             </div>
             {tournament.is_archived && (
-              <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
+              <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                 アーカイブ済み
               </div>
             )}
@@ -714,32 +708,32 @@ export default function TournamentDashboardList({
           {/* 参加状況詳細 */}
           {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
-              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
+              <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
               <div className="grid grid-cols-5 gap-2">
                 {/* 想定チーム数 */}
-                <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">想定チーム数</div>
-                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+                <div className="p-2 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                  <div className="text-xs text-blue-700 font-medium mb-1">想定チーム数</div>
+                  <div className="text-lg font-bold text-blue-700">{tournament.team_count}</div>
                 </div>
                 {/* 参加確定 */}
-                <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加確定</div>
-                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                <div className="p-2 bg-green-50 rounded-lg border border-green-200 text-center">
+                  <div className="text-xs text-green-700 font-medium mb-1">参加確定</div>
+                  <div className="text-lg font-bold text-green-700">{tournament.confirmed_count || 0}</div>
                 </div>
                 {/* キャンセル待ち */}
-                <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
-                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">キャンセル待ち</div>
-                  <div className="text-lg font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                <div className="p-2 bg-orange-50 rounded-lg border border-orange-200 text-center">
+                  <div className="text-xs text-orange-700 font-medium mb-1">キャンセル待ち</div>
+                  <div className="text-lg font-bold text-orange-700">{tournament.waitlisted_count || 0}</div>
                 </div>
                 {/* 辞退申請中 */}
-                <div className="p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
-                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-1">辞退申請中</div>
-                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                <div className="p-2 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
+                  <div className="text-xs text-yellow-700 font-medium mb-1">辞退申請中</div>
+                  <div className="text-lg font-bold text-yellow-700">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
                 {/* キャンセル済 */}
-                <div className="p-2 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
-                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">キャンセル済</div>
-                  <div className="text-lg font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
+                <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-xs text-gray-700 font-medium mb-1">キャンセル済</div>
+                  <div className="text-lg font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
             </div>
@@ -747,9 +741,9 @@ export default function TournamentDashboardList({
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+          <Button asChild size="sm" variant="outline" className="group text-sm hover:border-blue-300 hover:bg-blue-50">
             <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
-              <Eye className="w-4 h-4 mr-1" />
+              <Eye className="w-4 h-4 mr-1 transition-transform group-hover:scale-110" />
               詳細
             </Link>
           </Button>
@@ -885,7 +879,7 @@ export default function TournamentDashboardList({
                     variant="outline"
                     onClick={() => handleFormatChangeClick(tournament)}
                     disabled={disabled}
-                    className={`text-sm ${disabled ? 'cursor-not-allowed opacity-50' : 'border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700'}`}
+                    className={`group text-sm ${disabled ? 'cursor-not-allowed opacity-50' : 'border-orange-200 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700'}`}
                     title={btnState.title || (isChanging ? "" : "部門のフォーマットを変更（試合データは削除されます）")}
                   >
                     {isChanging ? (
@@ -895,7 +889,7 @@ export default function TournamentDashboardList({
                       </div>
                     ) : (
                       <div className="flex items-center">
-                        {disabled ? <Lock className="w-4 h-4 mr-2" /> : <Settings className="w-4 h-4 mr-2" />}
+                        {disabled ? <Lock className="w-4 h-4 mr-2" /> : <Settings className="w-4 h-4 mr-2 transition-transform group-hover:rotate-90" />}
                         フォーマット変更
                       </div>
                     )}
@@ -1611,16 +1605,16 @@ export default function TournamentDashboardList({
         {/* グループ化された大会 */}
         {groups.map(({ group, tournaments: divisions }) => (
           <Card key={group.group_id} className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-2xl mb-2">{group.group_name}</CardTitle>
                   {group.group_description && (
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-sm text-gray-500 mb-3">
                       {group.group_description}
                     </p>
                   )}
-                  <div className="flex items-center text-sm text-muted-foreground">
+                  <div className="flex items-center text-sm text-gray-500">
                     <Users className="h-4 w-4 mr-1" />
                     {divisions.length}部門
                   </div>
@@ -1631,7 +1625,7 @@ export default function TournamentDashboardList({
                     <Button
                       asChild
                       size="sm"
-                      className="text-sm bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-600"
+                      className="text-sm bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       <Link href={`/admin/operators?group_id=${group.group_id}`}>
                         <UserCog className="w-4 h-4 mr-2" />
@@ -1658,10 +1652,10 @@ export default function TournamentDashboardList({
                     <Button
                       asChild
                       size="sm"
-                      className="text-sm bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="group text-sm bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="w-4 h-4 mr-2 transition-transform group-hover:rotate-90" />
                         部門作成
                       </Link>
                     </Button>
@@ -1679,7 +1673,7 @@ export default function TournamentDashboardList({
                         asChild
                         size="sm"
                         variant="outline"
-                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 text-xs"
+                        className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 text-xs"
                       >
                         <Link href="/admin/subscription/plans">
                           プラン変更
@@ -1694,7 +1688,7 @@ export default function TournamentDashboardList({
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                <h4 className="text-sm font-medium text-gray-900">所属部門</h4>
                 <div className="grid gap-4">
                   {divisions.map((division) => (
                     <TournamentCard

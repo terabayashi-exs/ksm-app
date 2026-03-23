@@ -44,15 +44,15 @@ export default function RegisterEmailPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+              <div className="p-3 bg-green-100 rounded-full">
                 <Mail className="h-12 w-12 text-green-600" />
               </div>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               メールを送信しました
             </h2>
           </div>
@@ -60,13 +60,13 @@ export default function RegisterEmailPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
-                <p className="text-foreground">
+                <p className="text-gray-900">
                   <strong>{email}</strong> にチーム登録用のリンクを送信しました。
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-gray-500 text-sm">
                   メールボックスをご確認いただき、メール内のリンクをクリックしてチーム登録を完了してください。
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-gray-500 text-sm">
                   リンクの有効期限は10分です。
                 </p>
                 <div className="pt-4">
@@ -86,18 +86,18 @@ export default function RegisterEmailPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+            <div className="p-3 bg-primary/10 rounded-full">
               <Mail className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             チーム登録申請
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-gray-500">
             メールアドレスを入力してください
           </p>
         </div>
@@ -125,13 +125,13 @@ export default function RegisterEmailPage() {
                   disabled={loading}
                   autoComplete="email"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   チーム代表者として使用するメールアドレスを入力してください
                 </p>
               </div>
 
               {error && (
-                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -142,7 +142,7 @@ export default function RegisterEmailPage() {
             </form>
 
             <div className="mt-6 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 既にアカウントをお持ちの方は{" "}
                 <Link
                   href="/auth/login"

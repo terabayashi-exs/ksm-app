@@ -83,9 +83,9 @@ export function TournamentBlock({
         {title && (
           <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
         )}
-        <div className="flex items-center justify-center p-8 bg-card border border-border rounded-lg">
+        <div className="flex items-center justify-center p-8 bg-white border border-gray-200 rounded-lg">
           <div className="text-center">
-            <div className="text-sm text-muted-foreground mb-2">不戦勝</div>
+            <div className="text-sm text-gray-500 mb-2">不戦勝</div>
             <div className="text-lg font-semibold">{winnerName || "勝者"}</div>
           </div>
         </div>
@@ -102,6 +102,7 @@ export function TournamentBlock({
         className="relative flex gap-16 w-full"
         style={{
           height: `${blockHeight}px`,
+          minWidth: "750px",
         }}
       >
         {/* SVG接続線 */}

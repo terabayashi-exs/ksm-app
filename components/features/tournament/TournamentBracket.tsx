@@ -84,7 +84,7 @@ const response = await fetch(
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-muted-foreground">
+        <span className="ml-3 text-gray-500">
           トーナメント表を読み込み中...
         </span>
       </div>
@@ -94,23 +94,70 @@ const response = await fetch(
   if (error) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground text-lg mb-2">{error}</p>
-        <p className="text-muted-foreground text-sm">
+        <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-500 text-lg mb-2">{error}</p>
+        <p className="text-gray-500 text-sm">
           この大会は予選リーグ戦のみで構成されています。
         </p>
       </div>
     );
   }
 
-  const { mainMatches, placementMatches, loserSemifinalMatches } = organizeMatchesByMatchType(matches);
+  const { mainMatches, placementMatches: allPlacementMatches, loserSemifinalMatches } = organizeMatchesByMatchType(matches);
+
+  // 下位決定準決勝が2試合以上ある場合、4チームの山を構成
+  const loserBracketGroups: {
+    matches: BracketMatch[];       // 下位決定準決勝2試合 + 勝者決定戦1試合
+    title: string;                  // e.g. "5位決定戦"
+    remainingPlacements: { position: number; match: BracketMatch }[];  // 敗者決定戦（7位決定戦など）
+  }[] = [];
+
+  // 下位の山に含まれなかった順位決定戦
+  let regularPlacementMatches = allPlacementMatches;
+
+  if (loserSemifinalMatches.length >= 2) {
+    const loserSfCodes = new Set(loserSemifinalMatches.map(m => m.match_code));
+
+    const winnerPlacements: BracketMatch[] = [];
+    const loserPlacements: { position: number; match: BracketMatch }[] = [];
+    const otherPlacements: { position: number; match: BracketMatch }[] = [];
+
+    for (const pm of allPlacementMatches) {
+      const src1 = pm.match.team1_source || '';
+      const src2 = pm.match.team2_source || '';
+      const isWinnerDest = [...loserSfCodes].some(code =>
+        src1 === `${code}_winner` || src2 === `${code}_winner`
+      );
+      const isLoserDest = [...loserSfCodes].some(code =>
+        src1 === `${code}_loser` || src2 === `${code}_loser`
+      );
+
+      if (isWinnerDest) {
+        winnerPlacements.push(pm.match);
+      } else if (isLoserDest) {
+        loserPlacements.push(pm);
+      } else {
+        otherPlacements.push(pm);
+      }
+    }
+
+    if (winnerPlacements.length === 1) {
+      loserBracketGroups.push({
+        matches: [...loserSemifinalMatches, ...winnerPlacements],
+        title: winnerPlacements[0].position_note || "下位決定トーナメント",
+        remainingPlacements: loserPlacements,
+      });
+      // 下位の山に含まれなかったものだけを通常の順位決定戦として表示
+      regularPlacementMatches = otherPlacements;
+    }
+  }
 
   // 試合がない場合
   if (mainMatches.length === 0) {
     return (
       <div className="text-center py-16">
-        <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground text-lg">
+        <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-500 text-lg">
           トーナメント表データがありません
         </p>
       </div>
@@ -319,7 +366,7 @@ const response = await fetch(
         )[0];
 
         // 末尾の「戦」を除去
-        blockRoundLabels.push(bestLabel.replace(/戦$/, ''));
+        blockRoundLabels.push(bestLabel);
       } else {
         // position_noteがない場合は空文字
         blockRoundLabels.push('');
@@ -398,7 +445,7 @@ const response = await fetch(
         }
       `}</style>
 
-      <div className="print-container relative bg-card border border-border rounded-lg p-6 shadow-sm overflow-x-auto">
+      <div className="print-container relative bg-white border border-gray-200 rounded-lg p-6 shadow-sm overflow-x-auto">
         <div className="space-y-8">
           {/* 試合数に応じて表示方法を切り替え */}
           {shouldUseMultiBlock ? (
@@ -440,7 +487,7 @@ const response = await fetch(
                   const bestLabel = positionNotes.sort((a, b) =>
                     (labelPriority[a] || 99) - (labelPriority[b] || 99)
                   )[0];
-                  singleBlockRoundLabels.push(bestLabel.replace(/戦$/, ''));
+                  singleBlockRoundLabels.push(bestLabel);
                 } else {
                   singleBlockRoundLabels.push('');
                 }
@@ -461,21 +508,8 @@ const response = await fetch(
             })()
           )}
 
-          {/* 敗者側準決勝（各試合を個別ブロックで描画） */}
-          {loserSemifinalMatches.map((match) => (
-            <div key={`loser-sf-${match.match_code}`} className="third-place-section">
-              <TournamentBlock
-                blockId={`loser-sf-${match.match_code}`}
-                matches={[match]}
-                sportConfig={sportConfig || undefined}
-                title={match.position_note || "下位決定準決勝"}
-                roundLabels={[match.position_note || "下位決定準決勝"]}
-              />
-            </div>
-          ))}
-
-          {/* 順位決定戦ブロック（3位・5位・7位など） */}
-          {placementMatches.map(({ position, match }) => (
+          {/* 順位決定戦ブロック（3位決定戦など - 下位の山に含まれないもの） */}
+          {regularPlacementMatches.map(({ position, match }) => (
             <div key={`placement-${position}`} className="third-place-section">
               <TournamentBlock
                 blockId={`placement-${position}`}
@@ -483,6 +517,48 @@ const response = await fetch(
                 sportConfig={sportConfig || undefined}
                 title={`${position}位決定戦`}
                 roundLabels={[`${position}位決定戦`]}
+              />
+            </div>
+          ))}
+
+          {/* 下位4チームの山（下位決定準決勝→5位決定戦など） */}
+          {loserBracketGroups.map((group, idx) => {
+            const sortedGroupMatches = [...group.matches].sort((a, b) => compareMatchCode(a.match_code, b.match_code));
+            const finalLabel = group.title;
+            return (
+              <div key={`loser-bracket-${idx}`} className="third-place-section">
+                <TournamentBlock
+                  blockId={`loser-bracket-${idx}`}
+                  matches={sortedGroupMatches}
+                  sportConfig={sportConfig || undefined}
+                  roundLabels={["下位決定準決勝", finalLabel]}
+                />
+              </div>
+            );
+          })}
+
+          {/* 下位の山から漏れた順位決定戦（7位決定戦など） */}
+          {loserBracketGroups.flatMap(g => g.remainingPlacements).map(({ position, match }) => (
+            <div key={`loser-placement-${position}`} className="third-place-section">
+              <TournamentBlock
+                blockId={`loser-placement-${position}`}
+                matches={[match]}
+                sportConfig={sportConfig || undefined}
+                title={`${position}位決定戦`}
+                roundLabels={[`${position}位決定戦`]}
+              />
+            </div>
+          ))}
+
+          {/* 敗者側準決勝（山を構成できなかった場合の個別表示） */}
+          {loserBracketGroups.length === 0 && loserSemifinalMatches.map((match) => (
+            <div key={`loser-sf-${match.match_code}`} className="third-place-section">
+              <TournamentBlock
+                blockId={`loser-sf-${match.match_code}`}
+                matches={[match]}
+                sportConfig={sportConfig || undefined}
+                title={match.position_note || "下位決定準決勝"}
+                roundLabels={[match.position_note || "下位決定準決勝"]}
               />
             </div>
           ))}

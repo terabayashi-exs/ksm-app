@@ -85,17 +85,17 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, currentUserId, ini
   return (
     <div>
       {/* タブナビゲーション */}
-      <div className="border-b border-border">
-        <nav className="-mb-px flex space-x-1" aria-label="ダッシュボードタブ">
+      <div>
+        <nav className={`grid gap-1 ${tabs.length === 1 ? 'grid-cols-1' : tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`} aria-label="ダッシュボードタブ">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`
-                flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap
+                flex items-center justify-center gap-2 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap
                 ${activeTab === tab.key
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900"
                 }
               `}
             >
@@ -133,14 +133,14 @@ function IncompleteTournamentGroupsWrapper({
     <>
       {showCard && (
         <div>
-          <Card className="border-2 border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/10">
+          <Card className="border-2 border-amber-300 bg-amber-50/50">
             <CardHeader>
-              <CardTitle className="text-amber-800 dark:text-amber-200 flex items-center gap-2">
+              <CardTitle className="text-amber-800 flex items-center gap-2">
                 ⚠️ 作成中の大会
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-amber-700 dark:text-amber-300 mb-4 text-sm">
+              <p className="text-amber-700 mb-4 text-sm">
                 大会は作成されましたが、まだ部門が設定されていません。
                 部門を作成して大会を完成させましょう。
               </p>
@@ -173,45 +173,45 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
       {/* システム管理者メニュー（スーパーユーザーのみ） */}
       {isSuperadmin && (
         <div>
-          <h2 className="text-xl font-bold text-foreground mb-4">システム管理者メニュー</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">システム管理者メニュー</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/20">
+            <Card className="border-purple-200 bg-purple-50">
               <CardHeader>
-                <CardTitle className="text-purple-800 dark:text-purple-200 flex items-center gap-2">
+                <CardTitle className="text-purple-800 flex items-center gap-2">
                   <Database className="h-5 w-5" />
                   マスタ管理
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-purple-700 dark:text-purple-300 mb-4">
+                <p className="text-purple-700 mb-4">
                   システムの基本データを管理します
                 </p>
                 <div className="space-y-2">
-                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100 dark:border-purple-700 dark:hover:border-purple-600 dark:hover:bg-purple-950/30">
+                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
                     <Link href="/admin/administrators">利用者マスタ</Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100 dark:border-purple-700 dark:hover:border-purple-600 dark:hover:bg-purple-950/30">
+                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
                     <Link href="/admin/sport-types">競技種別マスタ</Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100 dark:border-purple-700 dark:hover:border-purple-600 dark:hover:bg-purple-950/30">
+                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
                     <Link href="/admin/tournament-formats">大会フォーマット</Link>
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
+            <Card className="border-blue-200 bg-blue-50">
               <CardHeader>
-                <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center">
+                <CardTitle className="text-blue-800 flex items-center">
                   📢 お知らせ管理
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-blue-700 dark:text-blue-300 mb-4">
+                <p className="text-blue-700 mb-4">
                   TOPページに表示するお知らせの作成・編集・削除を行います
                 </p>
                 <div className="space-y-2">
-                  <Button asChild variant="outline" className="w-full border-2 border-blue-300 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-700 dark:hover:border-blue-600 dark:hover:bg-blue-950/30">
+                  <Button asChild variant="outline" className="w-full border-2 border-blue-300 hover:border-blue-400 hover:bg-blue-100">
                     <Link href="/admin/announcements">お知らせ管理</Link>
                   </Button>
                 </div>
@@ -223,62 +223,62 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
 
       {/* 大会管理者メニュー（全管理者） */}
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-4">大会管理者メニュー</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">大会管理者メニュー</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
+          <Card className="border-green-200 bg-green-50">
             <CardHeader>
-              <CardTitle className="text-green-800 dark:text-green-200 flex items-center gap-2">
+              <CardTitle className="text-green-800 flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
                 大会の登録
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-green-700 dark:text-green-300 mb-4">
+              <p className="text-green-700 mb-4">
                 新しい大会を作成します
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-100 dark:border-green-700 dark:hover:border-green-600 dark:hover:bg-green-950/30">
+                <Button asChild variant="outline" className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-100">
                   <Link href="/admin/tournament-groups/create">大会を作成する</Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-100 dark:border-green-700 dark:hover:border-green-600 dark:hover:bg-green-950/30">
+                <Button asChild variant="outline" className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-100">
                   <Link href="/admin/tournaments/duplicate">大会を複製する</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
+          <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
-              <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center gap-2">
+              <CardTitle className="text-blue-800 flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
                 会場の管理
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-blue-700 dark:text-blue-300 mb-4">
+              <p className="text-blue-700 mb-4">
                 大会運営に必要な基本データを管理します
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full border-2 border-blue-300 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-700 dark:hover:border-blue-600 dark:hover:bg-blue-950/30">
+                <Button asChild variant="outline" className="w-full border-2 border-blue-300 hover:border-blue-400 hover:bg-blue-100">
                   <Link href="/admin/venues">会場を登録する</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/20">
+          <Card className="border-purple-200 bg-purple-50">
             <CardHeader>
-              <CardTitle className="text-purple-800 dark:text-purple-200 flex items-center gap-2">
+              <CardTitle className="text-purple-800 flex items-center gap-2">
                 <ImageIcon className="h-5 w-5" />
                 ロゴの管理
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-purple-700 dark:text-purple-300 mb-4">
+              <p className="text-purple-700 mb-4">
                 組織ロゴの設定・管理を行います
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100 dark:border-purple-700 dark:hover:border-purple-600 dark:hover:bg-purple-950/30">
+                <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
                   <Link href="/admin/profile">ロゴを登録する</Link>
                 </Button>
               </div>
@@ -295,9 +295,9 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
       {/* 大会状況 */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-foreground">大会状況</h2>
+          <h2 className="text-xl font-bold text-gray-900">大会状況</h2>
           {isSuperadmin && (
-            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showAllAdmins}
@@ -468,19 +468,16 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
     }
   };
 
-  // アーカイブハンドラ
+  // アーカイブハンドラ（HTML版アーカイブのみ。DBレコード削除は行わない）
   const handleArchiveTournament = async (tournament: Tournament) => {
-    if (!confirm(`大会「${tournament.tournament_name}」をアーカイブしますか？\n\n⚠️ この操作は取り消せません。`)) return;
+    if (!confirm(`大会「${tournament.tournament_name}」をアーカイブしますか？\n\nHTMLアーカイブが作成され、is_archivedフラグが設定されます。\nDBレコードは削除されません。`)) return;
     setArchiving(tournament.tournament_id);
     try {
       const archiveRes = await fetch(`/api/tournaments/${tournament.tournament_id}/archive`, { method: 'POST' });
       const archiveResult = await archiveRes.json();
       if (!archiveResult.success) { alert(`アーカイブエラー: ${archiveResult.error}`); return; }
-      const cleanupRes = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/archive-cleanup`, { method: 'DELETE' });
-      const cleanupResult = await cleanupRes.json();
-      alert(cleanupResult.success
-        ? `✅ アーカイブとクリーンアップが完了しました。`
-        : `⚠️ アーカイブは完了しましたが、クリーンアップでエラーが発生しました。\n${cleanupResult.error}`);
+      const sizeKb = archiveResult.data?.file_size ? `${(archiveResult.data.file_size / 1024).toFixed(2)} KB` : '';
+      alert(`✅ HTMLアーカイブが完了しました。${sizeKb ? `\nファイルサイズ: ${sizeKb}` : ''}`);
       router.refresh();
     } catch (err) {
       console.error('アーカイブエラー:', err);
@@ -573,39 +570,52 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
     return (
     <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       <div className="p-4 relative">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              {sportIcon && <span className="text-xl">{sportIcon}</span>}
-              {tournament.tournament_name}
-            </h4>
-            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-1">
-              <Trophy className="w-4 h-4 mr-1" />
-              <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+        <div className="mb-3">
+          <h4 className="font-semibold text-base sm:text-lg text-gray-900 flex items-start gap-2">
+            {sportIcon && <span className="text-lg sm:text-xl flex-shrink-0">{sportIcon}</span>}
+            <span>{tournament.tournament_name}</span>
+          </h4>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
+                window.open(qrPageUrl, '_blank', 'width=500,height=700');
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer shadow-sm"
+              title="部門詳細ページのQRコードを表示"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              QR
+            </button>
+            <div className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+              tournament.status === 'planning'
+                ? 'bg-gray-100 text-gray-800'
+                : tournament.status === 'recruiting'
+                ? 'bg-blue-100 text-blue-800'
+                : tournament.status === 'before_event'
+                ? 'bg-yellow-100 text-yellow-800'
+                : tournament.status === 'ongoing'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {getStatusLabel(tournament.status)}
             </div>
-            {tournament.organization_name && (
-              <div className="flex items-center text-xs text-gray-500 dark:text-gray-500 mt-1">
-                <span>主催: {tournament.organization_name}</span>
-              </div>
-            )}
           </div>
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-            tournament.status === 'planning'
-              ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-              : tournament.status === 'recruiting'
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-              : tournament.status === 'before_event'
-              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-              : tournament.status === 'ongoing'
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-          }`}>
-            {getStatusLabel(tournament.status)}
+          <div className="flex items-center text-sm text-gray-600 mt-1">
+            <Trophy className="w-4 h-4 mr-1" />
+            <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
           </div>
+          {tournament.organization_name && (
+            <div className="flex items-center text-xs text-gray-500 mt-1">
+              <span>主催: {tournament.organization_name}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 mb-4">
-          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center text-sm text-gray-600">
             <CalendarDays className="w-4 h-4 mr-2" />
             <span>
               {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
@@ -616,27 +626,27 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
           {/* 参加状況 */}
           {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
-              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
-              <div className="grid grid-cols-5 gap-2">
-                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-0.5">想定チーム数</div>
-                  <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+              <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">想定チーム数</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.team_count}</div>
                 </div>
-                <div className="p-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-0.5">参加確定</div>
-                  <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">参加確定</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.confirmed_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
-                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-0.5">キャンセル待ち</div>
-                  <div className="text-base font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル待</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.waitlisted_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
-                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-0.5">辞退申請中</div>
-                  <div className="text-base font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">辞退申請中</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
-                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-0.5">キャンセル済</div>
-                  <div className="text-base font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル済</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
             </div>
@@ -645,27 +655,27 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
 
         {/* 操作ボタン（カテゴリ別） */}
         {!tournament.is_archived ? (
-          <div className="space-y-3 pt-1">
+          <div className="space-y-3 bg-blue-50/80 rounded-lg p-3">
 
             {/* ── 基本情報 ── */}
             <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">基本情報</p>
+              <p className="text-xs font-semibold text-blue-600 mb-2">基本情報</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                     <Eye className="w-4 h-4 mr-1" />
                     公開画面を見る
                   </Link>
                 </Button>
                 {tournament.has_matchdays ? (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/edit-league`}>
                       <FileEdit className="w-4 h-4 mr-1" />
                       部門編集
                     </Link>
                   </Button>
                 ) : (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
                       <FileEdit className="w-4 h-4 mr-1" />
                       部門編集
@@ -678,7 +688,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     variant="outline"
                     onClick={() => handleFormatChangeClick(tournament)}
                     disabled={isFormatChanging && selectedTournamentId === tournament.tournament_id}
-                    className="text-sm hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                     title="部門のフォーマットを変更（試合データは削除されます）"
                   >
                     {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
@@ -688,13 +698,13 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     )}
                   </Button>
                 ) : (
-                  <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
+                  <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
                     <Lock className="w-4 h-4 mr-1" />
                     フォーマット変更
                   </Button>
                 )}
                 {tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
                       <Calendar className="w-4 h-4 mr-1" />
                       日程・会場設定
@@ -702,7 +712,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   </Button>
                 )}
                 {!tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
                       <MapPin className="w-4 h-4 mr-1" />
                       会場・コート設定
@@ -714,24 +724,24 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
 
             {/* ── 事前準備 ── */}
             <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">事前準備</p>
+              <p className="text-xs font-semibold text-blue-600 mb-2">事前準備</p>
               <div className="flex gap-2 flex-wrap">
                 {/* チーム登録・組合せは planning/recruiting/before_event のみ有効 */}
                 {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') ? (
                   <>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <FileText className="w-4 h-4 mr-1" />
                         ルール設定
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                         <Users className="w-4 h-4 mr-1" />
                         チーム手動登録
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -741,12 +751,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                       size="sm"
                       variant="outline"
                       onClick={() => handleDrawClick(tournament)}
-                      className="text-sm hover:border-blue-300 hover:bg-blue-50"
+                      className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50"
                     >
                       <Shuffle className="w-4 h-4 mr-1" />
                       組合せ作成
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
@@ -756,27 +766,27 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 ) : (
                   /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
                   <>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <FileText className="w-4 h-4 mr-1" />
                         ルール設定
                       </Link>
                     </Button>
-                    <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
+                    <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
                       <Lock className="w-4 h-4 mr-1" />
                       チーム手動登録
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
                       </Link>
                     </Button>
-                    <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="開催中のため変更できません">
+                    <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
                       <Lock className="w-4 h-4 mr-1" />
                       組合せ作成
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
@@ -789,21 +799,21 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
 
             {/* ── 当日運営 ── */}
             <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">当日運営</p>
+              <p className="text-xs font-semibold text-blue-600 mb-2">当日運営</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                     <ClipboardList className="w-4 h-4 mr-1" />
                     試合結果入力
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                     <Trophy className="w-4 h-4 mr-1" />
                     手動順位設定
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
                     <Target className="w-4 h-4 mr-1" />
                     選出条件変更
@@ -814,21 +824,21 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
 
             {/* ── 管理・その他 ── */}
             <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
+              <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
                     <Mail className="w-4 h-4 mr-1" />
                     メール送信
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                     <FileText className="w-4 h-4 mr-1" />
                     ファイル管理
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-yellow-300 hover:bg-yellow-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-yellow-300 hover:bg-yellow-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
                     <Star className="w-4 h-4 mr-1" />
                     スポンサー管理
@@ -840,7 +850,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     variant="outline"
                     onClick={() => handleArchiveTournament(tournament)}
                     disabled={archiving === tournament.tournament_id}
-                    className="text-sm hover:border-purple-300 hover:bg-purple-50"
+                    className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50"
                   >
                     {archiving === tournament.tournament_id ? (
                       <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-1" />アーカイブ中...</>
@@ -849,7 +859,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     )}
                   </Button>
                 ) : (
-                  <Button size="sm" variant="outline" disabled className="text-sm cursor-not-allowed opacity-50" title="大会終了後にアーカイブできます">
+                  <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="大会終了後にアーカイブできます">
                     <Lock className="w-4 h-4 mr-1" />
                     アーカイブ
                   </Button>
@@ -875,16 +885,16 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
           </div>
         ) : (
           /* アーカイブ済み */
-          <div className="pt-1">
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
+          <div className="bg-blue-50/80 rounded-lg p-3">
+            <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
             <div className="flex gap-2 flex-wrap">
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                   <Eye className="w-4 h-4 mr-1" />
                   公開画面を見る
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
                 <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
@@ -896,7 +906,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   variant="outline"
                   onClick={() => handleDeleteTournament(tournament)}
                   disabled={deleting === tournament.tournament_id}
-                  className="text-sm border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                  className="text-sm bg-white border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                 >
                   {deleting === tournament.tournament_id ? (
                     <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-1" />削除中...</>
@@ -921,52 +931,58 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
       <>
         {groups.map(({ group, tournaments: divisions }) => (
           <Card key={group.group_id} className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl mb-2 flex items-center gap-2">
-                    {group.logo_blob_url ? (
-                      <div className="w-8 h-8 relative flex-shrink-0">
-                        <Image
-                          src={group.logo_blob_url}
-                          alt="組織ロゴ"
-                          fill
-                          className="object-contain rounded"
-                          sizes="32px"
-                        />
-                      </div>
-                    ) : null}
-                    {group.group_name}
-                  </CardTitle>
-                  {group.group_description && (
-                    <p className="text-sm text-muted-foreground mb-3">{group.group_description}</p>
-                  )}
-                </div>
-                <div className="flex-shrink-0 flex gap-2 flex-wrap justify-end">
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white dark:border-blue-500 dark:bg-blue-950/50 dark:hover:bg-blue-950">
-                    <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
-                      <FileEdit className="w-4 h-4 mr-1" />
-                      大会編集
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white dark:border-blue-500 dark:bg-blue-950/50 dark:hover:bg-blue-950">
-                    <Link href={`/admin/operators?group_id=${group.group_id}`}>
-                      <UserCog className="w-4 h-4 mr-1" />
-                      運営者管理
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white dark:border-blue-500 dark:bg-blue-950/50 dark:hover:bg-blue-950">
-                    <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      部門作成
-                    </Link>
-                  </Button>
-                </div>
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
+              <CardTitle className="text-xl sm:text-2xl mb-2 flex items-center gap-2">
+                {group.logo_blob_url ? (
+                  <div className="w-8 h-8 relative flex-shrink-0">
+                    <Image
+                      src={group.logo_blob_url}
+                      alt="組織ロゴ"
+                      fill
+                      className="object-contain rounded"
+                      sizes="32px"
+                    />
+                  </div>
+                ) : null}
+                {group.group_name}
+              </CardTitle>
+              {group.group_description && (
+                <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
+                  onClick={() => {
+                    const publicUrl = `${window.location.origin}/public/tournaments/groups/${group.group_id}`;
+                    const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
+                    window.open(qrPageUrl, '_blank', 'width=500,height=700');
+                  }}
+                >
+                  <QrCode className="w-4 h-4 mr-1" />
+                  大会QR
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
+                    <FileEdit className="w-4 h-4 mr-1" />
+                    大会編集
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Link href={`/admin/operators?group_id=${group.group_id}`}>
+                    <UserCog className="w-4 h-4 mr-1" />
+                    運営者管理
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    部門作成
+                  </Link>
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                <h4 className="text-sm font-medium text-gray-900">所属部門</h4>
                 <div className="grid gap-4">
                   {divisions.map((division) => (
                     <TournamentCard key={division.tournament_id} tournament={division} />
@@ -1068,10 +1084,10 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
         <Card>
           <CardContent className="text-center py-12">
             <Trophy className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               現在、表示可能な大会はありません
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-gray-600 mb-6">
               新しい大会を作成して参加チームの募集を開始しましょう
             </p>
             <Button asChild>
@@ -1129,39 +1145,52 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
     return (
     <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       <div className="p-4 relative">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              {sportIcon && <span className="text-xl">{sportIcon}</span>}
-              {tournament.tournament_name}
-            </h4>
-            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-1">
-              <Trophy className="w-4 h-4 mr-1" />
-              <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+        <div className="mb-3">
+          <h4 className="font-semibold text-base sm:text-lg text-gray-900 flex items-start gap-2">
+            {sportIcon && <span className="text-lg sm:text-xl flex-shrink-0">{sportIcon}</span>}
+            <span>{tournament.tournament_name}</span>
+          </h4>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
+                window.open(qrPageUrl, '_blank', 'width=500,height=700');
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer shadow-sm"
+              title="部門詳細ページのQRコードを表示"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              QR
+            </button>
+            <div className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+              tournament.status === 'planning'
+                ? 'bg-gray-100 text-gray-800'
+                : tournament.status === 'recruiting'
+                ? 'bg-blue-100 text-blue-800'
+                : tournament.status === 'before_event'
+                ? 'bg-yellow-100 text-yellow-800'
+                : tournament.status === 'ongoing'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {getStatusLabel(tournament.status)}
             </div>
-            {tournament.organization_name && (
-              <div className="flex items-center text-xs text-gray-500 dark:text-gray-500 mt-1">
-                <span>主催: {tournament.organization_name}</span>
-              </div>
-            )}
           </div>
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-            tournament.status === 'planning'
-              ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-              : tournament.status === 'recruiting'
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-              : tournament.status === 'before_event'
-              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-              : tournament.status === 'ongoing'
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-          }`}>
-            {getStatusLabel(tournament.status)}
+          <div className="flex items-center text-sm text-gray-600 mt-1">
+            <Trophy className="w-4 h-4 mr-1" />
+            <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
           </div>
+          {tournament.organization_name && (
+            <div className="flex items-center text-xs text-gray-500 mt-1">
+              <span>主催: {tournament.organization_name}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 mb-4">
-          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center text-sm text-gray-600">
             <CalendarDays className="w-4 h-4 mr-2" />
             <span>
               {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
@@ -1172,27 +1201,27 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
           {/* 参加状況 */}
           {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
-              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
-              <div className="grid grid-cols-5 gap-2">
-                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                  <div className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-0.5">想定チーム数</div>
-                  <div className="text-base font-bold text-blue-700 dark:text-blue-400">{tournament.team_count}</div>
+              <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">想定チーム数</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.team_count}</div>
                 </div>
-                <div className="p-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-0.5">参加確定</div>
-                  <div className="text-base font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">参加確定</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.confirmed_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
-                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-0.5">キャンセル待ち</div>
-                  <div className="text-base font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル待</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.waitlisted_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
-                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-0.5">辞退申請中</div>
-                  <div className="text-base font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">辞退申請中</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
-                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-0.5">キャンセル済</div>
-                  <div className="text-base font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル済</div>
+                  <div className="text-base font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
             </div>
@@ -1201,19 +1230,19 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
 
         {/* 操作ボタン（運営者向け：権限に応じて表示） */}
         {!tournament.is_archived ? (
-          <div className="space-y-3 pt-1">
+          <div className="space-y-3 bg-blue-50/80 rounded-lg p-3">
             {/* ── 基本情報 ── */}
             <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">基本情報</p>
+              <p className="text-xs font-semibold text-blue-600 mb-2">基本情報</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                     <Eye className="w-4 h-4 mr-1" />
                     公開画面を見る
                   </Link>
                 </Button>
                 {permissions.canManageCourts && tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
                       <Calendar className="w-4 h-4 mr-1" />
                       日程・会場設定
@@ -1221,7 +1250,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                   </Button>
                 )}
                 {permissions.canManageCourts && !tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
                       <MapPin className="w-4 h-4 mr-1" />
                       会場・コート設定
@@ -1234,10 +1263,10 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             {/* ── 事前準備 ── */}
             {(permissions.canManageRules || permissions.canRegisterTeams || permissions.canCreateDraws || permissions.canManageParticipants || permissions.canPrintRefereeCards) && (
               <div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">事前準備</p>
+                <p className="text-xs font-semibold text-blue-600 mb-2">事前準備</p>
                 <div className="flex gap-2 flex-wrap">
                   {permissions.canManageRules && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <Settings className="w-4 h-4 mr-1" />
                         ルール設定
@@ -1245,7 +1274,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canRegisterTeams && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                         <UserPlus className="w-4 h-4 mr-1" />
                         チーム登録
@@ -1253,7 +1282,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canCreateDraws && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
                         <Shuffle className="w-4 h-4 mr-1" />
                         組合せ作成
@@ -1261,7 +1290,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canManageParticipants && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -1269,7 +1298,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canPrintRefereeCards && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
@@ -1283,10 +1312,10 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             {/* ── 当日運営 ── */}
             {(permissions.canInputResults || permissions.canConfirmResults || permissions.canSetManualRankings || permissions.canChangePromotionRules) && (
               <div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">当日運営</p>
+                <p className="text-xs font-semibold text-blue-600 mb-2">当日運営</p>
                 <div className="flex gap-2 flex-wrap">
                   {(permissions.canInputResults || permissions.canConfirmResults) && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                         <ClipboardList className="w-4 h-4 mr-1" />
                         試合結果入力
@@ -1294,7 +1323,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canSetManualRankings && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                         <Trophy className="w-4 h-4 mr-1" />
                         手動順位設定
@@ -1302,7 +1331,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canChangePromotionRules && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
                         <Target className="w-4 h-4 mr-1" />
                         選出条件変更
@@ -1316,10 +1345,10 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             {/* ── 管理・その他 ── */}
             {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors) && (
               <div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">管理・その他</p>
+                <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
                 <div className="flex gap-2 flex-wrap">
                   {permissions.canSendEmails && (
-                    <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
                         <Mail className="w-4 h-4 mr-1" />
                         メール送信
@@ -1332,16 +1361,16 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
           </div>
         ) : (
           /* アーカイブ済み */
-          <div className="pt-1">
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1.5">閲覧</p>
+          <div className="bg-blue-50/80 rounded-lg p-3">
+            <p className="text-xs font-semibold text-blue-600 mb-2">閲覧</p>
             <div className="flex gap-2 flex-wrap">
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                   <Eye className="w-4 h-4 mr-1" />
                   公開画面を見る
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="text-sm hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
                 <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
@@ -1363,32 +1392,28 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
       <>
         {groups.map(({ group, tournaments: divisions }) => (
           <Card key={group.group_id} className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl mb-2 flex items-center gap-2">
-                    {group.logo_blob_url ? (
-                      <div className="w-8 h-8 relative flex-shrink-0">
-                        <Image
-                          src={group.logo_blob_url}
-                          alt="組織ロゴ"
-                          fill
-                          className="object-contain rounded"
-                          sizes="32px"
-                        />
-                      </div>
-                    ) : null}
-                    {group.group_name}
-                  </CardTitle>
-                  {group.group_description && (
-                    <p className="text-sm text-muted-foreground mb-3">{group.group_description}</p>
-                  )}
-                </div>
-              </div>
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
+              <CardTitle className="text-xl sm:text-2xl mb-2 flex items-center gap-2">
+                {group.logo_blob_url ? (
+                  <div className="w-8 h-8 relative flex-shrink-0">
+                    <Image
+                      src={group.logo_blob_url}
+                      alt="組織ロゴ"
+                      fill
+                      className="object-contain rounded"
+                      sizes="32px"
+                    />
+                  </div>
+                ) : null}
+                {group.group_name}
+              </CardTitle>
+              {group.group_description && (
+                <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
+              )}
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">所属部門</h4>
+                <h4 className="text-sm font-medium text-gray-900">所属部門</h4>
                 <div className="grid gap-4">
                   {divisions.map((division) => (
                     <TournamentCard key={division.tournament_id} tournament={division} />
@@ -1470,10 +1495,10 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
         <Card>
           <CardContent className="text-center py-12">
             <Trophy className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               現在、担当している大会はありません
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               管理者から大会へのアクセス権限が付与されると、ここに表示されます
             </p>
           </CardContent>
@@ -1489,14 +1514,14 @@ function OperatorTabContent({ initialTournamentData, initialSportTypes }: { init
     <div className="space-y-8">
       {/* 運営者メニュー */}
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-4">運営者メニュー</h2>
-        <p className="text-sm text-muted-foreground mb-6">管理者から付与されたアクセス権限のある大会が表示されます</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">運営者メニュー</h2>
+        <p className="text-sm text-gray-500 mb-6">管理者から付与されたアクセス権限のある大会が表示されます</p>
       </div>
 
       {/* 大会状況 */}
       <div>
         <div className="mb-4">
-          <h2 className="text-xl font-bold text-foreground">担当大会一覧</h2>
+          <h2 className="text-xl font-bold text-gray-900">担当大会一覧</h2>
         </div>
         {initialTournamentData ? (
           <OperatorTournamentStatusList data={initialTournamentData} initialSportTypes={initialSportTypes} />
@@ -1535,6 +1560,8 @@ interface JoinedTournament {
   withdrawal_status: string;
   withdrawal_requested_at: string | null;
   sport_type_id: number | null;
+  tournament_status: string | null;
+  recruitment_end_date: string | null;
   tournament_group_id: number | null;
   group_name: string | null;
   logo_blob_url: string | null;
@@ -1785,17 +1812,17 @@ function TeamExpandedPanel({ team }: {
   ];
 
   return (
-    <div className="border-t border-border">
+    <div className="border-t border-gray-200">
       {/* パネルタブ */}
-      <div className="flex border-b border-border bg-muted/20">
+      <div className="grid grid-cols-3 gap-1">
         {panelTabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => { setActiveTab(tab.key); setPanelMsg(null); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-base font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === tab.key
-                ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-background'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }`}
           >
             {tab.icon}
@@ -1809,8 +1836,8 @@ function TeamExpandedPanel({ team }: {
         {panelMsg && (
           <div className={`flex items-start justify-between gap-2 p-3 rounded-lg text-xs ${
             panelMsg.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-300'
-              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
           }`}>
             <div className="flex items-start gap-1.5">
               {panelMsg.type === 'success'
@@ -1830,10 +1857,10 @@ function TeamExpandedPanel({ team }: {
             <div className="space-y-4">
               {/* 初回訪問時のメッセージ */}
               {showInitialMessage && team.prefecture_id && (
-                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-start gap-2 flex-1">
                     <MapPin className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                    <div className="text-sm text-blue-800">
                       <p className="font-medium">あなたの活動地域の大会を表示しています</p>
                       <p className="text-xs mt-1 opacity-80">
                         {prefectures.find(p => p.prefecture_id === team.prefecture_id)?.prefecture_name || '登録地域'}の大会を表示中です。他の地域の大会を探す場合は、検索条件を変更してください。
@@ -1850,26 +1877,26 @@ function TeamExpandedPanel({ team }: {
               )}
 
               {/* 検索UI */}
-              <div className="border border-border rounded-lg mb-6 bg-muted/20">
+              <div className="border border-gray-200 rounded-lg mb-6 bg-gray-50/20">
                 {/* 検索ヘッダー（常に表示） */}
                 <button
                   onClick={() => setSearchExpanded(!searchExpanded)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50/30 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <Search className="w-5 h-5 text-blue-600" />
                     <span className="font-medium">大会を検索</span>
                   </div>
                   {searchExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
                   )}
                 </button>
 
                 {/* 検索条件エリア（折り畳み） */}
                 {searchExpanded && (
-                  <div className="p-4 space-y-4 border-t border-border">
+                  <div className="p-4 space-y-4 border-t border-gray-200">
                     {/* フリーワード検索 */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">フリーワード検索</label>
@@ -1886,10 +1913,10 @@ function TeamExpandedPanel({ team }: {
                     <div>
                       <label className="text-sm font-medium mb-2 block">地域で探す</label>
                       <Select value={selectedPrefecture || 'all'} onValueChange={(value) => setSelectedPrefecture(value === 'all' ? '' : value)}>
-                        <SelectTrigger className="bg-background">
+                        <SelectTrigger className="bg-white">
                           <SelectValue placeholder="都道府県を選択" />
                         </SelectTrigger>
-                        <SelectContent className="bg-background">
+                        <SelectContent className="bg-white">
                           <SelectItem value="all">指定しない</SelectItem>
                           {prefectures.map((pref) => (
                             <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)}>
@@ -1909,8 +1936,8 @@ function TeamExpandedPanel({ team }: {
                           onClick={() => setSelectedSportType('')}
                           className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
                             selectedSportType === ''
-                              ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                              : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                              ? 'border-blue-600 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
                           }`}
                         >
                           <span className="text-xl">🏆</span>
@@ -1924,8 +1951,8 @@ function TeamExpandedPanel({ team }: {
                             onClick={() => setSelectedSportType(String(sport.sport_type_id))}
                             className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
                               selectedSportType === String(sport.sport_type_id)
-                                ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                                : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
                             }`}
                           >
                             <span className="text-xl">{getSportIcon(sport.sport_code)}</span>
@@ -1956,9 +1983,9 @@ function TeamExpandedPanel({ team }: {
 
               {/* 参加申込可能 */}
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-3">参加申込できる大会</div>
+                <div className="text-sm font-medium text-gray-500 mb-3">参加申込できる大会</div>
                 {available.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">現在募集中の大会はありません</p>
+                  <p className="text-sm text-gray-500">現在募集中の大会はありません</p>
                 ) : (
                   <div className="space-y-4">
                     {(() => {
@@ -1974,7 +2001,7 @@ function TeamExpandedPanel({ team }: {
 
                       return Array.from(grouped.entries()).map(([groupId, { group_name, logo_blob_url, tournaments }]) => {
                         return (
-                        <div key={groupId ?? 'no-group'} className="border border-border rounded-lg p-5">
+                        <div key={groupId ?? 'no-group'} className="border border-gray-200 rounded-lg p-5">
                           <div className="text-lg font-semibold mb-3 flex items-center gap-2">
                             {logo_blob_url ? (
                               <div className="w-7 h-7 relative flex-shrink-0">
@@ -2000,18 +2027,18 @@ function TeamExpandedPanel({ team }: {
                               const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
 
                               return (
-                              <div key={t.tournament_id} className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
+                              <div key={t.tournament_id} className="flex items-center justify-between p-4 bg-gray-50/40 rounded-lg">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     {sportIcon && <span className="text-lg flex-shrink-0">{sportIcon}</span>}
                                     <div className="text-base font-semibold truncate">{t.tournament_name}</div>
                                     {isJoined && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
                                         ✓ 申込済 {joinedCount > 1 ? `${joinedCount}チーム` : ''}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">
+                                  <div className="text-sm text-gray-500">
                                     {t.event_start_date && t.event_end_date && (
                                       <>
                                         {t.event_start_date === t.event_end_date
@@ -2029,11 +2056,11 @@ function TeamExpandedPanel({ team }: {
                                   </div>
                                 </div>
                                 {isJoined ? (
-                                  <Button asChild size="default" variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-300 dark:hover:bg-blue-950/30 flex-shrink-0 ml-3">
+                                  <Button asChild size="default" variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-50 flex-shrink-0 ml-3">
                                     <Link href={`/my/tournaments/${t.tournament_id}/apply?mode=new`}>追加で申込</Link>
                                   </Button>
                                 ) : (
-                                  <Button asChild size="default" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-300 dark:hover:bg-green-950/30 flex-shrink-0 ml-3">
+                                  <Button asChild size="default" variant="outline" className="border-green-400 text-green-700 hover:bg-green-50 flex-shrink-0 ml-3">
                                     <Link href={`/my/tournaments/${t.tournament_id}/apply`}>申込</Link>
                                   </Button>
                                 )}
@@ -2054,10 +2081,13 @@ function TeamExpandedPanel({ team }: {
 
         {/* 申込済の大会タブ */}
         {activeTab === 'joined' && (
-          tournamentsLoading ? <div className="text-center py-4"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto" /></div> : (
+          tournamentsLoading ? <div className="text-center py-4"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto" /></div> : (() => {
+            // 終了した大会を除外
+            const activeJoined = joined.filter(t => t.tournament_status !== 'completed');
+            return (
             <div className="space-y-4">
-              {joined.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
+              {activeJoined.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
                   <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
                   <p className="text-sm">参加申込済みの大会はありません</p>
                 </div>
@@ -2065,8 +2095,8 @@ function TeamExpandedPanel({ team }: {
                 <div className="space-y-4">
                   {(() => {
                     // 大会グループごとにグループ化
-                    const grouped = new Map<number | null, { group_name: string | null; logo_blob_url: string | null; tournaments: typeof joined }>();
-                    joined.forEach(t => {
+                    const grouped = new Map<number | null, { group_name: string | null; logo_blob_url: string | null; tournaments: typeof activeJoined }>();
+                    activeJoined.forEach(t => {
                       const key = t.tournament_group_id ?? null;
                       const groupName = t.group_name ?? null;
                       const logoBlobUrl = t.logo_blob_url ?? null;
@@ -2089,7 +2119,7 @@ function TeamExpandedPanel({ team }: {
                       });
 
                       return (
-                        <div key={groupId ?? 'no-group'} className="border border-border rounded-lg p-5">
+                        <div key={groupId ?? 'no-group'} className="border border-gray-200 rounded-lg p-5">
                           <div className="text-lg font-semibold mb-3 flex items-center gap-2">
                             {logo_blob_url ? (
                               <div className="w-7 h-7 relative flex-shrink-0">
@@ -2111,18 +2141,22 @@ function TeamExpandedPanel({ team }: {
                               // 競技種別アイコンを取得
                               const sportType = sportTypes.find(s => s.sport_type_id === firstTeam.sport_type_id);
                               const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
+                              // 募集期間内かチェック
+                              const isRecruitmentOpen = firstTeam.recruitment_end_date
+                                ? new Date(firstTeam.recruitment_end_date) >= new Date()
+                                : false;
 
                               return (
-                                <div key={tournamentId} className="border border-border rounded-lg overflow-hidden bg-gradient-to-br from-background to-muted/10">
+                                <div key={tournamentId} className="border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-background to-muted/10">
                                   {/* 部門ヘッダー */}
                                   <div className="px-5 py-4">
                                     <div className="flex items-center justify-between gap-3 mb-4">
                                       <div className="flex-1 min-w-0">
-                                        <div className="text-lg font-bold truncate text-foreground flex items-center gap-2">
+                                        <div className="text-lg font-bold truncate text-gray-900 flex items-center gap-2">
                                           {sportIcon && <span className="text-lg flex-shrink-0">{sportIcon}</span>}
                                           {firstTeam.tournament_name}
                                         </div>
-                                        <div className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
+                                        <div className="text-sm text-gray-500 mt-1.5 flex items-center gap-2">
                                           {availableTournament?.event_start_date && availableTournament?.event_end_date && (
                                             <div className="flex items-center gap-1.5">
                                               <CalendarDays className="w-3.5 h-3.5" />
@@ -2144,20 +2178,22 @@ function TeamExpandedPanel({ team }: {
                                         >
                                           公開画面を見る
                                         </Button>
-                                        <Button
-                                          asChild
-                                          size="sm"
-                                          variant="outline"
-                                          className="border-blue-400 text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-300 dark:hover:bg-blue-950/30"
-                                        >
-                                          <Link href={`/my/tournaments/${tournamentId}/apply?mode=new`}>追加で申込</Link>
-                                        </Button>
+                                        {isRecruitmentOpen && (
+                                          <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                            className="border-blue-400 text-blue-700 hover:bg-blue-50"
+                                          >
+                                            <Link href={`/my/tournaments/${tournamentId}/apply?mode=new`}>追加で申込</Link>
+                                          </Button>
+                                        )}
                                       </div>
                                     </div>
 
                                     {/* 参加チーム一覧 */}
                                     <div className="space-y-1">
-                                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <Users className="w-3.5 h-3.5" />
                                         参加チーム {teams.length > 1 && `(${teams.length})`}
                                       </div>
@@ -2168,7 +2204,7 @@ function TeamExpandedPanel({ team }: {
                                           const isWithdrawalRejected = t.withdrawal_status === 'withdrawal_rejected';
 
                                           return (
-                                            <div key={t.tournament_team_id} className="pl-5 py-2 rounded-md hover:bg-muted/30 transition-colors group">
+                                            <div key={t.tournament_team_id} className="pl-5 py-2 rounded-md hover:bg-gray-50/30 transition-colors group">
                                               <div className="flex items-center gap-2">
                                                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                                   isWithdrawalApproved ? 'bg-gray-400' :
@@ -2176,16 +2212,16 @@ function TeamExpandedPanel({ team }: {
                                                   isWithdrawalRejected ? 'bg-red-500' :
                                                   'bg-green-500'
                                                 }`} />
-                                                <div className="font-medium text-base text-foreground flex-1 truncate">
+                                                <div className="font-medium text-base text-gray-900 flex-1 truncate">
                                                   {t.tournament_team_name}
                                                 </div>
                                                 {t.assigned_block && (
-                                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
+                                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
                                                     ブロック {t.assigned_block}
                                                   </span>
                                                 )}
                                                 {isWithdrawalRejected && (
-                                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0">
+                                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 flex-shrink-0">
                                                     辞退却下
                                                   </span>
                                                 )}
@@ -2193,7 +2229,7 @@ function TeamExpandedPanel({ team }: {
                                                   <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30 flex-shrink-0"
+                                                    className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400 flex-shrink-0"
                                                     asChild
                                                   >
                                                     <Link href={`/my/tournaments/${t.tournament_id}/apply?team=${teamId}&tournament_team_id=${t.tournament_team_id}`}>
@@ -2205,7 +2241,7 @@ function TeamExpandedPanel({ team }: {
                                                 <Button
                                                   size="sm"
                                                   variant="outline"
-                                                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 flex-shrink-0"
+                                                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 flex-shrink-0"
                                                   disabled={isWithdrawalRequested || isWithdrawalApproved}
                                                   onClick={() => !isWithdrawalRequested && !isWithdrawalApproved && handleWithdrawal(t.tournament_team_id, t.tournament_team_name, t.tournament_name)}
                                                 >
@@ -2229,7 +2265,8 @@ function TeamExpandedPanel({ team }: {
                 </div>
               )}
             </div>
-          )
+            );
+          })()
         )}
 
         {/* 過去に参加した大会タブ */}
@@ -2237,7 +2274,7 @@ function TeamExpandedPanel({ team }: {
           pastTournamentsLoading ? <div className="text-center py-4"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto" /></div> : (
             <div className="space-y-4">
               {pastTournaments.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-12 text-gray-500">
                   <Archive className="h-12 w-12 mx-auto mb-4 opacity-30" />
                   <p className="text-sm">過去に参加した大会はありません</p>
                 </div>
@@ -2258,7 +2295,7 @@ function TeamExpandedPanel({ team }: {
                     });
 
                     return Array.from(grouped.entries()).map(([groupId, { group_name, logo_blob_url, tournaments: groupTournaments }]) => (
-                      <div key={groupId ?? 'no-group'} className="border border-border rounded-lg p-5">
+                      <div key={groupId ?? 'no-group'} className="border border-gray-200 rounded-lg p-5">
                         <div className="text-lg font-semibold mb-3 flex items-center gap-2">
                           {logo_blob_url ? (
                             <div className="w-7 h-7 relative flex-shrink-0">
@@ -2280,14 +2317,14 @@ function TeamExpandedPanel({ team }: {
                             const sportIcon = sportType ? getSportIcon(sportType.sport_code) : null;
 
                             return (
-                              <div key={t.tournament_id} className="border border-border rounded-lg p-4 bg-gradient-to-br from-background to-muted/10 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+                              <div key={t.tournament_id} className="border border-gray-200 rounded-lg p-4 bg-gradient-to-br from-background to-muted/10 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-base font-bold truncate text-foreground flex items-center gap-2 mb-2">
+                                    <div className="text-base font-bold truncate text-gray-900 flex items-center gap-2 mb-2">
                                       {sportIcon && <span className="text-base flex-shrink-0">{sportIcon}</span>}
                                       {t.tournament_name}
                                     </div>
-                                    <div className="text-sm text-muted-foreground space-y-1">
+                                    <div className="text-sm text-gray-500 space-y-1">
                                       {t.event_start_date && t.event_end_date && (
                                         <div className="flex items-center gap-1.5">
                                           <CalendarDays className="w-3.5 h-3.5" />
@@ -2390,13 +2427,13 @@ function TeamLinkSection({ onLinked }: { onLinked: () => void }) {
   };
 
   return (
-    <Card className="border-dashed border-2 border-orange-300 dark:border-orange-700">
+    <Card className="border-dashed border-2 border-orange-300">
       <CardContent className="p-4">
         <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
           <Target className="w-4 h-4 text-orange-600" />
           チームIDで紐付ける
         </h4>
-        <p className="text-xs text-muted-foreground mb-3">
+        <p className="text-xs text-gray-500 mb-3">
           管理者から伝えられたチームIDを入力して、チームを自分のアカウントに紐付けます。
         </p>
         <div className="flex gap-2">
@@ -2461,7 +2498,7 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="text-center py-12 text-gray-500">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
         <p className="text-sm">読み込み中...</p>
       </div>
@@ -2472,18 +2509,32 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
     return (
       <div className="max-w-md mx-auto text-center py-12 space-y-6">
         <div>
-          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-40" />
-          <p className="text-lg font-medium text-foreground mb-2">チーム情報が未登録です</p>
-          <p className="text-sm text-muted-foreground mb-6">
+          <Users className="h-12 w-12 mx-auto mb-4 text-gray-500 opacity-40" />
+          <p className="text-lg font-medium text-gray-900 mb-2">チーム情報が未登録です</p>
+          <p className="text-sm text-gray-500 mb-6">
             大会に参加するには、チームを登録するか、管理者から伝えられたチームIDで紐付けてください。
           </p>
-          <Button asChild variant="outline" className="border-2 border-blue-400 hover:border-blue-500 hover:bg-blue-50 dark:border-blue-500 dark:hover:border-blue-400 dark:hover:bg-blue-950/30">
+          <Button asChild variant="outline" className="border-2 border-blue-400 hover:border-blue-500 hover:bg-blue-50">
             <Link href="/my/teams/new">
               <UserPlus className="mr-2 h-4 w-4" />
               チームを登録する
             </Link>
           </Button>
         </div>
+
+        {/* 制約事項 */}
+        <div className="text-left bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-amber-800">ご利用上の注意</p>
+          </div>
+          <ul className="text-sm text-amber-800 space-y-1.5 list-disc list-inside">
+            <li>1つのアカウントで管理できるチームは<strong>1チームまで</strong>です</li>
+            <li>チームの担当者は<strong>最大2名まで</strong>登録できます（メール招待で追加）</li>
+            <li>チームIDで紐付けを行うと、現在登録済みのチーム情報との紐付けが解除されます。チームのデータ（選手・大会参加情報）は残りますが、再度紐付けない限りアクセスできなくなります</li>
+          </ul>
+        </div>
+
         <TeamLinkSection onLinked={fetchTeams} />
       </div>
     );
@@ -2494,37 +2545,38 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
       {teams.map((team) => {
         return (
           <Card key={team.team_id} className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 pb-3">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 pb-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg mb-1 flex items-center gap-2">
                     <span className="truncate">{team.team_name}</span>
                     {team.team_omission && (
-                      <span className="text-sm font-normal text-muted-foreground flex-shrink-0">（{team.team_omission}）</span>
+                      <span className="text-sm font-normal text-gray-500 flex-shrink-0">（{team.team_omission}）</span>
                     )}
                   </CardTitle>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-200 text-blue-800">
                       担当者
                     </span>
+                    <span className="text-xs">チームID: {team.team_id}</span>
                     <span className="text-xs">選手 {team.player_count}名</span>
                     <span className="text-xs">担当者 {team.manager_count}/2名</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 pt-1">
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white dark:border-blue-500 dark:bg-blue-950/50 dark:hover:bg-blue-950">
+                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
                     <Link href={`/my/teams/${team.team_id}/edit`}>
                       <Pencil className="w-4 h-4 mr-1" />
                       チーム情報
                     </Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-purple-400 bg-white/70 hover:bg-white dark:border-purple-500 dark:bg-purple-950/50 dark:hover:bg-purple-950">
+                  <Button asChild size="sm" variant="outline" className="text-sm border-purple-400 bg-white/70 hover:bg-white">
                     <Link href={`/my/teams/${team.team_id}/managers`}>
                       <UserCog className="w-4 h-4 mr-1" />
                       代表者
                     </Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-green-400 bg-white/70 hover:bg-white dark:border-green-500 dark:bg-green-950/50 dark:hover:bg-green-950">
+                  <Button asChild size="sm" variant="outline" className="text-sm border-green-400 bg-white/70 hover:bg-white">
                     <Link href={`/my/teams/${team.team_id}/players`}>
                       <Users className="w-4 h-4 mr-1" />
                       選手登録
@@ -2553,11 +2605,11 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
         </div>
       ) : (
         <div className="space-y-2">
-          <Card className="border-orange-300 bg-orange-50 dark:border-orange-700 dark:bg-orange-950/20">
+          <Card className="border-orange-300 bg-orange-50">
             <CardContent className="p-4">
               <div className="flex items-start gap-2 mb-3">
                 <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-orange-800 dark:text-orange-200">
+                <p className="text-sm text-orange-800">
                   別のチームIDで紐付けると、現在のチーム紐付けが解除されます。
                   チームのデータ（選手・大会参加情報）は削除されません。
                 </p>
@@ -2565,7 +2617,7 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
               <TeamLinkSection onLinked={fetchTeams} />
               <button
                 onClick={() => setShowLinkConfirm(false)}
-                className="text-xs text-muted-foreground hover:text-foreground mt-2 underline"
+                className="text-xs text-gray-500 hover:text-gray-900 mt-2 underline"
               >
                 キャンセル
               </button>

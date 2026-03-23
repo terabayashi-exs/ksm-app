@@ -512,16 +512,6 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           </p>
         </div>
         
-        <div className="space-x-2">
-          <Button variant="outline" onClick={restoreDefaults}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            デフォルトに戻す
-          </Button>
-          <Button variant="outline" onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "保存中..." : "設定を保存"}
-          </Button>
-        </div>
       </div>
 
       {/* ルール設定フォーム */}
@@ -920,16 +910,21 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
         </Card>
       )}
 
-      {/* 下部保存ボタン */}
-      <div className="flex justify-end space-x-2 mt-8 pt-6 border-t">
-        <Button variant="outline" onClick={restoreDefaults}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          デフォルトに戻す
-        </Button>
-        <Button variant="outline" onClick={handleSave} disabled={saving}>
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? "保存中..." : "設定を保存"}
-        </Button>
+      {/* 固定ボタン分のスペーサー */}
+      <div className="h-16" />
+
+      {/* 保存ボタン（画面下部固定） */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex gap-3">
+          <Button variant="outline" onClick={restoreDefaults} className="flex-shrink-0">
+            <RotateCcw className="h-4 w-4 mr-2" />
+            デフォルトに戻す
+          </Button>
+          <Button onClick={handleSave} disabled={saving} className="flex-1">
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "保存中..." : "設定を保存"}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -115,14 +115,14 @@ export default function EditTeamPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -165,7 +165,7 @@ export default function EditTeamPage() {
               <div className="space-y-2">
                 <Label htmlFor="team_omission">
                   チーム略称
-                  <span className="text-xs text-muted-foreground ml-2">（任意）</span>
+                  <span className="text-xs text-gray-500 ml-2">（任意）</span>
                 </Label>
                 <Input
                   id="team_omission"
@@ -175,7 +175,7 @@ export default function EditTeamPage() {
                   maxLength={50}
                   disabled={submitting || success}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   大会の組み合わせ表などに表示される短縮名です。
                 </p>
               </div>
@@ -183,7 +183,7 @@ export default function EditTeamPage() {
               <div className="space-y-2">
                 <Label htmlFor="prefecture_id">
                   主な活動地域
-                  <span className="text-xs text-muted-foreground ml-2">（任意）</span>
+                  <span className="text-xs text-gray-500 ml-2">（任意）</span>
                 </Label>
                 <Select
                   value={prefectureId}
@@ -196,36 +196,36 @@ export default function EditTeamPage() {
                   }}
                   disabled={submitting || success}
                 >
-                  <SelectTrigger id="prefecture_id" className="bg-background">
+                  <SelectTrigger id="prefecture_id" className="bg-white">
                     <SelectValue placeholder="都道府県を選択してください" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border border-border shadow-lg z-50">
-                    <SelectItem value="none" className="text-muted-foreground bg-card hover:bg-accent">
+                  <SelectContent className="bg-white border border-gray-200 shadow-lg z-50">
+                    <SelectItem value="none" className="text-gray-500 bg-white hover:bg-gray-100">
                       選択なし
                     </SelectItem>
                     {prefectures.map((pref) => (
-                      <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)} className="bg-card hover:bg-accent">
+                      <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)} className="bg-white hover:bg-gray-100">
                         {pref.prefecture_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   ここで地域を選択しておくと、大会を探すときにその地域の大会が自動で検索されるようになります。
                 </p>
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 p-3 bg-destructive/5 dark:bg-red-950/20 rounded-lg border border-destructive/20 dark:border-red-800">
+                <div className="flex items-start gap-2 p-3 bg-destructive/5 rounded-lg border border-destructive/20">
                   <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-destructive dark:text-red-300">{error}</p>
+                  <p className="text-sm text-destructive">{error}</p>
                 </div>
               )}
 
               {success && (
-                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
                   <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-green-800 dark:text-green-300">チーム情報を更新しました。ダッシュボードへ戻ります…</p>
+                  <p className="text-sm text-green-800">チーム情報を更新しました。ダッシュボードへ戻ります…</p>
                 </div>
               )}
 

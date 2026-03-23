@@ -13,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { User, LogOut, Menu, X, Search } from "lucide-react";
 
 export default function Header() {
@@ -46,8 +45,6 @@ export default function Header() {
 
           {/* デスクトップ: CTAボタン + ユーザーメニュー */}
           <div className="hidden sm:flex items-center space-x-3">
-            <ThemeToggle />
-
             {status === "loading" ? (
               <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : session?.user ? (
@@ -61,9 +58,9 @@ export default function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b border-border">
-                    <p className="font-medium text-foreground">{session.user.name}</p>
-                    <p className="text-sm text-muted-foreground">{session.user.email}</p>
+                  <div className="px-3 py-2 border-b border-gray-200">
+                    <p className="font-medium text-gray-900">{session.user.name}</p>
+                    <p className="text-sm text-gray-500">{session.user.email}</p>
                   </div>
 
                   <DropdownMenuItem asChild>
@@ -85,7 +82,7 @@ export default function Header() {
             ) : (
               <>
                 <Button asChild size="sm">
-                  <Link href="/tournaments" className="flex items-center">
+                  <Link href="/" className="flex items-center">
                     <Search className="mr-1.5 h-3.5 w-3.5" />
                     大会を探す
                   </Link>
@@ -101,7 +98,6 @@ export default function Header() {
 
           {/* モバイル: ハンバーガーメニューボタン */}
           <div className="flex sm:hidden items-center gap-2">
-            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
@@ -149,7 +145,7 @@ export default function Header() {
             ) : (
               <>
                 <Link
-                  href="/tournaments"
+                  href="/"
                   className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
                   onClick={() => setMobileMenuOpen(false)}
                 >

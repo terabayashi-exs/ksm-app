@@ -107,7 +107,7 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
 
   return (
     <div className="space-y-3 mb-6">
-      <h3 className="text-lg font-medium text-foreground flex items-center">
+      <h3 className="text-lg font-medium text-gray-900 flex items-center">
         <AlertTriangle className="w-5 h-5 mr-2 text-yellow-600" />
         要対応事項 ({notifications.length}件)
       </h3>
@@ -119,7 +119,7 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
               <div className="flex items-start space-x-3 flex-1">
                 {getNotificationIcon(notification.severity)}
                 <div className="flex-1">
-                  <h4 className="font-medium text-foreground">
+                  <h4 className="font-medium text-gray-900">
                     {notification.title}
                     {(() => {
                       const blockName = notification.metadata?.block_name;
@@ -133,7 +133,7 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                       return null;
                     })()}
                   </h4>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-gray-500 mt-1">
                     {notification.message}
                   </p>
                   {(() => {
@@ -156,18 +156,18 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                   })()}
                   <div className="flex items-center space-x-4 mt-3">
                     {!tournamentId && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-gray-500">
                         {notification.tournament_name}
                       </span>
                     )}
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-gray-500">
                       {new Date(notification.created_at).toLocaleString('ja-JP')}
                     </span>
                     {(() => {
                       const tieType = notification.metadata?.tie_type;
                       if (typeof tieType === 'string') {
                         return (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-gray-500">
                             ({tieType === 'first_place' ? '1位' : '2位'}同点)
                           </span>
                         );
@@ -191,7 +191,7 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                   size="sm"
                   variant="ghost"
                   onClick={() => resolveNotification(notification.notification_id)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-gray-500 hover:text-gray-900"
                   title="この通知を非表示にする"
                 >
                   <X className="w-4 h-4" />

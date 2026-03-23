@@ -179,7 +179,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
               <div className="text-sm text-green-700 mb-1">参加確定</div>
               <div className="text-3xl font-bold text-green-600">
                 {stats.confirmed}
-                <span className="text-sm font-normal text-muted-foreground ml-1">
+                <span className="text-sm font-normal text-gray-500 ml-1">
                   / {stats.max_teams}
                 </span>
               </div>
@@ -269,7 +269,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
           {filteredParticipants.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
-                <div className="text-center text-muted-foreground py-8">
+                <div className="text-center text-gray-500 py-8">
                   該当するチームがありません
                 </div>
               </CardContent>

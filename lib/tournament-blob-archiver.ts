@@ -2,7 +2,7 @@
 import { BlobStorage } from './blob-storage';
 import { db } from './db';
 import { ArchiveVersionManager } from './archive-version-manager';
-import { parseTotalScore } from './score-parser';
+import { parseScoreArray } from './score-parser';
 
 /**
  * アーカイブインデックスの型定義
@@ -302,8 +302,8 @@ export class TournamentBlobArchiver {
           tt.assigned_block,
           tt.block_position,
           tt.withdrawal_status,
-          (SELECT COUNT(*) FROM t_tournament_players tp 
-           WHERE tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id) as player_count,
+          (SELECT COUNT(*) FROM t_tournament_players tp
+           WHERE tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id) as player_count
         FROM t_tournament_teams tt
         LEFT JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ?
@@ -333,7 +333,7 @@ export class TournamentBlobArchiver {
         })
       );
 
-      // 3. 試合データ
+      // 3. 試合データ（チーム略称をJOINで取得）
       const matchesResult = await db.execute(`
         SELECT
           ml.match_id,
@@ -341,10 +341,16 @@ export class TournamentBlobArchiver {
           ml.tournament_date,
           ml.match_number,
           ml.match_code,
-          ml.team1_display_name,
-          ml.team2_display_name,
+          COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
+          COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name) as team2_display_name,
+          ml.team1_tournament_team_id,
+          ml.team2_tournament_team_id,
           ml.court_number,
+          ml.court_name,
+          ml.venue_name,
+          ml.venue_id,
           ml.start_time,
+          ml.matchday,
           mb.phase,
           mb.display_round_name,
           mb.block_name,
@@ -361,6 +367,8 @@ export class TournamentBlobArchiver {
         FROM t_matches_live ml
         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+        LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ?
         ORDER BY ml.tournament_date, ml.match_number
       `, [tournamentId]);
@@ -370,6 +378,7 @@ export class TournamentBlobArchiver {
         SELECT
           mb.block_name,
           mb.phase,
+          mb.display_round_name,
           mb.team_rankings,
           mb.remarks
         FROM t_match_blocks mb
@@ -402,17 +411,42 @@ export class TournamentBlobArchiver {
       const bracketPdfExists = await checkTournamentBracketPdfExists(tournamentId);
       const resultsPdfExists = await checkTournamentResultsPdfExists(tournamentId);
 
+      // 競技設定を取得（PK戦分離のため）
+      let sportConfig: { supports_pk?: boolean } | null = null;
+      try {
+        const { getTournamentSportCode, getSportScoreConfig } = await import('@/lib/sport-standings-calculator');
+        const sportCode = await getTournamentSportCode(tournamentId);
+        sportConfig = getSportScoreConfig(sportCode);
+      } catch {
+        console.warn('⚠️ 競技設定取得スキップ');
+      }
+
       // データをまとめて返す
-      // スコアの計算処理を追加
+      // スコアの計算処理を追加（PK分離対応）
       const processedMatches = matchesResult.rows.map(match => {
-        const calculateGoals = (scores: string | null): number => {
-          return parseTotalScore(scores);
+        const calculateDisplayScore = (scores: string | null): { goals: number; pkGoals: number | null } => {
+          const scoreArray = parseScoreArray(scores);
+          // サッカーでPK戦がある場合の特別処理
+          if (sportConfig?.supports_pk && scoreArray.length >= 5) {
+            const regularTotal = scoreArray.slice(0, 4).reduce((sum, score) => sum + score, 0);
+            const pkTotal = scoreArray.slice(4).reduce((sum, score) => sum + score, 0);
+            if (pkTotal > 0) {
+              return { goals: regularTotal, pkGoals: pkTotal };
+            }
+            return { goals: regularTotal, pkGoals: null };
+          }
+          return { goals: scoreArray.reduce((sum, s) => sum + s, 0), pkGoals: null };
         };
+
+        const team1Score = calculateDisplayScore(match.team1_scores as string | null);
+        const team2Score = calculateDisplayScore(match.team2_scores as string | null);
 
         return {
           ...match,
-          team1_goals: calculateGoals(match.team1_scores as string | null),
-          team2_goals: calculateGoals(match.team2_scores as string | null)
+          team1_goals: team1Score.goals,
+          team2_goals: team2Score.goals,
+          team1_pk_goals: team1Score.pkGoals,
+          team2_pk_goals: team2Score.pkGoals,
         };
       });
 

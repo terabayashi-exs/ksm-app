@@ -252,22 +252,22 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* 選択済み情報 */}
-      <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+      <div className="border rounded-lg p-4 bg-gray-50/30 space-y-3">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">編集中</Badge>
           <span className="text-sm font-medium">{tournament.format_name || 'フォーマット未設定'}</span>
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-muted-foreground">競技種別:</span>{" "}
+            <span className="text-gray-500">競技種別:</span>{" "}
             <span className="font-medium">{tournament.sport_name || '未設定'}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">フォーマット:</span>{" "}
+            <span className="text-gray-500">フォーマット:</span>{" "}
             <span className="font-medium">{tournament.format_name || '未設定'}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">チーム数:</span>{" "}
+            <span className="text-gray-500">チーム数:</span>{" "}
             <span className="font-medium">{tournament.team_count}チーム</span>
           </div>
         </div>
@@ -276,8 +276,8 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       {/* 所属する大会 */}
       <div className="space-y-2">
         <Label>所属する大会</Label>
-        <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-          <Building2 className="w-4 h-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
+          <Building2 className="w-4 h-4 text-gray-500" />
           <span>{tournament.group_name || '未設定'}</span>
         </div>
       </div>
@@ -297,9 +297,9 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       <div className="space-y-2">
         <Label>会場 <span className="text-destructive">*</span></Label>
         {loadingVenues ? (
-          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-muted-foreground">読み込み中...</span>
+            <span className="text-gray-500">読み込み中...</span>
           </div>
         ) : (
           <div className="space-y-2">
@@ -355,7 +355,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                         <button
                           key={venue.venue_id}
                           type="button"
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-accent ${isSelected ? 'bg-accent/50' : ''}`}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? 'bg-gray-100/50' : ''}`}
                           onClick={() => {
                             let newVenues: Venue[];
                             if (isSelected) {
@@ -369,7 +369,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
                         >
                           <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
                           <span>{venue.venue_name}</span>
-                          <span className="text-muted-foreground ml-auto text-xs">{venue.court_count}コート</span>
+                          <span className="text-gray-500 ml-auto text-xs">{venue.court_count}コート</span>
                         </button>
                       );
                     })}
@@ -382,8 +382,8 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       </div>
 
       {/* コート数（表示のみ） */}
-      <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-        <span className="text-muted-foreground">使用コート数:</span>
+      <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
+        <span className="text-gray-500">使用コート数:</span>
         <span className="font-medium">{tournament.court_count}コート</span>
       </div>
 
@@ -416,14 +416,14 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
         {(watch('tournament_dates') || []).map((_, index) => (
           <div key={index} className="flex items-end gap-3">
             <div className="flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">開催日 {index + 1}</Label>
+              <Label className="text-xs text-gray-500">開催日 {index + 1}</Label>
               <Input
                 type="date"
                 {...register(`tournament_dates.${index}.date`)}
               />
             </div>
             <div className="w-24 space-y-1">
-              <Label className="text-xs text-muted-foreground">Day番号</Label>
+              <Label className="text-xs text-gray-500">Day番号</Label>
               <Input
                 type="number"
                 min="1"
@@ -501,7 +501,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
               onCheckedChange={(checked) => setValue("show_players_public", checked)}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-gray-500">
             チェックを入れると、一般ユーザーも部門詳細画面の「参加チーム」タブで選手名・背番号を閲覧できるようになります。
           </p>
         </div>
@@ -518,10 +518,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             min={5}
             max={120}
             disabled={tournament.default_match_duration != null}
-            className={tournament.default_match_duration != null ? "bg-muted" : ""}
+            className={tournament.default_match_duration != null ? "bg-gray-50" : ""}
           />
           {tournament.default_match_duration != null && (
-            <p className="text-xs text-muted-foreground">フォーマットで設定済み</p>
+            <p className="text-xs text-gray-500">フォーマットで設定済み</p>
           )}
           {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
         </div>
@@ -534,10 +534,10 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
             min={0}
             max={60}
             disabled={tournament.default_break_duration != null}
-            className={tournament.default_break_duration != null ? "bg-muted" : ""}
+            className={tournament.default_break_duration != null ? "bg-gray-50" : ""}
           />
           {tournament.default_break_duration != null && (
-            <p className="text-xs text-muted-foreground">フォーマットで設定済み</p>
+            <p className="text-xs text-gray-500">フォーマットで設定済み</p>
           )}
           {errors.break_duration_minutes && <p className="text-sm text-destructive">{errors.break_duration_minutes.message}</p>}
         </div>
@@ -549,7 +549,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           <h3 className="text-sm font-semibold">スケジュールプレビュー</h3>
           <Badge variant="secondary" className="text-xs">個別編集可能</Badge>
         </div>
-        <p className="text-xs text-muted-foreground">各試合の時間とコート番号を個別に調整できます</p>
+        <p className="text-xs text-gray-500">各試合の時間とコート番号を個別に調整できます</p>
         <SchedulePreview
           formatId={watch('format_id') || null}
           settings={{
@@ -566,14 +566,21 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
         />
       </div>
 
-      {/* 送信ボタン */}
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />更新中...</>
-        ) : (
-          "更新する"
-        )}
-      </Button>
+      {/* 固定ボタン分のスペーサー */}
+      <div className="h-16" />
+
+      {/* 保存ボタン（画面下部固定） */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />更新中...</>
+            ) : (
+              "保存する"
+            )}
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

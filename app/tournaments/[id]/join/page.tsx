@@ -203,41 +203,41 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
     : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* パンくずリスト */}
-        <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
-          <Link href="/" className="hover:text-foreground transition-colors">
+        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">
+          <Link href="/" className="hover:text-gray-900 transition-colors">
             <Home className="h-4 w-4" />
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <Link href="/my" className="hover:text-foreground transition-colors">
+          <Link href="/my" className="hover:text-gray-900 transition-colors">
             マイダッシュボード
           </Link>
           {group && (
             <>
               <ChevronRight className="h-4 w-4" />
-              <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-foreground transition-colors">
+              <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-gray-900 transition-colors">
                 {group.group_name}
               </Link>
             </>
           )}
           <ChevronRight className="h-4 w-4" />
-          <Link href={`/public/tournaments/${tournament.tournament_id}`} className="hover:text-foreground transition-colors">
+          <Link href={`/public/tournaments/${tournament.tournament_id}`} className="hover:text-gray-900 transition-colors">
             {group ? tournament.category_name || tournament.tournament_name : tournament.tournament_name}
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground font-medium">参加申し込み</span>
+          <span className="text-gray-900 font-medium">参加申し込み</span>
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {actualEditMode
               ? (specificTeamId ? `「${existingTournamentTeamInfo?.team_name || 'チーム'}」の参加選手変更` : '参加選手の変更')
               : (isNewTeamMode ? '参加チームを追加' : '大会参加申し込み')
             }
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-gray-500">
             {group && (
               <>
                 {group.group_name} - {tournament.category_name || tournament.tournament_name}
@@ -296,18 +296,18 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">大会名:</span>
+                  <span className="font-medium text-gray-500">大会名:</span>
                   <span className="ml-2">{group.group_name}</span>
                 </div>
                 {group.organizer && (
                   <div>
-                    <span className="font-medium text-muted-foreground">主催:</span>
+                    <span className="font-medium text-gray-500">主催:</span>
                     <span className="ml-2">{group.organizer}</span>
                   </div>
                 )}
                 {(group.event_start_date || group.event_end_date) && (
                   <div className="md:col-span-2">
-                    <span className="font-medium text-muted-foreground flex items-center gap-1">
+                    <span className="font-medium text-gray-500 flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       開催期間:
                     </span>
@@ -332,21 +332,21 @@ export default async function TournamentJoinPage({ params, searchParams }: PageP
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium text-muted-foreground">{group ? '部門名:' : '大会名:'}</span>
+                <span className="font-medium text-gray-500">{group ? '部門名:' : '大会名:'}</span>
                 <span className="ml-2">{group ? (tournament.category_name || tournament.tournament_name) : tournament.tournament_name}</span>
               </div>
               <div>
-                <span className="font-medium text-muted-foreground">形式:</span>
+                <span className="font-medium text-gray-500">形式:</span>
                 <span className="ml-2">{tournament.format_name}</span>
               </div>
               {!group && tournament.venue_name && (
                 <div>
-                  <span className="font-medium text-muted-foreground">会場:</span>
+                  <span className="font-medium text-gray-500">会場:</span>
                   <span className="ml-2">{tournament.venue_name}</span>
                 </div>
               )}
               <div>
-                <span className="font-medium text-muted-foreground">募集期間:</span>
+                <span className="font-medium text-gray-500">募集期間:</span>
                 <span className="ml-2">
                   {tournament.recruitment_start_date} 〜 {tournament.recruitment_end_date}
                 </span>

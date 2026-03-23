@@ -335,10 +335,10 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                 value={formData.prefecture_id || "none"}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, prefecture_id: value === "none" ? "" : value }))}
               >
-                <SelectTrigger id="prefecture_id" className="bg-background">
+                <SelectTrigger id="prefecture_id" className="bg-white">
                   <SelectValue placeholder="都道府県を選択してください" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border border-border">
+                <SelectContent className="bg-white border border-gray-200">
                   <SelectItem value="none">選択なし</SelectItem>
                   {prefectures.map((pref) => (
                     <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)}>
@@ -347,7 +347,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 会場の所在地となる都道府県を選択してください
               </p>
             </div>
@@ -361,7 +361,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                 placeholder="例: 中央区スポーツ1-1-1"
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 市区町村以降の住所を入力してください
               </p>
             </div>

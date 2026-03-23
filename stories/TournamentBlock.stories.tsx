@@ -11,7 +11,7 @@ const meta: Meta<typeof TournamentBlock> = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <div className="p-4 bg-background">
+      <div className="p-4 bg-white">
         <Story />
       </div>
     ),

@@ -201,7 +201,7 @@ export default function ParticipantActionsModal({
 
           {/* チーム情報 */}
           {team.waitlist_position && (
-            <div className="bg-muted p-4 rounded-lg space-y-2 text-base">
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-base">
               <div><span className="font-semibold">キャンセル待ち順位:</span> {team.waitlist_position}位</div>
             </div>
           )}

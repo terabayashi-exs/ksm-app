@@ -1121,10 +1121,10 @@ export default function TournamentDrawPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <p className="mt-4 text-gray-500">読み込み中...</p>
         </div>
       </div>
     );
@@ -1147,14 +1147,14 @@ export default function TournamentDrawPage() {
 
   if (!tournament) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">大会情報が見つかりません</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-gray-500">大会情報が見つかりません</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -1216,7 +1216,7 @@ export default function TournamentDrawPage() {
         {/* 参加チーム一覧（折りたたみ可能） */}
         <Card>
           <CardHeader
-            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            className="cursor-pointer hover:bg-gray-50/50 transition-colors"
             onClick={() => setIsTeamListExpanded(!isTeamListExpanded)}
           >
             <CardTitle className="flex items-center justify-between">
@@ -1230,7 +1230,7 @@ export default function TournamentDrawPage() {
                   <span>参加チーム一覧 ({registeredTeams.length}チーム)</span>
                 </div>
                 {!isTeamListExpanded && (
-                  <span className="text-sm font-normal text-muted-foreground">
+                  <span className="text-sm font-normal text-gray-500">
                     クリックして展開
                   </span>
                 )}
@@ -1250,7 +1250,7 @@ export default function TournamentDrawPage() {
                 )}
               </div>
               {registeredTeams.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
+                <p className="text-gray-500 text-center py-8">
                   参加チームがありません
                 </p>
               ) : (
@@ -1267,17 +1267,17 @@ export default function TournamentDrawPage() {
                     return (
                       <div
                         key={team.tournament_team_id}
-                        className={`p-3 border rounded-lg hover:bg-muted ${
-                          isAssigned ? 'bg-muted border-muted opacity-75' : ''
+                        className={`p-3 border rounded-lg hover:bg-gray-50 ${
+                          isAssigned ? 'bg-gray-50 border-muted opacity-75' : ''
                         }`}
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className={`font-medium ${isAssigned ? 'text-muted-foreground' : ''}`}>
+                            <p className={`font-medium ${isAssigned ? 'text-gray-500' : ''}`}>
                               {team.team_name}
                               {isAssigned && <span className="text-xs text-green-600 ml-2">(振分け済み)</span>}
                             </p>
-                            <p className={`text-sm ${isAssigned ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
+                            <p className={`text-sm ${isAssigned ? 'text-gray-500' : 'text-gray-500'}`}>
                               {team.team_omission || ''}
                             </p>
                           </div>
@@ -1330,7 +1330,7 @@ export default function TournamentDrawPage() {
                     />
                   ) : block.teams.filter(team => team && team.team_id).length === 0 ? (
                     <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
-                      <p className="text-muted-foreground">チームが振り分けられていません</p>
+                      <p className="text-gray-500">チームが振り分けられていません</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1426,7 +1426,7 @@ export default function TournamentDrawPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full table-auto">
                     <thead>
-                      <tr className="border-b bg-muted">
+                      <tr className="border-b bg-gray-50">
                         <th className="px-4 py-3 text-left">試合</th>
                         <th className="px-4 py-3 text-left">対戦カード</th>
                         <th className="px-4 py-3 text-left">日程</th>
@@ -1480,15 +1480,15 @@ export default function TournamentDrawPage() {
 
                         // 試合行
                         rows.push(
-                          <tr key={`match-${match.match_id}`} className="border-b hover:bg-muted">
+                          <tr key={`match-${match.match_id}`} className="border-b hover:bg-gray-50">
                             <td className="px-4 py-3 font-medium">{match.match_code}</td>
                             <td className="px-4 py-3">
                               <div className="flex items-center space-x-2">
-                                <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
+                                <span className={(match.team1_name && match.team1_name !== match.team1_display_name) ? 'font-medium text-blue-900' : 'text-gray-500'}>
                                   {match.team1_name || resolveTeamSource(match.team1_source) || match.team1_display_name}
                                 </span>
-                                <span className="text-muted-foreground font-bold">vs</span>
-                                <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-muted-foreground'}>
+                                <span className="text-gray-500 font-bold">vs</span>
+                                <span className={(match.team2_name && match.team2_name !== match.team2_display_name) ? 'font-medium text-blue-900' : 'text-gray-500'}>
                                   {match.team2_name || resolveTeamSource(match.team2_source) || match.team2_display_name}
                                 </span>
                               </div>
@@ -1497,7 +1497,7 @@ export default function TournamentDrawPage() {
                               <div>
                                 <p>{new Date(match.tournament_date).toLocaleDateString('ja-JP')}</p>
                                 {match.start_time && (
-                                  <p className="text-muted-foreground">{match.start_time}</p>
+                                  <p className="text-gray-500">{match.start_time}</p>
                                 )}
                               </div>
                             </td>
@@ -1522,7 +1522,7 @@ export default function TournamentDrawPage() {
                       })}
                     </tbody>
                   </table>
-                  <div className="mt-4 text-sm text-muted-foreground text-center">
+                  <div className="mt-4 text-sm text-gray-500 text-center">
                     全 {firstPhaseMatches.length} 試合
                   </div>
                 </div>

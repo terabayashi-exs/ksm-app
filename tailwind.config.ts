@@ -8,7 +8,6 @@ const config: Config = {
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./stories/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: "class",
   theme: {
     container: {
       center: true,
@@ -57,6 +56,15 @@ const config: Config = {
           700: "hsl(var(--base-700))",
           800: "hsl(var(--base-800))",
           900: "hsl(var(--base-900))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
         },
       },
       backgroundImage: {

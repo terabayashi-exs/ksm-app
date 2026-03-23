@@ -193,13 +193,13 @@ export default function AdminTeamsPage() {
     // 管理者ダッシュボードと完全に同じ色分けとテキスト
     return (
       <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-        type === 'ongoing' 
-          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
+        type === 'ongoing'
+          ? 'bg-green-100 text-green-800'
           : type === 'recruiting'
           ? visibility === 1
-            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-yellow-100 text-yellow-800'
+          : 'bg-gray-100 text-gray-800'
       }`}>
         {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (visibility === 1 ? '募集中' : '準備中') : type === 'completed' ? '完了' : status}
       </div>
@@ -275,17 +275,17 @@ export default function AdminTeamsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <p className="mt-4 text-gray-500">読み込み中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -300,7 +300,7 @@ export default function AdminTeamsPage() {
               <Button
                 variant="outline"
                 className="text-white border-white/30 hover:bg-white/10 hover:text-white"
-                onClick={() => router.push('/admin')}
+                onClick={() => router.push('/my')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 管理者ダッシュボードに戻る
@@ -325,9 +325,9 @@ export default function AdminTeamsPage() {
                     </Badge>
                   )}
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">チームを確認したい大会を選択してください</p>
+                <p className="text-sm text-gray-500">チームを確認したい大会を選択してください</p>
                 <div className="relative mt-3">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
                   <Input
                     placeholder="大会名・会場・フォーマットで検索..."
                     value={tournamentSearchTerm}
@@ -338,12 +338,12 @@ export default function AdminTeamsPage() {
               </CardHeader>
               <CardContent className="space-y-3 flex-1 overflow-y-auto">
                 {tournaments.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-gray-500">
                     <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>大会がありません</p>
                   </div>
                 ) : filteredGroups.length === 0 && filteredUngrouped.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-gray-500">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">検索条件に一致する大会がありません</p>
                     <Button
@@ -383,7 +383,7 @@ export default function AdminTeamsPage() {
                               onClick={() => handleTournamentSelect(tournament.tournament_id)}
                             >
                               <div className="flex items-center justify-between mb-2">
-                                <p className="font-medium text-sm text-foreground">
+                                <p className="font-medium text-sm text-gray-900">
                                   {tournament.tournament_name}
                                 </p>
                                 {getStatusBadge(tournament)}
@@ -395,7 +395,7 @@ export default function AdminTeamsPage() {
                                     <span>{tournament.format_name}</span>
                                   </div>
                                 )}
-                                <div className="flex space-x-4 text-xs text-muted-foreground">
+                                <div className="flex space-x-4 text-xs text-gray-500">
                                   <div className="flex items-center">
                                     <Users className="w-3 h-3 mr-1" />
                                     {tournament.team_count}チーム
@@ -434,7 +434,7 @@ export default function AdminTeamsPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
-                              <p className="font-medium text-foreground">
+                              <p className="font-medium text-gray-900">
                                 {tournament.tournament_name}
                               </p>
                               {getStatusBadge(tournament)}
@@ -446,7 +446,7 @@ export default function AdminTeamsPage() {
                                   <span>{tournament.format_name}</span>
                                 </div>
                               )}
-                              <div className="flex space-x-4 text-xs text-muted-foreground">
+                              <div className="flex space-x-4 text-xs text-gray-500">
                                 <div className="flex items-center">
                                   <Users className="w-3 h-3 mr-1" />
                                   {tournament.team_count}チーム
@@ -492,7 +492,7 @@ export default function AdminTeamsPage() {
                 </CardTitle>
                 {selectedTournamentId && (
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
                     <Input
                       placeholder="チーム名で検索..."
                       value={searchTerm}
@@ -504,7 +504,7 @@ export default function AdminTeamsPage() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 {!selectedTournamentId ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-gray-500">
                     <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
                     <p className="text-lg font-medium mb-2">大会を選択してください</p>
                     <p className="text-sm">左側から大会を選択すると、参加チーム一覧が表示されます</p>
@@ -512,10 +512,10 @@ export default function AdminTeamsPage() {
                 ) : teamsLoading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">チーム一覧を読み込み中...</p>
+                    <p className="text-gray-500">チーム一覧を読み込み中...</p>
                   </div>
                 ) : filteredTeams.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-gray-500">
                     <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
                     <p className="text-lg font-medium mb-2">
                       {searchTerm ? '検索条件に一致するチームがありません' : 'この大会に参加チームはありません'}
@@ -538,10 +538,10 @@ export default function AdminTeamsPage() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
-                              <h4 className="font-medium text-foreground flex items-center">
+                              <h4 className="font-medium text-gray-900 flex items-center">
                                 {team.team_name}
                                 {team.team_omission && (
-                                  <span className="text-sm text-muted-foreground ml-2">
+                                  <span className="text-sm text-gray-500 ml-2">
                                     ({team.team_omission})
                                   </span>
                                 )}
@@ -562,7 +562,7 @@ export default function AdminTeamsPage() {
                         {/* 連絡先情報 */}
                         {team.contact_phone && (
                           <div className="space-y-2 mb-3">
-                            <div className="flex items-center text-sm text-muted-foreground">
+                            <div className="flex items-center text-sm text-gray-500">
                               <Phone className="w-4 h-4 mr-2" />
                               {team.contact_phone}
                             </div>
@@ -575,12 +575,12 @@ export default function AdminTeamsPage() {
                             onClick={() => toggleTeamExpansion(team.tournament_team_id)}
                             className="w-full flex items-center justify-between mb-2 hover:bg-gray-50 p-2 rounded transition-colors"
                           >
-                            <h5 className="font-medium text-sm text-foreground flex items-center">
+                            <h5 className="font-medium text-sm text-gray-900 flex items-center">
                               <UserCheck className="w-4 h-4 mr-1" />
                               登録選手 ({team.player_count}名)
                             </h5>
                             <div className="flex items-center space-x-2">
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-gray-500">
                                 {new Date(team.joined_at).toLocaleDateString('ja-JP')}参加
                               </span>
                               {expandedTeams.has(team.tournament_team_id) ? (
@@ -595,7 +595,7 @@ export default function AdminTeamsPage() {
                             team.players.length > 0 ? (
                               <div className="grid grid-cols-1 gap-2 mt-2">
                                 {team.players.map((player) => (
-                                  <div key={player.tournament_player_id} className="flex items-center text-sm text-muted-foreground pl-2">
+                                  <div key={player.tournament_player_id} className="flex items-center text-sm text-gray-500 pl-2">
                                     <span className="min-w-[2.5rem] text-gray-500">
                                       {player.jersey_number ? `#${player.jersey_number}` : '−'}
                                     </span>
@@ -604,7 +604,7 @@ export default function AdminTeamsPage() {
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-xs text-muted-foreground text-center py-2 pl-2">
+                              <p className="text-xs text-gray-500 text-center py-2 pl-2">
                                 選手が登録されていません
                               </p>
                             )

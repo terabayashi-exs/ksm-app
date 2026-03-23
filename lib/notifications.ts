@@ -157,12 +157,14 @@ export async function getTournamentNotifications(
 export async function checkFinalTournamentPromotionCompleted(tournamentId: number): Promise<boolean> {
   try {
     // トーナメント形式の試合ブロックを取得（動的フェーズ対応）
+    // match_typeはt_match_blocksではなくt_matches_liveに存在するためJOINで取得
     const tournamentBlockResult = await db.execute({
       sql: `
-        SELECT match_block_id
-        FROM t_match_blocks
-        WHERE tournament_id = ?
-          AND match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
+        SELECT DISTINCT mb.match_block_id
+        FROM t_match_blocks mb
+        INNER JOIN t_matches_live ml ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ?
+          AND ml.match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
       `,
       args: [tournamentId]
     });

@@ -139,8 +139,8 @@ export async function archiveTournamentAsJson(
         tt.assigned_block,
         tt.block_position,
         tt.withdrawal_status,
-        (SELECT COUNT(*) FROM t_tournament_players tp 
-         WHERE tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id) as player_count,
+        (SELECT COUNT(*) FROM t_tournament_players tp
+         WHERE tp.team_id = tt.team_id AND tp.tournament_id = tt.tournament_id) as player_count
       FROM t_tournament_teams tt
       LEFT JOIN m_teams t ON tt.team_id = t.team_id
       WHERE tt.tournament_id = ?

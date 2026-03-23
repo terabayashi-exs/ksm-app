@@ -195,11 +195,11 @@ export default function EditOperatorForm({
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label className="text-sm text-muted-foreground">メールアドレス</Label>
+            <Label className="text-sm text-gray-500">メールアドレス</Label>
             <div className="text-base font-medium mt-1">{operatorEmail}</div>
           </div>
           <div>
-            <Label className="text-sm text-muted-foreground">名前</Label>
+            <Label className="text-sm text-gray-500">名前</Label>
             <div className="text-base font-medium mt-1">{operatorName}</div>
           </div>
         </CardContent>
@@ -244,7 +244,7 @@ export default function EditOperatorForm({
                   <div
                     key={preset}
                     className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary/50 ${
-                      isSelected ? 'border-primary bg-primary/5' : 'border-border'
+                      isSelected ? 'border-primary bg-primary/5' : 'border-gray-200'
                     } ${useCustomPermissions ? 'opacity-50 pointer-events-none' : ''}`}
                     onClick={() => !useCustomPermissions && togglePreset(preset)}
                   >
@@ -260,7 +260,7 @@ export default function EditOperatorForm({
                           <Icon className="w-5 h-5 text-primary" />
                           <span className="font-medium text-base">{presetData.label}</span>
                         </div>
-                        <p className="text-sm text-muted-foreground">{presetData.description}</p>
+                        <p className="text-sm text-gray-500">{presetData.description}</p>
                       </div>
                     </div>
                   </div>
@@ -329,11 +329,11 @@ export default function EditOperatorForm({
 
                     let badgeClass = 'bg-primary/10 text-primary';
                     if (preparationPerms.includes(key)) {
-                      badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400';
+                      badgeClass = 'bg-blue-100 text-blue-700';
                     } else if (eventDayPerms.includes(key)) {
-                      badgeClass = 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400';
+                      badgeClass = 'bg-green-100 text-green-700';
                     } else if (managementPerms.includes(key)) {
-                      badgeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400';
+                      badgeClass = 'bg-purple-100 text-purple-700';
                     }
 
                     return (
@@ -360,9 +360,9 @@ export default function EditOperatorForm({
       )}
 
       {success && (
-        <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+        <Alert className="bg-green-50 border-green-200">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 dark:text-green-300">
+          <AlertDescription className="text-green-800">
             <strong>運営者情報を更新しました</strong>
             <div className="mt-1 text-sm">
               運営者一覧画面に戻ります...

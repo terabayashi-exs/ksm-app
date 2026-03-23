@@ -52,7 +52,7 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
             <div className="flex items-center gap-2 mb-1">
               <CardTitle className="text-xl">{team.tournament_team_name}</CardTitle>
               {team.tournament_team_omission && (
-                <span className="text-sm text-muted-foreground">({team.tournament_team_omission})</span>
+                <span className="text-sm text-gray-500">({team.tournament_team_omission})</span>
               )}
             </div>
             <CardDescription>
@@ -75,7 +75,7 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
           {team.team_members && team.team_members.length > 0 ? (
             team.team_members.map((member, index) => (
               <div key={index} className="flex items-start gap-2 text-base">
-                <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <Info className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="font-medium">担当者{index + 1}: {member.name}</span>
                   <span className="ml-3">メールアドレス: {member.email}</span>
@@ -83,14 +83,14 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
               </div>
             ))
           ) : (
-            <div className="flex items-center gap-2 text-base text-muted-foreground">
+            <div className="flex items-center gap-2 text-base text-gray-500">
               <Info className="h-5 w-5" />
               <span>担当者未登録</span>
             </div>
           )}
           {team.contact_phone && (
             <div className="flex items-center gap-2 text-base">
-              <Phone className="h-5 w-5 text-muted-foreground" />
+              <Phone className="h-5 w-5 text-gray-500" />
               <span>電話番号: {team.contact_phone}</span>
             </div>
           )}
@@ -110,7 +110,7 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
                   </div>
                 )}
                 {team.withdrawal_requested_at && (
-                  <div className="text-sm flex items-center gap-1 text-muted-foreground">
+                  <div className="text-sm flex items-center gap-1 text-gray-500">
                     <Calendar className="h-4 w-4" />
                     申請日時: {formatDate(team.withdrawal_requested_at)}
                   </div>
@@ -201,7 +201,7 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
 
         {/* 処理済み辞退情報 */}
         {(team.withdrawal_status === 'withdrawal_approved' || team.withdrawal_status === 'withdrawal_rejected') && (
-          <div className="text-base text-muted-foreground pt-2 border-t space-y-1">
+          <div className="text-base text-gray-500 pt-2 border-t space-y-1">
             <div className="font-semibold">
               {team.withdrawal_status === 'withdrawal_approved' ? '✓ 辞退承認済み' : '✕ 辞退却下済み'}
             </div>

@@ -84,7 +84,7 @@ export default function AdminTeamManagerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -111,8 +111,8 @@ export default function AdminTeamManagerPage() {
         {message && (
           <div className={`flex items-start gap-2 p-4 rounded-lg text-sm ${
             message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-300'
-              : 'bg-destructive/5 border border-destructive/20 text-destructive dark:bg-red-950/20 dark:border-red-800 dark:text-red-300'
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-destructive/5 border border-destructive/20 text-destructive'
           }`}>
             {message.type === 'success'
               ? <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -130,27 +130,27 @@ export default function AdminTeamManagerPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {managers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">担当者が登録されていません</p>
+              <p className="text-sm text-gray-500">担当者が登録されていません</p>
             ) : (
               managers.map((manager) => (
                 <div key={manager.login_user_id}
-                  className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
+                  className="flex items-center justify-between p-4 bg-gray-50/40 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-primary dark:text-blue-400" />
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-primary" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{manager.display_name}</span>
+                        <span className="font-medium text-gray-900">{manager.display_name}</span>
                       </div>
-                      <div className="text-sm text-muted-foreground">{manager.email}</div>
+                      <div className="text-sm text-gray-500">{manager.email}</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-destructive/30 text-destructive hover:border-destructive/40 hover:bg-destructive/5 dark:border-red-800 dark:text-red-400"
+                      className="border-destructive/30 text-destructive hover:border-destructive/40 hover:bg-destructive/5"
                       onClick={() => handleRemoveManager(manager.login_user_id, manager.display_name)}
                       disabled={processing === manager.login_user_id || managers.length <= 1}
                       title={managers.length <= 1 ? '最後の担当者は削除できません' : '担当者から削除'}
@@ -165,9 +165,9 @@ export default function AdminTeamManagerPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/10">
+        <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="pt-4">
-            <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+            <div className="flex items-start gap-2 text-sm text-amber-800">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div className="space-y-1">
                 <p className="font-medium">操作の注意事項</p>

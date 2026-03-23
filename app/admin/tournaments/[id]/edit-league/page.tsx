@@ -23,7 +23,7 @@ export default async function EditLeagueTournamentPage({ params }: EditLeaguePag
   const resolvedParams = await params;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -47,7 +47,7 @@ export default async function EditLeagueTournamentPage({ params }: EditLeaguePag
         <Card>
           <CardHeader>
             <CardTitle>リーグ戦 部門編集</CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-500">
               部門の基本情報を編集できます。節ごとの会場・日程は「日程・会場設定」画面から設定してください。
             </p>
           </CardHeader>

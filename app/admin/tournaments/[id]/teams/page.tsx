@@ -538,10 +538,10 @@ export default function TeamRegistrationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <p className="mt-4 text-gray-500">読み込み中...</p>
         </div>
       </div>
     );
@@ -549,14 +549,14 @@ export default function TeamRegistrationPage() {
 
   if (!tournament) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">大会情報が見つかりません</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-gray-500">大会情報が見つかりません</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -598,13 +598,13 @@ export default function TeamRegistrationPage() {
         </Card>
 
         {/* タブ切り替え */}
-        <div className="flex space-x-2 mb-6 border-b border-border">
+        <div className="grid grid-cols-2 gap-1 mb-6">
           <button
             onClick={() => setActiveTab('manual')}
-            className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors ${
+            className={`flex items-center justify-center gap-2 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'manual'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }`}
           >
             <UserPlus className="w-4 h-4" />
@@ -612,10 +612,10 @@ export default function TeamRegistrationPage() {
           </button>
           <button
             onClick={() => setActiveTab('csv')}
-            className={`flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors ${
+            className={`flex items-center justify-center gap-2 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'csv'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }`}
           >
             <Upload className="w-4 h-4" />
@@ -681,7 +681,7 @@ export default function TeamRegistrationPage() {
                       </div>
                       
                       {manualForm.players.length === 0 && (
-                        <p className="text-muted-foreground text-center py-4 border-2 border-dashed border-muted rounded-lg">
+                        <p className="text-gray-500 text-center py-4 border-2 border-dashed border-muted rounded-lg">
                           選手は後から追加することも可能です。「選手追加」ボタンで選手を登録してください。
                         </p>
                       )}
@@ -782,9 +782,9 @@ export default function TeamRegistrationPage() {
                   {/* CSVファイルアップロード */}
                   <div className="p-4 border-2 border-dashed border-muted rounded-lg">
                     <div className="text-center">
-                      <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-3" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">2. CSVファイルをアップロード</h3>
-                      <p className="text-muted-foreground mb-4">
+                      <Upload className="w-8 h-8 mx-auto text-gray-500 mb-3" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">2. CSVファイルをアップロード</h3>
+                      <p className="text-gray-500 mb-4">
                         入力済みのCSVファイルをアップロードしてください
                       </p>
                       <div className="flex flex-col items-center space-y-3">
@@ -792,7 +792,7 @@ export default function TeamRegistrationPage() {
                           type="file"
                           accept=".csv"
                           onChange={handleCsvFileSelect}
-                          className="block w-full text-sm text-muted-foreground
+                          className="block w-full text-sm text-gray-500
                                    file:mr-4 file:py-2 file:px-4
                                    file:rounded-md file:border-0
                                    file:text-sm file:font-medium
@@ -800,7 +800,7 @@ export default function TeamRegistrationPage() {
                                    hover:file:bg-blue-100"
                         />
                         {csvFile && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-gray-500">
                             選択ファイル: {csvFile.name}
                           </p>
                         )}
@@ -907,7 +907,7 @@ export default function TeamRegistrationPage() {
               </CardHeader>
               <CardContent>
                 {existingTeams.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
+                  <p className="text-gray-500 text-center py-4">
                     まだ参加申し込みされたチームはありません
                   </p>
                 ) : (
@@ -958,9 +958,9 @@ export default function TeamRegistrationPage() {
                               )}
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">略称: {team.team_omission}</p>
+                          <p className="text-sm text-gray-500">略称: {team.team_omission}</p>
                           <div className="flex items-center gap-1">
-                            <p className="text-sm text-muted-foreground">ID: <code className="text-xs bg-muted px-1 py-0.5 rounded select-all">{team.team_id}</code></p>
+                            <p className="text-sm text-gray-500">ID: <code className="text-xs bg-gray-50 px-1 py-0.5 rounded select-all">{team.team_id}</code></p>
                             <button
                               type="button"
                               onClick={() => {
@@ -972,8 +972,8 @@ export default function TeamRegistrationPage() {
                               コピー
                             </button>
                           </div>
-                          <p className="text-sm text-muted-foreground">選手数: {team.player_count}名</p>
-                          <p className="text-sm text-muted-foreground">登録日: {new Date(team.created_at).toLocaleDateString('ja-JP')}</p>
+                          <p className="text-sm text-gray-500">選手数: {team.player_count}名</p>
+                          <p className="text-sm text-gray-500">登録日: {new Date(team.created_at).toLocaleDateString('ja-JP')}</p>
                           {isAdminProxy && (
                             <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs">
                               <p className="text-yellow-800">

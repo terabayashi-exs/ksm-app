@@ -148,19 +148,19 @@ export default function OperatorTournamentList() {
           <div className="flex gap-2">
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
               tournament.status === 'planning'
-                ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                ? 'bg-gray-100 text-gray-800'
                 : tournament.status === 'recruiting'
-                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                ? 'bg-blue-100 text-blue-800'
                 : tournament.status === 'before_event'
-                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                ? 'bg-yellow-100 text-yellow-800'
                 : tournament.status === 'ongoing'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
             }`}>
               {getStatusLabel(tournament.status as TournamentStatus)}
             </div>
             {tournament.is_archived && (
-              <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">
+              <div className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                 アーカイブ済み
               </div>
             )}
@@ -197,32 +197,32 @@ export default function OperatorTournamentList() {
           {/* 参加状況詳細 */}
           {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
-              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">参加状況</div>
+              <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
               <div className="grid grid-cols-5 gap-2">
                 {/* 想定チーム数 */}
-                <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 dark:border-primary/20 text-center">
-                  <div className="text-xs text-primary dark:text-primary/80 font-medium mb-1">想定チーム数</div>
-                  <div className="text-lg font-bold text-primary dark:text-primary/80">{tournament.team_count}</div>
+                <div className="p-2 bg-primary/5 rounded-lg border border-primary/20 text-center">
+                  <div className="text-xs text-primary font-medium mb-1">想定チーム数</div>
+                  <div className="text-lg font-bold text-primary">{tournament.team_count}</div>
                 </div>
                 {/* 参加確定 */}
-                <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                  <div className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">参加確定</div>
-                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{tournament.confirmed_count || 0}</div>
+                <div className="p-2 bg-green-50 rounded-lg border border-green-200 text-center">
+                  <div className="text-xs text-green-700 font-medium mb-1">参加確定</div>
+                  <div className="text-lg font-bold text-green-700">{tournament.confirmed_count || 0}</div>
                 </div>
                 {/* キャンセル待ち */}
-                <div className="p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-center">
-                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">キャンセル待ち</div>
-                  <div className="text-lg font-bold text-orange-700 dark:text-orange-400">{tournament.waitlisted_count || 0}</div>
+                <div className="p-2 bg-orange-50 rounded-lg border border-orange-200 text-center">
+                  <div className="text-xs text-orange-700 font-medium mb-1">キャンセル待ち</div>
+                  <div className="text-lg font-bold text-orange-700">{tournament.waitlisted_count || 0}</div>
                 </div>
                 {/* 辞退申請中 */}
-                <div className="p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
-                  <div className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-1">辞退申請中</div>
-                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{tournament.withdrawal_requested_count || 0}</div>
+                <div className="p-2 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
+                  <div className="text-xs text-yellow-700 font-medium mb-1">辞退申請中</div>
+                  <div className="text-lg font-bold text-yellow-700">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
                 {/* キャンセル済 */}
-                <div className="p-2 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800 text-center">
-                  <div className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">キャンセル済</div>
-                  <div className="text-lg font-bold text-gray-700 dark:text-gray-400">{tournament.cancelled_count || 0}</div>
+                <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-xs text-gray-700 font-medium mb-1">キャンセル済</div>
+                  <div className="text-lg font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
             </div>
@@ -266,9 +266,9 @@ export default function OperatorTournamentList() {
 
   if (data.total === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="text-center py-12 text-gray-500">
         <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
-        <p className="text-lg font-medium text-foreground">アクセス可能な大会がありません</p>
+        <p className="text-lg font-medium text-gray-900">アクセス可能な大会がありません</p>
         <p className="text-sm mt-2">管理者から大会へのアクセス権を付与されるとここに表示されます</p>
       </div>
     );
@@ -294,16 +294,16 @@ export default function OperatorTournamentList() {
               onClick={() => toggleGroupCollapse(group.group_id)}
             >
               <div>
-                <h3 className="text-xl font-bold text-foreground">
+                <h3 className="text-xl font-bold text-gray-900">
                   {group.group_name || `グループ ${group.group_id}`}
                 </h3>
                 {group.group_description && (
-                  <p className="text-sm text-muted-foreground mt-1">{group.group_description}</p>
+                  <p className="text-sm text-gray-500 mt-1">{group.group_description}</p>
                 )}
                 {group.admin_name && (
-                  <p className="text-xs text-muted-foreground mt-1">主催者: {group.admin_name}</p>
+                  <p className="text-xs text-gray-500 mt-1">主催者: {group.admin_name}</p>
                 )}
-                <p className="text-sm text-muted-foreground mt-1">{tournaments.length}部門</p>
+                <p className="text-sm text-gray-500 mt-1">{tournaments.length}部門</p>
               </div>
               <div className="flex items-center gap-2">
                 {isCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
@@ -324,7 +324,7 @@ export default function OperatorTournamentList() {
       {/* グループ化されていない大会 */}
       {data.ungrouped.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-xl font-bold text-foreground">その他の大会</h3>
+          <h3 className="text-xl font-bold text-gray-900">その他の大会</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.ungrouped.map((tournament) => (
               <TournamentCard key={tournament.tournament_id} tournament={tournament} />

@@ -70,8 +70,8 @@ export default async function SportTypesPage() {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="p-2 bg-primary/10 dark:bg-blue-900 rounded-lg">
-                      <Trophy className="h-5 w-5 text-primary dark:text-blue-400" />
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Trophy className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <CardTitle className="text-xl">{String(sport.sport_name)}</CardTitle>
@@ -95,7 +95,7 @@ export default async function SportTypesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/5 dark:hover:bg-red-900/20"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/5"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -106,26 +106,26 @@ export default async function SportTypesPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">ピリオド数</span>
+                    <span className="text-gray-500">ピリオド数</span>
                     <span className="font-medium">
                       通常 {String(sport.regular_period_count)} / 最大 {String(sport.max_period_count)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">スコアタイプ</span>
+                    <span className="text-gray-500">スコアタイプ</span>
                     <div className="flex items-center space-x-1">
                       {scoreTypeIcon}
                       <span className="font-medium">{String(sport.score_unit)}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">標準試合時間</span>
+                    <span className="text-gray-500">標準試合時間</span>
                     <span className="font-medium">{String(sport.default_match_duration)}分</span>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">ピリオド構成:</p>
+                  <p className="text-xs text-gray-500 font-medium">ピリオド構成:</p>
                   <div className="flex flex-wrap gap-1">
                     {periodDefinitions.map((period: { period_id: number; period_name: string; type: string; duration?: number }) => (
                       <Badge 
@@ -140,7 +140,7 @@ export default async function SportTypesPage() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                <div className="pt-2 border-t border-gray-200 flex justify-between text-xs text-gray-500">
                   <span>{Number(sport.format_count)}個のフォーマット</span>
                   <span>{Number(sport.tournament_count)}個の大会</span>
                 </div>
@@ -153,7 +153,7 @@ export default async function SportTypesPage() {
         {sportTypes.length === 0 && (
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">競技種別が登録されていません</p>
+            <p className="text-gray-500">競技種別が登録されていません</p>
             <Button asChild className="mt-4">
               <Link href="/admin/sport-types/create">
                 <Plus className="h-4 w-4 mr-2" />

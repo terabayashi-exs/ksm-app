@@ -207,7 +207,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
 
   if (compact) {
     return (
-      <div className="border rounded-lg p-4 bg-muted/30">
+      <div className="border rounded-lg p-4 bg-gray-50/30">
         <p className="text-sm font-medium mb-3">操作権限</p>
         {content}
       </div>

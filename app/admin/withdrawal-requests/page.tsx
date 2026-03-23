@@ -32,7 +32,7 @@ export default async function WithdrawalRequestsPage() {
               </p>
             </div>
             <Button asChild variant="outline" className="text-white border-white/30 hover:bg-white/10 hover:text-white">
-              <Link href="/admin" className="flex items-center gap-2">
+              <Link href="/my" className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 ダッシュボードに戻る
               </Link>
@@ -47,7 +47,7 @@ export default async function WithdrawalRequestsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">辞退申請を読み込み中...</div>
+                <div className="text-gray-500">辞退申請を読み込み中...</div>
               </div>
             </CardContent>
           </Card>

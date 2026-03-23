@@ -60,6 +60,8 @@ export default function QRListPage() {
   const [includeCompleted, setIncludeCompleted] = useState(false);
   const [validity, setValidity] = useState<{ validFrom: string; validUntil: string } | null>(null);
   const [phaseList, setPhaseList] = useState<TournamentPhaseInfo[]>([]);
+  const [loadedQrCount, setLoadedQrCount] = useState(0);
+  const allQrLoaded = filteredMatches.length > 0 && loadedQrCount >= filteredMatches.length;
 
   const fetchMatches = useCallback(async () => {
     try {
@@ -106,6 +108,7 @@ export default function QRListPage() {
     }
 
     setFilteredMatches(filtered);
+    setLoadedQrCount(0);
   }, [matches, filterPhase, filterBlock]);
 
   useEffect(() => {
@@ -200,9 +203,9 @@ export default function QRListPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
+            <Button variant="outline" onClick={handlePrint} disabled={!allQrLoaded} className="flex items-center gap-2">
               <Printer className="h-4 w-4" />
-              印刷
+              {allQrLoaded ? '印刷' : `QR読込中... (${loadedQrCount}/${filteredMatches.length})`}
             </Button>
             <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
               ダッシュボードに戻る
@@ -351,24 +354,25 @@ export default function QRListPage() {
                       </div>
 
                       {/* QRコード + 備考欄（横並び） */}
-                      <div className="flex items-start gap-3 qr-remarks-area">
-                        <div className="shrink-0">
+                      <div className="flex items-stretch gap-3 qr-remarks-area flex-1">
+                        <div className="shrink-0 flex flex-col items-center qr-code-wrapper">
                           <Image
                             src={match.qr_image_url}
                             alt={`QRコード: ${match.match_code}`}
                             width={192}
                             height={192}
                             className="border-2 border-gray-300 rounded-md qr-code-image"
-                            loading="lazy"
+                            loading="eager"
                             unoptimized
+                            onLoad={() => setLoadedQrCount(c => c + 1)}
                           />
                           <p className="text-xs text-gray-500 mt-1 text-center no-print">
                             QRスキャンで結果入力
                           </p>
                         </div>
-                        <div className="flex-1 border border-gray-300 rounded-md p-1 remarks-box">
+                        <div className="flex-1 border border-gray-300 rounded-md p-1 remarks-box flex flex-col">
                           <div className="text-xs text-gray-400 mb-1 remarks-title">備考（得点者・警告等）</div>
-                          <div className="min-h-[60px] remarks-content"></div>
+                          <div className="flex-1 min-h-[60px] remarks-content"></div>
                         </div>
                       </div>
                     </CardContent>
@@ -517,19 +521,35 @@ export default function QRListPage() {
             font-size: 8px !important;
           }
 
+          /* CardContent を flex-1 にしてカード内の残りスペースを埋める */
+          .print-card .pt-0 {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+
           /* QRコード + 備考欄 */
           .qr-remarks-area {
             gap: 2mm !important;
+            flex: 1 !important;
+            align-items: stretch !important;
+            margin-bottom: 2mm !important;
+          }
+
+          .qr-code-wrapper {
+            justify-content: center !important;
           }
 
           .qr-code-image {
-            width: 50px !important;
-            height: 50px !important;
+            width: 30mm !important;
+            height: 30mm !important;
           }
 
           .remarks-box {
-            min-height: 50px !important;
             padding: 1mm !important;
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
 
           .remarks-title {
@@ -538,7 +558,7 @@ export default function QRListPage() {
           }
 
           .remarks-content {
-            min-height: 40px !important;
+            flex: 1 !important;
           }
 
           /* アイコンサイズ */

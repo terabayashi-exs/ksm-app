@@ -469,7 +469,7 @@ export default function TournamentFormatCreateForm() {
                 max={120}
                 placeholder="未設定"
               />
-              <p className="text-xs text-muted-foreground">部門作成時に自動入力される試合時間</p>
+              <p className="text-xs text-gray-500">部門作成時に自動入力される試合時間</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="default_break_duration">デフォルト休憩時間(分)</Label>
@@ -481,7 +481,7 @@ export default function TournamentFormatCreateForm() {
                 max={30}
                 placeholder="未設定"
               />
-              <p className="text-xs text-muted-foreground">部門作成時に自動入力される休憩時間</p>
+              <p className="text-xs text-gray-500">部門作成時に自動入力される休憩時間</p>
             </div>
           </div>
 

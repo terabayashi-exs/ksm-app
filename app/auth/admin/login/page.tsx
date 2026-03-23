@@ -65,18 +65,18 @@ function AdminLoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+            <div className="p-3 bg-primary/10 rounded-full">
               <Shield className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             管理者・運営者ログイン
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-gray-500">
             管理者・運営者専用ログインページ
           </p>
         </div>
@@ -114,7 +114,7 @@ function AdminLoginForm() {
               </div>
 
               {error && (
-                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 p-2 rounded">
                   {error}
                 </div>
               )}

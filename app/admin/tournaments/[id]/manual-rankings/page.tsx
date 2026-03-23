@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { buildPhaseFormatMap } from "@/lib/tournament-phases";
+import { calculateBlockStandings } from "@/lib/standings-calculator";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -91,13 +92,27 @@ export default async function ManualRankingsPage({ params }: PageProps) {
   });
   const blocksResult = { rows: filteredBlocks };
 
-  const blocks = blocksResult.rows.map(row => ({
-    match_block_id: row.match_block_id as number,
-    phase: row.phase as string,
-    display_round_name: row.actual_round_name as string,
-    block_name: row.block_name as string,
-    team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : [],
-    remarks: row.remarks as string | null
+  const blocks = await Promise.all(blocksResult.rows.map(async (row) => {
+    const matchBlockId = row.match_block_id as number;
+    let teamRankings = row.team_rankings ? JSON.parse(row.team_rankings as string) : [];
+
+    // team_rankingsが空の場合、試合結果から順位を計算して補完
+    if (teamRankings.length === 0) {
+      try {
+        teamRankings = await calculateBlockStandings(matchBlockId, tournamentId);
+      } catch {
+        teamRankings = [];
+      }
+    }
+
+    return {
+      match_block_id: matchBlockId,
+      phase: row.phase as string,
+      display_round_name: row.actual_round_name as string,
+      block_name: row.block_name as string,
+      team_rankings: teamRankings,
+      remarks: row.remarks as string | null
+    };
   }));
 
   // トーナメント形式のフェーズIDを動的に取得
@@ -232,7 +247,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">

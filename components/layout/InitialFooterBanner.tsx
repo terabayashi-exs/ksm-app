@@ -36,13 +36,13 @@ export default function InitialFooterBanner() {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg z-40 transition-all duration-500 ease-in-out ${
+      className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg z-40 transition-all duration-500 ease-in-out ${
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`}
     >
       <div className="container mx-auto px-4 py-3">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-          <span className="text-sm text-muted-foreground font-medium">supported by</span>
+          <span className="text-sm text-gray-500 font-medium">supported by</span>
           <a
             href="https://www.toyama-koueki.co.jp/"
             target="_blank"

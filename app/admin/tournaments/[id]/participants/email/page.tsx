@@ -89,15 +89,15 @@ export default function EmailSendPage() {
     const colorMap: Record<string, string> = {
       participationConfirmed: 'text-green-600', // 参加確定通知 - 緑
       participationNotSelected: 'text-destructive', // 参加見送り通知 - 赤
-      participationCancelled: 'text-muted-foreground', // キャンセル通知 - グレー
-      waitlist: 'text-muted-foreground', // キャンセル待ち通知 - グレー
+      participationCancelled: 'text-gray-500', // キャンセル通知 - グレー
+      waitlist: 'text-gray-500', // キャンセル待ち通知 - グレー
       withdrawal_approved: 'text-destructive', // 辞退承認通知 - 赤
       withdrawal_rejected: 'text-purple-600', // 辞退却下通知 - 紫
       scheduleAnnouncement: 'text-blue-600', // 大会日程・組合せ決定通知 - 青
-      auto_application: 'text-muted-foreground', // 申請受付（自動） - グレー
-      custom: 'text-muted-foreground', // カスタム - グレー
+      auto_application: 'text-gray-500', // 申請受付（自動） - グレー
+      custom: 'text-gray-500', // カスタム - グレー
     };
-    return colorMap[templateId] || 'text-muted-foreground';
+    return colorMap[templateId] || 'text-gray-500';
   };
 
   // 日時をフォーマットするヘルパー関数
@@ -401,8 +401,8 @@ export default function EmailSendPage() {
             </CardHeader>
             <CardContent className="pb-4">
               {/* 送信履歴の色分け説明 */}
-              <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
-                <div className="text-sm font-semibold text-foreground mb-2">📧 送信履歴の色分け</div>
+              <div className="mb-4 p-3 bg-gray-50/50 rounded-lg border">
+                <div className="text-sm font-semibold text-gray-900 mb-2">📧 送信履歴の色分け</div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-600"></span>
@@ -422,14 +422,14 @@ export default function EmailSendPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
-                    <span className="text-muted-foreground font-medium">その他</span>
+                    <span className="text-gray-500 font-medium">その他</span>
                   </div>
                 </div>
               </div>
 
               {/* メール送信履歴フィルタ */}
               <div className="mb-4 p-3 bg-white rounded-lg border space-y-3">
-                <div className="text-sm font-semibold text-foreground">🔍 メール送信履歴フィルタ</div>
+                <div className="text-sm font-semibold text-gray-900">🔍 メール送信履歴フィルタ</div>
                 <div>
                   <Select value={filterEmailSent} onValueChange={setFilterEmailSent}>
                     <SelectTrigger id="filterEmailSent" className="h-9 text-sm bg-white">
@@ -444,7 +444,7 @@ export default function EmailSendPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-gray-500">
                   表示中: {filteredTeams.length}チーム / 全{teams.length}チーム
                 </div>
               </div>
@@ -478,7 +478,7 @@ export default function EmailSendPage() {
                     <div>
                 <div className="border rounded-lg divide-y max-h-[600px] overflow-y-auto">
                   {filteredTeams.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
+                    <div className="p-8 text-center text-gray-500">
                       {teams.length === 0 ? '大会に参加しているチームがありません' : 'フィルタ条件に一致するチームがありません'}
                     </div>
                   ) : (
@@ -491,7 +491,7 @@ export default function EmailSendPage() {
                         <div
                           key={team.tournament_team_id}
                           className={`p-4 flex items-start gap-3 transition-colors ${
-                            hasNoMembers ? '' : isDisabled ? 'opacity-40' : 'hover:bg-muted/50'
+                            hasNoMembers ? '' : isDisabled ? 'opacity-40' : 'hover:bg-gray-50/50'
                           }`}
                         >
                           <Checkbox
@@ -518,18 +518,18 @@ export default function EmailSendPage() {
 
                               return (
                                 <div className="text-sm mt-1.5 flex items-start gap-1 flex-wrap">
-                                  <span className="text-muted-foreground">📧 送信履歴:</span>
+                                  <span className="text-gray-500">📧 送信履歴:</span>
                                   {filteredHistory.slice(0, 2).map((h, index) => (
                                     <span key={index}>
                                       <span className={`font-medium ${getTemplateColor(h.template_id)}`}>
                                         {getTemplateNameById(h.template_id)}
                                       </span>
-                                      <span className="text-muted-foreground">({formatDate(h.sent_at)})</span>
+                                      <span className="text-gray-500">({formatDate(h.sent_at)})</span>
                                       {index < Math.min(filteredHistory.length, 2) - 1 && ', '}
                                     </span>
                                   ))}
                                   {filteredHistory.length > 2 && (
-                                    <span className="text-muted-foreground"> 他{filteredHistory.length - 2}件</span>
+                                    <span className="text-gray-500"> 他{filteredHistory.length - 2}件</span>
                                   )}
                                 </div>
                               );
@@ -595,7 +595,7 @@ export default function EmailSendPage() {
                     rows={10}
                     className="mt-2 font-mono text-base leading-relaxed"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     チーム名を挿入したい場合は、本文中に「{'{{teamName}}'}」と記載してください
                   </p>
                 </div>
@@ -611,7 +611,7 @@ export default function EmailSendPage() {
                     placeholder="例: organizer@example.com"
                     className="mt-2 h-11 text-base"
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-xs text-gray-500 mt-2">
                     入力すると、メール末尾に「ご不明な点は大会運営者までお問い合わせください」と表示されます。
                   </p>
                 </div>

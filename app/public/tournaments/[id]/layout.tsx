@@ -1,10 +1,10 @@
 // app/public/tournaments/[id]/layout.tsx
 import { ReactNode } from 'react';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher';
+import ShareButton from '@/components/public/ShareButton';
 import TournamentTabNav from '@/components/public/TournamentTabNav';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import { ArrowLeft, Home, ChevronRight } from 'lucide-react';
@@ -37,36 +37,34 @@ export default async function TournamentDetailLayout({ children, params }: Layou
   const data = await getTournamentWithGroupInfo(tournamentId);
   const { tournament, group, sibling_divisions } = data;
 
+  // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
+  // layout のUI（タブ等）はスキップして children をそのまま返す
   if (tournament.is_archived) {
-    redirect(`/public/tournaments/${resolvedParams.id}/archived`);
+    return <>{children}</>;
   }
 
   const phaseList = getPhaseList(tournament);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* パンくずリスト */}
-        <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 no-print">
-          <Link href="/" className="hover:text-foreground flex items-center">
+        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6 no-print">
+          <Link href="/" className="hover:text-gray-900 flex items-center">
             <Home className="h-4 w-4" />
-          </Link>
-          <ChevronRight className="h-4 w-4" />
-          <Link href="/tournaments" className="hover:text-foreground">
-            大会一覧
           </Link>
           {group && (
             <>
               <ChevronRight className="h-4 w-4" />
-              <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-foreground">
+              <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-gray-900">
                 {group.group_name}
               </Link>
             </>
           )}
           <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground font-medium">{tournament.tournament_name}</span>
+          <span className="text-gray-900 font-medium">{tournament.tournament_name}</span>
         </nav>
 
         {/* ナビゲーションボタン */}
@@ -80,7 +78,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
             </Button>
           ) : (
             <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
+              <Link href="/" className="flex items-center text-gray-500 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 TOPページに戻る
               </Link>
@@ -92,15 +90,16 @@ export default async function TournamentDetailLayout({ children, params }: Layou
         <div className="mb-8 no-print">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-foreground mb-2">{tournament.tournament_name}</h1>
-              <p className="text-muted-foreground">部門の詳細情報をご覧いただけます</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{tournament.tournament_name}</h1>
+              <p className="text-gray-500">部門の詳細情報をご覧いただけます</p>
             </div>
-            <div className="sm:ml-4">
+            <div className="flex items-center gap-2 sm:ml-4">
               <DivisionSwitcher
                 currentDivisionId={tournament.tournament_id}
                 currentDivisionName={tournament.tournament_name}
                 siblingDivisions={sibling_divisions}
               />
+              <ShareButton tournamentName={tournament.tournament_name} />
             </div>
           </div>
         </div>

@@ -101,8 +101,8 @@ export default function TournamentPhaseView({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">読み込み中...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <span className="ml-2 text-gray-500">読み込み中...</span>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export default function TournamentPhaseView({
   if (matchType === 'league') {
     return (
       <div>
-        <div className="mb-4 text-sm text-muted-foreground">
+        <div className="mb-4 text-sm text-gray-500">
           {phaseName}はリーグ戦形式です。各チームの対戦結果を戦績表で表示しています。
         </div>
         <TournamentResults tournamentId={tournamentId} phase={phase} />
@@ -134,7 +134,7 @@ export default function TournamentPhaseView({
 
     return (
       <div className="space-y-6">
-        <div className="mb-4 text-sm text-muted-foreground no-print">
+        <div className="mb-4 text-sm text-gray-500 no-print">
           {phaseName}はトーナメント形式です。トーナメント表で試合の進行状況を表示しています。
         </div>
 
@@ -142,7 +142,7 @@ export default function TournamentPhaseView({
         <div className="text-center no-print">
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-            <h2 className="text-2xl font-bold text-foreground">
+            <h2 className="text-2xl font-bold text-gray-900">
               {phaseName}トーナメント
             </h2>
             <Button

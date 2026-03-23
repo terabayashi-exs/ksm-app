@@ -223,7 +223,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
               画像を選択
             </Button>
             {imageFile && (
-              <span className="ml-2 text-sm text-muted-foreground">{imageFile.name}</span>
+              <span className="ml-2 text-sm text-gray-500">{imageFile.name}</span>
             )}
           </div>
 
@@ -237,7 +237,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
                   className="object-contain"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 バナー作成時に自動的にアップロードされます
               </p>
             </div>
@@ -271,7 +271,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
               onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
               placeholder="https://example.com"
             />
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               バナークリック時に遷移するURLを入力してください
             </p>
           </div>
@@ -349,7 +349,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
                 </SelectContent>
               </Select>
               {recommendedSizeText && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-gray-500 mt-1">
                   推奨サイズ: {recommendedSizeText}
                 </p>
               )}
@@ -394,7 +394,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
                 value={formData.display_order}
                 onChange={(e) => setFormData({ ...formData, display_order: e.target.value })}
               />
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 数値が小さいほど先に表示されます
               </p>
             </div>

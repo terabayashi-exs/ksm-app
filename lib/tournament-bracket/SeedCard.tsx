@@ -12,7 +12,7 @@ interface SeedCardProps {
 export function SeedCard({ teamName, className = "" }: SeedCardProps) {
   return (
     <div
-      className={`relative bg-card border border-emerald-500 rounded-lg p-3 shadow-sm ${className}`}
+      className={`relative bg-white border border-emerald-500 rounded-lg p-3 shadow-sm ${className}`}
     >
       {/* シードラベル */}
       <div className="absolute -top-2 left-3 border border-emerald-500 bg-emerald-500 px-2 py-1 rounded-full text-xs font-medium text-white">

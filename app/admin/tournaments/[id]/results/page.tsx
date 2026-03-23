@@ -90,7 +90,7 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,48 +107,48 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin">
+            <Link href="/my">
               <ArrowLeft className="h-4 w-4 mr-1" />
               ダッシュボードに戻る
             </Link>
           </Button>
         </div>
-        <div className="bg-card rounded-lg shadow p-8 text-center">
-          <Trophy className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <Trophy className="w-16 h-16 mx-auto text-gray-500 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
             結果入力画面
           </h2>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-gray-500 mb-6">
             この画面では試合結果の入力・編集・確定を行います。<br />
             現在実装中です。
           </p>
           
           {/* 大会情報表示 */}
-          <div className="bg-muted rounded-lg p-6 mt-8">
-            <h3 className="text-lg font-semibold text-foreground mb-4">大会情報</h3>
+          <div className="bg-gray-50 rounded-lg p-6 mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">大会情報</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
               <div>
-                <span className="text-sm font-medium text-muted-foreground">大会名:</span>
-                <p className="text-foreground">{tournament.tournament_name}</p>
+                <span className="text-sm font-medium text-gray-500">大会名:</span>
+                <p className="text-gray-900">{tournament.tournament_name}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-muted-foreground">フォーマット:</span>
-                <p className="text-foreground">{tournament.format_name}</p>
+                <span className="text-sm font-medium text-gray-500">フォーマット:</span>
+                <p className="text-gray-900">{tournament.format_name}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-muted-foreground">会場:</span>
-                <p className="text-foreground">{tournament.venue_name}</p>
+                <span className="text-sm font-medium text-gray-500">会場:</span>
+                <p className="text-gray-900">{tournament.venue_name}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-muted-foreground">参加チーム数:</span>
-                <p className="text-foreground">{tournament.team_count}チーム</p>
+                <span className="text-sm font-medium text-gray-500">参加チーム数:</span>
+                <p className="text-gray-900">{tournament.team_count}チーム</p>
               </div>
             </div>
           </div>
 
           <div className="mt-8">
             <Button variant="outline" asChild>
-              <Link href="/admin">
+              <Link href="/my">
                 ダッシュボードに戻る
               </Link>
             </Button>

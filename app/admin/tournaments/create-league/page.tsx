@@ -14,7 +14,7 @@ export default async function CreateLeagueTournamentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -40,7 +40,7 @@ export default async function CreateLeagueTournamentPage() {
             <CardTitle className="flex items-center space-x-2">
               <span>リーグ戦 部門作成</span>
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-500">
               リーグ戦の基本情報を入力してください。節ごとの会場・日程は作成後に設定できます。
             </p>
           </CardHeader>

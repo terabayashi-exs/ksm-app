@@ -5,18 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { put, del } from '@vercel/blob';
-
-// 環境に応じたトークンを選択
-const BLOB_TOKEN = process.env.NODE_ENV === 'production' 
-  ? process.env.PROD_BLOB_READ_WRITE_TOKEN 
-  : process.env.DEV_BLOB_READ_WRITE_TOKEN;
-
-console.log('Blob Storage Configuration:', {
-  NODE_ENV: process.env.NODE_ENV,
-  hasDevToken: !!process.env.DEV_BLOB_READ_WRITE_TOKEN,
-  hasProdToken: !!process.env.PROD_BLOB_READ_WRITE_TOKEN,
-  selectedToken: BLOB_TOKEN ? BLOB_TOKEN.substring(0, 20) + '...' : 'undefined'
-});
+import { getBlobToken } from '@/lib/blob-config';
 
 // ロゴアップロード（POST）
 export async function POST(request: NextRequest) {
@@ -76,7 +65,7 @@ export async function POST(request: NextRequest) {
     // 既存のロゴがあれば削除
     if (existingLogo.rows.length > 0 && existingLogo.rows[0].logo_blob_url) {
       try {
-        await del(existingLogo.rows[0].logo_blob_url as string, { token: BLOB_TOKEN });
+        await del(existingLogo.rows[0].logo_blob_url as string, { token: getBlobToken() });
         console.log('既存ロゴファイルを削除しました:', existingLogo.rows[0].logo_blob_url);
       } catch (error) {
         console.warn('既存ロゴファイルの削除に失敗しました:', error);
@@ -94,7 +83,7 @@ export async function POST(request: NextRequest) {
     const blob = await put(filepath, file, {
       access: 'public',
       contentType: file.type,
-      token: BLOB_TOKEN,
+      token: getBlobToken(),
     });
 
     console.log('Vercel Blobアップロード成功:', {
@@ -241,7 +230,7 @@ export async function DELETE() {
 
     // Vercel Blobからファイル削除
     try {
-      await del(logoData.logo_blob_url as string, { token: BLOB_TOKEN });
+      await del(logoData.logo_blob_url as string, { token: getBlobToken() });
       console.log('Vercel Blobからファイルを削除しました:', logoData.logo_blob_url);
     } catch (error) {
       console.warn('Vercel Blobファイル削除に失敗しました:', error);

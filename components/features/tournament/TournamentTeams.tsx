@@ -34,15 +34,16 @@ const getTeamStatus = (team: SimpleTournamentTeam) => {
 interface TournamentTeamsProps {
   tournamentId: number;
   initialTeamsData?: SimpleTournamentTeamsData;
+  initialCanViewPlayers?: boolean;
 }
 
-export default function TournamentTeams({ tournamentId, initialTeamsData }: TournamentTeamsProps) {
+export default function TournamentTeams({ tournamentId, initialTeamsData, initialCanViewPlayers }: TournamentTeamsProps) {
   const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(initialTeamsData || null);
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
   const [teamPlayers, setTeamPlayers] = useState<Record<number, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
   const [loading, setLoading] = useState(!initialTeamsData);
   const [error, setError] = useState<string | null>(null);
-  const [canViewPlayers, setCanViewPlayers] = useState(false);
+  const [canViewPlayers, setCanViewPlayers] = useState(initialCanViewPlayers ?? false);
 
   // 参加チームデータの取得（initialTeamsDataが提供されていない場合のみ）
   useEffect(() => {
@@ -114,7 +115,7 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
       <Card>
         <CardContent className="text-center py-12">
           <Users className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-muted-foreground">参加チーム情報を読み込み中...</p>
+          <p className="text-gray-500">参加チーム情報を読み込み中...</p>
         </CardContent>
       </Card>
     );
@@ -135,9 +136,9 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">参加チーム</h3>
-          <p className="text-muted-foreground">まだ参加チームが登録されていません。</p>
+          <Users className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">参加チーム</h3>
+          <p className="text-gray-500">まだ参加チームが登録されていません。</p>
         </CardContent>
       </Card>
     );
@@ -157,11 +158,11 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{teamsData.total_teams}</div>
-              <div className="text-sm text-muted-foreground">参加チーム数</div>
+              <div className="text-sm text-gray-500">参加チーム数</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{teamsData.total_players}</div>
-              <div className="text-sm text-muted-foreground">参加選手数</div>
+              <div className="text-sm text-gray-500">参加選手数</div>
             </div>
           </div>
         </CardContent>
@@ -190,24 +191,24 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
                   <div key={team.tournament_team_id} className="border rounded-lg">
                     {/* チーム基本情報 */}
                     <div
-                      className="p-4 cursor-pointer hover:bg-muted transition-colors"
+                      className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() => toggleTeamExpansion(team.tournament_team_id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center">
                             {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
                             ) : (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <ChevronRight className="h-4 w-4 text-gray-500" />
                             )}
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-foreground">
+                            <h3 className="text-lg font-semibold text-gray-900">
                               {team.display_name}
                             </h3>
                             {team.team_omission && team.team_omission !== team.team_name && (
-                              <p className="text-sm text-muted-foreground">({team.team_name})</p>
+                              <p className="text-sm text-gray-500">({team.team_name})</p>
                             )}
                           </div>
                         </div>
@@ -221,11 +222,11 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
 
                     {/* 展開時の詳細情報 */}
                     {isExpanded && (
-                      <div className="border-t bg-muted">
+                      <div className="border-t bg-gray-50">
                         <div className="p-4 space-y-4">
                           {/* ブロック情報 */}
                           {team.assigned_block && (
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-gray-500">
                               所属ブロック: {team.assigned_block}
                             </div>
                           )}
@@ -234,7 +235,7 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
                           {canViewPlayers ? (
                             teamPlayers[team.tournament_team_id] && teamPlayers[team.tournament_team_id].length > 0 ? (
                               <div>
-                                <h4 className="font-medium text-muted-foreground mb-3 flex items-center">
+                                <h4 className="font-medium text-gray-500 mb-3 flex items-center">
                                   <Users className="h-4 w-4 mr-1" />
                                   参加選手一覧
                                 </h4>
@@ -252,11 +253,11 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
                                           <td className="py-2 px-3">
                                             {player.jersey_number ? (
                                               <span className="flex items-center">
-                                                <Hash className="h-3 w-3 mr-1 text-muted-foreground" />
+                                                <Hash className="h-3 w-3 mr-1 text-gray-500" />
                                                 {player.jersey_number}
                                               </span>
                                             ) : (
-                                              <span className="text-muted-foreground">-</span>
+                                              <span className="text-gray-500">-</span>
                                             )}
                                           </td>
                                           <td className="py-2 px-3 font-medium">{player.player_name}</td>
@@ -267,8 +268,8 @@ export default function TournamentTeams({ tournamentId, initialTeamsData }: Tour
                                 </div>
                               </div>
                             ) : (
-                              <div className="text-center py-6 text-muted-foreground">
-                                <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                              <div className="text-center py-6 text-gray-500">
+                                <Users className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                                 <p>このチームにはまだ選手が登録されていません</p>
                               </div>
                             )

@@ -154,6 +154,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
 
         // 脱退後はマイダッシュボードのチーム管理タブに戻る
         setTimeout(() => {
+          router.refresh();
           router.push("/my?tab=team");
         }, 1500);
       } else {
@@ -184,14 +185,14 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
           <CardTitle className="text-2xl">
             チーム代表者管理
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             {teamName}{teamOmission && `（${teamOmission}）`}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {message && (
-            <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200'}`}>
+            <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
               {message.text}
             </div>
           )}
@@ -207,14 +208,14 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
                 <h3 className="text-lg font-semibold">現在の担当者</h3>
                 <div className="space-y-2">
                   {managers.map(m => (
-                    <div key={m.login_user_id} className="flex items-center justify-between gap-3 p-4 bg-muted/40 rounded-lg">
+                    <div key={m.login_user_id} className="flex items-center justify-between gap-3 p-4 bg-gray-50/40 rounded-lg">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                          <UserCog className="w-6 h-6 text-green-700 dark:text-green-400" />
+                        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <UserCog className="w-6 h-6 text-green-700" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-base font-medium truncate">{m.display_name}</div>
-                          <div className="text-sm text-muted-foreground truncate">{m.email}</div>
+                          <div className="text-sm text-gray-500 truncate">{m.email}</div>
                         </div>
                       </div>
                       <Button
@@ -222,7 +223,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
                         variant="outline"
                         onClick={() => handleLeaveTeam(m.login_user_id)}
                         disabled={leaving === m.login_user_id}
-                        className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-800 dark:text-red-400 flex-shrink-0"
+                        className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50 flex-shrink-0"
                       >
                         <LogOut className="w-4 h-4 mr-1" />
                         {leaving === m.login_user_id ? '処理中...' : '脱退'}
@@ -238,12 +239,12 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
                   <h3 className="text-lg font-semibold">招待中</h3>
                   <div className="space-y-2">
                     {invitations.map(inv => (
-                      <div key={inv.id} className="flex items-center justify-between p-4 bg-amber-50/60 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <div key={inv.id} className="flex items-center justify-between p-4 bg-amber-50/60 rounded-lg border border-amber-200">
                         <div className="flex items-center gap-3 min-w-0">
                           <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
                           <div className="min-w-0">
                             <div className="text-sm font-medium truncate">{inv.invited_email}</div>
-                            <div className="text-sm text-muted-foreground">承認待ち</div>
+                            <div className="text-sm text-gray-500">承認待ち</div>
                           </div>
                         </div>
                         <Button
@@ -251,7 +252,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
                           variant="ghost"
                           onClick={() => handleCancelInvite(inv.id)}
                           disabled={cancelling === inv.id}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
                         >
                           {cancelling === inv.id ? '処理中...' : '取消'}
                         </Button>
@@ -265,7 +266,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
               {canInvite && (
                 <div className="space-y-3 pt-4 border-t">
                   <h3 className="text-lg font-semibold">2人目の担当者を招待</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-500">
                     招待したいユーザーのメールアドレスを入力してください。招待メールが送信されます。
                   </p>
                   <div className="flex gap-2">
@@ -290,13 +291,13 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
               )}
 
               {!canInvite && managers.length < 2 && invitations.length > 0 && (
-                <p className="text-sm text-muted-foreground pt-4 border-t">
+                <p className="text-sm text-gray-500 pt-4 border-t">
                   承認待ちの招待があります。承認されるか、取り消されるまで新しい招待はできません。
                 </p>
               )}
 
               {managers.length >= 2 && (
-                <p className="text-sm text-muted-foreground pt-4 border-t">
+                <p className="text-sm text-gray-500 pt-4 border-t">
                   担当者は最大2名までです。
                 </p>
               )}

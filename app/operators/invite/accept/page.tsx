@@ -109,7 +109,7 @@ function AcceptInviteContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
@@ -128,7 +128,7 @@ function AcceptInviteContent() {
         <CardContent className="space-y-4">
           {accepted ? (
             <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 運営者として登録されました。ログインしてマイダッシュボードにアクセスしてください。
               </p>
               <Button asChild className="w-full">
@@ -137,9 +137,9 @@ function AcceptInviteContent() {
             </div>
           ) : error ? (
             <div className="space-y-4">
-              <div className="flex items-start gap-2 p-3 bg-destructive/5 dark:bg-red-950/20 rounded-lg border border-destructive/20 dark:border-red-800">
+              <div className="flex items-start gap-2 p-3 bg-destructive/5 rounded-lg border border-destructive/20">
                 <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-destructive dark:text-red-300">{error}</p>
+                <p className="text-sm text-destructive">{error}</p>
               </div>
               <Button asChild variant="outline" className="w-full">
                 <Link href="/">TOPページへ</Link>
@@ -148,24 +148,24 @@ function AcceptInviteContent() {
           ) : inviteInfo ? (
             <div className="space-y-4">
               {/* 招待情報 */}
-              <div className="p-4 bg-primary/5 dark:bg-blue-950/20 rounded-lg border border-primary/20 dark:border-blue-800 space-y-2">
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
                 <div className="text-sm">
-                  <span className="text-muted-foreground">招待者：</span>
+                  <span className="text-gray-500">招待者：</span>
                   <span className="font-medium">{inviteInfo.invitedByName}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-muted-foreground">招待先メールアドレス：</span>
+                  <span className="text-gray-500">招待先メールアドレス：</span>
                   <span className="font-medium">{inviteInfo.email}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-muted-foreground">アクセス可能な部門：</span>
+                  <span className="text-gray-500">アクセス可能な部門：</span>
                   <ul className="mt-1 ml-4 list-disc text-xs">
                     {inviteInfo.tournamentNames.map((name, index) => (
                       <li key={index}>{name}</li>
                     ))}
                   </ul>
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-gray-500">
                   有効期限: {new Date(inviteInfo.expiresAt).toLocaleString('ja-JP')}
                 </div>
               </div>
@@ -173,20 +173,20 @@ function AcceptInviteContent() {
               {/* 既存アカウントの場合 */}
               {inviteInfo.hasAccount ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <p className="text-sm text-green-800 dark:text-green-300">
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-800">
                       ✓ アカウント「{inviteInfo.displayName}」に運営者権限を付与します
                     </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500">
                     ※ 既存のアカウントに運営者ロールが追加されます。
                   </p>
                 </div>
               ) : (
                 /* 新規アカウント作成フォーム */
                 <div className="space-y-3">
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <p className="text-sm text-yellow-800">
                       ℹ アカウントを作成してください
                     </p>
                   </div>
@@ -197,9 +197,9 @@ function AcceptInviteContent() {
                       type="email"
                       value={inviteInfo.email}
                       disabled
-                      className="bg-muted cursor-not-allowed"
+                      className="bg-gray-50 cursor-not-allowed"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-gray-500">
                       ※ 招待されたメールアドレスが自動入力されています
                     </p>
                   </div>

@@ -46,15 +46,15 @@ function EmailInputForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+              <div className="p-3 bg-green-100 rounded-full">
                 <Mail className="h-12 w-12 text-green-600" />
               </div>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               メールを送信しました
             </h2>
           </div>
@@ -62,13 +62,13 @@ function EmailInputForm() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
-                <p className="text-foreground">
+                <p className="text-gray-900">
                   <strong>{email}</strong> に登録用のリンクを送信しました。
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-gray-500 text-sm">
                   メールボックスをご確認いただき、メール内のリンクをクリックして登録を完了してください。
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-gray-500 text-sm">
                   リンクの有効期限は10分です。
                 </p>
                 <div className="pt-4">
@@ -88,18 +88,18 @@ function EmailInputForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+            <div className="p-3 bg-primary/10 rounded-full">
               <Mail className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             アカウント登録申請
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-gray-500">
             メールアドレスを入力してください
           </p>
         </div>
@@ -127,13 +127,13 @@ function EmailInputForm() {
                   disabled={loading}
                   autoComplete="email"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   登録に使用するメールアドレスを入力してください
                 </p>
               </div>
 
               {error && (
-                <div className="text-destructive text-sm text-center bg-destructive/5 dark:bg-red-950/20 p-2 rounded">
+                <div className="text-destructive text-sm text-center bg-destructive/5 p-2 rounded">
                   {error}
                 </div>
               )}
@@ -144,7 +144,7 @@ function EmailInputForm() {
             </form>
 
             <div className="mt-6 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 既にアカウントをお持ちの方は{' '}
                 <Link
                   href="/auth/login"
@@ -219,10 +219,10 @@ function AccountRegisterForm({ token }: { token: string }) {
 
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">トークンを確認しています...</p>
+          <p className="text-gray-500">トークンを確認しています...</p>
         </div>
       </div>
     );
@@ -230,15 +230,15 @@ function AccountRegisterForm({ token }: { token: string }) {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8 text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+            <div className="p-3 bg-green-100 rounded-full">
               <CheckCircle className="h-12 w-12 text-green-600" />
             </div>
           </div>
-          <h2 className="text-3xl font-extrabold text-foreground">登録完了</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-3xl font-extrabold text-gray-900">登録完了</h2>
+          <p className="text-gray-500">
             アカウントの登録が完了しました。<br />
             ログインページからログインしてください。
           </p>
@@ -287,18 +287,18 @@ function AccountRegisterForm({ token }: { token: string }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 dark:bg-blue-900/30 rounded-full">
+            <div className="p-3 bg-primary/10 rounded-full">
               <UserPlus className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             アカウント登録
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-gray-500">
             表示名とパスワードを設定してください
           </p>
         </div>
@@ -321,9 +321,9 @@ function AccountRegisterForm({ token }: { token: string }) {
                   value={email}
                   readOnly
                   disabled
-                  className="bg-muted"
+                  className="bg-gray-50"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   ※ メール認証済みのアドレスです（変更不可）
                 </p>
               </div>
@@ -340,7 +340,7 @@ function AccountRegisterForm({ token }: { token: string }) {
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={isLoading}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   ダッシュボードやログイン後に表示される名前です
                 </p>
               </div>
@@ -362,7 +362,7 @@ function AccountRegisterForm({ token }: { token: string }) {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-900"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -387,7 +387,7 @@ function AccountRegisterForm({ token }: { token: string }) {
                   <button
                     type="button"
                     onClick={() => setShowPasswordConfirmation((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-900"
                     tabIndex={-1}
                   >
                     {showPasswordConfirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -396,9 +396,9 @@ function AccountRegisterForm({ token }: { token: string }) {
               </div>
 
               {error && (
-                <div className="flex items-center space-x-2 p-2 bg-destructive/5 dark:bg-red-950/20 border border-destructive/20 dark:border-red-800 rounded-md">
+                <div className="flex items-center space-x-2 p-2 bg-destructive/5 border border-destructive/20 rounded-md">
                   <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
-                  <p className="text-sm text-destructive dark:text-red-400">{error}</p>
+                  <p className="text-sm text-destructive">{error}</p>
                 </div>
               )}
 
@@ -418,7 +418,7 @@ function AccountRegisterForm({ token }: { token: string }) {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 既にアカウントをお持ちの方は{' '}
                 <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
                   こちらからログイン

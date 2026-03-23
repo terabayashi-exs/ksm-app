@@ -34,12 +34,14 @@ export async function GET(request: NextRequest) {
     const day = searchParams.get('day');
     const tournamentName = searchParams.get('tournament_name');
     const statusFilter = searchParams.get('status') as TournamentStatus | null;
+    const prefectureId = searchParams.get('prefecture_id');
+    const organizerId = searchParams.get('organizer_id');
     const limit = searchParams.get('limit');
     const offset = searchParams.get('offset');
 
     // シンプルなクエリから始める
     let query = `
-      SELECT 
+      SELECT
         t.tournament_id,
         t.tournament_name,
         t.status,
@@ -51,15 +53,21 @@ export async function GET(request: NextRequest) {
         t.team_count,
         t.visibility,
         t.created_by,
-        COALESCE(v.venue_name, '未設定') as venue_name,
+        t.venue_id as venue_id_json,
+        t.group_id,
         COALESCE(t.format_name, '未設定') as format_name,
-        a.logo_blob_url,
-        a.organization_name,
+        tg.group_name,
+        COALESCE(lu.logo_blob_url, a.logo_blob_url) as logo_blob_url,
+        COALESCE(lu.organization_name, a.organization_name) as organization_name,
+        tg.login_user_id,
+        st.sport_code,
         0 as registered_teams
         ${teamId ? ', 0 as is_joined' : ', 0 as is_joined'}
       FROM t_tournaments t
-      LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+      LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
+      LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
     `;
 
     const params: (string | number)[] = [];
@@ -69,10 +77,31 @@ export async function GET(request: NextRequest) {
     // 公開されている大会のみ（文字列値'open'をチェック）
     conditions.push("t.visibility = 'open'");
 
-    // 大会名の部分検索
+    // 大会名 OR チーム名の部分検索
     if (tournamentName) {
-      conditions.push('t.tournament_name LIKE ?');
-      params.push(`%${tournamentName}%`);
+      conditions.push(`(t.tournament_name LIKE ? OR t.tournament_id IN (
+        SELECT tt.tournament_id FROM t_tournament_teams tt
+        WHERE tt.team_name LIKE ? AND tt.participation_status != 'cancelled'
+      ))`);
+      params.push(`%${tournamentName}%`, `%${tournamentName}%`);
+    }
+
+    // 主催者フィルタ（login_user_idで絞り込み）
+    if (organizerId) {
+      conditions.push('tg.login_user_id = ?');
+      params.push(parseInt(organizerId));
+    }
+
+    // 都道府県フィルタ（会場の都道府県で絞り込み）
+    if (prefectureId) {
+      conditions.push(`t.tournament_id IN (
+        SELECT t2.tournament_id FROM t_tournaments t2
+        INNER JOIN m_venues v2 ON v2.venue_id IN (
+          SELECT value FROM JSON_EACH(t2.venue_id)
+        )
+        WHERE v2.prefecture_id = ?
+      )`);
+      params.push(parseInt(prefectureId));
     }
 
     // 日付検索の実装
@@ -152,6 +181,13 @@ export async function GET(request: NextRequest) {
       });
     }
     
+    // 競技種別アイコンマップ
+    const sportCodeToIcon: Record<string, string> = {
+      soccer: '⚽', baseball: '⚾', basketball: '🏀', volleyball: '🏐',
+      futsal: '⚽', tennis: '🎾', badminton: '🏸', handball: '🤾',
+      tabletennis: '🏓', pk: '🥅',
+    };
+
     // 結果の整形（非同期ステータス計算付き）
     const allTournaments = await Promise.all(result.rows.map(async (row) => {
       const tournamentData = {
@@ -161,14 +197,36 @@ export async function GET(request: NextRequest) {
         recruitment_end_date: row.recruitment_end_date as string | null
       };
 
-      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
       const calculatedStatus = await calculateTournamentStatus(tournamentData, Number(row.tournament_id));
-      const tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates));
+      let tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates));
+
+      // tournament_datesが空の場合、match_blocksの試合日程から期間を取得
+      if (tournamentPeriod === '未設定') {
+        try {
+          const blockDatesResult = await db.execute(`
+            SELECT DISTINCT ml.tournament_date
+            FROM t_matches_live ml
+            INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+            WHERE mb.tournament_id = ?
+            AND ml.tournament_date IS NOT NULL AND ml.tournament_date != ''
+            ORDER BY ml.tournament_date
+          `, [Number(row.tournament_id)]);
+          const blockDates = blockDatesResult.rows
+            .map(r => String(r.tournament_date))
+            .filter(Boolean)
+            .sort();
+          if (blockDates.length === 1) {
+            tournamentPeriod = blockDates[0];
+          } else if (blockDates.length > 1) {
+            tournamentPeriod = `${blockDates[0]} - ${blockDates[blockDates.length - 1]}`;
+          }
+        } catch { /* ignore */ }
+      }
 
       // tournament_datesからevent_start_dateとevent_end_dateを計算
       let eventStartDate = '';
       let eventEndDate = '';
-      
+
       if (row.tournament_dates) {
         try {
           const dates = JSON.parse(row.tournament_dates as string);
@@ -181,14 +239,36 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // 全会場名を取得
+      let venueNames = '未設定';
+      if (row.venue_id_json) {
+        try {
+          const venueIds = JSON.parse(row.venue_id_json as string);
+          if (Array.isArray(venueIds) && venueIds.length > 0) {
+            const placeholders = venueIds.map(() => '?').join(',');
+            const venueResult = await db.execute(
+              `SELECT venue_name FROM m_venues WHERE venue_id IN (${placeholders}) ORDER BY venue_id`,
+              venueIds
+            );
+            const names = venueResult.rows.map(r => String(r.venue_name)).filter(Boolean);
+            if (names.length > 0) venueNames = names.join(' / ');
+          }
+        } catch { /* ignore */ }
+      }
+
+      // 競技種別アイコン
+      const sportIcon = row.sport_code ? (sportCodeToIcon[String(row.sport_code)] || '🏆') : '🏆';
+
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
-        status: calculatedStatus, // 動的ステータスを使用
+        group_name: row.group_name ? String(row.group_name) : null,
+        status: calculatedStatus,
         format_name: row.format_name as string,
-        venue_name: row.venue_name as string,
+        venue_name: venueNames,
+        sport_icon: sportIcon,
         team_count: Number(row.team_count),
-        is_public: row.visibility === 'open', // visibility='open'の場合にtrueを返す
+        is_public: row.visibility === 'open',
         recruitment_start_date: row.recruitment_start_date as string,
         recruitment_end_date: row.recruitment_end_date as string,
         event_start_date: eventStartDate,
