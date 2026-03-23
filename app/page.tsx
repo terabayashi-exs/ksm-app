@@ -177,9 +177,10 @@ async function fetchInitialTournaments() {
         t.visibility,
         t.format_name,
         t.venue_id as venue_id_json,
+        t.group_id,
         tg.group_name,
         lu.logo_blob_url,
-        lu.organization_name,
+        lu.display_name as organizer_name,
         st.sport_code
       FROM t_tournaments t
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
@@ -256,6 +257,7 @@ async function fetchInitialTournaments() {
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
+        group_id: row.group_id ? Number(row.group_id) : null,
         group_name: row.group_name ? String(row.group_name) : null,
         status: calculatedStatus,
         format_name: String(row.format_name || '未設定'),
@@ -268,7 +270,7 @@ async function fetchInitialTournaments() {
         recruitment_start_date: String(row.recruitment_start_date || ''),
         recruitment_end_date: String(row.recruitment_end_date || ''),
         logo_blob_url: row.logo_blob_url as string | null,
-        organization_name: row.organization_name as string | null,
+        organization_name: row.organizer_name as string | null,
         is_joined: false,
       };
     }));

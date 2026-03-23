@@ -80,7 +80,7 @@ export async function GET(
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
       WHERE t.group_id = ?
         AND t.visibility = 'open'
-        AND t.public_start_date <= date('now')
+        AND date(t.public_start_date) <= date('now')
       GROUP BY t.tournament_id
       ORDER BY t.created_at DESC
     `, [groupId]);

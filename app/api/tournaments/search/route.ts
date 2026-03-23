@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         COALESCE(t.format_name, '未設定') as format_name,
         tg.group_name,
         COALESCE(lu.logo_blob_url, a.logo_blob_url) as logo_blob_url,
-        COALESCE(lu.organization_name, a.organization_name) as organization_name,
+        COALESCE(lu.display_name, a.organization_name) as organization_name,
         tg.login_user_id,
         t.sport_type_id,
         st.sport_code,
@@ -270,6 +270,7 @@ export async function GET(request: NextRequest) {
       return {
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
+        group_id: row.group_id ? Number(row.group_id) : null,
         group_name: row.group_name ? String(row.group_name) : null,
         status: calculatedStatus,
         format_name: row.format_name as string,

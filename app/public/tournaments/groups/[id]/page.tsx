@@ -10,6 +10,7 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Users, Trophy } from 'lucide-react';
+import ShareButton from '@/components/public/ShareButton';
 import {
   getStatusLabel,
   getStatusBadgeVariant,
@@ -95,7 +96,7 @@ export default function TournamentGroupPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
+        <Header hideSearchButton />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -110,7 +111,7 @@ export default function TournamentGroupPage() {
   if (error || !group) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
+        <Header hideSearchButton />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
             <p className="text-destructive">{error || '大会が見つかりません'}</p>
@@ -118,7 +119,7 @@ export default function TournamentGroupPage() {
               className="mt-4"
               asChild
             >
-              <Link href="/">大会一覧に戻る</Link>
+              <Link href="/">TOPページに戻る</Link>
             </Button>
           </div>
         </div>
@@ -129,7 +130,7 @@ export default function TournamentGroupPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <Header hideSearchButton />
 
       {/* ページヘッダー */}
       <div className="bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm border-b">
@@ -139,11 +140,14 @@ export default function TournamentGroupPage() {
               <Button variant="outline" asChild>
                 <Link href="/" className="flex items-center">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  大会一覧に戻る
+                  TOPページに戻る
                 </Link>
               </Button>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{group.group_name}</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">{group.group_name}</h1>
+              <ShareButton tournamentName={group.group_name} />
+            </div>
             {group.organizer && (
               <p className="text-sm text-gray-500">
                 主催: {group.organizer}
@@ -246,11 +250,11 @@ export default function TournamentGroupPage() {
                         <CardContent className="p-4">
                           <div className="space-y-3">
                             {/* 部門名とステータス */}
-                            <div className="flex items-start justify-between">
-                              <h3 className="font-bold text-lg text-gray-900">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-bold text-lg text-gray-900 min-w-0">
                                 {division.tournament_name}
                               </h3>
-                              <Badge variant={getStatusBadgeVariant(division.status)}>
+                              <Badge variant={getStatusBadgeVariant(division.status)} className="shrink-0 whitespace-nowrap">
                                 {getStatusLabel(division.status)}
                               </Badge>
                             </div>
@@ -269,15 +273,8 @@ export default function TournamentGroupPage() {
                             )}
 
                             {/* チーム数 */}
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-500">
-                                {division.registered_teams}/{division.team_count}チーム
-                              </span>
-                              <Button size="sm" variant="outline" asChild>
-                                <Link href={`/public/tournaments/${division.tournament_id}`}>
-                                  詳細を見る
-                                </Link>
-                              </Button>
+                            <div className="text-sm text-gray-500">
+                              {division.registered_teams}/{division.team_count}チーム
                             </div>
 
                             {/* 大会期間（大会と異なる場合のみ表示） */}

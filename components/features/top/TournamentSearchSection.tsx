@@ -33,6 +33,7 @@ interface Organizer {
 interface SearchTournament {
   tournament_id: number;
   tournament_name: string;
+  group_id?: number | null;
   group_name?: string | null;
   status: TournamentStatus;
   format_name: string;
@@ -48,6 +49,18 @@ interface SearchTournament {
   logo_blob_url: string | null;
   organization_name: string | null;
   is_joined: boolean;
+}
+
+// 大会（グループ）単位の表示用
+interface GroupedTournament {
+  group_id: number;
+  group_name: string;
+  sport_icon: string;
+  status: TournamentStatus;
+  tournament_period: string;
+  venue_name: string;
+  logo_blob_url: string | null;
+  organization_name: string | null;
 }
 
 interface TournamentSearchSectionProps {
@@ -172,9 +185,29 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
     setTournaments(initialTournaments);
   };
 
-  // organization_name別にグループ化
-  const grouped = new Map<string, { logo_blob_url: string | null; tournaments: SearchTournament[] }>();
+  // 部門を大会（グループ）単位に集約
+  const groupMap = new Map<number, GroupedTournament>();
   tournaments.forEach(t => {
+    const gid = t.group_id;
+    if (!gid) return;
+    if (!groupMap.has(gid)) {
+      groupMap.set(gid, {
+        group_id: gid,
+        group_name: t.group_name || t.tournament_name,
+        sport_icon: t.sport_icon || '🏆',
+        status: t.status,
+        tournament_period: t.tournament_period,
+        venue_name: t.venue_name,
+        logo_blob_url: t.logo_blob_url,
+        organization_name: t.organization_name,
+      });
+    }
+  });
+  const groupedTournaments = Array.from(groupMap.values());
+
+  // organization_name別にグループ化
+  const grouped = new Map<string, { logo_blob_url: string | null; tournaments: GroupedTournament[] }>();
+  groupedTournaments.forEach(t => {
     const key = t.organization_name || '大会';
     if (!grouped.has(key)) {
       grouped.set(key, { logo_blob_url: t.logo_blob_url, tournaments: [] });
@@ -312,7 +345,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
 
         {hasSearched && searchTerm && !loading && (
           <p className="text-sm text-gray-500 mb-4">
-            「{searchTerm}」の検索結果: <span className="font-medium text-gray-900">{tournaments.length}件</span>
+            「{searchTerm}」の検索結果: <span className="font-medium text-gray-900">{groupedTournaments.length}件</span>
           </p>
         )}
 
@@ -322,7 +355,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
             <p className="text-sm text-gray-500">大会を検索中...</p>
           </div>
-        ) : tournaments.length === 0 ? (
+        ) : groupedTournaments.length === 0 ? (
           /* 空状態 */
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -363,8 +396,8 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
                 <div className="space-y-3">
                   {orgTournaments.map(t => (
                     <Link
-                      key={t.tournament_id}
-                      href={`/public/tournaments/${t.tournament_id}`}
+                      key={t.group_id}
+                      href={`/public/tournaments/groups/${t.group_id}`}
                       className="block"
                     >
                       <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
@@ -374,7 +407,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
                               <span className="text-lg flex-shrink-0">{t.sport_icon}</span>
                             )}
                             <span className="text-base font-semibold text-gray-900 truncate">
-                              {t.group_name ? `${t.group_name} / ${t.tournament_name}` : t.tournament_name}
+                              {t.group_name}
                             </span>
                             <Badge variant={getStatusBadgeVariant(t.status)} className="flex-shrink-0">
                               {getStatusLabel(t.status)}

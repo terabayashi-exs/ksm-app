@@ -41,7 +41,7 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
       ${teamId ? 'LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?' : ''}
       WHERE t.visibility = 'open'
-        AND t.public_start_date <= date('now')
+        AND date(t.public_start_date) <= date('now')
       ORDER BY t.group_order, t.created_at DESC
       LIMIT 10
     `;
@@ -131,7 +131,7 @@ export async function getTournamentStats() {
         recruitment_end_date,
         tournament_dates
       FROM t_tournaments 
-      WHERE visibility = 'open' AND public_start_date <= date('now')
+      WHERE visibility = 'open' AND date(public_start_date) <= date('now')
     `);
 
     const tournaments = tournamentsResult.rows;
