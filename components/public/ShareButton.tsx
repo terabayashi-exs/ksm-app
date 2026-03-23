@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Share2, Copy, Check } from 'lucide-react';
+import Image from 'next/image';
+import { Share2, Copy, Check, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,6 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 // Brand icons (lucide-react doesn't include brand icons)
 function XIcon({ className }: { className?: string }) {
@@ -45,6 +52,8 @@ interface ShareButtonProps {
 export default function ShareButton({ tournamentName }: ShareButtonProps) {
   const pathname = usePathname();
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
 
   function getFullUrl() {
     return `${window.location.origin}${pathname}`;
@@ -81,6 +90,13 @@ export default function ShareButton({ tournamentName }: ShareButtonProps) {
     );
   }
 
+  function handleShowQR() {
+    const url = getFullUrl();
+    setQrUrl(url);
+    // DropdownMenuが完全に閉じてからDialogを開く
+    setTimeout(() => setQrOpen(true), 100);
+  }
+
   async function handleCopyLink() {
     const url = getFullUrl();
     try {
@@ -101,37 +117,82 @@ export default function ShareButton({ tournamentName }: ShareButtonProps) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" aria-label="シェア">
-          <Share2 className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>シェア</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleShareX}>
-          <XIcon className="h-4 w-4 mr-2" />
-          X でシェア
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleShareFacebook}>
-          <FacebookIcon className="h-4 w-4 mr-2" />
-          Facebook でシェア
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleShareLine}>
-          <LineIcon className="h-4 w-4 mr-2" />
-          LINE でシェア
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleCopyLink}>
-          {copied ? (
-            <Check className="h-4 w-4 mr-2 text-green-600" />
-          ) : (
-            <Copy className="h-4 w-4 mr-2" />
-          )}
-          リンクをコピー
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" aria-label="シェア">
+            <Share2 className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>シェア</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleShowQR}>
+            <QrCode className="h-4 w-4 mr-2" />
+            QRコードを表示
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleShareX}>
+            <XIcon className="h-4 w-4 mr-2" />
+            X でシェア
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleShareFacebook}>
+            <FacebookIcon className="h-4 w-4 mr-2" />
+            Facebook でシェア
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleShareLine}>
+            <LineIcon className="h-4 w-4 mr-2" />
+            LINE でシェア
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleCopyLink}>
+            {copied ? (
+              <Check className="h-4 w-4 mr-2 text-green-600" />
+            ) : (
+              <Copy className="h-4 w-4 mr-2" />
+            )}
+            リンクをコピー
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* QRコードダイアログ */}
+      <Dialog open={qrOpen} onOpenChange={(open) => {
+        setQrOpen(open);
+        if (!open) {
+          // Radix UIのportal競合でbodyのpointer-eventsが残る問題を回避
+          setTimeout(() => {
+            document.body.style.pointerEvents = '';
+          }, 100);
+        }
+      }}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <QrCode className="h-5 w-5 text-primary" />
+              QRコード
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-gray-500 text-center">
+              このQRコードを読み取ると、このページを開けます
+            </p>
+            {qrUrl && (
+              <Image
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}`}
+                alt="QRコード"
+                width={250}
+                height={250}
+                className="rounded-lg"
+                unoptimized
+              />
+            )}
+            <p className="text-xs text-gray-400 break-all text-center max-w-full">
+              {qrUrl}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
