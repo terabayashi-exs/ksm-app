@@ -570,23 +570,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
     return (
     <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       <div className="p-4 relative">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h4 className="font-semibold text-lg text-gray-900 flex items-center gap-2">
-              {sportIcon && <span className="text-xl">{sportIcon}</span>}
-              {tournament.tournament_name}
-            </h4>
-            <div className="flex items-center text-sm text-gray-600 mt-1">
-              <Trophy className="w-4 h-4 mr-1" />
-              <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
-            </div>
-            {tournament.organization_name && (
-              <div className="flex items-center text-xs text-gray-500 mt-1">
-                <span>主催: {tournament.organization_name}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="mb-3">
+          <h4 className="font-semibold text-base sm:text-lg text-gray-900 flex items-start gap-2">
+            {sportIcon && <span className="text-lg sm:text-xl flex-shrink-0">{sportIcon}</span>}
+            <span>{tournament.tournament_name}</span>
+          </h4>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -600,7 +589,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
               <QrCode className="w-3.5 h-3.5" />
               QR
             </button>
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+            <div className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
               tournament.status === 'planning'
                 ? 'bg-gray-100 text-gray-800'
                 : tournament.status === 'recruiting'
@@ -614,6 +603,15 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
               {getStatusLabel(tournament.status)}
             </div>
           </div>
+          <div className="flex items-center text-sm text-gray-600 mt-1">
+            <Trophy className="w-4 h-4 mr-1" />
+            <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+          </div>
+          {tournament.organization_name && (
+            <div className="flex items-center text-xs text-gray-500 mt-1">
+              <span>主催: {tournament.organization_name}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 mb-4">
@@ -629,25 +627,25 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
           {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
               <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
-              <div className="grid grid-cols-5 gap-2">
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">想定チーム数</div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">想定チーム数</div>
                   <div className="text-base font-bold text-gray-700">{tournament.team_count}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">参加確定</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">参加確定</div>
                   <div className="text-base font-bold text-gray-700">{tournament.confirmed_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">キャンセル待ち</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル待</div>
                   <div className="text-base font-bold text-gray-700">{tournament.waitlisted_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">辞退申請中</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">辞退申請中</div>
                   <div className="text-base font-bold text-gray-700">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">キャンセル済</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル済</div>
                   <div className="text-base font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
@@ -934,56 +932,52 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
         {groups.map(({ group, tournaments: divisions }) => (
           <Card key={group.group_id} className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl mb-2 flex items-center gap-2">
-                    {group.logo_blob_url ? (
-                      <div className="w-8 h-8 relative flex-shrink-0">
-                        <Image
-                          src={group.logo_blob_url}
-                          alt="組織ロゴ"
-                          fill
-                          className="object-contain rounded"
-                          sizes="32px"
-                        />
-                      </div>
-                    ) : null}
-                    {group.group_name}
-                  </CardTitle>
-                  {group.group_description && (
-                    <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
-                  )}
-                </div>
-                <div className="flex-shrink-0 flex gap-2 flex-wrap justify-end">
-                  <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
-                    onClick={() => {
-                      const publicUrl = `${window.location.origin}/public/tournaments/groups/${group.group_id}`;
-                      const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
-                      window.open(qrPageUrl, '_blank', 'width=500,height=700');
-                    }}
-                  >
-                    <QrCode className="w-4 h-4 mr-1" />
-                    大会QR
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
-                    <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
-                      <FileEdit className="w-4 h-4 mr-1" />
-                      大会編集
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
-                    <Link href={`/admin/operators?group_id=${group.group_id}`}>
-                      <UserCog className="w-4 h-4 mr-1" />
-                      運営者管理
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
-                    <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      部門作成
-                    </Link>
-                  </Button>
-                </div>
+              <CardTitle className="text-xl sm:text-2xl mb-2 flex items-center gap-2">
+                {group.logo_blob_url ? (
+                  <div className="w-8 h-8 relative flex-shrink-0">
+                    <Image
+                      src={group.logo_blob_url}
+                      alt="組織ロゴ"
+                      fill
+                      className="object-contain rounded"
+                      sizes="32px"
+                    />
+                  </div>
+                ) : null}
+                {group.group_name}
+              </CardTitle>
+              {group.group_description && (
+                <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
+                  onClick={() => {
+                    const publicUrl = `${window.location.origin}/public/tournaments/groups/${group.group_id}`;
+                    const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
+                    window.open(qrPageUrl, '_blank', 'width=500,height=700');
+                  }}
+                >
+                  <QrCode className="w-4 h-4 mr-1" />
+                  大会QR
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
+                    <FileEdit className="w-4 h-4 mr-1" />
+                    大会編集
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Link href={`/admin/operators?group_id=${group.group_id}`}>
+                    <UserCog className="w-4 h-4 mr-1" />
+                    運営者管理
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    部門作成
+                  </Link>
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
@@ -1151,23 +1145,12 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
     return (
     <div className="border rounded-lg overflow-hidden hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative">
       <div className="p-4 relative">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h4 className="font-semibold text-lg text-gray-900 flex items-center gap-2">
-              {sportIcon && <span className="text-xl">{sportIcon}</span>}
-              {tournament.tournament_name}
-            </h4>
-            <div className="flex items-center text-sm text-gray-600 mt-1">
-              <Trophy className="w-4 h-4 mr-1" />
-              <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
-            </div>
-            {tournament.organization_name && (
-              <div className="flex items-center text-xs text-gray-500 mt-1">
-                <span>主催: {tournament.organization_name}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="mb-3">
+          <h4 className="font-semibold text-base sm:text-lg text-gray-900 flex items-start gap-2">
+            {sportIcon && <span className="text-lg sm:text-xl flex-shrink-0">{sportIcon}</span>}
+            <span>{tournament.tournament_name}</span>
+          </h4>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1181,7 +1164,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
               <QrCode className="w-3.5 h-3.5" />
               QR
             </button>
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+            <div className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
               tournament.status === 'planning'
                 ? 'bg-gray-100 text-gray-800'
                 : tournament.status === 'recruiting'
@@ -1195,6 +1178,15 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
               {getStatusLabel(tournament.status)}
             </div>
           </div>
+          <div className="flex items-center text-sm text-gray-600 mt-1">
+            <Trophy className="w-4 h-4 mr-1" />
+            <span>{tournament.format_name || `フォーマットID: ${tournament.format_id}`}</span>
+          </div>
+          {tournament.organization_name && (
+            <div className="flex items-center text-xs text-gray-500 mt-1">
+              <span>主催: {tournament.organization_name}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 mb-4">
@@ -1210,25 +1202,25 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
           {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
               <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
-              <div className="grid grid-cols-5 gap-2">
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">想定チーム数</div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">想定チーム数</div>
                   <div className="text-base font-bold text-gray-700">{tournament.team_count}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">参加確定</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">参加確定</div>
                   <div className="text-base font-bold text-gray-700">{tournament.confirmed_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">キャンセル待ち</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル待</div>
                   <div className="text-base font-bold text-gray-700">{tournament.waitlisted_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">辞退申請中</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">辞退申請中</div>
                   <div className="text-base font-bold text-gray-700">{tournament.withdrawal_requested_count || 0}</div>
                 </div>
-                <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <div className="text-xs text-gray-700 font-medium mb-0.5">キャンセル済</div>
+                <div className="p-1 sm:p-1.5 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-700 font-medium mb-0.5 whitespace-nowrap">キャンセル済</div>
                   <div className="text-base font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
                 </div>
               </div>
@@ -1401,27 +1393,23 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
         {groups.map(({ group, tournaments: divisions }) => (
           <Card key={group.group_id} className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl mb-2 flex items-center gap-2">
-                    {group.logo_blob_url ? (
-                      <div className="w-8 h-8 relative flex-shrink-0">
-                        <Image
-                          src={group.logo_blob_url}
-                          alt="組織ロゴ"
-                          fill
-                          className="object-contain rounded"
-                          sizes="32px"
-                        />
-                      </div>
-                    ) : null}
-                    {group.group_name}
-                  </CardTitle>
-                  {group.group_description && (
-                    <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
-                  )}
-                </div>
-              </div>
+              <CardTitle className="text-xl sm:text-2xl mb-2 flex items-center gap-2">
+                {group.logo_blob_url ? (
+                  <div className="w-8 h-8 relative flex-shrink-0">
+                    <Image
+                      src={group.logo_blob_url}
+                      alt="組織ロゴ"
+                      fill
+                      className="object-contain rounded"
+                      sizes="32px"
+                    />
+                  </div>
+                ) : null}
+                {group.group_name}
+              </CardTitle>
+              {group.group_description && (
+                <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
+              )}
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-3">

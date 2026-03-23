@@ -1,9 +1,6 @@
 // app/admin/administrators/page.tsx
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import AdministratorManagement from "@/components/features/admin/AdministratorManagement";
 
 export default async function AdministratorPage() {
@@ -27,14 +24,6 @@ export default async function AdministratorPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/my">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              ダッシュボードに戻る
-            </Link>
-          </Button>
-        </div>
         <AdministratorManagement />
       </div>
     </div>

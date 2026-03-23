@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus } from 'lucide-react';
+import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface Administrator {
   admin_id: number;
@@ -262,15 +263,21 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
-      {/* 新規登録ボタン */}
-      {!isCreating && !editingAdmin && (
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
+      {/* ダッシュボードに戻る + 新規登録ボタン */}
+      <div className="flex items-center justify-between">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/my">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            ダッシュボードに戻る
+          </Link>
+        </Button>
+        {!isCreating && !editingAdmin && (
+          <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             管理者を追加
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── 新規登録フロー ── */}
       {isCreating && (
@@ -500,34 +507,32 @@ export default function AdministratorManagement() {
               {administrators.map((admin) => (
                 <div
                   key={admin.admin_id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-gray-900">{admin.admin_name}</h3>
-                      {!admin.is_active && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                          利用停止中
-                        </span>
-                      )}
-                      <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">
-                        管理者
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h3 className="font-medium text-gray-900">{admin.admin_name}</h3>
+                    {!admin.is_active && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                        利用停止中
                       </span>
-                      {admin.is_superadmin && (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded font-semibold">
-                          スーパー管理者
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
-                      <Mail className="h-4 w-4" />
-                      <span>{admin.email}</span>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      登録日: {new Date(admin.created_at).toLocaleDateString('ja-JP')}
-                    </div>
+                    )}
+                    <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">
+                      管理者
+                    </span>
+                    {admin.is_superadmin && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded font-semibold">
+                        スーパー管理者
+                      </span>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
+                    <Mail className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{admin.email}</span>
+                  </div>
+                  <div className="text-sm text-gray-500 mb-3">
+                    登録日: {new Date(admin.created_at).toLocaleDateString('ja-JP')}
+                  </div>
+                  <div className="flex gap-2 border-t border-gray-100 pt-3">
                     <Button
                       variant="outline"
                       size="sm"

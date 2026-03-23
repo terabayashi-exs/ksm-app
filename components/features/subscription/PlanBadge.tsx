@@ -26,9 +26,10 @@ interface CurrentSubscriptionInfo {
 
 interface PlanBadgeProps {
   apiUrl?: string;
+  showChangeButton?: boolean;
 }
 
-export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }: PlanBadgeProps) {
+export default function PlanBadge({ apiUrl = "/api/admin/subscription/current", showChangeButton = true }: PlanBadgeProps) {
   const router = useRouter();
   const [subscriptionInfo, setSubscriptionInfo] = useState<CurrentSubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,9 +134,11 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current" }
       </div>
 
       {/* プラン変更ボタン */}
-      <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
-        プラン変更
-      </Button>
+      {showChangeButton && (
+        <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
+          プラン変更
+        </Button>
+      )}
     </div>
   );
 }

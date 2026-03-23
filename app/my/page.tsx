@@ -79,27 +79,34 @@ export default async function MyDashboardPage() {
       {/* ヘッダー */}
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-6">
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
                 マイダッシュボード
               </h1>
               <p className="text-sm text-white/70 mt-1">
                 ようこそ、{session.user.name}さん
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col items-start sm:items-end gap-2">
               {/* 管理者ロールがある場合のみプラン表示 */}
               {(roles.includes("admin") || isSuperadmin) && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-white/70">プラン：</span>
-                  <PlanBadge apiUrl="/api/my/subscription/current" />
+                  <PlanBadge apiUrl="/api/my/subscription/current" showChangeButton={false} />
                 </div>
               )}
-              <Button variant="outline" asChild>
-                <Link href="/">TOPページ</Link>
-              </Button>
-              <SignOutButton />
+              <div className="flex items-center gap-2">
+                {(roles.includes("admin") || isSuperadmin) && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/admin/subscription/plans">プラン変更</Link>
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/">TOPページ</Link>
+                </Button>
+                <SignOutButton size="sm" />
+              </div>
             </div>
           </div>
         </div>
