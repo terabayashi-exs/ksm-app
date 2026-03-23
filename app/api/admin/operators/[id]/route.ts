@@ -99,6 +99,7 @@ export async function PUT(
     }
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
@@ -120,9 +121,9 @@ export async function PUT(
       return NextResponse.json({ error: '運営者が見つかりません' }, { status: 404 });
     }
 
-    // 所属確認（自分が作成した運営者のみ編集可能）
+    // 所属確認（自分が作成した運営者のみ編集可能、スーパー管理者は全運営者を編集可能）
     const operator = operatorResult.rows[0];
-    if (operator.created_by_login_user_id !== adminLoginUserId) {
+    if (!isSuperadmin && operator.created_by_login_user_id !== adminLoginUserId) {
       return NextResponse.json({ error: 'この運営者を編集する権限がありません' }, { status: 403 });
     }
 
@@ -173,6 +174,7 @@ export async function DELETE(
     }
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
@@ -193,9 +195,9 @@ export async function DELETE(
       return NextResponse.json({ error: '運営者が見つかりません' }, { status: 404 });
     }
 
-    // 所属確認（自分が作成した運営者のみ削除可能）
+    // 所属確認（自分が作成した運営者のみ削除可能、スーパー管理者は全運営者を削除可能）
     const operator = operatorResult.rows[0];
-    if (operator.created_by_login_user_id !== adminLoginUserId) {
+    if (!isSuperadmin && operator.created_by_login_user_id !== adminLoginUserId) {
       return NextResponse.json({ error: 'この運営者を削除する権限がありません' }, { status: 403 });
     }
 

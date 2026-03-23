@@ -18,6 +18,7 @@ export async function PUT(
     }
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
@@ -40,8 +41,8 @@ export async function PUT(
 
     const operator = operatorResult.rows[0];
 
-    // 所属確認（自分が作成した運営者のみ操作可能）
-    if (operator.created_by_login_user_id !== adminLoginUserId) {
+    // 所属確認（自分が作成した運営者のみ操作可能、スーパー管理者は全運営者を操作可能）
+    if (!isSuperadmin && operator.created_by_login_user_id !== adminLoginUserId) {
       return NextResponse.json({ error: 'この運営者を操作する権限がありません' }, { status: 403 });
     }
 

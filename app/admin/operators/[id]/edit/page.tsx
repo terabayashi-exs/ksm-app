@@ -23,7 +23,7 @@ interface PageProps {
   }>;
 }
 
-async function getOperator(operatorId: number, adminLoginUserId: number) {
+async function getOperator(operatorId: number, adminLoginUserId: number, isSuperadmin: boolean) {
   try {
     // 運営者を取得（m_login_users + m_login_user_roles）
     const operatorResult = await db.execute({
@@ -47,8 +47,8 @@ async function getOperator(operatorId: number, adminLoginUserId: number) {
 
     const operator = operatorResult.rows[0];
 
-    // 所属確認（自分が作成した運営者のみ編集可能）
-    if (operator.created_by_login_user_id !== adminLoginUserId) {
+    // 所属確認（自分が作成した運営者のみ編集可能、スーパー管理者は全運営者を編集可能）
+    if (!isSuperadmin && operator.created_by_login_user_id !== adminLoginUserId) {
       return null;
     }
 
@@ -99,6 +99,7 @@ export default async function EditOperatorPage({ params, searchParams }: PagePro
   }
 
   const adminLoginUserId = (session.user as ExtendedUser).loginUserId;
+  const isSuperadmin = !!(session.user as ExtendedUser).isSuperadmin;
   if (!adminLoginUserId) {
     redirect('/auth/signin');
   }
@@ -108,7 +109,7 @@ export default async function EditOperatorPage({ params, searchParams }: PagePro
   const operatorId = parseInt(resolvedParams.id);
   const groupId = resolvedSearchParams.group_id ? parseInt(resolvedSearchParams.group_id, 10) : undefined;
 
-  const operator = await getOperator(operatorId, adminLoginUserId);
+  const operator = await getOperator(operatorId, adminLoginUserId, isSuperadmin);
 
   if (!operator) {
     notFound();

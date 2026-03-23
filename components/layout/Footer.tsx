@@ -24,7 +24,7 @@ export default function Footer() {
               大会の作成から結果の公開まで、一元的に管理できます。
             </p>
             <div className="text-sm text-white/50">
-              <span>&copy; 2025 大会GO</span>
+              <span>&copy; 2026 大会GO</span>
               <span className="ml-3 text-xs bg-white/10 text-white/60 px-2 py-1 rounded border border-white/10">
                 BETA
               </span>
