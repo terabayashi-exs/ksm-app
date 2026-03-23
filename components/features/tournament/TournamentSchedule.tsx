@@ -408,24 +408,29 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
           const dayMatches = filteredMatchesByDate[date];
           const bgColor = dateBgColors[dateIndex % dateBgColors.length];
 
-          // コートごとにグループ化
-          const matchesByCourt: Record<string, MatchData[]> = {};
+          // 会場→コートの2階層でグルーピング
+          // 1. 会場ごとにグループ化
+          const matchesByVenue: Record<string, MatchData[]> = {};
+          dayMatches.forEach(m => {
+            const venueKey = m.venue_id ? String(m.venue_id) : 'none';
+            if (!matchesByVenue[venueKey]) matchesByVenue[venueKey] = [];
+            matchesByVenue[venueKey].push(m);
+          });
+
+          // 会場キーをソート（venue_id昇順、未設定は最後）
+          const sortedVenueKeys = Object.keys(matchesByVenue).sort((a, b) => {
+            if (a === 'none') return 1;
+            if (b === 'none') return -1;
+            return Number(a) - Number(b);
+          });
+
+          // 全体でコートが複数あるか判定
+          const allCourtKeys = new Set<string>();
           dayMatches.forEach(m => {
             const courtKey = m.court_name || (m.court_number ? `コート${m.court_number}` : '未設定');
-            if (!matchesByCourt[courtKey]) matchesByCourt[courtKey] = [];
-            matchesByCourt[courtKey].push(m);
+            allCourtKeys.add(courtKey);
           });
-
-          // コートキーをソート（最小match_id順）
-          const sortedCourtKeys = Object.keys(matchesByCourt).sort((a, b) => {
-            if (a === '未設定') return 1;
-            if (b === '未設定') return -1;
-            const minIdA = Math.min(...matchesByCourt[a].map(m => m.match_id));
-            const minIdB = Math.min(...matchesByCourt[b].map(m => m.match_id));
-            return minIdA - minIdB;
-          });
-
-          const hasMultipleCourts = sortedCourtKeys.length > 1 || (sortedCourtKeys.length === 1 && sortedCourtKeys[0] !== '未設定');
+          const hasMultipleCourts = allCourtKeys.size > 1 || (allCourtKeys.size === 1 && !allCourtKeys.has('未設定'));
 
           return (
             <div key={date} className="space-y-0">
@@ -441,74 +446,83 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                 </div>
               </div>
 
-              {/* コート別試合表示 */}
-              <div className={`${bgColor} border border-t-0 border-gray-200 rounded-b-lg space-y-3 p-2 sm:p-3`}>
-                {sortedCourtKeys.map((courtKey) => {
-                  const courtMatches = matchesByCourt[courtKey];
-                  // 時間順にソート
-                  const sortedMatches = [...courtMatches].sort((a, b) => {
-                    const timeA = a.start_time || '99:99';
-                    const timeB = b.start_time || '99:99';
-                    if (timeA !== timeB) return timeA.localeCompare(timeB);
-                    return a.match_code.localeCompare(b.match_code, undefined, { numeric: true });
+              {/* 会場→コート別試合表示 */}
+              <div className={`${bgColor} border border-t-0 border-gray-200 rounded-b-lg space-y-4 p-2 sm:p-3`}>
+                {sortedVenueKeys.map((venueKey) => {
+                  const venueMatches = matchesByVenue[venueKey];
+                  const venueInfo = venueKey !== 'none' ? venues.find(v => v.venue_id === Number(venueKey)) : null;
+
+                  // この会場内でコートごとにグループ化
+                  const matchesByCourt: Record<string, MatchData[]> = {};
+                  venueMatches.forEach(m => {
+                    const courtKey = m.court_name || (m.court_number ? `コート${m.court_number}` : '未設定');
+                    if (!matchesByCourt[courtKey]) matchesByCourt[courtKey] = [];
+                    matchesByCourt[courtKey].push(m);
                   });
 
-                  // このコートの試合に紐づく会場を取得
-                  const courtVenueIds = new Set<number>();
-                  courtMatches.forEach(m => {
-                    if (m.venue_id) courtVenueIds.add(m.venue_id);
+                  // コートキーをcourt_number昇順でソート
+                  const sortedCourtKeys = Object.keys(matchesByCourt).sort((a, b) => {
+                    if (a === '未設定') return 1;
+                    if (b === '未設定') return -1;
+                    const numA = matchesByCourt[a][0]?.court_number ?? Infinity;
+                    const numB = matchesByCourt[b][0]?.court_number ?? Infinity;
+                    return numA - numB;
                   });
-                  const courtVenues = venues.filter(v => courtVenueIds.has(v.venue_id));
 
                   return (
-                    <Card key={courtKey} className="bg-white/80">
-                      {hasMultipleCourts && (
-                        <CardHeader className="pb-0">
-                          {(() => {
-                            const courtNameMatchesVenue = courtVenues.length === 1 && courtVenues[0].venue_name === courtKey;
-                            return (
-                              <>
-                                {courtVenues.length > 0 && (
-                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-1">
-                                    {courtVenues.map(v => (
-                                      <div key={v.venue_id} className="flex items-center text-sm text-gray-500">
-                                        <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
-                                        {v.google_maps_url ? (
-                                          <a
-                                            href={v.google_maps_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary hover:underline"
-                                          >
-                                            {v.venue_name}
-                                          </a>
-                                        ) : (
-                                          <span>{v.venue_name}</span>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {!courtNameMatchesVenue && (
-                                  <CardTitle className="flex items-center text-sm font-medium">
-                                    <LayoutGrid className="h-4 w-4 mr-1.5 text-gray-500" />
-                                    {courtKey}
-                                    <span className="text-xs text-gray-500 font-normal ml-2">
-                                      ({courtMatches.length}試合)
-                                    </span>
-                                  </CardTitle>
-                                )}
-                                {courtNameMatchesVenue && (
-                                  <span className="text-xs text-gray-500 font-normal">
-                                    ({courtMatches.length}試合)
-                                  </span>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </CardHeader>
+                    <div key={venueKey} className="space-y-3">
+                      {/* 会場ヘッダー（会場が複数ある場合、または1つでも会場情報がある場合に表示） */}
+                      {venueInfo && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600 font-medium px-1">
+                          <MapPin className="h-4 w-4 shrink-0" />
+                          {venueInfo.google_maps_url ? (
+                            <a href={venueInfo.google_maps_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {venueInfo.venue_name}
+                            </a>
+                          ) : (
+                            <span>{venueInfo.venue_name}</span>
+                          )}
+                        </div>
                       )}
-                      <CardContent className={`${hasMultipleCourts ? "pt-2" : "pt-4"} px-2 sm:px-4`}>
+
+                      {sortedCourtKeys.map((courtKey) => {
+                        const courtMatches = matchesByCourt[courtKey];
+                        // コート内で時間順にソート
+                        const sortedMatches = [...courtMatches].sort((a, b) => {
+                          const timeA = a.start_time || '99:99';
+                          const timeB = b.start_time || '99:99';
+                          if (timeA !== timeB) return timeA.localeCompare(timeB);
+                          return a.match_code.localeCompare(b.match_code, undefined, { numeric: true });
+                        });
+
+                        return (
+                          <Card key={courtKey} className="bg-white/80">
+                            {hasMultipleCourts && (
+                              <CardHeader className="pb-0">
+                                {(() => {
+                                  const courtNameMatchesVenue = venueInfo && venueInfo.venue_name === courtKey;
+                                  return (
+                                    <>
+                                      {!courtNameMatchesVenue && (
+                                        <CardTitle className="flex items-center text-sm font-medium">
+                                          <LayoutGrid className="h-4 w-4 mr-1.5 text-gray-500" />
+                                          {courtKey}
+                                          <span className="text-xs text-gray-500 font-normal ml-2">
+                                            ({courtMatches.length}試合)
+                                          </span>
+                                        </CardTitle>
+                                      )}
+                                      {courtNameMatchesVenue && (
+                                        <span className="text-xs text-gray-500 font-normal">
+                                          ({courtMatches.length}試合)
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </CardHeader>
+                            )}
+                            <CardContent className={`${hasMultipleCourts ? "pt-2" : "pt-4"} px-2 sm:px-4`}>
                         <table className="w-full border-collapse">
                           <thead>
                             <tr className="border-b">
@@ -598,16 +612,19 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                           </tbody>
                         </table>
                       </CardContent>
-                    </Card>
-                  );
-                })}
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </>
-    );
-  };
+            );
+          })}
+        </>
+      );
+    };
 
   // 節別スケジュール表示コンポーネント（リーグ戦用・試合コード順）
   const ScheduleByMatchday = ({ filteredMatches: fm }: { filteredMatches: MatchData[] }) => {
