@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher';
+import ShareButton from '@/components/public/ShareButton';
 import TournamentTabNav from '@/components/public/TournamentTabNav';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import { ArrowLeft, Home, ChevronRight } from 'lucide-react';
@@ -54,10 +55,6 @@ export default async function TournamentDetailLayout({ children, params }: Layou
           <Link href="/" className="hover:text-gray-900 flex items-center">
             <Home className="h-4 w-4" />
           </Link>
-          <ChevronRight className="h-4 w-4" />
-          <Link href="/" className="hover:text-gray-900">
-            大会一覧
-          </Link>
           {group && (
             <>
               <ChevronRight className="h-4 w-4" />
@@ -96,12 +93,13 @@ export default async function TournamentDetailLayout({ children, params }: Layou
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{tournament.tournament_name}</h1>
               <p className="text-gray-500">部門の詳細情報をご覧いただけます</p>
             </div>
-            <div className="sm:ml-4">
+            <div className="flex items-center gap-2 sm:ml-4">
               <DivisionSwitcher
                 currentDivisionId={tournament.tournament_id}
                 currentDivisionName={tournament.tournament_name}
                 siblingDivisions={sibling_divisions}
               />
+              <ShareButton tournamentName={tournament.tournament_name} />
             </div>
           </div>
         </div>
