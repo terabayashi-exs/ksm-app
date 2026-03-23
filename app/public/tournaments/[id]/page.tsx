@@ -54,7 +54,7 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
     getBannersForTab(tournamentId, 'overview'),
   ]);
 
-  const { tournament } = data;
+  const { tournament, group } = data;
 
   // アーカイブ済みの場合はアーカイブページにリダイレクト
   if (tournament.is_archived) {
@@ -68,6 +68,7 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
     <TabContentWithSidebarSSR banners={banners}>
       <TournamentOverview
         tournament={tournament}
+        groupName={group?.group_name || null}
         bracketPdfExists={bracketPdfExists}
         resultsPdfExists={resultsPdfExists}
         venues={venues}
@@ -78,11 +79,13 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
 
 function TournamentOverview({
   tournament,
+  groupName,
   bracketPdfExists,
   resultsPdfExists,
   venues,
 }: {
   tournament: Tournament;
+  groupName: string | null;
   bracketPdfExists: boolean;
   resultsPdfExists: boolean;
   venues: VenueInfo[];
@@ -118,7 +121,7 @@ function TournamentOverview({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <h4 className="font-medium text-gray-500 mb-2">大会名</h4>
-              <p className="text-lg font-semibold">{tournament.tournament_name}</p>
+              <p className="text-lg font-semibold">{groupName || tournament.tournament_name}</p>
             </div>
             <div>
               <h4 className="font-medium text-gray-500 mb-2">ステータス</h4>
