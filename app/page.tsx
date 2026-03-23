@@ -19,10 +19,14 @@ import { calculateTournamentStatus, formatTournamentPeriod } from "@/lib/tournam
 
 async function fetchSportTypes() {
   try {
+    // 公開大会が存在する競技種別のみ取得
     const result = await db.execute(`
-      SELECT sport_type_id, sport_name, sport_code
-      FROM m_sport_types
-      ORDER BY sport_type_id
+      SELECT DISTINCT st.sport_type_id, st.sport_name, st.sport_code
+      FROM m_sport_types st
+      INNER JOIN t_tournaments t ON t.sport_type_id = st.sport_type_id
+      INNER JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+      WHERE tg.visibility = 'open'
+      ORDER BY st.sport_type_id
     `);
     const sportCodeToIcon: Record<string, string> = {
       soccer: '⚽', baseball: '⚾', basketball: '🏀', volleyball: '🏐',

@@ -16,25 +16,41 @@ export async function GET() {
     }
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
 
-    // ログイン中の管理者が作成した運営者のみを取得
-    const operatorsResult = await db.execute({
-      sql: `SELECT
-              u.login_user_id,
-              u.email,
-              u.display_name,
-              u.is_active,
-              u.created_at,
-              u.updated_at
-            FROM m_login_users u
-            INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
-            WHERE r.role = 'operator' AND u.created_by_login_user_id = ?
-            ORDER BY u.created_at DESC`,
-      args: [adminLoginUserId]
-    });
+    // スーパー管理者は全運営者を取得、通常の管理者は自分が作成した運営者のみ
+    const operatorsResult = isSuperadmin
+      ? await db.execute({
+          sql: `SELECT
+                  u.login_user_id,
+                  u.email,
+                  u.display_name,
+                  u.is_active,
+                  u.created_at,
+                  u.updated_at
+                FROM m_login_users u
+                INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+                WHERE r.role = 'operator'
+                ORDER BY u.created_at DESC`,
+          args: []
+        })
+      : await db.execute({
+          sql: `SELECT
+                  u.login_user_id,
+                  u.email,
+                  u.display_name,
+                  u.is_active,
+                  u.created_at,
+                  u.updated_at
+                FROM m_login_users u
+                INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+                WHERE r.role = 'operator' AND u.created_by_login_user_id = ?
+                ORDER BY u.created_at DESC`,
+          args: [adminLoginUserId]
+        });
 
     // アクセス可能な部門を取得
     const operators = await Promise.all(

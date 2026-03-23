@@ -140,7 +140,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/admin/operators');
+        router.push(groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators');
         router.refresh();
       }, 2000);
     } catch {
@@ -186,7 +186,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/admin/operators');
+        router.push(groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators');
         router.refresh();
       }, 2000);
     } catch {
@@ -550,7 +550,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Button
-                onClick={() => router.push('/admin/operators')}
+                onClick={() => router.push(groupId ? `/admin/operators?group_id=${groupId}` : '/admin/operators')}
                 variant="outline"
                 disabled={submitting}
               >

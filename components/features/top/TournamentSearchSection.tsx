@@ -37,6 +37,7 @@ interface SearchTournament {
   status: TournamentStatus;
   format_name: string;
   venue_name: string;
+  sport_type_id?: number;
   sport_icon?: string;
   team_count: number;
   event_start_date: string;
@@ -85,13 +86,14 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
       .catch(() => {});
   }, []);
 
-  const fetchResults = useCallback(async (keyword: string, prefectureId?: number | null, organizerId?: number | null) => {
+  const fetchResults = useCallback(async (keyword: string, prefectureId?: number | null, organizerId?: number | null, sportTypeId?: number | null) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (keyword) params.set('tournament_name', keyword);
       if (prefectureId) params.set('prefecture_id', String(prefectureId));
       if (organizerId) params.set('organizer_id', String(organizerId));
+      if (sportTypeId) params.set('sport_type_id', String(sportTypeId));
       const res = await fetch(`/api/tournaments/search?${params}`);
       if (!res.ok) return;
       const result = await res.json();
@@ -141,17 +143,24 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
     }, 100);
   };
 
-  const handleSportTypeClick = (sportTypeId: number) => {
-    if (activeSportType === sportTypeId) {
+  const handleSportTypeClick = (sportTypeId: number | null) => {
+    if (activeSportType === sportTypeId || sportTypeId === null) {
       setActiveSportType(null);
-      setHasSearched(false);
-      setTournaments(initialTournaments);
+      if (!searchTerm.trim() && !selectedPrefecture) {
+        setHasSearched(false);
+        setTournaments(initialTournaments);
+      } else {
+        fetchResults(searchTerm.trim(), selectedPrefecture);
+      }
     } else {
       setActiveSportType(sportTypeId);
       setHasSearched(true);
       setActiveOrganizerId(null);
-      fetchResults(searchTerm.trim(), selectedPrefecture);
+      fetchResults(searchTerm.trim(), selectedPrefecture, null, sportTypeId);
     }
+    setTimeout(() => {
+      document.getElementById('tournament-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleClear = () => {
@@ -163,15 +172,9 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
     setTournaments(initialTournaments);
   };
 
-  // 競技種別でのクライアント側フィルタ（APIがsport_type未対応のため）
-  // TODO: APIにsport_type対応を追加した場合はサーバー側で絞り込む
-  const filteredTournaments = activeSportType
-    ? tournaments // 現時点ではAPIにsport_typeフィルタがないのでそのまま表示
-    : tournaments;
-
   // organization_name別にグループ化
   const grouped = new Map<string, { logo_blob_url: string | null; tournaments: SearchTournament[] }>();
-  filteredTournaments.forEach(t => {
+  tournaments.forEach(t => {
     const key = t.organization_name || '大会';
     if (!grouped.has(key)) {
       grouped.set(key, { logo_blob_url: t.logo_blob_url, tournaments: [] });
@@ -237,7 +240,27 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
         {sportTypes.length > 0 && (
           <div className="mt-5">
             <p className="text-xs text-gray-400 mb-2.5 font-medium">競技から探す</p>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
+              {/* すべてボタン */}
+              <button
+                onClick={() => handleSportTypeClick(null)}
+                className="flex flex-col items-center gap-1.5 group cursor-pointer"
+              >
+                <div className={`w-[56px] h-[56px] mx-auto flex items-center justify-center rounded-xl border-2 text-2xl transition-colors ${
+                  activeSportType === null
+                    ? 'border-primary bg-primary/10'
+                    : 'border-gray-200 bg-white group-hover:border-primary group-hover:bg-primary/5'
+                }`}>
+                  🏆
+                </div>
+                <span className={`text-xs transition-colors truncate max-w-full ${
+                  activeSportType === null
+                    ? 'text-primary font-medium'
+                    : 'text-gray-500 group-hover:text-primary'
+                }`}>
+                  すべて
+                </span>
+              </button>
               {sportTypes.map((sport) => (
                 <button
                   key={sport.sport_type_id}
@@ -263,6 +286,13 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
             </div>
           </div>
         )}
+
+        {/* 検索条件の説明 */}
+        {(searchTerm.trim() || selectedPrefecture || activeSportType) && (
+          <p className="mt-3 text-xs text-gray-400">
+            ※ 入力した条件すべてに一致する大会を表示します
+          </p>
+        )}
       </div>
 
       {/* ======== 大会一覧（検索結果） ======== */}
@@ -282,7 +312,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
 
         {hasSearched && searchTerm && !loading && (
           <p className="text-sm text-gray-500 mb-4">
-            「{searchTerm}」の検索結果: <span className="font-medium text-gray-900">{filteredTournaments.length}件</span>
+            「{searchTerm}」の検索結果: <span className="font-medium text-gray-900">{tournaments.length}件</span>
           </p>
         )}
 
@@ -292,7 +322,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
             <p className="text-sm text-gray-500">大会を検索中...</p>
           </div>
-        ) : filteredTournaments.length === 0 ? (
+        ) : tournaments.length === 0 ? (
           /* 空状態 */
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-4" />

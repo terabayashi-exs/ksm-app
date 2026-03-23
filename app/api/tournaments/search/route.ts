@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get('status') as TournamentStatus | null;
     const prefectureId = searchParams.get('prefecture_id');
     const organizerId = searchParams.get('organizer_id');
+    const sportTypeId = searchParams.get('sport_type_id');
     const limit = searchParams.get('limit');
     const offset = searchParams.get('offset');
 
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
         COALESCE(lu.logo_blob_url, a.logo_blob_url) as logo_blob_url,
         COALESCE(lu.organization_name, a.organization_name) as organization_name,
         tg.login_user_id,
+        t.sport_type_id,
         st.sport_code,
         0 as registered_teams
         ${teamId ? ', 0 as is_joined' : ', 0 as is_joined'}
@@ -90,6 +92,12 @@ export async function GET(request: NextRequest) {
     if (organizerId) {
       conditions.push('tg.login_user_id = ?');
       params.push(parseInt(organizerId));
+    }
+
+    // 競技種別フィルタ
+    if (sportTypeId) {
+      conditions.push('t.sport_type_id = ?');
+      params.push(parseInt(sportTypeId));
     }
 
     // 都道府県フィルタ（会場の都道府県で絞り込み）
@@ -266,6 +274,7 @@ export async function GET(request: NextRequest) {
         status: calculatedStatus,
         format_name: row.format_name as string,
         venue_name: venueNames,
+        sport_type_id: Number(row.sport_type_id),
         sport_icon: sportIcon,
         team_count: Number(row.team_count),
         is_public: row.visibility === 'open',

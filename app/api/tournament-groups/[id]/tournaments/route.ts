@@ -19,21 +19,38 @@ export async function GET(
 
     const resolvedParams = await params;
     const groupId = parseInt(resolvedParams.id);
+    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
+    const loginUserId = (session.user as { loginUserId: number }).loginUserId;
 
     // 大会グループに属する部門を取得
-    const result = await db.execute({
-      sql: `SELECT
-              t.tournament_id,
-              t.tournament_name,
-              t.category_name,
-              t.group_id,
-              tg.group_name
-            FROM t_tournaments t
-            JOIN t_tournament_groups tg ON t.group_id = tg.group_id
-            WHERE t.group_id = ? AND tg.login_user_id = ?
-            ORDER BY t.category_name, t.tournament_name`,
-      args: [groupId, (session.user as { loginUserId: number }).loginUserId]
-    });
+    // スーパー管理者は全グループの部門にアクセス可能
+    const result = isSuperadmin
+      ? await db.execute({
+          sql: `SELECT
+                  t.tournament_id,
+                  t.tournament_name,
+                  t.category_name,
+                  t.group_id,
+                  tg.group_name
+                FROM t_tournaments t
+                JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+                WHERE t.group_id = ?
+                ORDER BY t.category_name, t.tournament_name`,
+          args: [groupId]
+        })
+      : await db.execute({
+          sql: `SELECT
+                  t.tournament_id,
+                  t.tournament_name,
+                  t.category_name,
+                  t.group_id,
+                  tg.group_name
+                FROM t_tournaments t
+                JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+                WHERE t.group_id = ? AND tg.login_user_id = ?
+                ORDER BY t.category_name, t.tournament_name`,
+          args: [groupId, loginUserId]
+        });
 
     return NextResponse.json(result.rows);
   } catch (error) {
