@@ -1,4 +1,6 @@
 // app/tournaments/[id]/entry/teams/page.tsx
+export const metadata = { title: "参加チーム管理" };
+
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';

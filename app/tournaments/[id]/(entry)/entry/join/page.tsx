@@ -1,4 +1,6 @@
 // app/tournaments/[id]/entry/join/page.tsx
+export const metadata = { title: "大会参加申し込み" };
+
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';

@@ -1,4 +1,6 @@
 // app/tournaments/[id]/archived/page.tsx
+import type { Metadata } from 'next';
+import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import BackButton from '@/components/ui/back-button';
@@ -15,6 +17,12 @@ import { ArchivedHtmlViewer } from './ArchivedHtmlViewer';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const name = await getTournamentNameForMetadata(id);
+  return { title: name ? `${name} (アーカイブ)` : 'アーカイブ' };
 }
 
 // BlobにHTMLアーカイブが存在するかチェック

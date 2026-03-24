@@ -10,5 +10,5 @@ interface PageProps {
 export default async function AdminTournamentDetailPage({ params }: PageProps) {
   const { id } = await params;
   // 一般ユーザー向けの大会詳細ページにリダイレクト
-  redirect(`/tournaments/${id}`);
+  redirect(`/tournaments/${id}/schedule`);
 }

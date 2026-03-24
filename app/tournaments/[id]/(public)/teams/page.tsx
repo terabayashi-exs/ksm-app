@@ -1,5 +1,7 @@
 // app/tournaments/[id]/teams/page.tsx
 // 参加チームタブ（全データSSR）
+import type { Metadata } from 'next';
+import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
 import { getSimpleTournamentTeams } from '@/lib/tournament-teams-simple';
 import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
@@ -9,6 +11,12 @@ import { db } from '@/lib/db';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const name = await getTournamentNameForMetadata(id);
+  return { title: name ? `参加チーム - ${name}` : '参加チーム' };
 }
 
 export default async function TournamentTeamsPage({ params }: PageProps) {

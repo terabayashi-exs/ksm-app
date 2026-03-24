@@ -1,11 +1,14 @@
 // app/tournaments/[id]/page.tsx
 // 概要タブ（SSR）
+import type { Metadata } from 'next';
+import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Calendar, MapPin, Trophy, Users, Clock, Target, BarChart3, FileText, ExternalLink } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
+import { calculateTournamentStatusSync, getStatusLabel, getStatusColor } from '@/lib/tournament-status';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
@@ -42,6 +45,12 @@ async function getVenuesForTournament(venueIdJson: string | null): Promise<Venue
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const name = await getTournamentNameForMetadata(id);
+  return { title: name ? `${name} 概要` : '大会概要' };
 }
 
 export default async function TournamentOverviewPage({ params }: PageProps) {
@@ -90,17 +99,13 @@ function TournamentOverview({
   resultsPdfExists: boolean;
   venues: VenueInfo[];
 }) {
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ongoing':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">開催中</span>;
-      case 'completed':
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-50 text-gray-900">完了</span>;
-      case 'planning':
-      default:
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">開催予定</span>;
-    }
-  };
+  const calculatedStatus = calculateTournamentStatusSync({
+    status: tournament.status,
+    tournament_dates: tournament.tournament_dates || '{}',
+    recruitment_start_date: tournament.recruitment_start_date || null,
+    recruitment_end_date: tournament.recruitment_end_date || null,
+    public_start_date: tournament.public_start_date,
+  });
 
   const tournamentDates = tournament.tournament_dates ? JSON.parse(tournament.tournament_dates) : {};
   // 有効な日付のみフィルタリング（空文字列や不正な値を除外）
@@ -110,83 +115,6 @@ function TournamentOverview({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Trophy className="h-5 w-5 mr-2 text-primary" />
-            大会基本情報
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-500 mb-2">大会名</h4>
-              <p className="text-lg font-semibold">{groupName || tournament.tournament_name}</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-500 mb-2">ステータス</h4>
-              {getStatusBadge(tournament.status)}
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-500 mb-2">大会形式</h4>
-              {tournament.phases?.phases && tournament.phases.phases.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {tournament.phases.phases
-                    .sort((a, b) => a.order - b.order)
-                    .map((phase) => (
-                      <span key={phase.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        {phase.display_name || phase.name}
-                      </span>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
-              )}
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                会場
-              </h4>
-              {venues.length > 0 ? (
-                <div className="space-y-1">
-                  {venues.map(v => (
-                    <div key={v.venue_id}>
-                      {v.google_maps_url ? (
-                        <a
-                          href={v.google_maps_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline inline-flex items-center gap-1"
-                        >
-                          {v.venue_name}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        <p className="text-gray-900">{v.venue_name}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-900">未設定</p>
-              )}
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
-                <Users className="h-4 w-4 mr-1" />
-                参加チーム数
-              </h4>
-              <p className="text-gray-900">{tournament.team_count}チーム</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-500 mb-2">コート数</h4>
-              <p className="text-gray-900">{tournament.court_count}コート</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {(bracketPdfExists || resultsPdfExists) && (
         <div className={`grid grid-cols-1 ${bracketPdfExists && resultsPdfExists ? 'lg:grid-cols-2' : ''} gap-6`}>
           {bracketPdfExists && (
@@ -250,11 +178,13 @@ function TournamentOverview({
         </div>
       )}
 
-      <PublicFilesList
-        tournamentId={tournament.tournament_id}
-        showTitle={true}
-        layout="card"
-      />
+      <div id="public-files">
+        <PublicFilesList
+          tournamentId={tournament.tournament_id}
+          showTitle={true}
+          layout="card"
+        />
+      </div>
 
       {dateEntries.length > 0 && (
         <Card>
@@ -290,7 +220,7 @@ function TournamentOverview({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-primary/5 rounded-lg">
               <p className="text-2xl font-bold text-primary">{tournament.match_duration_minutes}</p>
               <p className="text-sm text-gray-500">試合時間（分）</p>
@@ -308,7 +238,7 @@ function TournamentOverview({
           <CardHeader>
             <CardTitle className="flex items-center">
               <Target className="h-5 w-5 mr-2 text-orange-600" />
-              募集期間
+              開催期間
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -328,6 +258,85 @@ function TournamentOverview({
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Trophy className="h-5 w-5 mr-2 text-primary" />
+            大会基本情報
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-500 mb-2">大会名</h4>
+              <p className="text-lg font-semibold">{groupName || tournament.tournament_name}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-500 mb-2">ステータス</h4>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(calculatedStatus)}`}>
+                {getStatusLabel(calculatedStatus)}
+              </span>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-500 mb-2">大会形式</h4>
+              {tournament.phases?.phases && tournament.phases.phases.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {tournament.phases.phases
+                    .sort((a, b) => a.order - b.order)
+                    .map((phase) => (
+                      <span key={phase.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        {phase.display_name || phase.name}
+                      </span>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
+              )}
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
+                <MapPin className="h-4 w-4 mr-1" />
+                会場
+              </h4>
+              {venues.length > 0 ? (
+                <div className="space-y-1">
+                  {venues.map(v => (
+                    <div key={v.venue_id}>
+                      {v.google_maps_url ? (
+                        <a
+                          href={v.google_maps_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          {v.venue_name}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <p className="text-gray-900">{v.venue_name}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-900">未設定</p>
+              )}
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-500 mb-2 flex items-center">
+                <Users className="h-4 w-4 mr-1" />
+                参加チーム数
+              </h4>
+              <p className="text-gray-900">{tournament.team_count}チーム</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-500 mb-2">コート数</h4>
+              <p className="text-gray-900">{tournament.court_count}コート</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

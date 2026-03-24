@@ -1,5 +1,7 @@
 // app/tournaments/[id]/standings/page.tsx
 // 順位表タブ（全データSSR）
+import type { Metadata } from 'next';
+import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
 import { getTournamentStandings } from '@/lib/standings-calculator';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
@@ -10,6 +12,12 @@ import type { TournamentPhase } from '@/lib/types/tournament-phases';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const name = await getTournamentNameForMetadata(id);
+  return { title: name ? `順位表 - ${name}` : '順位表' };
 }
 
 export default async function TournamentStandingsPage({ params }: PageProps) {

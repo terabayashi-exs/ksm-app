@@ -7,8 +7,8 @@ import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher'
 import ShareButton from '@/components/public/ShareButton';
 import TournamentTabNav from '@/components/public/TournamentTabNav';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
-import { ArrowLeft, Home, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Home, ChevronRight, FileText } from 'lucide-react';
+import { db } from '@/lib/db';
 import type { TournamentPhase } from '@/lib/types/tournament-phases';
 
 interface LayoutProps {
@@ -34,8 +34,15 @@ export default async function TournamentDetailLayout({ children, params }: Layou
     throw new Error('有効な大会IDを指定してください');
   }
 
-  const data = await getTournamentWithGroupInfo(tournamentId);
+  const [data, publicFilesResult] = await Promise.all([
+    getTournamentWithGroupInfo(tournamentId),
+    db.execute(
+      `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
+      [tournamentId]
+    ).catch(() => ({ rows: [{ count: 0 }] })),
+  ]);
   const { tournament, group, sibling_divisions } = data;
+  const hasPublicFiles = Number(publicFilesResult.rows[0]?.count ?? 0) > 0;
 
   // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
   // layout のUI（タブ等）はスキップして children をそのまま返す
@@ -51,47 +58,48 @@ export default async function TournamentDetailLayout({ children, params }: Layou
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* パンくずリスト */}
-        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6 no-print">
-          <Link href="/" className="hover:text-gray-900 flex items-center">
-            <Home className="h-4 w-4" />
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6 no-print">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
           </Link>
           {group && (
             <>
-              <ChevronRight className="h-4 w-4" />
-              <Link href={`/tournaments/groups/${group.group_id}`} className="hover:text-gray-900">
-                {group.group_name}
+              <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <Link
+                href={`/tournaments/groups/${group.group_id}`}
+                className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+              >
+                {group.group_name} Top
               </Link>
             </>
           )}
-          <ChevronRight className="h-4 w-4" />
-          <span className="text-gray-900 font-medium">{tournament.tournament_name}</span>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            {tournament.tournament_name}
+          </span>
         </nav>
-
-        {/* ナビゲーションボタン */}
-        <div className="flex items-center gap-3 mb-6 no-print">
-          {group ? (
-            <Button variant="outline" asChild>
-              <Link href={`/tournaments/groups/${group.group_id}`} className="flex items-center">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                大会トップに戻る
-              </Link>
-            </Button>
-          ) : (
-            <Button variant="ghost" asChild>
-              <Link href="/" className="flex items-center text-gray-500 hover:text-gray-900">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                TOPページに戻る
-              </Link>
-            </Button>
-          )}
-        </div>
 
         {/* ページヘッダー */}
         <div className="mb-8 no-print">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{tournament.tournament_name}</h1>
-              <p className="text-gray-500">部門の詳細情報をご覧いただけます</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">{tournament.tournament_name}</h1>
+              {group && (
+                <p className="text-gray-500">（{group.group_name}）</p>
+              )}
+              {hasPublicFiles && (
+                <Link
+                  href={`/tournaments/${tournament.tournament_id}#public-files`}
+                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline mt-1"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  大会資料があります
+                </Link>
+              )}
             </div>
             <div className="flex items-center gap-2 sm:ml-4">
               <DivisionSwitcher

@@ -1,3 +1,5 @@
+import type { Metadata } from 'next';
+import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +14,12 @@ import { getTournamentById } from '@/lib/tournament-detail';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const name = await getTournamentNameForMetadata(id);
+  return { title: name ? `トーナメント表 - ${name}` : 'トーナメント表' };
 }
 
 // 大会詳細データを取得する関数
@@ -61,7 +69,7 @@ async function TournamentBracketContent({ params }: PageProps) {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ナビゲーション */}
-        <div className="mb-6">
+        <div className="mb-6 no-print">
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
             <Button variant="ghost" asChild>
@@ -74,7 +82,7 @@ async function TournamentBracketContent({ params }: PageProps) {
         </div>
 
         {/* ページヘッダー */}
-        <div className="mb-8">
+        <div className="mb-8 no-print">
           <div className="flex items-center mb-4">
             <Trophy className="h-8 w-8 text-yellow-600 mr-3" />
             <div>
@@ -98,7 +106,7 @@ async function TournamentBracketContent({ params }: PageProps) {
         <TournamentBracket tournamentId={tournament.tournament_id} />
 
         {/* 操作ガイドと注意事項 */}
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
+        <div className="grid md:grid-cols-2 gap-6 mt-8 no-print">
           <Card className="bg-green-50 border-green-200">
             <CardContent className="pt-4">
               <div className="flex items-start space-x-3">

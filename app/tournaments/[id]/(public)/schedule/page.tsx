@@ -1,5 +1,7 @@
 // app/tournaments/[id]/schedule/page.tsx
 // 日程・結果タブ（全データSSR）
+import type { Metadata } from 'next';
+import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
 import { getTournamentPublicMatches } from '@/lib/tournament-public-matches';
 import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
@@ -8,6 +10,12 @@ import { db } from '@/lib/db';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const name = await getTournamentNameForMetadata(id);
+  return { title: name ? `日程・結果 - ${name}` : '日程・結果' };
 }
 
 async function getTournamentVenues(tournamentId: number) {

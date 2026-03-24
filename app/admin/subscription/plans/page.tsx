@@ -1,3 +1,5 @@
+export const metadata = { title: "プラン変更" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";

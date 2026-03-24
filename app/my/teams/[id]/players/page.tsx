@@ -1,4 +1,6 @@
 // app/my/teams/[id]/players/page.tsx
+export const metadata = { title: "選手管理" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";

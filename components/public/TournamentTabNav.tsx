@@ -12,16 +12,15 @@ interface TournamentTabNavProps {
 
 function getPhaseIcon(phase: TournamentPhase) {
   if (phase.format_type === 'tournament') {
-    return <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />;
+    return <Award className="h-4 w-4 mr-1.5" />;
   }
-  return <GitBranch className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />;
+  return <GitBranch className="h-4 w-4 mr-1.5" />;
 }
 
 interface TabDef {
   value: string;
   href: string;
   label: string;
-  shortLabel?: string;
   icon: React.ReactNode;
 }
 
@@ -31,18 +30,10 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
 
   const tabs: TabDef[] = [
     {
-      value: 'overview',
-      href: basePath,
-      label: '大会概要',
-      shortLabel: '概要',
-      icon: <Trophy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
-    },
-    {
       value: 'schedule',
       href: `${basePath}/schedule`,
       label: '日程・結果',
-      shortLabel: '日程',
-      icon: <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
+      icon: <Calendar className="h-4 w-4 mr-1.5" />,
     },
     ...phases.map((phase) => ({
       value: `phase_${phase.id}`,
@@ -54,14 +45,19 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
       value: 'standings',
       href: `${basePath}/standings`,
       label: '順位表',
-      icon: <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
+      icon: <BarChart3 className="h-4 w-4 mr-1.5" />,
     },
     {
       value: 'teams',
       href: `${basePath}/teams`,
       label: '参加チーム',
-      shortLabel: 'チーム',
-      icon: <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
+      icon: <Users className="h-4 w-4 mr-1.5" />,
+    },
+    {
+      value: 'overview',
+      href: basePath,
+      label: '概要',
+      icon: <Trophy className="h-4 w-4 mr-1.5" />,
     },
   ];
 
@@ -98,22 +94,15 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
           href={tab.href}
           prefetch={true}
           className={`
-            flex items-center justify-center py-3 text-xs sm:text-sm rounded-md font-medium transition-colors
+            flex items-center justify-center whitespace-nowrap py-2.5 px-1 text-[11px] sm:text-sm rounded-md font-medium transition-colors
             ${isActive(tab)
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'bg-gray-50 text-gray-500 hover:bg-gray-50/80 hover:text-gray-900'
             }
           `}
         >
-          {tab.icon}
-          {tab.shortLabel ? (
-            <>
-              <span className="sm:hidden">{tab.shortLabel}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-            </>
-          ) : (
-            tab.label
-          )}
+          <span className="hidden sm:inline-flex items-center">{tab.icon}</span>
+          {tab.label}
         </Link>
       ))}
     </nav>

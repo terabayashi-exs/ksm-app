@@ -1,3 +1,5 @@
+export const metadata = { title: "競技種別作成" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";

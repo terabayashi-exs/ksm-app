@@ -1,3 +1,5 @@
+export const metadata = { title: "大会編集" };
+
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';

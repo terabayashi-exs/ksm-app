@@ -1,4 +1,6 @@
 // app/admin/administrators/page.tsx
+export const metadata = { title: "利用者マスタ管理" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import AdministratorManagement from "@/components/features/admin/AdministratorManagement";

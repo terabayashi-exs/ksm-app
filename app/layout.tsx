@@ -1,10 +1,14 @@
 // app/layout.tsx
 import AuthSessionProvider from "@/components/providers/session-provider";
 import { Analytics } from "@vercel/analytics/react";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata = {
-  title: "Taikai GO - スポーツ大会管理システム",
+  title: {
+    default: "Taikai GO - スポーツ大会管理システム",
+    template: "%s | Taikai GO",
+  },
   description: "あらゆるスポーツ大会の運営から結果公開まで、簡単に大会運営ができる総合管理システム",
   robots: "index, follow",
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
@@ -92,6 +96,8 @@ export default function RootLayout({
             `,
           }}
         />
+
+        <GoogleAnalytics />
       </head>
       <body suppressHydrationWarning>
         <AuthSessionProvider>

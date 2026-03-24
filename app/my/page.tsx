@@ -2,14 +2,18 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import SignOutButton from "@/components/features/auth/SignOutButton";
+import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
+import Footer from "@/components/layout/Footer";
+import { Home, ChevronRight } from "lucide-react";
 import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
-import PlanBadge from "@/components/features/subscription/PlanBadge";
 import { fetchDashboardData, fetchOperatorDashboardData, fetchTeamData, TournamentDashboardData, TeamDashboardItem } from "@/lib/dashboard-data";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "マイダッシュボード",
+};
 
 export default async function MyDashboardPage() {
   const session = await auth();
@@ -88,25 +92,12 @@ export default async function MyDashboardPage() {
                 ようこそ、{session.user.name}さん
               </p>
             </div>
-            <div className="flex flex-col items-start sm:items-end gap-2">
-              {/* 管理者ロールがある場合のみプラン表示 */}
-              {(roles.includes("admin") || isSuperadmin) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/70">プラン：</span>
-                  <PlanBadge apiUrl="/api/my/subscription/current" showChangeButton={false} />
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                {(roles.includes("admin") || isSuperadmin) && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/admin/subscription/plans">プラン変更</Link>
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/">TOPページ</Link>
-                </Button>
-                <SignOutButton size="sm" />
-              </div>
+            <div className="flex items-center gap-2">
+              <UserAvatarMenu
+                userName={session.user.name || ''}
+                userEmail={session.user.email || ''}
+                showDashboardLink={false}
+              />
             </div>
           </div>
         </div>
@@ -114,17 +105,34 @@ export default async function MyDashboardPage() {
 
       {/* コンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* パンくずリスト */}
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            マイダッシュボード
+          </span>
+        </nav>
         <MyDashboardTabs
           roles={roles}
           isSuperadmin={isSuperadmin}
           teamIds={teamIds}
           currentUserId={session.user.id}
+          loginUserId={loginUserId}
           initialSportTypes={sportTypes}
           initialTournamentData={tournamentData}
           initialOperatorTournamentData={operatorTournamentData}
           initialTeamData={initialTeamData}
         />
       </div>
+
+      <Footer />
     </div>
   );
 }

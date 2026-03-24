@@ -1,6 +1,8 @@
 // app/admin/withdrawal-requests/page.tsx
 // 管理者向け辞退申請管理ページ
 
+export const metadata = { title: "辞退申請管理" };
+
 import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';

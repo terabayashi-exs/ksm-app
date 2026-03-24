@@ -9,7 +9,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Calendar, MapPin, Users, Trophy } from 'lucide-react';
+import { Home, ChevronRight, Calendar, MapPin, Users, Trophy } from 'lucide-react';
 import ShareButton from '@/components/public/ShareButton';
 import {
   getStatusLabel,
@@ -136,16 +136,22 @@ export default function TournamentGroupPage() {
       <div className="bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Button variant="outline" asChild>
-                <Link href="/" className="flex items-center">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  TOPページに戻る
-                </Link>
-              </Button>
-            </div>
+            {/* パンくずリスト */}
+            <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-4">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white/70 text-gray-600 hover:bg-white hover:text-gray-900 transition-colors whitespace-nowrap"
+              >
+                <Home className="h-3.5 w-3.5" />
+                <span>Home</span>
+              </Link>
+              <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+                {group.group_name} Top
+              </span>
+            </nav>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">{group.group_name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{group.group_name}</h1>
               <ShareButton tournamentName={group.group_name} />
             </div>
             {group.organizer && (

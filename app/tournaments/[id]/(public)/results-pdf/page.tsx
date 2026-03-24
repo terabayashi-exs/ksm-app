@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${tournament.tournament_name} - 結果表 | KSM-App`,
+    title: `結果表PDF - ${tournament.tournament_name}`,
     description: `${tournament.tournament_name}の結果表（PDF版）をご覧いただけます。`,
   };
 }

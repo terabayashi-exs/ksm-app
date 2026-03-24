@@ -1,6 +1,8 @@
 // app/tournaments/[id]/withdrawal/page.tsx
 // 大会エントリー辞退申請ページ
 
+export const metadata = { title: "エントリー辞退" };
+
 import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
