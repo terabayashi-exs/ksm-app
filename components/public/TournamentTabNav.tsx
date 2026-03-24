@@ -27,7 +27,7 @@ interface TabDef {
 
 export default function TournamentTabNav({ tournamentId, phases }: TournamentTabNavProps) {
   const pathname = usePathname();
-  const basePath = `/public/tournaments/${tournamentId}`;
+  const basePath = `/tournaments/${tournamentId}`;
 
   const tabs: TabDef[] = [
     {

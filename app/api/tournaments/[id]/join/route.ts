@@ -592,7 +592,7 @@ async function handleTournamentJoin(
           }
 
           // 大会詳細ページのURL
-          const tournamentUrl = `${process.env.NEXTAUTH_URL}/public/tournaments/${tournamentId}`;
+          const tournamentUrl = `${process.env.NEXTAUTH_URL}/tournaments/${tournamentId}`;
 
           // メールテンプレート生成（統一版）
           // tournament_name = 部門名、group_name = 大会名として扱う

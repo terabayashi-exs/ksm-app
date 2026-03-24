@@ -26,7 +26,7 @@ export default function SponsorBanners({ tournamentId, position, targetTab, size
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        let url = `/api/public/sponsor-banners?tournament_id=${tournamentId}&position=${position}&tab=${targetTab}`;
+        let url = `/api/sponsor-banners?tournament_id=${tournamentId}&position=${position}&tab=${targetTab}`;
         if (size) {
           url += `&size=${size}`;
         }
@@ -58,7 +58,7 @@ export default function SponsorBanners({ tournamentId, position, targetTab, size
   // バナークリック時の処理
   const handleBannerClick = async (banner: SponsorBanner) => {
     // クリック数をカウント（非同期、結果は待たない）
-    fetch(`/api/public/sponsor-banners/${banner.banner_id}/click`, {
+    fetch(`/api/sponsor-banners/${banner.banner_id}/click`, {
       method: 'POST',
     }).catch((error) => {
       console.error('クリック計測エラー:', error);

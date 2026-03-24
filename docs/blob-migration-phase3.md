@@ -128,7 +128,7 @@ curl http://localhost:3000/api/admin/blob-statistics
 ```
 
 ### 2. **UI確認**
-1. **アーカイブ表示**: `/public/tournaments/[id]/archived`
+1. **アーカイブ表示**: `/tournaments/[id]/archived`
    - ローディング状態の確認
    - データソース表示（Blob/Database）
    - エラーハンドリング動作

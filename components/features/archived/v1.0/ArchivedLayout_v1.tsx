@@ -1601,7 +1601,7 @@ function ArchivedTournamentOverview_v1({
                   <div className="flex justify-center">
                     <Button asChild className="bg-green-600 hover:bg-green-700">
                       <Link 
-                        href={`/public/tournaments/${tournament.tournament_id}/bracket-pdf`}
+                        href={`/tournaments/${tournament.tournament_id}/bracket-pdf`}
                         className="flex items-center gap-2"
                       >
                         <FileText className="h-4 w-4" />
@@ -1635,7 +1635,7 @@ function ArchivedTournamentOverview_v1({
                   <div className="flex justify-center">
                     <Button asChild className="bg-blue-600 hover:bg-blue-700">
                       <Link 
-                        href={`/public/tournaments/${tournament.tournament_id}/results-pdf`}
+                        href={`/tournaments/${tournament.tournament_id}/results-pdf`}
                         className="flex items-center gap-2"
                       >
                         <BarChart3 className="h-4 w-4" />

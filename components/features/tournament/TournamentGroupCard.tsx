@@ -209,7 +209,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
 
                 <div className="flex flex-col gap-1 ml-4">
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/public/tournaments/${tournament.tournament_id}`}>
+                    <Link href={`/tournaments/${tournament.tournament_id}`}>
                       詳細
                     </Link>
                   </Button>
@@ -217,7 +217,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                   {/* 参加済みの場合は参加選手変更ボタンを表示 */}
                   {tournament.is_joined && userRole === 'team' && (
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/tournaments/${tournament.tournament_id}/teams`}>
+                      <Link href={`/tournaments/${tournament.tournament_id}/entry/teams`}>
                         選手変更
                       </Link>
                     </Button>
@@ -234,8 +234,8 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
                     <Button asChild size="sm" variant="outline">
                       <Link href={
                         userRole === 'team'
-                          ? `/tournaments/${tournament.tournament_id}/join`
-                          : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/join`)}`
+                          ? `/tournaments/${tournament.tournament_id}/entry/join`
+                          : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/entry/join`)}`
                       }>
                         参加
                       </Link>

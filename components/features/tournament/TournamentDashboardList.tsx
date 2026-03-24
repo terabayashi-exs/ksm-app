@@ -647,7 +647,7 @@ export default function TournamentDashboardList({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const publicUrl = `${window.location.origin}/tournaments/${tournament.tournament_id}`;
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}

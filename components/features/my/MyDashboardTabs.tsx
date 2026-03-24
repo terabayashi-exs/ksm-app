@@ -579,7 +579,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const publicUrl = `${window.location.origin}/tournaments/${tournament.tournament_id}`;
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}
@@ -895,7 +895,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
                 </Link>
@@ -952,7 +952,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
                   onClick={() => {
-                    const publicUrl = `${window.location.origin}/public/tournaments/groups/${group.group_id}`;
+                    const publicUrl = `${window.location.origin}/tournaments/groups/${group.group_id}`;
                     const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
                     window.open(qrPageUrl, '_blank', 'width=500,height=700');
                   }}
@@ -1154,7 +1154,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const publicUrl = `${window.location.origin}/tournaments/${tournament.tournament_id}`;
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}
@@ -1371,7 +1371,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
                 </Link>
@@ -2174,7 +2174,7 @@ function TeamExpandedPanel({ team }: {
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          onClick={() => window.open(`/public/tournaments/${tournamentId}`, '_blank', 'noopener,noreferrer')}
+                                          onClick={() => window.open(`/tournaments/${tournamentId}`, '_blank', 'noopener,noreferrer')}
                                         >
                                           公開画面を見る
                                         </Button>
@@ -2348,7 +2348,7 @@ function TeamExpandedPanel({ team }: {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => window.open(`/public/tournaments/${t.tournament_id}`, '_blank', 'noopener,noreferrer')}
+                                      onClick={() => window.open(`/tournaments/${t.tournament_id}`, '_blank', 'noopener,noreferrer')}
                                     >
                                       <Eye className="w-4 h-4 mr-1" />
                                       公開画面を見る

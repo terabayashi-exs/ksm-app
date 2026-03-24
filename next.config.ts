@@ -10,6 +10,30 @@ const nextConfig: NextConfig = {
     DATABASE_URL: process.env.DATABASE_URL,
     DATABASE_AUTH_TOKEN: process.env.DATABASE_AUTH_TOKEN,
   },
+  async redirects() {
+    return [
+      {
+        source: '/public/tournaments/groups/:path*',
+        destination: '/tournaments/groups/:path*',
+        permanent: true,
+      },
+      {
+        source: '/public/tournaments/:path*',
+        destination: '/tournaments/:path*',
+        permanent: true,
+      },
+      {
+        source: '/tournaments/:id/join',
+        destination: '/tournaments/:id/entry/join',
+        permanent: true,
+      },
+      {
+        source: '/tournaments/:id/withdrawal',
+        destination: '/tournaments/:id/entry/withdrawal',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

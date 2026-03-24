@@ -435,7 +435,7 @@ export default function AdminTournamentsList() {
                               {tournament.is_archived && (
                                 <>
                                   <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                                    <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                                    <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                                       アーカイブ表示
                                     </Link>
                                   </Button>

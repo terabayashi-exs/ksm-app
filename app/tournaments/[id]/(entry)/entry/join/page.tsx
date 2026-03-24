@@ -1,16 +1,16 @@
-// app/my/tournaments/[tournament_id]/apply/page.tsx
+// app/tournaments/[id]/entry/join/page.tsx
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
-import MyTournamentJoinForm from '@/components/features/my/MyTournamentJoinForm';
+import TournamentJoinForm from '@/components/features/tournament/TournamentJoinForm';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import Link from 'next/link';
 import { Home, ChevronRight, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface PageProps {
-  params: Promise<{ tournament_id: string }>;
-  searchParams: Promise<{ team?: string; mode?: string; tournament_team_id?: string }>;
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mode?: string; team?: string }>;
 }
 
 interface TeamPlayer {
@@ -20,16 +20,7 @@ interface TeamPlayer {
   is_active: number;
 }
 
-interface ExistingTournamentPlayer {
-  player_id: number;
-  player_name: string;
-  jersey_number: number | null;
-}
-
-interface ExistingTournamentTeamInfo {
-  team_name: string;
-  team_omission: string;
-}
+// getTournamentDetails関数はgetTournamentWithGroupInfoに置き換えられました
 
 async function getTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
   const result = await db.execute(`
@@ -43,6 +34,7 @@ async function getTeamPlayers(teamId: string): Promise<TeamPlayer[]> {
     ORDER BY jersey_number ASC, player_name ASC
   `, [teamId]);
 
+  // データベースの行オブジェクトをプレーンオブジェクトに変換
   const players = result.rows.map(row => ({
     player_id: Number(row.player_id),
     player_name: String(row.player_name),
@@ -62,7 +54,13 @@ async function checkExistingParticipation(tournamentId: number, teamId: string) 
   return result.rows.length > 0;
 }
 
-async function getExistingTournamentPlayers(tournamentId: number, teamId: string, tournamentTeamId?: number): Promise<ExistingTournamentPlayer[]> {
+interface ExistingTournamentPlayer {
+  player_id: number;
+  player_name: string;
+  jersey_number: number | null;
+}
+
+async function getExistingTournamentPlayers(tournamentId: number, teamId: string): Promise<ExistingTournamentPlayer[]> {
   const result = await db.execute(`
     SELECT DISTINCT
       tp.player_id,
@@ -70,12 +68,9 @@ async function getExistingTournamentPlayers(tournamentId: number, teamId: string
       tp.jersey_number
     FROM t_tournament_players tp
     INNER JOIN m_players p ON tp.player_id = p.player_id
-    WHERE tp.tournament_id = ?
-      AND tp.team_id = ?
-      AND tp.player_status = 'active'
-      ${tournamentTeamId ? 'AND tp.tournament_team_id = ?' : ''}
+    WHERE tp.tournament_id = ? AND tp.team_id = ? AND tp.player_status = 'active'
     ORDER BY tp.jersey_number ASC, p.player_name ASC
-  `, tournamentTeamId ? [tournamentId, teamId, tournamentTeamId] : [tournamentId, teamId]);
+  `, [tournamentId, teamId]);
 
   return result.rows.map(row => ({
     player_id: Number(row.player_id),
@@ -84,18 +79,28 @@ async function getExistingTournamentPlayers(tournamentId: number, teamId: string
   }));
 }
 
+interface ExistingTournamentTeamInfo {
+  team_name: string;
+  team_omission: string;
+}
+
 async function getExistingTournamentTeamInfo(tournamentId: number, teamId: string, tournamentTeamId?: number): Promise<ExistingTournamentTeamInfo | null> {
-  const result = await db.execute(`
-    SELECT
+  let query = `
+    SELECT 
       team_name,
       team_omission
     FROM t_tournament_teams
-    WHERE tournament_id = ?
-      AND team_id = ?
-      ${tournamentTeamId ? 'AND tournament_team_id = ?' : ''}
-    ORDER BY created_at DESC
-    LIMIT 1
-  `, tournamentTeamId ? [tournamentId, teamId, tournamentTeamId] : [tournamentId, teamId]);
+    WHERE tournament_id = ? AND team_id = ?
+  `;
+  const params: (string | number)[] = [tournamentId, teamId];
+
+  // 特定のtournament_team_idが指定されている場合はそれを条件に追加
+  if (tournamentTeamId) {
+    query += ` AND tournament_team_id = ?`;
+    params.push(tournamentTeamId);
+  }
+
+  const result = await db.execute(query, params);
 
   if (result.rows.length === 0) return null;
 
@@ -106,71 +111,47 @@ async function getExistingTournamentTeamInfo(tournamentId: number, teamId: strin
   };
 }
 
-async function getAllParticipatingPlayerIds(tournamentId: number, excludeTournamentTeamId?: number): Promise<number[]> {
+async function getExistingTournamentPlayersForSpecificTeam(tournamentId: number, teamId: string, tournamentTeamId: number): Promise<ExistingTournamentPlayer[]> {
   const result = await db.execute(`
-    SELECT DISTINCT tp.player_id
+    SELECT DISTINCT
+      tp.player_id,
+      p.player_name,
+      tp.jersey_number
     FROM t_tournament_players tp
-    WHERE tp.tournament_id = ?
-      AND tp.player_status = 'active'
-      ${excludeTournamentTeamId ? 'AND tp.tournament_team_id != ?' : ''}
-  `, excludeTournamentTeamId ? [tournamentId, excludeTournamentTeamId] : [tournamentId]);
+    INNER JOIN m_players p ON tp.player_id = p.player_id
+    WHERE tp.tournament_id = ? AND tp.team_id = ? AND tp.tournament_team_id = ? AND tp.player_status = 'active'
+    ORDER BY tp.jersey_number ASC, p.player_name ASC
+  `, [tournamentId, teamId, tournamentTeamId]);
 
-  return result.rows.map(row => Number(row.player_id));
+  return result.rows.map(row => ({
+    player_id: Number(row.player_id),
+    player_name: String(row.player_name),
+    jersey_number: row.jersey_number ? Number(row.jersey_number) : null
+  }));
 }
 
-export default async function MyTournamentJoinPage({ params, searchParams }: PageProps) {
+export default async function TournamentJoinPage({ params, searchParams }: PageProps) {
   const session = await auth();
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
-  const tournamentId = parseInt(resolvedParams.tournament_id);
-  const specificTeamId = resolvedSearchParams.team;
-  const mode = resolvedSearchParams.mode; // 'new' = 新規追加モード
-  const tournamentTeamIdParam = resolvedSearchParams.tournament_team_id
-    ? parseInt(resolvedSearchParams.tournament_team_id)
-    : undefined;
+  const tournamentId = parseInt(resolvedParams.id);
+  const isNewTeamMode = resolvedSearchParams.mode === 'new';
+  const specificTeamId = resolvedSearchParams.team ? parseInt(resolvedSearchParams.team) : null;
 
-  // 認証チェック（統合ログインシステム対応）
-  if (!session?.user) {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/my/tournaments/${tournamentId}/apply`)}`);
+  // 認証チェック（チーム権限必須）
+  if (!session || session.user.role !== 'team') {
+    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/entry/join`)}`);
   }
 
-  const roles = (session.user.roles ?? []) as ("admin" | "operator" | "team")[];
-  let teamIds = (session.user.teamIds ?? []) as string[];
-  const isAdmin = roles.includes("admin") || roles.includes("operator");
-
-  // チームロールでもなく管理者でもなく、チームIDもない場合はログインページへ
-  if (!roles.includes("team") && !isAdmin && teamIds.length === 0) {
-    console.error('[apply] redirect: no team role and no teamIds', { roles, teamIds: teamIds.length, isAdmin });
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/my/tournaments/${tournamentId}/apply`)}`);
-  }
-
-  // 旧adminプロバイダーでログインした管理者の場合、teamIdsがセッションにないためDBから取得
-  if (teamIds.length === 0 && isAdmin && session.user.loginUserId) {
-    const teamsResult = await db.execute(
-      `SELECT team_id FROM m_team_members WHERE login_user_id = ? AND is_active = 1`,
-      [session.user.loginUserId]
-    );
-    teamIds = teamsResult.rows.map(r => r.team_id as string);
-  }
-
-  // 特定のチームが指定されている場合はそれを使用、そうでない場合は最初のチームを使用
-  const teamId = specificTeamId || teamIds[0];
+  const teamId = session.user.teamId;
   if (!teamId) {
-    console.error('[apply] redirect: teamId not found', { specificTeamId, teamIds, roles, loginUserId: session.user.loginUserId });
-    redirect(`/my?message=${encodeURIComponent('チームが見つかりませんでした')}`);
+    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/entry/join`)}`);
   }
 
   // 大会情報取得（グループ情報含む）
-  let tournamentData;
-  try {
-    tournamentData = await getTournamentWithGroupInfo(tournamentId);
-  } catch (error) {
-    console.error('[apply] getTournamentWithGroupInfo error:', error, { tournamentId });
-    redirect(`/my?message=${encodeURIComponent('大会情報の取得に失敗しました')}`);
-  }
+  const tournamentData = await getTournamentWithGroupInfo(tournamentId);
   if (!tournamentData) {
-    console.error('[apply] redirect: tournamentData is falsy', { tournamentId });
-    redirect('/my');
+    redirect('/tournaments');
   }
 
   const { tournament, group } = tournamentData;
@@ -182,52 +163,44 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
     const endDate = new Date(tournament.recruitment_end_date);
 
     if (now < startDate || now > endDate) {
-      redirect(`/my?message=${encodeURIComponent('募集期間外です')}`);
+      redirect(`/tournaments/${tournamentId}`);
     }
   }
 
   // 既に参加申し込み済みかチェック
   const alreadyJoined = await checkExistingParticipation(tournamentId, teamId);
-
-  // 新規追加モード（mode=new）の場合は、参加済みでも編集モードにしない
-  const isNewTeamMode = mode === 'new';
-  const isEditMode = alreadyJoined && !isNewTeamMode;
+  
+  // 新チーム追加モードの場合は、既存参加の有無に関わらず新規モードとして扱う
+  // 特定チーム編集モードの場合は、そのチームが存在すれば編集モード
+  let actualEditMode = alreadyJoined && !isNewTeamMode;
+  
+  // 特定チーム編集の場合、そのチームの存在確認
+  if (specificTeamId) {
+    const specificTeamResult = await db.execute(`
+      SELECT tournament_team_id FROM t_tournament_teams 
+      WHERE tournament_id = ? AND team_id = ? AND tournament_team_id = ?
+    `, [tournamentId, teamId, specificTeamId]);
+    
+    if (specificTeamResult.rows.length === 0) {
+      redirect(`/team`); // 存在しないチームの編集要求は無効
+    }
+    actualEditMode = true;
+  }
 
   // チームの選手一覧取得
   const teamPlayers = await getTeamPlayers(teamId);
 
-  // 既存の大会参加選手情報を取得（編集モードの場合のみ）
-  // 新規追加モード時は空配列を渡す
-  const existingTournamentPlayers = isEditMode
-    ? await getExistingTournamentPlayers(tournamentId, teamId, tournamentTeamIdParam)
+  // 既存の大会参加選手情報を取得（修正モードの場合）
+  const existingTournamentPlayers = actualEditMode
+    ? specificTeamId
+      ? await getExistingTournamentPlayersForSpecificTeam(tournamentId, teamId, specificTeamId)
+      : await getExistingTournamentPlayers(tournamentId, teamId)
     : [];
 
-  // 既存の大会参加チーム情報を取得（編集モードの場合のみ）
-  // 新規追加モード時はnullを渡す
-  const existingTournamentTeamInfo = isEditMode
-    ? await getExistingTournamentTeamInfo(tournamentId, teamId, tournamentTeamIdParam)
+  // 既存の大会参加チーム情報を取得（修正モードの場合）
+  const existingTournamentTeamInfo = actualEditMode
+    ? await getExistingTournamentTeamInfo(tournamentId, teamId, specificTeamId || undefined)
     : null;
-
-  // この大会で既に参加登録されている選手のIDリストを取得
-  // 編集モード時は自分のチームの選手を除外するため、tournament_team_idを渡す
-  let excludeTournamentTeamId: number | undefined;
-  if (isEditMode) {
-    // URLパラメータからtournament_team_idを取得、なければDBから最初のものを取得
-    if (tournamentTeamIdParam) {
-      excludeTournamentTeamId = tournamentTeamIdParam;
-    } else if (existingTournamentPlayers.length > 0) {
-      const ttResult = await db.execute(`
-        SELECT tournament_team_id FROM t_tournament_teams
-        WHERE tournament_id = ? AND team_id = ?
-        ORDER BY created_at DESC
-        LIMIT 1
-      `, [tournamentId, teamId]);
-      if (ttResult.rows.length > 0) {
-        excludeTournamentTeamId = Number(ttResult.rows[0].tournament_team_id);
-      }
-    }
-  }
-  const alreadyParticipatingPlayerIds = await getAllParticipatingPlayerIds(tournamentId, excludeTournamentTeamId);
 
   return (
     <div className="min-h-screen bg-white">
@@ -259,38 +232,56 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isEditMode ? '参加選手の変更' : '大会参加申し込み'}
+            {actualEditMode
+              ? (specificTeamId ? `「${existingTournamentTeamInfo?.team_name || 'チーム'}」の参加選手変更` : '参加選手の変更')
+              : (isNewTeamMode ? '参加チームを追加' : '大会参加申し込み')
+            }
           </h1>
           <p className="text-gray-500">
             {group && (
               <>
                 {group.group_name} - {tournament.category_name || tournament.tournament_name}
-                {isEditMode
-                  ? ' への参加選手を変更してください'
+                {actualEditMode
+                  ? specificTeamId
+                    ? ` の「${existingTournamentTeamInfo?.team_name}」チームの参加選手を変更してください`
+                    : ' への参加選手を変更してください'
+                  : isNewTeamMode
+                  ? ' に追加のチームで参加申し込みをしてください'
                   : ' への参加選手を選択してください'
                 }
               </>
             )}
             {!group && (
               <>
-                {isEditMode
-                  ? `${tournament.tournament_name} への参加選手を変更してください`
+                {actualEditMode
+                  ? specificTeamId
+                    ? `${tournament.tournament_name} の「${existingTournamentTeamInfo?.team_name}」チームの参加選手を変更してください`
+                    : `${tournament.tournament_name} への参加選手を変更してください`
+                  : isNewTeamMode
+                  ? `${tournament.tournament_name} に追加のチームで参加申し込みをしてください`
                   : `${tournament.tournament_name} への参加選手を選択してください`
                 }
               </>
             )}
           </p>
-          {isEditMode && (
+          {actualEditMode && !specificTeamId && (
             <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-md">
               <p className="text-sm text-primary">
                 既に参加申し込み済みです。参加選手の変更や背番号の修正が可能です。
               </p>
             </div>
           )}
+          {actualEditMode && specificTeamId && (
+            <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+              <p className="text-sm text-orange-800">
+                <strong>個別チーム編集:</strong> 「{existingTournamentTeamInfo?.team_name}({existingTournamentTeamInfo?.team_omission})」チームの選手情報を編集しています。
+              </p>
+            </div>
+          )}
           {isNewTeamMode && (
             <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800">
-                追加申し込みモードです。同じチームから別のチーム名で参加登録できます。
+                <strong>複数チーム参加モード:</strong> 同じマスターチームから追加のチームで参加します。異なるチーム名・略称を入力してください。
               </p>
             </div>
           )}
@@ -357,21 +348,21 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
               <div>
                 <span className="font-medium text-gray-500">募集期間:</span>
                 <span className="ml-2">
-                  {tournament.recruitment_start_date?.replace('T', ' ')} 〜 {tournament.recruitment_end_date?.replace('T', ' ')}
+                  {tournament.recruitment_start_date} 〜 {tournament.recruitment_end_date}
                 </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <MyTournamentJoinForm
+        <TournamentJoinForm
           tournamentId={tournamentId}
-          teamId={teamId}
           teamPlayers={teamPlayers}
           existingTournamentPlayers={existingTournamentPlayers}
           existingTournamentTeamInfo={existingTournamentTeamInfo}
-          isEditMode={isEditMode}
-          alreadyParticipatingPlayerIds={alreadyParticipatingPlayerIds}
+          isEditMode={actualEditMode}
+          isNewTeamMode={isNewTeamMode}
+          specificTeamId={specificTeamId || undefined}
         />
       </div>
     </div>

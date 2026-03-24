@@ -147,7 +147,7 @@ export class ArchiveVersionManager {
 
 ##### **動的コンポーネント読み込み**
 ```typescript
-// app/public/tournaments/[id]/archived/page.tsx
+// app/tournaments/[id]/archived/page.tsx
 export default async function ArchivedTournamentPage({ params }: { params: { id: string } }) {
   const tournamentId = parseInt(params.id);
   const archiveVersion = await ArchiveVersionManager.getArchiveUIVersion(tournamentId);

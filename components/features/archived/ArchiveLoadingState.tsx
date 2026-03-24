@@ -103,7 +103,7 @@ export function ArchiveErrorState({ error, tournamentId, onRetry }: ArchiveError
               )}
               
               <Button variant="outline" asChild>
-                <Link href="/public/tournaments">
+                <Link href="/tournaments">
                   大会一覧へ
                 </Link>
               </Button>

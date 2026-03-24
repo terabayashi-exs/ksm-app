@@ -148,13 +148,23 @@ async function handleTournamentJoin(
     }
 
     const roles = (session.user.roles ?? []) as ("admin" | "operator" | "team")[];
-    const teamIds = (session.user.teamIds ?? []) as string[];
+    let teamIds = (session.user.teamIds ?? []) as string[];
+    const isAdmin = roles.includes("admin") || roles.includes("operator");
 
-    if (!roles.includes("team") && teamIds.length === 0) {
+    if (!roles.includes("team") && !isAdmin && teamIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'チーム権限が必要です' },
         { status: 401 }
       );
+    }
+
+    // teamIdsがセッションにない管理者の場合、DBから取得
+    if (teamIds.length === 0 && isAdmin && session.user.loginUserId) {
+      const teamsResult = await db.execute(
+        `SELECT team_id FROM m_team_members WHERE login_user_id = ? AND is_active = 1`,
+        [session.user.loginUserId]
+      );
+      teamIds = teamsResult.rows.map(r => r.team_id as string);
     }
 
     const resolvedParams = await context.params;
@@ -197,8 +207,8 @@ async function handleTournamentJoin(
     const editModeFromData = data.isEditMode || false;
     const actualEditMode = isEditMode || editModeFromData;
 
-    // チーム所有権チェック
-    if (!teamIds.includes(teamId)) {
+    // チーム所有権チェック（管理者はスキップ）
+    if (!isAdmin && !teamIds.includes(teamId)) {
       return NextResponse.json(
         { success: false, error: 'チームへのアクセス権限がありません' },
         { status: 403 }
@@ -447,7 +457,7 @@ async function handleTournamentJoin(
           }
 
           // 大会詳細ページのURL
-          const tournamentUrl = `${process.env.NEXTAUTH_URL}/public/tournaments/${tournamentId}`;
+          const tournamentUrl = `${process.env.NEXTAUTH_URL}/tournaments/${tournamentId}`;
 
           // メールテンプレート生成
           const emailTemplate = await generateTournamentApplicationConfirmation({
