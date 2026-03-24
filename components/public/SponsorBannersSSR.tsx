@@ -17,7 +17,7 @@ export default function SponsorBannersSSR({ banners, position, size }: SponsorBa
   if (banners.length === 0) return null;
 
   const handleBannerClick = (banner: SponsorBanner) => {
-    fetch(`/api/public/sponsor-banners/${banner.banner_id}/click`, {
+    fetch(`/api/sponsor-banners/${banner.banner_id}/click`, {
       method: 'POST',
     }).catch(() => {});
     if (banner.banner_url) {

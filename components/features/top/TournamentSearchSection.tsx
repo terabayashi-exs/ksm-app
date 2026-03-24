@@ -397,7 +397,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
                   {orgTournaments.map(t => (
                     <Link
                       key={t.group_id}
-                      href={`/public/tournaments/groups/${t.group_id}`}
+                      href={`/tournaments/groups/${t.group_id}`}
                       className="block"
                     >
                       <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">

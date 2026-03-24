@@ -15,7 +15,7 @@ export function useSidebarBanners(tournamentId: number, targetTab: TargetTab) {
     const fetchBanners = async () => {
       try {
         const response = await fetch(
-          `/api/public/sponsor-banners?tournament_id=${tournamentId}&position=sidebar&tab=${targetTab}`
+          `/api/sponsor-banners?tournament_id=${tournamentId}&position=sidebar&tab=${targetTab}`
         );
 
         if (!response.ok) {

@@ -1,3 +1,5 @@
+export const metadata = { title: "試合日程設定" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";

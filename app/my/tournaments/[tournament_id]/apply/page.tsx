@@ -1,4 +1,6 @@
 // app/my/tournaments/[tournament_id]/apply/page.tsx
+export const metadata = { title: "大会参加申し込み" };
+
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
@@ -135,22 +137,41 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
   }
 
   const roles = (session.user.roles ?? []) as ("admin" | "operator" | "team")[];
-  const teamIds = (session.user.teamIds ?? []) as string[];
+  let teamIds = (session.user.teamIds ?? []) as string[];
+  const isAdmin = roles.includes("admin") || roles.includes("operator");
 
-  // チームロールまたはチームIDがない場合はログインページへ
-  if (!roles.includes("team") && teamIds.length === 0) {
+  // チームロールでもなく管理者でもなく、チームIDもない場合はログインページへ
+  if (!roles.includes("team") && !isAdmin && teamIds.length === 0) {
+    console.error('[apply] redirect: no team role and no teamIds', { roles, teamIds: teamIds.length, isAdmin });
     redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/my/tournaments/${tournamentId}/apply`)}`);
+  }
+
+  // 旧adminプロバイダーでログインした管理者の場合、teamIdsがセッションにないためDBから取得
+  if (teamIds.length === 0 && isAdmin && session.user.loginUserId) {
+    const teamsResult = await db.execute(
+      `SELECT team_id FROM m_team_members WHERE login_user_id = ? AND is_active = 1`,
+      [session.user.loginUserId]
+    );
+    teamIds = teamsResult.rows.map(r => r.team_id as string);
   }
 
   // 特定のチームが指定されている場合はそれを使用、そうでない場合は最初のチームを使用
   const teamId = specificTeamId || teamIds[0];
   if (!teamId) {
+    console.error('[apply] redirect: teamId not found', { specificTeamId, teamIds, roles, loginUserId: session.user.loginUserId });
     redirect(`/my?message=${encodeURIComponent('チームが見つかりませんでした')}`);
   }
 
   // 大会情報取得（グループ情報含む）
-  const tournamentData = await getTournamentWithGroupInfo(tournamentId);
+  let tournamentData;
+  try {
+    tournamentData = await getTournamentWithGroupInfo(tournamentId);
+  } catch (error) {
+    console.error('[apply] getTournamentWithGroupInfo error:', error, { tournamentId });
+    redirect(`/my?message=${encodeURIComponent('大会情報の取得に失敗しました')}`);
+  }
   if (!tournamentData) {
+    console.error('[apply] redirect: tournamentData is falsy', { tournamentId });
     redirect('/my');
   }
 
@@ -225,13 +246,13 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
           {group && (
             <>
               <ChevronRight className="h-4 w-4" />
-              <Link href={`/public/tournaments/groups/${group.group_id}`} className="hover:text-gray-900 transition-colors">
+              <Link href={`/tournaments/groups/${group.group_id}`} className="hover:text-gray-900 transition-colors">
                 {group.group_name}
               </Link>
             </>
           )}
           <ChevronRight className="h-4 w-4" />
-          <Link href={`/public/tournaments/${tournament.tournament_id}`} className="hover:text-gray-900 transition-colors">
+          <Link href={`/tournaments/${tournament.tournament_id}`} className="hover:text-gray-900 transition-colors">
             {group ? tournament.category_name || tournament.tournament_name : tournament.tournament_name}
           </Link>
           <ChevronRight className="h-4 w-4" />

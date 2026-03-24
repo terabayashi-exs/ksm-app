@@ -41,7 +41,7 @@
 
 ### 5. クリック数トラッキング
 - バナークリック時にAPIエンドポイント経由でカウント
-- `/api/public/sponsor-banners/[id]/click` - クリック数カウントAPI
+- `/api/sponsor-banners/[id]/click` - クリック数カウントAPI
 - 管理画面でクリック数確認可能
 
 ### 6. 画像管理（Vercel Blob Storage）
@@ -157,12 +157,12 @@ tournament_id: 1
 
 #### バナー取得
 ```
-GET /api/public/sponsor-banners?tournament_id={id}&position={position}&tab={tab}
+GET /api/sponsor-banners?tournament_id={id}&position={position}&tab={tab}
 ```
 
 #### クリック数カウント
 ```
-POST /api/public/sponsor-banners/[id]/click
+POST /api/sponsor-banners/[id]/click
 ```
 
 ## 🎨 フロントエンド実装
@@ -244,8 +244,8 @@ POST /api/public/sponsor-banners/[id]/click
 - `app/api/admin/sponsor-banners/route.ts` - 一覧・作成
 - `app/api/admin/sponsor-banners/[id]/route.ts` - 更新・削除
 - `app/api/admin/sponsor-banners/upload/route.ts` - 画像アップロード
-- `app/api/public/sponsor-banners/route.ts` - 公開バナー取得
-- `app/api/public/sponsor-banners/[id]/click/route.ts` - クリック数カウント
+- `app/api/sponsor-banners/route.ts` - 公開バナー取得
+- `app/api/sponsor-banners/[id]/click/route.ts` - クリック数カウント
 
 ### コンポーネント
 - `components/admin/SponsorBannerForm.tsx` - バナーフォーム
@@ -261,7 +261,7 @@ POST /api/public/sponsor-banners/[id]/click
 - `app/admin/tournaments/[id]/sponsor-banners/page.tsx` - バナー一覧
 - `app/admin/tournaments/[id]/sponsor-banners/create/page.tsx` - バナー作成
 - `app/admin/tournaments/[id]/sponsor-banners/[bannerId]/edit/page.tsx` - バナー編集
-- `app/public/tournaments/[id]/page.tsx` - 公開ページ（バナー表示）
+- `app/tournaments/[id]/page.tsx` - 公開ページ（バナー表示）
 
 ## 💡 今後の拡張案
 

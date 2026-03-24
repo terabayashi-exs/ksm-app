@@ -1,0 +1,128 @@
+// app/tournaments/[id]/layout.tsx
+import { ReactNode } from 'react';
+import Link from 'next/link';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher';
+import ShareButton from '@/components/public/ShareButton';
+import TournamentTabNav from '@/components/public/TournamentTabNav';
+import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
+import { Home, ChevronRight, FileText } from 'lucide-react';
+import { db } from '@/lib/db';
+import type { TournamentPhase } from '@/lib/types/tournament-phases';
+
+interface LayoutProps {
+  children: ReactNode;
+  params: Promise<{ id: string }>;
+}
+
+function getPhaseList(tournament: { phases?: { phases: TournamentPhase[] } | null }): TournamentPhase[] {
+  if (tournament.phases?.phases && tournament.phases.phases.length > 0) {
+    return [...tournament.phases.phases].sort((a, b) => a.order - b.order);
+  }
+  return [
+    { id: 'preliminary', order: 1, name: '予選', format_type: 'league' as const },
+    { id: 'final', order: 2, name: '決勝', format_type: 'tournament' as const },
+  ];
+}
+
+export default async function TournamentDetailLayout({ children, params }: LayoutProps) {
+  const resolvedParams = await params;
+  const tournamentId = parseInt(resolvedParams.id);
+
+  if (isNaN(tournamentId)) {
+    throw new Error('有効な大会IDを指定してください');
+  }
+
+  const [data, publicFilesResult] = await Promise.all([
+    getTournamentWithGroupInfo(tournamentId),
+    db.execute(
+      `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
+      [tournamentId]
+    ).catch(() => ({ rows: [{ count: 0 }] })),
+  ]);
+  const { tournament, group, sibling_divisions } = data;
+  const hasPublicFiles = Number(publicFilesResult.rows[0]?.count ?? 0) > 0;
+
+  // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
+  // layout のUI（タブ等）はスキップして children をそのまま返す
+  if (tournament.is_archived) {
+    return <>{children}</>;
+  }
+
+  const phaseList = getPhaseList(tournament);
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Header />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* パンくずリスト */}
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6 no-print">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          {group && (
+            <>
+              <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <Link
+                href={`/tournaments/groups/${group.group_id}`}
+                className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+              >
+                {group.group_name} Top
+              </Link>
+            </>
+          )}
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            {tournament.tournament_name}
+          </span>
+        </nav>
+
+        {/* ページヘッダー */}
+        <div className="mb-8 no-print">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">{tournament.tournament_name}</h1>
+              {group && (
+                <p className="text-gray-500">（{group.group_name}）</p>
+              )}
+              {hasPublicFiles && (
+                <Link
+                  href={`/tournaments/${tournament.tournament_id}#public-files`}
+                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline mt-1"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  大会資料があります
+                </Link>
+              )}
+            </div>
+            <div className="flex items-center gap-2 sm:ml-4">
+              <DivisionSwitcher
+                currentDivisionId={tournament.tournament_id}
+                currentDivisionName={tournament.tournament_name}
+                siblingDivisions={sibling_divisions}
+              />
+              <ShareButton tournamentName={tournament.tournament_name} />
+            </div>
+          </div>
+        </div>
+
+        {/* タブナビゲーション */}
+        <TournamentTabNav
+          tournamentId={tournament.tournament_id}
+          phases={phaseList}
+        />
+
+        {/* タブコンテンツ */}
+        {children}
+      </div>
+
+      <Footer />
+    </div>
+  );
+}

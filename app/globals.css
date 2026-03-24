@@ -79,6 +79,22 @@ body {
   .tournament-block {
     page-break-inside: avoid;
   }
+
+  /* 印刷時のレイアウト調整 */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .min-h-screen {
+    min-height: auto !important;
+  }
+
+  /* 印刷時のパディング縮小 */
+  .py-8 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
 }
 
 /* インタラクティブカード — クリック可能なカードに適用 */

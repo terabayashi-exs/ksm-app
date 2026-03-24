@@ -1,4 +1,6 @@
 // app/admin/announcements/page.tsx
+export const metadata = { title: "お知らせ管理" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";

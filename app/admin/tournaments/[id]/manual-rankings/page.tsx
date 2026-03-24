@@ -1,4 +1,6 @@
 // app/admin/tournaments/[id]/manual-rankings/page.tsx
+export const metadata = { title: "順位手動調整" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";

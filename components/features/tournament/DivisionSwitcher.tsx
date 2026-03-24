@@ -28,7 +28,7 @@ export default function DivisionSwitcher({
   return (
     <Select
       value={currentDivisionId.toString()}
-      onValueChange={(value) => router.push(`/public/tournaments/${value}`)}
+      onValueChange={(value) => router.push(`/tournaments/${value}`)}
     >
       <SelectTrigger className="w-[280px]">
         <SelectValue placeholder="部門を選択" />

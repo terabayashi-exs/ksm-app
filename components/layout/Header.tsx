@@ -7,12 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
 import { User, LogOut, Menu, X, Search } from "lucide-react";
 
 interface HeaderProps {
@@ -52,37 +47,10 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
             {status === "loading" ? (
               <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : session?.user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 text-white/90 hover:text-white hover:bg-white/10">
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      {session.user.name}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b border-gray-200">
-                    <p className="font-medium text-gray-900">{session.user.name}</p>
-                    <p className="text-sm text-gray-500">{session.user.email}</p>
-                  </div>
-
-                  <DropdownMenuItem asChild>
-                    <Link href="/my" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      マイダッシュボード
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    onClick={() => signOut({ redirect: false }).then(() => window.location.href = '/')}
-                    className="text-destructive cursor-pointer"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    ログアウト
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserAvatarMenu
+                userName={session.user.name || ''}
+                userEmail={session.user.email || ''}
+              />
             ) : (
               <>
                 {!hideSearchButton && (
@@ -117,69 +85,75 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
         </div>
       </div>
 
-      {/* モバイルメニュー */}
+      {/* モバイルメニュー（オーバーレイ） */}
       {mobileMenuOpen && (
-        <div className="sm:hidden border-t border-white/10 bg-base-800">
-          <div className="px-4 py-3 space-y-2">
-            {status === "loading" ? (
-              <div className="w-full h-10 bg-white/10 rounded-md animate-pulse"></div>
-            ) : session?.user ? (
-              <>
-                <div className="px-3 py-2 border-b border-white/10 mb-2">
-                  <p className="font-medium text-white text-sm">{session.user.name}</p>
-                  <p className="text-xs text-white/60">{session.user.email}</p>
-                </div>
-                <Link
-                  href="/my"
-                  className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-4 w-4" />
-                  マイダッシュボード
-                </Link>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    signOut({ redirect: false }).then(() => window.location.href = '/');
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-3 text-sm text-red-400 rounded-md hover:bg-white/10 text-left"
-                >
-                  <LogOut className="h-4 w-4" />
-                  ログアウト
-                </button>
-              </>
-            ) : (
-              <>
-                {!hideSearchButton && (
+        <>
+          <div
+            className="fixed inset-0 top-16 z-40 bg-black/50 sm:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute left-0 right-0 top-full z-50 sm:hidden border-t border-white/10 bg-base-800 shadow-lg">
+            <div className="px-4 py-3 space-y-2">
+              {status === "loading" ? (
+                <div className="w-full h-10 bg-white/10 rounded-md animate-pulse"></div>
+              ) : session?.user ? (
+                <>
+                  <div className="px-3 py-2 border-b border-white/10 mb-2">
+                    <p className="font-medium text-white text-sm">{session.user.name}</p>
+                    <p className="text-xs text-white/60">{session.user.email}</p>
+                  </div>
                   <Link
-                    href="/"
+                    href="/my"
                     className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Search className="h-4 w-4" />
-                    大会を探す
+                    <User className="h-4 w-4" />
+                    マイダッシュボード
                   </Link>
-                )}
-                <Link
-                  href="/auth/login"
-                  className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-4 w-4" />
-                  ログイン
-                </Link>
-                <Link
-                  href="/auth/register"
-                  className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="h-4 w-4" />
-                  新規ユーザー登録
-                </Link>
-              </>
-            )}
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut({ redirect: false }).then(() => window.location.href = '/');
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm text-red-400 rounded-md hover:bg-white/10 text-left"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    ログアウト
+                  </button>
+                </>
+              ) : (
+                <>
+                  {!hideSearchButton && (
+                    <Link
+                      href="/"
+                      className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Search className="h-4 w-4" />
+                      大会を探す
+                    </Link>
+                  )}
+                  <Link
+                    href="/auth/login"
+                    className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4" />
+                    ログイン
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    className="flex items-center gap-2 px-3 py-3 text-sm text-white/90 rounded-md hover:bg-white/10"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4" />
+                    新規ユーザー登録
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   );

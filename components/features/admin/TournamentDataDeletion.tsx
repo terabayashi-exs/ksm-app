@@ -177,7 +177,7 @@ export default function TournamentDataDeletion({
 
             {deletionResult && (
               <Button
-                onClick={() => window.open(`/public/tournaments/${tournament.tournament_id}/archived`, '_blank')}
+                onClick={() => window.open(`/tournaments/${tournament.tournament_id}/archived`, '_blank')}
                 variant="outline"
                 className="flex items-center gap-2"
               >

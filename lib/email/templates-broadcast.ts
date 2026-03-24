@@ -19,7 +19,7 @@ export function generateCustomBroadcastEmail(data: {
                   process.env.NEXTAUTH_URL ||
                   'https://taikai-go.com';
   const tournamentUrl = data.tournamentId
-    ? `${baseUrl}/public/tournaments/${data.tournamentId}`
+    ? `${baseUrl}/tournaments/${data.tournamentId}`
     : null;
 
   // URL置換処理

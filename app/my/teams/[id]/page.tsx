@@ -549,7 +549,7 @@ function TournamentsTab({ teamId }: { teamId: string }) {
                     </div>
                   </div>
                   <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0 ml-3">
-                    <Link href={`/tournaments/${t.tournament_id}/join`}>
+                    <Link href={`/my/tournaments/${t.tournament_id}/apply?team=${teamId}`}>
                       参加申込
                     </Link>
                   </Button>

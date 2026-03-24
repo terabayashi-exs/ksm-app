@@ -1,4 +1,6 @@
 // app/my/teams/[id]/managers/page.tsx
+export const metadata = { title: "担当者管理" };
+
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";

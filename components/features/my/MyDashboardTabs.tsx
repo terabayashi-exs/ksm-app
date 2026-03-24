@@ -1,7 +1,7 @@
 // components/features/my/MyDashboardTabs.tsx
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Image as ImageIcon, Calendar } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
@@ -20,11 +20,13 @@ import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckRespo
 import { FormatChangeDialog } from "@/components/features/tournament/FormatChangeDialog";
 import { FormatSelectionModal } from "@/components/features/tournament/FormatSelectionModal";
 import WithdrawalModal from "@/components/features/my/WithdrawalModal";
+import { Label } from "@/components/ui/label";
 
 type Role = "admin" | "operator" | "team";
+type TabKey = "admin" | "operator" | "team" | "profile";
 
 interface Tab {
-  key: "admin" | "operator" | "team";
+  key: TabKey;
   label: string;
   icon: React.ReactNode;
 }
@@ -40,6 +42,7 @@ interface MyDashboardTabsProps {
   isSuperadmin: boolean;
   teamIds: string[];
   currentUserId: string;
+  loginUserId: number;
   initialTournamentData?: TournamentDashboardData | null;
   initialOperatorTournamentData?: TournamentDashboardData | null;
   initialTeamData?: TeamDashboardItem[] | null;
@@ -54,7 +57,7 @@ export default function MyDashboardTabs(props: MyDashboardTabsProps) {
   );
 }
 
-function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, currentUserId, initialTournamentData, initialOperatorTournamentData, initialTeamData, initialSportTypes }: MyDashboardTabsProps) {
+function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, currentUserId, loginUserId: _loginUserId, initialTournamentData, initialOperatorTournamentData, initialTeamData, initialSportTypes }: MyDashboardTabsProps) {
   const searchParams = useSearchParams();
 
   // 表示するタブを決定
@@ -76,17 +79,20 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, currentUserId, ini
   // チームタブは常に追加
   tabs.push({ key: "team", label: "チーム管理", icon: <Crown className="h-4 w-4" /> });
 
+  // 個人情報管理タブは常に追加
+  tabs.push({ key: "profile", label: "個人情報", icon: <User className="h-4 w-4" /> });
+
   // URLの ?tab= パラメータで初期タブを決定（なければ先頭タブ）
-  const tabParam = searchParams.get("tab") as "admin" | "operator" | "team" | null;
+  const tabParam = searchParams.get("tab") as TabKey | null;
   const initialTab = (tabParam && tabs.some(t => t.key === tabParam)) ? tabParam : tabs[0].key;
 
-  const [activeTab, setActiveTab] = useState<"admin" | "operator" | "team">(initialTab);
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   return (
     <div>
       {/* タブナビゲーション */}
       <div>
-        <nav className={`grid gap-1 ${tabs.length === 1 ? 'grid-cols-1' : tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`} aria-label="ダッシュボードタブ">
+        <nav className={`grid gap-1 ${tabs.length === 1 ? 'grid-cols-1' : tabs.length === 2 ? 'grid-cols-2' : tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`} aria-label="ダッシュボードタブ">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -111,6 +117,7 @@ function MyDashboardTabsInner({ roles, isSuperadmin, teamIds, currentUserId, ini
         {activeTab === "admin" && <AdminTabContent isSuperadmin={isSuperadmin} currentUserId={currentUserId} initialTournamentData={initialTournamentData} initialSportTypes={initialSportTypes} />}
         {activeTab === "operator" && <OperatorTabContent initialTournamentData={initialOperatorTournamentData} initialSportTypes={initialSportTypes} />}
         {activeTab === "team" && <TeamTabContent teamIds={teamIds} initialTeamData={initialTeamData} />}
+        {activeTab === "profile" && <ProfileTabContent roles={roles} isSuperadmin={isSuperadmin} />}
       </div>
     </div>
   );
@@ -266,24 +273,7 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
             </CardContent>
           </Card>
 
-          <Card className="border-purple-200 bg-purple-50">
-            <CardHeader>
-              <CardTitle className="text-purple-800 flex items-center gap-2">
-                <ImageIcon className="h-5 w-5" />
-                ロゴの管理
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-purple-700 mb-4">
-                組織ロゴの設定・管理を行います
-              </p>
-              <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
-                  <Link href="/admin/profile">ロゴを登録する</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
       </div>
 
@@ -579,7 +569,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const publicUrl = `${window.location.origin}/tournaments/${tournament.tournament_id}`;
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}
@@ -895,7 +885,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
                 </Link>
@@ -952,7 +942,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
                   onClick={() => {
-                    const publicUrl = `${window.location.origin}/public/tournaments/groups/${group.group_id}`;
+                    const publicUrl = `${window.location.origin}/tournaments/groups/${group.group_id}`;
                     const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
                     window.open(qrPageUrl, '_blank', 'width=500,height=700');
                   }}
@@ -1154,7 +1144,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const publicUrl = `${window.location.origin}/public/tournaments/${tournament.tournament_id}`;
+                const publicUrl = `${window.location.origin}/tournaments/${tournament.tournament_id}`;
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}
@@ -1371,7 +1361,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
-                <Link href={`/public/tournaments/${tournament.tournament_id}/archived`}>
+                <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
                 </Link>
@@ -2174,7 +2164,7 @@ function TeamExpandedPanel({ team }: {
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          onClick={() => window.open(`/public/tournaments/${tournamentId}`, '_blank', 'noopener,noreferrer')}
+                                          onClick={() => window.open(`/tournaments/${tournamentId}/schedule`, '_blank', 'noopener,noreferrer')}
                                         >
                                           公開画面を見る
                                         </Button>
@@ -2348,7 +2338,7 @@ function TeamExpandedPanel({ team }: {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => window.open(`/public/tournaments/${t.tournament_id}`, '_blank', 'noopener,noreferrer')}
+                                      onClick={() => window.open(`/tournaments/${t.tournament_id}/schedule`, '_blank', 'noopener,noreferrer')}
                                     >
                                       <Eye className="w-4 h-4 mr-1" />
                                       公開画面を見る
@@ -2626,5 +2616,402 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── 個人情報管理タブ ────────────────────────────────────────────────────────
+function ProfileTabContent({ roles, isSuperadmin }: { roles: Role[]; isSuperadmin: boolean }) {
+  const isAdmin = roles.includes("admin") || isSuperadmin;
+
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // ロゴ関連
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoDeleting, setLogoDeleting] = useState(false);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchLogoData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/profile/logo');
+      const result = await res.json();
+      if (result.success && result.data) {
+        setLogoUrl(result.data.has_logo ? result.data.logo_url : null);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/my/profile');
+        const result = await res.json();
+        if (result.success) {
+          setDisplayName(result.data.display_name);
+          setEmail(result.data.email);
+          setOrganizationName(result.data.organization_name || '');
+        }
+      } catch {
+        console.error('プロフィール取得エラー');
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    fetchProfile();
+    if (isAdmin) fetchLogoData();
+  }, [isAdmin, fetchLogoData]);
+
+  const handleProfileSave = async () => {
+    if (!displayName.trim()) {
+      setProfileMessage({ type: 'error', text: '表示名を入力してください' });
+      return;
+    }
+    setProfileSaving(true);
+    setProfileMessage(null);
+    try {
+      const res = await fetch('/api/my/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: displayName.trim(), organization_name: organizationName.trim() }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setProfileMessage({ type: 'success', text: 'プロフィールを更新しました' });
+      } else {
+        setProfileMessage({ type: 'error', text: result.error || '更新に失敗しました' });
+      }
+    } catch {
+      setProfileMessage({ type: 'error', text: '通信エラーが発生しました' });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setProfileMessage({ type: 'error', text: 'JPEG、PNG、WebPファイルのみアップロード可能です' });
+      return;
+    }
+    if (file.size > 1 * 1024 * 1024) {
+      setProfileMessage({ type: 'error', text: 'ファイルサイズは1MB以下にしてください' });
+      return;
+    }
+    setSelectedLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreviewUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    setProfileMessage(null);
+  };
+
+  const handleLogoUpload = async () => {
+    if (!selectedLogoFile) return;
+    setLogoUploading(true);
+    setProfileMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append('logo', selectedLogoFile);
+      formData.append('organization_name', organizationName);
+      const res = await fetch('/api/admin/profile/logo', { method: 'POST', body: formData });
+      const result = await res.json();
+      if (result.success) {
+        setProfileMessage({ type: 'success', text: 'ロゴをアップロードしました' });
+        setSelectedLogoFile(null);
+        setLogoPreviewUrl(null);
+        if (logoFileInputRef.current) logoFileInputRef.current.value = '';
+        await fetchLogoData();
+      } else {
+        setProfileMessage({ type: 'error', text: result.error || 'アップロードに失敗しました' });
+      }
+    } catch {
+      setProfileMessage({ type: 'error', text: 'アップロードに失敗しました' });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleLogoDelete = async () => {
+    if (!logoUrl || !confirm('ロゴを削除してもよろしいですか？')) return;
+    setLogoDeleting(true);
+    try {
+      const res = await fetch('/api/admin/profile/logo', { method: 'DELETE' });
+      const result = await res.json();
+      if (result.success) {
+        setProfileMessage({ type: 'success', text: 'ロゴを削除しました' });
+        await fetchLogoData();
+      } else {
+        setProfileMessage({ type: 'error', text: result.error || '削除に失敗しました' });
+      }
+    } catch {
+      setProfileMessage({ type: 'error', text: '削除に失敗しました' });
+    } finally {
+      setLogoDeleting(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    setPasswordMessage(null);
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'すべての項目を入力してください' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: 'error', text: '新しいパスワードは8文字以上で入力してください' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: '新しいパスワードが一致しません' });
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      const res = await fetch('/api/my/profile/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setPasswordMessage({ type: 'success', text: 'パスワードを変更しました' });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        setPasswordMessage({ type: 'error', text: result.error || 'パスワード変更に失敗しました' });
+      }
+    } catch {
+      setPasswordMessage({ type: 'error', text: '通信エラーが発生しました' });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  if (profileLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* プロフィール情報 */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            プロフィール情報
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
+              <Input value={email} disabled className="bg-gray-50" />
+              <p className="text-xs text-gray-500 mt-1">メールアドレスは変更できません</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                maxLength={50}
+                placeholder="表示名を入力"
+              />
+            </div>
+            {isAdmin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">組織名</label>
+                <Input
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  maxLength={100}
+                  placeholder="組織名を入力（任意）"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* ロゴ設定（管理者のみ） */}
+          {isAdmin && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">組織ロゴ</Label>
+                  <p className="text-xs text-gray-500">大会カードに表示（JPEG/PNG/WebP、1MB以下）</p>
+                </div>
+                {logoUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogoDelete}
+                    disabled={logoDeleting}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    {logoDeleting ? '削除中...' : 'ロゴ削除'}
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* 現在のロゴ or プレビュー */}
+                {(logoPreviewUrl || logoUrl) && (
+                  <div className="w-16 h-16 bg-white border rounded-lg flex items-center justify-center overflow-hidden relative flex-shrink-0">
+                    <Image src={logoPreviewUrl || logoUrl!} alt="ロゴ" fill className="object-contain" sizes="64px" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Input
+                    type="file"
+                    ref={logoFileInputRef}
+                    onChange={handleLogoFileChange}
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    className="cursor-pointer"
+                  />
+                  {selectedLogoFile && (
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={handleLogoUpload} disabled={logoUploading}>
+                        {logoUploading ? '送信中...' : 'アップロード'}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setSelectedLogoFile(null);
+                        setLogoPreviewUrl(null);
+                        if (logoFileInputRef.current) logoFileInputRef.current.value = '';
+                      }}>
+                        取消
+                      </Button>
+                      <span className="text-xs text-gray-500">{selectedLogoFile.name} ({(selectedLogoFile.size / 1024 / 1024).toFixed(2)}MB)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {profileMessage && (
+            <div className={`flex items-center gap-2 text-sm ${profileMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+              {profileMessage.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+              {profileMessage.text}
+            </div>
+          )}
+          <Button onClick={handleProfileSave} disabled={profileSaving}>
+            {profileSaving ? '保存中...' : '保存'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* パスワード変更 + プラン情報を横並び */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              パスワード変更
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">現在のパスワード</label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="現在のパスワード"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">新しいパスワード</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="8文字以上"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">新しいパスワード（確認）</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="もう一度入力"
+              />
+            </div>
+            {passwordMessage && (
+              <div className={`flex items-center gap-2 text-sm ${passwordMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                {passwordMessage.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                {passwordMessage.text}
+              </div>
+            )}
+            <Button onClick={handlePasswordChange} disabled={passwordSaving}>
+              {passwordSaving ? '変更中...' : 'パスワードを変更'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* プラン情報（管理者のみ） */}
+        {isAdmin && (
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                プラン情報
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <PlanBadgeInline />
+              <Button variant="outline" asChild>
+                <Link href="/admin/subscription/plans">プラン変更</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// PlanBadge のインライン版（個人情報タブ内用）
+function PlanBadgeInline() {
+  const [planName, setPlanName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch('/api/my/subscription/current');
+        const result = await res.json();
+        if (result.plan) {
+          setPlanName(result.plan.plan_name);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchPlan();
+  }, []);
+
+  if (!planName) return <div className="text-sm text-gray-500">読み込み中...</div>;
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary">
+      <Star className="h-4 w-4" />
+      {planName}
+    </span>
   );
 }

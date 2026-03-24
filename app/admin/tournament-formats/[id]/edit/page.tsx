@@ -1,3 +1,5 @@
+export const metadata = { title: "大会形式編集" };
+
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";

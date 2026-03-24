@@ -1,6 +1,8 @@
 // app/admin/tournaments/[id]/participants/page.tsx
 // 参加チーム管理ページ
 
+export const metadata = { title: "参加チーム管理" };
+
 import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
