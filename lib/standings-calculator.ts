@@ -1404,12 +1404,19 @@ async function getRequiredPromotionPositions(
     promotionRequirementsResult.rows.forEach(row => {
       [row.team1_source, row.team2_source].forEach(source => {
         if (source) {
-          const match = String(source).match(/^([A-Z]+)_(\d+)$/);
+          const sourceStr = String(source);
+          // A_1, B_3 等のブロック直接参照
+          const match = sourceStr.match(/^([A-Z]+)_(\d+)$/);
           if (match) {
             const [, reqBlock, posStr] = match;
             if (reqBlock === blockName) {
               requiredPositions.add(parseInt(posStr, 10));
             }
+          }
+          // BEST_3_1 等のパターン → 全ブロックのN位が対象
+          const bestMatch = sourceStr.match(/^BEST_(\d+)_\d+$/);
+          if (bestMatch) {
+            requiredPositions.add(parseInt(bestMatch[1], 10));
           }
         }
       });
@@ -1474,7 +1481,7 @@ async function analyzePromotionEligibility(
     if (teams.length > 1) {
       canPromote = false;
       const teamNames = teams.map(t => t.team_name).join('、');
-      tieMessages.push(`${position}位同着: ${teamNames} (${teams.length}チーム)`);
+      tieMessages.push(`同${position}位: ${teamNames} (${teams.length}チーム)`);
     }
   });
 

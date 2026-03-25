@@ -66,12 +66,12 @@ export async function promoteTeamsToFinalTournament(tournamentId: number, target
     }
 
     // 確定したブロックから上位チームを取得（動的進出対応）
-    const promotions = await extractTopTeamsDynamic(tournamentId, blockRankings);
+    const { promotions, skippedPromotions } = await extractTopTeamsDynamic(tournamentId, blockRankings);
     console.log(`[PROMOTION] 進出チーム数: ${Object.keys(promotions).length}件`);
     console.log(`[PROMOTION] 進出チーム（動的進出対応）:`, JSON.stringify(promotions, null, 2));
 
     // 決勝トーナメント試合を更新
-    await updateFinalTournamentMatches(tournamentId, promotions);
+    await updateFinalTournamentMatches(tournamentId, promotions, skippedPromotions);
 
     console.log(`[PROMOTION] 決勝トーナメント進出処理完了`);
 
@@ -234,8 +234,9 @@ async function checkBlockCompletion(matchBlockId: number): Promise<boolean> {
 async function extractTopTeamsDynamic(
   tournamentId: number,
   blockRankings: { block_name: string; match_block_id: number; rankings: BlockRanking[]; }[]
-): Promise<{ [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; }> {
+): Promise<{ promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; }; skippedPromotions: Set<string>; }> {
   const promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; } = {};
+  const skippedPromotions = new Set<string>();
 
   try {
     // phases JSONから後続フェーズ（2つ目以降）のIDを取得
@@ -245,7 +246,7 @@ async function extractTopTeamsDynamic(
 
     if (subsequentPhases.length === 0) {
       console.log(`[PROMOTION] 後続フェーズがないため進出チーム抽出をスキップ`);
-      return promotions;
+      return { promotions, skippedPromotions };
     }
 
     // 後続フェーズのライブ試合から必要な進出条件を取得（オーバーライド適用）
@@ -312,22 +313,12 @@ async function extractTopTeamsDynamic(
             };
             console.log(`[PROMOTION] ${block.block_name}ブロック${position}位確定: ${selectedTeam.team_name}(tournament_team_id: ${selectedTeam.tournament_team_id}, team_id: ${selectedTeam.team_id})`);
           } else if (teamsAtPosition.length > 1) {
-            // 複数チームが同じ順位の場合（通常は手動調整で解決されているはず）
-            console.log(`[PROMOTION] ${block.block_name}ブロック${position}位に複数チーム（${teamsAtPosition.length}チーム）`);
+            // 複数チームが同じ順位 → 順位未確定のためスキップ（手動順位設定で解消後に再実行）
+            console.log(`[PROMOTION] ${block.block_name}ブロック${position}位に複数チーム（${teamsAtPosition.length}チーム） → 順位未確定のためスキップ`);
             teamsAtPosition.forEach((team, index) => {
               console.log(`[PROMOTION]   ${position}位-${index+1}: ${team.team_name}(tournament_team_id: ${team.tournament_team_id}, team_id: ${team.team_id})`);
             });
-
-            // 最初のチームを選択（手動調整されていれば通常1チームのはず）
-            if (teamsAtPosition.length > 0) {
-              const selectedTeam = teamsAtPosition[0];
-              promotions[promotionKey] = {
-                tournament_team_id: selectedTeam.tournament_team_id,
-                team_id: selectedTeam.team_id,
-                team_name: selectedTeam.team_name || selectedTeam.team_omission || selectedTeam.team_id
-              };
-              console.log(`[PROMOTION] ${block.block_name}ブロック${position}位: 複数チーム中から先頭チーム選択: ${selectedTeam.team_name}(tournament_team_id: ${selectedTeam.tournament_team_id}, team_id: ${selectedTeam.team_id})`);
-            }
+            skippedPromotions.add(promotionKey);
           } else {
             console.log(`[PROMOTION] ${block.block_name}ブロック${position}位: チームなし`);
           }
@@ -348,6 +339,16 @@ async function extractTopTeamsDynamic(
       });
 
       for (const [position, keys] of positionGroups) {
+        // 同着順位チェック: いずれかのブロックで該当順位に複数チームがいればスキップ
+        const hasDuplicatePosition = blockRankings.some(block =>
+          block.rankings.filter(t => t.position === position).length > 1
+        );
+        if (hasDuplicatePosition) {
+          console.log(`[PROMOTION] BEST_${position}_*: いずれかのブロックで同${position}位が発生 → 順位未確定のためスキップ`);
+          keys.forEach(key => skippedPromotions.add(key));
+          continue;
+        }
+
         // 正規化してから比較（ブロック間チーム数が異なる場合に対応）
         const candidateTeams = await normalizeStatsForBestComparison(
           tournamentId, blockRankings, position
@@ -465,12 +466,15 @@ async function extractTopTeamsDynamic(
     }
 
     console.log(`[PROMOTION] 進出チーム最終確定:`, Object.entries(promotions).map(([key, team]) => `${key}: ${team.team_name}(${team.team_id})`));
-    return promotions;
+    if (skippedPromotions.size > 0) {
+      console.log(`[PROMOTION] スキップされた進出条件（順位未確定）:`, Array.from(skippedPromotions));
+    }
+    return { promotions, skippedPromotions };
 
   } catch (error) {
     console.error(`[PROMOTION] 動的進出チーム抽出エラー:`, error);
     // フォールバック: 従来の上位2チーム方式
-    return extractTopTeamsPartial(blockRankings);
+    return { promotions: extractTopTeamsPartial(blockRankings), skippedPromotions: new Set<string>() };
   }
 }
 
@@ -716,7 +720,8 @@ function recalculateStatsExcludingOpponents(
  */
 async function updateFinalTournamentMatches(
   tournamentId: number,
-  promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; }
+  promotions: { [key: string]: { tournament_team_id?: number; team_id: string; team_name: string; }; },
+  skippedPromotions?: Set<string>
 ): Promise<void> {
   try {
     // phases JSONから後続フェーズ（2つ目以降）のIDを取得
@@ -891,6 +896,14 @@ async function updateFinalTournamentMatches(
             hasUpdate = true;
             console.log(`[PROMOTION] ${matchCode} team1 更新: "${currentTeam1Name}"(tournament_team_id:${currentTeam1TournamentTeamId}) → "${newTeam1.team_name}"(tournament_team_id:${newTeam1.tournament_team_id})`);
           }
+        } else if (skippedPromotions?.has(template.team1_source)) {
+          // 順位未確定でスキップされた → 既存の割り当てをクリア
+          if (currentTeam1TournamentTeamId !== null) {
+            newTeam1TournamentTeamId = null;
+            newTeam1Name = template.template_team1_name;
+            hasUpdate = true;
+            console.log(`[PROMOTION] ${matchCode} team1 順位未確定クリア: "${currentTeam1Name}" → "${template.template_team1_name}"`);
+          }
         }
       }
 
@@ -917,6 +930,14 @@ async function updateFinalTournamentMatches(
             newTeam2Name = newTeam2.team_name;
             hasUpdate = true;
             console.log(`[PROMOTION] ${matchCode} team2 更新: "${currentTeam2Name}"(tournament_team_id:${currentTeam2TournamentTeamId}) → "${newTeam2.team_name}"(tournament_team_id:${newTeam2.tournament_team_id})`);
+          }
+        } else if (skippedPromotions?.has(template.team2_source)) {
+          // 順位未確定でスキップされた → 既存の割り当てをクリア
+          if (currentTeam2TournamentTeamId !== null) {
+            newTeam2TournamentTeamId = null;
+            newTeam2Name = template.template_team2_name;
+            hasUpdate = true;
+            console.log(`[PROMOTION] ${matchCode} team2 順位未確定クリア: "${currentTeam2Name}" → "${template.template_team2_name}"`);
           }
         }
       }
@@ -1044,7 +1065,7 @@ export async function validateFinalTournamentPromotions(tournamentId: number): P
 
     // 1. 予選ブロックの順位表から進出チーム情報を取得
     const blockRankings = await getAllBlockRankings(tournamentId);
-    const promotions = await extractTopTeamsDynamic(tournamentId, blockRankings);
+    const { promotions } = await extractTopTeamsDynamic(tournamentId, blockRankings);
 
     console.log(`[PROMOTION_VALIDATION] 進出チーム情報取得完了: ${Object.keys(promotions).length}件`);
 
