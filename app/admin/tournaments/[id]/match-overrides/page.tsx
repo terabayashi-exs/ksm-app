@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Pencil, AlertCircle, List } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Pencil, AlertCircle, List, RefreshCw } from 'lucide-react';
 import { MatchOverrideDialog } from '@/components/features/admin/MatchOverrideDialog';
 import { BulkMatchOverrideDialog } from '@/components/features/admin/BulkMatchOverrideDialog';
 import { formatTeamSourceDisplay } from '@/lib/team-source-display';
@@ -122,6 +122,7 @@ export default function MatchOverridesPage() {
     originalTeam2Source: string | null;
   } | null>(null);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
   const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
 
   const sourceCandidates = useMemo(
@@ -267,10 +268,40 @@ export default function MatchOverridesPage() {
               ダッシュボードに戻る
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsBulkDialogOpen(true)}>
-            <List className="h-4 w-4 mr-2" />
-            一括変更
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsBulkDialogOpen(true)}>
+              <List className="h-4 w-4 mr-2" />
+              一括変更
+            </Button>
+            <Button
+              size="sm"
+              disabled={isPromoting}
+              onClick={async () => {
+                if (!confirm('チーム進出処理を実行しますか？\n現在の順位表に基づいて、決勝トーナメント等の試合にチームを割り当てます。')) return;
+                setIsPromoting(true);
+                try {
+                  const res = await fetch(`/api/tournaments/${tournamentId}/update-rankings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'promote_only' })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    alert('チーム進出処理が完了しました。');
+                  } else {
+                    alert(`エラー: ${data.error || '進出処理に失敗しました'}`);
+                  }
+                } catch {
+                  alert('進出処理中にエラーが発生しました。');
+                } finally {
+                  setIsPromoting(false);
+                }
+              }}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isPromoting ? 'animate-spin' : ''}`} />
+              {isPromoting ? '処理中...' : 'チーム進出処理'}
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-6">

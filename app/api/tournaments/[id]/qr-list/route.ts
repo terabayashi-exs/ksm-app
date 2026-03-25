@@ -285,7 +285,7 @@ export async function GET(
       // 節なしの場合: コート名のみ
       let locationDisplay: string;
       if (hasMatchday) {
-        if (venueName && courtName && courtName !== String(courtNumber)) {
+        if (venueName && courtName && courtName !== String(courtNumber) && courtName !== venueName) {
           locationDisplay = `${venueName}(${courtName})`;
         } else if (venueName) {
           locationDisplay = venueName;

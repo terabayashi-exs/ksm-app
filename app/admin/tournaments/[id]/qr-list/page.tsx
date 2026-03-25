@@ -57,6 +57,7 @@ export default function QRListPage() {
   const [error, setError] = useState('');
   const [filterPhase, setFilterPhase] = useState<string>('all');
   const [filterBlock, setFilterBlock] = useState<string>('all');
+  const [filterMatchday, setFilterMatchday] = useState<string>('all');
   const [includeCompleted, setIncludeCompleted] = useState(false);
   const [validity, setValidity] = useState<{ validFrom: string; validUntil: string } | null>(null);
   const [phaseList, setPhaseList] = useState<TournamentPhaseInfo[]>([]);
@@ -107,9 +108,14 @@ export default function QRListPage() {
       filtered = filtered.filter(m => m.block_name === filterBlock);
     }
 
+    if (filterMatchday !== 'all') {
+      const md = parseInt(filterMatchday);
+      filtered = filtered.filter(m => m.matchday === md);
+    }
+
     setFilteredMatches(filtered);
     setLoadedQrCount(0);
-  }, [matches, filterPhase, filterBlock]);
+  }, [matches, filterPhase, filterBlock, filterMatchday]);
 
   useEffect(() => {
     fetchMatches();
@@ -154,6 +160,10 @@ export default function QRListPage() {
   });
   const uniqueBlocks = Array.from(blockMap.entries())
     .sort((a, b) => a[1].matchBlockId - b[1].matchBlockId);
+
+  // 節（matchday）の一覧を取得
+  const uniqueMatchdays = Array.from(new Set(matches.map(m => m.matchday).filter((md): md is number => md !== null))).sort((a, b) => a - b);
+  const hasMatchdays = uniqueMatchdays.length > 1;
 
   if (loading) {
     return (
@@ -235,7 +245,7 @@ export default function QRListPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`grid grid-cols-1 ${hasMatchdays ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
               <div>
                 <label className="block text-sm font-medium mb-2">フェーズ</label>
                 <select
@@ -265,6 +275,22 @@ export default function QRListPage() {
                   ))}
                 </select>
               </div>
+
+              {hasMatchdays && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">節</label>
+                  <select
+                    value={filterMatchday}
+                    onChange={(e) => setFilterMatchday(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">すべて</option>
+                    {uniqueMatchdays.map(md => (
+                      <option key={md} value={md}>第{md}節</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
