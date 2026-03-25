@@ -139,9 +139,11 @@ export async function getTournamentPublicMatches(tournamentId: number) {
             ml.remarks,
             CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
             ml.team1_scores as live_team1_scores,
-            ml.team2_scores as live_team2_scores
+            ml.team2_scores as live_team2_scores,
+            mo.override_reason
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+          LEFT JOIN t_tournament_match_overrides mo ON mo.tournament_id = mb.tournament_id AND mo.match_code = ml.match_code
           LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
           LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
           WHERE mb.tournament_id = ?
@@ -198,11 +200,12 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               ml.cancellation_type,
               ml.is_bye_match,
               ml.team1_source,
-              ml.team2_source
+              ml.team2_source,
+              mo.override_reason
             FROM t_matches_live ml
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
             LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-
+            LEFT JOIN t_tournament_match_overrides mo ON mo.tournament_id = mb.tournament_id AND mo.match_code = ml.match_code
             LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
             LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
             WHERE mb.tournament_id = ?
@@ -251,12 +254,13 @@ export async function getTournamentPublicMatches(tournamentId: number) {
               ml.team1_source,
               ml.team2_source,
               ml.team1_scores as live_team1_scores,
-              ml.team2_scores as live_team2_scores
+              ml.team2_scores as live_team2_scores,
+              mo.override_reason
             FROM t_matches_live ml
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
             LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
             LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-
+            LEFT JOIN t_tournament_match_overrides mo ON mo.tournament_id = mb.tournament_id AND mo.match_code = ml.match_code
             LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
             LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
             WHERE mb.tournament_id = ?
@@ -303,10 +307,12 @@ export async function getTournamentPublicMatches(tournamentId: number) {
           ml.remarks,
           CASE WHEN ml.result_status = 'confirmed' THEN ml.updated_at ELSE NULL END as confirmed_at,
           COALESCE(ms.match_status, ml.match_status, 'scheduled') as actual_match_status,
-          ml.cancellation_type
+          ml.cancellation_type,
+          mo.override_reason
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+        LEFT JOIN t_tournament_match_overrides mo ON mo.tournament_id = mb.tournament_id AND mo.match_code = ml.match_code
         LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ?
@@ -502,7 +508,9 @@ export async function getTournamentPublicMatches(tournamentId: number) {
         team2_source: row.team2_source ? String(row.team2_source) : null,
         // ライブスコア（管理者表示用）
         live_team1_scores: row.live_team1_scores ? String(row.live_team1_scores) : null,
-        live_team2_scores: row.live_team2_scores ? String(row.live_team2_scores) : null
+        live_team2_scores: row.live_team2_scores ? String(row.live_team2_scores) : null,
+        // オーバーライド備考
+        override_reason: row.override_reason ? String(row.override_reason) : null
       };
 
       matches.push(processedMatch);

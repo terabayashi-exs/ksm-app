@@ -77,6 +77,32 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
+    // 組合せ作成済みのチームは削除不可（試合データの整合性保護）
+    const matchCount = await db.execute(`
+      SELECT COUNT(*) AS cnt FROM t_matches_live
+      WHERE match_block_id IN (
+        SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+      ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ?)
+    `, [tournamentId, tournamentTeamId, tournamentTeamId]);
+
+    const matchFinalCount = await db.execute(`
+      SELECT COUNT(*) AS cnt FROM t_matches_final
+      WHERE match_block_id IN (
+        SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
+      ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ?)
+    `, [tournamentId, tournamentTeamId, tournamentTeamId]);
+
+    const totalMatchCount = Number(matchCount.rows[0]?.cnt ?? 0) + Number(matchFinalCount.rows[0]?.cnt ?? 0);
+    if (totalMatchCount > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '組合せ作成済みのチームは削除できません。先に組合せを削除してください。'
+        },
+        { status: 409 }
+      );
+    }
+
     // トランザクション開始（削除の順序が重要）
     console.log('Starting team deletion transaction...');
 

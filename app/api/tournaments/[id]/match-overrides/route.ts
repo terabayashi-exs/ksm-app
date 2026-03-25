@@ -152,6 +152,26 @@ export async function POST(
       );
     }
 
+    // TEAM直接指定パターンのバリデーション
+    for (const sourceOverride of [team1_source_override, team2_source_override]) {
+      if (sourceOverride) {
+        const teamMatch = sourceOverride.match(/^TEAM:(\d+)$/);
+        if (teamMatch) {
+          const teamId = parseInt(teamMatch[1]);
+          const teamCheck = await db.execute(
+            `SELECT tournament_team_id FROM t_tournament_teams WHERE tournament_team_id = ? AND tournament_id = ?`,
+            [teamId, tournamentId]
+          );
+          if (teamCheck.rows.length === 0) {
+            return NextResponse.json(
+              { success: false, error: `指定されたチーム(ID:${teamId})がこの大会に登録されていません` },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    }
+
     // 試合存在確認（選出条件が設定されている試合のみ対象）
     const templateCheck = await db.execute(`
       SELECT ml.match_code

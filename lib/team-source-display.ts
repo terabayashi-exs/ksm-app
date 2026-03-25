@@ -2,6 +2,11 @@
  * team_source 文字列をユーザー向け日本語表示に変換
  */
 export function formatTeamSourceDisplay(source: string): string {
+  // TEAM直接指定パターン (例: TEAM:123 → チーム直接指定)
+  const teamMatch = source.match(/^TEAM:(\d+)$/);
+  if (teamMatch) {
+    return `チーム直接指定(ID:${teamMatch[1]})`;
+  }
   // BEST パターン (例: BEST_3_1 → 全ブロック3位中ベスト1)
   const bestMatch = source.match(/^BEST_(\d+)_(\d+)$/);
   if (bestMatch) {

@@ -16,7 +16,8 @@ import {
   FileText,
   Key,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -55,6 +56,7 @@ interface TeamData {
   registration_type: 'self_registered' | 'admin_proxy';
   player_count: number;
   created_at: string;
+  has_matches?: boolean;
 }
 
 interface RegistrationResult {
@@ -936,25 +938,38 @@ export default function TeamRegistrationPage() {
                                 {isAdminProxy ? '管理者代行' : '申し込み済み'}
                               </span>
                               {isAdminProxy && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteTeam(team)}
-                                  disabled={deletingTeamId === team.team_id}
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/20"
-                                >
-                                  {deletingTeamId === team.team_id ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                                      削除中
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Trash2 className="w-3 h-3 mr-1" />
-                                      削除
-                                    </>
-                                  )}
-                                </Button>
+                                team.has_matches ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    className="cursor-not-allowed opacity-50"
+                                    title="組合せ作成済みのため削除できません"
+                                  >
+                                    <Lock className="w-3 h-3 mr-1" />
+                                    削除不可
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteTeam(team)}
+                                    disabled={deletingTeamId === team.team_id}
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/20"
+                                  >
+                                    {deletingTeamId === team.team_id ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                                        削除中
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Trash2 className="w-3 h-3 mr-1" />
+                                        削除
+                                      </>
+                                    )}
+                                  </Button>
+                                )
                               )}
                             </div>
                           </div>
