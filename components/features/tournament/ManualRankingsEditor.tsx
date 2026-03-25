@@ -223,7 +223,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
       }
     });
 
-    // 3位決定戦がない場合、準決勝敗者は同着3位
+    // 3位決定戦がない場合、準決勝敗者は同順位3位
     if (!thirdPlaceMatch?.is_confirmed && semiFinalLosers.length > 0) {
       semiFinalLosers.forEach(loserId => {
         const match = semiFinalMatches.find(m => {
@@ -236,7 +236,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
           rankings.push({
             team_id: loserId,
             team_name: team1IdStr === loserId ? match.team1_display_name : match.team2_display_name,
-            position: 3, // 同着3位
+            position: 3, // 同順位3位
             is_confirmed: true
           });
           rankedTeamIds.add(loserId);
@@ -664,7 +664,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
       {/* ヘッダー */}
       <div>
         <p className="text-sm text-gray-600">
-          同着順位を設定する場合は、同じ順位番号を入力してください（例：1位、2位、2位、4位）
+          同順位を設定する場合は、同じ順位番号を入力してください（例：1位、2位、2位、4位）
         </p>
       </div>
 
@@ -778,7 +778,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
                             </Label>
                             <Textarea
                               id={`remarks-${block.match_block_id}`}
-                              placeholder="順位決定の理由や特記事項を入力してください（例：同着1位のため抽選で決定、3位決定戦なしのため同着3位など）"
+                              placeholder="順位決定の理由や特記事項を入力してください（例：同1位のため抽選で決定、3位決定戦なしのため同順位3位など）"
                               value={block.remarks || ''}
                               onChange={(e) => updateBlockRemarks(blockIndex, e.target.value)}
                               disabled={saving}
@@ -870,7 +870,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
                       </Label>
                       <Textarea
                         id={`tournament-remarks-${phase.id}`}
-                        placeholder="順位決定の理由や特記事項を入力してください（例：3位決定戦なしのため同着3位など）"
+                        placeholder="順位決定の理由や特記事項を入力してください（例：3位決定戦なしのため同順位3位など）"
                         value={finalTournamentBlock.remarks || ''}
                         onChange={(e) => updateFinalRemarks(e.target.value)}
                         disabled={saving}
@@ -899,7 +899,7 @@ export default function ManualRankingsEditor({ tournamentId, blocks, phases, fin
             <div className="text-sm text-yellow-800">
               <p className="font-medium mb-1">手動順位設定の注意事項:</p>
               <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>同着順位を設定する場合は、同じ順位番号を入力してください</li>
+                <li>同順位を設定する場合は、同じ順位番号を入力してください</li>
                 <li>順位変更後は自動的に次のフェーズの進出チームが更新されます</li>
                 <li>備考欄に順位決定の理由や特記事項を記録できます</li>
                 <li>変更は保存ボタンを押すまで反映されません</li>

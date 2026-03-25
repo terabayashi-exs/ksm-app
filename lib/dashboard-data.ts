@@ -318,6 +318,40 @@ async function fetchAllMatchTimes(tournamentIds: number[]): Promise<Map<number, 
   return result;
 }
 
+/**
+ * 試合データから大会ごとの開催日程（最初・最後の日付）を一括取得する。
+ * tournament_dates が空の場合のフォールバック用。
+ */
+async function fetchAllMatchDates(tournamentIds: number[]): Promise<Map<number, { startDate: string; endDate: string }>> {
+  const result = new Map<number, { startDate: string; endDate: string }>();
+  if (tournamentIds.length === 0) return result;
+
+  const placeholders = tournamentIds.map(() => '?').join(', ');
+  const matchDatesResult = await db.execute(`
+    SELECT
+      mb.tournament_id,
+      MIN(ml.tournament_date) as earliest_date,
+      MAX(ml.tournament_date) as latest_date
+    FROM t_matches_live ml
+    JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+    WHERE mb.tournament_id IN (${placeholders})
+      AND ml.tournament_date IS NOT NULL
+      AND ml.tournament_date != ''
+    GROUP BY mb.tournament_id
+  `, tournamentIds);
+
+  for (const row of matchDatesResult.rows) {
+    const tid = Number(row.tournament_id);
+    const startDate = String(row.earliest_date || '');
+    const endDate = String(row.latest_date || '');
+    if (startDate) {
+      result.set(tid, { startDate, endDate: endDate || startDate });
+    }
+  }
+
+  return result;
+}
+
 function groupTournaments(tournaments: Tournament[]): GroupedTournamentData {
   const grouped: GroupedTournamentData['grouped'] = {};
   const ungrouped: Tournament[] = [];
@@ -408,8 +442,9 @@ export async function fetchOperatorDashboardData(loginUserId: number): Promise<T
   const allRows = [...activeResult.rows, ...filteredCompletedRows];
   const tournamentIds = allRows.map(r => Number(r.tournament_id));
 
-  // 試合時刻を一括取得（N+1解消）
+  // 試合時刻・試合日付を一括取得（N+1解消）
   const matchTimesMap = await fetchAllMatchTimes(tournamentIds);
+  const matchDatesMap = await fetchAllMatchDates(tournamentIds);
 
   // 運営者の権限情報を一括取得（N+1解消）
   const permissionsMap = new Map<number, Record<string, boolean>>();
@@ -442,7 +477,7 @@ export async function fetchOperatorDashboardData(loginUserId: number): Promise<T
     if (row.tournament_dates) {
       try {
         const dates = JSON.parse(row.tournament_dates as string);
-        const sortedDates = (Object.values(dates) as string[]).sort();
+        const sortedDates = (Object.values(dates) as string[]).filter((d): d is string => typeof d === 'string' && d.trim() !== '').sort();
         eventStartDate = sortedDates[0] || '';
         eventEndDate = sortedDates[sortedDates.length - 1] || '';
       } catch {
@@ -451,6 +486,16 @@ export async function fetchOperatorDashboardData(loginUserId: number): Promise<T
     }
 
     const tid = Number(row.tournament_id);
+
+    // tournament_dates が空の場合、試合データの日付からフォールバック
+    if (!eventStartDate) {
+      const matchDates = matchDatesMap.get(tid);
+      if (matchDates) {
+        eventStartDate = matchDates.startDate;
+        eventEndDate = matchDates.endDate;
+      }
+    }
+
     const { startTime = '', endTime = '' } = matchTimesMap.get(tid) ?? {};
 
     const calculatedStatus = await calculateTournamentStatus({
@@ -605,8 +650,9 @@ export async function fetchDashboardData(sessionId: string, isAdmin: boolean): P
   const allRows = [...activeResult.rows, ...filteredCompletedRows];
   const tournamentIds = allRows.map(r => Number(r.tournament_id));
 
-  // 試合時刻を一括取得（N+1解消）
+  // 試合時刻・試合日付を一括取得（N+1解消）
   const matchTimesMap = await fetchAllMatchTimes(tournamentIds);
+  const matchDatesMap = await fetchAllMatchDates(tournamentIds);
 
   // 動的ステータスを並列計算
   const tournamentsWithTimes: Tournament[] = await Promise.all(allRows.map(async (row) => {
@@ -616,7 +662,7 @@ export async function fetchDashboardData(sessionId: string, isAdmin: boolean): P
     if (row.tournament_dates) {
       try {
         const dates = JSON.parse(row.tournament_dates as string);
-        const sortedDates = (Object.values(dates) as string[]).sort();
+        const sortedDates = (Object.values(dates) as string[]).filter((d): d is string => typeof d === 'string' && d.trim() !== '').sort();
         eventStartDate = sortedDates[0] || '';
         eventEndDate = sortedDates[sortedDates.length - 1] || '';
       } catch {
@@ -625,6 +671,16 @@ export async function fetchDashboardData(sessionId: string, isAdmin: boolean): P
     }
 
     const tid = Number(row.tournament_id);
+
+    // tournament_dates が空の場合、試合データの日付からフォールバック
+    if (!eventStartDate) {
+      const matchDates = matchDatesMap.get(tid);
+      if (matchDates) {
+        eventStartDate = matchDates.startDate;
+        eventEndDate = matchDates.endDate;
+      }
+    }
+
     const { startTime = '', endTime = '' } = matchTimesMap.get(tid) ?? {};
 
     const calculatedStatus = await calculateTournamentStatus({

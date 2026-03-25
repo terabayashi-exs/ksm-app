@@ -255,7 +255,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
           <div className="py-6">
             <h1 className="text-3xl font-bold text-white">手動順位設定</h1>
             <p className="text-sm text-white/70 mt-1">
-              各ブロックの順位を手動で調整できます。同着順位も設定可能です。
+              各ブロックの順位を手動で調整できます。同順位も設定可能です。
             </p>
           </div>
         </div>

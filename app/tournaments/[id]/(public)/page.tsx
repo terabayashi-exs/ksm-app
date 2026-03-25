@@ -73,6 +73,32 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
 
   const venues = await getVenuesForTournament(tournament.venue_id);
 
+  // 開催期間を算出: tournament_dates → 試合日付フォールバック
+  let eventStartDate = '';
+  let eventEndDate = '';
+  if (tournament.tournament_dates) {
+    try {
+      const dates = JSON.parse(tournament.tournament_dates);
+      const sortedDates = (Object.values(dates) as string[]).filter((d): d is string => typeof d === 'string' && d.trim() !== '').sort();
+      eventStartDate = sortedDates[0] || '';
+      eventEndDate = sortedDates[sortedDates.length - 1] || '';
+    } catch { /* ignore */ }
+  }
+  if (!eventStartDate) {
+    try {
+      const matchDatesResult = await db.execute(`
+        SELECT MIN(ml.tournament_date) as earliest, MAX(ml.tournament_date) as latest
+        FROM t_matches_live ml
+        JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+        WHERE mb.tournament_id = ? AND ml.tournament_date IS NOT NULL AND ml.tournament_date != ''
+      `, [tournamentId]);
+      if (matchDatesResult.rows.length > 0 && matchDatesResult.rows[0].earliest) {
+        eventStartDate = String(matchDatesResult.rows[0].earliest);
+        eventEndDate = String(matchDatesResult.rows[0].latest || matchDatesResult.rows[0].earliest);
+      }
+    } catch { /* ignore */ }
+  }
+
   return (
     <TabContentWithSidebarSSR banners={banners}>
       <TournamentOverview
@@ -81,6 +107,8 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
         bracketPdfExists={bracketPdfExists}
         resultsPdfExists={resultsPdfExists}
         venues={venues}
+        eventStartDate={eventStartDate}
+        eventEndDate={eventEndDate}
       />
     </TabContentWithSidebarSSR>
   );
@@ -92,12 +120,16 @@ function TournamentOverview({
   bracketPdfExists,
   resultsPdfExists,
   venues,
+  eventStartDate,
+  eventEndDate,
 }: {
   tournament: Tournament;
   groupName: string | null;
   bracketPdfExists: boolean;
   resultsPdfExists: boolean;
   venues: VenueInfo[];
+  eventStartDate: string;
+  eventEndDate: string;
 }) {
   const calculatedStatus = calculateTournamentStatusSync({
     status: tournament.status,
@@ -233,7 +265,7 @@ function TournamentOverview({
         </CardContent>
       </Card>
 
-      {tournament.recruitment_start_date && tournament.recruitment_end_date && (
+      {eventStartDate && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -245,14 +277,14 @@ function TournamentOverview({
             <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
               <div>
                 <p className="text-sm text-orange-700">開始</p>
-                <p className="font-medium text-orange-800">{formatDateOnly(tournament.recruitment_start_date)}</p>
+                <p className="font-medium text-orange-800">{formatDateOnly(eventStartDate)}</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-0.5 bg-orange-300"></div>
               </div>
               <div>
                 <p className="text-sm text-orange-700">終了</p>
-                <p className="font-medium text-orange-800">{formatDateOnly(tournament.recruitment_end_date)}</p>
+                <p className="font-medium text-orange-800">{formatDateOnly(eventEndDate)}</p>
               </div>
             </div>
           </CardContent>
