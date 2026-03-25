@@ -762,9 +762,11 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         ルール設定
                       </Link>
                     </Button>
-                    <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
-                      <Lock className="w-4 h-4 mr-1" />
-                      チーム手動登録
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
+                        <Users className="w-4 h-4 mr-1" />
+                        チーム手動登録
+                      </Link>
                     </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>

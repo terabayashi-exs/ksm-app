@@ -39,6 +39,7 @@ interface MatchData {
   match_status: string;
   result_status: string;
   remarks: string | null;
+  override_reason?: string | null;
   has_result: boolean;
   cancellation_type: string | null;
   round_name: string | null;
@@ -540,7 +541,11 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               const result = getMatchResult(match);
                               const isEvenRow = matchIndex % 2 === 1;
 
-                              const hasRemarksMobile = match.remarks && !match.is_walkover;
+                              const matchRemarks = [
+                                match.remarks && !match.is_walkover ? match.remarks : null,
+                                match.override_reason
+                              ].filter(Boolean).join(' / ');
+                              const hasRemarksMobile = !!matchRemarks;
 
                               return (
                                 <React.Fragment key={match.match_id}>
@@ -579,7 +584,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                       </div>
                                       {hasRemarksMobile && (
                                         <div className="text-xs text-gray-500 mt-1 hidden md:block text-right">
-                                          {match.remarks}
+                                          {matchRemarks}
                                         </div>
                                       )}
                                     </td>
@@ -601,7 +606,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                     <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                       <td colSpan={hasMultipleCourts ? 4 : 5} className="pb-2 px-1 pt-0">
                                         <div className="text-xs text-gray-500 text-right">
-                                          備考: {match.remarks}
+                                          備考: {matchRemarks}
                                         </div>
                                       </td>
                                     </tr>
@@ -703,7 +708,11 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                           const courtDiffersFromVenue = match.court_name && match.venue_name && match.court_name !== match.venue_name;
                           const matchVenue = match.venue_id ? venues.find(v => v.venue_id === match.venue_id) : null;
                           const isEvenRow = matchIndex % 2 === 1;
-                          const hasRemarks = match.remarks && !match.is_walkover;
+                          const matchRemarks = [
+                            match.remarks && !match.is_walkover ? match.remarks : null,
+                            match.override_reason
+                          ].filter(Boolean).join(' / ');
+                          const hasRemarks = !!matchRemarks;
                           // モバイルでは会場行・備考行が続く場合、最後の行にborder-bをつける
                           const mainRowBorder = hasVenue || hasRemarks ? 'md:border-b' : 'border-b';
 
@@ -743,9 +752,9 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   <div className="flex items-center justify-end">
                                     <div className="text-base">{result.display}</div>
                                   </div>
-                                  {match.remarks && !match.is_walkover && (
+                                  {hasRemarks && (
                                     <div className="text-xs text-gray-500 mt-1 hidden md:block text-right">
-                                      {match.remarks}
+                                      {matchRemarks}
                                     </div>
                                   )}
                                 </td>
@@ -798,7 +807,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                 <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                   <td colSpan={4} className="pb-2 px-1 pt-0">
                                     <div className="text-xs text-gray-500">
-                                      備考: {match.remarks}
+                                      備考: {matchRemarks}
                                     </div>
                                   </td>
                                 </tr>

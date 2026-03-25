@@ -117,6 +117,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
       ORDER BY tt.created_at ASC
     `, [tournamentId]);
 
+    // 組合せ作成済みチーム（試合に含まれるチーム）のIDセットを取得
+    const matchTeamsResult = await db.execute(`
+      SELECT DISTINCT team_id FROM (
+        SELECT team1_tournament_team_id AS team_id FROM t_matches_live
+        WHERE match_block_id IN (SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?)
+        UNION
+        SELECT team2_tournament_team_id AS team_id FROM t_matches_live
+        WHERE match_block_id IN (SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?)
+        UNION
+        SELECT team1_tournament_team_id AS team_id FROM t_matches_final
+        WHERE match_block_id IN (SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?)
+        UNION
+        SELECT team2_tournament_team_id AS team_id FROM t_matches_final
+        WHERE match_block_id IN (SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?)
+      ) WHERE team_id IS NOT NULL
+    `, [tournamentId, tournamentId, tournamentId, tournamentId]);
+    const teamsInMatches = new Set(matchTeamsResult.rows.map(r => Number(r.team_id)));
+
     // 各チームの選手詳細情報を取得
     const teams = await Promise.all(
       teamsResult.rows.map(async (teamRow) => {
@@ -156,6 +174,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           withdrawal_status: team.withdrawal_status || 'active',
           created_at: team.joined_at,
           player_count: team.player_count || 0,
+          has_matches: teamsInMatches.has(team.tournament_team_id),
           players: playersResult.rows.map((playerRow) => {
             const player = playerRow as unknown as {
               tournament_player_id: number;

@@ -8,6 +8,27 @@ import {
 import { getTournamentPointSystem } from '@/lib/point-system-loader';
 import { parseTotalScore } from '@/lib/score-parser';
 
+/**
+ * TEAM:{id} パターンから直接チーム情報を取得するヘルパー
+ */
+async function resolveDirectTeam(tournamentTeamId: number, tournamentId: number): Promise<{ tournament_team_id: number; team_name: string; team_omission: string } | null> {
+  try {
+    const result = await db.execute(
+      `SELECT tournament_team_id, team_name, team_omission FROM t_tournament_teams WHERE tournament_team_id = ? AND tournament_id = ?`,
+      [tournamentTeamId, tournamentId]
+    );
+    if (result.rows.length === 0) return null;
+    return {
+      tournament_team_id: Number(result.rows[0].tournament_team_id),
+      team_name: String(result.rows[0].team_name),
+      team_omission: String(result.rows[0].team_omission || ''),
+    };
+  } catch (error) {
+    console.error(`[PROMOTION] TEAM直接指定の解決エラー (tournament_team_id=${tournamentTeamId}):`, error);
+    return null;
+  }
+}
+
 export interface BlockRanking {
   tournament_team_id?: number; // 複数エントリーチーム対応
   team_id: string;
@@ -847,30 +868,56 @@ async function updateFinalTournamentMatches(
       console.log(`[PROMOTION] ${matchCode} テンプレート進出条件: "${template.team1_source}" vs "${template.team2_source}"`);
 
       // team1_sourceから進出チームを取得
-      if (template.team1_source && promotions[template.team1_source]) {
-        const newTeam1 = promotions[template.team1_source];
-        const team1TournamentTeamIdChanged = newTeam1.tournament_team_id !== currentTeam1TournamentTeamId;
-        const team1Changed = newTeam1.team_name !== currentTeam1Name || team1TournamentTeamIdChanged;
+      if (template.team1_source) {
+        const teamDirectMatch = template.team1_source.match(/^TEAM:(\d+)$/);
+        if (teamDirectMatch) {
+          // TEAM直接指定: tournament_team_idでチーム情報を取得
+          const directTeamId = parseInt(teamDirectMatch[1]);
+          const directTeam = await resolveDirectTeam(directTeamId, tournamentId);
+          if (directTeam && (directTeam.tournament_team_id !== currentTeam1TournamentTeamId || directTeam.team_name !== currentTeam1Name)) {
+            newTeam1TournamentTeamId = directTeam.tournament_team_id;
+            newTeam1Name = directTeam.team_name;
+            hasUpdate = true;
+            console.log(`[PROMOTION] ${matchCode} team1 TEAM直接指定: "${currentTeam1Name}" → "${directTeam.team_name}"(tournament_team_id:${directTeam.tournament_team_id})`);
+          }
+        } else if (promotions[template.team1_source]) {
+          const newTeam1 = promotions[template.team1_source];
+          const team1TournamentTeamIdChanged = newTeam1.tournament_team_id !== currentTeam1TournamentTeamId;
+          const team1Changed = newTeam1.team_name !== currentTeam1Name || team1TournamentTeamIdChanged;
 
-        if (team1Changed) {
-          newTeam1TournamentTeamId = newTeam1.tournament_team_id || null;
-          newTeam1Name = newTeam1.team_name;
-          hasUpdate = true;
-          console.log(`[PROMOTION] ${matchCode} team1 更新: "${currentTeam1Name}"(tournament_team_id:${currentTeam1TournamentTeamId}) → "${newTeam1.team_name}"(tournament_team_id:${newTeam1.tournament_team_id})`);
+          if (team1Changed) {
+            newTeam1TournamentTeamId = newTeam1.tournament_team_id || null;
+            newTeam1Name = newTeam1.team_name;
+            hasUpdate = true;
+            console.log(`[PROMOTION] ${matchCode} team1 更新: "${currentTeam1Name}"(tournament_team_id:${currentTeam1TournamentTeamId}) → "${newTeam1.team_name}"(tournament_team_id:${newTeam1.tournament_team_id})`);
+          }
         }
       }
 
       // team2_sourceから進出チームを取得
-      if (template.team2_source && promotions[template.team2_source]) {
-        const newTeam2 = promotions[template.team2_source];
-        const team2TournamentTeamIdChanged = newTeam2.tournament_team_id !== currentTeam2TournamentTeamId;
-        const team2Changed = newTeam2.team_name !== currentTeam2Name || team2TournamentTeamIdChanged;
+      if (template.team2_source) {
+        const teamDirectMatch = template.team2_source.match(/^TEAM:(\d+)$/);
+        if (teamDirectMatch) {
+          // TEAM直接指定: tournament_team_idでチーム情報を取得
+          const directTeamId = parseInt(teamDirectMatch[1]);
+          const directTeam = await resolveDirectTeam(directTeamId, tournamentId);
+          if (directTeam && (directTeam.tournament_team_id !== currentTeam2TournamentTeamId || directTeam.team_name !== currentTeam2Name)) {
+            newTeam2TournamentTeamId = directTeam.tournament_team_id;
+            newTeam2Name = directTeam.team_name;
+            hasUpdate = true;
+            console.log(`[PROMOTION] ${matchCode} team2 TEAM直接指定: "${currentTeam2Name}" → "${directTeam.team_name}"(tournament_team_id:${directTeam.tournament_team_id})`);
+          }
+        } else if (promotions[template.team2_source]) {
+          const newTeam2 = promotions[template.team2_source];
+          const team2TournamentTeamIdChanged = newTeam2.tournament_team_id !== currentTeam2TournamentTeamId;
+          const team2Changed = newTeam2.team_name !== currentTeam2Name || team2TournamentTeamIdChanged;
 
-        if (team2Changed) {
-          newTeam2TournamentTeamId = newTeam2.tournament_team_id || null;
-          newTeam2Name = newTeam2.team_name;
-          hasUpdate = true;
-          console.log(`[PROMOTION] ${matchCode} team2 更新: "${currentTeam2Name}"(tournament_team_id:${currentTeam2TournamentTeamId}) → "${newTeam2.team_name}"(tournament_team_id:${newTeam2.tournament_team_id})`);
+          if (team2Changed) {
+            newTeam2TournamentTeamId = newTeam2.tournament_team_id || null;
+            newTeam2Name = newTeam2.team_name;
+            hasUpdate = true;
+            console.log(`[PROMOTION] ${matchCode} team2 更新: "${currentTeam2Name}"(tournament_team_id:${currentTeam2TournamentTeamId}) → "${newTeam2.team_name}"(tournament_team_id:${newTeam2.tournament_team_id})`);
+          }
         }
       }
 
