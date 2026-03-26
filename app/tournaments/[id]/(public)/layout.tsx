@@ -50,7 +50,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
     return <>{children}</>;
   }
 
-  const phaseList = getPhaseList(tournament);
+  const phaseList = getPhaseList(tournament).filter(p => p.is_visible !== false);
 
   return (
     <div className="min-h-screen bg-white">

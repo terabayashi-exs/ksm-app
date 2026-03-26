@@ -202,6 +202,19 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
               メール送信
             </Label>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="canManageDisplaySettings"
+              checked={permissions.canManageDisplaySettings}
+              onCheckedChange={(checked) =>
+                updatePermission('canManageDisplaySettings', checked as boolean)
+              }
+            />
+            <Label htmlFor="canManageDisplaySettings" className="cursor-pointer text-base">
+              表示設定
+            </Label>
+          </div>
         </div>
   );
 

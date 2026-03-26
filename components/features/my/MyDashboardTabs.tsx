@@ -830,6 +830,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     ファイル管理
                   </Link>
                 </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
+                    <Eye className="w-4 h-4 mr-1" />
+                    表示設定
+                  </Link>
+                </Button>
                 <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-yellow-300 hover:bg-yellow-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
                     <Star className="w-4 h-4 mr-1" />
@@ -1335,7 +1341,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             )}
 
             {/* ── 管理・その他 ── */}
-            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors) && (
+            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings) && (
               <div>
                 <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
                 <div className="flex gap-2 flex-wrap">
@@ -1344,6 +1350,14 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
                         <Mail className="w-4 h-4 mr-1" />
                         メール送信
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canManageDisplaySettings && (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
+                        <Eye className="w-4 h-4 mr-1" />
+                        表示設定
                       </Link>
                     </Button>
                   )}

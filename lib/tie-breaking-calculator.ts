@@ -98,7 +98,10 @@ export class TieBreakingEngine {
 
     // 共通ルール
     calculators.set('points', this.calculateByPoints.bind(this));
-    calculators.set('head_to_head', this.calculateByHeadToHead.bind(this));
+    calculators.set('head_to_head', this.calculateByHeadToHead.bind(this)); // 後方互換
+    calculators.set('h2h_points', this.calculateByH2HPoints.bind(this));
+    calculators.set('h2h_goal_difference', this.calculateByH2HGoalDifference.bind(this));
+    calculators.set('h2h_goals_for', this.calculateByH2HGoalsFor.bind(this));
     calculators.set('lottery', this.calculateByLottery.bind(this));
 
     // 競技種別固有ルール
@@ -192,12 +195,12 @@ export class TieBreakingEngine {
         });
       }
 
-      // グループの結果を元のリストに反映
-      teams = this.mergeGroupResults(teams, groupTeams, group.position);
+      // グループの結果を元のリストに反映（H2Hで解決済みならresolved=trueを渡す）
+      teams = this.mergeGroupResults(teams, groupTeams, group.position, resolved);
     }
 
     return {
-      teams: this.assignFinalPositions(teams),
+      teams: tieBreakingApplied ? teams : this.assignFinalPositions(teams),
       tieBreakingApplied,
       lotteriesRequired,
       calculations
@@ -321,6 +324,114 @@ export class TieBreakingEngine {
     }
 
     return { teams, resolved: false };
+  }
+
+  /**
+   * H2H統計を計算するヘルパー（2チーム間の全直接対決から勝点・得点・失点を集計）
+   */
+  private calculateH2HStats(
+    teams: TeamStandingData[],
+    matches: MatchData[]
+  ): Map<string, { points: number; goalsFor: number; goalsAgainst: number; goalDifference: number }> {
+    const stats = new Map<string, { points: number; goalsFor: number; goalsAgainst: number; goalDifference: number }>();
+    const teamIds = new Set(teams.map(t => t.team_id));
+
+    // 初期化
+    for (const team of teams) {
+      stats.set(team.team_id, { points: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0 });
+    }
+
+    // 対象チーム間の試合のみ抽出
+    const h2hMatches = matches.filter(m =>
+      teamIds.has(m.team1_id) && teamIds.has(m.team2_id)
+    );
+
+    for (const match of h2hMatches) {
+      const s1 = stats.get(match.team1_id)!;
+      const s2 = stats.get(match.team2_id)!;
+
+      s1.goalsFor += match.team1_goals;
+      s1.goalsAgainst += match.team2_goals;
+      s2.goalsFor += match.team2_goals;
+      s2.goalsAgainst += match.team1_goals;
+
+      if (match.is_draw) {
+        s1.points += 1;
+        s2.points += 1;
+      } else if (match.winner_team_id === match.team1_id) {
+        s1.points += 3;
+      } else if (match.winner_team_id === match.team2_id) {
+        s2.points += 3;
+      }
+    }
+
+    // 得失点差を計算
+    for (const [, s] of stats) {
+      s.goalDifference = s.goalsFor - s.goalsAgainst;
+    }
+
+    return stats;
+  }
+
+  /**
+   * 当該チーム間の勝点による順位決定
+   */
+  private async calculateByH2HPoints(
+    teams: TeamStandingData[],
+    context: TieBreakingContext
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    if (teams.length < 2) return { teams, resolved: false };
+
+    const stats = this.calculateH2HStats(teams, context.matches);
+    const sorted = [...teams].sort((a, b) => {
+      const sa = stats.get(a.team_id)!;
+      const sb = stats.get(b.team_id)!;
+      return sb.points - sa.points;
+    });
+
+    // 全チームの勝点が同じなら未解決
+    const allSame = sorted.every(t => stats.get(t.team_id)!.points === stats.get(sorted[0].team_id)!.points);
+    return { teams: sorted, resolved: !allSame };
+  }
+
+  /**
+   * 当該チーム間の得失点差による順位決定
+   */
+  private async calculateByH2HGoalDifference(
+    teams: TeamStandingData[],
+    context: TieBreakingContext
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    if (teams.length < 2) return { teams, resolved: false };
+
+    const stats = this.calculateH2HStats(teams, context.matches);
+    const sorted = [...teams].sort((a, b) => {
+      const sa = stats.get(a.team_id)!;
+      const sb = stats.get(b.team_id)!;
+      return sb.goalDifference - sa.goalDifference;
+    });
+
+    const allSame = sorted.every(t => stats.get(t.team_id)!.goalDifference === stats.get(sorted[0].team_id)!.goalDifference);
+    return { teams: sorted, resolved: !allSame };
+  }
+
+  /**
+   * 当該チーム間の総得点による順位決定
+   */
+  private async calculateByH2HGoalsFor(
+    teams: TeamStandingData[],
+    context: TieBreakingContext
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    if (teams.length < 2) return { teams, resolved: false };
+
+    const stats = this.calculateH2HStats(teams, context.matches);
+    const sorted = [...teams].sort((a, b) => {
+      const sa = stats.get(a.team_id)!;
+      const sb = stats.get(b.team_id)!;
+      return sb.goalsFor - sa.goalsFor;
+    });
+
+    const allSame = sorted.every(t => stats.get(t.team_id)!.goalsFor === stats.get(sorted[0].team_id)!.goalsFor);
+    return { teams: sorted, resolved: !allSame };
   }
 
   /**
@@ -451,31 +562,36 @@ export class TieBreakingEngine {
   private mergeGroupResults(
     allTeams: TeamStandingData[],
     groupTeams: TeamStandingData[],
-    startPosition: number
+    startPosition: number,
+    resolved: boolean = false
   ): TeamStandingData[] {
     const groupTeamIds = new Set(groupTeams.map(t => t.team_id));
     const otherTeams = allTeams.filter(t => !groupTeamIds.has(t.team_id));
-    
-    // グループ内の順位を再設定（同着考慮）
+
+    // グループ内の順位を再設定
     const updatedGroupTeams: TeamStandingData[] = [];
     let currentPosition = startPosition;
-    
+
     for (let i = 0; i < groupTeams.length; i++) {
       const currentTeam = groupTeams[i];
       updatedGroupTeams.push({ ...currentTeam, position: currentPosition });
-      
-      // 次のチームと統計値が同じかチェック（抽選が必要なグループでは全て同着）
+
       if (i < groupTeams.length - 1) {
-        const nextTeam = groupTeams[i + 1];
-        const isNextTeamTied = 
-          currentTeam.points === nextTeam.points &&
-          currentTeam.goal_difference === nextTeam.goal_difference &&
-          currentTeam.goals_for === nextTeam.goals_for;
-        
-        if (!isNextTeamTied) {
+        if (resolved) {
+          // タイブレーキングで解決済み → ソート順に連番で割り当て
           currentPosition = startPosition + i + 1;
+        } else {
+          // 未解決 → 全体統計値が同じなら同着
+          const nextTeam = groupTeams[i + 1];
+          const isNextTeamTied =
+            currentTeam.points === nextTeam.points &&
+            currentTeam.goal_difference === nextTeam.goal_difference &&
+            currentTeam.goals_for === nextTeam.goals_for;
+
+          if (!isNextTeamTied) {
+            currentPosition = startPosition + i + 1;
+          }
         }
-        // 同着の場合はcurrentPositionを変更しない
       }
     }
 
@@ -514,6 +630,9 @@ export class TieBreakingEngine {
       goal_difference: `得失点差による順位決定（${teamsCount}チーム）`,
       goals_for: `総得点による順位決定（${teamsCount}チーム）`,
       head_to_head: `直接対決結果による順位決定（${teamsCount}チーム）`,
+      h2h_points: `当該チーム間の勝点による順位決定（${teamsCount}チーム）`,
+      h2h_goal_difference: `当該チーム間の得失点差による順位決定（${teamsCount}チーム）`,
+      h2h_goals_for: `当該チーム間の総得点による順位決定（${teamsCount}チーム）`,
       win_rate: `勝率による順位決定（${teamsCount}チーム）`,
       best_time: `ベストタイムによる順位決定（${teamsCount}チーム）`,
       win_count: `勝利数による順位決定（${teamsCount}チーム）`,
