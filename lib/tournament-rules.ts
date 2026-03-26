@@ -253,22 +253,24 @@ export function getLegacyDefaultRules(tournamentId: number, phaseIds?: string[])
 export interface WalkoverSettings {
   winner_goals: number;
   loser_goals: number;
+  draw_goals: number;
 }
 
 // 不戦勝設定の解析
 export function parseWalkoverSettings(walkoverSettingsJson?: string): WalkoverSettings {
   if (!walkoverSettingsJson) {
-    return { winner_goals: 3, loser_goals: 0 }; // デフォルト値
+    return { winner_goals: 3, loser_goals: 0, draw_goals: 0 }; // デフォルト値
   }
-  
+
   try {
     const settings = JSON.parse(walkoverSettingsJson);
     return {
+      draw_goals: Number(settings.draw_goals) || 0,
       winner_goals: Number(settings.winner_goals) || 3,
       loser_goals: Number(settings.loser_goals) || 0
     };
   } catch {
-    return { winner_goals: 3, loser_goals: 0 }; // パースエラー時のデフォルト値
+    return { winner_goals: 3, loser_goals: 0, draw_goals: 0 }; // パースエラー時のデフォルト値
   }
 }
 
@@ -299,11 +301,11 @@ export async function getTournamentWalkoverSettings(tournamentId: number): Promi
     }
     
     // ルール設定がない場合はデフォルト値を返す
-    return { winner_goals: 3, loser_goals: 0 };
+    return { winner_goals: 3, loser_goals: 0, draw_goals: 0 };
     
   } catch (error) {
     console.error('不戦勝設定の取得に失敗:', error);
     // エラー時もデフォルト値を返す
-    return { winner_goals: 3, loser_goals: 0 };
+    return { winner_goals: 3, loser_goals: 0, draw_goals: 0 };
   }
 }

@@ -85,6 +85,7 @@ export interface Tournament {
     canManageSponsors?: boolean;
     canPrintRefereeCards?: boolean;
     canSendEmails?: boolean;
+    canManageDisplaySettings?: boolean;
   } | null;
 }
 
