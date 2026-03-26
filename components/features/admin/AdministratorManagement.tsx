@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus } from 'lucide-react';
 
 interface Administrator {
   admin_id: number;
@@ -263,14 +262,8 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
-      {/* ダッシュボードに戻る + 新規登録ボタン */}
-      <div className="flex items-center justify-between">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/my">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            ダッシュボードに戻る
-          </Link>
-        </Button>
+      {/* 新規登録ボタン */}
+      <div className="flex items-center justify-end">
         {!isCreating && !editingAdmin && (
           <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />

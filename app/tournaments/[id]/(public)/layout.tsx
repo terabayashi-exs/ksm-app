@@ -7,7 +7,7 @@ import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher'
 import ShareButton from '@/components/public/ShareButton';
 import TournamentTabNav from '@/components/public/TournamentTabNav';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
-import { Home, ChevronRight, FileText } from 'lucide-react';
+import { Home, ChevronRight, FileText, Bell } from 'lucide-react';
 import { db } from '@/lib/db';
 import type { TournamentPhase } from '@/lib/types/tournament-phases';
 
@@ -34,15 +34,20 @@ export default async function TournamentDetailLayout({ children, params }: Layou
     throw new Error('有効な大会IDを指定してください');
   }
 
-  const [data, publicFilesResult] = await Promise.all([
+  const [data, publicFilesResult, noticesResult] = await Promise.all([
     getTournamentWithGroupInfo(tournamentId),
     db.execute(
       `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
       [tournamentId]
     ).catch(() => ({ rows: [{ count: 0 }] })),
+    db.execute(
+      `SELECT COUNT(*) as count FROM t_tournament_notices WHERE tournament_id = ? AND is_active = 1`,
+      [tournamentId]
+    ).catch(() => ({ rows: [{ count: 0 }] })),
   ]);
   const { tournament, group, sibling_divisions } = data;
   const hasPublicFiles = Number(publicFilesResult.rows[0]?.count ?? 0) > 0;
+  const hasNotices = Number(noticesResult.rows[0]?.count ?? 0) > 0;
 
   // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
   // layout のUI（タブ等）はスキップして children をそのまま返す
@@ -91,15 +96,26 @@ export default async function TournamentDetailLayout({ children, params }: Layou
               {group && (
                 <p className="text-gray-500">（{group.group_name}）</p>
               )}
-              {hasPublicFiles && (
-                <Link
-                  href={`/tournaments/${tournament.tournament_id}#public-files`}
-                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline mt-1"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  大会資料があります
-                </Link>
-              )}
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {hasNotices && (
+                  <Link
+                    href={`/tournaments/${tournament.tournament_id}#tournament-notices`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-medium hover:bg-amber-200 transition-colors"
+                  >
+                    <Bell className="h-3.5 w-3.5" />
+                    お知らせがあります
+                  </Link>
+                )}
+                {hasPublicFiles && (
+                  <Link
+                    href={`/tournaments/${tournament.tournament_id}#public-files`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium hover:bg-blue-200 transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    大会資料があります
+                  </Link>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 sm:ml-4">
               <DivisionSwitcher

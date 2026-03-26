@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, Bell } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
@@ -220,6 +220,25 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
                 <div className="space-y-2">
                   <Button asChild variant="outline" className="w-full border-2 border-blue-300 hover:border-blue-400 hover:bg-blue-100">
                     <Link href="/admin/announcements">お知らせ管理</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader>
+                <CardTitle className="text-orange-800 flex items-center gap-2">
+                  <Shuffle className="h-5 w-5" />
+                  大会オーナー移管
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-orange-700 mb-4">
+                  大会グループのオーナーを別の管理者に移管します
+                </p>
+                <div className="space-y-2">
+                  <Button asChild variant="outline" className="w-full border-2 border-orange-300 hover:border-orange-400 hover:bg-orange-100">
+                    <Link href="/admin/transfer-tournament">オーナー移管</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -830,6 +849,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     ファイル管理
                   </Link>
                 </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}/notices`}>
+                    <Bell className="w-4 h-4 mr-1" />
+                    お知らせ管理
+                  </Link>
+                </Button>
                 <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
                     <Eye className="w-4 h-4 mr-1" />
@@ -1341,7 +1366,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             )}
 
             {/* ── 管理・その他 ── */}
-            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings) && (
+            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings || permissions.canManageNotices) && (
               <div>
                 <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
                 <div className="flex gap-2 flex-wrap">
@@ -1350,6 +1375,14 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
                         <Mail className="w-4 h-4 mr-1" />
                         メール送信
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canManageNotices && (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/notices`}>
+                        <Bell className="w-4 h-4 mr-1" />
+                        お知らせ管理
                       </Link>
                     </Button>
                   )}
