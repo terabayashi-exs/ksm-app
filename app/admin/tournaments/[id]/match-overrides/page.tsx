@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Pencil, AlertCircle, List, RefreshCw } from 'lucide-react';
+import { ArrowRight, Pencil, AlertCircle, List, RefreshCw, ChevronRight, Home } from 'lucide-react';
 import { MatchOverrideDialog } from '@/components/features/admin/MatchOverrideDialog';
 import { BulkMatchOverrideDialog } from '@/components/features/admin/BulkMatchOverrideDialog';
 import { formatTeamSourceDisplay } from '@/lib/team-source-display';
@@ -261,13 +261,14 @@ export default function MatchOverridesPage() {
         </div>
       </div>
       <div className="container mx-auto py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/my?tab=admin">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              ダッシュボードに戻る
-            </Link>
-          </Button>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">個別ルール設定</span>
+        </nav>
+        <div className="flex items-center justify-end mb-6">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setIsBulkDialogOpen(true)}>
               <List className="h-4 w-4 mr-2" />

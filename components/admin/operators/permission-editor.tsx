@@ -215,6 +215,19 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
               表示設定
             </Label>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="canManageNotices"
+              checked={permissions.canManageNotices}
+              onCheckedChange={(checked) =>
+                updatePermission('canManageNotices', checked as boolean)
+              }
+            />
+            <Label htmlFor="canManageNotices" className="cursor-pointer text-base">
+              お知らせ管理
+            </Label>
+          </div>
         </div>
   );
 

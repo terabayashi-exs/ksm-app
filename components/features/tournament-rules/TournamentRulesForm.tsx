@@ -178,10 +178,12 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           const sportCode = String(tieRulesResult.tournament?.sport_code || 'pk_championship');
           setAvailableRuleTypes(tieRulesResult.available_rule_types || getAvailableTieBreakingRules(sportCode));
           
-          // 統一ルール（予選を基準）
-          const preliminaryTieRules = tieRulesResult.phase_rules?.preliminary;
-          if (preliminaryTieRules?.rules?.length > 0) {
-            setTieBreakingRules(preliminaryTieRules.rules);
+          // 統一ルール（最初のフェーズを基準に復元）
+          const phaseRules = tieRulesResult.phase_rules;
+          const firstPhaseId = phaseRules ? Object.keys(phaseRules)[0] : null;
+          const savedTieRules = firstPhaseId ? phaseRules[firstPhaseId] : null;
+          if (savedTieRules?.rules?.length > 0) {
+            setTieBreakingRules(savedTieRules.rules);
           } else {
             setTieBreakingRules(getDefaultTieBreakingRules(sportCode));
           }

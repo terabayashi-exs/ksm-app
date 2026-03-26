@@ -16,6 +16,36 @@
 
 ---
 
+## 0030: 部門お知らせテーブル（t_tournament_notices）（2026-03-26）
+
+### 基本情報
+- **日付**: 2026年3月26日
+- **環境**: dev（stag/mainは要実行）
+- **方法**: db:migrate（カスタムマイグレーター）
+- **実行者**: Claude Code
+
+### 変更内容
+- `t_tournament_notices` テーブル新設（部門単位のお知らせ管理）
+  - `tournament_notice_id` (PK, AUTOINCREMENT)
+  - `tournament_id` (FK → t_tournaments, CASCADE DELETE)
+  - `content` (TEXT, NOT NULL)
+  - `display_order` (INTEGER, DEFAULT 0)
+  - `is_active` (INTEGER, DEFAULT 1)
+  - `created_at`, `updated_at` (TIMESTAMP)
+- インデックス: `idx_tournament_notices_tournament` on `tournament_id`
+
+### 影響ファイル
+- `src/db/schema.ts` — テーブル定義追加
+- `drizzle/0030_add_tournament_notices.sql` — マイグレーションSQL
+- `drizzle/meta/_journal.json` — エントリ追加
+
+### 実行コマンド
+```bash
+npm run db:migrate
+```
+
+---
+
 ## 0029: フォーマット公開制御（visibility + t_format_access_grants）（2026-03-16）
 
 ### 基本情報

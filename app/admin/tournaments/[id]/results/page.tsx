@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Trophy } from 'lucide-react';
+import { Trophy, ChevronRight, Home } from 'lucide-react';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
 import type { TournamentStatus } from '@/lib/tournament-status';
@@ -107,14 +107,20 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
 
       {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/my">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              ダッシュボードに戻る
-            </Link>
-          </Button>
-        </div>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            マイダッシュボード
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            結果入力
+          </span>
+        </nav>
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <Trophy className="w-16 h-16 mx-auto text-gray-500 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -150,8 +156,8 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
 
           <div className="mt-8">
             <Button variant="outline" asChild>
-              <Link href="/my">
-                ダッシュボードに戻る
+              <Link href="/my?tab=admin">
+                マイダッシュボードに戻る
               </Link>
             </Button>
           </div>

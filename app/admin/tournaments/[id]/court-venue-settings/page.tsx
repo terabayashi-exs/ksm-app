@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
-import { ArrowLeft, Save, MapPin, Loader2, Calendar } from 'lucide-react';
+import { Save, MapPin, Loader2, Calendar, ChevronRight, Home } from 'lucide-react';
 
 // コート名プリセット
 const COURT_NAME_PRESETS = [
@@ -312,13 +312,13 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* 戻るボタン */}
-        <Button asChild variant="outline" size="sm">
-          <Link href="/my">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            ダッシュボードに戻る
-          </Link>
-        </Button>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">会場・コート設定</span>
+        </nav>
 
         {/* メッセージ */}
         {error && (

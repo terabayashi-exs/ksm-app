@@ -18,6 +18,7 @@ export interface OperatorPermissions {
   canPrintRefereeCards: boolean;     // 審判カード印刷
   canSendEmails: boolean;            // メール送信
   canManageDisplaySettings: boolean; // 表示設定（フェーズタブ表示/非表示、チーム表示名変更）
+  canManageNotices: boolean;         // お知らせ管理
 }
 
 /**
@@ -40,6 +41,7 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canPrintRefereeCards: false,
   canSendEmails: false,
   canManageDisplaySettings: false,
+  canManageNotices: false,
 };
 
 /**
@@ -70,6 +72,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: true,      // 審判カード印刷
       canSendEmails: false,
       canManageDisplaySettings: false,
+      canManageNotices: false,
     }
   },
   event_day: {
@@ -91,6 +94,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: false,
       canSendEmails: false,
       canManageDisplaySettings: false,
+      canManageNotices: false,
     }
   },
   management: {
@@ -112,6 +116,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: false,
       canSendEmails: true,             // メール送信
       canManageDisplaySettings: true,  // 表示設定
+      canManageNotices: true,          // お知らせ管理
     }
   },
   custom: {

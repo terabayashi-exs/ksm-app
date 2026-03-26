@@ -263,14 +263,8 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
-      {/* ダッシュボードに戻る + 新規登録ボタン */}
-      <div className="flex items-center justify-between">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/my">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            ダッシュボードに戻る
-          </Link>
-        </Button>
+      {/* 新規登録ボタン */}
+      <div className="flex items-center justify-end">
         {!isCreating && !editingAdmin && (
           <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />

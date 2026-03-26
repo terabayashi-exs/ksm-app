@@ -503,12 +503,13 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                           canManageSponsors: 'スポンサー管理',
                           canPrintRefereeCards: '審判カード印刷',
                           canSendEmails: 'メール送信',
+                          canManageNotices: 'お知らせ管理',
                         };
 
                         // カテゴリごとの色分け
                         const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canManageParticipants', 'canPrintRefereeCards'];
                         const eventDayPerms = ['canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules'];
-                        const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails'];
+                        const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageNotices'];
 
                         let badgeClass = 'bg-primary/10 text-primary';
                         if (preparationPerms.includes(key)) {

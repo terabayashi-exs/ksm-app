@@ -14,6 +14,7 @@ import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
 import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
 import PublicFilesList from '@/components/features/tournament/PublicFilesList';
+import PublicNoticeList from '@/components/features/tournament/PublicNoticeList';
 import type { Tournament } from '@/lib/types';
 import { parseVenueIds } from '@/lib/types';
 import { db } from '@/lib/db';
@@ -209,6 +210,8 @@ function TournamentOverview({
           )}
         </div>
       )}
+
+      <PublicNoticeList tournamentId={tournament.tournament_id} />
 
       <div id="public-files">
         <PublicFilesList

@@ -1,42 +1,32 @@
-export const metadata = { title: "リーグ戦部門編集" };
+export const metadata = { title: "大会オーナー移管" };
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import TournamentEditLeagueForm from "@/components/features/tournament/TournamentEditLeagueForm";
+import TransferTournamentOwner from "@/components/features/admin/TransferTournamentOwner";
 
-interface EditLeaguePageProps {
-  params: Promise<{ id: string }>;
-}
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export default async function EditLeagueTournamentPage({ params }: EditLeaguePageProps) {
+export default async function TransferTournamentPage() {
   const session = await auth();
 
-  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
-    redirect("/auth/admin/login");
+  if (!session || !(session.user as { isSuperadmin?: boolean })?.isSuperadmin) {
+    redirect("/auth/login");
   }
-
-  const resolvedParams = await params;
 
   return (
     <div className="min-h-screen bg-white">
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white">リーグ戦 部門編集</h1>
+            <h1 className="text-3xl font-bold text-white">大会オーナー移管</h1>
             <p className="text-sm text-white/70 mt-1">
-              リーグ戦部門の基本情報を編集します
+              大会グループのオーナーを別の管理者に移管します
             </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
           <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
             <Home className="h-3.5 w-3.5" />
@@ -48,20 +38,10 @@ export default async function EditLeagueTournamentPage({ params }: EditLeaguePag
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
-            リーグ戦 部門編集
+            大会オーナー移管
           </span>
         </nav>
-        <Card>
-          <CardHeader>
-            <CardTitle>リーグ戦 部門編集</CardTitle>
-            <p className="text-sm text-gray-500">
-              部門の基本情報を編集できます。節ごとの会場・日程は「日程・会場設定」画面から設定してください。
-            </p>
-          </CardHeader>
-          <CardContent>
-            <TournamentEditLeagueForm tournamentId={resolvedParams.id} />
-          </CardContent>
-        </Card>
+        <TransferTournamentOwner />
       </div>
     </div>
   );

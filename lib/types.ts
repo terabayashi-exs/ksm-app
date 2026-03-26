@@ -86,6 +86,7 @@ export interface Tournament {
     canPrintRefereeCards?: boolean;
     canSendEmails?: boolean;
     canManageDisplaySettings?: boolean;
+    canManageNotices?: boolean;
   } | null;
 }
 

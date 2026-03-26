@@ -13,7 +13,9 @@ import {
   Calendar,
   Clock,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  ChevronRight,
+  Home
 } from 'lucide-react';
 
 interface QRMatch {
@@ -61,7 +63,8 @@ export default function QRListPage() {
   const [includeCompleted, setIncludeCompleted] = useState(false);
   const [validity, setValidity] = useState<{ validFrom: string; validUntil: string } | null>(null);
   const [phaseList, setPhaseList] = useState<TournamentPhaseInfo[]>([]);
-  const [loadedQrCount, setLoadedQrCount] = useState(0);
+  const [loadedQrIds, setLoadedQrIds] = useState<Set<number>>(new Set());
+  const loadedQrCount = filteredMatches.filter(m => loadedQrIds.has(m.match_id)).length;
   const allQrLoaded = filteredMatches.length > 0 && loadedQrCount >= filteredMatches.length;
 
   const fetchMatches = useCallback(async () => {
@@ -114,7 +117,6 @@ export default function QRListPage() {
     }
 
     setFilteredMatches(filtered);
-    setLoadedQrCount(0);
   }, [matches, filterPhase, filterBlock, filterMatchday]);
 
   useEffect(() => {
@@ -188,40 +190,49 @@ export default function QRListPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 print:p-4">
+    <div className="min-h-screen bg-white">
       {/* ヘッダー（印刷時非表示） */}
-      <div className="no-print mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <QrCode className="h-8 w-8" />
-              審判用QRコード一覧
-            </h1>
-            <p className="text-gray-600 mt-1">
+      <div className="bg-base-800 border-b-[3px] border-primary no-print">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-3xl font-bold text-white">審判用QRコード一覧</h1>
+            <p className="text-sm text-white/70 mt-1">
               試合前・進行中の試合のQRコードを表示します（全{filteredMatches.length}試合）
             </p>
-            {validity && (
-              <p className="text-sm text-primary mt-2 font-medium">
-                QRコード有効期限: {new Date(validity.validUntil).toLocaleString('ja-JP', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })} まで
-              </p>
-            )}
           </div>
-          <div className="flex items-center gap-3">
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:px-4 print:py-4">
+        {/* パンくず（印刷時非表示） */}
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6 no-print">
+          <a href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></a>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <a href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</a>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">QRコード一覧</span>
+        </nav>
+
+        {validity && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium mb-6 no-print">
+            <Clock className="h-4 w-4 shrink-0" />
+            QRコード有効期限: {new Date(validity.validUntil).toLocaleString('ja-JP', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            })} まで
+          </div>
+        )}
+
+        <div className="no-print mb-6">
+          <div className="flex items-center justify-end mb-4">
             <Button variant="outline" onClick={handlePrint} disabled={!allQrLoaded} className="flex items-center gap-2">
               <Printer className="h-4 w-4" />
               {allQrLoaded ? '印刷' : `QR読込中... (${loadedQrCount}/${filteredMatches.length})`}
             </Button>
-            <Button variant="outline" onClick={() => router.push('/my?tab=admin')}>
-              ダッシュボードに戻る
-            </Button>
           </div>
-        </div>
 
         {/* 完了試合表示チェックボックス */}
         <div className="mb-4">
@@ -390,7 +401,7 @@ export default function QRListPage() {
                             className="border-2 border-gray-300 rounded-md qr-code-image"
                             loading="eager"
                             unoptimized
-                            onLoad={() => setLoadedQrCount(c => c + 1)}
+                            onLoad={() => setLoadedQrIds(prev => new Set(prev).add(match.match_id))}
                           />
                           <p className="text-xs text-gray-500 mt-1 text-center no-print">
                             QRスキャンで結果入力
@@ -594,6 +605,7 @@ export default function QRListPage() {
           }
         }
       `}</style>
+      </div>
     </div>
   );
 }

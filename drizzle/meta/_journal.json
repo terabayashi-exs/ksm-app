@@ -211,6 +211,13 @@
       "when": 1741795200000,
       "tag": "0029_add_format_visibility_and_access_grants",
       "breakpoints": false
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1741881600000,
+      "tag": "0030_add_tournament_notices",
+      "breakpoints": false
     }
   ]
 }

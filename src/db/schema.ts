@@ -838,6 +838,19 @@ export const tAnnouncements = sqliteTable("t_announcements", {
 	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
 ]);
 
+export const tTournamentNotices = sqliteTable("t_tournament_notices", {
+	tournamentNoticeId: integer("tournament_notice_id").primaryKey({ autoIncrement: true }),
+	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+	content: text().notNull(),
+	displayOrder: integer("display_order").default(0).notNull(),
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_tournament_notices_tournament").on(_table.tournamentId),
+]);
+
 export const tSponsorBanners = sqliteTable("t_sponsor_banners", {
 	bannerId: integer("banner_id").primaryKey({ autoIncrement: true }),
 	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),

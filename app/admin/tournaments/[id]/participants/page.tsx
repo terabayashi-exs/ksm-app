@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 import ParticipantManagement from '@/components/features/admin/ParticipantManagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users, Mail } from 'lucide-react';
+import { Users, Mail, ChevronRight, Home } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -44,13 +44,21 @@ export default async function ParticipantsPage({ params }: PageProps) {
         </div>
       </div>
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex items-center justify-between mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/my?tab=admin">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              ダッシュボードに戻る
-            </Link>
-          </Button>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            マイダッシュボード
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            参加チーム管理
+          </span>
+        </nav>
+        <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline">
             <Link href={`/admin/tournaments/${tournamentId}/participants/email`}>
               <Mail className="h-4 w-4 mr-2" />
