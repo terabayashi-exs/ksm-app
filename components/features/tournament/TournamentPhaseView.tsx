@@ -143,7 +143,7 @@ export default function TournamentPhaseView({
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
             <h2 className="text-2xl font-bold text-gray-900">
-              {phaseName}トーナメント
+              {phaseName}
             </h2>
             <Button
               onClick={handlePrint}
