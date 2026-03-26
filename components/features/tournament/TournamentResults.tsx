@@ -755,19 +755,19 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                           className="border border-gray-200 p-1 md:p-2 bg-green-50 text-xs md:text-base font-medium text-gray-500"
                         >
                           <div
-                            className="flex flex-col items-center justify-center overflow-visible"
+                            className="flex items-center justify-center overflow-visible"
                             style={{
+                              writingMode: 'vertical-rl',
+                              textOrientation: 'upright',
                               fontSize: '12px',
                               fontWeight: '500',
                               lineHeight: '1.2',
-                              minHeight: '80px'
+                              minHeight: '80px',
+                              whiteSpace: 'nowrap'
                             }}
                             title={opponent.team_name}
                           >
-                            {/* 全デバイスで全文表示（縦書き） */}
-                            {(opponent.team_omission || opponent.team_name).split('').map((char, index) => (
-                              <span key={index} className="block">{char}</span>
-                            ))}
+                            {opponent.team_omission || opponent.team_name}
                           </div>
                         </th>
                       ))}
