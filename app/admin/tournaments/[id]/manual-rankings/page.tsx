@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import ManualRankingsEditor from "@/components/features/tournament/ManualRankingsEditor";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { ChevronRight, Home } from "lucide-react";
 import { buildPhaseFormatMap } from "@/lib/tournament-phases";
 import { calculateBlockStandings } from "@/lib/standings-calculator";

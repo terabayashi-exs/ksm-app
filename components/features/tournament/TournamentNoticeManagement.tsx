@@ -22,7 +22,7 @@ interface Props {
   tournamentName: string;
 }
 
-export default function TournamentNoticeManagement({ tournamentId, tournamentName }: Props) {
+export default function TournamentNoticeManagement({ tournamentId, tournamentName: _tournamentName }: Props) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

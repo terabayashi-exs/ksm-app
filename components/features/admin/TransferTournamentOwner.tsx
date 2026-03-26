@@ -83,7 +83,7 @@ export default function TransferTournamentOwner() {
       } else {
         setResult({ success: false, message: data.error || "移管に失敗しました" });
       }
-    } catch (e) {
+    } catch {
       setResult({ success: false, message: "通信エラーが発生しました" });
     } finally {
       setTransferring(false);

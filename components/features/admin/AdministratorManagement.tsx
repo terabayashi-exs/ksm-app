@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus } from 'lucide-react';
 
 interface Administrator {
   admin_id: number;

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  QrCode,
   Printer,
   Filter,
   Calendar,
@@ -50,7 +50,6 @@ interface TournamentPhaseInfo {
 
 export default function QRListPage() {
   const params = useParams();
-  const router = useRouter();
   const tournamentId = params.id as string;
 
   const [matches, setMatches] = useState<QRMatch[]>([]);
@@ -206,9 +205,9 @@ export default function QRListPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:px-4 print:py-4">
         {/* パンくず（印刷時非表示） */}
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6 no-print">
-          <a href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></a>
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <a href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</a>
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">QRコード一覧</span>
         </nav>
