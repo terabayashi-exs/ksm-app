@@ -755,7 +755,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                           className="border border-gray-200 p-1 md:p-2 bg-green-50 text-xs md:text-base font-medium text-gray-500"
                         >
                           <div
-                            className="flex items-center justify-center overflow-visible"
+                            className="overflow-visible"
                             style={{
                               writingMode: 'vertical-rl',
                               textOrientation: 'upright',
@@ -763,7 +763,8 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                               fontWeight: '500',
                               lineHeight: '1.2',
                               minHeight: '80px',
-                              whiteSpace: 'nowrap'
+                              whiteSpace: 'nowrap',
+                              margin: '0 auto'
                             }}
                             title={opponent.team_name}
                           >
