@@ -19,6 +19,7 @@ export interface OperatorPermissions {
   canSendEmails: boolean;            // メール送信
   canManageDisplaySettings: boolean; // 表示設定（フェーズタブ表示/非表示、チーム表示名変更）
   canManageNotices: boolean;         // お知らせ管理
+  canManageOperators: boolean;       // 運営者管理（運営者の追加）
 }
 
 /**
@@ -42,6 +43,7 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canSendEmails: false,
   canManageDisplaySettings: false,
   canManageNotices: false,
+  canManageOperators: false,
 };
 
 /**
@@ -73,6 +75,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canSendEmails: false,
       canManageDisplaySettings: false,
       canManageNotices: false,
+      canManageOperators: false,
     }
   },
   event_day: {
@@ -95,6 +98,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canSendEmails: false,
       canManageDisplaySettings: false,
       canManageNotices: false,
+      canManageOperators: false,
     }
   },
   management: {
@@ -117,6 +121,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canSendEmails: true,             // メール送信
       canManageDisplaySettings: true,  // 表示設定
       canManageNotices: true,          // お知らせ管理
+      canManageOperators: true,        // 運営者管理
     }
   },
   custom: {

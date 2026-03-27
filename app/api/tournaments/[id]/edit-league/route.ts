@@ -147,6 +147,7 @@ export async function PUT(
       tournament_name,
       venue_ids,
       match_duration_minutes,
+      break_duration_minutes,
       is_public,
       show_players_public,
       public_start_date,
@@ -207,7 +208,7 @@ export async function PUT(
       tournament_name,
       venueIdJson,
       match_duration_minutes,
-      0, // break_duration_minutes: リーグ戦では不要
+      break_duration_minutes != null ? break_duration_minutes : 0,
       newStatus,
       is_public ? 'open' : 'preparing',
       show_players_public ? 1 : 0,

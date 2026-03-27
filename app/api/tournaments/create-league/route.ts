@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       format_id,
       team_count,
       match_duration_minutes,
+      break_duration_minutes,
       is_public,
       public_start_date,
       recruitment_start_date,
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       1,    // court_count: デフォルト
       '{"1": ""}', // tournament_dates: 後で日程・会場設定から更新
       match_duration_minutes,
-      defaultBreakDuration,
+      break_duration_minutes != null ? break_duration_minutes : defaultBreakDuration,
       calculatedStatus,
       is_public ? 'open' : 'preparing',
       public_start_date,

@@ -23,6 +23,7 @@ export async function GET() {
         u.email,
         u.is_active,
         u.is_superadmin,
+        u.organization_name,
         u.created_at,
         u.updated_at
       FROM m_login_users u
@@ -38,6 +39,7 @@ export async function GET() {
       role: 'admin',
       is_active: Number(row.is_active) === 1,
       is_superadmin: Number(row.is_superadmin) === 1,
+      organization_name: row.organization_name ? String(row.organization_name) : '',
       created_at: String(row.created_at),
       updated_at: String(row.updated_at)
     }));
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { admin_name, email, password, is_active, is_superadmin } = body;
+    const { admin_name, email, password, is_active, is_superadmin, organization_name } = body;
 
     // バリデーション
     if (!admin_name || !admin_name.trim()) {
@@ -114,14 +116,15 @@ export async function POST(request: NextRequest) {
 
     // m_login_users に登録（フリープランを初期設定）
     const insertResult = await db.execute(`
-      INSERT INTO m_login_users (email, password_hash, display_name, is_superadmin, is_active, current_plan_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 1, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      INSERT INTO m_login_users (email, password_hash, display_name, is_superadmin, is_active, current_plan_id, organization_name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 1, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       email.trim(),
       hashedPassword,
       admin_name.trim(),
       is_superadmin === true ? 1 : 0,
-      is_active === false ? 0 : 1
+      is_active === false ? 0 : 1,
+      organization_name?.trim() || null
     ]);
 
     const loginUserId = Number(insertResult.lastInsertRowid);

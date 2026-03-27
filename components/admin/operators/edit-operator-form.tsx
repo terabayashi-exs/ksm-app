@@ -321,12 +321,13 @@ export default function EditOperatorForm({
                       canPrintRefereeCards: '審判カード印刷',
                       canSendEmails: 'メール送信',
                       canManageNotices: 'お知らせ管理',
+                      canManageOperators: '運営者管理',
                     };
 
                     // カテゴリごとの色分け
                     const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canManageParticipants', 'canPrintRefereeCards'];
                     const eventDayPerms = ['canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules'];
-                    const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageNotices'];
+                    const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageNotices', 'canManageOperators'];
 
                     let badgeClass = 'bg-primary/10 text-primary';
                     if (preparationPerms.includes(key)) {
