@@ -228,6 +228,19 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
               お知らせ管理
             </Label>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="canManageOperators"
+              checked={permissions.canManageOperators}
+              onCheckedChange={(checked) =>
+                updatePermission('canManageOperators', checked as boolean)
+              }
+            />
+            <Label htmlFor="canManageOperators" className="cursor-pointer text-base">
+              運営者管理
+            </Label>
+          </div>
         </div>
   );
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { hasOperatorPermission } from '@/lib/operator-permission-check';
 
 /**
  * GET /api/admin/operators
@@ -11,17 +12,26 @@ export async function GET() {
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
     const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
+    const isAdmin = session.user.role === 'admin';
+    const isOperatorWithPerm = session.user.role === 'operator' && adminLoginUserId
+      ? await hasOperatorPermission(adminLoginUserId, 'canManageOperators')
+      : false;
+
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
+    }
+
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
 
-    // スーパー管理者は全運営者を取得、通常の管理者は自分が作成した運営者のみ
+    // スーパー管理者は全運営者を取得、通常の管理者/運営者は自分が作成した運営者のみ
     const operatorsResult = isSuperadmin
       ? await db.execute({
           sql: `SELECT

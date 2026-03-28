@@ -3,20 +3,23 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Phone, Calendar, Info } from 'lucide-react';
+import { AlertTriangle, Phone, Calendar, Info, UserPlus } from 'lucide-react';
 import ParticipantStatusBadge from './ParticipantStatusBadge';
+import TeamManagerInviteDialog from './TeamManagerInviteDialog';
 import type { ParticipantTeam, ActionType } from './ParticipantActionsModal';
 
 interface ParticipantCardProps {
   team: ParticipantTeam;
   onAction: (team: ParticipantTeam, action: ActionType) => void;
+  onTeamUpdated?: () => void;
 }
 
-export default function ParticipantCard({ team, onAction }: ParticipantCardProps) {
+export default function ParticipantCard({ team, onAction, onTeamUpdated }: ParticipantCardProps) {
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   // カードのスタイルを状態に応じて変更
   const getCardClassName = () => {
     if (team.withdrawal_status === 'withdrawal_requested') {
@@ -56,9 +59,7 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
               )}
             </div>
             <CardDescription>
-              {team.assigned_block && (
-                <span>{team.assigned_block}ブロック {team.block_position}位</span>
-              )}
+              <span className="font-mono text-xs">{team.team_id}</span>
             </CardDescription>
           </div>
           <ParticipantStatusBadge
@@ -83,9 +84,20 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
               </div>
             ))
           ) : (
-            <div className="flex items-center gap-2 text-base text-gray-500">
-              <Info className="h-5 w-5" />
-              <span>担当者未登録</span>
+            <div className="flex items-center gap-3 text-base text-gray-500">
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5" />
+                <span>担当者未登録</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-blue-300 text-blue-600 hover:bg-blue-50"
+                onClick={() => setInviteDialogOpen(true)}
+              >
+                <UserPlus className="h-3.5 w-3.5 mr-1" />
+                担当者登録(メール認証)
+              </Button>
             </div>
           )}
           {team.contact_phone && (
@@ -216,6 +228,14 @@ export default function ParticipantCard({ team, onAction }: ParticipantCardProps
           </div>
         )}
       </CardContent>
+
+      <TeamManagerInviteDialog
+        teamId={team.team_id}
+        teamName={team.tournament_team_name}
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onSuccess={onTeamUpdated}
+      />
     </Card>
   );
 }

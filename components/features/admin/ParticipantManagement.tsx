@@ -281,6 +281,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
                   key={team.tournament_team_id}
                   team={team}
                   onAction={handleAction}
+                  onTeamUpdated={fetchData}
                 />
               ))}
             </div>

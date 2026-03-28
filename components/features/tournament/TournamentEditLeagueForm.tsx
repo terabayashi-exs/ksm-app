@@ -59,6 +59,7 @@ const leagueEditSchema = z.object({
   tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
   venue_ids: z.array(z.number()).min(1, "会場を1つ以上選択してください"),
   match_duration_minutes: z.number().min(5, "試合時間は5分以上").max(120, "試合時間は120分以下"),
+  break_duration_minutes: z.number().min(0, "休憩時間は0分以上").max(60, "休憩時間は60分以下"),
   is_public: z.boolean(),
   show_players_public: z.boolean(),
   public_start_date: z.string().min(1, "公開開始日時は必須です"),
@@ -121,6 +122,7 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
             tournament_name: data.tournament.tournament_name,
             venue_ids: venueIds,
             match_duration_minutes: data.tournament.match_duration_minutes,
+            break_duration_minutes: data.tournament.break_duration_minutes || 0,
             is_public: data.tournament.visibility === "open",
             show_players_public: data.tournament.show_players_public,
             public_start_date: data.tournament.public_start_date,
@@ -346,22 +348,40 @@ export default function TournamentEditLeagueForm({ tournamentId }: Props) {
         </p>
       </div>
 
-      {/* 試合時間 */}
-      <div className="space-y-2">
-        <Label htmlFor="match_duration_minutes">試合時間(分) <span className="text-destructive">*</span></Label>
-        <Input
-          id="match_duration_minutes"
-          type="number"
-          className={`max-w-[200px] ${tournament?.default_match_duration != null ? "bg-gray-50" : ""}`}
-          {...register("match_duration_minutes", { valueAsNumber: true })}
-          disabled={tournament?.default_match_duration != null}
-        />
-        {tournament?.default_match_duration != null ? (
-          <p className="text-xs text-gray-500">フォーマットで設定済み</p>
-        ) : (
-          <p className="text-xs text-gray-500">節設定で日時の重複チェックに使用されます</p>
-        )}
-        {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
+      {/* 試合時間・休憩時間 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="match_duration_minutes">試合時間(分) <span className="text-destructive">*</span></Label>
+          <Input
+            id="match_duration_minutes"
+            type="number"
+            className={`max-w-[200px] ${tournament?.default_match_duration != null ? "bg-gray-50" : ""}`}
+            {...register("match_duration_minutes", { valueAsNumber: true })}
+            disabled={tournament?.default_match_duration != null}
+          />
+          {tournament?.default_match_duration != null ? (
+            <p className="text-xs text-gray-500">フォーマットで設定済み</p>
+          ) : (
+            <p className="text-xs text-gray-500">節設定で日時の重複チェックに使用されます</p>
+          )}
+          {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="break_duration_minutes">休憩時間(分) <span className="text-destructive">*</span></Label>
+          <Input
+            id="break_duration_minutes"
+            type="number"
+            className={`max-w-[200px] ${tournament?.default_break_duration != null ? "bg-gray-50" : ""}`}
+            {...register("break_duration_minutes", { valueAsNumber: true })}
+            disabled={tournament?.default_break_duration != null}
+          />
+          {tournament?.default_break_duration != null ? (
+            <p className="text-xs text-gray-500">フォーマットで設定済み</p>
+          ) : (
+            <p className="text-xs text-gray-500">試合間の休憩時間です</p>
+          )}
+          {errors.break_duration_minutes && <p className="text-sm text-destructive">{errors.break_duration_minutes.message}</p>}
+        </div>
       </div>
 
       {/* 公開設定 */}

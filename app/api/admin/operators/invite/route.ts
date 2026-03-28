@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
 import { sendEmail } from '@/lib/email/mailer';
+import { hasOperatorPermission, getMergedOperatorPermissions, validatePermissionScope } from '@/lib/operator-permission-check';
 
 /**
  * POST /api/admin/operators/invite
@@ -12,11 +13,20 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const isAdmin = session.user.role === 'admin';
+    const isOperatorWithPerm = session.user.role === 'operator' && adminLoginUserId
+      ? await hasOperatorPermission(adminLoginUserId, 'canManageOperators')
+      : false;
+
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
+    }
+
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
@@ -36,6 +46,19 @@ export async function POST(request: NextRequest) {
 
     if (!tournamentAccess || !Array.isArray(tournamentAccess) || tournamentAccess.length === 0) {
       return NextResponse.json({ error: '部門アクセス権を設定してください' }, { status: 400 });
+    }
+
+    // 運営者による招待の場合、権限範囲チェック
+    if (isOperatorWithPerm) {
+      const myPerms = await getMergedOperatorPermissions(adminLoginUserId);
+      for (const access of tournamentAccess) {
+        const violations = validatePermissionScope(myPerms, access.permissions || {});
+        if (violations.length > 0) {
+          return NextResponse.json({
+            error: `自分が持っていない権限は付与できません: ${violations.join(', ')}`,
+          }, { status: 403 });
+        }
+      }
     }
 
     // 既に登録済みのメールアドレスかチェック

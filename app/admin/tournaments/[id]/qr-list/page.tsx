@@ -492,8 +492,10 @@ export default function QRListPage() {
             margin: 0 !important;
           }
 
+          /* CardHeader: 高さを抑える */
           .print-card .pb-2 {
             padding-bottom: 0.5mm !important;
+            flex-shrink: 0 !important;
           }
 
           .print-card .pt-0 {
@@ -510,20 +512,29 @@ export default function QRListPage() {
 
           /* 日時・会場情報 */
           .court-info {
-            font-size: 11px !important;
+            font-size: 9px !important;
             font-weight: 600 !important;
             line-height: 1.3 !important;
             gap: 4px !important;
+            flex-wrap: nowrap !important;
+            overflow: hidden !important;
+          }
+
+          .court-info > span {
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
           }
 
           .court-info svg {
             width: 10px !important;
             height: 10px !important;
+            flex-shrink: 0 !important;
           }
 
           /* 対戦カード + スコア欄 */
           .matchup-area {
-            margin-bottom: 1mm !important;
+            margin-bottom: 2mm !important;
             padding: 1mm 2mm !important;
           }
 
@@ -570,15 +581,18 @@ export default function QRListPage() {
             flex: 1 !important;
             align-items: stretch !important;
             margin-bottom: 2mm !important;
+            min-height: 0 !important;
           }
 
           .qr-code-wrapper {
-            justify-content: center !important;
+            justify-content: flex-start !important;
           }
 
           .qr-code-image {
-            width: 30mm !important;
-            height: 30mm !important;
+            width: 28mm !important;
+            height: 28mm !important;
+            min-width: 28mm !important;
+            min-height: 28mm !important;
           }
 
           .remarks-box {

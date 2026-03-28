@@ -14,6 +14,7 @@ interface Administrator {
   role: string;
   is_active: boolean;
   is_superadmin: boolean;
+  organization_name: string;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +25,7 @@ interface AdministratorFormData {
   password: string;
   is_active: boolean;
   is_superadmin: boolean;
+  organization_name: string;
 }
 
 // メールアドレス確認結果
@@ -58,7 +60,8 @@ export default function AdministratorManagement() {
     email: '',
     password: '',
     is_active: true,
-    is_superadmin: false
+    is_superadmin: false,
+    organization_name: ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -87,7 +90,7 @@ export default function AdministratorManagement() {
 
   // フォームリセット
   const resetAll = () => {
-    setFormData({ admin_name: '', email: '', password: '', is_active: true, is_superadmin: false });
+    setFormData({ admin_name: '', email: '', password: '', is_active: true, is_superadmin: false, organization_name: '' });
     setEditingAdmin(null);
     setIsCreating(false);
     setCreateStep('email');
@@ -185,10 +188,12 @@ export default function AdministratorManagement() {
   // ── 編集フロー ──────────────────────────────────────────────────
 
   const startEditing = (admin: Administrator) => {
-    setFormData({ admin_name: admin.admin_name, email: admin.email, password: '', is_active: admin.is_active, is_superadmin: admin.is_superadmin });
+    setFormData({ admin_name: admin.admin_name, email: admin.email, password: '', is_active: admin.is_active, is_superadmin: admin.is_superadmin, organization_name: admin.organization_name || '' });
     setEditingAdmin(admin);
     setIsCreating(false);
     setError(null);
+    // 編集フォームが見えるようにスクロール
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   };
 
   const handleUpdate = async () => {
@@ -366,6 +371,16 @@ export default function AdministratorManagement() {
                   </div>
                 </div>
                 <div>
+                  <Label htmlFor="organization_name">組織名</Label>
+                  <Input
+                    id="organization_name"
+                    value={formData.organization_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))}
+                    placeholder="例: 富山県サッカー協会"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">TOPページで大会のグルーピング表示に使用されます</p>
+                </div>
+                <div>
                   <Label htmlFor="password">初期パスワード *</Label>
                   <Input
                     id="password"
@@ -441,6 +456,16 @@ export default function AdministratorManagement() {
                   placeholder="例: admin@example.com"
                 />
               </div>
+            </div>
+            <div>
+              <Label htmlFor="edit_organization_name">組織名</Label>
+              <Input
+                id="edit_organization_name"
+                value={formData.organization_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))}
+                placeholder="例: 富山県サッカー協会"
+              />
+              <p className="text-xs text-gray-500 mt-1">TOPページで大会のグルーピング表示に使用されます</p>
             </div>
             <div>
               <Label htmlFor="edit_password">パスワード（変更する場合のみ入力）</Label>
@@ -522,6 +547,11 @@ export default function AdministratorManagement() {
                     <Mail className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">{admin.email}</span>
                   </div>
+                  {admin.organization_name && (
+                    <div className="text-sm text-gray-500 mb-1">
+                      組織名: {admin.organization_name}
+                    </div>
+                  )}
                   <div className="text-sm text-gray-500 mb-3">
                     登録日: {new Date(admin.created_at).toLocaleDateString('ja-JP')}
                   </div>

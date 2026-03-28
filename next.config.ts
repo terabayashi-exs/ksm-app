@@ -32,6 +32,12 @@ const nextConfig: NextConfig = {
         destination: '/tournaments/:id/entry/withdrawal',
         permanent: true,
       },
+      // 旧システム（rakusyo-go.com）のURL対応
+      {
+        source: '/tournaments',
+        destination: '/',
+        permanent: true,
+      },
     ];
   },
   images: {

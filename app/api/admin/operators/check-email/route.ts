@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { hasOperatorPermission } from '@/lib/operator-permission-check';
 
 /**
  * POST /api/admin/operators/check-email
@@ -10,8 +11,18 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
+
+    const isAdmin = session.user.role === 'admin';
+    const loginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const isOperatorWithPerm = session.user.role === 'operator' && loginUserId
+      ? await hasOperatorPermission(loginUserId, 'canManageOperators')
+      : false;
+
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
     }
 
     const body = await request.json();
