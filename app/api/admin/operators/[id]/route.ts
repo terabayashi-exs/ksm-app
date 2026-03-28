@@ -207,25 +207,11 @@ export async function DELETE(
       args: [operatorId]
     });
 
-    // ロールを削除（m_login_user_rolesにはcascade deleteが設定されているため、ユーザー削除時に自動削除される）
-    // しかし、明示的にロールのみを削除することも可能
+    // operatorロールのみを削除（アカウント自体は保持）
     await db.execute({
       sql: 'DELETE FROM m_login_user_roles WHERE login_user_id = ? AND role = ?',
       args: [operatorId, 'operator']
     });
-
-    // ユーザー自体を削除（他のロールがなければ）
-    const otherRolesResult = await db.execute({
-      sql: 'SELECT COUNT(*) as count FROM m_login_user_roles WHERE login_user_id = ?',
-      args: [operatorId]
-    });
-
-    if (Number(otherRolesResult.rows[0].count) === 0) {
-      await db.execute({
-        sql: 'DELETE FROM m_login_users WHERE login_user_id = ?',
-        args: [operatorId]
-      });
-    }
 
     return NextResponse.json({ message: '運営者を削除しました' });
   } catch (error) {
