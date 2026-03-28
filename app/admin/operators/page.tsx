@@ -19,9 +19,10 @@ export default async function OperatorsPage({
 }) {
   const session = await getServerSession(authOptions);
   const user = session?.user as ExtendedUser | undefined;
-  const isAdmin = user?.role === 'admin';
+  const roles = user?.roles || [];
+  const isAdmin = roles.includes('admin');
   const loginUserId = user?.loginUserId;
-  const isOperatorWithPerm = user?.role === 'operator' && loginUserId
+  const isOperatorWithPerm = roles.includes('operator') && loginUserId
     ? await hasOperatorPermission(loginUserId, 'canManageOperators')
     : false;
 

@@ -15,9 +15,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const isAdmin = session.user.role === 'admin';
     const loginUserId = (session.user as { loginUserId?: number }).loginUserId;
-    const isOperatorWithPerm = session.user.role === 'operator' && loginUserId
+    const roles = (session.user as { roles?: string[] }).roles || [];
+    const isAdmin = roles.includes('admin');
+    const isOperatorWithPerm = roles.includes('operator') && loginUserId
       ? await hasOperatorPermission(loginUserId, 'canManageOperators')
       : false;
 

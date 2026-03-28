@@ -88,6 +88,7 @@ export interface Tournament {
     canManageDisplaySettings?: boolean;
     canManageNotices?: boolean;
     canManageOperators?: boolean;
+    canEditTournament?: boolean;
   } | null;
 }
 
