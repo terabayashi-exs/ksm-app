@@ -43,6 +43,7 @@ import { type TournamentFile } from '@/lib/types/tournament-files';
 interface FileManagementTableProps {
   tournamentId: number;
   refreshTrigger?: number; // 外部から更新をトリガーするための props
+  onFilesChange?: () => void; // ファイル削除・公開設定変更時のコールバック
 }
 
 interface EditState {
@@ -79,7 +80,7 @@ function formatDate(dateString: string): string {
   });
 }
 
-export default function FileManagementTable({ tournamentId, refreshTrigger }: FileManagementTableProps) {
+export default function FileManagementTable({ tournamentId, refreshTrigger, onFilesChange }: FileManagementTableProps) {
   const [files, setFiles] = useState<TournamentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editState, setEditState] = useState<EditState>({
@@ -179,8 +180,9 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
       const result = await response.json();
 
       if (result.success) {
-        await fetchFiles(); // ファイル一覧を更新
+        await fetchFiles();
         closeEditDialog();
+        onFilesChange?.();
       } else {
         alert('更新に失敗しました: ' + result.error);
       }
@@ -202,8 +204,9 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
       const result = await response.json();
 
       if (result.success) {
-        await fetchFiles(); // ファイル一覧を更新
-        closeDeleteDialog(); // ダイアログを閉じる
+        await fetchFiles();
+        closeDeleteDialog();
+        onFilesChange?.();
       } else {
         alert('削除に失敗しました: ' + result.error);
       }
@@ -233,7 +236,8 @@ export default function FileManagementTable({ tournamentId, refreshTrigger }: Fi
       const result = await response.json();
 
       if (result.success) {
-        await fetchFiles(); // ファイル一覧を更新
+        await fetchFiles();
+        onFilesChange?.();
       } else {
         alert('更新に失敗しました: ' + result.error);
       }

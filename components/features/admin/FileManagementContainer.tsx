@@ -11,15 +11,21 @@ import FileManagementTable from './FileManagementTable';
 
 interface FileManagementContainerProps {
   tournamentId: number;
+  onStatsChange?: () => void;
 }
 
-export default function FileManagementContainer({ tournamentId }: FileManagementContainerProps) {
+export default function FileManagementContainer({ tournamentId, onStatsChange }: FileManagementContainerProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // ファイルアップロード成功時のコールバック
   const handleUploadSuccess = () => {
-    // refreshTriggerを変更してFileManagementTableの再読み込みを促す
     setRefreshTrigger(prev => prev + 1);
+    onStatsChange?.();
+  };
+
+  // ファイル削除・公開設定変更時のコールバック
+  const handleFilesChange = () => {
+    onStatsChange?.();
   };
 
   return (
@@ -49,9 +55,10 @@ export default function FileManagementContainer({ tournamentId }: FileManagement
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <FileManagementTable 
+          <FileManagementTable
             tournamentId={tournamentId}
             refreshTrigger={refreshTrigger}
+            onFilesChange={handleFilesChange}
           />
         </CardContent>
       </Card>

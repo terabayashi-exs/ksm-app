@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Save, ArrowLeft, Users } from "lucide-react";
+import { Plus, Trash2, Save, Users, ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
 
 interface Player {
@@ -125,24 +125,32 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-6">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/my?tab=team">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            戻る
-          </Link>
-        </Button>
+    <div>
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-2xl font-bold text-white">選手管理</h1>
+            <p className="text-sm text-white/70 mt-1">
+              チームに所属する選手の登録・編集を行います
+            </p>
+          </div>
+        </div>
       </div>
+
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=team" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">選手管理</span>
+        </nav>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            選手管理
-          </CardTitle>
-          <p className="text-sm text-gray-500">
             {teamName}{teamOmission && `（${teamOmission}）`}
-          </p>
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -254,6 +262,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

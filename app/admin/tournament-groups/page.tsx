@@ -117,7 +117,7 @@ export default function TournamentGroupsList() {
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white">大会一覧</h1>
+            <h1 className="text-2xl font-bold text-white">大会一覧</h1>
             <p className="text-sm text-white/70 mt-1">
               大会の管理を行います（各大会に複数の部門を作成できます）
             </p>

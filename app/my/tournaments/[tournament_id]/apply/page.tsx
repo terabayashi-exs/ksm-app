@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import MyTournamentJoinForm from '@/components/features/my/MyTournamentJoinForm';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import Link from 'next/link';
-import { Home, ChevronRight, Calendar } from 'lucide-react';
+import { Home, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface PageProps {
@@ -233,106 +233,47 @@ export default async function MyTournamentJoinPage({ params, searchParams }: Pag
 
   return (
     <div className="min-h-screen bg-white">
+      <div className="bg-base-800 border-b-[3px] border-primary">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <h1 className="text-2xl font-bold text-white">
+              {isEditMode ? '参加選手の変更' : '大会参加申し込み'}
+            </h1>
+            <p className="text-sm text-white/70 mt-1">
+              {group
+                ? `${group.group_name} - ${tournament.category_name || tournament.tournament_name}`
+                : tournament.tournament_name
+              }
+              {isEditMode ? ' への参加選手を変更します' : ' への参加選手を選択してください'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* パンくずリスト */}
-        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">
-          <Link href="/" className="hover:text-gray-900 transition-colors">
-            <Home className="h-4 w-4" />
-          </Link>
-          <ChevronRight className="h-4 w-4" />
-          <Link href="/my" className="hover:text-gray-900 transition-colors">
-            マイダッシュボード
-          </Link>
-          {group && (
-            <>
-              <ChevronRight className="h-4 w-4" />
-              <Link href={`/tournaments/groups/${group.group_id}`} className="hover:text-gray-900 transition-colors">
-                {group.group_name}
-              </Link>
-            </>
-          )}
-          <ChevronRight className="h-4 w-4" />
-          <Link href={`/tournaments/${tournament.tournament_id}`} className="hover:text-gray-900 transition-colors">
-            {group ? tournament.category_name || tournament.tournament_name : tournament.tournament_name}
-          </Link>
-          <ChevronRight className="h-4 w-4" />
-          <span className="text-gray-900 font-medium">参加申し込み</span>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=team" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            {isEditMode ? '参加選手の変更' : '参加申し込み'}
+          </span>
         </nav>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isEditMode ? '参加選手の変更' : '大会参加申し込み'}
-          </h1>
-          <p className="text-gray-500">
-            {group && (
-              <>
-                {group.group_name} - {tournament.category_name || tournament.tournament_name}
-                {isEditMode
-                  ? ' への参加選手を変更してください'
-                  : ' への参加選手を選択してください'
-                }
-              </>
-            )}
-            {!group && (
-              <>
-                {isEditMode
-                  ? `${tournament.tournament_name} への参加選手を変更してください`
-                  : `${tournament.tournament_name} への参加選手を選択してください`
-                }
-              </>
-            )}
-          </p>
-          {isEditMode && (
-            <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-md">
-              <p className="text-sm text-primary">
-                既に参加申し込み済みです。参加選手の変更や背番号の修正が可能です。
-              </p>
-            </div>
-          )}
-          {isNewTeamMode && (
-            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-sm text-green-800">
-                追加申し込みモードです。同じチームから別のチーム名で参加登録できます。
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* 大会グループ情報カード（グループが存在する場合） */}
-        {group && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">大会情報</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-500">大会名:</span>
-                  <span className="ml-2">{group.group_name}</span>
-                </div>
-                {group.organizer && (
-                  <div>
-                    <span className="font-medium text-gray-500">主催:</span>
-                    <span className="ml-2">{group.organizer}</span>
-                  </div>
-                )}
-                {(group.event_start_date || group.event_end_date) && (
-                  <div className="md:col-span-2">
-                    <span className="font-medium text-gray-500 flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      開催期間:
-                    </span>
-                    <span className="ml-2">
-                      {group.event_start_date && group.event_end_date && group.event_start_date === group.event_end_date
-                        ? new Date(group.event_start_date).toLocaleDateString('ja-JP')
-                        : `${group.event_start_date ? new Date(group.event_start_date).toLocaleDateString('ja-JP') : ''} 〜 ${group.event_end_date ? new Date(group.event_end_date).toLocaleDateString('ja-JP') : ''}`
-                      }
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {isEditMode && (
+          <div className="mb-6 p-3 bg-primary/5 border border-primary/20 rounded-md">
+            <p className="text-sm text-primary">
+              既に参加申し込み済みです。参加選手の変更や背番号の修正が可能です。
+            </p>
+          </div>
+        )}
+        {isNewTeamMode && (
+          <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-sm text-green-800">
+              追加申し込みモードです。同じチームから別のチーム名で参加登録できます。
+            </p>
+          </div>
         )}
 
         {/* 部門情報カード */}

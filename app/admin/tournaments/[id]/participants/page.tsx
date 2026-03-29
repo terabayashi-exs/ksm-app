@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 import ParticipantManagement from '@/components/features/admin/ParticipantManagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Mail, ChevronRight, Home } from 'lucide-react';
+import { Mail, ChevronRight, Home } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -36,10 +36,10 @@ export default async function ParticipantsPage({ params }: PageProps) {
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Users className="h-8 w-8 text-white" />
-              参加チーム管理
-            </h1>
+            <h1 className="text-2xl font-bold text-white">参加チーム管理</h1>
+            <p className="text-sm text-white/70 mt-1">
+              参加チームの確認・ステータス管理・辞退処理を行います
+            </p>
           </div>
         </div>
       </div>

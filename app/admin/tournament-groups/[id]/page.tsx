@@ -128,7 +128,7 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
         <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center space-x-3">
-              <h1 className="text-3xl font-bold text-white">{group.group_name}</h1>
+              <h1 className="text-2xl font-bold text-white">{group.group_name}</h1>
               <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
                 {group.visibility === 'open' ? '公開' : '非公開'}
               </Badge>

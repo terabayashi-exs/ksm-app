@@ -6,6 +6,11 @@ import { getToken } from "next-auth/jwt";
 export default async function middleware(req: NextRequest) {
   const { nextUrl } = req;
 
+  // 旧システムURL（/tournaments）→ トップページへ301リダイレクト（クエリパラメータ除外）
+  if (nextUrl.pathname === "/tournaments") {
+    return NextResponse.redirect(new URL("/", nextUrl), 301);
+  }
+
   // 審判用ルート（/referee/*）は認証不要で通過させる
   const isRefereeRoute = nextUrl.pathname.startsWith("/referee");
   if (isRefereeRoute) {
@@ -76,6 +81,8 @@ export const config = {
     "/my",
     "/auth/:path*",
     // 審判ルートも明示的に追加（middlewareで除外処理を行う）
-    "/referee/:path*"
+    "/referee/:path*",
+    // 旧システムURLのリダイレクト
+    "/tournaments"
   ]
 };

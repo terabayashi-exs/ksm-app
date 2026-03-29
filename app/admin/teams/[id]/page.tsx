@@ -88,7 +88,7 @@ export default function AdminTeamManagerPage() {
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-white">
               チーム担当者管理
             </h1>
             {team && (
