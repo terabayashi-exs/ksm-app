@@ -97,7 +97,7 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white">結果入力</h1>
+            <h1 className="text-2xl font-bold text-white">結果入力</h1>
             <p className="text-sm text-white/70 mt-1">
               「{tournament.tournament_name}」の試合結果を入力・管理します
             </p>

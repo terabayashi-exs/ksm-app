@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 import WithdrawalRequestManagement from '@/components/features/admin/WithdrawalRequestManagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function WithdrawalRequestsPage() {
@@ -25,10 +25,7 @@ export default async function WithdrawalRequestsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-                <AlertTriangle className="h-8 w-8 text-white" />
-                辞退申請管理
-              </h1>
+              <h1 className="text-2xl font-bold text-white">辞退申請管理</h1>
               <p className="text-sm text-white/70 mt-1">
                 チームからの大会辞退申請を確認・承認・却下することができます
               </p>

@@ -35,7 +35,6 @@ export default function DisplaySettingsPage() {
   const [editName, setEditName] = useState('');
   const [editOmission, setEditOmission] = useState('');
   const [savingTeam, setSavingTeam] = useState(false);
-  const [tournamentName, setTournamentName] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,7 +44,6 @@ export default function DisplaySettingsPage() {
         const tournamentData = await tournamentRes.json();
 
         if (tournamentData.success && tournamentData.data) {
-          setTournamentName(tournamentData.data.tournament_name || '');
           if (tournamentData.data.phases?.phases) {
             setPhases(
               tournamentData.data.phases.phases
@@ -179,8 +177,10 @@ export default function DisplaySettingsPage() {
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white">表示設定</h1>
-            <p className="text-sm text-white/70 mt-1">{tournamentName}</p>
+            <h1 className="text-2xl font-bold text-white">表示設定</h1>
+            <p className="text-sm text-white/70 mt-1">
+              公開ページに表示するブロックやチーム名の設定を行います
+            </p>
           </div>
         </div>
       </div>

@@ -7,8 +7,9 @@ import { hasOperatorPermission } from '@/lib/operator-permission-check';
 /**
  * GET /api/admin/operators
  * 管理者配下の運営者一覧を取得
+ * ?group_id=N を指定した場合、そのグループの部門にアクセス権がある運営者のみ返す
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
 
@@ -18,8 +19,9 @@ export async function GET() {
 
     const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
     const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
-    const isAdmin = session.user.role === 'admin';
-    const isOperatorWithPerm = session.user.role === 'operator' && adminLoginUserId
+    const roles = (session.user as { roles?: string[] }).roles || [];
+    const isAdmin = roles.includes('admin');
+    const isOperatorWithPerm = roles.includes('operator') && adminLoginUserId
       ? await hasOperatorPermission(adminLoginUserId, 'canManageOperators')
       : false;
 
@@ -31,36 +33,66 @@ export async function GET() {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
 
-    // スーパー管理者は全運営者を取得、通常の管理者/運営者は自分が作成した運営者のみ
-    const operatorsResult = isSuperadmin
-      ? await db.execute({
-          sql: `SELECT
-                  u.login_user_id,
-                  u.email,
-                  u.display_name,
-                  u.is_active,
-                  u.created_at,
-                  u.updated_at
-                FROM m_login_users u
-                INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
-                WHERE r.role = 'operator'
-                ORDER BY u.created_at DESC`,
-          args: []
-        })
-      : await db.execute({
-          sql: `SELECT
-                  u.login_user_id,
-                  u.email,
-                  u.display_name,
-                  u.is_active,
-                  u.created_at,
-                  u.updated_at
-                FROM m_login_users u
-                INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
-                WHERE r.role = 'operator' AND u.created_by_login_user_id = ?
-                ORDER BY u.created_at DESC`,
-          args: [adminLoginUserId]
-        });
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('group_id');
+
+    let operatorsResult;
+
+    if (groupId) {
+      // group_id指定時: そのグループの部門にアクセス権がある運営者のみ取得
+      const baseCondition = isSuperadmin ? '' : 'AND u.created_by_login_user_id = ?';
+      const args = isSuperadmin ? [parseInt(groupId)] : [parseInt(groupId), adminLoginUserId];
+
+      operatorsResult = await db.execute({
+        sql: `SELECT DISTINCT
+                u.login_user_id,
+                u.email,
+                u.display_name,
+                u.is_active,
+                u.created_at,
+                u.updated_at
+              FROM m_login_users u
+              INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+              INNER JOIN t_operator_tournament_access ota ON u.login_user_id = ota.operator_id
+              INNER JOIN t_tournaments t ON ota.tournament_id = t.tournament_id
+              WHERE r.role = 'operator'
+                AND t.group_id = ?
+                ${baseCondition}
+              ORDER BY u.created_at DESC`,
+        args
+      });
+    } else {
+      // group_id未指定時: 従来通り全運営者を取得
+      operatorsResult = isSuperadmin
+        ? await db.execute({
+            sql: `SELECT
+                    u.login_user_id,
+                    u.email,
+                    u.display_name,
+                    u.is_active,
+                    u.created_at,
+                    u.updated_at
+                  FROM m_login_users u
+                  INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+                  WHERE r.role = 'operator'
+                  ORDER BY u.created_at DESC`,
+            args: []
+          })
+        : await db.execute({
+            sql: `SELECT
+                    u.login_user_id,
+                    u.email,
+                    u.display_name,
+                    u.is_active,
+                    u.created_at,
+                    u.updated_at
+                  FROM m_login_users u
+                  INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+                  WHERE r.role = 'operator' AND u.created_by_login_user_id = ?
+                  ORDER BY u.created_at DESC`,
+            args: [adminLoginUserId]
+          });
+    }
 
     // アクセス可能な部門を取得
     const operators = await Promise.all(

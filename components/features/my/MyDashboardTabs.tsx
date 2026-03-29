@@ -1366,7 +1366,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             )}
 
             {/* ── 管理・その他 ── */}
-            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings || permissions.canManageNotices || permissions.canManageOperators) && (
+            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings || permissions.canManageNotices) && (
               <div>
                 <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
                 <div className="flex gap-2 flex-wrap">
@@ -1391,14 +1391,6 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
                         <Eye className="w-4 h-4 mr-1" />
                         表示設定
-                      </Link>
-                    </Button>
-                  )}
-                  {permissions.canManageOperators && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-green-300 hover:bg-green-50">
-                      <Link href={`/admin/operators?group_id=${tournament.group_id}`}>
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        運営者管理
                       </Link>
                     </Button>
                   )}
@@ -1457,6 +1449,26 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
               {group.group_description && (
                 <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
               )}
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
+                  onClick={() => {
+                    const publicUrl = `${window.location.origin}/tournaments/groups/${group.group_id}`;
+                    const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
+                    window.open(qrPageUrl, '_blank', 'width=500,height=700');
+                  }}
+                >
+                  <QrCode className="w-4 h-4 mr-1" />
+                  大会QR
+                </Button>
+                {divisions.some(d => d.operator_permissions?.canManageOperators) && (
+                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                    <Link href={`/admin/operators?group_id=${group.group_id}`}>
+                      <UserCog className="w-4 h-4 mr-1" />
+                      運営者管理
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-3">

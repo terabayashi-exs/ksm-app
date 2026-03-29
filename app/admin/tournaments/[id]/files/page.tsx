@@ -31,33 +31,33 @@ export default function TournamentFilesPage() {
   const [totalSize, setTotalSize] = useState(0);
   const [publicCount, setPublicCount] = useState(0);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        // 大会情報と統計情報を取得
-        const response = await fetch(`/api/admin/tournaments/${tournamentId}/files/stats`);
-        if (!response.ok) {
-          router.push('/my?tab=admin');
-          return;
-        }
-        const data = await response.json();
-
-        if (data.success) {
-          setTotalCount(data.total_count);
-          setUploadFiles(data.upload_files);
-          setExternalLinks(data.external_links);
-          setTotalSize(data.total_size);
-          setPublicCount(data.public_count);
-        }
-      } catch (error) {
-        console.error('データ取得エラー:', error);
-      } finally {
-        setLoading(false);
+  const fetchStats = async () => {
+    try {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/files/stats`);
+      if (!response.ok) {
+        router.push('/my?tab=admin');
+        return;
       }
-    }
+      const data = await response.json();
 
-    fetchData();
-  }, [tournamentId, router]);
+      if (data.success) {
+        setTotalCount(data.total_count);
+        setUploadFiles(data.upload_files);
+        setExternalLinks(data.external_links);
+        setTotalSize(data.total_size);
+        setPublicCount(data.public_count);
+      }
+    } catch (error) {
+      console.error('データ取得エラー:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentId]);
 
   if (loading) {
     return (
@@ -73,10 +73,7 @@ export default function TournamentFilesPage() {
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-              <div className="flex items-center space-x-3 mb-2">
-                <FileText className="h-6 w-6 text-white" />
-                <h1 className="text-2xl font-bold text-white">ファイル管理</h1>
-              </div>
+              <h1 className="text-2xl font-bold text-white">ファイル管理</h1>
               <p className="text-sm text-white/70">
                 大会に関連するファイルをアップロード・管理できます。公開設定で一般ユーザーへの共有も可能です。
               </p>
@@ -152,7 +149,7 @@ export default function TournamentFilesPage() {
         </div>
 
         {/* ファイルアップロード・管理統合コンテナ */}
-        <FileManagementContainer tournamentId={tournamentId} />
+        <FileManagementContainer tournamentId={tournamentId} onStatsChange={fetchStats} />
       </div>
     </div>
   );

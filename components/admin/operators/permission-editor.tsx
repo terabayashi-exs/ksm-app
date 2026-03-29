@@ -19,229 +19,53 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
     });
   };
 
+  const PermCheckbox = ({ id, label }: { id: keyof OperatorPermissions; label: string }) => (
+    <div className="flex items-center space-x-2">
+      <Checkbox
+        id={id}
+        checked={permissions[id]}
+        onCheckedChange={(checked) => updatePermission(id, checked as boolean)}
+      />
+      <Label htmlFor={id} className="cursor-pointer text-base">{label}</Label>
+    </div>
+  );
+
   const content = (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageCourts"
-              checked={permissions.canManageCourts}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageCourts', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageCourts" className="cursor-pointer text-base">
-              日程・会場・コート設定
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageRules"
-              checked={permissions.canManageRules}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageRules', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageRules" className="cursor-pointer text-base">
-              ルール設定
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canRegisterTeams"
-              checked={permissions.canRegisterTeams}
-              onCheckedChange={(checked) =>
-                updatePermission('canRegisterTeams', checked as boolean)
-              }
-            />
-            <Label htmlFor="canRegisterTeams" className="cursor-pointer text-base">
-              チーム登録
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canCreateDraws"
-              checked={permissions.canCreateDraws}
-              onCheckedChange={(checked) =>
-                updatePermission('canCreateDraws', checked as boolean)
-              }
-            />
-            <Label htmlFor="canCreateDraws" className="cursor-pointer text-base">
-              組合せ作成・編集
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canChangeFormat"
-              checked={permissions.canChangeFormat}
-              onCheckedChange={(checked) =>
-                updatePermission('canChangeFormat', checked as boolean)
-              }
-            />
-            <Label htmlFor="canChangeFormat" className="cursor-pointer text-base">
-              フォーマット変更
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageParticipants"
-              checked={permissions.canManageParticipants}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageParticipants', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageParticipants" className="cursor-pointer text-base">
-              参加チーム管理
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canInputResults"
-              checked={permissions.canInputResults}
-              onCheckedChange={(checked) =>
-                updatePermission('canInputResults', checked as boolean)
-              }
-            />
-            <Label htmlFor="canInputResults" className="cursor-pointer text-base">
-              試合結果入力（結果の登録）
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canConfirmResults"
-              checked={permissions.canConfirmResults}
-              onCheckedChange={(checked) =>
-                updatePermission('canConfirmResults', checked as boolean)
-              }
-            />
-            <Label htmlFor="canConfirmResults" className="cursor-pointer text-base">
-              試合結果入力（結果の確定）
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canSetManualRankings"
-              checked={permissions.canSetManualRankings}
-              onCheckedChange={(checked) =>
-                updatePermission('canSetManualRankings', checked as boolean)
-              }
-            />
-            <Label htmlFor="canSetManualRankings" className="cursor-pointer text-base">
-              手動順位設定
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canChangePromotionRules"
-              checked={permissions.canChangePromotionRules}
-              onCheckedChange={(checked) =>
-                updatePermission('canChangePromotionRules', checked as boolean)
-              }
-            />
-            <Label htmlFor="canChangePromotionRules" className="cursor-pointer text-base">
-              選出条件変更
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageFiles"
-              checked={permissions.canManageFiles}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageFiles', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageFiles" className="cursor-pointer text-base">
-              ファイル管理
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageSponsors"
-              checked={permissions.canManageSponsors}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageSponsors', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageSponsors" className="cursor-pointer text-base">
-              スポンサー管理
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canPrintRefereeCards"
-              checked={permissions.canPrintRefereeCards}
-              onCheckedChange={(checked) =>
-                updatePermission('canPrintRefereeCards', checked as boolean)
-              }
-            />
-            <Label htmlFor="canPrintRefereeCards" className="cursor-pointer text-base">
-              審判カード印刷
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canSendEmails"
-              checked={permissions.canSendEmails}
-              onCheckedChange={(checked) =>
-                updatePermission('canSendEmails', checked as boolean)
-              }
-            />
-            <Label htmlFor="canSendEmails" className="cursor-pointer text-base">
-              メール送信
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageDisplaySettings"
-              checked={permissions.canManageDisplaySettings}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageDisplaySettings', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageDisplaySettings" className="cursor-pointer text-base">
-              表示設定
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageNotices"
-              checked={permissions.canManageNotices}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageNotices', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageNotices" className="cursor-pointer text-base">
-              お知らせ管理
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canManageOperators"
-              checked={permissions.canManageOperators}
-              onCheckedChange={(checked) =>
-                updatePermission('canManageOperators', checked as boolean)
-              }
-            />
-            <Label htmlFor="canManageOperators" className="cursor-pointer text-base">
-              運営者管理
-            </Label>
-          </div>
+    <div className="space-y-5">
+      <div>
+        <p className="text-xs font-semibold text-blue-600 mb-2">事前準備</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <PermCheckbox id="canManageCourts" label="日程・会場・コート設定" />
+          <PermCheckbox id="canManageRules" label="ルール設定" />
+          <PermCheckbox id="canRegisterTeams" label="チーム登録" />
+          <PermCheckbox id="canCreateDraws" label="組合せ作成・編集" />
+          <PermCheckbox id="canChangeFormat" label="フォーマット変更" />
+          <PermCheckbox id="canManageParticipants" label="参加チーム管理" />
+          <PermCheckbox id="canPrintRefereeCards" label="審判カード印刷" />
         </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-green-600 mb-2">当日運営</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <PermCheckbox id="canInputResults" label="試合結果入力（結果の登録）" />
+          <PermCheckbox id="canConfirmResults" label="試合結果入力（結果の確定）" />
+          <PermCheckbox id="canSetManualRankings" label="手動順位設定" />
+          <PermCheckbox id="canChangePromotionRules" label="選出条件変更" />
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-purple-600 mb-2">管理・その他</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <PermCheckbox id="canManageFiles" label="ファイル管理" />
+          <PermCheckbox id="canManageSponsors" label="スポンサー管理" />
+          <PermCheckbox id="canSendEmails" label="メール送信" />
+          <PermCheckbox id="canManageDisplaySettings" label="表示設定" />
+          <PermCheckbox id="canManageNotices" label="お知らせ管理" />
+          <PermCheckbox id="canManageOperators" label="運営者管理" />
+          <PermCheckbox id="canEditTournament" label="部門編集" />
+        </div>
+      </div>
+    </div>
   );
 
   if (compact) {

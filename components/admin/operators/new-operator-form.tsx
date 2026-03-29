@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UserCheck, UserPlus, Mail, AlertCircle, CheckCircle, Loader2, ClipboardList, Calendar, Settings, Wrench } from 'lucide-react';
+import { UserCheck, UserPlus, Mail, AlertCircle, CheckCircle, Loader2, ClipboardList, Calendar, Settings, Wrench, Shield } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import TournamentAccessSelector from './tournament-access-selector';
 import PermissionEditor from './permission-editor';
@@ -40,6 +40,7 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
     preparation: ClipboardList,
     event_day: Calendar,
     management: Settings,
+    operator_all: Shield,
     custom: Wrench,
   };
 
@@ -382,8 +383,8 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
               {/* プリセット選択 */}
               <div className="space-y-3">
                 <Label className="text-base font-medium">権限プリセット（複数選択可）</Label>
-                <div className="grid gap-3 md:grid-cols-3">
-                  {(['preparation', 'event_day', 'management'] as const).map((preset) => {
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                  {(['preparation', 'event_day', 'management', 'operator_all'] as const).map((preset) => {
                     const Icon = presetIcons[preset];
                     const isSelected = selectedPresets.has(preset);
                     return (
@@ -486,50 +487,55 @@ export default function NewOperatorForm({ groupId }: NewOperatorFormProps) {
                 <div className="border-t pt-6">
                   <p className="text-base font-medium mb-4">有効な権限（統合結果）</p>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(getEffectivePermissions())
-                      .filter(([_, value]) => value === true)
-                      .map(([key]) => {
-                        const labels: Record<string, string> = {
-                          canManageCourts: '日程・会場・コート設定',
-                          canManageRules: 'ルール設定',
-                          canRegisterTeams: 'チーム登録',
-                          canCreateDraws: '組合せ作成・編集',
-                          canManageParticipants: '参加チーム管理',
-                          canInputResults: '試合結果入力',
-                          canConfirmResults: '試合結果確定',
-                          canSetManualRankings: '手動順位設定',
-                          canChangePromotionRules: '選出条件変更',
-                          canManageFiles: 'ファイル管理',
-                          canManageSponsors: 'スポンサー管理',
-                          canPrintRefereeCards: '審判カード印刷',
-                          canSendEmails: 'メール送信',
-                          canManageNotices: 'お知らせ管理',
-                          canManageOperators: '運営者管理',
-                        };
+                    {(() => {
+                      const labels: Record<string, string> = {
+                        canManageCourts: '日程・会場・コート設定',
+                        canManageRules: 'ルール設定',
+                        canRegisterTeams: 'チーム登録',
+                        canCreateDraws: '組合せ作成・編集',
+                        canChangeFormat: 'フォーマット変更',
+                        canManageParticipants: '参加チーム管理',
+                        canPrintRefereeCards: '審判カード印刷',
+                        canInputResults: '試合結果入力',
+                        canConfirmResults: '試合結果確定',
+                        canSetManualRankings: '手動順位設定',
+                        canChangePromotionRules: '選出条件変更',
+                        canManageFiles: 'ファイル管理',
+                        canManageSponsors: 'スポンサー管理',
+                        canSendEmails: 'メール送信',
+                        canManageDisplaySettings: '表示設定',
+                        canManageNotices: 'お知らせ管理',
+                        canManageOperators: '運営者管理',
+                        canEditTournament: '部門編集',
+                      };
+                      const categoryOrder = [
+                        'canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canChangeFormat', 'canManageParticipants', 'canPrintRefereeCards',
+                        'canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules',
+                        'canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageNotices', 'canManageOperators', 'canEditTournament',
+                      ];
+                      const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canChangeFormat', 'canManageParticipants', 'canPrintRefereeCards'];
+                      const eventDayPerms = ['canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules'];
+                      const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageNotices', 'canManageOperators', 'canEditTournament'];
 
-                        // カテゴリごとの色分け
-                        const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canManageParticipants', 'canPrintRefereeCards'];
-                        const eventDayPerms = ['canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules'];
-                        const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageNotices', 'canManageOperators'];
+                      return Object.entries(getEffectivePermissions())
+                        .filter(([_, value]) => value === true)
+                        .sort((a, b) => categoryOrder.indexOf(a[0]) - categoryOrder.indexOf(b[0]))
+                        .map(([key]) => {
+                          let badgeClass = 'bg-primary/10 text-primary';
+                          if (preparationPerms.includes(key)) badgeClass = 'bg-blue-100 text-blue-700';
+                          else if (eventDayPerms.includes(key)) badgeClass = 'bg-green-100 text-green-700';
+                          else if (managementPerms.includes(key)) badgeClass = 'bg-purple-100 text-purple-700';
 
-                        let badgeClass = 'bg-primary/10 text-primary';
-                        if (preparationPerms.includes(key)) {
-                          badgeClass = 'bg-blue-100 text-blue-700';
-                        } else if (eventDayPerms.includes(key)) {
-                          badgeClass = 'bg-green-100 text-green-700';
-                        } else if (managementPerms.includes(key)) {
-                          badgeClass = 'bg-purple-100 text-purple-700';
-                        }
-
-                        return (
-                          <span
-                            key={key}
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badgeClass}`}
-                          >
-                            {labels[key] || key}
+                          return (
+                            <span
+                              key={key}
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badgeClass}`}
+                            >
+                              {labels[key] || key}
                           </span>
                         );
-                      })}
+                      });
+                    })()}
                   </div>
                 </div>
               )}

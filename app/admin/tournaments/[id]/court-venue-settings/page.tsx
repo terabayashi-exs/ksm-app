@@ -303,7 +303,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-3xl font-bold text-white">会場・コート設定</h1>
+            <h1 className="text-2xl font-bold text-white">会場・コート設定</h1>
             <p className="text-sm text-white/70 mt-1">
               開催日ごとに各コートの会場・コート名を設定します
             </p>

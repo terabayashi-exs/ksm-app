@@ -60,14 +60,6 @@ interface TeamData {
   has_matches?: boolean;
 }
 
-interface RegistrationResult {
-  teamName: string;
-  teamId: string;
-  isExistingTeam: boolean;
-  success: boolean;
-  error?: string;
-}
-
 export default function TeamRegistrationPage() {
   const router = useRouter();
   const params = useParams();
@@ -94,38 +86,37 @@ export default function TeamRegistrationPage() {
   const [csvUploading, setCsvUploading] = useState(false);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
-  const [registrationResults, setRegistrationResults] = useState<RegistrationResult[]>([]);
 
   // 大会情報と既存参加チーム取得
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // 管理者用APIから大会情報と参加チーム一覧を取得
-        const response = await fetch(`/api/admin/tournaments/${tournamentId}/teams`);
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/teams`);
 
-        if (!response.ok) {
-          console.error('データ取得エラー:', `HTTPエラー: ${response.status}`);
-          return;
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-          setTournament(result.data.tournament);
-          setExistingTeams(result.data.teams);
-        } else {
-          console.error('データ取得エラー:', result.error);
-        }
-      } catch (error) {
-        console.error('データ取得エラー:', error);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        console.error('データ取得エラー:', `HTTPエラー: ${response.status}`);
+        return;
       }
-    };
 
+      const result = await response.json();
+
+      if (result.success) {
+        setTournament(result.data.tournament);
+        setExistingTeams(result.data.teams);
+      } else {
+        console.error('データ取得エラー:', result.error);
+      }
+    } catch (error) {
+      console.error('データ取得エラー:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (tournamentId) {
       fetchData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId]);
 
   // 手動登録フォームの処理
@@ -169,20 +160,6 @@ export default function TeamRegistrationPage() {
       const result = await response.json();
 
       if (result.success) {
-        // 成功時: 既存チーム一覧に追加
-        const newExistingTeam: TeamData = {
-          tournament_team_id: result.data.tournament_team_id,
-          team_id: result.data.team_id,
-          team_name: result.data.tournament_team_name,
-          team_omission: teamData.tournament_team_omission,
-          master_team_name: result.data.team_name,
-          contact_phone: teamData.contact_phone || '',
-          registration_type: 'admin_proxy', // 管理者代行登録として設定
-          player_count: teamData.players.length,
-          created_at: new Date().toISOString()
-        };
-        setExistingTeams(prev => [...prev, newExistingTeam]);
-        
         // フォームリセット
         setManualForm({
           team_name: '',
@@ -193,7 +170,8 @@ export default function TeamRegistrationPage() {
           players: []
         });
 
-        alert(`チーム「${result.data.team_name}」の管理者代行登録が完了しました。\n\n【チームID】${result.data.team_id}\n\nこのチームIDをチーム代表者にお伝えください。\n代表者はマイダッシュボードの「チームIDで紐付ける」機能で\n自分のアカウントにチームを紐付けできます。`);
+        // チーム一覧を再取得して即反映
+        await fetchData();
       } else {
         throw new Error(result.error || '登録に失敗しました');
       }
@@ -428,34 +406,27 @@ export default function TeamRegistrationPage() {
       const successCount = results.filter(r => r.success).length;
       const failureCount = results.length - successCount;
 
-      // 結果を state に保存
-      setRegistrationResults(results as RegistrationResult[]);
-
-      // 簡略化されたalert表示
-      let message = `CSV一括登録完了\n\n成功: ${successCount}チーム\n失敗: ${failureCount}チーム`;
-
+      // 失敗があった場合のみ通知
       if (failureCount > 0) {
-        message += '\n\n【失敗したチーム】\n';
+        let message = `成功: ${successCount}チーム / 失敗: ${failureCount}チーム\n\n【失敗したチーム】\n`;
         results
           .filter(r => !r.success)
           .forEach(r => {
             message += `- ${r.teamName}: ${r.error}\n`;
           });
+        alert(message);
       }
 
-      if (successCount > 0) {
-        message += '\n\n結果CSVダウンロードボタンが表示されます。\nダウンロードしてチーム代表者にチームIDをお伝えください。';
-      }
+      // フォームリセット
+      setCsvFile(null);
+      setCsvPreview([]);
+      setCsvErrors([]);
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
 
-      alert(message);
-
-      // 成功時はフォームリセット（ただしリロードはしない - CSVダウンロード後にリロード）
+      // チーム一覧を再取得して即反映
       if (successCount > 0) {
-        setCsvFile(null);
-        setCsvPreview([]);
-        setCsvErrors([]);
-        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
+        await fetchData();
       }
 
     } catch (error) {
@@ -513,32 +484,6 @@ export default function TeamRegistrationPage() {
     }
   };
 
-  // 結果CSVダウンロード
-  const downloadResultsCsv = () => {
-    const header = 'チーム名,チームID,状態\n';
-    const rows = registrationResults
-      .filter(r => r.success)
-      .map(r => {
-        const status = r.isExistingTeam ? '既存チーム使用' : '新規作成';
-        return `"${r.teamName}","${r.teamId}","${status}"`;
-      })
-      .join('\n');
-
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `registration_results_${tournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    // ダウンロード後にページリロード
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -564,9 +509,9 @@ export default function TeamRegistrationPage() {
       <div className="bg-base-800 border-b-[3px] border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-              <h1 className="text-3xl font-bold text-white">チーム登録（管理者代行）</h1>
+              <h1 className="text-2xl font-bold text-white">チーム登録</h1>
               <p className="text-sm text-white/70 mt-1">
-                「{tournament.tournament_name}」のチーム登録を管理者が代行します
+                「{tournament.tournament_name}」のチーム登録を行います
               </p>
           </div>
         </div>
@@ -589,10 +534,9 @@ export default function TeamRegistrationPage() {
               <div>
                 <h3 className="font-medium text-primary mb-1">代行登録の流れ</h3>
                 <p className="text-sm text-primary">
-                  チーム登録後に表示されるチームIDをチーム代表者にお伝えください。
-                  代表者は自身のアカウントでログイン後、マイダッシュボードの「チームIDで紐付ける」機能で
-                  チームを自分のアカウントに紐付けることができます。
-                  メールアドレス・代表者名は任意です。
+                  ここでチームを登録した後、参加チーム管理画面のメール送信機能を使って、
+                  チーム代表者にアカウント登録とチームIDによる紐付けを案内してください。
+                  代表者はメールのリンクをクリックすることでチームを自分のアカウントに紐付けることができます。
                 </p>
               </div>
             </div>
@@ -871,25 +815,6 @@ export default function TeamRegistrationPage() {
                           </Button>
                         </div>
                       )}
-                    </div>
-                  )}
-                  {/* 結果CSVダウンロード */}
-                  {registrationResults.filter(r => r.success).length > 0 && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-start space-x-3">
-                        <Download className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <h3 className="font-medium text-blue-900 mb-2">登録結果CSVダウンロード</h3>
-                          <p className="text-sm text-blue-800 mb-3">
-                            登録結果（チームID含む）をCSVファイルでダウンロードできます。
-                            チーム代表者への通知にご利用ください。
-                          </p>
-                          <Button variant="outline" onClick={downloadResultsCsv} size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100">
-                            <Download className="w-4 h-4 mr-2" />
-                            結果CSVをダウンロード（{registrationResults.filter(r => r.success).length}チーム）
-                          </Button>
-                        </div>
-                      </div>
                     </div>
                   )}
                 </CardContent>

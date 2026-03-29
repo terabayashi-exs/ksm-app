@@ -23,7 +23,7 @@ export default async function WithdrawalStatisticsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-white">辞退申請統計</h1>
+              <h1 className="text-2xl font-bold text-white">辞退申請統計</h1>
               <p className="text-sm text-white/70 mt-1">大会辞退申請の詳細な統計情報と傾向分析</p>
             </div>
           </div>

@@ -206,7 +206,7 @@ export default function OperatorList({ groupId }: OperatorListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>運営者を削除しますか？</AlertDialogTitle>
             <AlertDialogDescription>
-              この操作は取り消せません。運営者アカウントとすべての関連データが削除されます。
+              この運営者の運営者ロールとアクセス権が削除されます。アカウント自体は削除されません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

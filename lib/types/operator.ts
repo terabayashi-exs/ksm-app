@@ -20,6 +20,7 @@ export interface OperatorPermissions {
   canManageDisplaySettings: boolean; // 表示設定（フェーズタブ表示/非表示、チーム表示名変更）
   canManageNotices: boolean;         // お知らせ管理
   canManageOperators: boolean;       // 運営者管理（運営者の追加）
+  canEditTournament: boolean;        // 部門編集
 }
 
 /**
@@ -44,12 +45,13 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canManageDisplaySettings: false,
   canManageNotices: false,
   canManageOperators: false,
+  canEditTournament: false,
 };
 
 /**
  * 権限プリセットの種類
  */
-export type PermissionPreset = 'preparation' | 'event_day' | 'management' | 'custom';
+export type PermissionPreset = 'preparation' | 'event_day' | 'management' | 'operator_all' | 'custom';
 
 /**
  * 権限プリセット定義
@@ -76,6 +78,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageDisplaySettings: false,
       canManageNotices: false,
       canManageOperators: false,
+      canEditTournament: false,
     }
   },
   event_day: {
@@ -99,6 +102,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageDisplaySettings: false,
       canManageNotices: false,
       canManageOperators: false,
+      canEditTournament: false,
     }
   },
   management: {
@@ -122,6 +126,31 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageDisplaySettings: true,  // 表示設定
       canManageNotices: true,          // お知らせ管理
       canManageOperators: true,        // 運営者管理
+      canEditTournament: false,
+    }
+  },
+  operator_all: {
+    label: '運営者（全権限）',
+    description: '運営者の登録を含むすべての操作権限を付与',
+    permissions: {
+      canManageCourts: true,
+      canManageRules: true,
+      canRegisterTeams: true,
+      canCreateDraws: true,
+      canChangeFormat: true,
+      canManageParticipants: true,
+      canInputResults: true,
+      canConfirmResults: true,
+      canSetManualRankings: true,
+      canChangePromotionRules: true,
+      canManageFiles: true,
+      canManageSponsors: true,
+      canPrintRefereeCards: true,
+      canSendEmails: true,
+      canManageDisplaySettings: true,
+      canManageNotices: true,
+      canManageOperators: true,
+      canEditTournament: true,
     }
   },
   custom: {
