@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Calendar, MapPin, Trophy, Users, Clock, Target, BarChart3, FileText, ExternalLink } from 'lucide-react';
 import { formatDateOnly } from '@/lib/utils';
-import { calculateTournamentStatusSync, getStatusLabel, getStatusColor } from '@/lib/tournament-status';
+import { calculateTournamentStatus, getStatusLabel, getStatusColor, type TournamentStatus } from '@/lib/tournament-status';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
 import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
@@ -100,6 +100,14 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
     } catch { /* ignore */ }
   }
 
+  const calculatedStatus = await calculateTournamentStatus({
+    status: tournament.status,
+    tournament_dates: tournament.tournament_dates || '{}',
+    recruitment_start_date: tournament.recruitment_start_date || null,
+    recruitment_end_date: tournament.recruitment_end_date || null,
+    public_start_date: tournament.public_start_date,
+  }, tournamentId);
+
   return (
     <TabContentWithSidebarSSR banners={banners}>
       <TournamentOverview
@@ -110,6 +118,7 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
         venues={venues}
         eventStartDate={eventStartDate}
         eventEndDate={eventEndDate}
+        calculatedStatus={calculatedStatus}
       />
     </TabContentWithSidebarSSR>
   );
@@ -123,6 +132,7 @@ function TournamentOverview({
   venues,
   eventStartDate,
   eventEndDate,
+  calculatedStatus,
 }: {
   tournament: Tournament;
   groupName: string | null;
@@ -131,14 +141,8 @@ function TournamentOverview({
   venues: VenueInfo[];
   eventStartDate: string;
   eventEndDate: string;
+  calculatedStatus: TournamentStatus;
 }) {
-  const calculatedStatus = calculateTournamentStatusSync({
-    status: tournament.status,
-    tournament_dates: tournament.tournament_dates || '{}',
-    recruitment_start_date: tournament.recruitment_start_date || null,
-    recruitment_end_date: tournament.recruitment_end_date || null,
-    public_start_date: tournament.public_start_date,
-  });
 
   const tournamentDates = tournament.tournament_dates ? JSON.parse(tournament.tournament_dates) : {};
   // 有効な日付のみフィルタリング（空文字列や不正な値を除外）
