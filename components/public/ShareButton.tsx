@@ -82,12 +82,8 @@ export default function ShareButton({ tournamentName }: ShareButtonProps) {
 
   function handleShareLine() {
     const url = getFullUrl();
-    const encodedUrl = encodeURIComponent(url);
-    window.open(
-      `https://social-plugins.line.me/lineit/share?url=${encodedUrl}`,
-      '_blank',
-      'width=550,height=420'
-    );
+    const text = `${tournamentName} の結果をチェック！\n${url}`;
+    window.location.href = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
   }
 
   function handleShowQR() {
