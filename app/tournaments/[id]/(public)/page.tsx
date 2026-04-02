@@ -14,7 +14,6 @@ import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
 import { getBannersForTab } from '@/lib/sponsor-banner-loader';
 import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
 import PublicFilesList from '@/components/features/tournament/PublicFilesList';
-import PublicNoticeList from '@/components/features/tournament/PublicNoticeList';
 import type { Tournament } from '@/lib/types';
 import { parseVenueIds } from '@/lib/types';
 import { db } from '@/lib/db';
@@ -74,6 +73,13 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
 
   const venues = await getVenuesForTournament(tournament.venue_id);
 
+  // 節設定の有無を判定
+  const matchdayResult = await db.execute(
+    `SELECT 1 FROM t_matches_live ml JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id WHERE mb.tournament_id = ? AND ml.matchday IS NOT NULL LIMIT 1`,
+    [tournamentId]
+  );
+  const hasMatchdays = matchdayResult.rows.length > 0;
+
   // 開催期間を算出: tournament_dates → 試合日付フォールバック
   let eventStartDate = '';
   let eventEndDate = '';
@@ -119,6 +125,7 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
         eventStartDate={eventStartDate}
         eventEndDate={eventEndDate}
         calculatedStatus={calculatedStatus}
+        hasMatchdays={hasMatchdays}
       />
     </TabContentWithSidebarSSR>
   );
@@ -133,6 +140,7 @@ function TournamentOverview({
   eventStartDate,
   eventEndDate,
   calculatedStatus,
+  hasMatchdays,
 }: {
   tournament: Tournament;
   groupName: string | null;
@@ -142,6 +150,7 @@ function TournamentOverview({
   eventStartDate: string;
   eventEndDate: string;
   calculatedStatus: TournamentStatus;
+  hasMatchdays: boolean;
 }) {
 
   const tournamentDates = tournament.tournament_dates ? JSON.parse(tournament.tournament_dates) : {};
@@ -215,8 +224,6 @@ function TournamentOverview({
         </div>
       )}
 
-      <PublicNoticeList tournamentId={tournament.tournament_id} />
-
       <div id="public-files">
         <PublicFilesList
           tournamentId={tournament.tournament_id}
@@ -259,15 +266,17 @@ function TournamentOverview({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid ${hasMatchdays ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
             <div className="text-center p-4 bg-primary/5 rounded-lg">
-              <p className="text-2xl font-bold text-primary">{tournament.match_duration_minutes}</p>
-              <p className="text-sm text-gray-500">試合時間（分）</p>
+              <p className="text-2xl font-bold text-primary">{tournament.display_match_duration || tournament.match_duration_minutes}</p>
+              <p className="text-sm text-gray-500">試合時間{tournament.display_match_duration ? '' : '（分）'}</p>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
-              <p className="text-sm text-gray-500">休憩時間（分）</p>
-            </div>
+            {!hasMatchdays && (
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
+                <p className="text-sm text-gray-500">休憩時間（分）</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

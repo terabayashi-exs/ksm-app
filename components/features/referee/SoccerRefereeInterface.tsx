@@ -7,13 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  RotateCcw,
+import {
   Plus,
   Minus,
-  Timer,
   AlertCircle,
-  FastForward
 } from 'lucide-react';
 import { SportRuleConfig, PeriodConfig } from '@/lib/tournament-rules';
 
@@ -86,10 +83,9 @@ export default function SoccerRefereeInterface({
   setMatchRemarks,
   isConfirmed,
   updating,
-  updateMatchStatus,
+  updateMatchStatus: _updateMatchStatus,
   getTotalScore
 }: Props) {
-  const [currentPeriod, setCurrentPeriod] = useState(match.current_period);
   const [availablePeriods, setAvailablePeriods] = useState<PeriodConfig[]>([]);
   
   // PK戦用状態管理
@@ -107,47 +103,6 @@ export default function SoccerRefereeInterface({
     const team2Total = getTotalScore(scores.team2);
     setRegularScores({ team1: team1Total, team2: team2Total });
   }, [extendedData, scores, getTotalScore]);
-
-  // ピリオド進行
-  const advancePeriod = async () => {
-    const nextPeriod = currentPeriod + 1;
-    
-    if (nextPeriod > extendedData.max_periods) {
-      alert('最後のピリオドです');
-      return;
-    }
-
-    // 次のピリオドが使用可能かチェック
-    if (!extendedData.active_periods.includes(nextPeriod)) {
-      const periodName = availablePeriods.find(p => p.period_number === nextPeriod)?.period_name || `第${nextPeriod}ピリオド`;
-      const confirmed = confirm(`${periodName}は大会ルールで使用しない設定ですが、進行してもよろしいですか？`);
-      if (!confirmed) return;
-    }
-
-    await updateMatchStatus('update_period', {
-      current_period: nextPeriod
-    });
-    
-    setCurrentPeriod(nextPeriod);
-  };
-
-  // ピリオド戻し（管理者のみ）
-  const regressPeriod = async () => {
-    if (currentPeriod <= 1) {
-      alert('最初のピリオドです');
-      return;
-    }
-
-    const confirmed = confirm('前のピリオドに戻してもよろしいですか？\nスコアは保持されます。');
-    if (!confirmed) return;
-
-    const prevPeriod = currentPeriod - 1;
-    await updateMatchStatus('update_period', {
-      current_period: prevPeriod
-    });
-    
-    setCurrentPeriod(prevPeriod);
-  };
 
   // ピリオドスコア変更（サッカー用）
   const changeScore = (team: 'team1' | 'team2', period: number, delta: number) => {
@@ -297,12 +252,6 @@ export default function SoccerRefereeInterface({
     return extendedData.active_periods.includes(periodNumber);
   };
 
-  // ピリオドの必須チェック
-  const isPeriodRequired = (periodNumber: number): boolean => {
-    const period = availablePeriods.find(p => p.period_number === periodNumber);
-    return period?.is_required || false;
-  };
-
   // PK戦モード切り替え
   const togglePkMode = () => {
     if (!pkMode) {
@@ -441,88 +390,6 @@ export default function SoccerRefereeInterface({
 
   return (
     <div className="space-y-6">
-      {/* サッカー専用ピリオド制御 */}
-      <Card className="border-green-200 bg-green-50/30">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Timer className="w-5 h-5 text-green-600" />
-            <span>サッカー試合進行</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* 現在ピリオド表示 */}
-            <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2">
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl font-bold text-green-600">
-                  {getPeriodName(currentPeriod)}
-                </div>
-                {isPeriodAvailable(currentPeriod) ? (
-                  <Badge variant="default" className="bg-green-600">使用中</Badge>
-                ) : (
-                  <Badge variant="secondary" className="bg-yellow-500 text-white">規定外</Badge>
-                )}
-              </div>
-              <div className="text-sm text-gray-500">
-                {currentPeriod}/{extendedData.max_periods}
-              </div>
-            </div>
-
-            {/* ピリオド操作ボタン */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                onClick={regressPeriod}
-                disabled={currentPeriod <= 1 || isConfirmed || match.match_status !== 'ongoing'}
-                className="flex items-center space-x-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>前のピリオドへ</span>
-              </Button>
-              
-              <Button
-                variant="default"
-                onClick={advancePeriod}
-                disabled={currentPeriod >= extendedData.max_periods || isConfirmed || match.match_status !== 'ongoing'}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-              >
-                <FastForward className="w-4 h-4" />
-                <span>次のピリオドへ</span>
-              </Button>
-            </div>
-
-            {/* ピリオド一覧表示 */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {availablePeriods.map((period) => {
-                const isCurrent = period.period_number === currentPeriod;
-                const isAvailable = isPeriodAvailable(period.period_number);
-                const isRequired = isPeriodRequired(period.period_number);
-                
-                return (
-                  <div
-                    key={period.period_number}
-                    className={`p-2 rounded border text-center text-sm ${
-                      isCurrent 
-                        ? 'border-green-500 bg-green-100' 
-                        : isAvailable
-                        ? 'border-blue-200 bg-blue-50'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="font-medium">{period.period_name}</div>
-                    <div className="mt-1 space-x-1">
-                      {isCurrent && <Badge variant="default" className="text-xs bg-green-600">現在</Badge>}
-                      {isRequired && <Badge variant="secondary" className="text-xs bg-green-600">必須</Badge>}
-                      {isAvailable && !isCurrent && <Badge variant="outline" className="text-xs">使用</Badge>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* サッカー対応スコア入力 */}
       <Card>
         <CardHeader>
@@ -532,18 +399,12 @@ export default function SoccerRefereeInterface({
           <div className="space-y-4">
             {extendedData.active_periods.map((periodNumber) => {
               const periodName = getPeriodName(periodNumber);
-              const isCurrent = periodNumber === currentPeriod;
               const isAvailable = isPeriodAvailable(periodNumber);
-              
+
               return (
-                <div key={periodNumber} className={`border rounded-lg p-4 ${
-                  isCurrent ? 'border-green-500 bg-green-50/50' : 'border-gray-200'
-                }`}>
+                <div key={periodNumber} className="border rounded-lg p-4 border-gray-200">
                   <Label className="block text-sm font-medium mb-3">
                     {periodName}
-                    {isCurrent && match.match_status === 'ongoing' && !isConfirmed && (
-                      <Badge className="ml-2 bg-green-600">進行中</Badge>
-                    )}
                     {!isAvailable && (
                       <Badge variant="secondary" className="ml-2 bg-yellow-500 text-white">規定外</Badge>
                     )}

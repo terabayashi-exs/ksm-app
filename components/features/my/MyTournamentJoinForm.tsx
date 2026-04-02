@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface TeamPlayer {
   player_id: number;
@@ -53,7 +53,7 @@ const formSchema = z.object({
   tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
   tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(5, 'チーム略称は5文字以内で入力してください'),
   players: z.array(playerSchema)
-    .max(20, '選手は最大20人まで登録可能です')
+    .max(30, '選手は最大30人まで登録可能です')
     .refine((players) => {
       if (players.length === 0) return true;
       const participatingPlayers = players.filter(p => p.is_participating);
@@ -176,18 +176,6 @@ export default function MyTournamentJoinForm({
     }
 
     setSelectedExistingPlayers(newSelected);
-  };
-
-  const addNewPlayer = () => {
-    append({
-      player_name: '',
-      jersey_number: undefined,
-      is_participating: true
-    });
-  };
-
-  const removeNewPlayer = (index: number) => {
-    remove(index);
   };
 
   const onSubmit = async (data: FormData) => {
@@ -366,75 +354,6 @@ export default function MyTournamentJoinForm({
 
           {errors.players && (
             <p className="text-sm text-red-600">{errors.players.message}</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Users className="h-5 w-5 mr-2" />
-              新規選手の追加（任意）
-            </div>
-            <Button type="button" onClick={addNewPlayer} size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-1" />
-              新規選手を追加
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-500 mb-4">
-            チームに未登録の選手を、この大会のみ参加させたい場合に追加してください。
-          </p>
-
-          {fields.filter(f => !f.player_id).length === 0 ? (
-            <div className="bg-gray-50 p-4 rounded-md text-sm text-gray-600 text-center">
-              新規選手はまだ追加されていません
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {fields.map((field, index) => {
-                if (field.player_id) return null;
-
-                return (
-                  <div key={field.id} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor={`player-name-${index}`}>選手名 *</Label>
-                        <Input
-                          id={`player-name-${index}`}
-                          {...control.register(`players.${index}.player_name` as const)}
-                          placeholder="選手名"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`jersey-${index}`}>背番号</Label>
-                        <Input
-                          id={`jersey-${index}`}
-                          type="number"
-                          {...control.register(`players.${index}.jersey_number` as const, {
-                            valueAsNumber: true
-                          })}
-                          placeholder="背番号"
-                          min={1}
-                          max={99}
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => removeNewPlayer(index)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 mt-6"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
           )}
         </CardContent>
       </Card>

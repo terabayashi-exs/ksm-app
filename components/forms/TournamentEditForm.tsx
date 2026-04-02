@@ -39,6 +39,7 @@ const editTournamentSchema = z.object({
   })).min(1, '開催日程は必須です'),
   match_duration_minutes: z.number().min(5, '試合時間は5分以上').max(120, '試合時間は120分以下'),
   break_duration_minutes: z.number().min(0, '休憩時間は0分以上').max(60, '休憩時間は60分以下'),
+  display_match_duration: z.string().max(50),
   is_public: z.boolean(),
   show_players_public: z.boolean(),
   public_start_date: z.string().min(1, '公開開始日時は必須です'),
@@ -110,6 +111,7 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
       tournament_dates: parseTournamentDates(tournament.tournament_dates),
       match_duration_minutes: tournament.match_duration_minutes,
       break_duration_minutes: tournament.break_duration_minutes,
+      display_match_duration: tournament.display_match_duration || "",
       is_public: tournament.visibility === 1,
       show_players_public: tournament.show_players_public || false,
       public_start_date: formatDateTimeLocal(tournament.public_start_date),
@@ -541,6 +543,17 @@ export default function TournamentEditForm({ tournament }: TournamentEditFormPro
           )}
           {errors.break_duration_minutes && <p className="text-sm text-destructive">{errors.break_duration_minutes.message}</p>}
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="display_match_duration">表示用試合時間</Label>
+        <Input
+          id="display_match_duration"
+          type="text"
+          className="max-w-[200px]"
+          placeholder="例: 80, 40-10-40"
+          {...register("display_match_duration")}
+        />
+        <p className="text-xs text-gray-500">概要ページに表示する試合時間（未入力時はシステム値を表示）</p>
       </div>
 
       {/* スケジュールプレビュー */}

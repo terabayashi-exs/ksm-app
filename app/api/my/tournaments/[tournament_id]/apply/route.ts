@@ -31,7 +31,7 @@ const tournamentJoinSchema = z.object({
       .optional(),
     is_participating: z.boolean().default(true)
   }))
-  .max(20, '選手は最大20人まで登録可能です')
+  .max(30, '選手は最大30人まで登録可能です')
   .refine((players) => {
     if (players.length === 0) return true;
     const participatingPlayers = players.filter(p => p.is_participating);

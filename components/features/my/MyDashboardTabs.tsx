@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, Bell } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
-import TournamentDashboardList from "@/components/features/tournament/TournamentDashboardList";
 import { TournamentDashboardData, GroupedTournamentData, TeamDashboardItem } from "@/lib/dashboard-data";
 import { Tournament } from "@/lib/types";
 import { getStatusLabel } from "@/lib/tournament-status";
@@ -320,7 +319,9 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
         {initialTournamentData ? (
           <TournamentStatusList data={initialTournamentData} isSuperadmin={isSuperadmin} currentUserId={currentUserId} showAllAdmins={showAllAdmins} initialSportTypes={initialSportTypes} />
         ) : (
-          <TournamentDashboardList />
+          <div className="text-center py-8 text-gray-500">
+            <p>大会データの取得に失敗しました。ページを再読み込みしてください。</p>
+          </div>
         )}
       </div>
     </div>
@@ -592,7 +593,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-colors cursor-pointer shadow-sm"
               title="部門詳細ページのQRコードを表示"
             >
               <QrCode className="w-3.5 h-3.5" />
@@ -670,21 +671,21 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
             <div>
               <p className="text-xs font-semibold text-blue-600 mb-2">基本情報</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                     <Eye className="w-4 h-4 mr-1" />
                     公開画面を見る
                   </Link>
                 </Button>
                 {tournament.has_matchdays ? (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/edit-league`}>
                       <FileEdit className="w-4 h-4 mr-1" />
                       部門編集
                     </Link>
                   </Button>
                 ) : (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
                       <FileEdit className="w-4 h-4 mr-1" />
                       部門編集
@@ -697,7 +698,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     variant="outline"
                     onClick={() => handleFormatChangeClick(tournament)}
                     disabled={isFormatChanging && selectedTournamentId === tournament.tournament_id}
-                    className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
                     title="部門のフォーマットを変更（試合データは削除されます）"
                   >
                     {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
@@ -713,7 +714,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   </Button>
                 )}
                 {tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
                       <Calendar className="w-4 h-4 mr-1" />
                       日程・会場設定
@@ -721,7 +722,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   </Button>
                 )}
                 {!tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
                       <MapPin className="w-4 h-4 mr-1" />
                       会場・コート設定
@@ -738,19 +739,19 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 {/* チーム登録・組合せは planning/recruiting/before_event のみ有効 */}
                 {(tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') ? (
                   <>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <FileText className="w-4 h-4 mr-1" />
                         ルール設定
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                         <Users className="w-4 h-4 mr-1" />
                         チーム手動登録
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -760,12 +761,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                       size="sm"
                       variant="outline"
                       onClick={() => handleDrawClick(tournament)}
-                      className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50"
+                      className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50"
                     >
                       <Shuffle className="w-4 h-4 mr-1" />
                       組合せ作成
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
@@ -775,19 +776,19 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 ) : (
                   /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
                   <>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <FileText className="w-4 h-4 mr-1" />
                         ルール設定
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                         <Users className="w-4 h-4 mr-1" />
                         チーム手動登録
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -797,7 +798,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                       <Lock className="w-4 h-4 mr-1" />
                       組合せ作成
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
@@ -812,23 +813,28 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
             <div>
               <p className="text-xs font-semibold text-blue-600 mb-2">当日運営</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                     <ClipboardList className="w-4 h-4 mr-1" />
                     試合結果入力
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                     <Trophy className="w-4 h-4 mr-1" />
                     手動順位設定
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
                     <Target className="w-4 h-4 mr-1" />
                     選出条件変更
                   </Link>
+                </Button>
+                {/* TODO: テスト完了後に懲罰管理ボタンを有効化する */}
+                <Button size="sm" variant="outline" className="text-sm bg-white opacity-50 cursor-not-allowed" disabled>
+                    <ShieldAlert className="w-4 h-4 mr-1" />
+                    懲罰管理
                 </Button>
               </div>
             </div>
@@ -837,31 +843,25 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
             <div>
               <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
                     <Mail className="w-4 h-4 mr-1" />
                     メール送信
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                     <FileText className="w-4 h-4 mr-1" />
                     ファイル管理
                   </Link>
                 </Button>
                 <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/notices`}>
-                    <Bell className="w-4 h-4 mr-1" />
-                    お知らせ管理
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
                     <Eye className="w-4 h-4 mr-1" />
                     表示設定
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-yellow-300 hover:bg-yellow-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
                     <Star className="w-4 h-4 mr-1" />
                     スポンサー管理
@@ -873,7 +873,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     variant="outline"
                     onClick={() => handleArchiveTournament(tournament)}
                     disabled={archiving === tournament.tournament_id}
-                    className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50"
+                    className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50"
                   >
                     {archiving === tournament.tournament_id ? (
                       <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-1" />アーカイブ中...</>
@@ -911,13 +911,13 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
           <div className="bg-blue-50/80 rounded-lg p-3">
             <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
             <div className="flex gap-2 flex-wrap">
-              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                   <Eye className="w-4 h-4 mr-1" />
                   公開画面を見る
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                 <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
@@ -973,7 +973,7 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
               )}
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
+                <Button size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50"
                   onClick={() => {
                     const publicUrl = `${window.location.origin}/tournaments/groups/${group.group_id}`;
                     const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
@@ -983,19 +983,19 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                   <QrCode className="w-4 h-4 mr-1" />
                   大会QR
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
                     <FileEdit className="w-4 h-4 mr-1" />
                     大会編集
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/operators?group_id=${group.group_id}`}>
                     <UserCog className="w-4 h-4 mr-1" />
                     運営者管理
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
                     <Plus className="w-4 h-4 mr-1" />
                     部門作成
@@ -1181,7 +1181,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                 const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(tournament.tournament_name)}`;
                 window.open(qrPageUrl, '_blank', 'width=500,height=700');
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-colors cursor-pointer shadow-sm"
               title="部門詳細ページのQRコードを表示"
             >
               <QrCode className="w-3.5 h-3.5" />
@@ -1258,14 +1258,14 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             <div>
               <p className="text-xs font-semibold text-blue-600 mb-2">基本情報</p>
               <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                     <Eye className="w-4 h-4 mr-1" />
                     公開画面を見る
                   </Link>
                 </Button>
                 {permissions.canManageCourts && tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
                       <Calendar className="w-4 h-4 mr-1" />
                       日程・会場設定
@@ -1273,7 +1273,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                   </Button>
                 )}
                 {permissions.canManageCourts && !tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
                       <MapPin className="w-4 h-4 mr-1" />
                       会場・コート設定
@@ -1289,7 +1289,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                 <p className="text-xs font-semibold text-blue-600 mb-2">事前準備</p>
                 <div className="flex gap-2 flex-wrap">
                   {permissions.canManageRules && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
                         <Settings className="w-4 h-4 mr-1" />
                         ルール設定
@@ -1297,7 +1297,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canRegisterTeams && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/teams`}>
                         <UserPlus className="w-4 h-4 mr-1" />
                         チーム登録
@@ -1305,7 +1305,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canCreateDraws && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/draw`}>
                         <Shuffle className="w-4 h-4 mr-1" />
                         組合せ作成
@@ -1313,7 +1313,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canManageParticipants && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
@@ -1321,7 +1321,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canPrintRefereeCards && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
@@ -1338,7 +1338,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                 <p className="text-xs font-semibold text-blue-600 mb-2">当日運営</p>
                 <div className="flex gap-2 flex-wrap">
                   {(permissions.canInputResults || permissions.canConfirmResults) && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
                         <ClipboardList className="w-4 h-4 mr-1" />
                         試合結果入力
@@ -1346,7 +1346,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canSetManualRankings && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
                         <Trophy className="w-4 h-4 mr-1" />
                         手動順位設定
@@ -1354,40 +1354,37 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Button>
                   )}
                   {permissions.canChangePromotionRules && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/match-overrides`}>
                         <Target className="w-4 h-4 mr-1" />
                         選出条件変更
                       </Link>
                     </Button>
                   )}
+                  {/* TODO: テスト完了後に懲罰管理ボタンを有効化する */}
+                  <Button size="sm" variant="outline" className="text-sm bg-white opacity-50 cursor-not-allowed" disabled>
+                      <ShieldAlert className="w-4 h-4 mr-1" />
+                      懲罰管理
+                  </Button>
                 </div>
               </div>
             )}
 
             {/* ── 管理・その他 ── */}
-            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings || permissions.canManageNotices) && (
+            {(permissions.canSendEmails || permissions.canManageFiles || permissions.canManageSponsors || permissions.canManageDisplaySettings) && (
               <div>
                 <p className="text-xs font-semibold text-blue-600 mb-2">管理・その他</p>
                 <div className="flex gap-2 flex-wrap">
                   {permissions.canSendEmails && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants/email`}>
                         <Mail className="w-4 h-4 mr-1" />
                         メール送信
                       </Link>
                     </Button>
                   )}
-                  {permissions.canManageNotices && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/notices`}>
-                        <Bell className="w-4 h-4 mr-1" />
-                        お知らせ管理
-                      </Link>
-                    </Button>
-                  )}
                   {permissions.canManageDisplaySettings && (
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
                         <Eye className="w-4 h-4 mr-1" />
                         表示設定
@@ -1403,13 +1400,13 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
           <div className="bg-blue-50/80 rounded-lg p-3">
             <p className="text-xs font-semibold text-blue-600 mb-2">閲覧</p>
             <div className="flex gap-2 flex-wrap">
-              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-blue-300 hover:bg-blue-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                 <Link href={`/admin/tournaments/${tournament.tournament_id}`} target="_blank" rel="noopener noreferrer">
                   <Eye className="w-4 h-4 mr-1" />
                   公開画面を見る
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-purple-300 hover:bg-purple-50">
+              <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                 <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
                   <Archive className="w-4 h-4 mr-1" />
                   アーカイブ表示
@@ -1450,7 +1447,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                 <p className="text-sm text-gray-500 mb-3">{group.group_description}</p>
               )}
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white"
+                <Button size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50"
                   onClick={() => {
                     const publicUrl = `${window.location.origin}/tournaments/groups/${group.group_id}`;
                     const qrPageUrl = `/qr?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(group.group_name || '')}`;
@@ -1461,7 +1458,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                   大会QR
                 </Button>
                 {divisions.some(d => d.operator_permissions?.canManageOperators) && (
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/operators?group_id=${group.group_id}`}>
                       <UserCog className="w-4 h-4 mr-1" />
                       運営者管理
@@ -2623,7 +2620,7 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 pt-1">
-                  <Button asChild size="sm" variant="outline" className="text-sm border-blue-400 bg-white/70 hover:bg-white">
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/my/teams/${team.team_id}/edit`}>
                       <Pencil className="w-4 h-4 mr-1" />
                       チーム情報

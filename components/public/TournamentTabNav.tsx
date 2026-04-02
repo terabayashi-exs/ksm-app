@@ -8,6 +8,7 @@ import type { TournamentPhase } from '@/lib/types/tournament-phases';
 interface TournamentTabNavProps {
   tournamentId: number;
   phases: TournamentPhase[];
+  sportCode?: string;
 }
 
 function getPhaseIcon(phase: TournamentPhase) {
@@ -24,7 +25,7 @@ interface TabDef {
   icon: React.ReactNode;
 }
 
-export default function TournamentTabNav({ tournamentId, phases }: TournamentTabNavProps) {
+export default function TournamentTabNav({ tournamentId, phases, sportCode: _sportCode }: TournamentTabNavProps) {
   const pathname = usePathname();
   const basePath = `/tournaments/${tournamentId}`;
 
@@ -53,6 +54,13 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
       label: '参加チーム',
       icon: <Users className="h-4 w-4 mr-1.5" />,
     },
+    // TODO: テスト完了後に懲罰タブを有効化する
+    // ...(sportCode && isDisciplinarySport(sportCode) ? [{
+    //   value: 'disciplinary',
+    //   href: `${basePath}/disciplinary`,
+    //   label: '懲罰',
+    //   icon: <ShieldAlert className="h-4 w-4 mr-1.5" />,
+    // }] : []),
     {
       value: 'overview',
       href: basePath,

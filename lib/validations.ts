@@ -152,6 +152,8 @@ export const tournamentEditSchema = z.object({
     .min(0, '休憩時間は0分以上で入力してください')
     .max(60, '休憩時間は60分以下で入力してください'),
 
+  display_match_duration: z.string().max(50).optional().nullable(),
+
   is_public: z.boolean().optional().default(false),
   show_players_public: z.boolean().optional().default(false),
 
@@ -230,7 +232,7 @@ export type PlayerRegisterForm = z.infer<typeof playerRegisterSchema>;
 export const teamWithPlayersRegisterSchema = teamRegisterSchema.extend({
   players: z.array(playerRegisterSchema)
     .min(0, '選手は0人以上で登録してください')
-    .max(20, '選手は最大20人まで登録可能です')
+    .max(30, '選手は最大30人まで登録可能です')
     .refine((players) => {
       // 背番号の重複チェック
       const numbers = players.filter(p => p.player_number !== undefined).map(p => p.player_number);

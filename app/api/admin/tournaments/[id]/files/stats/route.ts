@@ -58,6 +58,17 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     const stats = statsResult.rows[0];
 
+    // お知らせ件数を取得
+    const noticeResult = await db.execute(`
+      SELECT
+        COUNT(*) as total_notices,
+        COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_notices
+      FROM t_tournament_notices
+      WHERE tournament_id = ?
+    `, [tournamentId]);
+
+    const noticeStats = noticeResult.rows[0];
+
     return NextResponse.json({
       success: true,
       tournament_name: String(tournament.tournament_name),
@@ -66,6 +77,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       external_links: Number(stats.external_links),
       total_size: Number(stats.total_size),
       public_count: Number(stats.public_count),
+      total_notices: Number(noticeStats.total_notices),
+      active_notices: Number(noticeStats.active_notices),
     });
   } catch (error) {
     console.error('ファイル統計情報取得エラー:', error);

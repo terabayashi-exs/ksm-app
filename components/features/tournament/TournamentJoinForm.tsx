@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Users, UserPlus } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface TeamPlayer {
   player_id: number;
@@ -53,7 +53,7 @@ const formSchema = z.object({
   tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
   tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(5, 'チーム略称は5文字以内で入力してください'),
   players: z.array(playerSchema)
-    .max(20, '選手は最大20人まで登録可能です')
+    .max(30, '選手は最大30人まで登録可能です')
     .refine((players) => {
       // 選手名の重複チェック（参加する選手のみ）
       const participatingPlayers = players.filter(p => p.is_participating);
@@ -198,21 +198,6 @@ export default function TournamentJoinForm({
 
     setSelectedExistingPlayers(newSelected);
   };
-
-  // 新規選手を追加
-  const addNewPlayer = () => {
-    append({
-      player_name: '',
-      jersey_number: undefined,
-      is_participating: true
-    });
-  };
-
-  // 新規選手を削除
-  const removeNewPlayer = (index: number) => {
-    remove(index);
-  };
-
 
   // フォーム送信
   const onSubmit = async (data: FormData) => {
@@ -421,107 +406,6 @@ export default function TournamentJoinForm({
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 新規選手追加セクション（新規登録時のみ表示） */}
-      {!isEditMode && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <UserPlus className="h-5 w-5 mr-2" />
-                新規選手追加
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addNewPlayer}
-                disabled={loading}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                選手を追加
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500 mb-4">
-              新しい選手を手動で追加できます
-            </p>
-
-            {fields.filter(f => !f.player_id).length > 0 ? (
-              <div className="space-y-4">
-                {fields.map((field, index) => {
-                  if (field.player_id) return null; // 既存選手はスキップ
-
-                  return (
-                    <div key={field.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium">新規選手 {index + 1}</h4>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeNewPlayer(index)}
-                          disabled={loading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor={`player-name-${index}`}>選手名 *</Label>
-                          <Input
-                            id={`player-name-${index}`}
-                            {...control.register(`players.${index}.player_name`)}
-                            placeholder="選手名を入力"
-                            disabled={loading}
-                          />
-                          {errors.players?.[index]?.player_name && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.players[index]?.player_name?.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label htmlFor={`jersey-${index}`}>背番号</Label>
-                          <Input
-                            id={`jersey-${index}`}
-                            type="number"
-                            min="1"
-                            max="99"
-                            {...control.register(`players.${index}.jersey_number`, {
-                              setValueAs: (value) => {
-                                if (value === '' || value === null || value === undefined) {
-                                  return undefined;
-                                }
-                                const num = parseInt(value, 10);
-                                return isNaN(num) ? undefined : num;
-                              }
-                            })}
-                            placeholder="1-99"
-                            disabled={loading}
-                          />
-                          {errors.players?.[index]?.jersey_number && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.players[index]?.jersey_number?.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">
-                新規選手を追加するには上の「選手を追加」ボタンをクリックしてください
-              </p>
-            )}
           </CardContent>
         </Card>
       )}

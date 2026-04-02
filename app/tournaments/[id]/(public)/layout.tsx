@@ -34,7 +34,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
     throw new Error('有効な大会IDを指定してください');
   }
 
-  const [data, publicFilesResult, noticesResult] = await Promise.all([
+  const [data, publicFilesResult, noticesResult, sportCodeResult] = await Promise.all([
     getTournamentWithGroupInfo(tournamentId),
     db.execute(
       `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
@@ -44,10 +44,17 @@ export default async function TournamentDetailLayout({ children, params }: Layou
       `SELECT COUNT(*) as count FROM t_tournament_notices WHERE tournament_id = ? AND is_active = 1`,
       [tournamentId]
     ).catch(() => ({ rows: [{ count: 0 }] })),
+    db.execute(
+      `SELECT st.sport_code FROM t_tournaments t
+       JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+       WHERE t.tournament_id = ?`,
+      [tournamentId]
+    ).catch(() => ({ rows: [] })),
   ]);
   const { tournament, group, sibling_divisions } = data;
   const hasPublicFiles = Number(publicFilesResult.rows[0]?.count ?? 0) > 0;
   const hasNotices = Number(noticesResult.rows[0]?.count ?? 0) > 0;
+  const sportCode = sportCodeResult.rows.length > 0 ? String(sportCodeResult.rows[0].sport_code) : '';
 
   // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
   // layout のUI（タブ等）はスキップして children をそのまま返す
@@ -132,6 +139,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
         <TournamentTabNav
           tournamentId={tournament.tournament_id}
           phases={phaseList}
+          sportCode={sportCode}
         />
 
         {/* タブコンテンツ */}

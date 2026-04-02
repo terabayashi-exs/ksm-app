@@ -1,12 +1,19 @@
 // components/features/tournament/PublicFilesList.tsx
-// 大会公開ファイル一覧表示コンポーネント
+// お知らせ・大会資料等の統合表示コンポーネント
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, Calendar, ExternalLink, RefreshCw, Link as LinkIcon } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { FileText, Calendar, ExternalLink, RefreshCw, Link as LinkIcon, Bell, Maximize2 } from 'lucide-react';
 import type { LinkType } from '@/lib/types/tournament-files';
 
 interface PublicFile {
@@ -20,6 +27,13 @@ interface PublicFile {
   file_size: number;
   upload_order: number;
   uploaded_at: string;
+  display_date?: string;
+}
+
+interface Notice {
+  tournament_notice_id: number;
+  content: string;
+  updated_at: string | null;
 }
 
 interface PublicFilesData {
@@ -53,42 +67,108 @@ function formatDate(dateString: string): string {
   });
 }
 
-export default function PublicFilesList({ 
-  tournamentId, 
-  showTitle = true, 
+/** お知らせカード（溢れ検知 + ダイアログ付き） */
+function NoticeCard({ notice }: { notice: Notice }) {
+  const contentRef = useRef<HTMLParagraphElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el) {
+      setIsOverflowing(el.scrollHeight > el.clientHeight);
+    }
+  }, [notice.content]);
+
+  return (
+    <Card className="hover:shadow-md transition-shadow border-amber-200 bg-amber-50/30">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center justify-between">
+          <div className="flex items-center">
+            <Bell className="h-5 w-5 mr-2 text-amber-600 flex-shrink-0" />
+            <span className="line-clamp-1">お知らせ</span>
+          </div>
+          {isOverflowing && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="ml-2 text-gray-400 hover:text-amber-600 transition-colors flex-shrink-0">
+                  <Maximize2 className="h-4 w-4" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center">
+                    <Bell className="h-5 w-5 mr-2 text-amber-600" />
+                    お知らせ
+                  </DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {notice.content}
+                </p>
+                {notice.updated_at && (
+                  <div className="text-xs text-gray-500 flex items-center mt-3">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {formatDate(notice.updated_at)}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p
+          ref={contentRef}
+          className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3 mb-3"
+        >
+          {notice.content}
+        </p>
+        {notice.updated_at && (
+          <div className="text-xs text-gray-500 flex items-center">
+            <Calendar className="h-3 w-3 mr-1" />
+            {formatDate(notice.updated_at)}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function PublicFilesList({
+  tournamentId,
+  showTitle = true,
   maxFiles,
   layout = 'card'
 }: PublicFilesListProps) {
   const [data, setData] = useState<PublicFilesData | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ファイル一覧を取得
-  const fetchFiles = useCallback(async () => {
+  // ファイル一覧とお知らせを取得
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`/api/tournaments/${tournamentId}/public-files`, {
-        cache: 'no-store'
-      });
-      
-      const result = await response.json();
 
-      if (result.success) {
-        let files = result.data.files;
-        
-        // maxFiles制限適用
+      const [filesRes, noticesRes] = await Promise.all([
+        fetch(`/api/tournaments/${tournamentId}/public-files`, { cache: 'no-store' }),
+        fetch(`/api/tournaments/${tournamentId}/notices`, { cache: 'no-store' }),
+      ]);
+
+      const filesResult = await filesRes.json();
+      if (filesResult.success) {
+        let files = filesResult.data.files;
         if (maxFiles && files.length > maxFiles) {
           files = files.slice(0, maxFiles);
         }
-        
-        setData({
-          files,
-          total_files: result.data.total_files
-        });
+        setData({ files, total_files: filesResult.data.total_files });
       } else {
-        setError(result.error || 'ファイル一覧の取得に失敗しました');
+        setError(filesResult.error || 'ファイル一覧の取得に失敗しました');
+      }
+
+      const noticesResult = await noticesRes.json();
+      if (noticesResult.success) {
+        setNotices(noticesResult.notices || []);
       }
     } catch (err) {
       console.error('公開ファイル取得エラー:', err);
@@ -100,15 +180,15 @@ export default function PublicFilesList({
 
   // 初回読み込み
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+    fetchData();
+  }, [fetchData]);
 
   // ローディング表示
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
         <RefreshCw className="h-5 w-5 animate-spin text-gray-500 mr-2" />
-        <span className="text-sm text-gray-500">ファイルを読み込み中...</span>
+        <span className="text-sm text-gray-500">読み込み中...</span>
       </div>
     );
   }
@@ -118,7 +198,7 @@ export default function PublicFilesList({
     return (
       <div className="text-center py-6">
         <div className="text-sm text-red-600 mb-2">{error}</div>
-        <Button variant="outline" size="sm" onClick={fetchFiles}>
+        <Button variant="outline" size="sm" onClick={fetchData}>
           <RefreshCw className="h-4 w-4 mr-2" />
           再試行
         </Button>
@@ -126,10 +206,17 @@ export default function PublicFilesList({
     );
   }
 
-  // ファイルがない場合は何も表示しない
-  if (!data || data.files.length === 0) {
+  const hasFiles = data && data.files.length > 0;
+  const hasNotices = notices.length > 0;
+
+  // どちらもない場合は何も表示しない
+  if (!hasFiles && !hasNotices) {
     return null;
   }
+
+  // ファイルをアップロード→外部リンクの順に並べる
+  const uploadFiles = data?.files.filter(f => f.link_type === 'upload') || [];
+  const externalFiles = data?.files.filter(f => f.link_type === 'external') || [];
 
   // カードレイアウト
   if (layout === 'card') {
@@ -139,29 +226,34 @@ export default function PublicFilesList({
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center">
               <FileText className="h-5 w-5 mr-2 text-blue-600" />
-              📎 大会資料
+              📎 お知らせ・大会資料等
             </h3>
-            {maxFiles && data.total_files > maxFiles && (
-              <span className="text-sm text-gray-500">
-                {maxFiles}件表示 / 全{data.total_files}件
-              </span>
-            )}
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.files.map((file) => (
-            <Card key={file.file_id} className="hover:shadow-md transition-shadow">
+          {/* お知らせカード */}
+          {notices.map((notice) => (
+            <NoticeCard key={`notice-${notice.tournament_notice_id}`} notice={notice} />
+          ))}
+
+          {/* 大会資料（アップロードファイル）カード */}
+          {uploadFiles.map((file) => (
+            <Card key={`file-${file.file_id}`} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-start justify-between">
-                  <div className="flex items-center">
-                    {file.link_type === 'external' ? (
-                      <LinkIcon className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
-                    ) : (
-                      <FileText className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
-                    )}
+                <CardTitle className="text-base flex items-center justify-between">
+                  <div className="flex items-center min-w-0">
+                    <FileText className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
                     <span className="line-clamp-2">{file.file_title}</span>
                   </div>
+                  <a
+                    href={file.blob_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -170,79 +262,52 @@ export default function PublicFilesList({
                     {file.file_description}
                   </p>
                 )}
-
-                <div className="text-xs text-gray-500 space-y-1 mb-4">
-                  {file.link_type === 'external' ? (
-                    <>
-                      <div className="flex items-center">
-                        <LinkIcon className="h-3 w-3 mr-1" />
-                        外部リンク
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatDate(file.uploaded_at)}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>📄 {file.original_filename}</div>
-                      <div>📏 {formatFileSize(file.file_size)}</div>
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatDate(file.uploaded_at)}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {file.link_type === 'external' ? (
-                  <Button
-                    asChild
-                    size="sm"
-                    className="w-full"
-                  >
-                    <a
-                      href={file.external_url || file.blob_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      リンクを開く
-                    </a>
-                  </Button>
-                ) : (
-                  <div className="flex gap-2">
-                    <Button
-                      asChild
-                      size="sm"
-                      className="flex-1"
-                    >
-                      <a
-                        href={file.blob_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download={file.original_filename}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        ダウンロード
-                      </a>
-                    </Button>
-
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                    >
-                      <a
-                        href={file.blob_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>📏 {formatFileSize(file.file_size)}</div>
+                  <div className="flex items-center">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {file.display_date || formatDate(file.uploaded_at)}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* 外部リンクカード */}
+          {externalFiles.map((file) => (
+            <Card key={`file-${file.file_id}`} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <div className="flex items-center min-w-0">
+                    <LinkIcon className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
+                    <span className="line-clamp-2">{file.file_title}</span>
+                  </div>
+                  <a
+                    href={file.external_url || file.blob_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {file.file_description && (
+                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                    {file.file_description}
+                  </p>
                 )}
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div className="flex items-center">
+                    <LinkIcon className="h-3 w-3 mr-1" />
+                    外部リンク
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {file.display_date || formatDate(file.uploaded_at)}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -258,90 +323,81 @@ export default function PublicFilesList({
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center">
             <FileText className="h-5 w-5 mr-2 text-blue-600" />
-            📎 大会資料
+            📎 お知らせ・大会資料等
           </h3>
-          {maxFiles && data.total_files > maxFiles && (
-            <span className="text-sm text-gray-500">
-              {maxFiles}件表示 / 全{data.total_files}件
-            </span>
-          )}
         </div>
       )}
-      
+
       <div className="space-y-2">
-        {data.files.map((file) => (
+        {/* お知らせ */}
+        {notices.map((notice) => (
           <div
-            key={file.file_id}
-            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50/50 transition-colors"
+            key={`notice-${notice.tournament_notice_id}`}
+            className="flex items-center p-3 border border-amber-200 bg-amber-50/30 rounded-lg"
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
-              {file.link_type === 'external' ? (
-                <LinkIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
-              ) : (
-                <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-              )}
+              <Bell className="h-5 w-5 text-amber-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{file.file_title}</div>
-                <div className="text-sm text-gray-500">
-                  {file.link_type === 'external'
-                    ? `外部リンク • ${formatDate(file.uploaded_at)}`
-                    : `${formatFileSize(file.file_size)} • ${formatDate(file.uploaded_at)}`
-                  }
-                </div>
-                {file.file_description && (
-                  <div className="text-sm text-gray-500 truncate">
-                    {file.file_description}
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{notice.content}</p>
+                {notice.updated_at && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formatDate(notice.updated_at)}
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        ))}
 
-            {file.link_type === 'external' ? (
-              <Button
-                asChild
-                size="sm"
-              >
-                <a
-                  href={file.external_url || file.blob_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-4 w-4 mr-1" />
-                  開く
-                </a>
-              </Button>
-            ) : (
-              <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                >
-                  <a
-                    href={file.blob_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
-
-                <Button
-                  asChild
-                  size="sm"
-                >
-                  <a
-                    href={file.blob_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={file.original_filename}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    ダウンロード
-                  </a>
-                </Button>
+        {/* 大会資料（アップロードファイル） */}
+        {uploadFiles.map((file) => (
+          <div
+            key={`file-${file.file_id}`}
+            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50/50 transition-colors"
+          >
+            <div className="flex items-center space-x-3 flex-1 min-w-0">
+              <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{file.file_title}</div>
+                <div className="text-sm text-gray-500">
+                  {formatFileSize(file.file_size)} • {file.display_date || formatDate(file.uploaded_at)}
+                </div>
               </div>
-            )}
+            </div>
+            <a
+              href={file.blob_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+        ))}
+
+        {/* 外部リンク */}
+        {externalFiles.map((file) => (
+          <div
+            key={`file-${file.file_id}`}
+            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50/50 transition-colors"
+          >
+            <div className="flex items-center space-x-3 flex-1 min-w-0">
+              <LinkIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{file.file_title}</div>
+                <div className="text-sm text-gray-500">
+                  外部リンク • {file.display_date || formatDate(file.uploaded_at)}
+                </div>
+              </div>
+            </div>
+            <a
+              href={file.external_url || file.blob_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
           </div>
         ))}
       </div>

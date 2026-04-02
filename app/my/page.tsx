@@ -2,6 +2,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
+// TODO: ヘッダーロゴ対応時に有効化
+// import Image from "next/image";
 import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
 import Footer from "@/components/layout/Footer";
 import { Home, ChevronRight } from "lucide-react";
@@ -85,6 +87,11 @@ export default async function MyDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-6">
             <div>
+              {/* TODO: ヘッダーロゴ対応時に有効化
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Image src="/images/taikaigo-logo-white.svg" alt="大会GO" width={100} height={24} className="h-6 w-auto" />
+                マイダッシュボード
+              </h1> */}
               <h1 className="text-2xl font-bold text-white">
                 マイダッシュボード
               </h1>
@@ -92,6 +99,7 @@ export default async function MyDashboardPage() {
                 ようこそ、{session.user.name}さん
               </p>
             </div>
+            {/* TODO: ヘッダーロゴ対応時に self-end sm:self-auto を追加 */}
             <div className="flex items-center gap-2">
               <UserAvatarMenu
                 userName={session.user.name || ''}

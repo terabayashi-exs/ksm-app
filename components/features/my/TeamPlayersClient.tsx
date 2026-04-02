@@ -60,11 +60,6 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
   const handleSavePlayers = async () => {
     const validPlayers = formPlayers.filter(p => p.player_name.trim());
 
-    if (validPlayers.length === 0) {
-      setMessage({ type: 'error', text: '選手名を入力してください' });
-      return;
-    }
-
     // 背番号の重複チェック
     const jerseyNumbers = validPlayers
       .map(p => p.jersey_number.trim())
@@ -107,8 +102,8 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
   };
 
   const addPlayer = () => {
-    if (formPlayers.length >= 20) {
-      setMessage({ type: 'error', text: '選手は最大20名までです' });
+    if (formPlayers.length >= 30) {
+      setMessage({ type: 'error', text: '選手は最大30名までです' });
       return;
     }
     setFormPlayers(prev => [...prev, { player_name: '', jersey_number: '' }]);
@@ -172,7 +167,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                   <span className="font-medium">登録選手：{players.length}名</span>
                 </div>
                 <span className="text-sm text-gray-500">
-                  （最大20名まで）
+                  （最大30名まで）
                 </span>
               </div>
 
@@ -256,7 +251,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                 <p>• 選手名は必須項目です</p>
                 <p>• 背番号は任意です（1〜99の範囲で設定できます）</p>
                 <p>• 背番号を設定する場合は、重複しないようにしてください</p>
-                <p>• 最大20名まで登録できます</p>
+                <p>• 最大30名まで登録できます</p>
               </div>
             </div>
           )}
