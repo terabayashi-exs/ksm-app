@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
+import { ScrollableContainer } from '@/components/ui/scrollable-container';
 import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
 import { SportScoreConfig } from '@/lib/sport-standings-calculator';
 
@@ -740,7 +741,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
               </CardHeader>
           <CardContent>
             {block.teams.length > 0 ? (
-              <div className="overflow-x-auto">
+              <ScrollableContainer>
                 {/* 統合された戦績表（順位表情報 + 対戦結果） */}
                 <table className="w-full border-collapse border border-gray-200 min-w-[800px] md:min-w-0">
                   <thead>
@@ -768,7 +769,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                             }}
                             title={opponent.team_name}
                           >
-                            {opponent.team_omission || opponent.team_name}
+                            {(opponent.team_omission || opponent.team_name).replace(/\(/g, '（').replace(/\)/g, '）')}
                           </div>
                         </th>
                       ))}
@@ -998,7 +999,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                     </div>
                   </div>
                 )}
-              </div>
+              </ScrollableContainer>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 このブロックには参加チームがありません

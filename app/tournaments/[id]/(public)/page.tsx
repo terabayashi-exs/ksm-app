@@ -73,6 +73,19 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
 
   const venues = await getVenuesForTournament(tournament.venue_id);
 
+  // 実際のコート数を試合データから集計
+  let actualCourtCount = tournament.court_count;
+  try {
+    const courtResult = await db.execute(`
+      SELECT COUNT(DISTINCT COALESCE(ml.court_name, CAST(ml.court_number AS TEXT))) as court_count
+      FROM t_matches_live ml
+      JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      WHERE mb.tournament_id = ? AND (ml.court_number IS NOT NULL OR ml.court_name IS NOT NULL)
+    `, [tournamentId]);
+    const count = Number(courtResult.rows[0]?.court_count ?? 0);
+    if (count > 0) actualCourtCount = count;
+  } catch { /* フォールバック: tournament.court_count */ }
+
   // 節設定の有無を判定
   const matchdayResult = await db.execute(
     `SELECT 1 FROM t_matches_live ml JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id WHERE mb.tournament_id = ? AND ml.matchday IS NOT NULL LIMIT 1`,
@@ -122,6 +135,7 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
         bracketPdfExists={bracketPdfExists}
         resultsPdfExists={resultsPdfExists}
         venues={venues}
+        actualCourtCount={actualCourtCount}
         eventStartDate={eventStartDate}
         eventEndDate={eventEndDate}
         calculatedStatus={calculatedStatus}
@@ -137,6 +151,7 @@ function TournamentOverview({
   bracketPdfExists,
   resultsPdfExists,
   venues,
+  actualCourtCount,
   eventStartDate,
   eventEndDate,
   calculatedStatus,
@@ -147,6 +162,7 @@ function TournamentOverview({
   bracketPdfExists: boolean;
   resultsPdfExists: boolean;
   venues: VenueInfo[];
+  actualCourtCount: number;
   eventStartDate: string;
   eventEndDate: string;
   calculatedStatus: TournamentStatus;
@@ -380,7 +396,7 @@ function TournamentOverview({
             </div>
             <div>
               <h4 className="font-medium text-gray-500 mb-2">コート数</h4>
-              <p className="text-gray-900">{tournament.court_count}コート</p>
+              <p className="text-gray-900">{actualCourtCount}コート</p>
             </div>
           </div>
         </CardContent>

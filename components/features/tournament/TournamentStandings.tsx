@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Medal, Award, TrendingUp, Users, Target, Hash, RefreshCw } from 'lucide-react';
+import { ScrollableContainer } from '@/components/ui/scrollable-container';
 import { useSession } from 'next-auth/react';
 
 // 多競技対応の型定義
@@ -540,7 +541,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                 <p className="text-sm">試合結果が確定次第、順位が表示されます。</p>
               </div>
             ) : (
-            <div className="overflow-x-auto">
+            <ScrollableContainer>
               <table className="w-full border-collapse min-w-[700px] md:min-w-0">
                 <thead>
                   <tr className="border-b bg-gray-50800">
@@ -753,7 +754,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableContainer>
             )}
 
             {/* 備考表示 */}

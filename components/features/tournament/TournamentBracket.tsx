@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
+import { ScrollableContainer } from "@/components/ui/scrollable-container";
 import {
   TournamentBlock,
   MultiBlockBracket,
@@ -445,7 +446,7 @@ const response = await fetch(
         }
       `}</style>
 
-      <div className="print-container relative bg-white border border-gray-200 rounded-lg p-6 shadow-sm overflow-x-auto">
+      <ScrollableContainer className="print-container bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
         <div className="space-y-8">
           {/* 試合数に応じて表示方法を切り替え */}
           {shouldUseMultiBlock ? (
@@ -563,7 +564,7 @@ const response = await fetch(
             </div>
           ))}
         </div>
-      </div>
+      </ScrollableContainer>
     </>
   );
 }

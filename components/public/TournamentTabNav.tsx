@@ -95,7 +95,7 @@ export default function TournamentTabNav({ tournamentId, phases, sportCode: _spo
   };
 
   return (
-    <nav className={`grid w-full mb-8 grid-cols-3 ${mobileGridRows} gap-1 ${smGridCols} sm:grid-rows-1 no-print`}>
+    <nav id="tournament-tab-nav" className={`sticky top-[67px] z-40 bg-white pt-2 pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 grid w-full grid-cols-3 ${mobileGridRows} gap-1 ${smGridCols} sm:grid-rows-1 no-print`}>
       {tabs.map((tab) => (
         <Link
           key={tab.value}
