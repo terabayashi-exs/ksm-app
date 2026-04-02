@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, Users, Target, Award, Hash, Medal, MessageSquare, Download } from 'lucide-react';
+import { Trophy, Users, Target, Award, Hash, Medal, MessageSquare, ExternalLink } from 'lucide-react';
 import { ScrollableContainer } from '@/components/ui/scrollable-container';
 import { BlockResults, getResultColor } from '@/lib/match-results-calculator';
 import { SportScoreConfig } from '@/lib/sport-standings-calculator';
@@ -48,6 +48,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const lastBlobUrlRef = useRef<string | null>(null);
 
   // ブロック分類関数（round_name優先、フェーズIDに依存しない動的判定）
   const getBlockKey = (_phase: string, blockName: string, displayRoundName?: string, roundName?: string | null): string => {
@@ -281,9 +282,14 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
       pdf.addImage(imgData3, 'PNG', 0, 0, imgWidth3, Math.min(imgHeight3, pageHeight));
       document.body.removeChild(page3Element);
 
-      // PDFをダウンロード
-      const fileName = `戦績表_${tournamentName.replace(/[\/\\:*?"<>|]/g, '')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      pdf.save(fileName);
+      // 前回のBlob URLを解放してメモリリーク防止
+      if (lastBlobUrlRef.current) {
+        URL.revokeObjectURL(lastBlobUrlRef.current);
+      }
+      // PDFを別タブで表示
+      const blobUrl = String(pdf.output('bloburl'));
+      lastBlobUrlRef.current = blobUrl;
+      window.open(blobUrl, '_blank');
 
     } catch (error) {
       console.error('PDFダウンロードエラー:', error);
@@ -678,8 +684,8 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
               size="sm"
               className="flex items-center gap-2"
             >
-              <Download className="h-4 w-4" />
-              {downloadingPdf ? 'PDF生成中...' : 'PDFダウンロード'}
+              <ExternalLink className="h-4 w-4" />
+              {downloadingPdf ? 'PDF生成中...' : 'PDF表示'}
             </Button>
           </CardTitle>
         </CardHeader>

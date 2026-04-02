@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, ShieldAlert } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, ShieldAlert, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import { TournamentDashboardData, GroupedTournamentData, TeamDashboardItem } from "@/lib/dashboard-data";
@@ -772,6 +772,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         審判カード印刷
                       </Link>
                     </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/match-comments`}>
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        試合コメント
+                      </Link>
+                    </Button>
                   </>
                 ) : (
                   /* 開催中・完了: 変更系は無効表示、参加チーム管理のみ有効 */
@@ -802,6 +808,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
                         <QrCode className="w-4 h-4 mr-1" />
                         審判カード印刷
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/match-comments`}>
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        試合コメント
                       </Link>
                     </Button>
                   </>
@@ -1328,6 +1340,12 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       </Link>
                     </Button>
                   )}
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/match-comments`}>
+                      <MessageSquare className="w-4 h-4 mr-1" />
+                      試合コメント
+                    </Link>
+                  </Button>
                 </div>
               </div>
             )}

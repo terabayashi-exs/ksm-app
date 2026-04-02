@@ -139,10 +139,10 @@ export function ScrollableContainer({
           <button
             type="button"
             onClick={() => scrollByAmount('left')}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 hover:bg-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/50 shadow-sm border border-gray-200/50 hover:bg-white/80 transition-colors"
             aria-label="左にスクロール"
           >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
+            <ChevronLeft className="h-5 w-5 text-gray-400" />
           </button>
         </div>
       </div>
@@ -159,10 +159,10 @@ export function ScrollableContainer({
           <button
             type="button"
             onClick={() => scrollByAmount('right')}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 hover:bg-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/50 shadow-sm border border-gray-200/50 hover:bg-white/80 transition-colors"
             aria-label="右にスクロール"
           >
-            <ChevronRight className="h-5 w-5 text-gray-600" />
+            <ChevronRight className="h-5 w-5 text-gray-400" />
           </button>
         </div>
       </div>
@@ -171,7 +171,7 @@ export function ScrollableContainer({
       <div
         className={cn(
           'print:hidden absolute left-0 top-0 bottom-0 w-8 pointer-events-none',
-          'bg-gradient-to-r from-white/60 to-transparent',
+          'bg-gradient-to-r from-white/40 to-transparent',
           'transition-opacity duration-200',
           canScrollLeft ? 'opacity-100' : 'opacity-0',
         )}
@@ -181,7 +181,7 @@ export function ScrollableContainer({
       <div
         className={cn(
           'print:hidden absolute right-0 top-0 bottom-0 w-8 pointer-events-none',
-          'bg-gradient-to-l from-white/60 to-transparent',
+          'bg-gradient-to-l from-white/40 to-transparent',
           'transition-opacity duration-200',
           canScrollRight ? 'opacity-100' : 'opacity-0',
         )}

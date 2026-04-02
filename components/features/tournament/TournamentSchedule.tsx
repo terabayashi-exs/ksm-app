@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle, LayoutGrid, ChevronsUpDown } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle, LayoutGrid, ChevronsUpDown, MessageSquare } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatDateOnly } from '@/lib/utils';
 import { parseTotalScore } from '@/lib/score-parser';
@@ -40,6 +40,7 @@ interface MatchData {
   match_status: string;
   result_status: string;
   remarks: string | null;
+  match_comment?: string | null;
   override_reason?: string | null;
   has_result: boolean;
   cancellation_type: string | null;
@@ -91,10 +92,13 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
 
   useEffect(() => {
     // DOMレンダリング完了後に計算（JumpNavの高さが確定してから）
-    const timer = requestAnimationFrame(updateStickyOffsets);
+    const timer1 = requestAnimationFrame(updateStickyOffsets);
+    // JumpNavのレンダリング後にもう一度計算
+    const timer2 = setTimeout(updateStickyOffsets, 100);
     window.addEventListener('resize', updateStickyOffsets);
     return () => {
-      cancelAnimationFrame(timer);
+      cancelAnimationFrame(timer1);
+      clearTimeout(timer2);
       window.removeEventListener('resize', updateStickyOffsets);
     };
   }, [updateStickyOffsets, matches]);
@@ -464,11 +468,11 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       if (matchdays.length <= 1) return null;
       return (
         <div ref={jumpNavRef} className="sticky z-30 bg-white pb-2 no-print" style={{ top: `${jumpNavTop}px` }}>
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               {dropdownButton('節を選んで移動')}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" side="bottom" sideOffset={4}>
               {matchdays.map(md => (
                 <DropdownMenuItem key={md} onClick={() => scrollTo(`schedule-matchday-${md}`)}>
                   第{md}節
@@ -483,11 +487,11 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       if (dates.length <= 1) return null;
       return (
         <div ref={jumpNavRef} className="sticky z-30 bg-white pb-2 no-print" style={{ top: `${jumpNavTop}px` }}>
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               {dropdownButton('開催日を選んで移動')}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" side="bottom" sideOffset={4}>
               {dates.map(date => (
                 <DropdownMenuItem key={date} onClick={() => scrollTo(`schedule-date-${date}`)}>
                   {formatShort(date)}
@@ -674,9 +678,12 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               const score1Class = result.winner === 'team1' ? 'text-red-600 font-bold' : '';
                               const score2Class = result.winner === 'team2' ? 'text-red-600 font-bold' : '';
 
+                              const hasSubRows = hasRemarksMobile || !!match.match_comment;
+                              const mainRowBorder = hasSubRows ? '' : 'border-b';
+
                               return (
                                 <React.Fragment key={match.match_id}>
-                                  <tr className={`${hasRemarksMobile ? 'border-b md:border-b' : 'border-b'} hover:bg-gray-50/50 ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                  <tr className={`${mainRowBorder} hover:bg-gray-50/50 ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                     <td className="py-2 px-1 whitespace-nowrap align-middle">
                                       <span className="text-lg font-medium">{formatTime(match.start_time)}</span>
                                     </td>
@@ -745,10 +752,21 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   </tr>
                                   {/* スマホ: 備考を全列結合で表示 */}
                                   {hasRemarksMobile && (
-                                    <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                    <tr className={`${!match.match_comment ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                       <td colSpan={hasMultipleCourts ? 4 : 5} className="pb-2 px-1 pt-0">
                                         <div className="text-xs text-gray-500 text-right">
                                           備考: {matchRemarks}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {/* コメント表示（PC・スマホ共通、全列結合で試合下部に表示） */}
+                                  {match.match_comment && (
+                                    <tr className={`border-b ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                      <td colSpan={99} className="pb-2 px-1 pt-1">
+                                        <div className="flex items-start gap-1 text-xs text-blue-600">
+                                          <MessageSquare className="h-3 w-3 shrink-0 mt-0.5" />
+                                          <span>{match.match_comment}</span>
                                         </div>
                                       </td>
                                     </tr>
@@ -818,8 +836,8 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
 
           return (
             <div key={matchday} id={`schedule-matchday-${matchday}`} className="space-y-0">
-              {/* 節ヘッダー */}
-              <div className={`${bgColor} border border-gray-200 rounded-t-lg px-4 py-3 flex items-center justify-between`}>
+              {/* 節ヘッダー（sticky：ヘッダー + タブナビ + JumpNav の下に追従） */}
+              <div className={`sticky z-10 ${bgColor} border border-gray-200 rounded-t-lg px-4 py-3 flex items-center justify-between shadow-sm`} style={{ top: `${dateHeaderTop}px` }}>
                 <div className="flex items-center text-2xl font-semibold leading-none tracking-tight">
                   <Trophy className="h-5 w-5 mr-2 text-primary" />
                   第{matchday}節
@@ -855,7 +873,8 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                             match.override_reason
                           ].filter(Boolean).join(' / ');
                           const hasRemarks = !!matchRemarks;
-                          const mainRowBorder = hasVenue || hasRemarks ? 'md:border-b' : 'border-b';
+                          const hasSubRows = hasVenue || hasRemarks || !!match.match_comment;
+                          const mainRowBorder = hasSubRows ? '' : 'border-b';
 
                           const team1Class = result.winner === 'team1' ? 'font-bold text-red-600' : match.match_type === 'FM' ? 'text-rose-400' : '';
                           const team2Class = result.winner === 'team2' ? 'font-bold text-red-600' : match.match_type === 'FM' ? 'text-rose-400' : '';
@@ -944,7 +963,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               </tr>
                               {/* スマホ: 全列結合の会場行 */}
                               {hasVenue && (
-                                <tr className={`${!hasRemarks ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                <tr className={`${!hasRemarks && !match.match_comment ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                   <td colSpan={4} className="pb-2 px-1 pt-0">
                                     <div className="flex items-center text-xs text-gray-500">
                                       <MapPin className="h-3 w-3 mr-0.5 shrink-0" />
@@ -964,10 +983,21 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               )}
                               {/* スマホ: 備考を全列結合で表示 */}
                               {hasRemarks && (
-                                <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                <tr className={`${!match.match_comment ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                   <td colSpan={5} className="pb-2 px-1 pt-0">
                                     <div className="text-xs text-gray-500">
                                       備考: {matchRemarks}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              {/* コメント表示（PC・スマホ共通、全列結合で試合下部に表示） */}
+                              {match.match_comment && (
+                                <tr className={`border-b ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                  <td colSpan={99} className="pb-2 px-1 pt-1">
+                                    <div className="flex items-start gap-1 text-xs text-blue-600">
+                                      <MessageSquare className="h-3 w-3 shrink-0 mt-0.5" />
+                                      <span>{match.match_comment}</span>
                                     </div>
                                   </td>
                                 </tr>

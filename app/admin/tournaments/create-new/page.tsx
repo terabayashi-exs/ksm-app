@@ -3,7 +3,7 @@ export const metadata = { title: "部門作成" };
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, ChevronRight, Home } from "lucide-react";
+import { AlertTriangle, ChevronRight, Home } from "lucide-react";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,14 +54,6 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
           <p className="text-sm text-gray-500 mt-1">
             大会に属する部門（カテゴリー）を作成します
           </p>
-        </div>
-        <div className="mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/my">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              ダッシュボードに戻る
-            </Link>
-          </Button>
         </div>
         {/* 部門追加制限に達している場合のエラー表示 */}
         {divisionCheckResult && !divisionCheckResult.allowed ? (

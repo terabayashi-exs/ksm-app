@@ -113,9 +113,9 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
             <p className="text-destructive">{error || '大会が見つかりません'}</p>
             <Button
               className="mt-4"
-              onClick={() => router.push('/admin/tournament-groups')}
+              onClick={() => router.push('/my?tab=admin')}
             >
-              大会一覧に戻る
+              マイダッシュボードに戻る
             </Button>
           </div>
         </div>
@@ -136,10 +136,6 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
             マイダッシュボード
-          </Link>
-          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/admin/tournament-groups" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
-            大会一覧
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
