@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle, LayoutGrid } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Users, CheckCircle, XCircle, AlertTriangle, LayoutGrid, ChevronsUpDown, MessageSquare } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatDateOnly } from '@/lib/utils';
 import { parseTotalScore } from '@/lib/score-parser';
 import MatchNewsArea from './MatchNewsArea';
@@ -39,6 +40,7 @@ interface MatchData {
   match_status: string;
   result_status: string;
   remarks: string | null;
+  match_comment?: string | null;
   override_reason?: string | null;
   has_result: boolean;
   cancellation_type: string | null;
@@ -75,6 +77,42 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
   const [filterTeamId, setFilterTeamId] = useState<string>('all');
   const [filterCourtNumber, setFilterCourtNumber] = useState<string>('all');
   const [confirmedTeams, setConfirmedTeams] = useState<TeamOption[]>([]);
+  const [dateHeaderTop, setDateHeaderTop] = useState(67);
+  const jumpNavRef = useRef<HTMLDivElement>(null);
+
+  // sticky オフセットの計算（ヘッダー + タブナビ + JumpNav）
+  const updateStickyOffsets = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const header = 67;
+    const tabNav = document.getElementById('tournament-tab-nav');
+    const tabHeight = tabNav ? tabNav.offsetHeight : 0;
+    const jumpHeight = jumpNavRef.current?.offsetHeight ?? 0;
+    setDateHeaderTop(header + tabHeight + jumpHeight);
+  }, []);
+
+  useEffect(() => {
+    // DOMレンダリング完了後に計算（JumpNavの高さが確定してから）
+    const timer1 = requestAnimationFrame(updateStickyOffsets);
+    // JumpNavのレンダリング後にもう一度計算
+    const timer2 = setTimeout(updateStickyOffsets, 100);
+    window.addEventListener('resize', updateStickyOffsets);
+    return () => {
+      cancelAnimationFrame(timer1);
+      clearTimeout(timer2);
+      window.removeEventListener('resize', updateStickyOffsets);
+    };
+  }, [updateStickyOffsets, matches]);
+
+  // JumpNav の sticky top（ヘッダー67px + タブナビ高さ）
+  const jumpNavTop = useMemo(() => {
+    const header = 67;
+    if (typeof document === 'undefined') return header;
+    const tabNav = document.getElementById('tournament-tab-nav');
+    const tabHeight = tabNav ? tabNav.offsetHeight : 0;
+    return header + tabHeight;
+    // dateHeaderTop を依存に入れて、リサイズ時に再計算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateHeaderTop]);
 
   // 試合データの取得（initialMatchesが提供されていない場合のみ）
   useEffect(() => {
@@ -172,6 +210,17 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
     return matches.some(m => m.matchday != null && m.matchday > 0);
   }, [matches]);
 
+  // 全試合から最長の会場/コート表示名を算出し、列の min-width を統一
+  const venueColWidth = useMemo(() => {
+    const maxLen = matches.reduce((max, m) => {
+      const venue = m.venue_name || '';
+      const court = m.court_name || '';
+      return Math.max(max, venue.length, court.length);
+    }, 0);
+    // text-sm(14px)で全角1文字≒14px、アイコン+余白で+2rem
+    return maxLen > 0 ? `${maxLen + 2}rem` : '8rem';
+  }, [matches]);
+
   // 試合結果の表示
   const getMatchResult = (match: MatchData) => {
     // 確定済みの試合結果がない場合
@@ -189,11 +238,15 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
           return {
             status: match.match_status === 'ongoing' ? 'ongoing' : 'completed_unconfirmed',
             display: (
-              <span className={`${colorClass} text-lg font-medium`}>
-                {t1} - {t2}
-                <span className="text-xs ml-1">({statusLabel})</span>
-              </span>
+              <div className={`${colorClass} font-medium`}>
+                <div className="text-lg">{t1} - {t2}</div>
+                <div className="text-xs">({statusLabel})</div>
+              </div>
             ),
+            team1Score: t1,
+            team2Score: t2,
+            statusLabel,
+            statusColor: colorClass,
             icon: iconEl
           };
         } catch {
@@ -259,31 +312,29 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       return {
         status: 'walkover',
         display: <span className="text-orange-600 text-lg font-medium">不戦勝 {walkoverScore}</span>,
+        team1Score: match.team1_goals ?? 0,
+        team2Score: match.team2_goals ?? 0,
+        pkSuffix: '',
         icon: <AlertTriangle className="h-4 w-4 text-orange-500" />,
         winner: winnerIsTeam1 ? 'team1' : 'team2'
       };
     }
 
-    // PK戦を考慮したスコア表示の生成
-    const getScoreDisplay = () => {
-      const hasPkGoals = (match.team1_pk_goals !== null && match.team1_pk_goals !== undefined) || 
-                        (match.team2_pk_goals !== null && match.team2_pk_goals !== undefined);
-      
-      if (hasPkGoals && (match.team1_pk_goals || 0) > 0 || (match.team2_pk_goals || 0) > 0) {
-        return `${match.team1_goals} - ${match.team2_goals} (PK ${match.team1_pk_goals || 0}-${match.team2_pk_goals || 0})`;
-      }
-      
-      return `${match.team1_goals} - ${match.team2_goals}`;
-    };
+    // PK戦があるか
+    const hasPk = ((match.team1_pk_goals ?? 0) > 0 || (match.team2_pk_goals ?? 0) > 0);
+    const pkSuffix = hasPk ? ` (PK ${match.team1_pk_goals || 0}-${match.team2_pk_goals || 0})` : '';
 
     if (match.is_draw) {
       return {
         status: 'draw',
         display: (
-          <span className="text-blue-600 text-lg font-medium">
-            {getScoreDisplay()}
+          <span className="text-lg font-medium">
+            {match.team1_goals} - {match.team2_goals}{pkSuffix}
           </span>
         ),
+        team1Score: match.team1_goals ?? 0,
+        team2Score: match.team2_goals ?? 0,
+        pkSuffix,
         icon: <Users className="h-4 w-4 text-blue-500" />
       };
     }
@@ -293,10 +344,16 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
     return {
       status: 'completed',
       display: (
-        <span className="text-green-600 text-lg font-medium">
-          {getScoreDisplay()}
+        <span className="text-lg font-medium">
+          <span className={winnerIsTeam1 ? 'text-red-600' : ''}>{match.team1_goals}</span>
+          <span> - </span>
+          <span className={!winnerIsTeam1 ? 'text-red-600' : ''}>{match.team2_goals}</span>
+          {pkSuffix && <span className="text-gray-500 text-sm">{pkSuffix}</span>}
         </span>
       ),
+      team1Score: match.team1_goals ?? 0,
+      team2Score: match.team2_goals ?? 0,
+      pkSuffix,
       icon: <CheckCircle className="h-4 w-4 text-green-500" />,
       winner: winnerIsTeam1 ? 'team1' : 'team2'
     };
@@ -355,10 +412,6 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       <CardContent>
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{filteredMatches.length}</div>
-            <div className="text-sm text-gray-500">試合数</div>
-          </div>
-          <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
               {Object.keys(filteredMatches.reduce((acc, match) => {
                 acc[match.tournament_date] = true;
@@ -366,6 +419,10 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
               }, {} as Record<string, boolean>)).length}
             </div>
             <div className="text-sm text-gray-500">開催日数</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{filteredMatches.length}</div>
+            <div className="text-sm text-gray-500">試合数</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
@@ -377,6 +434,75 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       </CardContent>
     </Card>
   );
+
+  // 移動ボタンコンポーネント（ドロップダウン方式・sticky）
+  const JumpNav = ({ filteredMatches }: { filteredMatches: MatchData[] }) => {
+    const scrollTo = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const y = el.getBoundingClientRect().top + window.scrollY - dateHeaderTop - 8;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    };
+
+    // 短い日付フォーマット（M/d(曜日)）
+    const formatShort = (dateStr: string): string => {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+      return `${d.getMonth() + 1}/${d.getDate()}(${weekdays[d.getDay()]})`;
+    };
+
+    const dropdownButton = (label: string) => (
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+      >
+        <Calendar className="h-4 w-4" />
+        {label}
+        <ChevronsUpDown className="h-3.5 w-3.5 text-gray-400" />
+      </button>
+    );
+
+    if (isLeagueMode) {
+      const matchdays = [...new Set(filteredMatches.map(m => m.matchday ?? 0).filter(md => md > 0))].sort((a, b) => a - b);
+      if (matchdays.length <= 1) return null;
+      return (
+        <div ref={jumpNavRef} className="sticky z-30 bg-white pb-2 no-print" style={{ top: `${jumpNavTop}px` }}>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              {dropdownButton('節を選んで移動')}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="bottom" sideOffset={4}>
+              {matchdays.map(md => (
+                <DropdownMenuItem key={md} onClick={() => scrollTo(`schedule-matchday-${md}`)}>
+                  第{md}節
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    } else {
+      const dates = [...new Set(filteredMatches.map(m => m.tournament_date))].sort();
+      if (dates.length <= 1) return null;
+      return (
+        <div ref={jumpNavRef} className="sticky z-30 bg-white pb-2 no-print" style={{ top: `${jumpNavTop}px` }}>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              {dropdownButton('開催日を選んで移動')}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="bottom" sideOffset={4}>
+              {dates.map(date => (
+                <DropdownMenuItem key={date} onClick={() => scrollTo(`schedule-date-${date}`)}>
+                  {formatShort(date)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    }
+  };
 
   // 日程別スケジュール表示コンポーネント（日付→コート→時間順）
   const ScheduleByDate = ({ filteredMatches }: { filteredMatches: MatchData[] }) => {
@@ -434,9 +560,9 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
           const hasMultipleCourts = allCourtKeys.size > 1 || (allCourtKeys.size === 1 && !allCourtKeys.has('未設定'));
 
           return (
-            <div key={date} className="space-y-0">
-              {/* 開催日ヘッダー（sticky：ヘッダー h-16 + border 3px の下に追従） */}
-              <div className={`sticky top-[67px] z-10 ${bgColor} border border-gray-200 rounded-t-lg px-4 py-3 flex items-center justify-between shadow-sm`}>
+            <div key={date} id={`schedule-date-${date}`} className="space-y-0">
+              {/* 開催日ヘッダー（sticky：ヘッダー + タブナビ + JumpNav の下に追従） */}
+              <div className={`sticky z-10 ${bgColor} border border-gray-200 rounded-t-lg px-4 py-3 flex items-center justify-between shadow-sm`} style={{ top: `${dateHeaderTop}px` }}>
                 <div className="flex items-center text-2xl font-semibold leading-none tracking-tight">
                   <Calendar className="h-5 w-5 mr-2" />
                   開催日: {formatDateOnly(date)}
@@ -527,12 +653,12 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                         <table className="w-full border-collapse">
                           <thead>
                             <tr className="border-b">
-                              <th className="text-left py-3 px-1 font-medium w-[3.5rem]">時間</th>
-                              <th className="text-left py-3 px-1 font-medium w-[2.5rem]">試合</th>
-                              <th className="text-left py-3 px-1 font-medium">対戦</th>
-                              <th className="text-right py-3 px-1 font-medium">結果</th>
+                              <th className="text-left py-3 px-1 font-medium whitespace-nowrap">時間</th>
+                              <th className="text-left py-3 px-1 font-medium whitespace-nowrap">試合</th>
+                              <th className="text-left py-3 px-1 font-medium w-full">対戦</th>
+                              <th className="text-center md:text-right py-3 px-1 font-medium whitespace-nowrap">結果</th>
                               {!hasMultipleCourts && (
-                                <th className="text-right py-3 px-1 font-medium w-[4.5rem]">コート</th>
+                                <th className="text-right py-3 px-1 font-medium hidden md:table-cell whitespace-nowrap">コート</th>
                               )}
                             </tr>
                           </thead>
@@ -547,9 +673,17 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               ].filter(Boolean).join(' / ');
                               const hasRemarksMobile = !!matchRemarks;
 
+                              const team1Class = result.winner === 'team1' ? 'font-bold text-red-600' : match.match_type === 'FM' ? 'text-rose-400' : '';
+                              const team2Class = result.winner === 'team2' ? 'font-bold text-red-600' : match.match_type === 'FM' ? 'text-rose-400' : '';
+                              const score1Class = result.winner === 'team1' ? 'text-red-600 font-bold' : '';
+                              const score2Class = result.winner === 'team2' ? 'text-red-600 font-bold' : '';
+
+                              const hasSubRows = hasRemarksMobile || !!match.match_comment;
+                              const mainRowBorder = hasSubRows ? '' : 'border-b';
+
                               return (
                                 <React.Fragment key={match.match_id}>
-                                  <tr className={`${hasRemarksMobile ? 'border-b md:border-b' : 'border-b'} hover:bg-gray-50/50 ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                  <tr className={`${mainRowBorder} hover:bg-gray-50/50 ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                     <td className="py-2 px-1 whitespace-nowrap align-middle">
                                       <span className="text-lg font-medium">{formatTime(match.start_time)}</span>
                                     </td>
@@ -559,28 +693,43 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                     <td className="py-2 px-1">
                                       {/* PC: 1行表示 */}
                                       <div className="hidden md:block text-base">
-                                        <span className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                        <span className={team1Class}>
                                           {match.team1_display_name || "調整中"}
                                         </span>
                                         <span className="text-gray-500 mx-2">&times;</span>
-                                        <span className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                        <span className={team2Class}>
                                           {match.team2_display_name || "調整中"}
                                         </span>
                                       </div>
-                                      {/* スマホ: 縦並び表示 */}
+                                      {/* スマホ: 縦並び */}
                                       <div className="md:hidden text-base space-y-0.5">
-                                        <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                          {match.team1_display_name || "調整中"}
-                                        </div>
+                                        <div className={team1Class}>{match.team1_display_name || "調整中"}</div>
                                         <div className="text-sm text-gray-500">&times;</div>
-                                        <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                          {match.team2_display_name || "調整中"}
-                                        </div>
+                                        <div className={team2Class}>{match.team2_display_name || "調整中"}</div>
                                       </div>
                                     </td>
-                                    <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
-                                      <div className="flex items-center justify-end">
+                                    <td className="py-2 px-1 whitespace-nowrap text-center md:text-right align-middle">
+                                      {/* PC: 横並びスコア */}
+                                      <div className="hidden md:flex items-center justify-end">
                                         <div className="text-base">{result.display}</div>
+                                      </div>
+                                      {/* スマホ: 縦並びスコア */}
+                                      <div className="md:hidden">
+                                        {(result.status === 'completed' || result.status === 'draw' || result.status === 'walkover') ? (
+                                          <div className="flex flex-col items-center leading-tight space-y-0.5">
+                                            <span className={`text-base font-medium ${score1Class}`}>{result.team1Score}</span>
+                                            <span className="text-sm text-gray-500">&nbsp;</span>
+                                            <span className={`text-base font-medium ${score2Class}`}>{result.team2Score}</span>
+                                          </div>
+                                        ) : (result.status === 'ongoing' || result.status === 'completed_unconfirmed') && result.team1Score !== undefined ? (
+                                          <div className="flex flex-col items-center leading-tight space-y-0.5">
+                                            <span className={`text-base font-medium ${result.statusColor || ''}`}>{result.team1Score}</span>
+                                            <span className={`text-xs ${result.statusColor || ''}`}>({result.statusLabel})</span>
+                                            <span className={`text-base font-medium ${result.statusColor || ''}`}>{result.team2Score}</span>
+                                          </div>
+                                        ) : (
+                                          <div className="text-base">{result.display}</div>
+                                        )}
                                       </div>
                                       {hasRemarksMobile && (
                                         <div className="text-xs text-gray-500 mt-1 hidden md:block text-right">
@@ -589,10 +738,10 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                       )}
                                     </td>
                                     {!hasMultipleCourts && (
-                                      <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
+                                      <td className="py-2 px-1 whitespace-nowrap text-right align-middle hidden md:table-cell">
                                         {match.court_number ? (
                                           <div className="flex items-center justify-end text-sm">
-                                            <MapPin className="h-3 w-3 mr-1 text-gray-500 hidden md:inline" />
+                                            <MapPin className="h-3 w-3 mr-1 text-gray-500" />
                                             <span>{match.court_name || match.court_number}</span>
                                           </div>
                                         ) : (
@@ -603,10 +752,21 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   </tr>
                                   {/* スマホ: 備考を全列結合で表示 */}
                                   {hasRemarksMobile && (
-                                    <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                    <tr className={`${!match.match_comment ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                       <td colSpan={hasMultipleCourts ? 4 : 5} className="pb-2 px-1 pt-0">
                                         <div className="text-xs text-gray-500 text-right">
                                           備考: {matchRemarks}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {/* コメント表示（PC・スマホ共通、全列結合で試合下部に表示） */}
+                                  {match.match_comment && (
+                                    <tr className={`border-b ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                      <td colSpan={99} className="pb-2 px-1 pt-1">
+                                        <div className="flex items-start gap-1 text-xs text-blue-600">
+                                          <MessageSquare className="h-3 w-3 shrink-0 mt-0.5" />
+                                          <span>{match.match_comment}</span>
                                         </div>
                                       </td>
                                     </tr>
@@ -675,9 +835,9 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
           );
 
           return (
-            <div key={matchday} className="space-y-0">
-              {/* 節ヘッダー */}
-              <div className={`${bgColor} border border-gray-200 rounded-t-lg px-4 py-3 flex items-center justify-between`}>
+            <div key={matchday} id={`schedule-matchday-${matchday}`} className="space-y-0">
+              {/* 節ヘッダー（sticky：ヘッダー + タブナビ + JumpNav の下に追従） */}
+              <div className={`sticky z-10 ${bgColor} border border-gray-200 rounded-t-lg px-4 py-3 flex items-center justify-between shadow-sm`} style={{ top: `${dateHeaderTop}px` }}>
                 <div className="flex items-center text-2xl font-semibold leading-none tracking-tight">
                   <Trophy className="h-5 w-5 mr-2 text-primary" />
                   第{matchday}節
@@ -694,11 +854,11 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-3 px-1 font-medium w-[3.5rem]">日時</th>
-                          <th className="text-left py-3 px-1 font-medium w-[2.5rem]">試合</th>
-                          <th className="text-left py-3 px-1 font-medium">対戦</th>
-                          <th className="text-right py-3 px-1 font-medium whitespace-nowrap">結果</th>
-                          <th className="text-right py-3 px-1 font-medium hidden md:table-cell">会場</th>
+                          <th className="text-left py-3 px-1 font-medium whitespace-nowrap">日時</th>
+                          <th className="text-left py-3 px-1 font-medium whitespace-nowrap">試合</th>
+                          <th className="text-left py-3 px-1 font-medium w-full">対戦</th>
+                          <th className="text-center md:text-right py-3 px-1 font-medium whitespace-nowrap">結果</th>
+                          <th className="text-center py-3 px-1 font-medium hidden md:table-cell whitespace-nowrap" style={{ minWidth: venueColWidth }}>会場</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -713,8 +873,13 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                             match.override_reason
                           ].filter(Boolean).join(' / ');
                           const hasRemarks = !!matchRemarks;
-                          // モバイルでは会場行・備考行が続く場合、最後の行にborder-bをつける
-                          const mainRowBorder = hasVenue || hasRemarks ? 'md:border-b' : 'border-b';
+                          const hasSubRows = hasVenue || hasRemarks || !!match.match_comment;
+                          const mainRowBorder = hasSubRows ? '' : 'border-b';
+
+                          const team1Class = result.winner === 'team1' ? 'font-bold text-red-600' : match.match_type === 'FM' ? 'text-rose-400' : '';
+                          const team2Class = result.winner === 'team2' ? 'font-bold text-red-600' : match.match_type === 'FM' ? 'text-rose-400' : '';
+                          const score1Class = result.winner === 'team1' ? 'text-red-600 font-bold' : '';
+                          const score2Class = result.winner === 'team2' ? 'text-red-600 font-bold' : '';
 
                           return (
                             <React.Fragment key={match.match_id}>
@@ -729,28 +894,43 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                 <td className="py-2 px-1">
                                   {/* PC: 1行表示 */}
                                   <div className="hidden md:block text-base">
-                                    <span className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                    <span className={team1Class}>
                                       {match.team1_display_name || "調整中"}
                                     </span>
                                     <span className="text-gray-500 mx-2">&times;</span>
-                                    <span className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
+                                    <span className={team2Class}>
                                       {match.team2_display_name || "調整中"}
                                     </span>
                                   </div>
-                                  {/* スマホ: 縦並び表示 */}
+                                  {/* スマホ: 縦並び */}
                                   <div className="md:hidden text-base space-y-0.5">
-                                    <div className={`${result.winner === 'team1' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                      {match.team1_display_name || "調整中"}
-                                    </div>
+                                    <div className={team1Class}>{match.team1_display_name || "調整中"}</div>
                                     <div className="text-sm text-gray-500">&times;</div>
-                                    <div className={`${result.winner === 'team2' ? 'font-bold text-green-600' : match.match_type === 'FM' ? 'text-rose-400' : ''}`}>
-                                      {match.team2_display_name || "調整中"}
-                                    </div>
+                                    <div className={team2Class}>{match.team2_display_name || "調整中"}</div>
                                   </div>
                                 </td>
-                                <td className="py-2 px-1 whitespace-nowrap text-right align-middle">
-                                  <div className="flex items-center justify-end">
+                                <td className="py-2 px-1 whitespace-nowrap text-center md:text-right align-middle">
+                                  {/* PC: 横並びスコア */}
+                                  <div className="hidden md:flex items-center justify-end">
                                     <div className="text-base">{result.display}</div>
+                                  </div>
+                                  {/* スマホ: 縦並びスコア */}
+                                  <div className="md:hidden">
+                                    {(result.status === 'completed' || result.status === 'draw' || result.status === 'walkover') ? (
+                                      <div className="flex flex-col items-center leading-tight space-y-0.5">
+                                        <span className={`text-base font-medium ${score1Class}`}>{result.team1Score}</span>
+                                        <span className="text-sm text-gray-500">&nbsp;</span>
+                                        <span className={`text-base font-medium ${score2Class}`}>{result.team2Score}</span>
+                                      </div>
+                                    ) : (result.status === 'ongoing' || result.status === 'completed_unconfirmed') && result.team1Score !== undefined ? (
+                                      <div className="flex flex-col items-center leading-tight space-y-0.5">
+                                        <span className={`text-base font-medium ${result.statusColor || ''}`}>{result.team1Score}</span>
+                                        <span className={`text-xs ${result.statusColor || ''}`}>({result.statusLabel})</span>
+                                        <span className={`text-base font-medium ${result.statusColor || ''}`}>{result.team2Score}</span>
+                                      </div>
+                                    ) : (
+                                      <div className="text-base">{result.display}</div>
+                                    )}
                                   </div>
                                   {hasRemarks && (
                                     <div className="text-xs text-gray-500 mt-1 hidden md:block text-right">
@@ -759,11 +939,10 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                   )}
                                 </td>
                                 {/* PC: 会場列 */}
-
-                                <td className="py-2 px-1 text-right align-top hidden md:table-cell">
+                                <td className="py-2 px-1 text-center align-middle hidden md:table-cell whitespace-nowrap">
                                   {hasVenue ? (
                                     <div className="text-sm">
-                                      <div className="flex items-center justify-end">
+                                      <div className="flex items-center justify-center">
                                         <MapPin className="h-3 w-3 mr-1 text-gray-500" />
                                         {matchVenue?.google_maps_url ? (
                                           <a href={matchVenue.google_maps_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -774,7 +953,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                                         )}
                                       </div>
                                       {courtDiffersFromVenue && (
-                                        <div className="text-xs text-gray-500">{match.court_name}</div>
+                                        <div className="text-xs text-gray-500 text-center">{match.court_name}</div>
                                       )}
                                     </div>
                                   ) : (
@@ -784,7 +963,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               </tr>
                               {/* スマホ: 全列結合の会場行 */}
                               {hasVenue && (
-                                <tr className={`${!hasRemarks ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                <tr className={`${!hasRemarks && !match.match_comment ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
                                   <td colSpan={4} className="pb-2 px-1 pt-0">
                                     <div className="flex items-center text-xs text-gray-500">
                                       <MapPin className="h-3 w-3 mr-0.5 shrink-0" />
@@ -804,10 +983,21 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
                               )}
                               {/* スマホ: 備考を全列結合で表示 */}
                               {hasRemarks && (
-                                <tr className={`border-b md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
-                                  <td colSpan={4} className="pb-2 px-1 pt-0">
+                                <tr className={`${!match.match_comment ? 'border-b' : ''} md:hidden ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                  <td colSpan={5} className="pb-2 px-1 pt-0">
                                     <div className="text-xs text-gray-500">
                                       備考: {matchRemarks}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              {/* コメント表示（PC・スマホ共通、全列結合で試合下部に表示） */}
+                              {match.match_comment && (
+                                <tr className={`border-b ${isEvenRow ? 'bg-black/[0.03]' : ''}`}>
+                                  <td colSpan={99} className="pb-2 px-1 pt-1">
+                                    <div className="flex items-start gap-1 text-xs text-blue-600">
+                                      <MessageSquare className="h-3 w-3 shrink-0 mt-0.5" />
+                                      <span>{match.match_comment}</span>
                                     </div>
                                   </td>
                                 </tr>
@@ -880,6 +1070,7 @@ export default function TournamentSchedule({ tournamentId, initialMatches, initi
       )}
 
       <OverviewCard filteredMatches={filteredMatches} />
+      <JumpNav filteredMatches={filteredMatches} />
       {isLeagueMode ? (
         <ScheduleByMatchday filteredMatches={filteredMatches} />
       ) : (

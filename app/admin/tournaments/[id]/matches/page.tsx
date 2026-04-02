@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 import {
   Clock,
   Play,
@@ -1035,17 +1036,7 @@ export default function AdminMatchesPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">試合結果入力</h1>
-            <p className="text-sm text-white/70 mt-1">
-              「{tournament.tournament_name}」の試合進行状況管理
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -1055,6 +1046,12 @@ export default function AdminMatchesPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">試合結果入力</span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">試合結果入力</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            「{tournament.tournament_name}」の試合進行状況管理
+          </p>
+        </div>
         <div className="flex items-center justify-end mb-6">
           <Button
             variant="outline"

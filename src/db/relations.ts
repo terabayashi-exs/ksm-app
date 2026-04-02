@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners, mLoginUsers, tFormatAccessGrants } from "./schema";
+import { mTeams, tMatchesFinal, tMatchBlocks, tTournaments, tMatchStatus, tTournamentNotifications, mTournamentFormats, mMatchTemplates, tTournamentFiles, mSubscriptionPlans, mAdministrators, mVenues, tTournamentGroups, mPlayers, tTournamentPlayers, tTournamentTeams, tTournamentMatchOverrides, tTournamentRules, tEmailSendHistory, tPasswordResetTokens, tAdministratorSubscriptions, tSubscriptionUsage, tPaymentHistory, tAnnouncements, tSponsorBanners, mLoginUsers, tFormatAccessGrants, tDisciplinaryActions, tDisciplinarySettings } from "./schema";
 
 export const tMatchesFinalRelations = relations(tMatchesFinal, ({one}) => ({
 	tMatchBlock: one(tMatchBlocks, {
@@ -117,6 +117,8 @@ export const tTournamentGroupsRelations = relations(tTournamentGroups, ({one, ma
 		references: [mAdministrators.adminLoginId]
 	}),
 	tTournaments: many(tTournaments),
+	tDisciplinarySettings: many(tDisciplinarySettings),
+	tDisciplinaryActions: many(tDisciplinaryActions),
 }));
 
 export const mVenuesRelations = relations(mVenues, ({many}) => ({
@@ -230,6 +232,28 @@ export const tSponsorBannersRelations = relations(tSponsorBanners, ({one}) => ({
 	tTournament: one(tTournaments, {
 		fields: [tSponsorBanners.tournamentId],
 		references: [tTournaments.tournamentId]
+	}),
+}));
+
+export const tDisciplinarySettingsRelations = relations(tDisciplinarySettings, ({one}) => ({
+	tTournamentGroup: one(tTournamentGroups, {
+		fields: [tDisciplinarySettings.groupId],
+		references: [tTournamentGroups.groupId]
+	}),
+}));
+
+export const tDisciplinaryActionsRelations = relations(tDisciplinaryActions, ({one}) => ({
+	tTournamentGroup: one(tTournamentGroups, {
+		fields: [tDisciplinaryActions.groupId],
+		references: [tTournamentGroups.groupId]
+	}),
+	tTournament: one(tTournaments, {
+		fields: [tDisciplinaryActions.tournamentId],
+		references: [tTournaments.tournamentId]
+	}),
+	tTournamentTeam: one(tTournamentTeams, {
+		fields: [tDisciplinaryActions.tournamentTeamId],
+		references: [tTournamentTeams.tournamentTeamId]
 	}),
 }));
 

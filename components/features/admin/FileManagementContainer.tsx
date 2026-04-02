@@ -5,16 +5,17 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Upload } from 'lucide-react';
+import { FileText, Upload, Link as LinkIcon } from 'lucide-react';
 import FileUploader from './FileUploader';
 import FileManagementTable from './FileManagementTable';
 
 interface FileManagementContainerProps {
   tournamentId: number;
   onStatsChange?: () => void;
+  filterType?: 'upload' | 'external';
 }
 
-export default function FileManagementContainer({ tournamentId, onStatsChange }: FileManagementContainerProps) {
+export default function FileManagementContainer({ tournamentId, onStatsChange, filterType }: FileManagementContainerProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // ファイルアップロード成功時のコールバック
@@ -34,14 +35,20 @@ export default function FileManagementContainer({ tournamentId, onStatsChange }:
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Upload className="h-5 w-5 mr-2" />
-            ファイル・リンクの追加
+            {filterType === 'external' ? (
+              <><LinkIcon className="h-5 w-5 mr-2" />外部URLリンクの追加</>
+            ) : filterType === 'upload' ? (
+              <><Upload className="h-5 w-5 mr-2" />ファイルの追加</>
+            ) : (
+              <><Upload className="h-5 w-5 mr-2" />ファイル・リンクの追加</>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <FileUploader
             tournamentId={tournamentId}
             onUploadSuccess={handleUploadSuccess}
+            defaultLinkType={filterType}
           />
         </CardContent>
       </Card>
@@ -51,7 +58,9 @@ export default function FileManagementContainer({ tournamentId, onStatsChange }:
         <CardHeader>
           <CardTitle className="flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            登録済みファイル・リンク
+            {filterType === 'external' ? '登録済み外部URLリンク' :
+             filterType === 'upload' ? '登録済みファイル' :
+             '登録済みファイル・リンク'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -59,6 +68,7 @@ export default function FileManagementContainer({ tournamentId, onStatsChange }:
             tournamentId={tournamentId}
             refreshTrigger={refreshTrigger}
             onFilesChange={handleFilesChange}
+            filterType={filterType}
           />
         </CardContent>
       </Card>

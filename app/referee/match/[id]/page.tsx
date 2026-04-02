@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Play, 
   Square, 
-  RotateCcw,
   Plus,
   Minus,
   Clock,
@@ -18,7 +17,6 @@ import {
   MapPin,
   AlertCircle,
   CheckCircle,
-  Timer,
   ArrowLeft
 } from 'lucide-react';
 interface MatchData {
@@ -476,15 +474,6 @@ export default function RefereeMatchPage() {
   };
 
 
-  // ピリオド進行
-  const advancePeriod = async () => {
-    if (!match || match.current_period >= match.period_count) return;
-    
-    await updateMatchStatus('update_period', {
-      current_period: match.current_period + 1
-    });
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -598,12 +587,6 @@ export default function RefereeMatchPage() {
                   <Clock className="w-4 h-4 mr-1" />
                   {match.scheduled_time}
                 </div>
-                {match.match_status === 'ongoing' && (
-                  <div className="flex items-center">
-                    <Timer className="w-4 h-4 mr-1" />
-                    第{match.current_period}ピリオド
-                  </div>
-                )}
               </div>
             </div>
 
@@ -677,17 +660,6 @@ export default function RefereeMatchPage() {
                         結果確定前の試合は、「試合開始前」や「実施中」に戻すことができます。
                       </AlertDescription>
                     </Alert>
-                  )}
-
-                  {match.current_period < match.period_count && (
-                    <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                      onClick={advancePeriod}
-                      disabled={updating || isConfirmed}
-                    >
-                      <RotateCcw className="w-5 h-5 mr-2" />
-                      第{match.current_period + 1}ピリオドへ
-                    </Button>
                   )}
 
                   <Button
@@ -837,16 +809,6 @@ export default function RefereeMatchPage() {
                     <div key={periodNumber} className="border rounded-lg p-4">
                     <Label className="block text-sm font-medium mb-3">
                       {getPeriodName(periodNumber)}
-                      {periodNumber === match.current_period && match.match_status === 'ongoing' && !isConfirmed && (
-                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                          進行中
-                        </span>
-                      )}
-                      {periodNumber === match.current_period && match.match_status === 'completed' && (
-                        <span className="ml-2 text-xs bg-gray-50 text-gray-900 px-2 py-1 rounded">
-                          終了
-                        </span>
-                      )}
                     </Label>
                     
                     <div className="grid grid-cols-2 gap-4">

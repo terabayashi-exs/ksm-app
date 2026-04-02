@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { Plus, Edit, Trash2, Trophy, Timer, Target, ChevronRight, Home } from "lucide-react";
+import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,17 +35,8 @@ export default async function SportTypesPage() {
   const sportTypes = sportTypesResult.rows;
 
   return (
-    <div>
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">競技種別マスタ管理</h1>
-            <p className="text-sm text-white/70 mt-1">
-              大会で使用する競技種別の管理を行います
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-white">
+      <Header />
       <div className="container mx-auto p-6 max-w-7xl">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
           <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
@@ -60,6 +52,12 @@ export default async function SportTypesPage() {
             競技種別マスタ管理
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">競技種別マスタ管理</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            大会で使用する競技種別の管理を行います
+          </p>
+        </div>
         <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline">
             <Link href="/admin/sport-types/create">

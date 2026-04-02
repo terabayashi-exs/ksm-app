@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       team_count,
       match_duration_minutes,
       break_duration_minutes,
+      display_match_duration,
       is_public,
       public_start_date,
       recruitment_start_date,
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
         tournament_dates,
         match_duration_minutes,
         break_duration_minutes,
+        display_match_duration,
         status,
         visibility,
         public_start_date,
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
         archive_ui_version,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
     `, [
       group_id,
       tournament_name,
@@ -145,6 +147,7 @@ export async function POST(request: NextRequest) {
       '{"1": ""}', // tournament_dates: 後で日程・会場設定から更新
       match_duration_minutes,
       break_duration_minutes != null ? break_duration_minutes : defaultBreakDuration,
+      display_match_duration?.trim() || null,
       calculatedStatus,
       is_public ? 'open' : 'preparing',
       public_start_date,

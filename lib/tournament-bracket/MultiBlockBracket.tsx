@@ -1,6 +1,7 @@
 "use client";
 
 import { TournamentBlock } from "./TournamentBlock";
+import { ScrollableContainer } from "@/components/ui/scrollable-container";
 import type { BracketMatch, SportScoreConfig } from "./types";
 import type { PatternType, P6SeedLayout } from "./patterns";
 
@@ -61,31 +62,35 @@ export function MultiBlockBracket({
       {blocks.map((block) => (
         <div
           key={block.blockId}
-          className="border border-gray-200 rounded-lg p-4 bg-white overflow-x-auto"
+          className="border border-gray-200 rounded-lg p-4 bg-white"
         >
-          <TournamentBlock
-            blockId={block.blockId}
-            title={block.title}
-            matches={block.matches}
-            roundLabels={block.roundLabels}
-            seedTeams={block.seedTeams}
-            sportConfig={sportConfig}
-            pattern={block.pattern}
-            seedLayout={block.seedLayout}
-          />
+          <ScrollableContainer>
+            <TournamentBlock
+              blockId={block.blockId}
+              title={block.title}
+              matches={block.matches}
+              roundLabels={block.roundLabels}
+              seedTeams={block.seedTeams}
+              sportConfig={sportConfig}
+              pattern={block.pattern}
+              seedLayout={block.seedLayout}
+            />
+          </ScrollableContainer>
         </div>
       ))}
 
       {/* 決勝ブロック */}
       {finalBlockMatches.length > 0 && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-white overflow-x-auto">
-          <TournamentBlock
-            blockId="FINAL"
-            title={finalBlockTitle}
-            matches={finalBlockMatches}
-            roundLabels={finalBlockRoundLabels}
-            sportConfig={sportConfig}
-          />
+        <div className="border border-gray-200 rounded-lg p-4 bg-white">
+          <ScrollableContainer>
+            <TournamentBlock
+              blockId="FINAL"
+              title={finalBlockTitle}
+              matches={finalBlockMatches}
+              roundLabels={finalBlockRoundLabels}
+              sportConfig={sportConfig}
+            />
+          </ScrollableContainer>
         </div>
       )}
     </div>

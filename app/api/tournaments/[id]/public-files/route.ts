@@ -84,7 +84,8 @@ export async function GET(
         external_url,
         file_size,
         upload_order,
-        uploaded_at
+        uploaded_at,
+        display_date
       FROM t_tournament_files
       WHERE tournament_id = ? AND is_public = 1
       ORDER BY upload_order ASC, uploaded_at ASC
@@ -101,7 +102,8 @@ export async function GET(
       external_url: row.external_url ? String(row.external_url) : undefined,
       file_size: Number(row.file_size),
       upload_order: Number(row.upload_order),
-      uploaded_at: String(row.uploaded_at)
+      uploaded_at: String(row.uploaded_at),
+      display_date: row.display_date ? String(row.display_date) : undefined
     }));
 
     console.log(`📎 公開ファイル取得: 大会${tournamentId} - ${files.length}件`);

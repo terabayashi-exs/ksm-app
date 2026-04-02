@@ -38,7 +38,7 @@ const adminTeamRegistrationSchema = z.object({
       .max(10, 'ポジションは10文字以内で入力してください')
       .optional()
   }))
-  .max(20, '選手は最大20人まで登録可能です')
+  .max(30, '選手は最大30人まで登録可能です')
   .refine((players) => {
     // 背番号の重複チェック（背番号が設定されている選手のみ）
     const numbers = players.filter(p => p.uniform_number !== undefined).map(p => p.uniform_number);

@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Trash2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, Trash2, AlertCircle, CheckCircle, ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 
 interface Manager {
   login_user_id: number;
@@ -85,27 +86,34 @@ export default function AdminTeamManagerPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">
-              チーム担当者管理
-            </h1>
-            {team && (
-              <p className="text-sm text-white/70 mt-1">{team.team_name}</p>
-            )}
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <div className="mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/administrators">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              管理者一覧に戻る
-            </Link>
-          </Button>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            マイダッシュボード
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/admin/administrators" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            利用者マスタ管理
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            チーム担当者管理
+          </span>
+        </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">
+            チーム担当者管理
+          </h1>
+          {team && (
+            <p className="text-sm text-gray-500 mt-1">{team.team_name}</p>
+          )}
         </div>
 
         {message && (

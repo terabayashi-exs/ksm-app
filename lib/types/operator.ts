@@ -18,7 +18,6 @@ export interface OperatorPermissions {
   canPrintRefereeCards: boolean;     // 審判カード印刷
   canSendEmails: boolean;            // メール送信
   canManageDisplaySettings: boolean; // 表示設定（フェーズタブ表示/非表示、チーム表示名変更）
-  canManageNotices: boolean;         // お知らせ管理
   canManageOperators: boolean;       // 運営者管理（運営者の追加）
   canEditTournament: boolean;        // 部門編集
 }
@@ -43,7 +42,6 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canPrintRefereeCards: false,
   canSendEmails: false,
   canManageDisplaySettings: false,
-  canManageNotices: false,
   canManageOperators: false,
   canEditTournament: false,
 };
@@ -76,7 +74,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: true,      // 審判カード印刷
       canSendEmails: false,
       canManageDisplaySettings: false,
-      canManageNotices: false,
+
       canManageOperators: false,
       canEditTournament: false,
     }
@@ -100,7 +98,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: false,
       canSendEmails: false,
       canManageDisplaySettings: false,
-      canManageNotices: false,
+
       canManageOperators: false,
       canEditTournament: false,
     }
@@ -124,7 +122,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: false,
       canSendEmails: true,             // メール送信
       canManageDisplaySettings: true,  // 表示設定
-      canManageNotices: true,          // お知らせ管理
+
       canManageOperators: true,        // 運営者管理
       canEditTournament: false,
     }
@@ -148,7 +146,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: true,
       canSendEmails: true,
       canManageDisplaySettings: true,
-      canManageNotices: true,
+
       canManageOperators: true,
       canEditTournament: true,
     }

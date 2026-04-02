@@ -30,7 +30,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: "部門が見つかりません" }, { status: 404 });
     }
 
-    // 各試合の詳細を取得（試合単位の設定用）
+    // 各試合の詳細を取得（試合単位の設定用、チーム略称優先）
     const matchesResult = await db.execute(`
       SELECT
         ml.match_id,
@@ -43,12 +43,14 @@ export async function GET(
         ml.start_time,
         ml.court_number,
         ml.venue_name,
-        ml.team1_display_name,
-        ml.team2_display_name,
+        COALESCE(tt1.team_omission, tt1.team_name, ml.team1_display_name) as team1_display_name,
+        COALESCE(tt2.team_omission, tt2.team_name, ml.team2_display_name) as team2_display_name,
         ml.block_name,
         ml.court_name
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+      LEFT JOIN t_tournament_teams tt1 ON ml.team1_tournament_team_id = tt1.tournament_team_id
+      LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
       WHERE mb.tournament_id = ? AND ml.matchday IS NOT NULL
       ORDER BY ml.matchday ASC, ml.match_number ASC
     `, [tournamentId]);

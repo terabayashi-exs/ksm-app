@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Plus, ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 import {
   type SponsorBanner,
   getPositionLabel,
@@ -134,16 +135,7 @@ export default function SponsorBannersPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">スポンサーバナー管理</h1>
-            <p className="text-sm text-white/70 mt-1">
-              部門詳細画面に表示するスポンサーバナーを管理します
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -153,6 +145,12 @@ export default function SponsorBannersPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">スポンサーバナー管理</span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">スポンサーバナー管理</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            部門詳細画面に表示するスポンサーバナーを管理します
+          </p>
+        </div>
         <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline">
             <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners/create`}>

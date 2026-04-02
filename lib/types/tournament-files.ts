@@ -19,6 +19,7 @@ export interface TournamentFile {
   uploaded_by: string;
   uploaded_at: string;
   updated_at: string;
+  display_date?: string;       // 表示用添付日付
 }
 
 export interface FileUploadRequest {

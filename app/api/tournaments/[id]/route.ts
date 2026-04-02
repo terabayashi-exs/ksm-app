@@ -241,6 +241,7 @@ export async function PUT(
         tournament_dates = ?,
         match_duration_minutes = ?,
         break_duration_minutes = ?,
+        display_match_duration = ?,
         status = ?,
         visibility = ?,
         public_start_date = ?,
@@ -256,6 +257,7 @@ export async function PUT(
       tournamentDatesJson,
       data.match_duration_minutes,
       data.break_duration_minutes,
+      data.display_match_duration?.trim() || null,
       newStatus,  // 動的に計算したステータス
       data.is_public ? 'open' : 'preparing',
       data.public_start_date,
