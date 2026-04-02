@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mail, ChevronRight, Home } from 'lucide-react';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PageProps {
@@ -33,16 +34,7 @@ export default async function ParticipantsPage({ params }: PageProps) {
 
   return (
     <div>
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">参加チーム管理</h1>
-            <p className="text-sm text-white/70 mt-1">
-              参加チームの確認・ステータス管理・辞退処理を行います
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
           <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
@@ -58,6 +50,12 @@ export default async function ParticipantsPage({ params }: PageProps) {
             参加チーム管理
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">参加チーム管理</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            参加チームの確認・ステータス管理・辞退処理を行います
+          </p>
+        </div>
         <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline">
             <Link href={`/admin/tournaments/${tournamentId}/participants/email`}>

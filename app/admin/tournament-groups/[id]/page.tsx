@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, Pencil, Plus, Calendar, MapPin, Users } from 'lucide-react';
+import { Pencil, Plus, Calendar, MapPin, Users, ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 
 interface TournamentGroup {
   group_id: number;
@@ -112,9 +113,9 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
             <p className="text-destructive">{error || '大会が見つかりません'}</p>
             <Button
               className="mt-4"
-              onClick={() => router.push('/admin/tournament-groups')}
+              onClick={() => router.push('/my?tab=admin')}
             >
-              大会一覧に戻る
+              マイダッシュボードに戻る
             </Button>
           </div>
         </div>
@@ -124,32 +125,37 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-white">{group.group_name}</h1>
-              <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
-                {group.visibility === 'open' ? '公開' : '非公開'}
-              </Badge>
-            </div>
-            {group.organizer && (
-              <p className="text-sm text-white/70 mt-1">
-                主催: {group.organizer}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/tournament-groups">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              大会一覧に戻る
-            </Link>
-          </Button>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            マイダッシュボード
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            {group.group_name}
+          </span>
+        </nav>
+        <div className="mb-8">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-2xl font-bold text-gray-900">{group.group_name}</h1>
+            <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
+              {group.visibility === 'open' ? '公開' : '非公開'}
+            </Badge>
+          </div>
+          {group.organizer && (
+            <p className="text-sm text-gray-500 mt-1">
+              主催: {group.organizer}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline" size="sm">
             <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
               <Pencil className="h-4 w-4 mr-2" />

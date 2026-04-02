@@ -4,7 +4,8 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 import SponsorBannerForm from '@/components/admin/SponsorBannerForm';
 import type { SponsorBanner } from '@/lib/sponsor-banner-specs';
 
@@ -75,23 +76,30 @@ export default function EditSponsorBannerPage() {
   }
 
   return (
-    <div>
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">バナー編集</h1>
-            <p className="text-sm text-white/70 mt-1">スポンサーバナーの情報を編集します</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-white">
+      <Header />
       <div className="container mx-auto py-8 px-4">
-        <div className="mb-6">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`}>
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              バナー一覧に戻る
-            </Link>
-          </Button>
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            マイダッシュボード
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+            スポンサーバナー管理
+          </Link>
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            バナー編集
+          </span>
+        </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">バナー編集</h1>
+          <p className="text-sm text-gray-500 mt-1">スポンサーバナーの情報を編集します</p>
         </div>
         <SponsorBannerForm tournamentId={tournamentId} banner={banner} mode="edit" />
       </div>

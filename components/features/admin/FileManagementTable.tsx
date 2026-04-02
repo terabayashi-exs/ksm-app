@@ -44,6 +44,7 @@ interface FileManagementTableProps {
   tournamentId: number;
   refreshTrigger?: number; // 外部から更新をトリガーするための props
   onFilesChange?: () => void; // ファイル削除・公開設定変更時のコールバック
+  filterType?: 'upload' | 'external'; // タブによるフィルタリング
 }
 
 interface EditState {
@@ -51,6 +52,7 @@ interface EditState {
   file: TournamentFile | null;
   title: string;
   description: string;
+  displayDate: string;
   isPublic: boolean;
 }
 
@@ -80,7 +82,7 @@ function formatDate(dateString: string): string {
   });
 }
 
-export default function FileManagementTable({ tournamentId, refreshTrigger, onFilesChange }: FileManagementTableProps) {
+export default function FileManagementTable({ tournamentId, refreshTrigger, onFilesChange, filterType }: FileManagementTableProps) {
   const [files, setFiles] = useState<TournamentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editState, setEditState] = useState<EditState>({
@@ -88,6 +90,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
     file: null,
     title: '',
     description: '',
+    displayDate: '',
     isPublic: true
   });
   
@@ -127,6 +130,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
       file,
       title: file.file_title,
       description: file.file_description || '',
+      displayDate: file.display_date || '',
       isPublic: Boolean(file.is_public) // 数値からブール値に変換
     });
   };
@@ -138,6 +142,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
       file: null,
       title: '',
       description: '',
+      displayDate: '',
       isPublic: true
     });
   };
@@ -172,6 +177,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
           file_id: editState.file.file_id,
           file_title: editState.title,
           file_description: editState.description,
+          display_date: editState.displayDate || null,
           is_public: editState.isPublic,
           upload_order: editState.file.upload_order
         })
@@ -256,13 +262,19 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
     );
   }
 
-  if (files.length === 0) {
+  const filteredFiles = filterType ? files.filter(f => f.link_type === filterType) : files;
+
+  if (filteredFiles.length === 0) {
     return (
       <div className="text-center py-8">
         <FileText className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-        <p className="text-gray-500">まだファイル・リンクが登録されていません</p>
+        <p className="text-gray-500">
+          {filterType === 'upload' ? 'アップロードファイルはまだありません' :
+           filterType === 'external' ? '外部URLリンクはまだありません' :
+           'まだファイル・リンクが登録されていません'}
+        </p>
         <p className="text-sm text-gray-500 mt-2">
-          上記のフォームを使用してファイルのアップロードまたは外部URLリンクを追加してください
+          上記のフォームを使用して{filterType === 'external' ? '外部URLリンクを追加' : 'ファイルのアップロードまたは外部URLリンクを追加'}してください
         </p>
       </div>
     );
@@ -272,7 +284,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
     <div className="space-y-4">
       {/* 更新ボタン */}
       <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">{files.length}件のファイル</p>
+        <p className="text-sm text-gray-500">{filteredFiles.length}件のファイル</p>
         <Button variant="outline" size="sm" onClick={fetchFiles}>
           <RefreshCw className="h-4 w-4 mr-2" />
           更新
@@ -287,12 +299,12 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
               <TableHead>タイトル</TableHead>
               <TableHead>サイズ</TableHead>
               <TableHead>公開状態</TableHead>
-              <TableHead>アップロード日時</TableHead>
+              <TableHead>添付日付</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {files.map((file) => (
+            {filteredFiles.map((file) => (
               <TableRow key={file.file_id}>
                 <TableCell>
                   <div>
@@ -350,7 +362,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm">{formatDate(file.uploaded_at)}</span>
+                  <span className="text-sm">{file.display_date || formatDate(file.uploaded_at)}</span>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-2">
@@ -364,7 +376,7 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
                         href={file.blob_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        download={file.original_filename}
+                        download={`${file.file_title}.pdf`}
                       >
                         <Download className="h-4 w-4" />
                       </a>
@@ -427,12 +439,28 @@ export default function FileManagementTable({ tournamentId, refreshTrigger, onFi
                               rows={3}
                             />
                           </div>
+                          <div>
+                            <Label htmlFor="edit-display-date">添付日付</Label>
+                            <Input
+                              id="edit-display-date"
+                              type="date"
+                              value={editState.displayDate}
+                              onChange={(e) => setEditState(prev => ({
+                                ...prev,
+                                displayDate: e.target.value
+                              }))}
+                              className="w-48"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              未指定の場合は登録日が表示されます
+                            </p>
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Switch
                               checked={editState.isPublic}
-                              onCheckedChange={(checked) => setEditState(prev => ({ 
-                                ...prev, 
-                                isPublic: checked 
+                              onCheckedChange={(checked) => setEditState(prev => ({
+                                ...prev,
+                                isPublic: checked
                               }))}
                             />
                             <Label>公開する</Label>

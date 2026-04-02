@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,11 +32,6 @@ const tournamentGroupSchema = z.object({
 
 type TournamentGroupFormData = z.infer<typeof tournamentGroupSchema>;
 
-interface Venue {
-  venue_id: number;
-  venue_name: string;
-}
-
 interface TournamentGroupEditFormProps {
   initialData: {
     group_id: number;
@@ -55,7 +50,6 @@ interface TournamentGroupEditFormProps {
 export default function TournamentGroupEditForm({ initialData }: TournamentGroupEditFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [venues, setVenues] = useState<Venue[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -80,29 +74,6 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
   });
 
   const selectedVisibility = watch('visibility');
-
-  // 会場一覧取得（取得後に venue_id を再セットして選択状態を正しく反映）
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        const response = await fetch('/api/venues?scope=available');
-        const data = await response.json();
-        if (data.success) {
-          setVenues(data.data);
-          // 会場リストが揃ったタイミングで初期値を再セット
-          setValue(
-            'venue_id',
-            initialData.venue_id ? String(initialData.venue_id) : 'none'
-          );
-        }
-      } catch (error) {
-        console.error('会場一覧の取得に失敗:', error);
-      }
-    };
-
-    fetchVenues();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const onSubmit = async (data: TournamentGroupFormData) => {
     setIsSubmitting(true);
@@ -172,27 +143,6 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
             {errors.organizer && (
               <p className="text-sm text-red-500 mt-1">{errors.organizer.message}</p>
             )}
-          </div>
-
-          {/* 会場 */}
-          <div>
-            <Label htmlFor="venue_id">会場</Label>
-            <Select
-              value={watch('venue_id')}
-              onValueChange={(value) => setValue('venue_id', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="会場を選択してください" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">選択なし</SelectItem>
-                {venues.map((venue) => (
-                  <SelectItem key={venue.venue_id} value={String(venue.venue_id)}>
-                    {venue.venue_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* 大会説明 */}

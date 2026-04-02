@@ -3,11 +3,10 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import DivisionSwitcher from '@/components/features/tournament/DivisionSwitcher';
 import ShareButton from '@/components/public/ShareButton';
 import TournamentTabNav from '@/components/public/TournamentTabNav';
 import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
-import { Home, ChevronRight, FileText, Bell } from 'lucide-react';
+import { Home, ChevronRight, FileText } from 'lucide-react';
 import { db } from '@/lib/db';
 import type { TournamentPhase } from '@/lib/types/tournament-phases';
 
@@ -34,7 +33,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
     throw new Error('有効な大会IDを指定してください');
   }
 
-  const [data, publicFilesResult, noticesResult] = await Promise.all([
+  const [data, publicFilesResult, noticesResult, sportCodeResult] = await Promise.all([
     getTournamentWithGroupInfo(tournamentId),
     db.execute(
       `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
@@ -44,10 +43,17 @@ export default async function TournamentDetailLayout({ children, params }: Layou
       `SELECT COUNT(*) as count FROM t_tournament_notices WHERE tournament_id = ? AND is_active = 1`,
       [tournamentId]
     ).catch(() => ({ rows: [{ count: 0 }] })),
+    db.execute(
+      `SELECT st.sport_code FROM t_tournaments t
+       JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
+       WHERE t.tournament_id = ?`,
+      [tournamentId]
+    ).catch(() => ({ rows: [] })),
   ]);
-  const { tournament, group, sibling_divisions } = data;
+  const { tournament, group } = data;
   const hasPublicFiles = Number(publicFilesResult.rows[0]?.count ?? 0) > 0;
   const hasNotices = Number(noticesResult.rows[0]?.count ?? 0) > 0;
+  const sportCode = sportCodeResult.rows.length > 0 ? String(sportCodeResult.rows[0].sport_code) : '';
 
   // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
   // layout のUI（タブ等）はスキップして children をそのまま返す
@@ -90,41 +96,33 @@ export default async function TournamentDetailLayout({ children, params }: Layou
 
         {/* ページヘッダー */}
         <div className="mb-8 no-print">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">{tournament.tournament_name}</h1>
-              {group && (
-                <p className="text-gray-500">（{group.group_name}）</p>
-              )}
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                {hasNotices && (
-                  <Link
-                    href={`/tournaments/${tournament.tournament_id}#tournament-notices`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-medium hover:bg-amber-200 transition-colors"
-                  >
-                    <Bell className="h-3.5 w-3.5" />
-                    お知らせがあります
-                  </Link>
-                )}
-                {hasPublicFiles && (
-                  <Link
-                    href={`/tournaments/${tournament.tournament_id}#public-files`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium hover:bg-blue-200 transition-colors"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    大会資料があります
-                  </Link>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:ml-4">
-              <DivisionSwitcher
-                currentDivisionId={tournament.tournament_id}
-                currentDivisionName={tournament.tournament_name}
-                siblingDivisions={sibling_divisions}
-              />
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 truncate">{tournament.tournament_name}</h1>
+            <div className="shrink-0">
               <ShareButton tournamentName={tournament.tournament_name} />
             </div>
+          </div>
+          {group && (
+            <p className="text-gray-500 mt-1">（{group.group_name}）</p>
+          )}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {hasNotices && (
+              <Link
+                href={`/tournaments/${tournament.tournament_id}#tournament-notices`}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-medium hover:bg-amber-200 transition-colors"
+              >
+                お知らせあり
+              </Link>
+            )}
+            {hasPublicFiles && (
+              <Link
+                href={`/tournaments/${tournament.tournament_id}#public-files`}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium hover:bg-blue-200 transition-colors"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                大会資料あり
+              </Link>
+            )}
           </div>
         </div>
 
@@ -132,6 +130,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
         <TournamentTabNav
           tournamentId={tournament.tournament_id}
           phases={phaseList}
+          sportCode={sportCode}
         />
 
         {/* タブコンテンツ */}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -189,20 +190,12 @@ export default function QRListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* ヘッダー（印刷時非表示） */}
-      <div className="bg-base-800 border-b-[3px] border-primary no-print">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">審判用QRコード一覧</h1>
-            <p className="text-sm text-white/70 mt-1">
-              試合前・進行中の試合のQRコードを表示します（全{filteredMatches.length}試合）
-            </p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-white print:min-h-0 print-outer-wrapper">
+      <div className="no-print">
+        <Header />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:px-4 print:py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print-inner-wrapper">
         {/* パンくず（印刷時非表示） */}
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6 no-print">
           <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
@@ -211,6 +204,12 @@ export default function QRListPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">QRコード一覧</span>
         </nav>
+        <div className="mb-8 no-print">
+          <h1 className="text-2xl font-bold text-gray-900">審判用QRコード一覧</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            試合前・進行中の試合のQRコードを表示します（全{filteredMatches.length}試合）
+          </p>
+        </div>
 
         {validity && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium mb-6 no-print">
@@ -402,9 +401,17 @@ export default function QRListPage() {
                             unoptimized
                             onLoad={() => setLoadedQrIds(prev => new Set(prev).add(match.match_id))}
                           />
-                          <p className="text-xs text-gray-500 mt-1 text-center no-print">
-                            QRスキャンで結果入力
-                          </p>
+                          {validity && (
+                            <p className="text-sm text-gray-500 mt-1 text-center qr-validity">
+                              期限：{new Date(validity.validUntil).toLocaleString('ja-JP', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          )}
                         </div>
                         <div className="flex-1 border border-gray-300 rounded-md p-1 remarks-box flex flex-col">
                           <div className="text-xs text-gray-400 mb-1 remarks-title">備考（得点者・警告等）</div>
@@ -432,6 +439,10 @@ export default function QRListPage() {
 
           .no-print {
             display: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
           }
 
           @page {
@@ -440,10 +451,13 @@ export default function QRListPage() {
           }
 
           /* コンテナリセット */
-          .container {
+          .container,
+          .print-outer-wrapper,
+          .print-inner-wrapper {
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
+            min-height: 0 !important;
           }
 
           /* ページラッパー: 1ページ = 2列×4行のグリッド */
@@ -589,10 +603,20 @@ export default function QRListPage() {
           }
 
           .qr-code-image {
-            width: 28mm !important;
-            height: 28mm !important;
-            min-width: 28mm !important;
-            min-height: 28mm !important;
+            width: 25mm !important;
+            height: 25mm !important;
+            min-width: 25mm !important;
+            min-height: 25mm !important;
+          }
+
+          .qr-validity {
+            font-size: 8px !important;
+            margin-top: 0.5mm !important;
+            line-height: 1.2 !important;
+          }
+
+          .remarks-box {
+            max-width: 55% !important;
           }
 
           .remarks-box {

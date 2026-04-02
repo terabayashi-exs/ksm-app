@@ -26,6 +26,7 @@ export interface Tournament {
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
   match_duration_minutes: number;
   break_duration_minutes: number;
+  display_match_duration?: string;
   status: TournamentStatus;
   visibility: number; // 公開フラグ (0: 非公開, 1: 公開)
   show_players_public?: boolean; // 選手情報公開フラグ (false: 非公開, true: 公開)
@@ -86,7 +87,6 @@ export interface Tournament {
     canPrintRefereeCards?: boolean;
     canSendEmails?: boolean;
     canManageDisplaySettings?: boolean;
-    canManageNotices?: boolean;
     canManageOperators?: boolean;
     canEditTournament?: boolean;
   } | null;

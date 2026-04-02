@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { FILE_VALIDATION, type LinkType } from '@/lib/types/tournament-files';
 interface FileUploaderProps {
   tournamentId: number;
   onUploadSuccess?: () => void;
+  defaultLinkType?: LinkType;
 }
 
 interface UploadState {
@@ -23,6 +24,7 @@ interface UploadState {
   file: File | null;
   title: string;
   description: string;
+  displayDate: string;
   externalUrl: string;
   uploading: boolean;
   progress: number;
@@ -39,18 +41,26 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export default function FileUploader({ tournamentId, onUploadSuccess }: FileUploaderProps) {
+export default function FileUploader({ tournamentId, onUploadSuccess, defaultLinkType }: FileUploaderProps) {
   const [state, setState] = useState<UploadState>({
-    linkType: 'upload',
+    linkType: defaultLinkType || 'upload',
     file: null,
     title: '',
     description: '',
+    displayDate: '',
     externalUrl: '',
     uploading: false,
     progress: 0,
     error: null,
     success: false
   });
+
+  // defaultLinkType変更時にlinkTypeを同期
+  useEffect(() => {
+    if (defaultLinkType) {
+      setState(prev => ({ ...prev, linkType: defaultLinkType, file: null, externalUrl: '', displayDate: '', error: null, success: false }));
+    }
+  }, [defaultLinkType]);
 
   // ドロップゾーンの設定
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -152,6 +162,9 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
         formData.append('description', state.description.trim());
       }
       formData.append('upload_order', '0');
+      if (state.displayDate.trim()) {
+        formData.append('display_date', state.displayDate.trim());
+      }
 
       if (state.linkType === 'upload' && state.file) {
         formData.append('file', state.file);
@@ -188,6 +201,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
         file: null,
         title: '',
         description: '',
+        displayDate: '',
         externalUrl: ''
       }));
 
@@ -217,35 +231,37 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
 
   return (
     <div className="space-y-6">
-      {/* リンクタイプ選択 */}
-      <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setState(prev => ({ ...prev, linkType: 'upload', externalUrl: '', error: null }))}
-          className={`flex-1 ${
-            state.linkType === 'upload'
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
-              : 'hover:bg-gray-100'
-          }`}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          ファイルアップロード
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setState(prev => ({ ...prev, linkType: 'external', file: null, error: null }))}
-          className={`flex-1 ${
-            state.linkType === 'external'
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
-              : 'hover:bg-gray-100'
-          }`}
-        >
-          <LinkIcon className="h-4 w-4 mr-2" />
-          外部URLリンク
-        </Button>
-      </div>
+      {/* リンクタイプ選択（タブでフィルタされていない場合のみ表示） */}
+      {!defaultLinkType && (
+        <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setState(prev => ({ ...prev, linkType: 'upload', externalUrl: '', error: null }))}
+            className={`flex-1 ${
+              state.linkType === 'upload'
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
+                : 'hover:bg-gray-100'
+            }`}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            ファイルアップロード
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setState(prev => ({ ...prev, linkType: 'external', file: null, error: null }))}
+            className={`flex-1 ${
+              state.linkType === 'external'
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
+                : 'hover:bg-gray-100'
+            }`}
+          >
+            <LinkIcon className="h-4 w-4 mr-2" />
+            外部URLリンク
+          </Button>
+        </div>
+      )}
 
       {/* ファイルアップロードモード */}
       {state.linkType === 'upload' && (
@@ -341,6 +357,20 @@ export default function FileUploader({ tournamentId, onUploadSuccess }: FileUplo
               className="mt-1"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="file-display-date">添付日付（オプション）</Label>
+            <Input
+              id="file-display-date"
+              type="date"
+              value={state.displayDate}
+              onChange={(e) => setState(prev => ({ ...prev, displayDate: e.target.value }))}
+              className="mt-1 w-48"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              未指定の場合は登録日が表示されます
+            </p>
           </div>
         </div>
       )}

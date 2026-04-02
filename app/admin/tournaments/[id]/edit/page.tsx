@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 import TournamentEditForm from '@/components/forms/TournamentEditForm';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
@@ -112,17 +113,7 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">部門編集</h1>
-            <p className="text-sm text-white/70 mt-1">
-              部門「{tournament.tournament_name}」の設定を編集します
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -140,6 +131,12 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
             部門編集
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">部門編集</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            部門「{tournament.tournament_name}」の設定を編集します
+          </p>
+        </div>
         <TournamentEditForm tournament={tournament} />
       </div>
     </div>

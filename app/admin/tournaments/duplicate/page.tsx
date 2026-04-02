@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, Search, ChevronRight, ChevronLeft, CheckCircle, XCircle, Users, X, Plus, Building2, Trash2, Home } from 'lucide-react';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 
 interface SportType {
   sport_type_id: number;
@@ -343,17 +344,7 @@ export default function TournamentDuplicatePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">大会・部門複製</h1>
-            <p className="text-sm text-white/70 mt-1">
-              既存の部門設定を複製して、新しい大会や部門を効率的に作成できます
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -370,6 +361,12 @@ export default function TournamentDuplicatePage() {
             大会・部門複製
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">大会・部門複製</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            既存の部門設定を複製して、新しい大会や部門を効率的に作成できます
+          </p>
+        </div>
         {/* ステップインジケーター */}
         <div className="flex items-center justify-center mb-8 gap-2">
           {[

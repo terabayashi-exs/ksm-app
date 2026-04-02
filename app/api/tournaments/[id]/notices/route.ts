@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const tournamentId = parseInt(id);
 
   const result = await db.execute(
-    `SELECT tournament_notice_id, content, display_order, created_at
+    `SELECT tournament_notice_id, content, display_order, created_at, updated_at
      FROM t_tournament_notices
      WHERE tournament_id = ? AND is_active = 1
      ORDER BY display_order DESC, tournament_notice_id DESC`,
@@ -25,6 +25,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       content: String(row.content),
       display_order: Number(row.display_order),
       created_at: row.created_at ? String(row.created_at) : null,
+      updated_at: row.updated_at ? String(row.updated_at) : null,
     })),
   });
 }

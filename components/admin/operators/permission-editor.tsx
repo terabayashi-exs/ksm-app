@@ -60,7 +60,6 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
           <PermCheckbox id="canManageSponsors" label="スポンサー管理" />
           <PermCheckbox id="canSendEmails" label="メール送信" />
           <PermCheckbox id="canManageDisplaySettings" label="表示設定" />
-          <PermCheckbox id="canManageNotices" label="お知らせ管理" />
           <PermCheckbox id="canManageOperators" label="運営者管理" />
           <PermCheckbox id="canEditTournament" label="部門編集" />
         </div>

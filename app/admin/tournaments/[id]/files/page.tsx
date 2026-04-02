@@ -1,14 +1,16 @@
 // app/admin/tournaments/[id]/files/page.tsx
-// 管理者ファイル管理画面
+// 管理者ファイル・お知らせ管理画面
 
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import FileManagementContainer from '@/components/features/admin/FileManagementContainer';
+import TournamentNoticeManagement from '@/components/features/tournament/TournamentNoticeManagement';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, HardDrive, Upload, Loader2, Link as LinkIcon, ChevronRight, Home } from 'lucide-react';
+import { FileText, HardDrive, Upload, Loader2, Link as LinkIcon, ChevronRight, Home, Bell } from 'lucide-react';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 
 // ファイルサイズを人間が読みやすい形式に変換
 function formatFileSize(bytes: number): string {
@@ -19,17 +21,23 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+type TabType = 'notices' | 'files' | 'links';
+
 export default function TournamentFilesPage() {
   const params = useParams();
   const router = useRouter();
   const tournamentId = parseInt(params.id as string);
 
   const [loading, setLoading] = useState(true);
+  const [tournamentName, setTournamentName] = useState('');
   const [totalCount, setTotalCount] = useState(0);
   const [uploadFiles, setUploadFiles] = useState(0);
   const [externalLinks, setExternalLinks] = useState(0);
   const [totalSize, setTotalSize] = useState(0);
   const [publicCount, setPublicCount] = useState(0);
+  const [totalNotices, setTotalNotices] = useState(0);
+  const [activeNotices, setActiveNotices] = useState(0);
+  const [activeTab, setActiveTab] = useState<TabType>('notices');
 
   const fetchStats = async () => {
     try {
@@ -41,11 +49,14 @@ export default function TournamentFilesPage() {
       const data = await response.json();
 
       if (data.success) {
+        setTournamentName(data.tournament_name || '');
         setTotalCount(data.total_count);
         setUploadFiles(data.upload_files);
         setExternalLinks(data.external_links);
         setTotalSize(data.total_size);
         setPublicCount(data.public_count);
+        setTotalNotices(data.total_notices);
+        setActiveNotices(data.active_notices);
       }
     } catch (error) {
       console.error('データ取得エラー:', error);
@@ -67,19 +78,15 @@ export default function TournamentFilesPage() {
     );
   }
 
+  const tabs: { key: TabType; label: string; count: number }[] = [
+    { key: 'notices', label: 'お知らせ', count: totalNotices },
+    { key: 'files', label: 'アップロードファイル', count: uploadFiles },
+    { key: 'links', label: '外部URLリンク', count: externalLinks },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー部分 */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-              <h1 className="text-2xl font-bold text-white">ファイル管理</h1>
-              <p className="text-sm text-white/70">
-                大会に関連するファイルをアップロード・管理できます。公開設定で一般ユーザーへの共有も可能です。
-              </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -96,60 +103,109 @@ export default function TournamentFilesPage() {
             ファイル管理
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">ファイル管理</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            大会に関連するお知らせ・ファイル・外部リンクを管理できます。
+          </p>
+        </div>
 
         {/* 統計情報 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center">
-                <Upload className="h-8 w-8 text-primary" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">アップロードファイル</p>
-                  <p className="text-2xl font-bold text-gray-900">{uploadFiles}</p>
+                <Bell className="h-7 w-7 text-amber-600 shrink-0" />
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-500">お知らせ</p>
+                  <p className="text-xl font-bold text-gray-900">{activeNotices}<span className="text-sm font-normal text-gray-400"> / {totalNotices}</span></p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center">
-                <LinkIcon className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">外部URLリンク</p>
-                  <p className="text-2xl font-bold text-gray-900">{externalLinks}</p>
+                <Upload className="h-7 w-7 text-primary shrink-0" />
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-500">アップロード</p>
+                  <p className="text-xl font-bold text-gray-900">{uploadFiles}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center">
-                <HardDrive className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">総容量</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatFileSize(totalSize)}</p>
+                <LinkIcon className="h-7 w-7 text-purple-600 shrink-0" />
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-500">外部リンク</p>
+                  <p className="text-xl font-bold text-gray-900">{externalLinks}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center">
-                <FileText className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">公開中</p>
-                  <p className="text-2xl font-bold text-gray-900">{publicCount} / {totalCount}</p>
+                <HardDrive className="h-7 w-7 text-green-600 shrink-0" />
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-500">総容量</p>
+                  <p className="text-xl font-bold text-gray-900">{formatFileSize(totalSize)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center">
+                <FileText className="h-7 w-7 text-orange-600 shrink-0" />
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-500">公開中</p>
+                  <p className="text-xl font-bold text-gray-900">{publicCount}<span className="text-sm font-normal text-gray-400"> / {totalCount}</span></p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* ファイルアップロード・管理統合コンテナ */}
-        <FileManagementContainer tournamentId={tournamentId} onStatsChange={fetchStats} />
+        {/* タブ切り替え */}
+        <div className="border-b mb-6">
+          <div className="flex gap-0 -mb-px">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab.key
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* タブコンテンツ */}
+        {activeTab === 'notices' && (
+          <TournamentNoticeManagement tournamentId={tournamentId} tournamentName={tournamentName} />
+        )}
+        {(activeTab === 'files' || activeTab === 'links') && (
+          <FileManagementContainer tournamentId={tournamentId} onStatsChange={fetchStats} filterType={activeTab === 'files' ? 'upload' : 'external'} />
+        )}
       </div>
     </div>
   );

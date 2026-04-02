@@ -8,6 +8,7 @@ import type { TournamentPhase } from '@/lib/types/tournament-phases';
 interface TournamentTabNavProps {
   tournamentId: number;
   phases: TournamentPhase[];
+  sportCode?: string;
 }
 
 function getPhaseIcon(phase: TournamentPhase) {
@@ -24,7 +25,7 @@ interface TabDef {
   icon: React.ReactNode;
 }
 
-export default function TournamentTabNav({ tournamentId, phases }: TournamentTabNavProps) {
+export default function TournamentTabNav({ tournamentId, phases, sportCode: _sportCode }: TournamentTabNavProps) {
   const pathname = usePathname();
   const basePath = `/tournaments/${tournamentId}`;
 
@@ -53,6 +54,13 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
       label: '参加チーム',
       icon: <Users className="h-4 w-4 mr-1.5" />,
     },
+    // TODO: テスト完了後に懲罰タブを有効化する
+    // ...(sportCode && isDisciplinarySport(sportCode) ? [{
+    //   value: 'disciplinary',
+    //   href: `${basePath}/disciplinary`,
+    //   label: '懲罰',
+    //   icon: <ShieldAlert className="h-4 w-4 mr-1.5" />,
+    // }] : []),
     {
       value: 'overview',
       href: basePath,
@@ -87,7 +95,7 @@ export default function TournamentTabNav({ tournamentId, phases }: TournamentTab
   };
 
   return (
-    <nav className={`grid w-full mb-8 grid-cols-3 ${mobileGridRows} gap-1 ${smGridCols} sm:grid-rows-1 no-print`}>
+    <nav id="tournament-tab-nav" className={`sticky top-[67px] z-40 bg-white pt-2 pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 grid w-full grid-cols-3 ${mobileGridRows} gap-1 ${smGridCols} sm:grid-rows-1 no-print`}>
       {tabs.map((tab) => (
         <Link
           key={tab.value}

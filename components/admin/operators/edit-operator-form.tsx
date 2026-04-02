@@ -321,18 +321,17 @@ export default function EditOperatorForm({
                     canManageSponsors: 'スポンサー管理',
                     canSendEmails: 'メール送信',
                     canManageDisplaySettings: '表示設定',
-                    canManageNotices: 'お知らせ管理',
                     canManageOperators: '運営者管理',
                     canEditTournament: '部門編集',
                   };
                   const categoryOrder = [
                     'canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canChangeFormat', 'canManageParticipants', 'canPrintRefereeCards',
                     'canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules',
-                    'canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageNotices', 'canManageOperators', 'canEditTournament',
+                    'canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageOperators', 'canEditTournament',
                   ];
                   const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canChangeFormat', 'canManageParticipants', 'canPrintRefereeCards'];
                   const eventDayPerms = ['canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules'];
-                  const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageNotices', 'canManageOperators', 'canEditTournament'];
+                  const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageOperators', 'canEditTournament'];
 
                   return Object.entries(getEffectivePermissions())
                     .filter(([_, value]) => value === true)

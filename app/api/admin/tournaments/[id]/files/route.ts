@@ -69,7 +69,8 @@ export async function GET(
         is_public,
         uploaded_by,
         uploaded_at,
-        updated_at
+        updated_at,
+        display_date
       FROM t_tournament_files
       WHERE tournament_id = ?
       ORDER BY upload_order ASC, uploaded_at DESC
@@ -90,7 +91,8 @@ export async function GET(
       is_public: Boolean(row.is_public),
       uploaded_by: String(row.uploaded_by),
       uploaded_at: String(row.uploaded_at),
-      updated_at: String(row.updated_at)
+      updated_at: String(row.updated_at),
+      display_date: row.display_date ? String(row.display_date) : undefined
     }));
 
     // 統計情報を計算
@@ -142,7 +144,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { file_id, file_title, file_description, is_public, upload_order } = body;
+    const { file_id, file_title, file_description, is_public, upload_order, display_date } = body;
 
     if (!file_id || !file_title) {
       return NextResponse.json(
@@ -166,12 +168,13 @@ export async function PUT(
 
     // ファイル情報更新
     await db.execute(`
-      UPDATE t_tournament_files 
-      SET 
+      UPDATE t_tournament_files
+      SET
         file_title = ?,
         file_description = ?,
         is_public = ?,
         upload_order = ?,
+        display_date = ?,
         updated_at = datetime('now', '+9 hours')
       WHERE file_id = ? AND tournament_id = ?
     `, [
@@ -179,6 +182,7 @@ export async function PUT(
       file_description?.trim() || null,
       is_public !== false ? 1 : 0, // デフォルトは公開
       upload_order || 0,
+      display_date?.trim() || null,
       file_id,
       tournamentId
     ]);

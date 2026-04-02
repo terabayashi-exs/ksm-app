@@ -40,6 +40,7 @@ export const tMatchesFinal = sqliteTable("t_matches_final", {
 	matchStatus: text("match_status").default("completed").notNull(),
 	resultStatus: text("result_status").default("confirmed").notNull(),
 	remarks: text(),
+	matchComment: text("match_comment"),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 	cancellationType: text("cancellation_type"),
@@ -122,6 +123,7 @@ export const tMatchesLive = sqliteTable("t_matches_live", {
 	matchStatus: text("match_status").default("scheduled").notNull(),
 	resultStatus: text("result_status").default("none").notNull(),
 	remarks: text(),
+	matchComment: text("match_comment"),
 	confirmedBy: text("confirmed_by"),
 	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
@@ -394,6 +396,7 @@ export const tTournamentFiles = sqliteTable("t_tournament_files", {
 	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 	externalUrl: text("external_url"),
 	linkType: text("link_type").default("upload"),
+	displayDate: text("display_date"),
 },
 (_table) => [
 	index("idx_tournament_files_order").on(_table.tournamentId, _table.uploadOrder),
@@ -511,6 +514,7 @@ export const tTournaments = sqliteTable("t_tournaments", {
 	tournamentDates: text("tournament_dates").notNull(),
 	matchDurationMinutes: integer("match_duration_minutes").notNull(),
 	breakDurationMinutes: integer("break_duration_minutes").notNull(),
+	displayMatchDuration: text("display_match_duration"),
 	status: text().default("planning").notNull(),
 	visibility: text().default("draft").notNull(),
 	publicStartDate: text("public_start_date"),
@@ -1010,4 +1014,39 @@ export const tOperatorInvitations = sqliteTable("t_operator_invitations", {
 	index("idx_operator_invitations_token").on(_table.token),
 	index("idx_operator_invitations_status").on(_table.status),
 	index("idx_operator_invitations_invited_by").on(_table.invitedByLoginUserId),
+]);
+
+// 懲罰設定テーブル（大会グループ単位）
+export const tDisciplinarySettings = sqliteTable("t_disciplinary_settings", {
+	settingId: integer("setting_id").primaryKey({ autoIncrement: true }),
+	groupId: integer("group_id").notNull().unique().references(() => tTournamentGroups.groupId, { onDelete: "cascade" }),
+	yellowThreshold: integer("yellow_threshold").notNull().default(2),  // イエロー累積閾値
+	isEnabled: integer("is_enabled").notNull().default(1),              // 有効/無効
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+});
+
+// 懲罰記録テーブル（カード記録）
+export const tDisciplinaryActions = sqliteTable("t_disciplinary_actions", {
+	actionId: integer("action_id").primaryKey({ autoIncrement: true }),
+	groupId: integer("group_id").notNull().references(() => tTournamentGroups.groupId, { onDelete: "cascade" }),
+	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
+	matchId: integer("match_id").notNull(),
+	tournamentTeamId: integer("tournament_team_id").notNull().references(() => tTournamentTeams.tournamentTeamId),
+	playerName: text("player_name").notNull(),              // 正規化済み選手名
+	cardType: text("card_type").notNull(),                  // 'yellow' | 'red' | 'second_yellow'
+	reasonCode: integer("reason_code").notNull(),           // 理由プリセット（1-7）
+	reasonText: text("reason_text"),                        // 自由記述の補足（任意）
+	suspensionMatches: integer("suspension_matches").notNull().default(0), // 出場停止試合数
+	isVoid: integer("is_void").notNull().default(0),        // 取消フラグ
+	recordedBy: text("recorded_by"),                        // 記録者ログインID
+	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+},
+(_table) => [
+	index("idx_disciplinary_group").on(_table.groupId),
+	index("idx_disciplinary_tournament").on(_table.tournamentId),
+	index("idx_disciplinary_team").on(_table.tournamentTeamId),
+	index("idx_disciplinary_match").on(_table.matchId),
+	index("idx_disciplinary_player").on(_table.tournamentTeamId, _table.playerName),
 ]);

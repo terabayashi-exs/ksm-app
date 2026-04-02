@@ -72,11 +72,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   const { players } = body;
 
-  if (!Array.isArray(players) || players.length === 0) {
-    return NextResponse.json({ success: false, error: '選手は1名以上必要です' }, { status: 400 });
+  if (!Array.isArray(players)) {
+    return NextResponse.json({ success: false, error: 'リクエストの形式が不正です' }, { status: 400 });
   }
-  if (players.length > 20) {
-    return NextResponse.json({ success: false, error: '選手は20名以内にしてください' }, { status: 400 });
+  if (players.length > 30) {
+    return NextResponse.json({ success: false, error: '選手は30名以内にしてください' }, { status: 400 });
   }
 
   // バリデーション

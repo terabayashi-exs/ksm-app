@@ -40,6 +40,11 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
             <Badge className="text-xs bg-white/15 text-white/80 border-white/20 hover:bg-white/20">
               β版
             </Badge>
+            {session?.user && (
+              <Link href="/my" className="text-white/70 hover:text-white text-sm font-medium transition-colors ml-1">
+                ｜管理
+              </Link>
+            )}
           </div>
 
           {/* デスクトップ: CTAボタン + ユーザーメニュー */}

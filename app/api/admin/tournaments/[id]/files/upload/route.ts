@@ -93,6 +93,7 @@ export async function POST(
     const uploadOrder = parseInt(formData.get('upload_order') as string) || 0;
     const linkType = formData.get('link_type') as string || 'upload';
     const externalUrl = formData.get('external_url') as string | null;
+    const displayDate = formData.get('display_date') as string | null;
     
     console.log('📂 ファイル情報:', {
       filename: file?.name,
@@ -144,8 +145,9 @@ export async function POST(
           file_size,
           mime_type,
           upload_order,
-          uploaded_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          uploaded_by,
+          display_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         tournamentId,
         'external',
@@ -157,7 +159,8 @@ export async function POST(
         0,
         'text/uri-list',
         uploadOrder,
-        session.user.id
+        session.user.id,
+        displayDate?.trim() || null
       ]);
 
       // 大会のファイル数を更新
@@ -301,8 +304,9 @@ export async function POST(
         file_size,
         mime_type,
         upload_order,
-        uploaded_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        uploaded_by,
+        display_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       tournamentId,
       'upload',
@@ -313,7 +317,8 @@ export async function POST(
       file.size,
       file.type,
       uploadOrder,
-      session.user.id
+      session.user.id,
+      displayDate?.trim() || null
     ]);
 
     // 大会のファイル数を更新

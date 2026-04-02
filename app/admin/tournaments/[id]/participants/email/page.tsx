@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Send, AlertCircle, Loader2, Users, ChevronRight, Home } from 'lucide-react';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 import { EMAIL_PRESETS, EmailPresetId } from '@/lib/email/templates-broadcast';
 
 // 自動送信メールのtemplate_id一覧（履歴から除外する）
@@ -354,16 +355,7 @@ export default function EmailSendPage() {
 
   return (
     <div>
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">メール一括送信</h1>
-            <p className="text-sm text-white/70 mt-1">
-              参加チームの代表者にメールを一括送信します
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
           <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
@@ -372,6 +364,12 @@ export default function EmailSendPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">メール送信</span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">メール一括送信</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            参加チームの代表者にメールを一括送信します
+          </p>
+        </div>
         <div className="space-y-6">
           {/* 注意事項 */}
         <Card className="border-amber-200 bg-amber-50">
