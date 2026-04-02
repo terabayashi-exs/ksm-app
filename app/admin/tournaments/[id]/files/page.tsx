@@ -10,6 +10,7 @@ import TournamentNoticeManagement from '@/components/features/tournament/Tournam
 import { Card, CardContent } from '@/components/ui/card';
 import { FileText, HardDrive, Upload, Loader2, Link as LinkIcon, ChevronRight, Home, Bell } from 'lucide-react';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 
 // ファイルサイズを人間が読みやすい形式に変換
 function formatFileSize(bytes: number): string {
@@ -85,17 +86,7 @@ export default function TournamentFilesPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー部分 */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-              <h1 className="text-2xl font-bold text-white">ファイル管理</h1>
-              <p className="text-sm text-white/70">
-                大会に関連するお知らせ・ファイル・外部リンクを管理できます。
-              </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -112,6 +103,12 @@ export default function TournamentFilesPage() {
             ファイル管理
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">ファイル管理</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            大会に関連するお知らせ・ファイル・外部リンクを管理できます。
+          </p>
+        </div>
 
         {/* 統計情報 */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">

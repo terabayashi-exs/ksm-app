@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 // TODO: ヘッダーロゴ対応時に有効化
 // import Image from "next/image";
-import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
+import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Home, ChevronRight } from "lucide-react";
 import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
@@ -82,34 +82,7 @@ export default async function MyDashboardPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-6">
-            <div>
-              {/* TODO: ヘッダーロゴ対応時に有効化
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Image src="/images/taikaigo-logo-white.svg" alt="大会GO" width={100} height={24} className="h-6 w-auto" />
-                マイダッシュボード
-              </h1> */}
-              <h1 className="text-2xl font-bold text-white">
-                マイダッシュボード
-              </h1>
-              <p className="text-sm text-white/70 mt-1">
-                ようこそ、{session.user.name}さん
-              </p>
-            </div>
-            {/* TODO: ヘッダーロゴ対応時に self-end sm:self-auto を追加 */}
-            <div className="flex items-center gap-2">
-              <UserAvatarMenu
-                userName={session.user.name || ''}
-                userEmail={session.user.email || ''}
-                showDashboardLink={false}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       {/* コンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -127,6 +100,12 @@ export default async function MyDashboardPage() {
             マイダッシュボード
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">マイダッシュボード</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            ようこそ、{session.user.name}さん
+          </p>
+        </div>
         <MyDashboardTabs
           roles={roles}
           isSuperadmin={isSuperadmin}

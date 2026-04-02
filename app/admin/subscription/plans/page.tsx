@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Home, ChevronRight } from "lucide-react";
+import Header from "@/components/layout/Header";
 import PlanComparisonCards from "@/components/features/subscription/PlanComparisonCards";
 
 export default async function SubscriptionPlansPage() {
@@ -15,16 +16,7 @@ export default async function SubscriptionPlansPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-              <h1 className="text-2xl font-bold text-white">プラン変更</h1>
-              <p className="text-sm text-white/70 mt-1">
-                ご利用プランを変更できます
-              </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -34,6 +26,12 @@ export default async function SubscriptionPlansPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">プラン変更</span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">プラン変更</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            ご利用プランを変更できます
+          </p>
+        </div>
         <PlanComparisonCards />
       </div>
     </div>

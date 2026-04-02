@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -190,16 +191,8 @@ export default function QRListPage() {
 
   return (
     <div className="min-h-screen bg-white print:min-h-0 print-outer-wrapper">
-      {/* ヘッダー（印刷時非表示） */}
-      <div className="bg-base-800 border-b-[3px] border-primary no-print">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">審判用QRコード一覧</h1>
-            <p className="text-sm text-white/70 mt-1">
-              試合前・進行中の試合のQRコードを表示します（全{filteredMatches.length}試合）
-            </p>
-          </div>
-        </div>
+      <div className="no-print">
+        <Header />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print-inner-wrapper">
@@ -211,6 +204,12 @@ export default function QRListPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">QRコード一覧</span>
         </nav>
+        <div className="mb-8 no-print">
+          <h1 className="text-2xl font-bold text-gray-900">審判用QRコード一覧</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            試合前・進行中の試合のQRコードを表示します（全{filteredMatches.length}試合）
+          </p>
+        </div>
 
         {validity && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium mb-6 no-print">

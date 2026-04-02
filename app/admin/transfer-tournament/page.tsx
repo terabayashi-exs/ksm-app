@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
+import Header from "@/components/layout/Header";
 import TransferTournamentOwner from "@/components/features/admin/TransferTournamentOwner";
 
 export default async function TransferTournamentPage() {
@@ -15,16 +16,7 @@ export default async function TransferTournamentPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">大会オーナー移管</h1>
-            <p className="text-sm text-white/70 mt-1">
-              大会グループのオーナーを別の管理者に移管します
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -41,6 +33,12 @@ export default async function TransferTournamentPage() {
             大会オーナー移管
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">大会オーナー移管</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            大会グループのオーナーを別の管理者に移管します
+          </p>
+        </div>
         <TransferTournamentOwner />
       </div>
     </div>

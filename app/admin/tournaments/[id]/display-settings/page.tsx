@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Eye, EyeOff, Save, Pencil, Check, X, Users, ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 
 interface PhaseInfo {
   id: string;
@@ -174,16 +175,7 @@ export default function DisplaySettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">表示設定</h1>
-            <p className="text-sm text-white/70 mt-1">
-              公開ページに表示するブロックやチーム名の設定を行います
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -193,6 +185,12 @@ export default function DisplaySettingsPage() {
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">表示設定</span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">表示設定</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            公開ページに表示するブロックやチーム名の設定を行います
+          </p>
+        </div>
 
         {/* フェーズ表示設定 */}
         {phases.length > 0 && (

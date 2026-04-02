@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Trophy, ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 import { db } from '@/lib/db';
 import { Tournament } from '@/lib/types';
 import type { TournamentStatus } from '@/lib/tournament-status';
@@ -93,17 +94,7 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-_xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">結果入力</h1>
-            <p className="text-sm text-white/70 mt-1">
-              「{tournament.tournament_name}」の試合結果を入力・管理します
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -121,6 +112,12 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
             結果入力
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">結果入力</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            「{tournament.tournament_name}」の試合結果を入力・管理します
+          </p>
+        </div>
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <Trophy className="w-16 h-16 mx-auto text-gray-500 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">

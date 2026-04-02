@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, ChevronRight, Home } from "lucide-react";
+import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TournamentFormatList from "@/components/features/tournament-format/TournamentFormatList";
@@ -20,16 +21,7 @@ export default async function TournamentFormatsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">大会フォーマット管理</h1>
-            <p className="text-sm text-white/70 mt-1">
-              大会フォーマットと試合テンプレートの管理
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
@@ -46,6 +38,12 @@ export default async function TournamentFormatsPage() {
             大会フォーマット管理
           </span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">大会フォーマット管理</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            大会フォーマットと試合テンプレートの管理
+          </p>
+        </div>
         <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline">
             <Link href="/admin/tournament-formats/create">

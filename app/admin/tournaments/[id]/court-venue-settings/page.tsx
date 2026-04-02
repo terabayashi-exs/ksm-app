@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Save, MapPin, Loader2, Calendar, ChevronRight, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
 
 // コート名プリセット
 const COURT_NAME_PRESETS = [
@@ -299,17 +300,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* ページタイトル */}
-      <div className="bg-base-800 border-b-[3px] border-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-2xl font-bold text-white">会場・コート設定</h1>
-            <p className="text-sm text-white/70 mt-1">
-              開催日ごとに各コートの会場・コート名を設定します
-            </p>
-          </div>
-        </div>
-      </div>
+      <Header />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm">
@@ -319,6 +310,12 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">会場・コート設定</span>
         </nav>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">会場・コート設定</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            開催日ごとに各コートの会場・コート名を設定します
+          </p>
+        </div>
 
         {/* メッセージ */}
         {error && (
