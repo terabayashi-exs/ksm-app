@@ -376,9 +376,9 @@ export async function GET() {
         }
       });
 
-      // グループ内の大会を順序でソート
+      // グループ内の大会を部門名の昇順でソート
       Object.values(grouped).forEach(group => {
-        group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
+        group.tournaments.sort((a, b) => (a.tournament_name || '').localeCompare(b.tournament_name || '', 'ja'));
       });
 
       return { grouped, ungrouped };
