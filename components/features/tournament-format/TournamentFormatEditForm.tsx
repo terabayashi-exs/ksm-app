@@ -482,7 +482,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="format_name">フォーマット名 *</Label>
+                <Label htmlFor="format_name">フォーマット名 <span className="text-destructive">*</span></Label>
                 <Input
                   id="format_name"
                   {...register("format_name")}
@@ -495,7 +495,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sport_type_id">競技種別 *</Label>
+                <Label htmlFor="sport_type_id">競技種別 <span className="text-destructive">*</span></Label>
                 {sportTypesLoading ? (
                   <div className="flex items-center space-x-2 p-3 border rounded-md">
                     <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
@@ -524,7 +524,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="target_team_count">対象チーム数 *</Label>
+                <Label htmlFor="target_team_count">対象チーム数 <span className="text-destructive">*</span></Label>
                 <Input
                   id="target_team_count"
                   type="number"

@@ -108,7 +108,7 @@ export default function NewTeamPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="team_name">
-                  チーム名 <span className="text-red-500">*</span>
+                  チーム名 <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="team_name"

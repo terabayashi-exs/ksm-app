@@ -239,9 +239,9 @@ export async function DELETE(
       );
     }
 
-    // m_login_users を削除（ロールは CASCADE で自動削除）
+    // admin ロールのみ削除（アカウント自体は残す）
     await db.execute(`
-      DELETE FROM m_login_users WHERE login_user_id = ?
+      DELETE FROM m_login_user_roles WHERE login_user_id = ? AND role = 'admin'
     `, [loginUserId]);
 
     return NextResponse.json({

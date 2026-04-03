@@ -330,7 +330,7 @@ function AccountRegisterForm({ token }: { token: string }) {
 
               {/* 表示名 */}
               <div className="space-y-2">
-                <Label htmlFor="display_name">表示名 *</Label>
+                <Label htmlFor="display_name">表示名 <span className="text-destructive">*</span></Label>
                 <Input
                   id="display_name"
                   type="text"
@@ -347,7 +347,7 @@ function AccountRegisterForm({ token }: { token: string }) {
 
               {/* パスワード */}
               <div className="space-y-2">
-                <Label htmlFor="password">パスワード *</Label>
+                <Label htmlFor="password">パスワード <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -372,7 +372,7 @@ function AccountRegisterForm({ token }: { token: string }) {
 
               {/* パスワード確認 */}
               <div className="space-y-2">
-                <Label htmlFor="password_confirmation">パスワード（確認） *</Label>
+                <Label htmlFor="password_confirmation">パスワード（確認） <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Input
                     id="password_confirmation"

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, ShieldAlert, MessageSquare } from "lucide-react";
+import { Shield, Users, Building2, UserPlus, Database, MapPin, Trophy, CalendarDays, Clock, Plus, UserCog, Archive, Trash2, Lock, Eye, FileEdit, ClipboardList, FileText, Star, Target, Shuffle, Settings, ChevronDown, ChevronUp, Crown, Mail, Pencil, X, CheckCircle, AlertCircle, Search, QrCode, Calendar, User, KeyRound, ShieldAlert, MessageSquare, Merge } from "lucide-react";
 import Image from "next/image";
 import IncompleteTournamentGroups from "@/components/features/tournament/IncompleteTournamentGroups";
 import { TournamentDashboardData, GroupedTournamentData, TeamDashboardItem } from "@/lib/dashboard-data";
@@ -19,6 +19,7 @@ import { checkFormatChangeEligibility, changeFormat, type FormatChangeCheckRespo
 import { FormatChangeDialog } from "@/components/features/tournament/FormatChangeDialog";
 import { FormatSelectionModal } from "@/components/features/tournament/FormatSelectionModal";
 import WithdrawalModal from "@/components/features/my/WithdrawalModal";
+import TeamMergeConfirmDialog from "@/components/features/my/TeamMergeConfirmDialog";
 import { Label } from "@/components/ui/label";
 
 type Role = "admin" | "operator" | "team";
@@ -2546,6 +2547,7 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
   const [teams, setTeams] = useState<TeamInfo[]>((initialTeamData ?? []) as TeamInfo[]);
   const [loading, setLoading] = useState(!initialTeamData);
   const [showLinkConfirm, setShowLinkConfirm] = useState(false);
+  const [mergeMainTeam, setMergeMainTeam] = useState<TeamInfo | null>(null);
 
   const fetchTeams = useCallback(async () => {
     try {
@@ -2614,12 +2616,30 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
     );
   }
 
+  const hasMultipleTeams = teams.length > 1;
+
   return (
     <div className="space-y-4">
+      {/* 複数チーム警告バナー */}
+      {hasMultipleTeams && (
+        <div className="p-4 rounded-lg border-2 border-red-300 bg-red-50">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-red-800 mb-1">複数のチームが登録されています</p>
+              <p className="text-sm text-red-700">
+                管理できるチームは<strong>1チームまで</strong>です。メインチームを選択し、チーム統合を行ってください。
+                統合すると、統合されるチームのマスターデータは削除されますが、大会参加記録のチーム名はそのまま残ります。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {teams.map((team) => {
         return (
           <Card key={team.team_id} className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 pb-3">
+            <CardHeader className={`pb-3 ${hasMultipleTeams ? 'bg-gradient-to-r from-amber-50 to-amber-100' : 'bg-gradient-to-r from-green-50 to-green-100'}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg mb-1 flex items-center gap-2">
@@ -2638,66 +2658,99 @@ function TeamTabContent({ teamIds: _teamIds, initialTeamData }: {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 pt-1">
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                    <Link href={`/my/teams/${team.team_id}/edit`}>
-                      <Pencil className="w-4 h-4 mr-1" />
-                      チーム情報
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-purple-400 bg-white/70 hover:bg-white">
-                    <Link href={`/my/teams/${team.team_id}/managers`}>
-                      <UserCog className="w-4 h-4 mr-1" />
-                      代表者
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="text-sm border-green-400 bg-white/70 hover:bg-white">
-                    <Link href={`/my/teams/${team.team_id}/players`}>
-                      <Users className="w-4 h-4 mr-1" />
-                      選手登録
-                    </Link>
-                  </Button>
+                  {hasMultipleTeams ? (
+                    <Button
+                      size="sm"
+                      className="text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setMergeMainTeam(team)}
+                    >
+                      <Merge className="w-4 h-4 mr-1" />
+                      このチームをメインにする
+                    </Button>
+                  ) : (
+                    <>
+                      <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                        <Link href={`/my/teams/${team.team_id}/edit`}>
+                          <Pencil className="w-4 h-4 mr-1" />
+                          チーム情報
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="text-sm border-purple-400 bg-white/70 hover:bg-white">
+                        <Link href={`/my/teams/${team.team_id}/managers`}>
+                          <UserCog className="w-4 h-4 mr-1" />
+                          代表者
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="text-sm border-green-400 bg-white/70 hover:bg-white">
+                        <Link href={`/my/teams/${team.team_id}/players`}>
+                          <Users className="w-4 h-4 mr-1" />
+                          選手登録
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </CardHeader>
 
-            <TeamExpandedPanel
-              team={team}
-            />
+            {!hasMultipleTeams && (
+              <TeamExpandedPanel
+                team={team}
+              />
+            )}
           </Card>
         );
       })}
 
-      {/* チームIDで紐付けるセクション（既存チームの上書き） */}
-      {!showLinkConfirm ? (
-        <div className="text-center pt-4">
-          <button
-            onClick={() => setShowLinkConfirm(true)}
-            className="text-sm text-orange-600 hover:text-orange-800 underline"
-          >
-            別のチームIDで紐付け直す
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <Card className="border-orange-300 bg-orange-50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-2 mb-3">
-                <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-orange-800">
-                  別のチームIDで紐付けると、現在のチーム紐付けが解除されます。
-                  チームのデータ（選手・大会参加情報）は削除されません。
-                </p>
-              </div>
-              <TeamLinkSection onLinked={fetchTeams} />
+      {/* チームIDで紐付けるセクション（複数チーム時は非表示） */}
+      {!hasMultipleTeams && (
+        <>
+          {!showLinkConfirm ? (
+            <div className="text-center pt-4">
               <button
-                onClick={() => setShowLinkConfirm(false)}
-                className="text-xs text-gray-500 hover:text-gray-900 mt-2 underline"
+                onClick={() => setShowLinkConfirm(true)}
+                className="text-sm text-orange-600 hover:text-orange-800 underline"
               >
-                キャンセル
+                別のチームIDで紐付け直す
               </button>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Card className="border-orange-300 bg-orange-50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-2 mb-3">
+                    <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-orange-800">
+                      別のチームIDで紐付けると、現在のチーム紐付けが解除されます。
+                      チームのデータ（選手・大会参加情報）は削除されません。
+                    </p>
+                  </div>
+                  <TeamLinkSection onLinked={fetchTeams} />
+                  <button
+                    onClick={() => setShowLinkConfirm(false)}
+                    className="text-xs text-gray-500 hover:text-gray-900 mt-2 underline"
+                  >
+                    キャンセル
+                  </button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* チーム統合ダイアログ */}
+      {mergeMainTeam && (
+        <TeamMergeConfirmDialog
+          isOpen={!!mergeMainTeam}
+          onClose={() => setMergeMainTeam(null)}
+          onSuccess={() => {
+            setMergeMainTeam(null);
+            fetchTeams();
+          }}
+          mainTeam={mergeMainTeam}
+          absorbedTeams={teams.filter(t => t.team_id !== mergeMainTeam.team_id)}
+        />
       )}
     </div>
   );
@@ -3014,6 +3067,7 @@ function ProfileTabContent({ roles, isSuperadmin }: { roles: Role[]; isSuperadmi
               <label className="block text-sm font-medium text-gray-700 mb-1">現在のパスワード</label>
               <Input
                 type="password"
+                autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="現在のパスワード"
@@ -3023,6 +3077,7 @@ function ProfileTabContent({ roles, isSuperadmin }: { roles: Role[]; isSuperadmi
               <label className="block text-sm font-medium text-gray-700 mb-1">新しいパスワード</label>
               <Input
                 type="password"
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="8文字以上"
@@ -3032,6 +3087,7 @@ function ProfileTabContent({ roles, isSuperadmin }: { roles: Role[]; isSuperadmi
               <label className="block text-sm font-medium text-gray-700 mb-1">新しいパスワード（確認）</label>
               <Input
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="もう一度入力"

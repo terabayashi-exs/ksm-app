@@ -42,6 +42,9 @@ interface EmailCheckResult {
 // 新規登録フローの段階
 type CreateStep = 'email' | 'existing_confirm' | 'new_form';
 
+// 一般ユーザー追加フローの段階
+type UserCreateStep = 'email' | 'already_exists' | 'edit_form' | 'new_form';
+
 export default function AdministratorManagement() {
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,16 @@ export default function AdministratorManagement() {
   const [emailInput, setEmailInput] = useState('');
   const [emailCheckResult, setEmailCheckResult] = useState<EmailCheckResult | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // 一般ユーザー追加フロー
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [userCreateStep, setUserCreateStep] = useState<UserCreateStep>('email');
+  const [userEmailInput, setUserEmailInput] = useState('');
+  const [userCheckResult, setUserCheckResult] = useState<EmailCheckResult | null>(null);
+  const [checkingUserEmail, setCheckingUserEmail] = useState(false);
+  const [userFormData, setUserFormData] = useState({ display_name: '', email: '', password: '' });
+  const [userEditData, setUserEditData] = useState({ login_user_id: 0, display_name: '', password: '' });
+  const [savingUser, setSavingUser] = useState(false);
 
   const [formData, setFormData] = useState<AdministratorFormData>({
     admin_name: '',
@@ -96,6 +109,12 @@ export default function AdministratorManagement() {
     setCreateStep('email');
     setEmailInput('');
     setEmailCheckResult(null);
+    setIsCreatingUser(false);
+    setUserCreateStep('email');
+    setUserEmailInput('');
+    setUserCheckResult(null);
+    setUserFormData({ display_name: '', email: '', password: '' });
+    setUserEditData({ login_user_id: 0, display_name: '', password: '' });
     setError(null);
   };
 
@@ -185,6 +204,90 @@ export default function AdministratorManagement() {
     }
   };
 
+  // ── 一般ユーザー追加フロー ──────────────────────────────────────
+
+  const handleCheckUserEmail = async () => {
+    if (!userEmailInput.trim()) {
+      setError('メールアドレスを入力してください');
+      return;
+    }
+    setError(null);
+    setCheckingUserEmail(true);
+    try {
+      const response = await fetch('/api/administrators/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmailInput.trim() }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+
+      setUserCheckResult(result);
+
+      if (result.exists) {
+        // 既にアカウントがある
+        setUserCreateStep('already_exists');
+      } else {
+        // アカウントなし → 新規作成フォームへ
+        setUserFormData(prev => ({ ...prev, email: userEmailInput.trim() }));
+        setUserCreateStep('new_form');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setCheckingUserEmail(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!userFormData.display_name.trim()) { setError('表示名を入力してください'); return; }
+    if (!userFormData.email.trim()) { setError('メールアドレスを入力してください'); return; }
+    if (!userFormData.password.trim()) { setError('パスワードを入力してください'); return; }
+    if (userFormData.password.length < 6) { setError('パスワードは6文字以上で入力してください'); return; }
+
+    setSavingUser(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/administrators/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userFormData),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      resetAll();
+      // 成功メッセージ（一覧に表示しないため、簡易的にalertで通知）
+      alert(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!userEditData.display_name.trim()) { setError('表示名を入力してください'); return; }
+    if (userEditData.password && userEditData.password.length < 6) { setError('パスワードは6文字以上で入力してください'); return; }
+
+    setSavingUser(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/administrators/create-user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userEditData),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      resetAll();
+      alert(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
   // ── 編集フロー ──────────────────────────────────────────────────
 
   const startEditing = (admin: Administrator) => {
@@ -268,12 +371,18 @@ export default function AdministratorManagement() {
       )}
 
       {/* 新規登録ボタン */}
-      <div className="flex items-center justify-end">
-        {!isCreating && !editingAdmin && (
-          <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            管理者を追加
-          </Button>
+      <div className="flex items-center justify-end gap-2">
+        {!isCreating && !isCreatingUser && !editingAdmin && (
+          <>
+            <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              管理者を追加
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreatingUser(true); }} className="flex items-center gap-2 border-green-400 text-green-700 hover:bg-green-50">
+              <UserPlus className="h-4 w-4" />
+              一般ユーザーを追加
+            </Button>
+          </>
         )}
       </div>
 
@@ -295,11 +404,12 @@ export default function AdministratorManagement() {
                   追加したい管理者のメールアドレスを入力してください。既にアカウントがある場合はそのアカウントに管理者権限を付与します。
                 </p>
                 <div>
-                  <Label htmlFor="check_email">メールアドレス *</Label>
+                  <Label htmlFor="check_email">メールアドレス <span className="text-destructive">*</span></Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       id="check_email"
                       type="email"
+                      autoComplete="off"
                       value={emailInput}
                       onChange={(e) => { setEmailInput(e.target.value); setError(null); }}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCheckEmail(); }}
@@ -357,9 +467,10 @@ export default function AdministratorManagement() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="admin_name">表示名（氏名）*</Label>
+                    <Label htmlFor="admin_name">表示名（氏名） <span className="text-destructive">*</span></Label>
                     <Input
                       id="admin_name"
+                      autoComplete="off"
                       value={formData.admin_name}
                       onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))}
                       placeholder="例: 田中太郎"
@@ -381,10 +492,11 @@ export default function AdministratorManagement() {
                   <p className="text-xs text-gray-500 mt-1">TOPページで大会のグルーピング表示に使用されます</p>
                 </div>
                 <div>
-                  <Label htmlFor="password">初期パスワード *</Label>
+                  <Label htmlFor="password">初期パスワード <span className="text-destructive">*</span></Label>
                   <Input
                     id="password"
                     type="password"
+                    autoComplete="new-password"
                     value={formData.password}
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     placeholder="6文字以上"
@@ -426,6 +538,184 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
+      {/* ── 一般ユーザー追加フロー ── */}
+      {isCreatingUser && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-green-600" />
+              一般ユーザーを追加
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+
+            {/* Step 1: メールアドレス入力 */}
+            {userCreateStep === 'email' && (
+              <>
+                <p className="text-sm text-gray-500">
+                  登録したいユーザーのメールアドレスを入力してください。既にアカウントが存在する場合は登録できません。
+                </p>
+                <div>
+                  <Label htmlFor="user_check_email">メールアドレス <span className="text-destructive">*</span></Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="user_check_email"
+                      type="email"
+                      autoComplete="off"
+                      value={userEmailInput}
+                      onChange={(e) => { setUserEmailInput(e.target.value); setError(null); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleCheckUserEmail(); }}
+                      placeholder="例: user@example.com"
+                    />
+                    <Button onClick={handleCheckUserEmail} disabled={checkingUserEmail} className="shrink-0">
+                      <Search className="h-4 w-4 mr-1" />
+                      {checkingUserEmail ? '確認中...' : '確認'}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2a: 既にアカウントが存在する場合 */}
+            {userCreateStep === 'already_exists' && userCheckResult?.user && (
+              <>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-800 font-medium">
+                    <UserCheck className="h-5 w-5" />
+                    既にアカウントが登録されています
+                  </div>
+                  <div className="text-sm text-blue-700 space-y-1 ml-7">
+                    <div><span className="font-medium">表示名：</span>{userCheckResult.user.display_name}</div>
+                    <div><span className="font-medium">メール：</span>{userCheckResult.user.email}</div>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">
+                  このユーザーの表示名やパスワードを変更する場合は「編集する」をクリックしてください。
+                </p>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={() => {
+                    setUserEditData({
+                      login_user_id: userCheckResult.user!.login_user_id,
+                      display_name: userCheckResult.user!.display_name,
+                      password: '',
+                    });
+                    setUserCreateStep('edit_form');
+                  }}>
+                    編集する
+                  </Button>
+                  <Button variant="outline" onClick={() => { setUserCreateStep('email'); setError(null); }}>
+                    戻る
+                  </Button>
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2a-2: 既存ユーザー編集フォーム */}
+            {userCreateStep === 'edit_form' && userCheckResult?.user && (
+              <>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
+                    <Edit className="h-4 w-4" />
+                    「{userCheckResult.user.email}」のアカウント情報を編集
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="user_edit_display_name">表示名（氏名） <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="user_edit_display_name"
+                      autoComplete="off"
+                      value={userEditData.display_name}
+                      onChange={(e) => setUserEditData(prev => ({ ...prev, display_name: e.target.value }))}
+                      placeholder="例: 田中太郎"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="user_edit_email_display">メールアドレス</Label>
+                    <Input id="user_edit_email_display" value={userCheckResult.user.email} disabled className="bg-gray-50" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="user_edit_password">パスワード（変更する場合のみ入力）</Label>
+                  <Input
+                    id="user_edit_password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={userEditData.password}
+                    onChange={(e) => setUserEditData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="6文字以上"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">空欄の場合、パスワードは変更されません</p>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={handleUpdateUser} disabled={savingUser}>
+                    {savingUser ? '更新中...' : '更新する'}
+                  </Button>
+                  <Button variant="outline" onClick={() => { setUserCreateStep('already_exists'); setError(null); }}>
+                    戻る
+                  </Button>
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2b: 新規ユーザー作成フォーム */}
+            {userCreateStep === 'new_form' && (
+              <>
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-green-800 font-medium text-sm">
+                    <UserPlus className="h-4 w-4" />
+                    「{userEmailInput}」は未登録です
+                  </div>
+                  <p className="text-sm text-green-700 ml-6">新規アカウントを作成します。</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="user_display_name">表示名（氏名） <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="user_display_name"
+                      autoComplete="off"
+                      value={userFormData.display_name}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, display_name: e.target.value }))}
+                      placeholder="例: 田中太郎"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="user_email_display">メールアドレス</Label>
+                    <Input id="user_email_display" value={userFormData.email} disabled className="bg-gray-50" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="user_password">初期パスワード <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="user_password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={userFormData.password}
+                    onChange={(e) => setUserFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="6文字以上"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">本人に別途パスワードをお知らせください</p>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={handleCreateUser} disabled={savingUser}>
+                    {savingUser ? '作成中...' : 'アカウントを作成'}
+                  </Button>
+                  <Button variant="outline" onClick={() => { setUserCreateStep('email'); setError(null); }}>
+                    戻る
+                  </Button>
+                  <Button variant="outline" onClick={resetAll}>キャンセル</Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── 編集フォーム ── */}
       {editingAdmin && (
         <Card>
@@ -438,19 +728,21 @@ export default function AdministratorManagement() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit_admin_name">表示名（氏名）*</Label>
+                <Label htmlFor="edit_admin_name">表示名（氏名） <span className="text-destructive">*</span></Label>
                 <Input
                   id="edit_admin_name"
+                  autoComplete="off"
                   value={formData.admin_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))}
                   placeholder="例: 田中太郎"
                 />
               </div>
               <div>
-                <Label htmlFor="edit_email">メールアドレス *</Label>
+                <Label htmlFor="edit_email">メールアドレス <span className="text-destructive">*</span></Label>
                 <Input
                   id="edit_email"
                   type="email"
+                  autoComplete="off"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="例: admin@example.com"
@@ -472,6 +764,7 @@ export default function AdministratorManagement() {
               <Input
                 id="edit_password"
                 type="password"
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 placeholder="6文字以上"

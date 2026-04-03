@@ -121,7 +121,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
         <CardContent className="space-y-4">
           {/* 大会名 */}
           <div>
-            <Label htmlFor="group_name">大会名 *</Label>
+            <Label htmlFor="group_name">大会名 <span className="text-destructive">*</span></Label>
             <Input
               id="group_name"
               {...register('group_name')}

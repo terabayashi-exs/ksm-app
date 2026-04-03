@@ -130,7 +130,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
     let confirmMessage: string;
 
     if (managerCount === 1) {
-      confirmMessage = `あなたは唯一の担当者です。脱退するとチームごと削除されます。\n\nチーム「${teamName}」を削除してもよろしいですか？\n\n※大会参加履歴がある場合は削除できません。`;
+      confirmMessage = `チーム「${teamName}」の紐づけを解除します。\n\nチームID：${teamId}\n\n再度このチームの担当者となる場合は、上記チームIDを控えておき「チームIDで紐づける」から操作が必要です。\n\n紐づけを解除してもよろしいですか？`;
     } else {
       confirmMessage = `チーム「${teamName}」から脱退しますか？`;
     }
@@ -280,6 +280,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
                   <div className="flex gap-2">
                     <Input
                       type="email"
+                      autoComplete="off"
                       value={inviteEmail}
                       onChange={e => setInviteEmail(e.target.value)}
                       placeholder="メールアドレス"

@@ -573,7 +573,7 @@ export default function EmailSendPage() {
 
                 {/* タイトル */}
                 <div>
-                  <Label htmlFor="title" className="text-sm font-medium">メールタイトル *</Label>
+                  <Label htmlFor="title" className="text-sm font-medium">メールタイトル <span className="text-destructive">*</span></Label>
                   <Input
                     id="title"
                     value={emailTitle}
@@ -585,7 +585,7 @@ export default function EmailSendPage() {
 
                 {/* 本文 */}
                 <div>
-                  <Label htmlFor="body" className="text-sm font-medium">メール本文 *</Label>
+                  <Label htmlFor="body" className="text-sm font-medium">メール本文 <span className="text-destructive">*</span></Label>
                   <Textarea
                     id="body"
                     value={emailBody}

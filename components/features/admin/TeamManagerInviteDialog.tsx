@@ -88,6 +88,7 @@ export default function TeamManagerInviteDialog({ teamId, teamName, open, onOpen
                 <Input
                   id="invite-email"
                   type="email"
+                  autoComplete="off"
                   placeholder="example@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
