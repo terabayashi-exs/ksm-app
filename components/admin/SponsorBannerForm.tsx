@@ -252,7 +252,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="banner_name">バナー名 *</Label>
+            <Label htmlFor="banner_name">バナー名 <span className="text-destructive">*</span></Label>
             <Input
               id="banner_name"
               value={formData.banner_name}
@@ -286,7 +286,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
         <CardContent className="space-y-4">
           {/* バナーサイズ選択 */}
           <div>
-            <Label htmlFor="banner_size">バナーサイズ *</Label>
+            <Label htmlFor="banner_size">バナーサイズ <span className="text-destructive">*</span></Label>
             <Select
               value={formData.banner_size}
               onValueChange={(value) => handleBannerSizeChange(value as BannerSize)}
@@ -322,7 +322,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="display_position">表示位置 *</Label>
+              <Label htmlFor="display_position">表示位置 <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.display_position}
                 onValueChange={(value) =>
@@ -365,7 +365,7 @@ export default function SponsorBannerForm({ tournamentId, banner, mode }: Sponso
             </div>
 
             <div>
-              <Label htmlFor="target_tab">表示タブ *</Label>
+              <Label htmlFor="target_tab">表示タブ <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.target_tab}
                 onValueChange={(value) =>

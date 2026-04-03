@@ -210,7 +210,7 @@ export default function AnnouncementManagement() {
           <CardContent>
             <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">タイトル *</Label>
+                <Label htmlFor="title">タイトル <span className="text-destructive">*</span></Label>
                 <Input
                   id="title"
                   value={formData.title}
@@ -221,7 +221,7 @@ export default function AnnouncementManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">本文 *</Label>
+                <Label htmlFor="content">本文 <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="content"
                   value={formData.content}
@@ -234,7 +234,7 @@ export default function AnnouncementManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="status">公開状態 *</Label>
+                  <Label htmlFor="status">公開状態 <span className="text-destructive">*</span></Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value: 'draft' | 'published') =>

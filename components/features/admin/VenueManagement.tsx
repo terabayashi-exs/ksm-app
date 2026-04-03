@@ -309,7 +309,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="venue_name">会場名 *</Label>
+                <Label htmlFor="venue_name">会場名 <span className="text-destructive">*</span></Label>
                 <Input
                   id="venue_name"
                   value={formData.venue_name}
@@ -318,7 +318,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                 />
               </div>
               <div>
-                <Label htmlFor="available_courts">利用可能コート数 *</Label>
+                <Label htmlFor="available_courts">利用可能コート数 <span className="text-destructive">*</span></Label>
                 <Input
                   id="available_courts"
                   type="number"

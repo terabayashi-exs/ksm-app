@@ -246,7 +246,7 @@ export default function MyTournamentJoinForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="tournament_team_name">大会参加チーム名 *</Label>
+              <Label htmlFor="tournament_team_name">大会参加チーム名 <span className="text-destructive">*</span></Label>
               <Input
                 id="tournament_team_name"
                 {...control.register('tournament_team_name')}
@@ -258,7 +258,7 @@ export default function MyTournamentJoinForm({
             </div>
 
             <div>
-              <Label htmlFor="tournament_team_omission">チーム略称 *</Label>
+              <Label htmlFor="tournament_team_omission">チーム略称 <span className="text-destructive">*</span></Label>
               <Input
                 id="tournament_team_omission"
                 maxLength={5}

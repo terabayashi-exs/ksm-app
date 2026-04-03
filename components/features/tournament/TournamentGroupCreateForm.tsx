@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,15 +34,9 @@ const tournamentGroupSchema = z.object({
 
 type TournamentGroupFormData = z.infer<typeof tournamentGroupSchema>;
 
-interface Venue {
-  venue_id: number;
-  venue_name: string;
-}
-
 export default function TournamentGroupCreateForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [venues, setVenues] = useState<Venue[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [planLimitError, setPlanLimitError] = useState<{
     message: string;
@@ -62,23 +56,6 @@ export default function TournamentGroupCreateForm() {
       visibility: 'open',
     },
   });
-
-  // 会場一覧取得
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        const response = await fetch('/api/venues?scope=available');
-        const data = await response.json();
-        if (data.success) {
-          setVenues(data.data);
-        }
-      } catch (error) {
-        console.error('会場一覧の取得に失敗:', error);
-      }
-    };
-
-    fetchVenues();
-  }, []);
 
   const onSubmit = async (data: TournamentGroupFormData) => {
     setIsSubmitting(true);
@@ -160,7 +137,7 @@ export default function TournamentGroupCreateForm() {
         <CardContent className="space-y-4">
           {/* 大会名 */}
           <div>
-            <Label htmlFor="group_name">大会名 *</Label>
+            <Label htmlFor="group_name">大会名 <span className="text-destructive">*</span></Label>
             <Input
               id="group_name"
               {...register('group_name')}
@@ -182,27 +159,6 @@ export default function TournamentGroupCreateForm() {
             {errors.organizer && (
               <p className="text-sm text-red-500 mt-1">{errors.organizer.message}</p>
             )}
-          </div>
-
-          {/* 会場 */}
-          <div>
-            <Label htmlFor="venue_id">会場</Label>
-            <Select
-              onValueChange={(value) => setValue('venue_id', value === 'none' ? '' : value)}
-              defaultValue="none"
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="会場を選択してください" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">選択なし</SelectItem>
-                {venues.map((venue) => (
-                  <SelectItem key={venue.venue_id} value={String(venue.venue_id)}>
-                    {venue.venue_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* 大会説明 */}

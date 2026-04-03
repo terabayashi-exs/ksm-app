@@ -284,7 +284,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="withdrawal_reason" className="text-sm font-medium">
-                  辞退理由 <span className="text-red-500">*</span>
+                  辞退理由 <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="withdrawal_reason"

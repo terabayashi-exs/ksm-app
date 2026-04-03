@@ -173,7 +173,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
 
               <div className="space-y-3">
                 <div className="grid grid-cols-[1fr_100px_40px] gap-2 text-sm font-medium text-gray-500 px-1">
-                  <span>選手名 <span className="text-red-500">*</span></span>
+                  <span>選手名 <span className="text-destructive">*</span></span>
                   <span>背番号</span>
                   <span></span>
                 </div>
