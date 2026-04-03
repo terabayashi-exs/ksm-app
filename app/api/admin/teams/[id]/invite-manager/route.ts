@@ -51,22 +51,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ success: false, error: 'このメールアドレスは既にこのチームの担当者として登録されています' }, { status: 400 });
     }
 
-    // 既に別チームのprimary担当者か確認
-    const existingPrimary = await db.execute(
-      `SELECT tm.team_id, t.team_name FROM m_team_members tm
-       INNER JOIN m_login_users u ON tm.login_user_id = u.login_user_id
-       INNER JOIN m_teams t ON tm.team_id = t.team_id
-       WHERE u.email = ? AND tm.member_role = 'primary' AND tm.is_active = 1`,
-      [trimmedEmail]
-    );
-    if (existingPrimary.rows.length > 0) {
-      const otherTeamName = String(existingPrimary.rows[0].team_name);
-      return NextResponse.json({
-        success: false,
-        error: `このメールアドレスは既に「${otherTeamName}」の主担当者として登録されています`,
-      }, { status: 400 });
-    }
-
     // 既存の未処理招待を無効化
     await db.execute(
       `UPDATE t_team_invitations SET status = 'cancelled'

@@ -198,19 +198,21 @@ function AcceptManagerInviteContent() {
                   </p>
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="displayName">表示名（氏名） *</Label>
+                      <Label htmlFor="displayName">表示名（氏名） <span className="text-destructive">*</span></Label>
                       <Input
                         id="displayName"
+                        autoComplete="off"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="例: 山田太郎"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="password">パスワード *</Label>
+                      <Label htmlFor="password">パスワード <span className="text-destructive">*</span></Label>
                       <Input
                         id="password"
                         type="password"
+                        autoComplete="new-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="6文字以上"

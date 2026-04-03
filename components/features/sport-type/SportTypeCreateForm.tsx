@@ -158,7 +158,7 @@ export default function SportTypeCreateForm() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sport_name">競技名 *</Label>
+              <Label htmlFor="sport_name">競技名 <span className="text-destructive">*</span></Label>
               <Input
                 id="sport_name"
                 {...register("sport_name", { required: "競技名は必須です" })}
@@ -171,7 +171,7 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sport_code">競技コード *</Label>
+              <Label htmlFor="sport_code">競技コード <span className="text-destructive">*</span></Label>
               <Input
                 id="sport_code"
                 {...register("sport_code", { 
@@ -190,7 +190,7 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="score_type">スコアタイプ *</Label>
+              <Label htmlFor="score_type">スコアタイプ <span className="text-destructive">*</span></Label>
               <Select
                 value={scoreType}
                 onValueChange={(value) => {
@@ -220,7 +220,7 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="score_unit">スコア単位 *</Label>
+              <Label htmlFor="score_unit">スコア単位 <span className="text-destructive">*</span></Label>
               <Input
                 id="score_unit"
                 {...register("score_unit", { required: "スコア単位は必須です" })}
@@ -233,7 +233,7 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="default_match_duration">標準試合時間（分） *</Label>
+              <Label htmlFor="default_match_duration">標準試合時間（分） <span className="text-destructive">*</span></Label>
               <Input
                 id="default_match_duration"
                 type="number"

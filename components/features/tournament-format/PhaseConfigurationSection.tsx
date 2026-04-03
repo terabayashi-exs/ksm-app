@@ -208,7 +208,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
               <div className="col-span-10 grid grid-cols-1 md:grid-cols-4 gap-3">
                 {/* 順序 */}
                 <div className="space-y-1">
-                  <Label className="text-xs">順序 *</Label>
+                  <Label className="text-xs">順序 <span className="text-destructive">*</span></Label>
                   <Input
                     type="number"
                     value={phase.order}
@@ -220,7 +220,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
                 {/* ID */}
                 <div className="space-y-1">
-                  <Label className="text-xs">フェーズID *</Label>
+                  <Label className="text-xs">フェーズID <span className="text-destructive">*</span></Label>
                   <Input
                     value={phase.id}
                     onChange={(e) => updatePhase(index, 'id', e.target.value)}
@@ -234,7 +234,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
                 {/* 名前 */}
                 <div className="space-y-1">
-                  <Label className="text-xs">フェーズ名 *</Label>
+                  <Label className="text-xs">フェーズ名 <span className="text-destructive">*</span></Label>
                   <Input
                     value={phase.name}
                     onChange={(e) => updatePhase(index, 'name', e.target.value)}
@@ -245,7 +245,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
                 {/* 形式 */}
                 <div className="space-y-1">
-                  <Label className="text-xs">形式 *</Label>
+                  <Label className="text-xs">形式 <span className="text-destructive">*</span></Label>
                   <Select
                     value={phase.format_type}
                     onValueChange={(value) => updatePhase(index, 'format_type', value as PhaseFormatType)}

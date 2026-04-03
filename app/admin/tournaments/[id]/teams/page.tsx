@@ -582,7 +582,7 @@ export default function TeamRegistrationPage() {
                     {/* チーム基本情報 */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor="team_name">チーム名 *</Label>
+                        <Label htmlFor="team_name">チーム名 <span className="text-destructive">*</span></Label>
                         <Input
                           id="team_name"
                           value={manualForm.team_name}
@@ -592,7 +592,7 @@ export default function TeamRegistrationPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="team_omission">チーム略称 *</Label>
+                        <Label htmlFor="team_omission">チーム略称 <span className="text-destructive">*</span></Label>
                         <Input
                           id="team_omission"
                           value={manualForm.team_omission}
@@ -644,7 +644,7 @@ export default function TeamRegistrationPage() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                              <Label htmlFor={`player_name_${index}`}>選手名 *</Label>
+                              <Label htmlFor={`player_name_${index}`}>選手名 <span className="text-destructive">*</span></Label>
                               <Input
                                 id={`player_name_${index}`}
                                 value={player.player_name}

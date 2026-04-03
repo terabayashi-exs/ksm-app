@@ -317,7 +317,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
       {state.linkType === 'external' && (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="external-url">外部URL *</Label>
+            <Label htmlFor="external-url">外部URL <span className="text-destructive">*</span></Label>
             <Input
               id="external-url"
               type="url"
@@ -337,7 +337,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
       {(state.file || state.linkType === 'external') && (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="file-title">タイトル *</Label>
+            <Label htmlFor="file-title">タイトル <span className="text-destructive">*</span></Label>
             <Input
               id="file-title"
               value={state.title}
