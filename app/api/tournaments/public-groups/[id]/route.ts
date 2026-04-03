@@ -82,7 +82,7 @@ export async function GET(
         AND t.visibility = 'open'
         AND date(t.public_start_date) <= date('now')
       GROUP BY t.tournament_id
-      ORDER BY t.created_at DESC
+      ORDER BY t.tournament_name ASC
     `, [groupId]);
 
     // 各部門のステータスを計算
