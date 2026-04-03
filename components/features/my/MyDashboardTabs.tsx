@@ -168,7 +168,16 @@ function IncompleteTournamentGroupsWrapper({
 // ─── 管理者タブ ────────────────────────────────────────────────────────────────
 function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, initialSportTypes }: { isSuperadmin: boolean; currentUserId: string; initialTournamentData?: TournamentDashboardData | null; initialSportTypes?: SportType[] }) {
   const [hasIncompleteGroups, setHasIncompleteGroups] = useState<boolean | null>(null);
-  const [showAllAdmins, setShowAllAdmins] = useState(false);
+  const [showAllAdmins, setShowAllAdmins] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('dashboard_showAllAdmins') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('dashboard_showAllAdmins', String(showAllAdmins));
+  }, [showAllAdmins]);
 
   // デバッグログ
   useEffect(() => {
