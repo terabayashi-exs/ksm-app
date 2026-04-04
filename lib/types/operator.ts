@@ -49,12 +49,35 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
 /**
  * 権限プリセットの種類
  */
-export type PermissionPreset = 'preparation' | 'event_day' | 'management' | 'operator_all' | 'custom';
+export type PermissionPreset = 'basic_info' | 'preparation' | 'event_day' | 'management' | 'operator_all' | 'custom';
 
 /**
  * 権限プリセット定義
  */
 export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; description: string; permissions: OperatorPermissions }> = {
+  basic_info: {
+    label: '基本情報',
+    description: 'フォーマット変更、部門編集など基本情報の管理',
+    permissions: {
+      canManageCourts: false,
+      canManageRules: false,
+      canRegisterTeams: false,
+      canCreateDraws: false,
+      canChangeFormat: true,           // フォーマット変更
+      canManageParticipants: false,
+      canInputResults: false,
+      canConfirmResults: false,
+      canSetManualRankings: false,
+      canChangePromotionRules: false,
+      canManageFiles: false,
+      canManageSponsors: false,
+      canPrintRefereeCards: false,
+      canSendEmails: false,
+      canManageDisplaySettings: false,
+      canManageOperators: false,
+      canEditTournament: true,         // 部門編集
+    }
+  },
   preparation: {
     label: '事前準備',
     description: 'ルール設定、チーム登録、組合せ作成など大会開催前の準備作業',
@@ -63,7 +86,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageRules: true,            // ルール設定
       canRegisterTeams: true,          // チーム登録
       canCreateDraws: true,            // 組合せ作成・編集
-      canChangeFormat: false,          // フォーマット変更（管理者のみ）
+      canChangeFormat: false,
       canManageParticipants: true,     // 参加チーム管理
       canInputResults: false,
       canConfirmResults: false,
@@ -74,7 +97,6 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: true,      // 審判カード印刷
       canSendEmails: false,
       canManageDisplaySettings: false,
-
       canManageOperators: false,
       canEditTournament: false,
     }
@@ -122,7 +144,6 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canPrintRefereeCards: false,
       canSendEmails: true,             // メール送信
       canManageDisplaySettings: true,  // 表示設定
-
       canManageOperators: true,        // 運営者管理
       canEditTournament: false,
     }

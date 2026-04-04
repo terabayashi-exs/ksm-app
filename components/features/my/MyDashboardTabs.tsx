@@ -687,6 +687,22 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     公開画面を見る
                   </Link>
                 </Button>
+                {tournament.has_matchdays && (
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
+                      <Calendar className="w-4 h-4 mr-1" />
+                      日程・会場設定
+                    </Link>
+                  </Button>
+                )}
+                {!tournament.has_matchdays && (
+                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                    <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
+                      <MapPin className="w-4 h-4 mr-1" />
+                      会場・コート設定
+                    </Link>
+                  </Button>
+                )}
                 {tournament.has_matchdays ? (
                   <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/tournaments/${tournament.tournament_id}/edit-league`}>
@@ -723,22 +739,6 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     フォーマット変更
                   </Button>
                 )}
-                {tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matchday-settings`}>
-                      <Calendar className="w-4 h-4 mr-1" />
-                      日程・会場設定
-                    </Link>
-                  </Button>
-                )}
-                {!tournament.has_matchdays && (
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                    <Link href={`/admin/tournaments/${tournament.tournament_id}/court-venue-settings`}>
-                      <MapPin className="w-4 h-4 mr-1" />
-                      会場・コート設定
-                    </Link>
-                  </Button>
-                )}
               </div>
             </div>
 
@@ -761,12 +761,6 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         チーム手動登録
                       </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
-                        <Users className="w-4 h-4 mr-1" />
-                        参加チーム管理
-                      </Link>
-                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -775,6 +769,12 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                     >
                       <Shuffle className="w-4 h-4 mr-1" />
                       組合せ作成
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                        <Users className="w-4 h-4 mr-1" />
+                        参加チーム管理
+                      </Link>
                     </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
@@ -804,15 +804,15 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                         チーム手動登録
                       </Link>
                     </Button>
+                    <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
+                      <Lock className="w-4 h-4 mr-1" />
+                      組合せ作成
+                    </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
                         <Users className="w-4 h-4 mr-1" />
                         参加チーム管理
                       </Link>
-                    </Button>
-                    <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
-                      <Lock className="w-4 h-4 mr-1" />
-                      組合せ作成
                     </Button>
                     <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/qr-list`}>
@@ -874,19 +874,19 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
                 <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
                     <FileText className="w-4 h-4 mr-1" />
-                    ファイル管理
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                  <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
-                    <Eye className="w-4 h-4 mr-1" />
-                    表示設定
+                    お知らせ等管理
                   </Link>
                 </Button>
                 <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                   <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
                     <Star className="w-4 h-4 mr-1" />
                     スポンサー管理
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                  <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
+                    <Eye className="w-4 h-4 mr-1" />
+                    表示設定
                   </Link>
                 </Button>
                 {tournament.status === 'completed' ? (
@@ -1148,6 +1148,8 @@ function TournamentStatusList({ data, isSuperadmin, currentUserId, showAllAdmins
 
 // ─── 運営者用の大会状況リスト（権限に応じた表示制御） ────────────
 function OperatorTournamentStatusList({ data, initialSportTypes }: { data: TournamentDashboardData; initialSportTypes?: SportType[] }) {
+  const router = useRouter();
+
   // 競技種別マスタ（初期値はサーバーから渡されたデータ、フォールバック用にfetchも残す）
   const [sportTypes, setSportTypes] = useState<SportType[]>(initialSportTypes || []);
 
@@ -1171,6 +1173,97 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
       case 'basketball': return '🏀';
       case 'pk': return '🥅';
       default: return '⚽';
+    }
+  };
+
+  // フォーマット変更関連のstate
+  const [showFormatSelectionModal, setShowFormatSelectionModal] = useState(false);
+  const [showFormatChangeDialog, setShowFormatChangeDialog] = useState(false);
+  const [formatChangeCheckResult, setFormatChangeCheckResult] = useState<FormatChangeCheckResponse['data'] | null>(null);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
+  const [isFormatChanging, setIsFormatChanging] = useState(false);
+  const [availableFormats, setAvailableFormats] = useState<Array<{ format_id: number; format_name: string; target_team_count: number; format_description?: string; template_count?: number; sport_type_id?: number; sport_code?: string; default_match_duration?: number | null; default_break_duration?: number | null; matchday_count?: number; phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }> }>>([]);
+  const [selectedNewFormatId, setSelectedNewFormatId] = useState<number | null>(null);
+  const [selectedNewFormatName, setSelectedNewFormatName] = useState<string>('');
+
+  // フォーマット一覧は初回レンダー時に取得
+  const [formatsLoaded, setFormatsLoaded] = useState(false);
+  const loadFormats = async (): Promise<typeof availableFormats> => {
+    if (formatsLoaded && availableFormats.length > 0) return availableFormats;
+    try {
+      const res = await fetch('/api/admin/tournament-formats');
+      const result = await res.json();
+      if (result.success && result.formats) {
+        setAvailableFormats(result.formats);
+        setFormatsLoaded(true);
+        return result.formats;
+      }
+    } catch (err) {
+      console.error('フォーマット一覧取得エラー:', err);
+    }
+    return [];
+  };
+
+  // フォーマット変更クリック
+  const handleFormatChangeClick = async (tournament: Tournament) => {
+    const formats = await loadFormats();
+    setSelectedTournamentId(tournament.tournament_id);
+    setIsFormatChanging(true);
+    try {
+      const checkResult = await checkFormatChangeEligibility(tournament.tournament_id);
+      if (checkResult.success && checkResult.data) {
+        setFormatChangeCheckResult(checkResult.data);
+        const tournamentSportTypeId = Number(tournament.sport_type_id);
+        const otherFormats = formats.filter(f =>
+          f.format_id !== checkResult.data!.current_format_id &&
+          (!tournamentSportTypeId || Number(f.sport_type_id) === tournamentSportTypeId)
+        );
+        if (otherFormats.length === 0) {
+          alert(`変更可能な他のフォーマットが見つかりません。`);
+          setIsFormatChanging(false);
+          return;
+        }
+        setAvailableFormats(otherFormats);
+        setShowFormatSelectionModal(true);
+      } else {
+        alert(`変更可否チェックエラー: ${checkResult.error}`);
+      }
+    } catch (err) {
+      console.error('フォーマット変更チェックエラー:', err);
+      alert('フォーマット変更チェック中にエラーが発生しました');
+    } finally {
+      setIsFormatChanging(false);
+    }
+  };
+
+  const handleFormatSelection = (formatId: number, formatName: string) => {
+    setSelectedNewFormatId(formatId);
+    setSelectedNewFormatName(formatName);
+    setShowFormatSelectionModal(false);
+    setShowFormatChangeDialog(true);
+  };
+
+  const handleConfirmFormatChange = async () => {
+    if (!selectedTournamentId || !selectedNewFormatId) return;
+    setIsFormatChanging(true);
+    try {
+      const result = await changeFormat(selectedTournamentId, selectedNewFormatId, true);
+      if (result.success) {
+        alert(`✅ ${result.message}\n\n次は「組合せ作成」から新しいフォーマットでチームを配置してください。`);
+        router.refresh();
+        setShowFormatChangeDialog(false);
+        setSelectedTournamentId(null);
+        setSelectedNewFormatId(null);
+        setFormatChangeCheckResult(null);
+      } else {
+        alert(`フォーマット変更エラー: ${result.error}`);
+        setShowFormatChangeDialog(false);
+      }
+    } catch (err) {
+      console.error('フォーマット変更エラー:', err);
+      alert('フォーマット変更中にエラーが発生しました');
+    } finally {
+      setIsFormatChanging(false);
     }
   };
 
@@ -1302,6 +1395,46 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                     </Link>
                   </Button>
                 )}
+                {permissions.canEditTournament && (
+                  tournament.has_matchdays ? (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/edit-league`}>
+                        <FileEdit className="w-4 h-4 mr-1" />
+                        部門編集
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                        <FileEdit className="w-4 h-4 mr-1" />
+                        部門編集
+                      </Link>
+                    </Button>
+                  )
+                )}
+                {permissions.canChangeFormat && (
+                  (tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleFormatChangeClick(tournament)}
+                      disabled={isFormatChanging && selectedTournamentId === tournament.tournament_id}
+                      className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="部門のフォーマットを変更（試合データは削除されます）"
+                    >
+                      {isFormatChanging && selectedTournamentId === tournament.tournament_id ? (
+                        <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-1" />確認中...</>
+                      ) : (
+                        <><Settings className="w-4 h-4 mr-1" />フォーマット変更</>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled className="text-sm bg-white cursor-not-allowed opacity-50" title="開催中のため変更できません">
+                      <Lock className="w-4 h-4 mr-1" />
+                      フォーマット変更
+                    </Button>
+                  )
+                )}
               </div>
             </div>
 
@@ -1411,6 +1544,22 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       </Link>
                     </Button>
                   )}
+                  {permissions.canManageFiles && (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/files`}>
+                        <FileText className="w-4 h-4 mr-1" />
+                        お知らせ等管理
+                      </Link>
+                    </Button>
+                  )}
+                  {permissions.canManageSponsors && (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                        <Star className="w-4 h-4 mr-1" />
+                        スポンサー管理
+                      </Link>
+                    </Button>
+                  )}
                   {permissions.canManageDisplaySettings && (
                     <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                       <Link href={`/admin/tournaments/${tournament.tournament_id}/display-settings`}>
@@ -1485,7 +1634,35 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                   <QrCode className="w-4 h-4 mr-1" />
                   大会QR
                 </Button>
-                {divisions.some(d => d.operator_permissions?.canManageOperators) && (
+                {divisions.some(d => d.operator_permissions && Object.values(d.operator_permissions).every(v => v === true)) && (
+                  <>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
+                        <FileEdit className="w-4 h-4 mr-1" />
+                        大会編集
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/operators?group_id=${group.group_id}`}>
+                        <UserCog className="w-4 h-4 mr-1" />
+                        運営者管理
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}`}>
+                        <Plus className="w-4 h-4 mr-1" />
+                        部門作成
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href="/admin/venues">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        会場設定
+                      </Link>
+                    </Button>
+                  </>
+                )}
+                {!divisions.some(d => d.operator_permissions && Object.values(d.operator_permissions).every(v => v === true)) && divisions.some(d => d.operator_permissions?.canManageOperators) && (
                   <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
                     <Link href={`/admin/operators?group_id=${group.group_id}`}>
                       <UserCog className="w-4 h-4 mr-1" />
@@ -1518,6 +1695,26 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
     Object.keys(groupedData.grouped).length + groupedData.ungrouped.length;
 
   return (
+    <>
+    {/* フォーマット変更ダイアログ */}
+    {showFormatSelectionModal && formatChangeCheckResult && (
+      <FormatSelectionModal
+        currentFormatId={formatChangeCheckResult.current_format_id}
+        currentFormatName={formatChangeCheckResult.current_format_name}
+        availableFormats={availableFormats}
+        onSelect={handleFormatSelection}
+        onCancel={() => { setShowFormatSelectionModal(false); setSelectedTournamentId(null); }}
+      />
+    )}
+    {showFormatChangeDialog && formatChangeCheckResult && (
+      <FormatChangeDialog
+        checkResult={formatChangeCheckResult}
+        newFormatName={selectedNewFormatName}
+        onConfirm={handleConfirmFormatChange}
+        onCancel={() => { setShowFormatChangeDialog(false); setSelectedTournamentId(null); }}
+        isProcessing={isFormatChanging}
+      />
+    )}
     <div className="space-y-6">
       {/* 募集前の大会 */}
       {data.planning.length > 0 && (
@@ -1589,6 +1786,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
         </Card>
       )}
     </div>
+    </>
   );
 }
 

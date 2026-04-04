@@ -51,6 +51,23 @@ export async function GET(
 
     const groupRow = groupResult.rows[0];
 
+    // グループに紐づく全部門の会場をユニークに取得
+    const venuesResult = await db.execute(`
+      SELECT DISTINCT v.venue_id, v.venue_name, v.address as venue_address
+      FROM t_tournaments t, json_each(t.venue_id) je
+      JOIN m_venues v ON v.venue_id = je.value
+      WHERE t.group_id = ?
+        AND t.visibility = 'open'
+        AND date(t.public_start_date) <= date('now')
+      ORDER BY v.venue_name ASC
+    `, [groupId]);
+
+    const venues = venuesResult.rows.map(row => ({
+      venue_id: Number(row.venue_id),
+      venue_name: String(row.venue_name),
+      venue_address: row.venue_address as string | null,
+    }));
+
     // 所属部門一覧取得（公開のみ）
     const divisionsResult = await db.execute(`
       SELECT
@@ -137,6 +154,7 @@ export async function GET(
           venue_id: groupRow.venue_id ? Number(groupRow.venue_id) : null,
           venue_name: groupRow.venue_name as string | null,
           venue_address: groupRow.venue_address as string | null,
+          venues: venues,
           event_start_date: groupRow.event_start_date as string | null,
           event_end_date: groupRow.event_end_date as string | null,
           recruitment_start_date: groupRow.recruitment_start_date as string | null,

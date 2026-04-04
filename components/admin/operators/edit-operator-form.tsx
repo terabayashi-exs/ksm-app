@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, Loader2, ClipboardList, Calendar, Settings, Wrench, Shield } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, FileText, ClipboardList, Calendar, Settings, Wrench, Shield } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import TournamentAccessSelector from './tournament-access-selector';
@@ -32,6 +32,7 @@ export default function EditOperatorForm({
 
   // プリセットのアイコンマップ
   const presetIcons = {
+    basic_info: FileText,
     preparation: ClipboardList,
     event_day: Calendar,
     management: Settings,
@@ -54,7 +55,7 @@ export default function EditOperatorForm({
       const firstPermissions = initialTournamentAccess[0].permissions;
 
       // プリセットの組み合わせを試して、統合結果が一致するか確認
-      const availablePresets: Array<Exclude<PermissionPreset, 'custom'>> = ['preparation', 'event_day', 'management', 'operator_all'];
+      const availablePresets: Array<Exclude<PermissionPreset, 'custom'>> = ['basic_info', 'preparation', 'event_day', 'management', 'operator_all'];
       let foundMatch = false;
 
       // すべての組み合わせを試す（ビット演算で全パターン生成）
@@ -105,13 +106,25 @@ export default function EditOperatorForm({
   const togglePreset = (preset: Exclude<PermissionPreset, 'custom'>) => {
     setSelectedPresets(prev => {
       const next = new Set(prev);
-      if (next.has(preset)) {
-        next.delete(preset);
+      if (preset === 'operator_all') {
+        if (next.has('operator_all')) {
+          next.delete('operator_all');
+        } else {
+          next.clear();
+          next.add('operator_all');
+        }
       } else {
-        next.add(preset);
+        if (next.has(preset)) {
+          next.delete(preset);
+        } else {
+          next.add(preset);
+        }
       }
       return next;
     });
+    if (preset === 'operator_all') {
+      setUseCustomPermissions(false);
+    }
   };
 
   // 選択されたプリセットから統合権限を計算
@@ -236,25 +249,28 @@ export default function EditOperatorForm({
           <div className="space-y-3">
             <Label className="text-base font-medium">プリセットから選択（複数選択可）</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(['preparation', 'event_day', 'management', 'operator_all'] as const).map((preset) => {
+              {(['basic_info', 'preparation', 'event_day', 'management', 'operator_all'] as const).map((preset) => {
                 const Icon = presetIcons[preset];
                 const presetData = PERMISSION_PRESETS[preset];
                 const isSelected = selectedPresets.has(preset);
+                const isOperatorAllSelected = selectedPresets.has('operator_all');
+                const isDisabled = useCustomPermissions || (isOperatorAllSelected && preset !== 'operator_all');
 
                 return (
                   <div
                     key={preset}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary/50 ${
+                    className={`border rounded-lg p-4 transition-all hover:border-primary/50 ${
                       isSelected ? 'border-primary bg-primary/5' : 'border-gray-200'
-                    } ${useCustomPermissions ? 'opacity-50 pointer-events-none' : ''}`}
-                    onClick={() => !useCustomPermissions && togglePreset(preset)}
+                    } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    onClick={() => !isDisabled && togglePreset(preset)}
                   >
                     <div className="flex items-start gap-3">
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => togglePreset(preset)}
-                        disabled={useCustomPermissions}
+                        onCheckedChange={() => !isDisabled && togglePreset(preset)}
+                        disabled={isDisabled}
                         className="mt-1"
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -272,18 +288,20 @@ export default function EditOperatorForm({
 
           {/* カスタム設定 */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 ${selectedPresets.has('operator_all') ? 'opacity-50' : ''}`}>
               <Checkbox
                 id="useCustom"
                 checked={useCustomPermissions}
                 onCheckedChange={(checked) => {
+                  if (selectedPresets.has('operator_all')) return;
                   setUseCustomPermissions(checked as boolean);
                   if (!checked) {
                     setSelectedPresets(new Set(['event_day']));
                   }
                 }}
+                disabled={selectedPresets.has('operator_all')}
               />
-              <Label htmlFor="useCustom" className="cursor-pointer text-base font-medium flex items-center gap-2">
+              <Label htmlFor="useCustom" className={`text-base font-medium flex items-center gap-2 ${selectedPresets.has('operator_all') ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                 <Wrench className="w-5 h-5 text-primary" />
                 カスタム設定を使用
               </Label>
@@ -317,7 +335,7 @@ export default function EditOperatorForm({
                     canConfirmResults: '試合結果確定',
                     canSetManualRankings: '手動順位設定',
                     canChangePromotionRules: '選出条件変更',
-                    canManageFiles: 'ファイル管理',
+                    canManageFiles: 'お知らせ等管理',
                     canManageSponsors: 'スポンサー管理',
                     canSendEmails: 'メール送信',
                     canManageDisplaySettings: '表示設定',
@@ -325,20 +343,23 @@ export default function EditOperatorForm({
                     canEditTournament: '部門編集',
                   };
                   const categoryOrder = [
-                    'canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canChangeFormat', 'canManageParticipants', 'canPrintRefereeCards',
+                    'canChangeFormat', 'canEditTournament',
+                    'canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canManageParticipants', 'canPrintRefereeCards',
                     'canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules',
-                    'canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageOperators', 'canEditTournament',
+                    'canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageOperators',
                   ];
-                  const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canChangeFormat', 'canManageParticipants', 'canPrintRefereeCards'];
+                  const basicInfoPerms = ['canChangeFormat', 'canEditTournament'];
+                  const preparationPerms = ['canManageCourts', 'canManageRules', 'canRegisterTeams', 'canCreateDraws', 'canManageParticipants', 'canPrintRefereeCards'];
                   const eventDayPerms = ['canInputResults', 'canConfirmResults', 'canSetManualRankings', 'canChangePromotionRules'];
-                  const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageOperators', 'canEditTournament'];
+                  const managementPerms = ['canManageFiles', 'canManageSponsors', 'canSendEmails', 'canManageDisplaySettings', 'canManageOperators'];
 
                   return Object.entries(getEffectivePermissions())
                     .filter(([_, value]) => value === true)
                     .sort((a, b) => categoryOrder.indexOf(a[0]) - categoryOrder.indexOf(b[0]))
                     .map(([key]) => {
                       let badgeClass = 'bg-primary/10 text-primary';
-                      if (preparationPerms.includes(key)) badgeClass = 'bg-blue-100 text-blue-700';
+                      if (basicInfoPerms.includes(key)) badgeClass = 'bg-orange-100 text-orange-700';
+                      else if (preparationPerms.includes(key)) badgeClass = 'bg-blue-100 text-blue-700';
                       else if (eventDayPerms.includes(key)) badgeClass = 'bg-green-100 text-green-700';
                       else if (managementPerms.includes(key)) badgeClass = 'bg-purple-100 text-purple-700';
 

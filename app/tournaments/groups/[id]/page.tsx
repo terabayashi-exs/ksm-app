@@ -31,6 +31,12 @@ interface Division {
   event_end_date: string;
 }
 
+interface Venue {
+  venue_id: number;
+  venue_name: string;
+  venue_address: string | null;
+}
+
 interface TournamentGroup {
   group_id: number;
   group_name: string;
@@ -38,6 +44,7 @@ interface TournamentGroup {
   venue_id: number | null;
   venue_name: string | null;
   venue_address: string | null;
+  venues: Venue[];
   event_start_date: string | null;
   event_end_date: string | null;
   recruitment_start_date: string | null;
@@ -173,7 +180,24 @@ export default function TournamentGroupPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 会場 */}
-                {group.venue_name && (
+                {group.venues && group.venues.length > 0 ? (
+                  <div>
+                    <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      会場
+                    </div>
+                    <div className="space-y-2">
+                      {group.venues.map((venue) => (
+                        <div key={venue.venue_id}>
+                          <p className="text-sm">{venue.venue_name}</p>
+                          {venue.venue_address && (
+                            <p className="text-xs text-gray-500 mt-0.5">{venue.venue_address}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : group.venue_name ? (
                   <div>
                     <div className="flex items-center text-sm font-medium text-gray-500 mb-1">
                       <MapPin className="w-4 h-4 mr-2" />
@@ -184,7 +208,7 @@ export default function TournamentGroupPage() {
                       <p className="text-xs text-gray-500 mt-1">{group.venue_address}</p>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 {/* 大会期間 */}
                 {(group.event_start_date || group.event_end_date) && (
