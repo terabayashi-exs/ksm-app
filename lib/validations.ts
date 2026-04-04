@@ -232,7 +232,7 @@ export type PlayerRegisterForm = z.infer<typeof playerRegisterSchema>;
 export const teamWithPlayersRegisterSchema = teamRegisterSchema.extend({
   players: z.array(playerRegisterSchema)
     .min(0, '選手は0人以上で登録してください')
-    .max(30, '選手は最大30人まで登録可能です')
+    .max(100, '選手は最大100人まで登録可能です')
     .refine((players) => {
       // 背番号の重複チェック
       const numbers = players.filter(p => p.player_number !== undefined).map(p => p.player_number);
