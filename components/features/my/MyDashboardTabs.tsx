@@ -212,6 +212,9 @@ function AdminTabContent({ isSuperadmin, currentUserId, initialTournamentData, i
                   <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
                     <Link href="/admin/tournament-formats">大会フォーマット</Link>
                   </Button>
+                  <Button asChild variant="outline" className="w-full border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-100">
+                    <Link href="/admin/data-registration">管理者用データ登録</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
