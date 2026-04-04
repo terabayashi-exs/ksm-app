@@ -1,9 +1,61 @@
 // app/api/administrators/create-user/route.ts
-// 一般ユーザーアカウント作成（管理者による代行登録）
+// 一般ユーザーアカウント管理（管理者による代行登録・一覧取得）
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+
+// 一般ユーザー一覧の取得（adminロールを持たないユーザー）
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: '管理者権限が必要です' },
+        { status: 401 }
+      );
+    }
+
+    const result = await db.execute(`
+      SELECT
+        u.login_user_id,
+        u.display_name,
+        u.email,
+        u.is_active,
+        u.organization_name,
+        u.created_at,
+        u.updated_at,
+        GROUP_CONCAT(r.role) as roles
+      FROM m_login_users u
+      LEFT JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+      WHERE u.login_user_id NOT IN (
+        SELECT login_user_id FROM m_login_user_roles WHERE role = 'admin'
+      )
+      GROUP BY u.login_user_id
+      ORDER BY u.created_at DESC
+    `);
+
+    const users = result.rows.map(row => ({
+      login_user_id: Number(row.login_user_id),
+      display_name: String(row.display_name || ''),
+      email: String(row.email),
+      is_active: Number(row.is_active) === 1,
+      organization_name: row.organization_name ? String(row.organization_name) : '',
+      roles: row.roles ? String(row.roles).split(',') : [],
+      created_at: String(row.created_at),
+      updated_at: String(row.updated_at),
+    }));
+
+    return NextResponse.json({ success: true, data: users });
+
+  } catch (error) {
+    console.error('一般ユーザー一覧取得エラー:', error);
+    return NextResponse.json(
+      { success: false, error: '一般ユーザーデータの取得に失敗しました' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

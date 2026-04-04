@@ -37,7 +37,7 @@ export default async function AdministratorPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">利用者マスタ管理</h1>
           <p className="text-sm text-gray-500 mt-1">
-            システム利用者（管理者）の登録・編集・削除を行います
+            システム利用者（管理者・一般ユーザー）の登録・編集・削除を行います
           </p>
         </div>
         <AdministratorManagement />
