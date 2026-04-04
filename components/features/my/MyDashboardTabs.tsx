@@ -1442,7 +1442,7 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
             </div>
 
             {/* ── 事前準備 ── */}
-            {(permissions.canManageRules || permissions.canRegisterTeams || permissions.canCreateDraws || permissions.canManageParticipants || permissions.canPrintRefereeCards) && (
+            {(permissions.canManageRules || permissions.canRegisterTeams || permissions.canCreateDraws || permissions.canManageParticipants || permissions.canPrintRefereeCards || permissions.canManageMatchComments) && (
               <div>
                 <p className="text-xs font-semibold text-blue-600 mb-2">事前準備</p>
                 <div className="flex gap-2 flex-wrap">
@@ -1486,12 +1486,14 @@ function OperatorTournamentStatusList({ data, initialSportTypes }: { data: Tourn
                       </Link>
                     </Button>
                   )}
-                  <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
-                    <Link href={`/admin/tournaments/${tournament.tournament_id}/match-comments`}>
-                      <MessageSquare className="w-4 h-4 mr-1" />
-                      試合コメント
-                    </Link>
-                  </Button>
+                  {permissions.canManageMatchComments && (
+                    <Button asChild size="sm" variant="outline" className="text-sm bg-white hover:border-amber-300 hover:bg-amber-50">
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}/match-comments`}>
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        試合コメント
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

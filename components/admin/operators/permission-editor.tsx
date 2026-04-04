@@ -48,6 +48,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
           <PermCheckbox id="canCreateDraws" label="組合せ作成・編集" />
           <PermCheckbox id="canManageParticipants" label="参加チーム管理" />
           <PermCheckbox id="canPrintRefereeCards" label="審判カード印刷" />
+          <PermCheckbox id="canManageMatchComments" label="試合コメント管理" />
         </div>
       </div>
       <div>
