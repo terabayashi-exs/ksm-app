@@ -38,8 +38,53 @@ export async function GET(request: NextRequest) {
 
     let operatorsResult;
 
-    if (groupId) {
-      // group_id指定時: そのグループの部門にアクセス権がある運営者のみ取得
+    if (isOperatorWithPerm && !isAdmin && !isSuperadmin) {
+      // operator権限者: 自分がアクセス権を持つ大会と同じグループの運営者を全て表示
+      if (groupId) {
+        operatorsResult = await db.execute({
+          sql: `SELECT DISTINCT
+                  u.login_user_id,
+                  u.email,
+                  u.display_name,
+                  u.is_active,
+                  u.created_at,
+                  u.updated_at
+                FROM m_login_users u
+                INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+                INNER JOIN t_operator_tournament_access ota ON u.login_user_id = ota.operator_id
+                INNER JOIN t_tournaments t ON ota.tournament_id = t.tournament_id
+                WHERE r.role = 'operator'
+                  AND t.group_id = ?
+                ORDER BY u.created_at DESC`,
+          args: [parseInt(groupId)]
+        });
+      } else {
+        // group_id未指定: 自分がアクセス権を持つ大会のグループに属する全運営者
+        operatorsResult = await db.execute({
+          sql: `SELECT DISTINCT
+                  u.login_user_id,
+                  u.email,
+                  u.display_name,
+                  u.is_active,
+                  u.created_at,
+                  u.updated_at
+                FROM m_login_users u
+                INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
+                INNER JOIN t_operator_tournament_access ota ON u.login_user_id = ota.operator_id
+                INNER JOIN t_tournaments t ON ota.tournament_id = t.tournament_id
+                WHERE r.role = 'operator'
+                  AND t.group_id IN (
+                    SELECT DISTINCT t2.group_id
+                    FROM t_operator_tournament_access ota2
+                    INNER JOIN t_tournaments t2 ON ota2.tournament_id = t2.tournament_id
+                    WHERE ota2.operator_id = ?
+                  )
+                ORDER BY u.created_at DESC`,
+          args: [adminLoginUserId]
+        });
+      }
+    } else if (groupId) {
+      // admin: group_id指定時
       const baseCondition = isSuperadmin ? '' : 'AND u.created_by_login_user_id = ?';
       const args = isSuperadmin ? [parseInt(groupId)] : [parseInt(groupId), adminLoginUserId];
 
@@ -62,7 +107,7 @@ export async function GET(request: NextRequest) {
         args
       });
     } else {
-      // group_id未指定時: 従来通り全運営者を取得
+      // admin: group_id未指定時
       operatorsResult = isSuperadmin
         ? await db.execute({
             sql: `SELECT
@@ -182,6 +227,18 @@ export async function POST(request: NextRequest) {
     // パスワードをハッシュ化
     const passwordHash = await bcrypt.hash(body.password, 10);
 
+    // operatorの場合、自分の作成者（親管理者）を特定して引き継ぐ
+    let createdByLoginUserId = adminLoginUserId;
+    if (isOperatorWithPerm && !isAdmin) {
+      const parentResult = await db.execute({
+        sql: 'SELECT created_by_login_user_id FROM m_login_users WHERE login_user_id = ?',
+        args: [adminLoginUserId]
+      });
+      if (parentResult.rows.length > 0 && parentResult.rows[0].created_by_login_user_id) {
+        createdByLoginUserId = Number(parentResult.rows[0].created_by_login_user_id);
+      }
+    }
+
     // m_login_users に登録（運営者はプラン契約者ではないため current_plan_id は NULL）
     const insertResult = await db.execute({
       sql: `INSERT INTO m_login_users (
@@ -191,13 +248,15 @@ export async function POST(request: NextRequest) {
               is_superadmin,
               is_active,
               current_plan_id,
+              created_by_login_user_id,
               created_at,
               updated_at
-            ) VALUES (?, ?, ?, 0, 1, NULL, datetime('now', '+9 hours'), datetime('now', '+9 hours'))`,
+            ) VALUES (?, ?, ?, 0, 1, NULL, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))`,
       args: [
         body.operatorLoginId,
         passwordHash,
-        body.operatorName
+        body.operatorName,
+        createdByLoginUserId
       ]
     });
 
