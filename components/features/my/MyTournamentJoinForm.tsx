@@ -53,7 +53,7 @@ const formSchema = z.object({
   tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
   tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(5, 'チーム略称は5文字以内で入力してください'),
   players: z.array(playerSchema)
-    .max(30, '選手は最大30人まで登録可能です')
+    .max(100, '選手は最大100人まで登録可能です')
     .refine((players) => {
       if (players.length === 0) return true;
       const participatingPlayers = players.filter(p => p.is_participating);

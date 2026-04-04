@@ -75,8 +75,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   if (!Array.isArray(players)) {
     return NextResponse.json({ success: false, error: 'リクエストの形式が不正です' }, { status: 400 });
   }
-  if (players.length > 30) {
-    return NextResponse.json({ success: false, error: '選手は30名以内にしてください' }, { status: 400 });
+  if (players.length > 100) {
+    return NextResponse.json({ success: false, error: '選手は100名以内にしてください' }, { status: 400 });
   }
 
   // バリデーション

@@ -286,8 +286,8 @@ export default function TeamRegistrationPage() {
 
         // 最終バリデーション
         teams.forEach((team) => {
-          if (team.players.length > 30) {
-            errors.push(`チーム「${team.team_name}」: 選手は最大30人までです（現在${team.players.length}人）`);
+          if (team.players.length > 100) {
+            errors.push(`チーム「${team.team_name}」: 選手は最大100人までです（現在${team.players.length}人）`);
           }
 
           // 背番号重複チェック
