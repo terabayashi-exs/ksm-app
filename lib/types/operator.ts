@@ -17,6 +17,7 @@ export interface OperatorPermissions {
   canManageSponsors: boolean;        // スポンサー管理
   canPrintRefereeCards: boolean;     // 審判カード印刷
   canSendEmails: boolean;            // メール送信
+  canManageMatchComments: boolean;   // 試合コメント管理
   canManageDisplaySettings: boolean; // 表示設定（フェーズタブ表示/非表示、チーム表示名変更）
   canManageOperators: boolean;       // 運営者管理（運営者の追加）
   canEditTournament: boolean;        // 部門編集
@@ -41,6 +42,7 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canManageSponsors: false,
   canPrintRefereeCards: false,
   canSendEmails: false,
+  canManageMatchComments: false,
   canManageDisplaySettings: false,
   canManageOperators: false,
   canEditTournament: false,
@@ -73,6 +75,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageSponsors: false,
       canPrintRefereeCards: false,
       canSendEmails: false,
+      canManageMatchComments: false,
       canManageDisplaySettings: false,
       canManageOperators: false,
       canEditTournament: true,         // 部門編集
@@ -96,6 +99,7 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageSponsors: false,
       canPrintRefereeCards: true,      // 審判カード印刷
       canSendEmails: false,
+      canManageMatchComments: true,    // 試合コメント管理
       canManageDisplaySettings: false,
       canManageOperators: false,
       canEditTournament: false,
@@ -119,8 +123,8 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageSponsors: false,
       canPrintRefereeCards: false,
       canSendEmails: false,
+      canManageMatchComments: false,
       canManageDisplaySettings: false,
-
       canManageOperators: false,
       canEditTournament: false,
     }
@@ -143,8 +147,9 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageSponsors: true,         // スポンサー管理
       canPrintRefereeCards: false,
       canSendEmails: true,             // メール送信
+      canManageMatchComments: false,
       canManageDisplaySettings: true,  // 表示設定
-      canManageOperators: true,        // 運営者管理
+      canManageOperators: true,        // 運営者管���
       canEditTournament: false,
     }
   },
@@ -166,8 +171,8 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageSponsors: true,
       canPrintRefereeCards: true,
       canSendEmails: true,
+      canManageMatchComments: true,
       canManageDisplaySettings: true,
-
       canManageOperators: true,
       canEditTournament: true,
     }

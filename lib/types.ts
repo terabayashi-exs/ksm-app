@@ -86,6 +86,7 @@ export interface Tournament {
     canManageSponsors?: boolean;
     canPrintRefereeCards?: boolean;
     canSendEmails?: boolean;
+    canManageMatchComments?: boolean;
     canManageDisplaySettings?: boolean;
     canManageOperators?: boolean;
     canEditTournament?: boolean;
