@@ -42,7 +42,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
     try {
       const [managersRes, invitationsRes] = await Promise.all([
         fetch(`/api/my/teams/${teamId}/managers`),
-        fetch(`/api/my/teams/${teamId}/invitations`)
+        fetch(`/api/my/teams/invite?team_id=${teamId}`)
       ]);
 
       if (managersRes.ok) {
@@ -55,7 +55,7 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
       if (invitationsRes.ok) {
         const invitationsData = await invitationsRes.json();
         if (invitationsData.success) {
-          setInvitations(invitationsData.data);
+          setInvitations(invitationsData.data.filter((inv: TeamInvitation) => inv.status === 'pending'));
         }
       }
     } catch (err) {
@@ -77,10 +77,10 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
     setMessage(null);
 
     try {
-      const res = await fetch(`/api/my/teams/${teamId}/invite`, {
+      const res = await fetch(`/api/my/teams/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail.trim() })
+        body: JSON.stringify({ team_id: teamId, invited_email: inviteEmail.trim() })
       });
 
       const data = await res.json();
@@ -106,8 +106,10 @@ export default function TeamManagersClient({ teamId, teamName, teamOmission }: T
     setMessage(null);
 
     try {
-      const res = await fetch(`/api/my/teams/${teamId}/invitations/${invitationId}/cancel`, {
-        method: "POST"
+      const res = await fetch(`/api/my/teams/invite`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitation_id: invitationId })
       });
 
       const data = await res.json();

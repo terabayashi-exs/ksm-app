@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth, ExtendedUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { hasOperatorPermission } from '@/lib/operator-permission-check';
 
 /**
  * GET /api/admin/operators/[id]
@@ -12,9 +13,18 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
+
+    const user = session.user as ExtendedUser;
+    const roles = user.roles || [];
+    const isAdmin = roles.includes('admin');
+    const isOperatorWithPerm = roles.includes('operator') && user.loginUserId
+      ? await hasOperatorPermission(user.loginUserId, 'canManageOperators')
+      : false;
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -93,13 +103,21 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
-    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
+    const user = session.user as ExtendedUser;
+    const roles = user.roles || [];
+    const isAdmin = roles.includes('admin');
+    const adminLoginUserId = user.loginUserId;
+    const isSuperadmin = !!user.isSuperadmin;
+    const isOperatorWithPerm = roles.includes('operator') && adminLoginUserId
+      ? await hasOperatorPermission(adminLoginUserId, 'canManageOperators')
+      : false;
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
+    }
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
@@ -168,13 +186,21 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
-    const isSuperadmin = !!(session.user as { isSuperadmin?: boolean }).isSuperadmin;
+    const user = session.user as ExtendedUser;
+    const roles = user.roles || [];
+    const isAdmin = roles.includes('admin');
+    const adminLoginUserId = user.loginUserId;
+    const isSuperadmin = !!user.isSuperadmin;
+    const isOperatorWithPerm = roles.includes('operator') && adminLoginUserId
+      ? await hasOperatorPermission(adminLoginUserId, 'canManageOperators')
+      : false;
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
+    }
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }

@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
 import Header from '@/components/layout/Header';
+import { hasOperatorPermission } from '@/lib/operator-permission-check';
 
 export const metadata: Metadata = {
   title: '運営者を編集',
@@ -93,13 +94,20 @@ async function getOperator(operatorId: number, adminLoginUserId: number, isSuper
 
 export default async function EditOperatorPage({ params, searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
+  const user = session?.user as ExtendedUser | undefined;
+  const roles = user?.roles || [];
+  const isAdmin = roles.includes('admin');
+  const loginUserId = user?.loginUserId;
+  const isOperatorWithPerm = roles.includes('operator') && loginUserId
+    ? await hasOperatorPermission(loginUserId, 'canManageOperators')
+    : false;
 
-  if (!session?.user || (session.user as ExtendedUser).role !== 'admin') {
+  if (!session?.user || (!isAdmin && !isOperatorWithPerm)) {
     redirect('/auth/signin');
   }
 
-  const adminLoginUserId = (session.user as ExtendedUser).loginUserId;
-  const isSuperadmin = !!(session.user as ExtendedUser).isSuperadmin;
+  const adminLoginUserId = loginUserId;
+  const isSuperadmin = !!user?.isSuperadmin;
   if (!adminLoginUserId) {
     redirect('/auth/signin');
   }
