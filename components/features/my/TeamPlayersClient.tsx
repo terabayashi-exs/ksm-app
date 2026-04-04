@@ -215,7 +215,7 @@ export default function TeamPlayersClient({ teamId, teamName, teamOmission }: Te
                   </div>
                 )}
 
-                {formPlayers.length < 20 && (
+                {formPlayers.length < 100 && (
                   <Button
                     variant="outline"
                     className="w-full"
