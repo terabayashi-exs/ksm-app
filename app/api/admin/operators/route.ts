@@ -149,12 +149,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const adminLoginUserId = (session.user as { loginUserId?: number }).loginUserId;
+    const user = session.user as { loginUserId?: number; roles?: string[] };
+    const roles = user.roles || [];
+    const isAdmin = roles.includes('admin');
+    const adminLoginUserId = user.loginUserId;
+    const isOperatorWithPerm = roles.includes('operator') && adminLoginUserId
+      ? await hasOperatorPermission(adminLoginUserId, 'canManageOperators')
+      : false;
+    if (!isAdmin && !isOperatorWithPerm) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 401 });
+    }
     if (!adminLoginUserId) {
       return NextResponse.json({ error: '管理者情報が見つかりません' }, { status: 404 });
     }
