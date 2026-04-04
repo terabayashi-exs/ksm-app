@@ -53,6 +53,41 @@ interface EmailCheckResult {
 type CreateStep = 'email' | 'existing_confirm' | 'new_form';
 type UserCreateStep = 'email' | 'already_exists' | 'edit_form' | 'new_form';
 
+// ── 検索バーコンポーネント（フォーカス維持のため外部定義） ──
+function SearchBar({ inputValue, onInputChange, onSearch, onClear, appliedQuery, placeholder, count, total }: {
+  inputValue: string; onInputChange: (v: string) => void; onSearch: () => void; onClear: () => void;
+  appliedQuery: string; placeholder: string; count: number; total: number;
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="relative flex-1 max-w-sm">
+        <Input
+          value={inputValue}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') onSearch(); }}
+          placeholder={placeholder}
+          className="pr-8"
+        />
+        {inputValue && (
+          <button
+            onClick={onClear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      <Button variant="outline" size="sm" onClick={onSearch} className="shrink-0">
+        <Search className="h-4 w-4 mr-1" />
+        検索
+      </Button>
+      <span className="text-sm text-gray-500 whitespace-nowrap">
+        {appliedQuery ? `${count} / ${total} 件` : `${total} 件`}
+      </span>
+    </div>
+  );
+}
+
 export default function AdministratorManagement() {
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [generalUsers, setGeneralUsers] = useState<GeneralUser[]>([]);
@@ -62,8 +97,10 @@ export default function AdministratorManagement() {
   const [editingAdmin, setEditingAdmin] = useState<Administrator | null>(null);
   const [activeTab, setActiveTab] = useState('admin');
 
-  // 検索
+  // 検索（入力中テキストと確定済みクエリを分離）
+  const [adminSearchInput, setAdminSearchInput] = useState('');
   const [adminSearch, setAdminSearch] = useState('');
+  const [userSearchInput, setUserSearchInput] = useState('');
   const [userSearch, setUserSearch] = useState('');
 
   // ページネーション
@@ -446,33 +483,6 @@ export default function AdministratorManagement() {
     );
   }
 
-  // ── 検索バーコンポーネント ──
-  const SearchBar = ({ value, onChange, placeholder, count, total }: {
-    value: string; onChange: (v: string) => void; placeholder: string; count: number; total: number;
-  }) => (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="relative flex-1 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="pl-9 pr-8"
-        />
-        {value && (
-          <button
-            onClick={() => onChange('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-      <span className="text-sm text-gray-500 whitespace-nowrap">
-        {value ? `${count} / ${total} 件` : `${total} 件`}
-      </span>
-    </div>
-  );
 
   return (
     <div className="space-y-6">
@@ -842,8 +852,11 @@ export default function AdministratorManagement() {
             </CardHeader>
             <CardContent>
               <SearchBar
-                value={adminSearch}
-                onChange={setAdminSearch}
+                inputValue={adminSearchInput}
+                onInputChange={setAdminSearchInput}
+                onSearch={() => setAdminSearch(adminSearchInput)}
+                onClear={() => { setAdminSearchInput(''); setAdminSearch(''); }}
+                appliedQuery={adminSearch}
                 placeholder="氏名・メール・組織名で検索"
                 count={filteredAdministrators.length}
                 total={administrators.length}
@@ -934,8 +947,11 @@ export default function AdministratorManagement() {
             </CardHeader>
             <CardContent>
               <SearchBar
-                value={userSearch}
-                onChange={setUserSearch}
+                inputValue={userSearchInput}
+                onInputChange={setUserSearchInput}
+                onSearch={() => setUserSearch(userSearchInput)}
+                onClear={() => { setUserSearchInput(''); setUserSearch(''); }}
+                appliedQuery={userSearch}
                 placeholder="氏名・メール・組織名で検索"
                 count={filteredGeneralUsers.length}
                 total={generalUsers.length}
