@@ -100,11 +100,11 @@ export default function TournamentFilesPage() {
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
-            ファイル管理
+            お知らせ等管理
           </span>
         </nav>
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">ファイル管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900">お知らせ等管理</h1>
           <p className="text-sm text-gray-500 mt-1">
             大会に関連するお知らせ・ファイル・外部リンクを管理できます。
           </p>

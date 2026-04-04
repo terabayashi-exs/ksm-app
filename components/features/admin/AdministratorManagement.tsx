@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { AlertCircle, Edit, Trash2, Plus, User, Mail, Users, Search, UserCheck, UserPlus, Shield, X } from 'lucide-react';
 
 interface Administrator {
   admin_id: number;
-  admin_name: string; // display_name
+  admin_name: string;
   email: string;
   role: string;
   is_active: boolean;
@@ -19,8 +20,19 @@ interface Administrator {
   updated_at: string;
 }
 
+interface GeneralUser {
+  login_user_id: number;
+  display_name: string;
+  email: string;
+  is_active: boolean;
+  organization_name: string;
+  roles: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 interface AdministratorFormData {
-  admin_name: string; // display_name
+  admin_name: string;
   email: string;
   password: string;
   is_active: boolean;
@@ -28,7 +40,6 @@ interface AdministratorFormData {
   organization_name: string;
 }
 
-// メールアドレス確認結果
 interface EmailCheckResult {
   exists: boolean;
   already_admin?: boolean;
@@ -39,17 +50,26 @@ interface EmailCheckResult {
   };
 }
 
-// 新規登録フローの段階
 type CreateStep = 'email' | 'existing_confirm' | 'new_form';
-
-// 一般ユーザー追加フローの段階
 type UserCreateStep = 'email' | 'already_exists' | 'edit_form' | 'new_form';
 
 export default function AdministratorManagement() {
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
+  const [generalUsers, setGeneralUsers] = useState<GeneralUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<Administrator | null>(null);
+  const [activeTab, setActiveTab] = useState('admin');
+
+  // 検索
+  const [adminSearch, setAdminSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+
+  // ページネーション
+  const ITEMS_PER_PAGE = 10;
+  const [adminDisplayCount, setAdminDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [userDisplayCount, setUserDisplayCount] = useState(ITEMS_PER_PAGE);
 
   // 新規登録フロー
   const [isCreating, setIsCreating] = useState(false);
@@ -69,26 +89,59 @@ export default function AdministratorManagement() {
   const [savingUser, setSavingUser] = useState(false);
 
   const [formData, setFormData] = useState<AdministratorFormData>({
-    admin_name: '',
-    email: '',
-    password: '',
-    is_active: true,
-    is_superadmin: false,
-    organization_name: ''
+    admin_name: '', email: '', password: '', is_active: true, is_superadmin: false, organization_name: ''
   });
   const [saving, setSaving] = useState(false);
 
-  // 利用者一覧を取得
+  // フィルタされた管理者一覧
+  const filteredAdministrators = useMemo(() => {
+    setAdminDisplayCount(ITEMS_PER_PAGE);
+    if (!adminSearch.trim()) return administrators;
+    const q = adminSearch.toLowerCase();
+    return administrators.filter(a =>
+      a.admin_name.toLowerCase().includes(q) ||
+      a.email.toLowerCase().includes(q) ||
+      (a.organization_name && a.organization_name.toLowerCase().includes(q))
+    );
+  }, [administrators, adminSearch]);
+
+  // 表示中の管理者（ページネーション適用）
+  const visibleAdministrators = useMemo(() => {
+    return filteredAdministrators.slice(0, adminDisplayCount);
+  }, [filteredAdministrators, adminDisplayCount]);
+
+  const hasMoreAdmins = adminDisplayCount < filteredAdministrators.length;
+
+  // フィルタされた一般ユーザー一覧
+  const filteredGeneralUsers = useMemo(() => {
+    setUserDisplayCount(ITEMS_PER_PAGE);
+    if (!userSearch.trim()) return generalUsers;
+    const q = userSearch.toLowerCase();
+    return generalUsers.filter(u =>
+      u.display_name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.organization_name && u.organization_name.toLowerCase().includes(q))
+    );
+  }, [generalUsers, userSearch]);
+
+  // 表示中の一般ユーザー（ページネーション適用）
+  const visibleGeneralUsers = useMemo(() => {
+    return filteredGeneralUsers.slice(0, userDisplayCount);
+  }, [filteredGeneralUsers, userDisplayCount]);
+
+  const hasMoreUsers = userDisplayCount < filteredGeneralUsers.length;
+
+  // 管理者一覧を取得
   const fetchAdministrators = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/administrators');
-      if (!response.ok) throw new Error('利用者データの取得に失敗しました');
+      if (!response.ok) throw new Error('管理者データの取得に失敗しました');
       const result = await response.json();
       if (result.success) {
         setAdministrators(result.data);
       } else {
-        throw new Error(result.error || '利用者データの取得に失敗しました');
+        throw new Error(result.error || '管理者データの取得に失敗しました');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -97,8 +150,28 @@ export default function AdministratorManagement() {
     }
   };
 
+  // 一般ユーザー一覧を取得
+  const fetchGeneralUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const response = await fetch('/api/administrators/create-user');
+      if (!response.ok) throw new Error('一般ユーザーデータの取得に失敗しました');
+      const result = await response.json();
+      if (result.success) {
+        setGeneralUsers(result.data);
+      } else {
+        throw new Error(result.error || '一般ユーザーデータの取得に失敗しました');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   useEffect(() => {
     fetchAdministrators();
+    fetchGeneralUsers();
   }, []);
 
   // フォームリセット
@@ -120,12 +193,8 @@ export default function AdministratorManagement() {
 
   // ── 新規登録フロー ──────────────────────────────────────────────
 
-  // Step1: メールアドレスで確認
   const handleCheckEmail = async () => {
-    if (!emailInput.trim()) {
-      setError('メールアドレスを入力してください');
-      return;
-    }
+    if (!emailInput.trim()) { setError('メールアドレスを入力してください'); return; }
     setError(null);
     setCheckingEmail(true);
     try {
@@ -142,10 +211,8 @@ export default function AdministratorManagement() {
       if (result.already_admin) {
         setError('このメールアドレスは既に管理者として登録されています');
       } else if (result.exists) {
-        // アカウントあり → 確認画面へ
         setCreateStep('existing_confirm');
       } else {
-        // アカウントなし → 新規作成フォームへ
         setFormData(prev => ({ ...prev, email: emailInput.trim() }));
         setCreateStep('new_form');
       }
@@ -156,7 +223,6 @@ export default function AdministratorManagement() {
     }
   };
 
-  // Step2a: 既存ユーザーへの admin ロール付与
   const handleAddRole = async () => {
     if (!emailCheckResult?.user) return;
     setSaving(true);
@@ -170,6 +236,7 @@ export default function AdministratorManagement() {
       const result = await response.json();
       if (!result.success) throw new Error(result.error);
       await fetchAdministrators();
+      await fetchGeneralUsers();
       resetAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -178,7 +245,6 @@ export default function AdministratorManagement() {
     }
   };
 
-  // Step2b: 新規ユーザー作成（admin ロール付き）
   const handleCreateNew = async () => {
     if (!formData.admin_name.trim()) { setError('管理者名を入力してください'); return; }
     if (!formData.email.trim()) { setError('メールアドレスを入力してください'); return; }
@@ -207,10 +273,7 @@ export default function AdministratorManagement() {
   // ── 一般ユーザー追加フロー ──────────────────────────────────────
 
   const handleCheckUserEmail = async () => {
-    if (!userEmailInput.trim()) {
-      setError('メールアドレスを入力してください');
-      return;
-    }
+    if (!userEmailInput.trim()) { setError('メールアドレスを入力してください'); return; }
     setError(null);
     setCheckingUserEmail(true);
     try {
@@ -225,10 +288,8 @@ export default function AdministratorManagement() {
       setUserCheckResult(result);
 
       if (result.exists) {
-        // 既にアカウントがある
         setUserCreateStep('already_exists');
       } else {
-        // アカウントなし → 新規作成フォームへ
         setUserFormData(prev => ({ ...prev, email: userEmailInput.trim() }));
         setUserCreateStep('new_form');
       }
@@ -255,9 +316,8 @@ export default function AdministratorManagement() {
       });
       const result = await response.json();
       if (!result.success) throw new Error(result.error);
+      await fetchGeneralUsers();
       resetAll();
-      // 成功メッセージ（一覧に表示しないため、簡易的にalertで通知）
-      alert(result.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -279,8 +339,8 @@ export default function AdministratorManagement() {
       });
       const result = await response.json();
       if (!result.success) throw new Error(result.error);
+      await fetchGeneralUsers();
       resetAll();
-      alert(result.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -295,7 +355,27 @@ export default function AdministratorManagement() {
     setEditingAdmin(admin);
     setIsCreating(false);
     setError(null);
-    // 編集フォームが見えるようにスクロール
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+  };
+
+  // 一般ユーザー編集開始
+  const startEditingUser = (user: GeneralUser) => {
+    setUserEditData({
+      login_user_id: user.login_user_id,
+      display_name: user.display_name,
+      password: '',
+    });
+    setUserCheckResult({
+      exists: true,
+      user: {
+        login_user_id: user.login_user_id,
+        display_name: user.display_name,
+        email: user.email,
+      }
+    });
+    setUserCreateStep('edit_form');
+    setIsCreatingUser(true);
+    setError(null);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   };
 
@@ -334,20 +414,30 @@ export default function AdministratorManagement() {
       setError('利用者を全て削除することはできません。最低1人の管理者が必要です。');
       return;
     }
-    if (!confirm(`利用者「${admin.admin_name}」を削除しますか？\n\n※この操作は取り消せません。`)) return;
+    if (!confirm(`管理者「${admin.admin_name}」の管理者権限を削除しますか？\n\n※アカウント自体は削除されません。管理者ロールのみ削除されます。`)) return;
 
     try {
       const response = await fetch(`/api/administrators/${admin.admin_id}`, { method: 'DELETE' });
       const result = await response.json();
       if (!response.ok || !result.success) { setError(result.error || '削除に失敗しました'); return; }
       await fetchAdministrators();
+      await fetchGeneralUsers();
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : '削除中にエラーが発生しました');
     }
   };
 
-  if (loading) {
+  // ── ロール表示ヘルパー ──
+  const getRoleBadges = (roles: string[]) => {
+    const roleLabels: Record<string, { label: string; className: string }> = {
+      operator: { label: '運営者', className: 'bg-green-100 text-green-700' },
+      team: { label: 'チーム代表', className: 'bg-orange-100 text-orange-700' },
+    };
+    return roles.map(r => roleLabels[r]).filter(Boolean);
+  };
+
+  if (loading && loadingUsers) {
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -355,6 +445,34 @@ export default function AdministratorManagement() {
       </div>
     );
   }
+
+  // ── 検索バーコンポーネント ──
+  const SearchBar = ({ value, onChange, placeholder, count, total }: {
+    value: string; onChange: (v: string) => void; placeholder: string; count: number; total: number;
+  }) => (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="relative flex-1 max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="pl-9 pr-8"
+        />
+        {value && (
+          <button
+            onClick={() => onChange('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      <span className="text-sm text-gray-500 whitespace-nowrap">
+        {value ? `${count} / ${total} 件` : `${total} 件`}
+      </span>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -370,23 +488,7 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
-      {/* 新規登録ボタン */}
-      <div className="flex items-center justify-end gap-2">
-        {!isCreating && !isCreatingUser && !editingAdmin && (
-          <>
-            <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              管理者を追加
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreatingUser(true); }} className="flex items-center gap-2 border-green-400 text-green-700 hover:bg-green-50">
-              <UserPlus className="h-4 w-4" />
-              一般ユーザーを追加
-            </Button>
-          </>
-        )}
-      </div>
-
-      {/* ── 新規登録フロー ── */}
+      {/* ── 管理者新規登録フロー ── */}
       {isCreating && (
         <Card>
           <CardHeader>
@@ -396,8 +498,6 @@ export default function AdministratorManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-
-            {/* Step 1: メールアドレス入力 */}
             {createStep === 'email' && (
               <>
                 <p className="text-sm text-gray-500">
@@ -407,9 +507,7 @@ export default function AdministratorManagement() {
                   <Label htmlFor="check_email">メールアドレス <span className="text-destructive">*</span></Label>
                   <div className="flex gap-2 mt-1">
                     <Input
-                      id="check_email"
-                      type="email"
-                      autoComplete="off"
+                      id="check_email" type="email" autoComplete="off"
                       value={emailInput}
                       onChange={(e) => { setEmailInput(e.target.value); setError(null); }}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCheckEmail(); }}
@@ -427,7 +525,6 @@ export default function AdministratorManagement() {
               </>
             )}
 
-            {/* Step 2a: 既存ユーザーへのロール付与確認 */}
             {createStep === 'existing_confirm' && emailCheckResult?.user && (
               <>
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
@@ -447,15 +544,12 @@ export default function AdministratorManagement() {
                   <Button variant="outline" onClick={handleAddRole} disabled={saving}>
                     {saving ? '処理中...' : '管理者として追加する'}
                   </Button>
-                  <Button variant="outline" onClick={() => { setCreateStep('email'); setError(null); }}>
-                    戻る
-                  </Button>
+                  <Button variant="outline" onClick={() => { setCreateStep('email'); setError(null); }}>戻る</Button>
                   <Button variant="outline" onClick={resetAll}>キャンセル</Button>
                 </div>
               </>
             )}
 
-            {/* Step 2b: 新規ユーザー作成フォーム */}
             {createStep === 'new_form' && (
               <>
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-1">
@@ -468,13 +562,8 @@ export default function AdministratorManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="admin_name">表示名（氏名） <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="admin_name"
-                      autoComplete="off"
-                      value={formData.admin_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))}
-                      placeholder="例: 田中太郎"
-                    />
+                    <Input id="admin_name" autoComplete="off" value={formData.admin_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))} placeholder="例: 田中太郎" />
                   </div>
                   <div>
                     <Label htmlFor="email_display">メールアドレス</Label>
@@ -483,43 +572,25 @@ export default function AdministratorManagement() {
                 </div>
                 <div>
                   <Label htmlFor="organization_name">組織名</Label>
-                  <Input
-                    id="organization_name"
-                    value={formData.organization_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))}
-                    placeholder="例: 富山県サッカー協会"
-                  />
+                  <Input id="organization_name" value={formData.organization_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))} placeholder="例: 富山県サッカー協会" />
                   <p className="text-xs text-gray-500 mt-1">TOPページで大会のグルーピング表示に使用されます</p>
                 </div>
                 <div>
                   <Label htmlFor="password">初期パスワード <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="6文字以上"
-                  />
+                  <Input id="password" type="password" autoComplete="new-password" value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} placeholder="6文字以上" />
                   <p className="text-xs text-gray-500 mt-1">本人に別途パスワードをお知らせください</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is_active"
-                      checked={formData.is_active ?? true}
-                      onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                    />
+                    <input type="checkbox" id="is_active" checked={formData.is_active ?? true}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))} />
                     <Label htmlFor="is_active">利用可能</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is_superadmin"
-                      checked={formData.is_superadmin ?? false}
-                      onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))}
-                    />
+                    <input type="checkbox" id="is_superadmin" checked={formData.is_superadmin ?? false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))} />
                     <Label htmlFor="is_superadmin">スーパー管理者</Label>
                   </div>
                 </div>
@@ -527,9 +598,7 @@ export default function AdministratorManagement() {
                   <Button variant="outline" onClick={handleCreateNew} disabled={saving}>
                     {saving ? '作成中...' : 'アカウントを作成して追加'}
                   </Button>
-                  <Button variant="outline" onClick={() => { setCreateStep('email'); setError(null); }}>
-                    戻る
-                  </Button>
+                  <Button variant="outline" onClick={() => { setCreateStep('email'); setError(null); }}>戻る</Button>
                   <Button variant="outline" onClick={resetAll}>キャンセル</Button>
                 </div>
               </>
@@ -548,8 +617,6 @@ export default function AdministratorManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-
-            {/* Step 1: メールアドレス入力 */}
             {userCreateStep === 'email' && (
               <>
                 <p className="text-sm text-gray-500">
@@ -558,15 +625,11 @@ export default function AdministratorManagement() {
                 <div>
                   <Label htmlFor="user_check_email">メールアドレス <span className="text-destructive">*</span></Label>
                   <div className="flex gap-2 mt-1">
-                    <Input
-                      id="user_check_email"
-                      type="email"
-                      autoComplete="off"
+                    <Input id="user_check_email" type="email" autoComplete="off"
                       value={userEmailInput}
                       onChange={(e) => { setUserEmailInput(e.target.value); setError(null); }}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCheckUserEmail(); }}
-                      placeholder="例: user@example.com"
-                    />
+                      placeholder="例: user@example.com" />
                     <Button onClick={handleCheckUserEmail} disabled={checkingUserEmail} className="shrink-0">
                       <Search className="h-4 w-4 mr-1" />
                       {checkingUserEmail ? '確認中...' : '確認'}
@@ -579,7 +642,6 @@ export default function AdministratorManagement() {
               </>
             )}
 
-            {/* Step 2a: 既にアカウントが存在する場合 */}
             {userCreateStep === 'already_exists' && userCheckResult?.user && (
               <>
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
@@ -606,15 +668,12 @@ export default function AdministratorManagement() {
                   }}>
                     編集する
                   </Button>
-                  <Button variant="outline" onClick={() => { setUserCreateStep('email'); setError(null); }}>
-                    戻る
-                  </Button>
+                  <Button variant="outline" onClick={() => { setUserCreateStep('email'); setError(null); }}>戻る</Button>
                   <Button variant="outline" onClick={resetAll}>キャンセル</Button>
                 </div>
               </>
             )}
 
-            {/* Step 2a-2: 既存ユーザー編集フォーム */}
             {userCreateStep === 'edit_form' && userCheckResult?.user && (
               <>
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-1">
@@ -626,13 +685,8 @@ export default function AdministratorManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="user_edit_display_name">表示名（氏名） <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="user_edit_display_name"
-                      autoComplete="off"
-                      value={userEditData.display_name}
-                      onChange={(e) => setUserEditData(prev => ({ ...prev, display_name: e.target.value }))}
-                      placeholder="例: 田中太郎"
-                    />
+                    <Input id="user_edit_display_name" autoComplete="off" value={userEditData.display_name}
+                      onChange={(e) => setUserEditData(prev => ({ ...prev, display_name: e.target.value }))} placeholder="例: 田中太郎" />
                   </div>
                   <div>
                     <Label htmlFor="user_edit_email_display">メールアドレス</Label>
@@ -641,29 +695,27 @@ export default function AdministratorManagement() {
                 </div>
                 <div>
                   <Label htmlFor="user_edit_password">パスワード（変更する場合のみ入力）</Label>
-                  <Input
-                    id="user_edit_password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={userEditData.password}
-                    onChange={(e) => setUserEditData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="6文字以上"
-                  />
+                  <Input id="user_edit_password" type="password" autoComplete="new-password" value={userEditData.password}
+                    onChange={(e) => setUserEditData(prev => ({ ...prev, password: e.target.value }))} placeholder="6文字以上" />
                   <p className="text-xs text-gray-500 mt-1">空欄の場合、パスワードは変更されません</p>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={handleUpdateUser} disabled={savingUser}>
                     {savingUser ? '更新中...' : '更新する'}
                   </Button>
-                  <Button variant="outline" onClick={() => { setUserCreateStep('already_exists'); setError(null); }}>
-                    戻る
-                  </Button>
+                  <Button variant="outline" onClick={() => {
+                    if (userEmailInput) {
+                      setUserCreateStep('already_exists');
+                    } else {
+                      resetAll();
+                    }
+                    setError(null);
+                  }}>戻る</Button>
                   <Button variant="outline" onClick={resetAll}>キャンセル</Button>
                 </div>
               </>
             )}
 
-            {/* Step 2b: 新規ユーザー作成フォーム */}
             {userCreateStep === 'new_form' && (
               <>
                 <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-1">
@@ -676,13 +728,8 @@ export default function AdministratorManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="user_display_name">表示名（氏名） <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="user_display_name"
-                      autoComplete="off"
-                      value={userFormData.display_name}
-                      onChange={(e) => setUserFormData(prev => ({ ...prev, display_name: e.target.value }))}
-                      placeholder="例: 田中太郎"
-                    />
+                    <Input id="user_display_name" autoComplete="off" value={userFormData.display_name}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, display_name: e.target.value }))} placeholder="例: 田中太郎" />
                   </div>
                   <div>
                     <Label htmlFor="user_email_display">メールアドレス</Label>
@@ -691,23 +738,15 @@ export default function AdministratorManagement() {
                 </div>
                 <div>
                   <Label htmlFor="user_password">初期パスワード <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="user_password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={userFormData.password}
-                    onChange={(e) => setUserFormData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="6文字以上"
-                  />
+                  <Input id="user_password" type="password" autoComplete="new-password" value={userFormData.password}
+                    onChange={(e) => setUserFormData(prev => ({ ...prev, password: e.target.value }))} placeholder="6文字以上" />
                   <p className="text-xs text-gray-500 mt-1">本人に別途パスワードをお知らせください</p>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={handleCreateUser} disabled={savingUser}>
                     {savingUser ? '作成中...' : 'アカウントを作成'}
                   </Button>
-                  <Button variant="outline" onClick={() => { setUserCreateStep('email'); setError(null); }}>
-                    戻る
-                  </Button>
+                  <Button variant="outline" onClick={() => { setUserCreateStep('email'); setError(null); }}>戻る</Button>
                   <Button variant="outline" onClick={resetAll}>キャンセル</Button>
                 </div>
               </>
@@ -716,77 +755,48 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
-      {/* ── 編集フォーム ── */}
+      {/* ── 管理者編集フォーム ── */}
       {editingAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              利用者編集
+              管理者編集
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit_admin_name">表示名（氏名） <span className="text-destructive">*</span></Label>
-                <Input
-                  id="edit_admin_name"
-                  autoComplete="off"
-                  value={formData.admin_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))}
-                  placeholder="例: 田中太郎"
-                />
+                <Input id="edit_admin_name" autoComplete="off" value={formData.admin_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, admin_name: e.target.value }))} placeholder="例: 田中太郎" />
               </div>
               <div>
                 <Label htmlFor="edit_email">メールアドレス <span className="text-destructive">*</span></Label>
-                <Input
-                  id="edit_email"
-                  type="email"
-                  autoComplete="off"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="例: admin@example.com"
-                />
+                <Input id="edit_email" type="email" autoComplete="off" value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="例: admin@example.com" />
               </div>
             </div>
             <div>
               <Label htmlFor="edit_organization_name">組織名</Label>
-              <Input
-                id="edit_organization_name"
-                value={formData.organization_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))}
-                placeholder="例: 富山県サッカー協会"
-              />
+              <Input id="edit_organization_name" value={formData.organization_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, organization_name: e.target.value }))} placeholder="例: 富山県サッカー協会" />
               <p className="text-xs text-gray-500 mt-1">TOPページで大会のグルーピング表示に使用されます</p>
             </div>
             <div>
               <Label htmlFor="edit_password">パスワード（変更する場合のみ入力）</Label>
-              <Input
-                id="edit_password"
-                type="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="6文字以上"
-              />
+              <Input id="edit_password" type="password" autoComplete="new-password" value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} placeholder="6文字以上" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="edit_is_active"
-                  checked={formData.is_active ?? true}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                />
+                <input type="checkbox" id="edit_is_active" checked={formData.is_active ?? true}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))} />
                 <Label htmlFor="edit_is_active">利用可能</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="edit_is_superadmin"
-                  checked={formData.is_superadmin ?? false}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))}
-                />
+                <input type="checkbox" id="edit_is_superadmin" checked={formData.is_superadmin ?? false}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_superadmin: e.target.checked }))} />
                 <Label htmlFor="edit_is_superadmin">スーパー管理者</Label>
               </div>
             </div>
@@ -800,81 +810,198 @@ export default function AdministratorManagement() {
         </Card>
       )}
 
-      {/* ── 利用者一覧 ── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            登録済み管理者一覧
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {administrators.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              登録された管理者がいません
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {administrators.map((admin) => (
-                <div
-                  key={admin.admin_id}
-                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-medium text-gray-900">{admin.admin_name}</h3>
-                    {!admin.is_active && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                        利用停止中
-                      </span>
-                    )}
-                    <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">
-                      管理者
-                    </span>
-                    {admin.is_superadmin && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded font-semibold">
-                        スーパー管理者
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
-                    <Mail className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{admin.email}</span>
-                  </div>
-                  {admin.organization_name && (
-                    <div className="text-sm text-gray-500 mb-1">
-                      組織名: {admin.organization_name}
+      {/* ── タブ切り替え ── */}
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); resetAll(); }}>
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="admin" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            管理者 ({administrators.length})
+          </TabsTrigger>
+          <TabsTrigger value="user" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            一般ユーザー ({generalUsers.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── 管理者タブ ── */}
+        <TabsContent value="admin">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  管理者一覧
+                </CardTitle>
+                {!isCreating && !editingAdmin && (
+                  <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreating(true); }} className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    管理者を追加
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SearchBar
+                value={adminSearch}
+                onChange={setAdminSearch}
+                placeholder="氏名・メール・組織名で検索"
+                count={filteredAdministrators.length}
+                total={administrators.length}
+              />
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : filteredAdministrators.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {adminSearch ? '検索条件に一致する管理者がいません' : '登録された管理者がいません'}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {visibleAdministrators.map((admin) => (
+                    <div key={admin.admin_id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="font-medium text-gray-900">{admin.admin_name}</h3>
+                        {!admin.is_active && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">利用停止中</span>
+                        )}
+                        <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">管理者</span>
+                        {admin.is_superadmin && (
+                          <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded font-semibold">スーパー管理者</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
+                        <Mail className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{admin.email}</span>
+                      </div>
+                      {admin.organization_name && (
+                        <div className="text-sm text-gray-500 mb-1">組織名: {admin.organization_name}</div>
+                      )}
+                      <div className="text-sm text-gray-500 mb-3">
+                        登録日: {new Date(admin.created_at).toLocaleDateString('ja-JP')}
+                      </div>
+                      <div className="flex gap-2 border-t border-gray-100 pt-3">
+                        <Button variant="outline" size="sm" onClick={() => startEditing(admin)} className="flex items-center gap-1">
+                          <Edit className="h-4 w-4" />
+                          編集
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(admin)}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                          disabled={administrators.length <= 1}>
+                          <Trash2 className="h-4 w-4" />
+                          削除
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {hasMoreAdmins && (
+                    <div className="text-center pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setAdminDisplayCount(prev => prev + ITEMS_PER_PAGE)}
+                        className="w-full max-w-xs"
+                      >
+                        さらに表示する（残り {filteredAdministrators.length - adminDisplayCount} 件）
+                      </Button>
                     </div>
                   )}
-                  <div className="text-sm text-gray-500 mb-3">
-                    登録日: {new Date(admin.created_at).toLocaleDateString('ja-JP')}
-                  </div>
-                  <div className="flex gap-2 border-t border-gray-100 pt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startEditing(admin)}
-                      className="flex items-center gap-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      編集
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(admin)}
-                      className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300"
-                      disabled={administrators.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      削除
-                    </Button>
+                  <div className="text-center text-xs text-gray-400">
+                    {visibleAdministrators.length} / {filteredAdministrators.length} 件表示中
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── 一般ユーザータブ ── */}
+        <TabsContent value="user">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  一般ユーザー一覧
+                </CardTitle>
+                {!isCreatingUser && (
+                  <Button variant="outline" size="sm" onClick={() => { resetAll(); setIsCreatingUser(true); }}
+                    className="flex items-center gap-2 border-green-400 text-green-700 hover:bg-green-50">
+                    <UserPlus className="h-4 w-4" />
+                    一般ユーザーを追加
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SearchBar
+                value={userSearch}
+                onChange={setUserSearch}
+                placeholder="氏名・メール・組織名で検索"
+                count={filteredGeneralUsers.length}
+                total={generalUsers.length}
+              />
+              {loadingUsers ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : filteredGeneralUsers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {userSearch ? '検索条件に一致するユーザーがいません' : '登録された一般ユーザーがいません'}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {visibleGeneralUsers.map((user) => (
+                    <div key={user.login_user_id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="font-medium text-gray-900">{user.display_name || '(未設定)'}</h3>
+                        {!user.is_active && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">利用停止中</span>
+                        )}
+                        {user.roles.length === 0 && (
+                          <span className="px-2 py-1 bg-gray-50 text-gray-500 text-xs rounded">ロールなし</span>
+                        )}
+                        {getRoleBadges(user.roles).map((badge, i) => (
+                          <span key={i} className={`px-2 py-1 text-xs rounded ${badge.className}`}>{badge.label}</span>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-600 mb-1">
+                        <Mail className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                      {user.organization_name && (
+                        <div className="text-sm text-gray-500 mb-1">組織名: {user.organization_name}</div>
+                      )}
+                      <div className="text-sm text-gray-500 mb-3">
+                        登録日: {new Date(user.created_at).toLocaleDateString('ja-JP')}
+                      </div>
+                      <div className="flex gap-2 border-t border-gray-100 pt-3">
+                        <Button variant="outline" size="sm" onClick={() => startEditingUser(user)} className="flex items-center gap-1">
+                          <Edit className="h-4 w-4" />
+                          編集
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {hasMoreUsers && (
+                    <div className="text-center pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setUserDisplayCount(prev => prev + ITEMS_PER_PAGE)}
+                        className="w-full max-w-xs"
+                      >
+                        さらに表示する（残り {filteredGeneralUsers.length - userDisplayCount} 件）
+                      </Button>
+                    </div>
+                  )}
+                  <div className="text-center text-xs text-gray-400">
+                    {visibleGeneralUsers.length} / {filteredGeneralUsers.length} 件表示中
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

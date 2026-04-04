@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Plus, Trash2, Save, Loader2, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Bell, Plus, Trash2, Save, Loader2, Eye, EyeOff, Edit } from "lucide-react";
 
 interface Notice {
   tournament_notice_id: number;
@@ -207,40 +207,45 @@ export default function TournamentNoticeManagement({ tournamentId, tournamentNam
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="whitespace-pre-wrap text-sm">{notice.content}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant={notice.is_active ? "default" : "secondary"} className="text-xs">
-                            {notice.is_active ? "公開中" : "非公開"}
-                          </Badge>
-                          {notice.updated_at && (
-                            <span className="text-xs text-gray-400">
-                              更新: {notice.updated_at}
-                            </span>
-                          )}
-                        </div>
+                        {notice.updated_at && (
+                          <span className="text-xs text-gray-400 mt-1 block">
+                            更新: {notice.updated_at}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={Boolean(notice.is_active)}
+                            onCheckedChange={() => handleToggleActive(notice)}
+                          />
+                          <span className="text-sm">
+                            {notice.is_active ? (
+                              <span className="flex items-center text-green-600">
+                                <Eye className="h-4 w-4 mr-1" />
+                                公開
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-gray-500">
+                                <EyeOff className="h-4 w-4 mr-1" />
+                                非公開
+                              </span>
+                            )}
+                          </span>
+                        </div>
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleActive(notice)}
-                          title={notice.is_active ? "非公開にする" : "公開する"}
-                        >
-                          {notice.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => { setEditingId(notice.tournament_notice_id); setEditContent(notice.content); }}
                         >
-                          編集
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleDelete(notice.tournament_notice_id)}
-                          className="text-red-500 hover:text-red-700"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
                     </div>

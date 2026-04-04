@@ -33,13 +33,19 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
   const content = (
     <div className="space-y-5">
       <div>
+        <p className="text-xs font-semibold text-orange-600 mb-2">基本情報</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <PermCheckbox id="canChangeFormat" label="フォーマット変更" />
+          <PermCheckbox id="canEditTournament" label="部門編集" />
+        </div>
+      </div>
+      <div>
         <p className="text-xs font-semibold text-blue-600 mb-2">事前準備</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <PermCheckbox id="canManageCourts" label="日程・会場・コート設定" />
           <PermCheckbox id="canManageRules" label="ルール設定" />
           <PermCheckbox id="canRegisterTeams" label="チーム登録" />
           <PermCheckbox id="canCreateDraws" label="組合せ作成・編集" />
-          <PermCheckbox id="canChangeFormat" label="フォーマット変更" />
           <PermCheckbox id="canManageParticipants" label="参加チーム管理" />
           <PermCheckbox id="canPrintRefereeCards" label="審判カード印刷" />
         </div>
@@ -56,12 +62,11 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
       <div>
         <p className="text-xs font-semibold text-purple-600 mb-2">管理・その他</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <PermCheckbox id="canManageFiles" label="ファイル管理" />
+          <PermCheckbox id="canManageFiles" label="お知らせ等管理" />
           <PermCheckbox id="canManageSponsors" label="スポンサー管理" />
           <PermCheckbox id="canSendEmails" label="メール送信" />
           <PermCheckbox id="canManageDisplaySettings" label="表示設定" />
           <PermCheckbox id="canManageOperators" label="運営者管理" />
-          <PermCheckbox id="canEditTournament" label="部門編集" />
         </div>
       </div>
     </div>
