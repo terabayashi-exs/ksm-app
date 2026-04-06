@@ -275,7 +275,7 @@ export default function TournamentGroupPage() {
                       <Card
                         key={division.tournament_id}
                         className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => window.location.href = `/tournaments/${division.tournament_id}`}
+                        onClick={() => window.location.href = `/tournaments/${division.tournament_id}/schedule`}
                       >
                         <CardContent className="p-4">
                           <div className="space-y-3">

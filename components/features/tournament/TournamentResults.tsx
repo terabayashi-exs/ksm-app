@@ -826,7 +826,7 @@ export default function TournamentResults({ tournamentId, phase = 'preliminary' 
                       return (
                         <tr key={`${block.block_name}-row-${team.team_id}-${teamIndex}`}>
                           {/* チーム名（略称優先） */}
-                          <td className="border border-gray-200 p-2 md:p-3 bg-gray-50 font-medium text-sm md:text-base whitespace-nowrap">
+                          <td className="border border-gray-200 p-2 md:p-3 bg-gray-50 font-medium text-sm md:text-base whitespace-nowrap text-center">
                             <div title={team.team_name}>
                               {team.team_omission || team.team_name}
                             </div>
