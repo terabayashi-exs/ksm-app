@@ -6,8 +6,8 @@ import "./globals.css";
 
 export const metadata = {
   title: {
-    default: "Taikai GO - スポーツ大会管理システム",
-    template: "%s | Taikai GO",
+    default: "大会GO! [Taikai-Go]- スポーツ大会管理システム",
+    template: "%s | 大会GO! [Taikai-Go]",
   },
   description: "あらゆるスポーツ大会の運営から結果公開まで、簡単に大会運営ができる総合管理システム",
   robots: "index, follow",
