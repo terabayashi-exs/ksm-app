@@ -187,21 +187,35 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
 
   // 部門を大会（グループ）単位に集約
   const groupMap = new Map<number, GroupedTournament>();
+  const groupDivisionStatuses = new Map<number, TournamentStatus[]>();
   tournaments.forEach(t => {
     const gid = t.group_id;
     if (!gid) return;
+    if (!groupDivisionStatuses.has(gid)) {
+      groupDivisionStatuses.set(gid, []);
+    }
+    groupDivisionStatuses.get(gid)!.push(t.status);
     if (!groupMap.has(gid)) {
       groupMap.set(gid, {
         group_id: gid,
         group_name: t.group_name || t.tournament_name,
         sport_icon: t.sport_icon || '🏆',
-        status: t.status,
+        status: t.status, // 仮設定（後で集約）
         tournament_period: t.tournament_period,
         venue_name: t.venue_name,
         logo_blob_url: t.logo_blob_url,
         organization_name: t.organization_name,
       });
     }
+  });
+  // グループ内の全部門ステータスを集約（ダッシュボードと同じロジック）
+  groupMap.forEach((group, gid) => {
+    const statuses = groupDivisionStatuses.get(gid) || [];
+    if (statuses.some(s => s === 'ongoing')) group.status = 'ongoing';
+    else if (statuses.some(s => s === 'before_event')) group.status = 'before_event';
+    else if (statuses.some(s => s === 'recruiting')) group.status = 'recruiting';
+    else if (statuses.some(s => s === 'planning')) group.status = 'planning';
+    else if (statuses.every(s => s === 'completed')) group.status = 'completed';
   });
   const groupedTournaments = Array.from(groupMap.values());
 
