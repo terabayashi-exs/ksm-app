@@ -188,6 +188,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
   // 部門を大会（グループ）単位に集約
   const groupMap = new Map<number, GroupedTournament>();
   const groupDivisionStatuses = new Map<number, TournamentStatus[]>();
+  const groupVenueNames = new Map<number, string[]>();
   tournaments.forEach(t => {
     const gid = t.group_id;
     if (!gid) return;
@@ -195,6 +196,14 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
       groupDivisionStatuses.set(gid, []);
     }
     groupDivisionStatuses.get(gid)!.push(t.status);
+    // 会場名を収集（「/」区切りの場合は分割して個別に追加）
+    if (t.venue_name && t.venue_name !== '未設定') {
+      if (!groupVenueNames.has(gid)) {
+        groupVenueNames.set(gid, []);
+      }
+      const venues = t.venue_name.split(' / ').map((v: string) => v.trim()).filter(Boolean);
+      groupVenueNames.get(gid)!.push(...venues);
+    }
     if (!groupMap.has(gid)) {
       groupMap.set(gid, {
         group_id: gid,
@@ -202,7 +211,7 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
         sport_icon: t.sport_icon || '🏆',
         status: t.status, // 仮設定（後で集約）
         tournament_period: t.tournament_period,
-        venue_name: t.venue_name,
+        venue_name: t.venue_name, // 仮設定（後で集約）
         logo_blob_url: t.logo_blob_url,
         organization_name: t.organization_name,
       });
@@ -216,6 +225,10 @@ export default function TournamentSearchSection({ sportTypes, initialTournaments
     else if (statuses.some(s => s === 'recruiting')) group.status = 'recruiting';
     else if (statuses.some(s => s === 'planning')) group.status = 'planning';
     else if (statuses.every(s => s === 'completed')) group.status = 'completed';
+    // グループ内の全部門の会場名を重複除去して集約
+    const venues = groupVenueNames.get(gid) || [];
+    const uniqueVenues = [...new Set(venues)];
+    group.venue_name = uniqueVenues.length > 0 ? uniqueVenues.join(' / ') : '未設定';
   });
   const groupedTournaments = Array.from(groupMap.values());
 
