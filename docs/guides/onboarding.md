@@ -202,6 +202,40 @@ git commit -m "..."   # 7. コミット
 
 スキーマ変更時は必ず[マイグレーションガイド](./database-migration.md)に従ってください。
 
+## Claude Code の設定（AI支援開発を利用する場合）
+
+このプロジェクトではClaude Code（AI開発アシスタント）を活用しています。Claude Codeを使う場合、以下の設定を行うと、ファイル編集時にBiomeフォーマットが自動適用されます。
+
+### 設定手順
+
+`.claude/settings.json`を作成（または編集）し、以下を記載してください：
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx biome format --write $CLAUDE_FILE_PATH 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### この設定の効果
+- Claude Codeがファイルを編集・作成するたびに、Biomeフォーマットが自動で適用されます
+- 手動でフォーマットを実行する手間が省けます
+
+### 注意
+- `.claude/`ディレクトリは`.gitignore`対象のため、**各開発者がローカルで設定する必要があります**
+- Claude Codeを使わない開発者はこの設定は不要です
+
 ## 主要ドキュメント
 
 | ドキュメント | 内容 |
