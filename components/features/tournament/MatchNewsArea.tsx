@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, CheckCircle, AlertTriangle, Zap } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface MatchNewsData {
   match_id: number;
@@ -44,7 +44,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
       if (isFirstFetch) setLoading(true);
       try {
         const response = await fetch(`/api/tournaments/${tournamentId}/match-news`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (response.ok) {
@@ -54,7 +54,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
           }
         }
       } catch (error) {
-        console.error('速報データ取得エラー:', error);
+        console.error("速報データ取得エラー:", error);
       } finally {
         if (isFirstFetch) {
           setLoading(false);
@@ -73,44 +73,44 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
 
   // 試合の表示スタイルを取得
   const getMatchStyle = (match: MatchNewsData) => {
-    if (match.match_status === 'ongoing') {
+    if (match.match_status === "ongoing") {
       return {
-        container: 'border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-red-100',
-        badge: 'bg-red-500 text-white animate-pulse',
+        container: "border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-red-100",
+        badge: "bg-red-500 text-white animate-pulse",
         icon: <Zap className="h-4 w-4 text-red-600" />,
-        label: 'LIVE',
-        priority: 1
+        label: "LIVE",
+        priority: 1,
       };
     } else if (match.has_result) {
       return {
-        container: 'border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100',
-        badge: 'bg-blue-500 text-white',
+        container: "border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100",
+        badge: "bg-blue-500 text-white",
         icon: <CheckCircle className="h-4 w-4 text-blue-600" />,
-        label: '終了',
-        priority: 2
+        label: "終了",
+        priority: 2,
       };
-    } else if (match.match_status === 'completed') {
+    } else if (match.match_status === "completed") {
       return {
-        container: 'border-l-4 border-purple-500 bg-gradient-to-r from-purple-50 to-purple-100',
-        badge: 'bg-purple-500 text-white',
+        container: "border-l-4 border-purple-500 bg-gradient-to-r from-purple-50 to-purple-100",
+        badge: "bg-purple-500 text-white",
         icon: <AlertTriangle className="h-4 w-4 text-purple-600" />,
-        label: '結果待ち',
-        priority: 3
+        label: "結果待ち",
+        priority: 3,
       };
     }
-    
+
     return {
-      container: 'border-l-4 border-gray-500 bg-gradient-to-r from-gray-50 to-gray-100',
-      badge: 'bg-gray-500 text-white',
+      container: "border-l-4 border-gray-500 bg-gradient-to-r from-gray-50 to-gray-100",
+      badge: "bg-gray-500 text-white",
       icon: <Clock className="h-4 w-4 text-gray-600" />,
-      label: '予定',
-      priority: 4
+      label: "予定",
+      priority: 4,
     };
   };
 
   // 試合結果の表示
   const getMatchResult = (match: MatchNewsData) => {
-    if (match.match_status === 'ongoing') {
+    if (match.match_status === "ongoing") {
       // 進行中の場合、フォーマット済みスコアがあればそれを使用、なければ個別スコア
       if (match.score_display) {
         return match.score_display;
@@ -118,11 +118,14 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
       if (match.team1_goals !== null && match.team2_goals !== null) {
         return `${match.team1_goals} - ${match.team2_goals}`;
       }
-      return '進行中';
+      return "進行中";
     }
-    
+
     // 試合終了済みで、スコアが入力されている場合
-    if (match.match_status === 'completed' && (match.score_display || (match.team1_goals !== null && match.team2_goals !== null))) {
+    if (
+      match.match_status === "completed" &&
+      (match.score_display || (match.team1_goals !== null && match.team2_goals !== null))
+    ) {
       if (match.is_walkover) {
         // 不戦引き分けの場合（両チーム不参加）
         if (match.is_draw) {
@@ -131,7 +134,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
         // 通常の不戦勝（片方チーム不参加）
         return `不戦勝 ${match.team1_goals ?? 0}-${match.team2_goals ?? 0}`;
       }
-      
+
       // フォーマット済みスコア表示があればそれを優先（PK戦考慮済み）
       if (match.score_display) {
         if (match.is_draw) {
@@ -139,17 +142,17 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
         }
         return match.score_display;
       }
-      
+
       // フォールバック: 従来の表示方式
       if (match.is_draw) {
         return `${match.team1_goals} - ${match.team2_goals} (引分)`;
       }
-      
+
       return `${match.team1_goals} - ${match.team2_goals}`;
     }
-    
+
     if (!match.has_result) {
-      return match.match_status === 'completed' ? '結果入力中' : '試合前';
+      return match.match_status === "completed" ? "結果入力中" : "試合前";
     }
 
     if (match.is_walkover) {
@@ -163,7 +166,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
 
     // 結果があるがスコアがnullの場合のチェック
     if (!match.score_display && (match.team1_goals === null || match.team2_goals === null)) {
-      return '結果確認中';
+      return "結果確認中";
     }
 
     // フォーマット済みスコア表示があればそれを使用
@@ -184,63 +187,68 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
 
   // 勝者の判定
   const getWinnerDisplay = (match: MatchNewsData) => {
-    if (!match.has_result || match.is_draw || match.match_status === 'ongoing') {
+    if (!match.has_result || match.is_draw || match.match_status === "ongoing") {
       return {
-        team1Style: 'text-gray-900',
-        team2Style: 'text-gray-900'
+        team1Style: "text-gray-900",
+        team2Style: "text-gray-900",
       };
     }
 
     const winnerIsTeam1 = match.winner_team_id === match.team1_id;
     return {
-      team1Style: winnerIsTeam1 ? 'text-green-700 font-bold' : 'text-gray-600',
-      team2Style: winnerIsTeam1 ? 'text-gray-600' : 'text-green-700 font-bold'
+      team1Style: winnerIsTeam1 ? "text-green-700 font-bold" : "text-gray-600",
+      team2Style: winnerIsTeam1 ? "text-gray-600" : "text-green-700 font-bold",
     };
   };
 
   // ブロック色の取得（動的判定）
   const newsBlockColors = [
-    'bg-blue-100 text-blue-800',
-    'bg-green-100 text-green-800',
-    'bg-yellow-100 text-yellow-800',
-    'bg-purple-100 text-purple-800',
-    'bg-pink-100 text-pink-800',
-    'bg-indigo-100 text-indigo-800',
-    'bg-rose-100 text-rose-800',
-    'bg-teal-100 text-teal-800',
-    'bg-cyan-100 text-cyan-800',
-    'bg-lime-100 text-lime-800',
-    'bg-amber-100 text-amber-800',
-    'bg-sky-100 text-sky-800',
-    'bg-fuchsia-100 text-fuchsia-800',
-    'bg-emerald-100 text-emerald-800',
-    'bg-violet-100 text-violet-800',
-    'bg-red-100 text-red-800',
+    "bg-blue-100 text-blue-800",
+    "bg-green-100 text-green-800",
+    "bg-yellow-100 text-yellow-800",
+    "bg-purple-100 text-purple-800",
+    "bg-pink-100 text-pink-800",
+    "bg-indigo-100 text-indigo-800",
+    "bg-rose-100 text-rose-800",
+    "bg-teal-100 text-teal-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-lime-100 text-lime-800",
+    "bg-amber-100 text-amber-800",
+    "bg-sky-100 text-sky-800",
+    "bg-fuchsia-100 text-fuchsia-800",
+    "bg-emerald-100 text-emerald-800",
+    "bg-violet-100 text-violet-800",
+    "bg-red-100 text-red-800",
   ];
   const getBlockColor = (match: MatchNewsData): string => {
-    if (match.block_name && match.block_name.length === 1 && match.block_name >= 'A' && match.block_name <= 'Z') {
-      const index = match.block_name.charCodeAt(0) - 'A'.charCodeAt(0);
+    if (
+      match.block_name &&
+      match.block_name.length === 1 &&
+      match.block_name >= "A" &&
+      match.block_name <= "Z"
+    ) {
+      const index = match.block_name.charCodeAt(0) - "A".charCodeAt(0);
       return newsBlockColors[index % newsBlockColors.length];
     }
-    return 'bg-gray-100 text-gray-800';
+    return "bg-gray-100 text-gray-800";
   };
 
   // 時間の表示
   const getTimeDisplay = (match: MatchNewsData): string => {
-    if (match.match_status === 'ongoing' || !match.end_time) {
-      return match.start_time ? match.start_time.substring(0, 5) : '--:--';
+    if (match.match_status === "ongoing" || !match.end_time) {
+      return match.start_time ? match.start_time.substring(0, 5) : "--:--";
     }
-    
+
     // 終了時刻を表示
     const endTime = new Date(match.end_time);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - endTime.getTime()) / (1000 * 60));
-    
+
     if (diffMinutes < 60) {
       return `${diffMinutes}分前終了`;
     }
-    
-    return match.end_time.substring(0, 5) + ' 終了';
+
+    return match.end_time.substring(0, 5) + " 終了";
   };
 
   if (loading) {
@@ -262,7 +270,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
 
   // 優先度順にソート（進行中 → 終了 → 結果待ち）
   const sortedMatches = newsMatches
-    .map(match => ({ ...match, style: getMatchStyle(match) }))
+    .map((match) => ({ ...match, style: getMatchStyle(match) }))
     .sort((a, b) => {
       if (a.style.priority !== b.style.priority) {
         return a.style.priority - b.style.priority;
@@ -278,9 +286,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
         <CardTitle className="flex items-center text-lg font-bold text-orange-800">
           <span className="mr-2 text-xl">📢</span>
           試合速報
-          <span className="ml-2 text-sm font-normal text-orange-600">
-            （進行中・直近30分）
-          </span>
+          <span className="ml-2 text-sm font-normal text-orange-600">（進行中・直近30分）</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
@@ -289,7 +295,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
             const match = matchWithStyle;
             const style = matchWithStyle.style;
             const winnerDisplay = getWinnerDisplay(match);
-            
+
             return (
               <div
                 key={match.match_id}
@@ -300,7 +306,9 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                     <span className={`px-2 py-1 rounded text-xs font-bold ${style.badge}`}>
                       {style.label}
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getBlockColor(match)}`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${getBlockColor(match)}`}
+                    >
                       {match.match_code}
                     </span>
                     {match.court_number && (
@@ -314,7 +322,7 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                     <span>{getTimeDisplay(match)}</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className={`text-sm ${winnerDisplay.team1Style}`}>
@@ -325,11 +333,9 @@ export default function MatchNewsArea({ tournamentId }: MatchNewsAreaProps) {
                       {match.team2_display_name}
                     </div>
                   </div>
-                  
+
                   <div className="text-right">
-                    <div className="text-lg font-bold text-gray-800">
-                      {getMatchResult(match)}
-                    </div>
+                    <div className="text-lg font-bold text-gray-800">{getMatchResult(match)}</div>
                   </div>
                 </div>
               </div>

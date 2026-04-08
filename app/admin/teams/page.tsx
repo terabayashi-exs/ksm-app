@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   ArrowLeft,
-  Users,
   Calendar,
-  Trophy,
-  MapPin,
-  Search,
-  UserCheck,
-  Phone,
   ChevronDown,
-  ChevronRight
-} from 'lucide-react';
+  ChevronRight,
+  MapPin,
+  Phone,
+  Search,
+  Trophy,
+  UserCheck,
+  Users,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 interface Tournament {
   tournament_id: number;
@@ -49,7 +49,7 @@ interface TeamData {
   team_name: string;
   team_omission?: string;
   contact_phone?: string;
-  registration_type: 'self_registered' | 'admin_proxy';
+  registration_type: "self_registered" | "admin_proxy";
   withdrawal_status: string;
   joined_at: string;
   player_count: number;
@@ -73,8 +73,8 @@ export default function AdminTeamsPage() {
   const [teams, setTeams] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamsLoading, setTeamsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [tournamentSearchTerm, setTournamentSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [tournamentSearchTerm, setTournamentSearchTerm] = useState("");
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -83,19 +83,19 @@ export default function AdminTeamsPage() {
 
   const fetchTournaments = async () => {
     try {
-      console.log('[ADMIN_TEAMS] Fetching tournaments...');
-      const response = await fetch('/api/admin/tournaments/active', {
-        method: 'GET',
-        credentials: 'include',
+      console.log("[ADMIN_TEAMS] Fetching tournaments...");
+      const response = await fetch("/api/admin/tournaments/active", {
+        method: "GET",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
-      
-      console.log('[ADMIN_TEAMS] Response status:', response.status);
+
+      console.log("[ADMIN_TEAMS] Response status:", response.status);
       const data = await response.json();
-      console.log('[ADMIN_TEAMS] Response data:', data);
-      
+      console.log("[ADMIN_TEAMS] Response data:", data);
+
       if (data.success) {
         const tournamentsData = data.data || [];
         setTournaments(tournamentsData);
@@ -109,9 +109,9 @@ export default function AdminTeamsPage() {
             if (!grouped[tournament.group_id]) {
               grouped[tournament.group_id] = {
                 group_id: tournament.group_id,
-                group_name: tournament.group_name || '',
-                group_description: tournament.group_description || '',
-                tournaments: []
+                group_name: tournament.group_name || "",
+                group_description: tournament.group_description || "",
+                tournaments: [],
               };
             }
             grouped[tournament.group_id].tournaments.push(tournament);
@@ -121,25 +121,32 @@ export default function AdminTeamsPage() {
         });
 
         // グループ内の部門を順序でソート
-        Object.values(grouped).forEach(group => {
+        Object.values(grouped).forEach((group) => {
           group.tournaments.sort((a, b) => (a.group_order || 0) - (b.group_order || 0));
         });
 
         setTournamentGroups(Object.values(grouped));
         setUngroupedTournaments(ungrouped);
-        console.log('[ADMIN_TEAMS] Tournaments loaded successfully:', tournamentsData.length);
-        console.log('[ADMIN_TEAMS] Groups:', Object.keys(grouped).length, 'Ungrouped:', ungrouped.length);
+        console.log("[ADMIN_TEAMS] Tournaments loaded successfully:", tournamentsData.length);
+        console.log(
+          "[ADMIN_TEAMS] Groups:",
+          Object.keys(grouped).length,
+          "Ungrouped:",
+          ungrouped.length,
+        );
       } else {
-        console.error('[ADMIN_TEAMS] API error:', data.error);
+        console.error("[ADMIN_TEAMS] API error:", data.error);
         if (data.details) {
-          console.error('[ADMIN_TEAMS] Error details:', data.details);
+          console.error("[ADMIN_TEAMS] Error details:", data.details);
         }
         // ユーザーにエラーを表示
-        alert(`大会データの取得に失敗しました: ${data.error}\n${data.details || ''}`);
+        alert(`大会データの取得に失敗しました: ${data.error}\n${data.details || ""}`);
       }
     } catch (error) {
-      console.error('[ADMIN_TEAMS] Network or parsing error:', error);
-      alert(`ネットワークエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("[ADMIN_TEAMS] Network or parsing error:", error);
+      alert(
+        `ネットワークエラーが発生しました: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -155,15 +162,15 @@ export default function AdminTeamsPage() {
         // data.data.teams を設定（APIは { success, data: { tournament, teams } } という構造を返す）
         setTeams(data.data?.teams || []);
       } else {
-        console.error('チーム一覧取得エラー:', data.error);
+        console.error("チーム一覧取得エラー:", data.error);
         if (data.details) {
-          console.error('エラー詳細:', data.details);
+          console.error("エラー詳細:", data.details);
         }
-        alert(`チーム一覧の取得に失敗しました: ${data.error}\n${data.details || ''}`);
+        alert(`チーム一覧の取得に失敗しました: ${data.error}\n${data.details || ""}`);
         setTeams([]);
       }
     } catch (error) {
-      console.error('チーム一覧取得エラー:', error);
+      console.error("チーム一覧取得エラー:", error);
       setTeams([]);
     } finally {
       setTeamsLoading(false);
@@ -178,40 +185,58 @@ export default function AdminTeamsPage() {
   const getStatusBadge = (tournament: Tournament) => {
     const status = tournament.calculated_status || tournament.status;
     const visibility = tournament.visibility;
-    
+
     // 管理者ダッシュボードのTournamentDashboardListと完全に同じロジック
-    let type: 'ongoing' | 'recruiting' | 'completed' | 'other' = 'other';
-    
-    if (status === 'ongoing') {
-      type = 'ongoing';
-    } else if (status === 'recruiting') {
-      type = 'recruiting';
-    } else if (status === 'completed') {
-      type = 'completed';
+    let type: "ongoing" | "recruiting" | "completed" | "other" = "other";
+
+    if (status === "ongoing") {
+      type = "ongoing";
+    } else if (status === "recruiting") {
+      type = "recruiting";
+    } else if (status === "completed") {
+      type = "completed";
     }
 
     // 管理者ダッシュボードと完全に同じ色分けとテキスト
     return (
-      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-        type === 'ongoing'
-          ? 'bg-green-100 text-green-800'
-          : type === 'recruiting'
-          ? visibility === 1
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-yellow-100 text-yellow-800'
-          : 'bg-gray-100 text-gray-800'
-      }`}>
-        {type === 'ongoing' ? '開催中' : type === 'recruiting' ? (visibility === 1 ? '募集中' : '準備中') : type === 'completed' ? '完了' : status}
+      <div
+        className={`px-3 py-1 rounded-full text-xs font-medium ${
+          type === "ongoing"
+            ? "bg-green-100 text-green-800"
+            : type === "recruiting"
+              ? visibility === 1
+                ? "bg-blue-100 text-blue-800"
+                : "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+        }`}
+      >
+        {type === "ongoing"
+          ? "開催中"
+          : type === "recruiting"
+            ? visibility === 1
+              ? "募集中"
+              : "準備中"
+            : type === "completed"
+              ? "完了"
+              : status}
       </div>
     );
   };
 
   const getRegistrationTypeDisplay = (type: string) => {
     switch (type) {
-      case 'self_registered':
-        return <Badge variant="outline" className="bg-green-100 text-green-700">代表者登録</Badge>;
-      case 'admin_proxy':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-700">管理者代行</Badge>;
+      case "self_registered":
+        return (
+          <Badge variant="outline" className="bg-green-100 text-green-700">
+            代表者登録
+          </Badge>
+        );
+      case "admin_proxy":
+        return (
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+            管理者代行
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{type}</Badge>;
     }
@@ -219,21 +244,37 @@ export default function AdminTeamsPage() {
 
   const getWithdrawalStatusDisplay = (status: string) => {
     switch (status) {
-      case 'active':
-        return <Badge variant="outline" className="bg-green-100 text-green-700">参加中</Badge>;
-      case 'withdrawal_requested':
-        return <Badge variant="outline" className="bg-orange-100 text-orange-700">辞退申請中</Badge>;
-      case 'withdrawal_approved':
-        return <Badge variant="outline" className="bg-red-100 text-red-700">辞退承認済み</Badge>;
-      case 'withdrawal_rejected':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-700">辞退却下</Badge>;
+      case "active":
+        return (
+          <Badge variant="outline" className="bg-green-100 text-green-700">
+            参加中
+          </Badge>
+        );
+      case "withdrawal_requested":
+        return (
+          <Badge variant="outline" className="bg-orange-100 text-orange-700">
+            辞退申請中
+          </Badge>
+        );
+      case "withdrawal_approved":
+        return (
+          <Badge variant="outline" className="bg-red-100 text-red-700">
+            辞退承認済み
+          </Badge>
+        );
+      case "withdrawal_rejected":
+        return (
+          <Badge variant="outline" className="bg-blue-100 text-blue-700">
+            辞退却下
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const toggleTeamExpansion = (teamId: number) => {
-    setExpandedTeams(prev => {
+    setExpandedTeams((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(teamId)) {
         newSet.delete(teamId);
@@ -245,32 +286,40 @@ export default function AdminTeamsPage() {
   };
 
   // チーム検索フィルタリング
-  const filteredTeams = teams.filter(team =>
-    team.team_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTeams = teams.filter((team) =>
+    team.team_name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // 大会検索フィルタリング
   // フィルタリング: 検索条件に合致する大会のみ表示
-  const filteredTournaments = tournaments.filter(tournament =>
-    tournament.tournament_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()) ||
-    (tournament.venue_name && tournament.venue_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())) ||
-    (tournament.format_name && tournament.format_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())) ||
-    (tournament.group_name && tournament.group_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()))
+  const filteredTournaments = tournaments.filter(
+    (tournament) =>
+      tournament.tournament_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()) ||
+      (tournament.venue_name &&
+        tournament.venue_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())) ||
+      (tournament.format_name &&
+        tournament.format_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())) ||
+      (tournament.group_name &&
+        tournament.group_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())),
   );
 
   // グループ化されたデータをフィルタリング
   const filteredGroups = tournamentGroups
-    .map(group => ({
+    .map((group) => ({
       ...group,
-      tournaments: group.tournaments.filter(t => filteredTournaments.some(ft => ft.tournament_id === t.tournament_id))
+      tournaments: group.tournaments.filter((t) =>
+        filteredTournaments.some((ft) => ft.tournament_id === t.tournament_id),
+      ),
     }))
-    .filter(group =>
-      group.tournaments.length > 0 ||
-      (group.group_name && group.group_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase()))
+    .filter(
+      (group) =>
+        group.tournaments.length > 0 ||
+        (group.group_name &&
+          group.group_name.toLowerCase().includes(tournamentSearchTerm.toLowerCase())),
     );
 
-  const filteredUngrouped = ungroupedTournaments.filter(t =>
-    filteredTournaments.some(ft => ft.tournament_id === t.tournament_id)
+  const filteredUngrouped = ungroupedTournaments.filter((t) =>
+    filteredTournaments.some((ft) => ft.tournament_id === t.tournament_id),
   );
 
   if (loading) {
@@ -292,15 +341,13 @@ export default function AdminTeamsPage() {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-white">チーム一覧</h1>
-              <p className="text-sm text-white/70 mt-1">
-                大会別の参加チーム一覧を確認できます
-              </p>
+              <p className="text-sm text-white/70 mt-1">大会別の参加チーム一覧を確認できます</p>
             </div>
             <div className="flex space-x-3">
               <Button
                 variant="outline"
                 className="text-white border-white/30 hover:bg-white/10 hover:text-white"
-                onClick={() => router.push('/my')}
+                onClick={() => router.push("/my")}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 管理者ダッシュボードに戻る
@@ -319,9 +366,12 @@ export default function AdminTeamsPage() {
                 <CardTitle className="flex items-center">
                   <Trophy className="w-5 h-5 mr-2" />
                   大会選択
-                  {(filteredGroups.length !== tournamentGroups.length || filteredUngrouped.length !== ungroupedTournaments.length) && (
+                  {(filteredGroups.length !== tournamentGroups.length ||
+                    filteredUngrouped.length !== ungroupedTournaments.length) && (
                     <Badge variant="outline" className="ml-2">
-                      {filteredGroups.reduce((sum, g) => sum + g.tournaments.length, 0) + filteredUngrouped.length}/{tournaments.length}
+                      {filteredGroups.reduce((sum, g) => sum + g.tournaments.length, 0) +
+                        filteredUngrouped.length}
+                      /{tournaments.length}
                     </Badge>
                   )}
                 </CardTitle>
@@ -349,7 +399,7 @@ export default function AdminTeamsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setTournamentSearchTerm('')}
+                      onClick={() => setTournamentSearchTerm("")}
                       className="mt-2"
                     >
                       検索をクリア
@@ -359,7 +409,10 @@ export default function AdminTeamsPage() {
                   <>
                     {/* グループ化された大会 */}
                     {filteredGroups.map((group) => (
-                      <div key={`group-${group.group_id}`} className="border-2 border-primary/20 rounded-lg p-3 bg-primary/5">
+                      <div
+                        key={`group-${group.group_id}`}
+                        className="border-2 border-primary/20 rounded-lg p-3 bg-primary/5"
+                      >
                         <div className="mb-3">
                           <div className="flex items-center mb-1">
                             <Trophy className="w-4 h-4 mr-2 text-primary" />
@@ -377,8 +430,8 @@ export default function AdminTeamsPage() {
                               key={`tournament-${tournament.tournament_id}`}
                               className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                                 selectedTournamentId === tournament.tournament_id
-                                  ? 'border-primary bg-primary/10'
-                                  : 'border-gray-200 bg-white hover:border-gray-300'
+                                  ? "border-primary bg-primary/10"
+                                  : "border-gray-200 bg-white hover:border-gray-300"
                               }`}
                               onClick={() => handleTournamentSelect(tournament.tournament_id)}
                             >
@@ -403,7 +456,9 @@ export default function AdminTeamsPage() {
                                   {tournament.event_start_date && (
                                     <div className="flex items-center">
                                       <Calendar className="w-3 h-3 mr-1" />
-                                      {new Date(tournament.event_start_date).toLocaleDateString('ja-JP')}
+                                      {new Date(tournament.event_start_date).toLocaleDateString(
+                                        "ja-JP",
+                                      )}
                                     </div>
                                   )}
                                   {tournament.venue_name && (
@@ -426,8 +481,8 @@ export default function AdminTeamsPage() {
                         key={`tournament-${tournament.tournament_id}`}
                         className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                           selectedTournamentId === tournament.tournament_id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? "border-primary bg-primary/5"
+                            : "border-gray-200 hover:border-gray-300"
                         }`}
                         onClick={() => handleTournamentSelect(tournament.tournament_id)}
                       >
@@ -454,7 +509,9 @@ export default function AdminTeamsPage() {
                                 {tournament.event_start_date && (
                                   <div className="flex items-center">
                                     <Calendar className="w-3 h-3 mr-1" />
-                                    {new Date(tournament.event_start_date).toLocaleDateString('ja-JP')}
+                                    {new Date(tournament.event_start_date).toLocaleDateString(
+                                      "ja-JP",
+                                    )}
                                   </div>
                                 )}
                                 {tournament.venue_name && (
@@ -507,7 +564,9 @@ export default function AdminTeamsPage() {
                   <div className="text-center py-12 text-gray-500">
                     <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
                     <p className="text-lg font-medium mb-2">大会を選択してください</p>
-                    <p className="text-sm">左側から大会を選択すると、参加チーム一覧が表示されます</p>
+                    <p className="text-sm">
+                      左側から大会を選択すると、参加チーム一覧が表示されます
+                    </p>
                   </div>
                 ) : teamsLoading ? (
                   <div className="text-center py-12">
@@ -518,13 +577,15 @@ export default function AdminTeamsPage() {
                   <div className="text-center py-12 text-gray-500">
                     <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
                     <p className="text-lg font-medium mb-2">
-                      {searchTerm ? '検索条件に一致するチームがありません' : 'この大会に参加チームはありません'}
+                      {searchTerm
+                        ? "検索条件に一致するチームがありません"
+                        : "この大会に参加チームはありません"}
                     </p>
                     {searchTerm && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSearchTerm('')}
+                        onClick={() => setSearchTerm("")}
                         className="mt-2"
                       >
                         検索をクリア
@@ -534,7 +595,10 @@ export default function AdminTeamsPage() {
                 ) : (
                   <div className="space-y-4 flex-1 overflow-y-auto">
                     {filteredTeams.map((team, index) => (
-                      <div key={`team-${team.tournament_team_id}`} className="border rounded-lg p-4">
+                      <div
+                        key={`team-${team.tournament_team_id}`}
+                        className="border rounded-lg p-4"
+                      >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
@@ -581,7 +645,7 @@ export default function AdminTeamsPage() {
                             </h5>
                             <div className="flex items-center space-x-2">
                               <span className="text-xs text-gray-500">
-                                {new Date(team.joined_at).toLocaleDateString('ja-JP')}参加
+                                {new Date(team.joined_at).toLocaleDateString("ja-JP")}参加
                               </span>
                               {expandedTeams.has(team.tournament_team_id) ? (
                                 <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -591,13 +655,16 @@ export default function AdminTeamsPage() {
                             </div>
                           </button>
 
-                          {expandedTeams.has(team.tournament_team_id) && (
-                            team.players.length > 0 ? (
+                          {expandedTeams.has(team.tournament_team_id) &&
+                            (team.players.length > 0 ? (
                               <div className="grid grid-cols-1 gap-2 mt-2">
                                 {team.players.map((player) => (
-                                  <div key={player.tournament_player_id} className="flex items-center text-sm text-gray-500 pl-2">
+                                  <div
+                                    key={player.tournament_player_id}
+                                    className="flex items-center text-sm text-gray-500 pl-2"
+                                  >
                                     <span className="min-w-[2.5rem] text-gray-500">
-                                      {player.jersey_number ? `#${player.jersey_number}` : '−'}
+                                      {player.jersey_number ? `#${player.jersey_number}` : "−"}
                                     </span>
                                     <span className="flex-1">{player.player_name}</span>
                                   </div>
@@ -607,8 +674,7 @@ export default function AdminTeamsPage() {
                               <p className="text-xs text-gray-500 text-center py-2 pl-2">
                                 選手が登録されていません
                               </p>
-                            )
-                          )}
+                            ))}
                         </div>
                       </div>
                     ))}

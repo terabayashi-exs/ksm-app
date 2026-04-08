@@ -1,13 +1,21 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Calendar, MapPin, Trophy, ChevronDown, ChevronUp, CheckCircle, Building2 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import { getStatusLabel, type TournamentStatus } from '@/lib/tournament-status';
+import {
+  Building2,
+  Calendar,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Trophy,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getStatusLabel, type TournamentStatus } from "@/lib/tournament-status";
+import { formatDate } from "@/lib/utils";
 
 interface Tournament {
   tournament_id: number;
@@ -44,33 +52,40 @@ interface TournamentGroupCardProps {
   userRole?: string;
 }
 
-export default function TournamentGroupCard({ group, tournaments, userRole }: TournamentGroupCardProps) {
+export default function TournamentGroupCard({
+  group,
+  tournaments,
+  userRole,
+}: TournamentGroupCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const formatDateRange = (startDate: string | null | undefined, endDate: string | null | undefined) => {
-    if (!startDate && !endDate) return '';
+  const formatDateRange = (
+    startDate: string | null | undefined,
+    endDate: string | null | undefined,
+  ) => {
+    if (!startDate && !endDate) return "";
     if (!endDate || startDate === endDate) {
-      return startDate ? formatDate(startDate) : '';
+      return startDate ? formatDate(startDate) : "";
     }
     // startDateとendDateがnullでないことを保証
-    if (!startDate || !endDate) return '';
+    if (!startDate || !endDate) return "";
     return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
   };
 
   const getStatusBadge = (status: TournamentStatus) => {
     switch (status) {
-      case 'planning':
-        return 'bg-gray-50 text-gray-500';
-      case 'recruiting':
-        return 'bg-primary/10 text-primary';
-      case 'before_event':
-        return 'bg-gray-100 text-gray-900';
-      case 'ongoing':
-        return 'bg-primary/10 text-primary';
-      case 'completed':
-        return 'bg-gray-50 text-gray-500';
+      case "planning":
+        return "bg-gray-50 text-gray-500";
+      case "recruiting":
+        return "bg-primary/10 text-primary";
+      case "before_event":
+        return "bg-gray-100 text-gray-900";
+      case "ongoing":
+        return "bg-primary/10 text-primary";
+      case "completed":
+        return "bg-gray-50 text-gray-500";
       default:
-        return 'bg-gray-50 text-gray-500';
+        return "bg-gray-50 text-gray-500";
     }
   };
 
@@ -79,8 +94,10 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
   };
 
   // 代表的なロゴを取得（最初の大会のロゴ）
-  const representativeLogo = tournaments.find(t => t.logo_blob_url)?.logo_blob_url;
-  const representativeOrganization = tournaments.find(t => t.organization_name)?.organization_name;
+  const representativeLogo = tournaments.find((t) => t.logo_blob_url)?.logo_blob_url;
+  const representativeOrganization = tournaments.find(
+    (t) => t.organization_name,
+  )?.organization_name;
 
   return (
     <Card className="border-2 border-gray-200 card-interactive relative overflow-hidden">
@@ -95,7 +112,7 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
         <div className="absolute inset-0 opacity-5">
           <Image
             src={representativeLogo}
-            alt={representativeOrganization || '主催者ロゴ'}
+            alt={representativeOrganization || "主催者ロゴ"}
             fill
             className="object-contain object-center"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -106,14 +123,10 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
       <CardHeader className="relative z-10">
         <div className="flex items-center justify-between mb-2">
           <CardTitle className="text-xl font-bold">{group.group_name}</CardTitle>
-          <div className="text-sm text-gray-500">
-            {tournaments.length}部門
-          </div>
+          <div className="text-sm text-gray-500">{tournaments.length}部門</div>
         </div>
         {group.group_description && (
-          <CardDescription className="text-base">
-            {group.group_description}
-          </CardDescription>
+          <CardDescription className="text-base">{group.group_description}</CardDescription>
         )}
 
         {/* 大会情報 */}
@@ -144,106 +157,112 @@ export default function TournamentGroupCard({ group, tournaments, userRole }: To
         {isExpanded && (
           <div className="space-y-3">
             {tournaments.map((tournament) => (
-            <div
-              key={tournament.tournament_id}
-              className="border-2 border-gray-200 rounded-lg p-4 bg-white hover:border-primary hover:shadow-md transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-base">
-                      {tournament.category_name || tournament.tournament_name}
-                    </h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(tournament.status)}`}>
-                      {getStatusText(tournament.status)}
-                    </span>
-                    {tournament.is_joined && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary flex items-center">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        参加済み
+              <div
+                key={tournament.tournament_id}
+                className="border-2 border-gray-200 rounded-lg p-4 bg-white hover:border-primary hover:shadow-md transition-all duration-300"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-base">
+                        {tournament.category_name || tournament.tournament_name}
+                      </h4>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(tournament.status)}`}
+                      >
+                        {getStatusText(tournament.status)}
                       </span>
+                      {tournament.is_joined && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          参加済み
+                        </span>
+                      )}
+                    </div>
+
+                    {tournament.category_name && (
+                      <p className="text-sm text-gray-500 mb-2">{tournament.tournament_name}</p>
                     )}
-                  </div>
 
-                  {tournament.category_name && (
-                    <p className="text-sm text-gray-500 mb-2">
-                      {tournament.tournament_name}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-3">
-                    <span className="flex items-center gap-1">
-                      <Trophy className="h-3 w-3" />
-                      {tournament.format_name}
-                    </span>
-                    {tournament.event_start_date && (
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-3">
                       <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(tournament.event_start_date)}
+                        <Trophy className="h-3 w-3" />
+                        {tournament.format_name}
                       </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {tournament.venue_name || '会場未定'}
-                    </span>
-                  </div>
+                      {tournament.event_start_date && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(tournament.event_start_date)}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {tournament.venue_name || "会場未定"}
+                      </span>
+                    </div>
 
-                  {/* 参加状況（募集中の大会のみ） */}
-                  {tournament.status === 'recruiting' && (
-                    <div className="mb-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* 想定チーム数 */}
-                        <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                          <div className="text-xs text-gray-500 font-medium mb-1">想定チーム数</div>
-                          <div className="text-base font-bold text-gray-900">{tournament.team_count || 0}</div>
-                        </div>
-                        {/* 参加申請 */}
-                        <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                          <div className="text-xs text-gray-500 font-medium mb-1">参加申請</div>
-                          <div className="text-base font-bold text-gray-900">{tournament.applied_count || 0}</div>
+                    {/* 参加状況（募集中の大会のみ） */}
+                    {tournament.status === "recruiting" && (
+                      <div className="mb-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* 想定チーム数 */}
+                          <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                            <div className="text-xs text-gray-500 font-medium mb-1">
+                              想定チーム数
+                            </div>
+                            <div className="text-base font-bold text-gray-900">
+                              {tournament.team_count || 0}
+                            </div>
+                          </div>
+                          {/* 参加申請 */}
+                          <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                            <div className="text-xs text-gray-500 font-medium mb-1">参加申請</div>
+                            <div className="text-base font-bold text-gray-900">
+                              {tournament.applied_count || 0}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div className="flex flex-col gap-1 ml-4">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/tournaments/${tournament.tournament_id}`}>
-                      詳細
-                    </Link>
-                  </Button>
-
-                  {/* 参加済みの場合は参加選手変更ボタンを表示 */}
-                  {tournament.is_joined && userRole === 'team' && (
+                  <div className="flex flex-col gap-1 ml-4">
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/tournaments/${tournament.tournament_id}/entry/teams`}>
-                        選手変更
-                      </Link>
+                      <Link href={`/tournaments/${tournament.tournament_id}`}>詳細</Link>
                     </Button>
-                  )}
 
-                  {/* 未参加かつ募集期間中の場合に参加ボタンを表示 */}
-                  {!tournament.is_joined &&
-                   tournament.recruitment_start_date &&
-                   tournament.recruitment_end_date &&
-                   new Date(tournament.recruitment_start_date) <= new Date() &&
-                   new Date() <= new Date(tournament.recruitment_end_date) &&
-                   tournament.status !== 'ongoing' &&
-                   tournament.status !== 'completed' && (
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={
-                        userRole === 'team'
-                          ? `/tournaments/${tournament.tournament_id}/entry/join`
-                          : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/entry/join`)}`
-                      }>
-                        参加
-                      </Link>
-                    </Button>
-                  )}
+                    {/* 参加済みの場合は参加選手変更ボタンを表示 */}
+                    {tournament.is_joined && userRole === "team" && (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/tournaments/${tournament.tournament_id}/entry/teams`}>
+                          選手変更
+                        </Link>
+                      </Button>
+                    )}
+
+                    {/* 未参加かつ募集期間中の場合に参加ボタンを表示 */}
+                    {!tournament.is_joined &&
+                      tournament.recruitment_start_date &&
+                      tournament.recruitment_end_date &&
+                      new Date(tournament.recruitment_start_date) <= new Date() &&
+                      new Date() <= new Date(tournament.recruitment_end_date) &&
+                      tournament.status !== "ongoing" &&
+                      tournament.status !== "completed" && (
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            href={
+                              userRole === "team"
+                                ? `/tournaments/${tournament.tournament_id}/entry/join`
+                                : `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournament.tournament_id}/entry/join`)}`
+                            }
+                          >
+                            参加
+                          </Link>
+                        </Button>
+                      )}
+                  </div>
                 </div>
               </div>
-            </div>
             ))}
           </div>
         )}

@@ -1,8 +1,8 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { ArrowLeft, Download, FileText, Clock } from 'lucide-react';
-import { db } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { ArrowLeft, Clock, Download, FileText } from "lucide-react";
+import { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
 
 interface PageProps {
   params: Promise<{
@@ -21,7 +21,7 @@ async function getTournament(id: string) {
         FROM t_tournaments 
         WHERE tournament_id = ? AND visibility = 'open'
       `,
-      args: [parseInt(id)]
+      args: [parseInt(id)],
     });
 
     if (result.rows.length === 0) {
@@ -38,7 +38,7 @@ async function getTournament(id: string) {
       format_id: result.rows[0].format_id as number,
     };
   } catch (error) {
-    console.error('Error fetching tournament:', error);
+    console.error("Error fetching tournament:", error);
     return null;
   }
 }
@@ -46,10 +46,10 @@ async function getTournament(id: string) {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const tournament = await getTournament(resolvedParams.id);
-  
+
   if (!tournament) {
     return {
-      title: '大会が見つかりません'
+      title: "大会が見つかりません",
     };
   }
 
@@ -75,7 +75,7 @@ export default async function TournamentBracketPdfPage({ params }: PageProps) {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Link 
+            <Link
               href={`/tournaments/${tournament.tournament_id}`}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
@@ -84,9 +84,7 @@ export default async function TournamentBracketPdfPage({ params }: PageProps) {
             </Link>
           </div>
           <div className="mt-2">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {tournament.tournament_name}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">{tournament.tournament_name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <FileText className="h-4 w-4 text-blue-600" />
               <span className="text-sm text-gray-600">トーナメント表（PDF版）</span>
@@ -106,11 +104,11 @@ export default async function TournamentBracketPdfPage({ params }: PageProps) {
                 <Clock className="h-5 w-5 text-primary mt-0.5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-primary">
-                  📋 トーナメント表について
-                </h3>
+                <h3 className="text-sm font-medium text-primary">📋 トーナメント表について</h3>
                 <div className="mt-1 text-sm text-primary">
-                  <p>この表は手動で作成・更新されます。最新の試合結果は「日程・結果」ページをご確認ください。</p>
+                  <p>
+                    この表は手動で作成・更新されます。最新の試合結果は「日程・結果」ページをご確認ください。
+                  </p>
                   <p className="text-xs mt-1 opacity-75">
                     ※ ファイルの最終更新日時はダウンロードボタンから確認できます
                   </p>
@@ -138,7 +136,7 @@ export default async function TournamentBracketPdfPage({ params }: PageProps) {
           <div className="p-4 border-b">
             <h2 className="text-lg font-semibold text-gray-900">トーナメント表</h2>
           </div>
-          
+
           {/* PDF Viewer */}
           <div className="relative">
             <iframe
@@ -146,14 +144,18 @@ export default async function TournamentBracketPdfPage({ params }: PageProps) {
               className="w-full h-[800px] border-0"
               title={`${tournament.tournament_name} トーナメント表`}
             />
-            
+
             {/* PDF読み込みエラー時のフォールバック */}
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50 hidden" id="pdf-error-fallback">
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-gray-50 hidden"
+              id="pdf-error-fallback"
+            >
               <div className="text-center">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">PDFを表示できません</h3>
                 <p className="text-gray-600 mb-4">
-                  ブラウザでPDFが表示できない場合は、<br />
+                  ブラウザでPDFが表示できない場合は、
+                  <br />
                   下のボタンからダウンロードしてご覧ください。
                 </p>
                 <a

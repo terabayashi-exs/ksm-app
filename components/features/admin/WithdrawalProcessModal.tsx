@@ -1,37 +1,34 @@
-'use client';
+"use client";
 
 // components/features/admin/WithdrawalProcessModal.tsx
 // 辞退申請処理モーダル（承認・却下時のコメント入力）
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { 
-  CheckCircle, 
-  XCircle, 
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Activity,
   AlertTriangle,
-  X,
+  CheckCircle,
+  Info,
   Phone,
+  Settings,
   Trophy,
   Users,
-  Activity,
-  Settings,
-  Info
-} from 'lucide-react';
+  X,
+  XCircle,
+} from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // バリデーションスキーマ
 const processSchema = z.object({
-  admin_comment: z
-    .string()
-    .max(500, '管理者コメントは500文字以内で入力してください')
-    .optional()
+  admin_comment: z.string().max(500, "管理者コメントは500文字以内で入力してください").optional(),
 });
 
 type ProcessFormData = z.infer<typeof processSchema>;
@@ -57,7 +54,7 @@ interface ImpactAnalysis {
 }
 
 interface PlannedAction {
-  type: 'auto' | 'warning' | 'info';
+  type: "auto" | "warning" | "info";
   action: string;
   target: string;
   description: string;
@@ -85,20 +82,24 @@ interface WithdrawalImpactData {
 
 interface WithdrawalProcessModalProps {
   request: WithdrawalRequest;
-  action: 'approve' | 'reject';
+  action: "approve" | "reject";
   isOpen: boolean;
   onClose: () => void;
-  onProcess: (tournamentTeamId: number, action: 'approve' | 'reject', adminComment?: string) => Promise<void>;
+  onProcess: (
+    tournamentTeamId: number,
+    action: "approve" | "reject",
+    adminComment?: string,
+  ) => Promise<void>;
   processing: boolean;
 }
 
-export default function WithdrawalProcessModal({ 
-  request, 
-  action, 
-  isOpen, 
-  onClose, 
+export default function WithdrawalProcessModal({
+  request,
+  action,
+  isOpen,
+  onClose,
   onProcess,
-  processing 
+  processing,
 }: WithdrawalProcessModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [impactData, setImpactData] = useState<WithdrawalImpactData | null>(null);
@@ -109,9 +110,9 @@ export default function WithdrawalProcessModal({
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
   } = useForm<ProcessFormData>({
-    resolver: zodResolver(processSchema)
+    resolver: zodResolver(processSchema),
   });
 
   const onSubmit = async (data: ProcessFormData) => {
@@ -121,8 +122,8 @@ export default function WithdrawalProcessModal({
       reset();
       onClose();
     } catch (err) {
-      setError('処理中にエラーが発生しました');
-      console.error('辞退申請処理エラー:', err);
+      setError("処理中にエラーが発生しました");
+      console.error("辞退申請処理エラー:", err);
     }
   };
 
@@ -136,20 +137,22 @@ export default function WithdrawalProcessModal({
 
   // 承認の場合のみ影響分析を取得
   const fetchImpactAnalysis = useCallback(async () => {
-    if (action !== 'approve') return;
-    
+    if (action !== "approve") return;
+
     try {
       setLoadingImpact(true);
-      const response = await fetch(`/api/admin/withdrawal-requests/${request.tournament_team_id}/impact`);
+      const response = await fetch(
+        `/api/admin/withdrawal-requests/${request.tournament_team_id}/impact`,
+      );
       const result = await response.json();
-      
+
       if (result.success) {
         setImpactData(result.data);
       } else {
-        console.error('影響分析取得エラー:', result.error);
+        console.error("影響分析取得エラー:", result.error);
       }
     } catch (err) {
-      console.error('影響分析取得エラー:', err);
+      console.error("影響分析取得エラー:", err);
     } finally {
       setLoadingImpact(false);
     }
@@ -157,7 +160,7 @@ export default function WithdrawalProcessModal({
 
   // モーダルが開かれたときに影響分析を取得
   useEffect(() => {
-    if (isOpen && action === 'approve') {
+    if (isOpen && action === "approve") {
       fetchImpactAnalysis();
     }
   }, [isOpen, action, request.tournament_team_id, fetchImpactAnalysis]);
@@ -166,21 +169,21 @@ export default function WithdrawalProcessModal({
 
   const actionConfig = {
     approve: {
-      title: '辞退申請の承認',
-      description: 'この辞退申請を承認しますか？承認後は取り消すことができません。',
-      buttonText: '承認する',
+      title: "辞退申請の承認",
+      description: "この辞退申請を承認しますか？承認後は取り消すことができません。",
+      buttonText: "承認する",
       buttonIcon: <CheckCircle className="w-4 h-4" />,
-      buttonClass: 'bg-primary hover:bg-primary/90 text-primary-foreground',
-      badgeClass: 'bg-green-50 text-green-700 border-green-200'
+      buttonClass: "bg-primary hover:bg-primary/90 text-primary-foreground",
+      badgeClass: "bg-green-50 text-green-700 border-green-200",
     },
     reject: {
-      title: '辞退申請の却下',
-      description: 'この辞退申請を却下しますか？却下理由をコメントに記載することをお勧めします。',
-      buttonText: '却下する',
+      title: "辞退申請の却下",
+      description: "この辞退申請を却下しますか？却下理由をコメントに記載することをお勧めします。",
+      buttonText: "却下する",
       buttonIcon: <XCircle className="w-4 h-4" />,
-      buttonClass: 'bg-red-600 hover:bg-red-700 text-white',
-      badgeClass: 'bg-red-50 text-red-700 border-red-200'
-    }
+      buttonClass: "bg-red-600 hover:bg-red-700 text-white",
+      badgeClass: "bg-red-50 text-red-700 border-red-200",
+    },
   };
 
   const config = actionConfig[action];
@@ -195,12 +198,7 @@ export default function WithdrawalProcessModal({
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 {config.title}
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClose}
-                disabled={processing}
-              >
+              <Button variant="ghost" size="sm" onClick={handleClose} disabled={processing}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -216,7 +214,7 @@ export default function WithdrawalProcessModal({
                   {request.tournament_name}
                 </h3>
                 <Badge variant="outline" className={config.badgeClass}>
-                  {action === 'approve' ? '承認対象' : '却下対象'}
+                  {action === "approve" ? "承認対象" : "却下対象"}
                 </Badge>
               </div>
 
@@ -225,7 +223,9 @@ export default function WithdrawalProcessModal({
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-gray-500" />
                     <span className="font-medium">チーム:</span>
-                    <span>{request.tournament_team_name} ({request.tournament_team_omission})</span>
+                    <span>
+                      {request.tournament_team_name} ({request.tournament_team_omission})
+                    </span>
                   </div>
                   {request.assigned_block && (
                     <div className="text-sm">
@@ -258,13 +258,13 @@ export default function WithdrawalProcessModal({
               {/* 申請日時 */}
               {request.withdrawal_requested_at && (
                 <div className="text-sm text-gray-600">
-                  申請日時: {new Date(request.withdrawal_requested_at).toLocaleString('ja-JP')}
+                  申請日時: {new Date(request.withdrawal_requested_at).toLocaleString("ja-JP")}
                 </div>
               )}
             </div>
 
             {/* 承認時の影響分析 */}
-            {action === 'approve' && (
+            {action === "approve" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -279,7 +279,7 @@ export default function WithdrawalProcessModal({
                       onClick={() => setShowImpactDetails(!showImpactDetails)}
                     >
                       <Info className="w-4 h-4 mr-1" />
-                      {showImpactDetails ? '詳細を隠す' : '詳細を表示'}
+                      {showImpactDetails ? "詳細を隠す" : "詳細を表示"}
                     </Button>
                   )}
                 </div>
@@ -323,18 +323,31 @@ export default function WithdrawalProcessModal({
                       <div className="p-4 bg-gray-50 rounded-lg space-y-3">
                         <h4 className="font-medium text-gray-700">実行される処理一覧</h4>
                         {impactData.planned_actions.map((action, index) => (
-                          <div key={index} className="flex items-start gap-3 p-3 bg-white rounded border">
-                            <div className={`mt-0.5 p-1 rounded ${
-                              action.type === 'auto' ? 'bg-green-100 text-green-600' :
-                              action.type === 'warning' ? 'bg-amber-100 text-amber-600' :
-                              'bg-blue-100 text-blue-600'
-                            }`}>
-                              {action.type === 'auto' ? <Settings className="w-3 h-3" /> :
-                               action.type === 'warning' ? <AlertTriangle className="w-3 h-3" /> :
-                               <Info className="w-3 h-3" />}
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 p-3 bg-white rounded border"
+                          >
+                            <div
+                              className={`mt-0.5 p-1 rounded ${
+                                action.type === "auto"
+                                  ? "bg-green-100 text-green-600"
+                                  : action.type === "warning"
+                                    ? "bg-amber-100 text-amber-600"
+                                    : "bg-blue-100 text-blue-600"
+                              }`}
+                            >
+                              {action.type === "auto" ? (
+                                <Settings className="w-3 h-3" />
+                              ) : action.type === "warning" ? (
+                                <AlertTriangle className="w-3 h-3" />
+                              ) : (
+                                <Info className="w-3 h-3" />
+                              )}
                             </div>
                             <div className="flex-1 text-sm">
-                              <div className="font-medium">{action.action} - {action.target}</div>
+                              <div className="font-medium">
+                                {action.action} - {action.target}
+                              </div>
                               <div className="text-gray-600 mt-1">{action.description}</div>
                             </div>
                           </div>
@@ -354,23 +367,24 @@ export default function WithdrawalProcessModal({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="admin_comment" className="text-sm font-medium">
-                  管理者コメント {action === 'reject' && <span className="text-red-500">（却下理由の記載を推奨）</span>}
+                  管理者コメント{" "}
+                  {action === "reject" && (
+                    <span className="text-red-500">（却下理由の記載を推奨）</span>
+                  )}
                 </Label>
                 <Textarea
                   id="admin_comment"
                   placeholder={
-                    action === 'approve' 
-                      ? '承認理由や注意事項があれば記載してください（任意）'
-                      : '却下理由を詳しく記載してください（チームへの説明用）'
+                    action === "approve"
+                      ? "承認理由や注意事項があれば記載してください（任意）"
+                      : "却下理由を詳しく記載してください（チームへの説明用）"
                   }
                   className="mt-1"
                   rows={4}
-                  {...register('admin_comment')}
+                  {...register("admin_comment")}
                 />
                 {errors.admin_comment && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.admin_comment.message}
-                  </p>
+                  <p className="text-sm text-red-600 mt-1">{errors.admin_comment.message}</p>
                 )}
               </div>
 
@@ -384,21 +398,12 @@ export default function WithdrawalProcessModal({
 
               {/* アクションボタン */}
               <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={processing}
-                >
+                <Button type="button" variant="outline" onClick={handleClose} disabled={processing}>
                   キャンセル
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={processing}
-                  className={config.buttonClass}
-                >
+                <Button type="submit" disabled={processing} className={config.buttonClass}>
                   {config.buttonIcon}
-                  {processing ? '処理中...' : config.buttonText}
+                  {processing ? "処理中..." : config.buttonText}
                 </Button>
               </div>
             </form>
@@ -407,7 +412,7 @@ export default function WithdrawalProcessModal({
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <h4 className="font-medium text-amber-800 mb-1">⚠️ 注意事項</h4>
               <ul className="text-sm text-amber-700 space-y-1">
-                {action === 'approve' ? (
+                {action === "approve" ? (
                   <>
                     <li>• 承認後は申請の取り消しができません</li>
                     <li>• チームは試合参加から除外されます</li>

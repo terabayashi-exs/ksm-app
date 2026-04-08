@@ -13,23 +13,25 @@
  *   main - 本番環境
  */
 
-import { createClient } from '@libsql/client';
-import * as dotenv from 'dotenv';
+import { createClient } from "@libsql/client";
+import * as dotenv from "dotenv";
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 
-const env = process.argv[2] || 'dev';
-const dbUrl = env === 'stag'
-  ? process.env.DATABASE_URL_STAG
-  : env === 'main'
-  ? process.env.DATABASE_URL_MAIN
-  : process.env.DATABASE_URL;
+const env = process.argv[2] || "dev";
+const dbUrl =
+  env === "stag"
+    ? process.env.DATABASE_URL_STAG
+    : env === "main"
+      ? process.env.DATABASE_URL_MAIN
+      : process.env.DATABASE_URL;
 
-const dbToken = env === 'stag'
-  ? process.env.DATABASE_AUTH_TOKEN_STAG
-  : env === 'main'
-  ? process.env.DATABASE_AUTH_TOKEN_MAIN
-  : process.env.DATABASE_AUTH_TOKEN;
+const dbToken =
+  env === "stag"
+    ? process.env.DATABASE_AUTH_TOKEN_STAG
+    : env === "main"
+      ? process.env.DATABASE_AUTH_TOKEN_MAIN
+      : process.env.DATABASE_AUTH_TOKEN;
 
 const db = createClient({
   url: dbUrl!,
@@ -37,7 +39,7 @@ const db = createClient({
 });
 
 async function backfillTournaments() {
-  console.log('=== t_tournaments のバックフィル開始 ===');
+  console.log("=== t_tournaments のバックフィル開始 ===");
 
   // フォーマット情報が未コピーのt_tournamentsを取得
   const tournaments = await db.execute(`
@@ -53,31 +55,39 @@ async function backfillTournaments() {
       continue;
     }
 
-    const format = await db.execute(`
+    const format = await db.execute(
+      `
       SELECT preliminary_format_type, final_format_type, phases
       FROM m_tournament_formats
       WHERE format_id = ?
-    `, [t.format_id]);
+    `,
+      [t.format_id],
+    );
 
     if (format.rows.length === 0) {
-      console.log(`  [warn] tournament_id=${t.tournament_id} - format_id=${t.format_id} が見つかりません`);
+      console.log(
+        `  [warn] tournament_id=${t.tournament_id} - format_id=${t.format_id} が見つかりません`,
+      );
       continue;
     }
 
     const f = format.rows[0];
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_tournaments SET
         preliminary_format_type = ?,
         final_format_type = ?,
         phases = ?,
         updated_at = datetime('now', '+9 hours')
       WHERE tournament_id = ?
-    `, [
-      f.preliminary_format_type,
-      f.final_format_type,
-      typeof f.phases === 'string' ? f.phases : JSON.stringify(f.phases),
-      t.tournament_id
-    ]);
+    `,
+      [
+        f.preliminary_format_type,
+        f.final_format_type,
+        typeof f.phases === "string" ? f.phases : JSON.stringify(f.phases),
+        t.tournament_id,
+      ],
+    );
     updated++;
     console.log(`  [ok] tournament_id=${t.tournament_id} - フォーマット情報をコピー`);
   }
@@ -86,7 +96,7 @@ async function backfillTournaments() {
 }
 
 async function backfillMatchesLive() {
-  console.log('=== t_matches_live のバックフィル開始 ===');
+  console.log("=== t_matches_live のバックフィル開始 ===");
 
   // テンプレートフィールドが未コピーのt_matches_liveを取得
   // phase が NULL のレコードを対象とする
@@ -112,8 +122,8 @@ async function backfillMatchesLive() {
     // format_idを取得（キャッシュ活用）
     if (!formatCache.has(tournamentId)) {
       const tResult = await db.execute(
-        'SELECT format_id FROM t_tournaments WHERE tournament_id = ?',
-        [tournamentId]
+        "SELECT format_id FROM t_tournaments WHERE tournament_id = ?",
+        [tournamentId],
       );
       if (tResult.rows.length > 0) {
         formatCache.set(tournamentId, tResult.rows[0].format_id as number);
@@ -128,23 +138,29 @@ async function backfillMatchesLive() {
     }
 
     // テンプレートからフィールドを取得
-    const template = await db.execute(`
+    const template = await db.execute(
+      `
       SELECT match_type, phase, round_name, block_name,
         team1_source, team2_source, day_number, execution_priority,
         suggested_start_time, loser_position_start, loser_position_end,
         position_note, winner_position, is_bye_match, matchday, cycle
       FROM m_match_templates
       WHERE format_id = ? AND match_code = ? AND phase = ?
-    `, [formatId, m.match_code, m.block_phase]);
+    `,
+      [formatId, m.match_code, m.block_phase],
+    );
 
     if (template.rows.length === 0) {
-      console.log(`  [warn] match_id=${m.match_id} - テンプレート見つからず (format_id=${formatId}, match_code=${m.match_code}, phase=${m.block_phase})`);
+      console.log(
+        `  [warn] match_id=${m.match_id} - テンプレート見つからず (format_id=${formatId}, match_code=${m.match_code}, phase=${m.block_phase})`,
+      );
       notFound++;
       continue;
     }
 
     const t = template.rows[0];
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_matches_live SET
         phase = ?,
         match_type = ?,
@@ -163,14 +179,27 @@ async function backfillMatchesLive() {
         matchday = ?,
         cycle = ?
       WHERE match_id = ?
-    `, [
-      t.phase, t.match_type, t.round_name, t.block_name,
-      t.team1_source, t.team2_source, t.day_number, t.execution_priority,
-      t.suggested_start_time, t.loser_position_start, t.loser_position_end,
-      t.position_note, t.winner_position, t.is_bye_match ?? 0,
-      t.matchday, t.cycle ?? 1,
-      m.match_id
-    ]);
+    `,
+      [
+        t.phase,
+        t.match_type,
+        t.round_name,
+        t.block_name,
+        t.team1_source,
+        t.team2_source,
+        t.day_number,
+        t.execution_priority,
+        t.suggested_start_time,
+        t.loser_position_start,
+        t.loser_position_end,
+        t.position_note,
+        t.winner_position,
+        t.is_bye_match ?? 0,
+        t.matchday,
+        t.cycle ?? 1,
+        m.match_id,
+      ],
+    );
     updated++;
   }
 
@@ -178,7 +207,7 @@ async function backfillMatchesLive() {
 }
 
 async function backfillMatchesFinal() {
-  console.log('=== t_matches_final のバックフィル開始 ===');
+  console.log("=== t_matches_final のバックフィル開始 ===");
 
   const matches = await db.execute(`
     SELECT mf.match_id, mf.match_code, mf.match_block_id,
@@ -200,8 +229,8 @@ async function backfillMatchesFinal() {
 
     if (!formatCache.has(tournamentId)) {
       const tResult = await db.execute(
-        'SELECT format_id FROM t_tournaments WHERE tournament_id = ?',
-        [tournamentId]
+        "SELECT format_id FROM t_tournaments WHERE tournament_id = ?",
+        [tournamentId],
       );
       if (tResult.rows.length > 0) {
         formatCache.set(tournamentId, tResult.rows[0].format_id as number);
@@ -215,14 +244,17 @@ async function backfillMatchesFinal() {
       continue;
     }
 
-    const template = await db.execute(`
+    const template = await db.execute(
+      `
       SELECT match_type, phase, round_name, block_name,
         team1_source, team2_source, day_number, execution_priority,
         suggested_start_time, loser_position_start, loser_position_end,
         position_note, winner_position, is_bye_match, matchday, cycle
       FROM m_match_templates
       WHERE format_id = ? AND match_code = ? AND phase = ?
-    `, [formatId, m.match_code, m.block_phase]);
+    `,
+      [formatId, m.match_code, m.block_phase],
+    );
 
     if (template.rows.length === 0) {
       console.log(`  [warn] match_id=${m.match_id} - テンプレート見つからず`);
@@ -231,7 +263,8 @@ async function backfillMatchesFinal() {
     }
 
     const t = template.rows[0];
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_matches_final SET
         phase = ?,
         match_type = ?,
@@ -250,14 +283,27 @@ async function backfillMatchesFinal() {
         matchday = ?,
         cycle = ?
       WHERE match_id = ?
-    `, [
-      t.phase, t.match_type, t.round_name, t.block_name,
-      t.team1_source, t.team2_source, t.day_number, t.execution_priority,
-      t.suggested_start_time, t.loser_position_start, t.loser_position_end,
-      t.position_note, t.winner_position, t.is_bye_match ?? 0,
-      t.matchday, t.cycle ?? 1,
-      m.match_id
-    ]);
+    `,
+      [
+        t.phase,
+        t.match_type,
+        t.round_name,
+        t.block_name,
+        t.team1_source,
+        t.team2_source,
+        t.day_number,
+        t.execution_priority,
+        t.suggested_start_time,
+        t.loser_position_start,
+        t.loser_position_end,
+        t.position_note,
+        t.winner_position,
+        t.is_bye_match ?? 0,
+        t.matchday,
+        t.cycle ?? 1,
+        m.match_id,
+      ],
+    );
     updated++;
   }
 
@@ -271,9 +317,9 @@ async function main() {
     await backfillTournaments();
     await backfillMatchesLive();
     await backfillMatchesFinal();
-    console.log('✅ バックフィル完了');
+    console.log("✅ バックフィル完了");
   } catch (error) {
-    console.error('❌ バックフィルエラー:', error);
+    console.error("❌ バックフィルエラー:", error);
     process.exit(1);
   }
 }

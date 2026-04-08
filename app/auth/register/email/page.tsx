@@ -1,13 +1,13 @@
 // app/auth/register/email/page.tsx
 "use client";
 
-import { useState } from "react";
+import { ArrowLeft, Mail } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mail, ArrowLeft } from "lucide-react";
 
 export default function RegisterEmailPage() {
   const [email, setEmail] = useState("");
@@ -21,9 +21,9 @@ export default function RegisterEmailPage() {
     setError("");
 
     try {
-      const response = await fetch('/api/auth/request-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/request-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
@@ -32,11 +32,11 @@ export default function RegisterEmailPage() {
       if (data.success) {
         setSuccess(true);
       } else {
-        setError(data.error || 'メール送信に失敗しました');
+        setError(data.error || "メール送信に失敗しました");
       }
     } catch (error) {
-      console.error('Email submission error:', error);
-      setError('エラーが発生しました。もう一度お試しください。');
+      console.error("Email submission error:", error);
+      setError("エラーが発生しました。もう一度お試しください。");
     } finally {
       setLoading(false);
     }
@@ -52,9 +52,7 @@ export default function RegisterEmailPage() {
                 <Mail className="h-12 w-12 text-green-600" />
               </div>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              メールを送信しました
-            </h2>
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">メールを送信しました</h2>
           </div>
 
           <Card>
@@ -66,9 +64,7 @@ export default function RegisterEmailPage() {
                 <p className="text-gray-500 text-sm">
                   メールボックスをご確認いただき、メール内のリンクをクリックしてチーム登録を完了してください。
                 </p>
-                <p className="text-gray-500 text-sm">
-                  リンクの有効期限は10分です。
-                </p>
+                <p className="text-gray-500 text-sm">リンクの有効期限は10分です。</p>
                 <div className="pt-4">
                   <Button variant="outline" asChild>
                     <Link href="/">
@@ -94,12 +90,8 @@ export default function RegisterEmailPage() {
               <Mail className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            チーム登録申請
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            メールアドレスを入力してください
-          </p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">チーム登録申請</h2>
+          <p className="mt-2 text-sm text-gray-500">メールアドレスを入力してください</p>
         </div>
 
         <Card>
@@ -144,10 +136,7 @@ export default function RegisterEmailPage() {
             <div className="mt-6 text-center space-y-2">
               <p className="text-sm text-gray-500">
                 既にアカウントをお持ちの方は{" "}
-                <Link
-                  href="/auth/login"
-                  className="font-medium text-primary hover:text-primary/80"
-                >
+                <Link href="/auth/login" className="font-medium text-primary hover:text-primary/80">
                   こちらからログイン
                 </Link>
               </p>
@@ -156,10 +145,7 @@ export default function RegisterEmailPage() {
         </Card>
 
         <div className="text-center">
-          <Link
-            href="/"
-            className="text-sm font-medium text-primary hover:text-primary/80"
-          >
+          <Link href="/" className="text-sm font-medium text-primary hover:text-primary/80">
             ← トップページに戻る
           </Link>
         </div>

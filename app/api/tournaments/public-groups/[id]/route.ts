@@ -1,25 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { calculateTournamentStatus } from '@/lib/tournament-status';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { calculateTournamentStatus } from "@/lib/tournament-status";
 
 // GET /api/tournaments/public-groups/[id] - 公開大会グループの詳細取得
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const resolvedParams = await params;
     const groupId = parseInt(resolvedParams.id);
 
     if (isNaN(groupId)) {
-      return NextResponse.json(
-        { error: '有効な大会IDを指定してください' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "有効な大会IDを指定してください" }, { status: 400 });
     }
 
     // 大会グループ基本情報取得（公開のみ）
-    const groupResult = await db.execute(`
+    const groupResult = await db.execute(
+      `
       SELECT
         tg.group_id,
         tg.group_name,
@@ -40,19 +35,19 @@ export async function GET(
       LEFT JOIN t_tournaments t ON tg.group_id = t.group_id
       WHERE tg.group_id = ? AND tg.visibility = 'open'
       GROUP BY tg.group_id
-    `, [groupId]);
+    `,
+      [groupId],
+    );
 
     if (groupResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "大会が見つかりません" }, { status: 404 });
     }
 
     const groupRow = groupResult.rows[0];
 
     // グループに紐づく全部門の会場をユニークに取得
-    const venuesResult = await db.execute(`
+    const venuesResult = await db.execute(
+      `
       SELECT DISTINCT v.venue_id, v.venue_name, v.address as venue_address
       FROM t_tournaments t, json_each(t.venue_id) je
       JOIN m_venues v ON v.venue_id = je.value
@@ -60,16 +55,19 @@ export async function GET(
         AND t.visibility = 'open'
         AND date(t.public_start_date) <= date('now')
       ORDER BY v.venue_name ASC
-    `, [groupId]);
+    `,
+      [groupId],
+    );
 
-    const venues = venuesResult.rows.map(row => ({
+    const venues = venuesResult.rows.map((row) => ({
       venue_id: Number(row.venue_id),
       venue_name: String(row.venue_name),
       venue_address: row.venue_address as string | null,
     }));
 
     // 所属部門一覧取得（公開のみ）
-    const divisionsResult = await db.execute(`
+    const divisionsResult = await db.execute(
+      `
       SELECT
         t.tournament_id,
         t.tournament_name,
@@ -100,49 +98,56 @@ export async function GET(
         AND date(t.public_start_date) <= date('now')
       GROUP BY t.tournament_id
       ORDER BY t.tournament_name ASC
-    `, [groupId]);
+    `,
+      [groupId],
+    );
 
     // 各部門のステータスを計算
-    const divisions = await Promise.all(divisionsResult.rows.map(async (divRow) => {
-      // tournament_datesからevent_start_dateとevent_end_dateを計算
-      let eventStartDate = '';
-      let eventEndDate = '';
+    const divisions = await Promise.all(
+      divisionsResult.rows.map(async (divRow) => {
+        // tournament_datesからevent_start_dateとevent_end_dateを計算
+        let eventStartDate = "";
+        let eventEndDate = "";
 
-      if (divRow.tournament_dates) {
-        try {
-          const dates = JSON.parse(divRow.tournament_dates as string);
-          const dateValues = Object.values(dates) as string[];
-          const sortedDates = dateValues.sort();
-          eventStartDate = sortedDates[0] || '';
-          eventEndDate = sortedDates[sortedDates.length - 1] || '';
-        } catch (error) {
-          console.error('Error parsing tournament_dates:', error);
+        if (divRow.tournament_dates) {
+          try {
+            const dates = JSON.parse(divRow.tournament_dates as string);
+            const dateValues = Object.values(dates) as string[];
+            const sortedDates = dateValues.sort();
+            eventStartDate = sortedDates[0] || "";
+            eventEndDate = sortedDates[sortedDates.length - 1] || "";
+          } catch (error) {
+            console.error("Error parsing tournament_dates:", error);
+          }
         }
-      }
 
-      const calculatedStatus = await calculateTournamentStatus({
-        status: (divRow.status as string) || 'planning',
-        recruitment_start_date: divRow.recruitment_start_date as string | null,
-        recruitment_end_date: divRow.recruitment_end_date as string | null,
-        tournament_dates: (divRow.tournament_dates as string) || '{}'
-      }, Number(divRow.tournament_id));
+        const calculatedStatus = await calculateTournamentStatus(
+          {
+            status: (divRow.status as string) || "planning",
+            recruitment_start_date: divRow.recruitment_start_date as string | null,
+            recruitment_end_date: divRow.recruitment_end_date as string | null,
+            tournament_dates: (divRow.tournament_dates as string) || "{}",
+          },
+          Number(divRow.tournament_id),
+        );
 
-      return {
-        tournament_id: Number(divRow.tournament_id),
-        tournament_name: String(divRow.tournament_name),
-        format_id: Number(divRow.format_id),
-        format_name: divRow.format_name as string,
-        venue_id: Number(divRow.venue_id),
-        venue_name: divRow.venue_name as string,
-        team_count: Number(divRow.team_count),
-        registered_teams: Number(divRow.registered_teams),
-        status: calculatedStatus,
-        recruitment_start_date: divRow.recruitment_start_date as string,
-        recruitment_end_date: divRow.recruitment_end_date as string,
-        event_start_date: eventStartDate,
-        event_end_date: eventEndDate,
-      };
-    }));
+        return {
+          tournament_id: Number(divRow.tournament_id),
+          tournament_name: String(divRow.tournament_name),
+          format_id: Number(divRow.format_id),
+          format_name: divRow.format_name as string,
+          venue_id: Number(divRow.venue_id),
+          venue_name: divRow.venue_name as string,
+          team_count: Number(divRow.team_count),
+          registered_teams: Number(divRow.registered_teams),
+          status: calculatedStatus,
+          recruitment_start_date: divRow.recruitment_start_date as string,
+          recruitment_end_date: divRow.recruitment_end_date as string,
+          event_start_date: eventStartDate,
+          event_end_date: eventEndDate,
+        };
+      }),
+    );
 
     return NextResponse.json({
       success: true,
@@ -162,15 +167,11 @@ export async function GET(
           event_description: groupRow.event_description as string | null,
           division_count: Number(groupRow.division_count),
         },
-        divisions: divisions
-      }
+        divisions: divisions,
+      },
     });
-
   } catch (error) {
-    console.error('公開大会グループ取得エラー:', error);
-    return NextResponse.json(
-      { error: '大会グループの取得に失敗しました' },
-      { status: 500 }
-    );
+    console.error("公開大会グループ取得エラー:", error);
+    return NextResponse.json({ error: "大会グループの取得に失敗しました" }, { status: 500 });
   }
 }

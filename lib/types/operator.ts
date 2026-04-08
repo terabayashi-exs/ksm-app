@@ -3,24 +3,24 @@
  * ダッシュボードのボタンと連動した権限管理
  */
 export interface OperatorPermissions {
-  canManageCourts: boolean;          // 日程・会場設定 / 会場・コート設定
-  canManageRules: boolean;           // ルール設定
-  canRegisterTeams: boolean;         // チーム登録
-  canCreateDraws: boolean;           // 組合せ作成・編集
-  canChangeFormat: boolean;          // フォーマット変更
-  canManageParticipants: boolean;    // 参加チーム管理
-  canInputResults: boolean;          // 試合結果入力（結果の登録）
-  canConfirmResults: boolean;        // 試合結果入力（結果の確定）
-  canSetManualRankings: boolean;     // 手動順位設定
-  canChangePromotionRules: boolean;  // 選出条件変更
-  canManageFiles: boolean;           // ファイル管理
-  canManageSponsors: boolean;        // スポンサー管理
-  canPrintRefereeCards: boolean;     // 審判カード印刷
-  canSendEmails: boolean;            // メール送信
-  canManageMatchComments: boolean;   // 試合コメント管理
+  canManageCourts: boolean; // 日程・会場設定 / 会場・コート設定
+  canManageRules: boolean; // ルール設定
+  canRegisterTeams: boolean; // チーム登録
+  canCreateDraws: boolean; // 組合せ作成・編集
+  canChangeFormat: boolean; // フォーマット変更
+  canManageParticipants: boolean; // 参加チーム管理
+  canInputResults: boolean; // 試合結果入力（結果の登録）
+  canConfirmResults: boolean; // 試合結果入力（結果の確定）
+  canSetManualRankings: boolean; // 手動順位設定
+  canChangePromotionRules: boolean; // 選出条件変更
+  canManageFiles: boolean; // ファイル管理
+  canManageSponsors: boolean; // スポンサー管理
+  canPrintRefereeCards: boolean; // 審判カード印刷
+  canSendEmails: boolean; // メール送信
+  canManageMatchComments: boolean; // 試合コメント管理
   canManageDisplaySettings: boolean; // 表示設定（フェーズタブ表示/非表示、チーム表示名変更）
-  canManageOperators: boolean;       // 運営者管理（運営者の追加）
-  canEditTournament: boolean;        // 部門編集
+  canManageOperators: boolean; // 運営者管理（運営者の追加）
+  canEditTournament: boolean; // 部門編集
 }
 
 /**
@@ -34,7 +34,7 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
   canCreateDraws: false,
   canChangeFormat: false,
   canManageParticipants: false,
-  canInputResults: true,           // デフォルトで有効
+  canInputResults: true, // デフォルトで有効
   canConfirmResults: false,
   canSetManualRankings: false,
   canChangePromotionRules: false,
@@ -51,21 +51,30 @@ export const DEFAULT_OPERATOR_PERMISSIONS: OperatorPermissions = {
 /**
  * 権限プリセットの種類
  */
-export type PermissionPreset = 'basic_info' | 'preparation' | 'event_day' | 'management' | 'operator_all' | 'custom';
+export type PermissionPreset =
+  | "basic_info"
+  | "preparation"
+  | "event_day"
+  | "management"
+  | "operator_all"
+  | "custom";
 
 /**
  * 権限プリセット定義
  */
-export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; description: string; permissions: OperatorPermissions }> = {
+export const PERMISSION_PRESETS: Record<
+  PermissionPreset,
+  { label: string; description: string; permissions: OperatorPermissions }
+> = {
   basic_info: {
-    label: '基本情報',
-    description: 'フォーマット変更、部門編集など基本情報の管理',
+    label: "基本情報",
+    description: "フォーマット変更、部門編集など基本情報の管理",
     permissions: {
       canManageCourts: false,
       canManageRules: false,
       canRegisterTeams: false,
       canCreateDraws: false,
-      canChangeFormat: true,           // フォーマット変更
+      canChangeFormat: true, // フォーマット変更
       canManageParticipants: false,
       canInputResults: false,
       canConfirmResults: false,
@@ -78,36 +87,36 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageMatchComments: false,
       canManageDisplaySettings: false,
       canManageOperators: false,
-      canEditTournament: true,         // 部門編集
-    }
+      canEditTournament: true, // 部門編集
+    },
   },
   preparation: {
-    label: '事前準備',
-    description: 'ルール設定、チーム登録、組合せ作成など大会開催前の準備作業',
+    label: "事前準備",
+    description: "ルール設定、チーム登録、組合せ作成など大会開催前の準備作業",
     permissions: {
-      canManageCourts: true,           // 日程・会場設定 / 会場・コート設定
-      canManageRules: true,            // ルール設定
-      canRegisterTeams: true,          // チーム登録
-      canCreateDraws: true,            // 組合せ作成・編集
+      canManageCourts: true, // 日程・会場設定 / 会場・コート設定
+      canManageRules: true, // ルール設定
+      canRegisterTeams: true, // チーム登録
+      canCreateDraws: true, // 組合せ作成・編集
       canChangeFormat: false,
-      canManageParticipants: true,     // 参加チーム管理
+      canManageParticipants: true, // 参加チーム管理
       canInputResults: false,
       canConfirmResults: false,
       canSetManualRankings: false,
       canChangePromotionRules: false,
       canManageFiles: false,
       canManageSponsors: false,
-      canPrintRefereeCards: true,      // 審判カード印刷
+      canPrintRefereeCards: true, // 審判カード印刷
       canSendEmails: false,
-      canManageMatchComments: true,    // 試合コメント管理
+      canManageMatchComments: true, // 試合コメント管理
       canManageDisplaySettings: false,
       canManageOperators: false,
       canEditTournament: false,
-    }
+    },
   },
   event_day: {
-    label: '当日運営',
-    description: '試合結果入力、順位設定など大会当日の運営作業',
+    label: "当日運営",
+    description: "試合結果入力、順位設定など大会当日の運営作業",
     permissions: {
       canManageCourts: false,
       canManageRules: false,
@@ -115,10 +124,10 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canCreateDraws: false,
       canChangeFormat: false,
       canManageParticipants: false,
-      canInputResults: true,           // 試合結果入力（結果の登録）
-      canConfirmResults: true,         // 試合結果入力（結果の確定）
-      canSetManualRankings: true,      // 手動順位設定
-      canChangePromotionRules: true,   // 選出条件変更
+      canInputResults: true, // 試合結果入力（結果の登録）
+      canConfirmResults: true, // 試合結果入力（結果の確定）
+      canSetManualRankings: true, // 手動順位設定
+      canChangePromotionRules: true, // 選出条件変更
       canManageFiles: false,
       canManageSponsors: false,
       canPrintRefereeCards: false,
@@ -127,11 +136,11 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageDisplaySettings: false,
       canManageOperators: false,
       canEditTournament: false,
-    }
+    },
   },
   management: {
-    label: '管理・その他',
-    description: 'メール送信、ファイル管理、スポンサー管理',
+    label: "管理・その他",
+    description: "メール送信、ファイル管理、スポンサー管理",
     permissions: {
       canManageCourts: false,
       canManageRules: false,
@@ -143,19 +152,19 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canConfirmResults: false,
       canSetManualRankings: false,
       canChangePromotionRules: false,
-      canManageFiles: true,            // ファイル管理
-      canManageSponsors: true,         // スポンサー管理
+      canManageFiles: true, // ファイル管理
+      canManageSponsors: true, // スポンサー管理
       canPrintRefereeCards: false,
-      canSendEmails: true,             // メール送信
+      canSendEmails: true, // メール送信
       canManageMatchComments: false,
-      canManageDisplaySettings: true,  // 表示設定
-      canManageOperators: true,        // 運営者管���
+      canManageDisplaySettings: true, // 表示設定
+      canManageOperators: true, // 運営者管���
       canEditTournament: false,
-    }
+    },
   },
   operator_all: {
-    label: '運営者（全権限）',
-    description: '運営者の登録を含むすべての操作権限を付与',
+    label: "運営者（全権限）",
+    description: "運営者の登録を含むすべての操作権限を付与",
     permissions: {
       canManageCourts: true,
       canManageRules: true,
@@ -175,13 +184,13 @@ export const PERMISSION_PRESETS: Record<PermissionPreset, { label: string; descr
       canManageDisplaySettings: true,
       canManageOperators: true,
       canEditTournament: true,
-    }
+    },
   },
   custom: {
-    label: 'カスタム',
-    description: '個別に権限を設定',
-    permissions: DEFAULT_OPERATOR_PERMISSIONS
-  }
+    label: "カスタム",
+    description: "個別に権限を設定",
+    permissions: DEFAULT_OPERATOR_PERMISSIONS,
+  },
 };
 
 /**

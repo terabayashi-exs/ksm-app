@@ -1,72 +1,72 @@
 // lib/sport-standings-calculator.ts
 // 多競技対応の順位計算システム
 
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 /**
  * 競技種別別のスコア設定
  */
 export interface SportScoreConfig {
   sport_code: string;
-  score_label: string;          // "得点" | "ゴール" | "スコア" | "点数"
-  score_against_label: string;  // "失点" | "失ゴール" | "失スコア" | "失点"
-  difference_label: string;     // "得失点差" | "得失ゴール差" | "スコア差"
-  supports_pk: boolean;         // PK戦対応フラグ
-  pk_display_format?: string;   // PK表示フォーマット: "PK {pk_score1}-{pk_score2}"
+  score_label: string; // "得点" | "ゴール" | "スコア" | "点数"
+  score_against_label: string; // "失点" | "失ゴール" | "失スコア" | "失点"
+  difference_label: string; // "得失点差" | "得失ゴール差" | "スコア差"
+  supports_pk: boolean; // PK戦対応フラグ
+  pk_display_format?: string; // PK表示フォーマット: "PK {pk_score1}-{pk_score2}"
 }
 
 /**
  * 競技種別設定
  */
 export const SPORT_SCORE_CONFIGS: Record<string, SportScoreConfig> = {
-  'pk_championship': {
-    sport_code: 'pk_championship',
-    score_label: '得点',
-    score_against_label: '失点',
-    difference_label: '得失点差',
-    supports_pk: false
+  pk_championship: {
+    sport_code: "pk_championship",
+    score_label: "得点",
+    score_against_label: "失点",
+    difference_label: "得失点差",
+    supports_pk: false,
   },
-  'pk': {
-    sport_code: 'pk',
-    score_label: '得点',
-    score_against_label: '失点',
-    difference_label: '得失点差',
-    supports_pk: false  // PK競技では単純なスコア表示
+  pk: {
+    sport_code: "pk",
+    score_label: "得点",
+    score_against_label: "失点",
+    difference_label: "得失点差",
+    supports_pk: false, // PK競技では単純なスコア表示
   },
-  'soccer': {
-    sport_code: 'soccer',
-    score_label: '得点',
-    score_against_label: '失点',
-    difference_label: '得失点差',
+  soccer: {
+    sport_code: "soccer",
+    score_label: "得点",
+    score_against_label: "失点",
+    difference_label: "得失点差",
     supports_pk: true,
-    pk_display_format: 'PK {pk_score1}-{pk_score2}'
+    pk_display_format: "PK {pk_score1}-{pk_score2}",
   },
-  'baseball': {
-    sport_code: 'baseball',
-    score_label: 'スコア',
-    score_against_label: '失スコア',
-    difference_label: 'スコア差',
-    supports_pk: false
+  baseball: {
+    sport_code: "baseball",
+    score_label: "スコア",
+    score_against_label: "失スコア",
+    difference_label: "スコア差",
+    supports_pk: false,
   },
-  'basketball': {
-    sport_code: 'basketball',
-    score_label: '点数',
-    score_against_label: '失点',
-    difference_label: '得失点差',
-    supports_pk: false
-  }
+  basketball: {
+    sport_code: "basketball",
+    score_label: "点数",
+    score_against_label: "失点",
+    difference_label: "得失点差",
+    supports_pk: false,
+  },
 };
 
 /**
  * サッカー専用スコアデータ
  */
 export interface SoccerScoreData {
-  regular_goals_for: number;    // 通常時間ゴール（前半+後半+延長）
+  regular_goals_for: number; // 通常時間ゴール（前半+後半+延長）
   regular_goals_against: number; // 通常時間失ゴール
-  pk_goals_for?: number;        // PK戦ゴール（別集計）
-  pk_goals_against?: number;    // PK戦失ゴール（別集計）
-  is_pk_game: boolean;          // PK戦実施フラグ
-  pk_winner?: boolean;          // PK戦勝利フラグ（このチーム視点）
+  pk_goals_for?: number; // PK戦ゴール（別集計）
+  pk_goals_against?: number; // PK戦失ゴール（別集計）
+  is_pk_game: boolean; // PK戦実施フラグ
+  pk_winner?: boolean; // PK戦勝利フラグ（このチーム視点）
 }
 
 /**
@@ -84,9 +84,9 @@ export interface MultiSportTeamStanding {
   draws: number;
   losses: number;
   // 競技種別に応じて動的に設定される
-  scores_for: number;           // goals_for の汎用版
-  scores_against: number;       // goals_against の汎用版
-  score_difference: number;     // goal_difference の汎用版
+  scores_for: number; // goals_for の汎用版
+  scores_against: number; // goals_against の汎用版
+  score_difference: number; // goal_difference の汎用版
   // サッカー専用データ（該当する場合のみ）
   soccer_data?: SoccerScoreData;
   // 競技種別情報
@@ -97,7 +97,7 @@ export interface MultiSportTeamStanding {
  * 競技種別設定を取得
  */
 export function getSportScoreConfig(sportCode: string): SportScoreConfig {
-  return SPORT_SCORE_CONFIGS[sportCode] || SPORT_SCORE_CONFIGS['pk_championship'];
+  return SPORT_SCORE_CONFIGS[sportCode] || SPORT_SCORE_CONFIGS["pk_championship"];
 }
 
 /**
@@ -117,7 +117,7 @@ export function extractSoccerScoreData(
   team1TournamentTeamId: number,
   team2TournamentTeamId: number,
   winnerTournamentTeamId: number | null,
-  activePeriods: number[]
+  activePeriods: number[],
 ): SoccerScoreData {
   const isTeam1 = tournamentTeamId === team1TournamentTeamId;
   const teamScores = isTeam1 ? team1Scores : team2Scores;
@@ -159,7 +159,7 @@ export function extractSoccerScoreData(
     pk_goals_for: isPkGame ? pkGoalsFor : undefined,
     pk_goals_against: isPkGame ? pkGoalsAgainst : undefined,
     is_pk_game: isPkGame,
-    pk_winner: pkWinner
+    pk_winner: pkWinner,
   };
 }
 
@@ -169,15 +169,19 @@ export function extractSoccerScoreData(
 export function formatScoreDisplay(
   scoresFor: number,
   scoresAgainst: number,
-  soccerData?: SoccerScoreData
+  soccerData?: SoccerScoreData,
 ): string {
   const baseScore = `${scoresFor}-${scoresAgainst}`;
-  
+
   // サッカーでPK戦がある場合
-  if (soccerData?.is_pk_game && soccerData.pk_goals_for !== undefined && soccerData.pk_goals_against !== undefined) {
+  if (
+    soccerData?.is_pk_game &&
+    soccerData.pk_goals_for !== undefined &&
+    soccerData.pk_goals_against !== undefined
+  ) {
     return `${baseScore} (PK ${soccerData.pk_goals_for}-${soccerData.pk_goals_against})`;
   }
-  
+
   return baseScore;
 }
 
@@ -186,31 +190,38 @@ export function formatScoreDisplay(
  */
 export async function getTournamentSportCode(tournamentId: number): Promise<string> {
   try {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT st.sport_code
       FROM t_tournaments t
       INNER JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       WHERE t.tournament_id = ?
-    `, [tournamentId]);
-    
+    `,
+      [tournamentId],
+    );
+
     if (result.rows.length > 0) {
       return String(result.rows[0].sport_code);
     }
-    
+
     // フォールバック: PK選手権
-    return 'pk_championship';
+    return "pk_championship";
   } catch (error) {
-    console.error('Failed to get tournament sport code:', error);
-    return 'pk_championship';
+    console.error("Failed to get tournament sport code:", error);
+    return "pk_championship";
   }
 }
 
 /**
  * 多競技対応の試合結果データ取得
  */
-export async function getMultiSportMatchResults(matchBlockId: number, tournamentId: number): Promise<unknown[]> {
+export async function getMultiSportMatchResults(
+  matchBlockId: number,
+  tournamentId: number,
+): Promise<unknown[]> {
   try {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT
         mf.match_id,
         mf.match_code,
@@ -246,11 +257,13 @@ export async function getMultiSportMatchResults(matchBlockId: number, tournament
         AND (mf.team1_tournament_team_id IS NOT NULL AND mf.team2_tournament_team_id IS NOT NULL)
         AND (ml.match_status IS NULL OR ml.match_status != 'cancelled' OR mf.is_walkover = 1)
         AND (ml.match_type IS NULL OR ml.match_type != 'FM')
-    `, [matchBlockId, tournamentId]);
+    `,
+      [matchBlockId, tournamentId],
+    );
 
     return result.rows;
   } catch (error) {
-    console.error('Failed to get multi-sport match results:', error);
+    console.error("Failed to get multi-sport match results:", error);
     return [];
   }
 }

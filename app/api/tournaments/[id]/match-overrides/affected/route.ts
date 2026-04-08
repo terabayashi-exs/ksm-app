@@ -1,10 +1,10 @@
 // app/api/tournaments/[id]/match-overrides/affected/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { getTournamentFormatPhases } from '@/lib/tournament-phases';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getTournamentFormatPhases } from "@/lib/tournament-phases";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface RouteParams {
@@ -14,18 +14,12 @@ interface RouteParams {
 /**
  * GET: 特定の進出条件を使用している試合を取得
  */
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -33,41 +27,42 @@ export async function GET(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
     // クエリパラメータから検索する進出条件を取得
     const { searchParams } = new URL(request.url);
-    const source = searchParams.get('source');
+    const source = searchParams.get("source");
 
     if (!source) {
       return NextResponse.json(
-        { success: false, error: '検索する進出条件を指定してください' },
-        { status: 400 }
+        { success: false, error: "検索する進出条件を指定してください" },
+        { status: 400 },
       );
     }
 
     // 大会存在確認（phases JSONも取得）
-    const tournamentResult = await db.execute(`
+    const tournamentResult = await db.execute(
+      `
       SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (tournamentResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     // トーナメント形式のフェーズIDを取得
     const phasesJson = tournamentResult.rows[0].phases as string | null;
     const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
-    const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+    const phasePlaceholders = tournamentPhaseIds.map(() => "?").join(",");
 
     // 指定された進出条件を使用している試合を検索
-    const templatesResult = await db.execute(`
+    const templatesResult = await db.execute(
+      `
       SELECT
         ml.match_code,
         ml.round_name,
@@ -81,9 +76,11 @@ export async function GET(
         AND mb.phase IN (${phasePlaceholders})
         AND (ml.team1_source = ? OR ml.team2_source = ?)
       ORDER BY ml.execution_priority, ml.match_code
-    `, [tournamentId, ...tournamentPhaseIds, source, source]);
+    `,
+      [tournamentId, ...tournamentPhaseIds, source, source],
+    );
 
-    const affectedMatches = templatesResult.rows.map(row => ({
+    const affectedMatches = templatesResult.rows.map((row) => ({
       match_code: String(row.match_code),
       round_name: String(row.round_name),
       team1_source: row.team1_source ? String(row.team1_source) : null,
@@ -94,18 +91,17 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: affectedMatches
+      data: affectedMatches,
     });
-
   } catch (error) {
-    console.error('影響を受ける試合の取得エラー:', error);
+    console.error("影響を受ける試合の取得エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        error: '影響を受ける試合の取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "影響を受ける試合の取得に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

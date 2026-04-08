@@ -1,9 +1,9 @@
 // app/api/matches/[id]/status/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { parseScoreArray, formatScoreArray } from '@/lib/score-parser';
-import { auth } from '@/lib/auth';
-import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { formatScoreArray, parseScoreArray } from "@/lib/score-parser";
+import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -16,14 +16,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const matchId = parseInt(resolvedParams.id);
 
     if (isNaN(matchId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な試合IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な試合IDです" }, { status: 400 });
     }
 
     // 試合状態と基本情報を取得（実チーム名も含む）
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT
         ml.match_id,
         ml.match_code,
@@ -58,13 +56,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       WHERE ml.match_id = ?
-    `, [matchId]);
+    `,
+      [matchId],
+    );
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '試合が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "試合が見つかりません" }, { status: 404 });
     }
 
     const match = result.rows[0];
@@ -84,7 +81,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         scheduled_time: match.start_time,
         period_count: match.period_count,
         current_period: match.current_period,
-        match_status: match.match_status || 'scheduled',
+        match_status: match.match_status || "scheduled",
         actual_start_time: match.actual_start_time,
         actual_end_time: match.actual_end_time,
         team1_scores: match.team1_scores ? parseScoreArray(match.team1_scores) : null,
@@ -92,15 +89,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         winner_tournament_team_id: match.winner_tournament_team_id,
         remarks: match.remarks,
         updated_by: match.updated_by,
-        updated_at: match.updated_at
-      }
+        updated_at: match.updated_at,
+      },
     });
-
   } catch (error) {
-    console.error('Match status get error:', error);
+    console.error("Match status get error:", error);
     return NextResponse.json(
-      { success: false, error: '試合状態の取得に失敗しました' },
-      { status: 500 }
+      { success: false, error: "試合状態の取得に失敗しました" },
+      { status: 500 },
     );
   }
 }
@@ -113,20 +109,17 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const body = await request.json();
 
     if (isNaN(matchId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な試合IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な試合IDです" }, { status: 400 });
     }
 
     // 認証チェック（審判トークンまたは管理者）
     const session = await auth();
 
     // 期限切れチェック（試合結果入力）- 管理者のみチェック（審判トークンは除外）
-    if (session && session.user.role === 'admin') {
+    if (session && session.user.role === "admin") {
       const permissionCheck = await checkTrialExpiredPermission(
         session.user.id,
-        'canManageResults'
+        "canManageResults",
       );
 
       if (!permissionCheck.allowed) {
@@ -134,16 +127,24 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           {
             success: false,
             error: permissionCheck.reason,
-            trialExpired: true
+            trialExpired: true,
           },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
 
-    const { action, updated_by, current_period, team1_scores, team2_scores, winner_team_id, remarks } = body;
+    const {
+      action,
+      updated_by,
+      current_period,
+      team1_scores,
+      team2_scores,
+      winner_team_id,
+      remarks,
+    } = body;
 
-    console.log('Match status update request:', {
+    console.log("Match status update request:", {
       matchId,
       action,
       updated_by,
@@ -151,55 +152,70 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       team1_scores,
       team2_scores,
       winner_team_id,
-      remarks
+      remarks,
     });
 
     // アクション別処理
     switch (action) {
-      case 'start':
+      case "start":
         // 試合開始（日本時間で記録）
-        await db.execute(`
+        await db.execute(
+          `
           INSERT OR REPLACE INTO t_match_status (
             match_id, match_block_id, match_status, actual_start_time, current_period, updated_by, updated_at
           )
           SELECT ?, match_block_id, 'ongoing', datetime('now', '+9 hours'), 1, ?, datetime('now', '+9 hours')
           FROM t_matches_live WHERE match_id = ?
-        `, [matchId, updated_by, matchId]);
+        `,
+          [matchId, updated_by, matchId],
+        );
 
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_matches_live 
           SET match_status = 'ongoing'
           WHERE match_id = ?
-        `, [matchId]);
+        `,
+          [matchId],
+        );
         break;
 
-      case 'end':
+      case "end":
         // 試合終了（日本時間で記録）
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_match_status 
           SET match_status = 'completed', actual_end_time = datetime('now', '+9 hours'), updated_by = ?, updated_at = datetime('now', '+9 hours')
           WHERE match_id = ?
-        `, [updated_by, matchId]);
+        `,
+          [updated_by, matchId],
+        );
 
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_matches_live 
           SET match_status = 'completed'
           WHERE match_id = ?
-        `, [matchId]);
+        `,
+          [matchId],
+        );
         break;
 
-      case 'update_period':
+      case "update_period":
         // ピリオド更新
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_match_status 
           SET current_period = ?, updated_by = ?, updated_at = datetime('now', '+9 hours')
           WHERE match_id = ?
-        `, [current_period, updated_by, matchId]);
+        `,
+          [current_period, updated_by, matchId],
+        );
 
         // t_matches_liveにはcurrent_periodカラムがないため、t_match_statusのみ更新
         break;
 
-      case 'update_scores':
+      case "update_scores":
         // スコア・結果更新
         if (team1_scores && team2_scores) {
           // ピリオド別スコアをJSON配列形式で保存
@@ -209,13 +225,16 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           // winner_tournament_team_idを取得（winner_team_idに対応するtournament_team_idを取得）
           let winnerTournamentTeamId: number | null = null;
           if (winner_team_id) {
-            const matchResult = await db.execute(`
+            const matchResult = await db.execute(
+              `
               SELECT
                 team1_tournament_team_id,
                 team2_tournament_team_id
               FROM t_matches_live
               WHERE match_id = ?
-            `, [matchId]);
+            `,
+              [matchId],
+            );
 
             if (matchResult.rows.length > 0 && winner_team_id) {
               // winner_team_idは既にtournament_team_idとして渡されているはずなので、そのまま使用
@@ -223,7 +242,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             }
           }
 
-          console.log('Updating scores (JSON array format):', {
+          console.log("Updating scores (JSON array format):", {
             team1_scores: team1_scores,
             team2_scores: team2_scores,
             team1ScoresStr,
@@ -231,56 +250,72 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             winner_team_id,
             winner_tournament_team_id: winnerTournamentTeamId,
             remarks,
-            matchId
+            matchId,
           });
 
-          await db.execute(`
+          await db.execute(
+            `
             UPDATE t_matches_live
             SET team1_scores = ?, team2_scores = ?, winner_tournament_team_id = ?, remarks = ?, updated_at = datetime('now', '+9 hours')
             WHERE match_id = ?
-          `, [team1ScoresStr, team2ScoresStr, winnerTournamentTeamId, remarks, matchId]);
+          `,
+            [team1ScoresStr, team2ScoresStr, winnerTournamentTeamId, remarks, matchId],
+          );
         }
         break;
 
-      case 'cancel':
+      case "cancel":
         // 試合中止（日本時間で記録）
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_match_status 
           SET match_status = 'cancelled', updated_by = ?, updated_at = datetime('now', '+9 hours')
           WHERE match_id = ?
-        `, [updated_by, matchId]);
+        `,
+          [updated_by, matchId],
+        );
 
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_matches_live 
           SET match_status = 'cancelled'
           WHERE match_id = ?
-        `, [matchId]);
+        `,
+          [matchId],
+        );
         break;
 
-      case 'reset':
+      case "reset":
         // 試合開始前の状態に戻す（日本時間で記録）
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_match_status 
           SET match_status = 'scheduled', actual_start_time = NULL, actual_end_time = NULL, current_period = 1, updated_by = ?, updated_at = datetime('now', '+9 hours')
           WHERE match_id = ?
-        `, [updated_by, matchId]);
+        `,
+          [updated_by, matchId],
+        );
 
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_matches_live 
           SET match_status = 'scheduled'
           WHERE match_id = ?
-        `, [matchId]);
+        `,
+          [matchId],
+        );
         break;
 
       default:
         return NextResponse.json(
-          { success: false, error: '無効なアクションです' },
-          { status: 400 }
+          { success: false, error: "無効なアクションです" },
+          { status: 400 },
         );
     }
 
     // 更新後の状態を取得
-    const updatedResult = await db.execute(`
+    const updatedResult = await db.execute(
+      `
       SELECT 
         ml.*,
         ms.match_status,
@@ -292,7 +327,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       FROM t_matches_live ml
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       WHERE ml.match_id = ?
-    `, [matchId]);
+    `,
+      [matchId],
+    );
 
     const updatedMatch = updatedResult.rows[0];
 
@@ -308,15 +345,14 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         team1_scores: updatedMatch.team1_scores ? parseScoreArray(updatedMatch.team1_scores) : null,
         team2_scores: updatedMatch.team2_scores ? parseScoreArray(updatedMatch.team2_scores) : null,
         updated_by: updatedMatch.updated_by,
-        updated_at: updatedMatch.status_updated_at
-      }
+        updated_at: updatedMatch.status_updated_at,
+      },
     });
-
   } catch (error) {
-    console.error('Match status update error:', error);
+    console.error("Match status update error:", error);
     return NextResponse.json(
-      { success: false, error: '試合状態の更新に失敗しました' },
-      { status: 500 }
+      { success: false, error: "試合状態の更新に失敗しました" },
+      { status: 500 },
     );
   }
 }

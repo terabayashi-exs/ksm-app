@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import Image from 'next/image';
-import { CalendarDays, MapPin, Clock, Trophy, Eye, ChevronDown, ChevronUp } from 'lucide-react';
-import { getStatusLabel, type TournamentStatus } from '@/lib/tournament-status';
+import { CalendarDays, ChevronDown, ChevronUp, Clock, Eye, MapPin, Trophy } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getStatusLabel, type TournamentStatus } from "@/lib/tournament-status";
 
 interface Tournament {
   tournament_id: number;
@@ -71,17 +71,17 @@ export default function OperatorTournamentList() {
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
-        const response = await fetch('/api/operators/tournaments');
+        const response = await fetch("/api/operators/tournaments");
         const result: ApiResponse = await response.json();
 
         if (result.success && result.data) {
           setData(result.data);
         } else {
-          setError(result.error || '大会データの取得に失敗しました');
+          setError(result.error || "大会データの取得に失敗しました");
         }
       } catch (err) {
-        setError('ネットワークエラーが発生しました');
-        console.error('大会取得エラー:', err);
+        setError("ネットワークエラーが発生しました");
+        console.error("大会取得エラー:", err);
       } finally {
         setLoading(false);
       }
@@ -91,7 +91,7 @@ export default function OperatorTournamentList() {
   }, []);
 
   const toggleGroupCollapse = (groupId: number) => {
-    setCollapsedGroups(prev => {
+    setCollapsedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(groupId)) {
         next.delete(groupId);
@@ -104,10 +104,10 @@ export default function OperatorTournamentList() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return date.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -118,7 +118,7 @@ export default function OperatorTournamentList() {
         <div className="absolute top-0 right-0 w-20 h-20 opacity-10 overflow-hidden">
           <Image
             src={tournament.logo_blob_url}
-            alt={tournament.organization_name || '管理者ロゴ'}
+            alt={tournament.organization_name || "管理者ロゴ"}
             fill
             className="object-contain"
             sizes="80px"
@@ -146,17 +146,19 @@ export default function OperatorTournamentList() {
             )}
           </div>
           <div className="flex gap-2">
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-              tournament.status === 'planning'
-                ? 'bg-gray-100 text-gray-800'
-                : tournament.status === 'recruiting'
-                ? 'bg-blue-100 text-blue-800'
-                : tournament.status === 'before_event'
-                ? 'bg-yellow-100 text-yellow-800'
-                : tournament.status === 'ongoing'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
-            }`}>
+            <div
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                tournament.status === "planning"
+                  ? "bg-gray-100 text-gray-800"
+                  : tournament.status === "recruiting"
+                    ? "bg-blue-100 text-blue-800"
+                    : tournament.status === "before_event"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : tournament.status === "ongoing"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-800"
+              }`}
+            >
               {getStatusLabel(tournament.status as TournamentStatus)}
             </div>
             {tournament.is_archived && (
@@ -171,31 +173,39 @@ export default function OperatorTournamentList() {
           <div className="flex items-center text-sm text-gray-600">
             <CalendarDays className="w-4 h-4 mr-2" />
             <span>
-              {tournament.event_start_date ? formatDate(tournament.event_start_date) : '日程未定'}
-              {tournament.event_end_date && tournament.event_end_date !== tournament.event_start_date &&
-                ` - ${formatDate(tournament.event_end_date)}`
-              }
+              {tournament.event_start_date ? formatDate(tournament.event_start_date) : "日程未定"}
+              {tournament.event_end_date &&
+                tournament.event_end_date !== tournament.event_start_date &&
+                ` - ${formatDate(tournament.event_end_date)}`}
             </span>
           </div>
           {tournament.start_time && tournament.end_time && (
             <div className="flex items-center text-sm text-gray-600">
               <Clock className="w-4 h-4 mr-2" />
-              <span>{tournament.start_time} - {tournament.end_time}</span>
+              <span>
+                {tournament.start_time} - {tournament.end_time}
+              </span>
             </div>
           )}
-          {(!tournament.start_time || !tournament.end_time) && (tournament.status === 'planning' || tournament.status === 'recruiting' || tournament.status === 'before_event') && (
-            <div className="flex items-center text-sm text-gray-500">
-              <Clock className="w-4 h-4 mr-2" />
-              <span>試合時刻未設定</span>
-            </div>
-          )}
+          {(!tournament.start_time || !tournament.end_time) &&
+            (tournament.status === "planning" ||
+              tournament.status === "recruiting" ||
+              tournament.status === "before_event") && (
+              <div className="flex items-center text-sm text-gray-500">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>試合時刻未設定</span>
+              </div>
+            )}
           <div className="flex items-center text-sm text-gray-600">
             <MapPin className="w-4 h-4 mr-2" />
             <span>{tournament.venue_name}</span>
           </div>
 
           {/* 参加状況詳細 */}
-          {((tournament.confirmed_count ?? 0) > 0 || (tournament.waitlisted_count ?? 0) > 0 || (tournament.withdrawal_requested_count ?? 0) > 0 || (tournament.cancelled_count ?? 0) > 0) && (
+          {((tournament.confirmed_count ?? 0) > 0 ||
+            (tournament.waitlisted_count ?? 0) > 0 ||
+            (tournament.withdrawal_requested_count ?? 0) > 0 ||
+            (tournament.cancelled_count ?? 0) > 0) && (
             <div className="mt-3">
               <div className="text-xs font-medium text-gray-600 mb-2">参加状況</div>
               <div className="grid grid-cols-5 gap-2">
@@ -207,22 +217,30 @@ export default function OperatorTournamentList() {
                 {/* 参加確定 */}
                 <div className="p-2 bg-green-50 rounded-lg border border-green-200 text-center">
                   <div className="text-xs text-green-700 font-medium mb-1">参加確定</div>
-                  <div className="text-lg font-bold text-green-700">{tournament.confirmed_count || 0}</div>
+                  <div className="text-lg font-bold text-green-700">
+                    {tournament.confirmed_count || 0}
+                  </div>
                 </div>
                 {/* キャンセル待ち */}
                 <div className="p-2 bg-orange-50 rounded-lg border border-orange-200 text-center">
                   <div className="text-xs text-orange-700 font-medium mb-1">キャンセル待ち</div>
-                  <div className="text-lg font-bold text-orange-700">{tournament.waitlisted_count || 0}</div>
+                  <div className="text-lg font-bold text-orange-700">
+                    {tournament.waitlisted_count || 0}
+                  </div>
                 </div>
                 {/* 辞退申請中 */}
                 <div className="p-2 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
                   <div className="text-xs text-yellow-700 font-medium mb-1">辞退申請中</div>
-                  <div className="text-lg font-bold text-yellow-700">{tournament.withdrawal_requested_count || 0}</div>
+                  <div className="text-lg font-bold text-yellow-700">
+                    {tournament.withdrawal_requested_count || 0}
+                  </div>
                 </div>
                 {/* キャンセル済 */}
                 <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-center">
                   <div className="text-xs text-gray-700 font-medium mb-1">キャンセル済</div>
-                  <div className="text-lg font-bold text-gray-700">{tournament.cancelled_count || 0}</div>
+                  <div className="text-lg font-bold text-gray-700">
+                    {tournament.cancelled_count || 0}
+                  </div>
                 </div>
               </div>
             </div>
@@ -230,7 +248,12 @@ export default function OperatorTournamentList() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <Button asChild size="sm" variant="outline" className="text-sm hover:border-primary/30 hover:bg-primary/5">
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="text-sm hover:border-primary/30 hover:bg-primary/5"
+          >
             <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
               <Eye className="w-4 h-4 mr-1" />
               詳細
@@ -275,8 +298,8 @@ export default function OperatorTournamentList() {
   }
 
   // グループをdisplay_order順にソート
-  const sortedGroups = Object.values(data.grouped).sort((a, b) =>
-    a.group.display_order - b.group.display_order
+  const sortedGroups = Object.values(data.grouped).sort(
+    (a, b) => a.group.display_order - b.group.display_order,
   );
 
   return (
@@ -284,7 +307,7 @@ export default function OperatorTournamentList() {
       {/* グループ化された大会 */}
       {sortedGroups.map(({ group, tournaments }) => {
         const isCollapsed = collapsedGroups.has(group.group_id);
-        const groupColor = group.group_color || '#3b82f6';
+        const groupColor = group.group_color || "#3b82f6";
 
         return (
           <div key={group.group_id} className="space-y-4">
@@ -306,7 +329,11 @@ export default function OperatorTournamentList() {
                 <p className="text-sm text-gray-500 mt-1">{tournaments.length}部門</p>
               </div>
               <div className="flex items-center gap-2">
-                {isCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                {isCollapsed ? (
+                  <ChevronDown className="h-5 w-5" />
+                ) : (
+                  <ChevronUp className="h-5 w-5" />
+                )}
               </div>
             </div>
 

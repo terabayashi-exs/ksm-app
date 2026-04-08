@@ -1,13 +1,13 @@
 export const metadata = { title: "部門作成" };
 
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import Link from "next/link";
 import { AlertTriangle, ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import TournamentCreateNewForm from "@/components/features/tournament/TournamentCreateNewForm";
 import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import TournamentCreateNewForm from "@/components/features/tournament/TournamentCreateNewForm";
+import { auth } from "@/lib/auth";
 import { canAddDivision } from "@/lib/subscription/plan-checker";
 
 interface PageProps {
@@ -36,12 +36,18 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -51,9 +57,7 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
         </nav>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">部門作成</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            大会に属する部門（カテゴリー）を作成します
-          </p>
+          <p className="text-sm text-gray-500 mt-1">大会に属する部門（カテゴリー）を作成します</p>
         </div>
         {/* 部門追加制限に達している場合のエラー表示 */}
         {divisionCheckResult && !divisionCheckResult.allowed ? (
@@ -69,19 +73,20 @@ export default async function CreateNewTournamentPage({ searchParams }: PageProp
                 <p className="font-semibold mb-2">{divisionCheckResult.reason}</p>
                 <div className="space-y-1 text-sm">
                   <p>現在の部門数: {divisionCheckResult.current}部門</p>
-                  <p>プラン上限: {divisionCheckResult.limit === -1 ? '無制限' : `${divisionCheckResult.limit}部門`}</p>
+                  <p>
+                    プラン上限:{" "}
+                    {divisionCheckResult.limit === -1
+                      ? "無制限"
+                      : `${divisionCheckResult.limit}部門`}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-3">
                 <Button asChild variant="default" className="bg-primary hover:bg-primary/90">
-                  <Link href="/admin/subscription/plans">
-                    プランをアップグレード
-                  </Link>
+                  <Link href="/admin/subscription/plans">プランをアップグレード</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href="/my">
-                    ダッシュボードに戻る
-                  </Link>
+                  <Link href="/my">ダッシュボードに戻る</Link>
                 </Button>
               </div>
             </CardContent>

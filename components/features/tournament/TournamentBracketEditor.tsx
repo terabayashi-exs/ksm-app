@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MoveHorizontal } from 'lucide-react';
+import { MoveHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 interface Team {
   tournament_team_id?: number;
@@ -34,7 +34,13 @@ interface TournamentBracketEditorProps {
   allSlots?: FirstRoundSlot[][]; // 他のブロックのスロット情報（ブロック間移動用）
   blockNames?: string[]; // 全ブロック名
   currentBlockIndex: number; // 現在のブロックのインデックス
-  onMoveTeam?: (fromSlotIndex: number, fromTeamPosition: 'team1' | 'team2', toBlockIndex: number, toSlotIndex: number, toTeamPosition: 'team1' | 'team2') => void;
+  onMoveTeam?: (
+    fromSlotIndex: number,
+    fromTeamPosition: "team1" | "team2",
+    toBlockIndex: number,
+    toSlotIndex: number,
+    toTeamPosition: "team1" | "team2",
+  ) => void;
 }
 
 export default function TournamentBracketEditor({
@@ -42,7 +48,7 @@ export default function TournamentBracketEditor({
   allSlots,
   blockNames,
   currentBlockIndex,
-  onMoveTeam
+  onMoveTeam,
 }: TournamentBracketEditorProps) {
   return (
     <div className="space-y-4">
@@ -71,22 +77,33 @@ interface SlotCardProps {
   allSlots?: FirstRoundSlot[][];
   blockNames?: string[];
   currentBlockIndex: number;
-  onMoveTeam?: (fromSlotIndex: number, fromTeamPosition: 'team1' | 'team2', toBlockIndex: number, toSlotIndex: number, toTeamPosition: 'team1' | 'team2') => void;
+  onMoveTeam?: (
+    fromSlotIndex: number,
+    fromTeamPosition: "team1" | "team2",
+    toBlockIndex: number,
+    toSlotIndex: number,
+    toTeamPosition: "team1" | "team2",
+  ) => void;
 }
 
-function SlotCard({ slot, slotIndex, allSlots, blockNames, currentBlockIndex, onMoveTeam }: SlotCardProps) {
+function SlotCard({
+  slot,
+  slotIndex,
+  allSlots,
+  blockNames,
+  currentBlockIndex,
+  onMoveTeam,
+}: SlotCardProps) {
   const isByeMatch = slot.is_bye_match;
 
   return (
-    <Card className={isByeMatch ? 'bg-gray-50 border-gray-300' : 'bg-white'}>
+    <Card className={isByeMatch ? "bg-gray-50 border-gray-300" : "bg-white"}>
       <CardContent className="p-4">
         {/* 試合コードヘッダー */}
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm font-semibold text-gray-600">
-            {slot.match_code}
-          </div>
-          <Badge variant={isByeMatch ? 'secondary' : 'default'} className="text-xs">
-            {isByeMatch ? '不戦勝枠' : '対戦試合'}
+          <div className="text-sm font-semibold text-gray-600">{slot.match_code}</div>
+          <Badge variant={isByeMatch ? "secondary" : "default"} className="text-xs">
+            {isByeMatch ? "不戦勝枠" : "対戦試合"}
           </Badge>
         </div>
 
@@ -108,7 +125,7 @@ function SlotCard({ slot, slotIndex, allSlots, blockNames, currentBlockIndex, on
             />
           ) : (
             <TeamSlot
-              team={{ team_name: '（割り当てなし）', position: '' }}
+              team={{ team_name: "（割り当てなし）", position: "" }}
               isDraggable={false}
               isByeMatch={false}
               isEmptyByeSlot={isByeMatch}
@@ -122,9 +139,7 @@ function SlotCard({ slot, slotIndex, allSlots, blockNames, currentBlockIndex, on
           )}
 
           {/* vs表示 */}
-          <div className="text-center text-sm font-medium text-gray-400 py-1">
-            vs
-          </div>
+          <div className="text-center text-sm font-medium text-gray-400 py-1">vs</div>
 
           {/* チーム2 */}
           {slot.team2 ? (
@@ -142,7 +157,7 @@ function SlotCard({ slot, slotIndex, allSlots, blockNames, currentBlockIndex, on
             />
           ) : (
             <TeamSlot
-              team={{ team_name: '（割り当てなし）', position: '' }}
+              team={{ team_name: "（割り当てなし）", position: "" }}
               isDraggable={false}
               isByeMatch={false}
               isEmptyByeSlot={isByeMatch}
@@ -166,11 +181,17 @@ interface TeamSlotProps {
   isByeMatch: boolean;
   isEmptyByeSlot: boolean;
   slotIndex: number;
-  teamPosition: 'team1' | 'team2';
+  teamPosition: "team1" | "team2";
   currentBlockIndex: number;
   allSlots?: FirstRoundSlot[][];
   blockNames?: string[];
-  onMoveTeam?: (fromSlotIndex: number, fromTeamPosition: 'team1' | 'team2', toBlockIndex: number, toSlotIndex: number, toTeamPosition: 'team1' | 'team2') => void;
+  onMoveTeam?: (
+    fromSlotIndex: number,
+    fromTeamPosition: "team1" | "team2",
+    toBlockIndex: number,
+    toSlotIndex: number,
+    toTeamPosition: "team1" | "team2",
+  ) => void;
 }
 
 function TeamSlot({
@@ -181,7 +202,7 @@ function TeamSlot({
   currentBlockIndex,
   allSlots,
   blockNames,
-  onMoveTeam
+  onMoveTeam,
 }: TeamSlotProps) {
   const hasAssignment = team.tournament_team_id !== undefined;
 
@@ -194,35 +215,40 @@ function TeamSlot({
       blockName: string;
       slotIndex: number;
       slotCode: string;
-      teamPosition: 'team1' | 'team2';
+      teamPosition: "team1" | "team2";
       targetTeam: string | null;
     }> = [];
 
     allSlots.forEach((blockSlots, blockIndex) => {
       blockSlots.forEach((slot, sIndex) => {
         // team1の移動先
-        if (!(blockIndex === currentBlockIndex && sIndex === slotIndex && teamPosition === 'team1')) {
+        if (
+          !(blockIndex === currentBlockIndex && sIndex === slotIndex && teamPosition === "team1")
+        ) {
           const targetTeam = slot.team1?.team_name || null;
           options.push({
             blockIndex,
             blockName: blockNames[blockIndex] || `Block ${blockIndex + 1}`,
             slotIndex: sIndex,
             slotCode: slot.match_code,
-            teamPosition: 'team1',
-            targetTeam
+            teamPosition: "team1",
+            targetTeam,
           });
         }
 
         // team2の移動先（不戦勝試合でなければ）
-        if (!slot.is_bye_match && !(blockIndex === currentBlockIndex && sIndex === slotIndex && teamPosition === 'team2')) {
+        if (
+          !slot.is_bye_match &&
+          !(blockIndex === currentBlockIndex && sIndex === slotIndex && teamPosition === "team2")
+        ) {
           const targetTeam = slot.team2?.team_name || null;
           options.push({
             blockIndex,
             blockName: blockNames[blockIndex] || `Block ${blockIndex + 1}`,
             slotIndex: sIndex,
             slotCode: slot.match_code,
-            teamPosition: 'team2',
-            targetTeam
+            teamPosition: "team2",
+            targetTeam,
           });
         }
       });
@@ -239,12 +265,12 @@ function TeamSlot({
         p-3 rounded-lg border-2 transition-colors
         ${
           isEmptyByeSlot
-            ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+            ? "bg-gray-100 border-gray-300 cursor-not-allowed"
             : hasAssignment
-            ? 'bg-blue-50 border-blue-300'
-            : 'bg-white border-gray-300'
+              ? "bg-blue-50 border-blue-300"
+              : "bg-white border-gray-300"
         }
-        ${!isEmptyByeSlot && !hasAssignment ? 'border-dashed' : ''}
+        ${!isEmptyByeSlot && !hasAssignment ? "border-dashed" : ""}
       `}
     >
       <div className="flex items-center justify-between">
@@ -253,11 +279,7 @@ function TeamSlot({
             className={`
               text-sm font-medium
               ${
-                isEmptyByeSlot
-                  ? 'text-gray-500'
-                  : hasAssignment
-                  ? 'text-blue-900'
-                  : 'text-gray-400'
+                isEmptyByeSlot ? "text-gray-500" : hasAssignment ? "text-blue-900" : "text-gray-400"
               }
             `}
           >
@@ -288,23 +310,28 @@ function TeamSlot({
               {moveOptions.map((option, index) => (
                 <DropdownMenuItem
                   key={index}
-                  onClick={() => onMoveTeam?.(slotIndex, teamPosition, option.blockIndex, option.slotIndex, option.teamPosition)}
+                  onClick={() =>
+                    onMoveTeam?.(
+                      slotIndex,
+                      teamPosition,
+                      option.blockIndex,
+                      option.slotIndex,
+                      option.teamPosition,
+                    )
+                  }
                   className="text-xs"
                 >
                   <div className="flex flex-col">
                     <div className="font-medium">
-                      {option.blockName} - {option.slotCode} ({option.teamPosition === 'team1' ? '上' : '下'})
+                      {option.blockName} - {option.slotCode} (
+                      {option.teamPosition === "team1" ? "上" : "下"})
                     </div>
                     {option.targetTeam && (
                       <div className="text-gray-500 text-xs">
                         現在: {option.targetTeam} (入れ替え)
                       </div>
                     )}
-                    {!option.targetTeam && (
-                      <div className="text-gray-500 text-xs">
-                        (空き)
-                      </div>
-                    )}
+                    {!option.targetTeam && <div className="text-gray-500 text-xs">(空き)</div>}
                   </div>
                 </DropdownMenuItem>
               ))}

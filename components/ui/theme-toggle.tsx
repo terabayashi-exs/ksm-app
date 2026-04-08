@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { Moon, Sun, Monitor } from 'lucide-react';
-import { useTheme } from '@/components/providers/theme-provider';
-import { Button } from '@/components/ui/button';
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/components/providers/theme-provider";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -23,20 +23,20 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme('light')} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
           <Sun className="mr-2 h-4 w-4" />
           <span>ライトモード</span>
-          {theme === 'light' && <span className="ml-auto">✓</span>}
+          {theme === "light" && <span className="ml-auto">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('dark')} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
           <Moon className="mr-2 h-4 w-4" />
           <span>ダークモード</span>
-          {theme === 'dark' && <span className="ml-auto">✓</span>}
+          {theme === "dark" && <span className="ml-auto">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('system')} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
           <Monitor className="mr-2 h-4 w-4" />
           <span>システム設定</span>
-          {theme === 'system' && <span className="ml-auto">✓</span>}
+          {theme === "system" && <span className="ml-auto">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

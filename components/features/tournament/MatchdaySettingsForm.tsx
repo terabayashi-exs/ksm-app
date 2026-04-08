@@ -1,15 +1,21 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { AlertTriangle, Calendar, ChevronDown, ChevronUp, Copy, Loader2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import { AlertTriangle, Loader2, Save, Copy, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /** 手動入力可能なコンボボックス */
 function ComboInput({
@@ -37,7 +43,7 @@ function ComboInput({
           ref={inputRef}
           className={className}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           disabled={disabled}
@@ -48,15 +54,15 @@ function ComboInput({
           className="p-1 w-[var(--radix-popover-trigger-width)]"
           align="start"
           sideOffset={2}
-          onOpenAutoFocus={e => e.preventDefault()}
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="max-h-40 overflow-y-auto">
-            {suggestions.map(name => (
+            {suggestions.map((name) => (
               <button
                 key={name}
                 type="button"
                 className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 cursor-pointer"
-                onMouseDown={e => {
+                onMouseDown={(e) => {
                   e.preventDefault();
                   onChange(name);
                   setOpen(false);
@@ -118,10 +124,15 @@ interface Props {
 
 // コート名プリセット
 const COURT_NAME_PRESETS = [
-  "メインコート", "サブコート",
-  "第1コート", "第2コート",
-  "Aピッチ", "Bピッチ", "Cピッチ",
-  "第1グラウンド", "第2グラウンド",
+  "メインコート",
+  "サブコート",
+  "第1コート",
+  "第2コート",
+  "Aピッチ",
+  "Bピッチ",
+  "Cピッチ",
+  "第1グラウンド",
+  "第2グラウンド",
 ];
 
 export default function MatchdaySettingsForm({ tournamentId }: Props) {
@@ -171,7 +182,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   // 節ごとにグループ化
   const matchesByMatchday = useMemo(() => {
     const grouped: Record<number, MatchItem[]> = {};
-    matches.forEach(m => {
+    matches.forEach((m) => {
       if (!grouped[m.matchday]) grouped[m.matchday] = [];
       grouped[m.matchday].push(m);
     });
@@ -183,7 +194,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   // 使用済みコート名を収集（プリセット候補に追加）
   const usedCourtNames = useMemo(() => {
     const names = new Set<string>();
-    matches.forEach(m => {
+    matches.forEach((m) => {
       if (m.court_name) names.add(m.court_name);
     });
     return Array.from(names);
@@ -203,12 +214,12 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
         if (!b.tournament_date || !b.start_time) continue;
         if (a.tournament_date !== b.tournament_date) continue;
 
-        const courtA = (a.court_name || '').trim();
-        const courtB = (b.court_name || '').trim();
+        const courtA = (a.court_name || "").trim();
+        const courtB = (b.court_name || "").trim();
         if (courtA && courtB && courtA !== courtB) continue;
 
-        const [aH, aM] = a.start_time.split(':').map(Number);
-        const [bH, bM] = b.start_time.split(':').map(Number);
+        const [aH, aM] = a.start_time.split(":").map(Number);
+        const [bH, bM] = b.start_time.split(":").map(Number);
         const aStart = aH * 60 + aM;
         const aEnd = aStart + matchDuration;
         const bStart = bH * 60 + bM;
@@ -222,7 +233,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
             matchCodeB: b.match_code,
             date: a.tournament_date,
             time: a.start_time,
-            court: courtA || courtB || 'コート未設定',
+            court: courtA || courtB || "コート未設定",
           });
         }
       }
@@ -233,24 +244,28 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   // 重複がある試合IDのSet
   const conflictMatchIds = useMemo(() => {
     const ids = new Set<number>();
-    conflicts.forEach(c => { ids.add(c.matchIdA); ids.add(c.matchIdB); });
+    conflicts.forEach((c) => {
+      ids.add(c.matchIdA);
+      ids.add(c.matchIdB);
+    });
     return ids;
   }, [conflicts]);
 
-  const updateMatch = useCallback((matchId: number, field: string, value: string | number | null) => {
-    setMatches(prev => prev.map(m =>
-      m.match_id === matchId ? { ...m, [field]: value } : m
-    ));
-  }, []);
+  const updateMatch = useCallback(
+    (matchId: number, field: string, value: string | number | null) => {
+      setMatches((prev) =>
+        prev.map((m) => (m.match_id === matchId ? { ...m, [field]: value } : m)),
+      );
+    },
+    [],
+  );
 
   const updateMatchFields = useCallback((matchId: number, fields: Partial<MatchItem>) => {
-    setMatches(prev => prev.map(m =>
-      m.match_id === matchId ? { ...m, ...fields } : m
-    ));
+    setMatches((prev) => prev.map((m) => (m.match_id === matchId ? { ...m, ...fields } : m)));
   }, []);
 
   const toggleMatchday = (matchday: number) => {
-    setCollapsedMatchdays(prev => {
+    setCollapsedMatchdays((prev) => {
       const next = new Set(prev);
       if (next.has(matchday)) next.delete(matchday);
       else next.add(matchday);
@@ -260,33 +275,35 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
 
   // 前節の設定をコピー
   const copyFromPreviousMatchday = (matchday: number) => {
-    const prevMatches = matches.filter(m => m.matchday === matchday - 1);
+    const prevMatches = matches.filter((m) => m.matchday === matchday - 1);
     if (prevMatches.length === 0) return;
 
     // 前節の最初の試合の日付から+7日
     const prevDate = prevMatches[0]?.tournament_date;
-    let nextDate = '';
+    let nextDate = "";
     if (prevDate) {
       const d = new Date(prevDate);
       d.setDate(d.getDate() + 7);
-      nextDate = d.toISOString().split('T')[0];
+      nextDate = d.toISOString().split("T")[0];
     }
 
-    setMatches(prev => prev.map(m => {
-      if (m.matchday !== matchday) return m;
-      // 同じ節内のインデックスで前節からコピー
-      const idx = prev.filter(p => p.matchday === matchday).indexOf(m);
-      const prevMatch = prevMatches[idx];
-      if (!prevMatch) return { ...m, tournament_date: nextDate };
-      return {
-        ...m,
-        tournament_date: nextDate || prevMatch.tournament_date,
-        start_time: prevMatch.start_time,
-        court_name: prevMatch.court_name,
-        court_number: prevMatch.court_number,
-        venue_name: prevMatch.venue_name,
-      };
-    }));
+    setMatches((prev) =>
+      prev.map((m) => {
+        if (m.matchday !== matchday) return m;
+        // 同じ節内のインデックスで前節からコピー
+        const idx = prev.filter((p) => p.matchday === matchday).indexOf(m);
+        const prevMatch = prevMatches[idx];
+        if (!prevMatch) return { ...m, tournament_date: nextDate };
+        return {
+          ...m,
+          tournament_date: nextDate || prevMatch.tournament_date,
+          start_time: prevMatch.start_time,
+          court_name: prevMatch.court_name,
+          court_number: prevMatch.court_number,
+          venue_name: prevMatch.venue_name,
+        };
+      }),
+    );
   };
 
   // 一括設定の適用対象の節を取得
@@ -300,7 +317,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   }, [bulkTargetMode, bulkSelectedMatchdays, matchesByMatchday]);
 
   const toggleBulkMatchday = (matchday: number) => {
-    setBulkSelectedMatchdays(prev => {
+    setBulkSelectedMatchdays((prev) => {
       const next = new Set(prev);
       if (next.has(matchday)) next.delete(matchday);
       else next.add(matchday);
@@ -340,15 +357,15 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       if (startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + index * intervalDays);
-        matchdayDates[matchday] = d.toISOString().split('T')[0];
+        matchdayDates[matchday] = d.toISOString().split("T")[0];
       }
     });
 
-    setMatches(prev => {
+    setMatches((prev) => {
       // 節ごとの試合インデックスを管理（時刻の連番計算用）
       const matchdayIndexMap = new Map<number, number>();
 
-      return prev.map(m => {
+      return prev.map((m) => {
         if (!targetSet.has(m.matchday)) return m;
 
         const updated = { ...m };
@@ -362,11 +379,11 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
             // 節内の試合順に開始時刻をずらす
             const idx = matchdayIndexMap.get(m.matchday) || 0;
             matchdayIndexMap.set(m.matchday, idx + 1);
-            const [h, min] = bulkStartTime.split(':').map(Number);
+            const [h, min] = bulkStartTime.split(":").map(Number);
             const totalMin = h * 60 + min + idx * timeIntervalMinutes;
             const newH = Math.floor(totalMin / 60) % 24;
             const newM = totalMin % 60;
-            updated.start_time = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+            updated.start_time = `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
           } else {
             updated.start_time = bulkStartTime;
           }
@@ -395,7 +412,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
 
     setSaving(true);
     try {
-      const matchPayload = matches.map(m => ({
+      const matchPayload = matches.map((m) => ({
         match_id: m.match_id,
         tournament_date: m.tournament_date,
         start_time: m.start_time,
@@ -405,8 +422,8 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       }));
 
       const res = await fetch(`/api/tournaments/${tournamentId}/matchday-settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ matches: matchPayload }),
       });
 
@@ -414,9 +431,9 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       if (result.success) {
         alert("日程・会場設定を保存しました");
         router.refresh();
-        router.push('/my');
+        router.push("/my");
       } else if (result.conflicts) {
-        alert("日時・コートの重複があります:\n\n" + result.conflicts.join('\n'));
+        alert("日時・コートの重複があります:\n\n" + result.conflicts.join("\n"));
       } else {
         alert(result.error || "保存に失敗しました");
       }
@@ -441,7 +458,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
   }
 
   const matchDuration = tournament.match_duration_minutes || 10;
-  const configuredMatchCount = matches.filter(m => m.tournament_date).length;
+  const configuredMatchCount = matches.filter((m) => m.tournament_date).length;
   const totalMatchCount = matches.length;
 
   // コート名候補リスト（プリセット + 使用済み、重複除去）
@@ -480,15 +497,29 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
             <div className="space-y-3">
               {/* 日付 */}
               <div className="flex items-start gap-2">
-                <Checkbox checked={bulkApplyDate} onCheckedChange={(v) => setBulkApplyDate(!!v)} className="mt-1.5" />
+                <Checkbox
+                  checked={bulkApplyDate}
+                  onCheckedChange={(v) => setBulkApplyDate(!!v)}
+                  className="mt-1.5"
+                />
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-xs">開始日</Label>
-                    <Input className="h-9" type="date" value={bulkStartDate} onChange={e => setBulkStartDate(e.target.value)} disabled={!bulkApplyDate} />
+                    <Input
+                      className="h-9"
+                      type="date"
+                      value={bulkStartDate}
+                      onChange={(e) => setBulkStartDate(e.target.value)}
+                      disabled={!bulkApplyDate}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">日付間隔</Label>
-                    <Select value={bulkInterval} onValueChange={setBulkInterval} disabled={!bulkApplyDate}>
+                    <Select
+                      value={bulkInterval}
+                      onValueChange={setBulkInterval}
+                      disabled={!bulkApplyDate}
+                    >
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
@@ -504,23 +535,43 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
               </div>
               {/* 開始時刻 */}
               <div className="flex items-start gap-2">
-                <Checkbox checked={bulkApplyStartTime} onCheckedChange={(v) => setBulkApplyStartTime(!!v)} className="mt-1.5" />
+                <Checkbox
+                  checked={bulkApplyStartTime}
+                  onCheckedChange={(v) => setBulkApplyStartTime(!!v)}
+                  className="mt-1.5"
+                />
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-xs">開始時刻</Label>
-                    <Input className="h-9" type="time" value={bulkStartTime} onChange={e => setBulkStartTime(e.target.value)} disabled={!bulkApplyStartTime} />
+                    <Input
+                      className="h-9"
+                      type="time"
+                      value={bulkStartTime}
+                      onChange={(e) => setBulkStartTime(e.target.value)}
+                      disabled={!bulkApplyStartTime}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">試合間隔</Label>
-                    <Select value={bulkTimeInterval} onValueChange={setBulkTimeInterval} disabled={!bulkApplyStartTime}>
+                    <Select
+                      value={bulkTimeInterval}
+                      onValueChange={setBulkTimeInterval}
+                      disabled={!bulkApplyStartTime}
+                    >
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">なし（全試合同じ時刻）</SelectItem>
-                        <SelectItem value={String(matchDuration)}>{matchDuration}分（試合時間のみ）</SelectItem>
-                        <SelectItem value={String(matchDuration + 5)}>{matchDuration + 5}分（試合時間+休憩5分）</SelectItem>
-                        <SelectItem value={String(matchDuration + 10)}>{matchDuration + 10}分（試合時間+休憩10分）</SelectItem>
+                        <SelectItem value={String(matchDuration)}>
+                          {matchDuration}分（試合時間のみ）
+                        </SelectItem>
+                        <SelectItem value={String(matchDuration + 5)}>
+                          {matchDuration + 5}分（試合時間+休憩5分）
+                        </SelectItem>
+                        <SelectItem value={String(matchDuration + 10)}>
+                          {matchDuration + 10}分（試合時間+休憩10分）
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -528,21 +579,38 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
               </div>
               {/* 会場 */}
               <div className="flex items-start gap-2">
-                <Checkbox checked={bulkApplyVenue} onCheckedChange={(v) => setBulkApplyVenue(!!v)} className="mt-1.5" />
+                <Checkbox
+                  checked={bulkApplyVenue}
+                  onCheckedChange={(v) => setBulkApplyVenue(!!v)}
+                  className="mt-1.5"
+                />
                 <div className="flex-1 space-y-1">
                   <Label className="text-xs">会場</Label>
-                  <Input className="h-9" value={bulkVenueName} onChange={e => setBulkVenueName(e.target.value)} placeholder="例: ○○グラウンド" list="bulk-venue-presets" disabled={!bulkApplyVenue} />
+                  <Input
+                    className="h-9"
+                    value={bulkVenueName}
+                    onChange={(e) => setBulkVenueName(e.target.value)}
+                    placeholder="例: ○○グラウンド"
+                    list="bulk-venue-presets"
+                    disabled={!bulkApplyVenue}
+                  />
                   <datalist id="bulk-venue-presets">
-                    {venues.map(v => (
+                    {venues.map((v) => (
                       <option key={v.venue_id} value={v.venue_name} />
                     ))}
                   </datalist>
-                  <p className="text-xs text-gray-500">※ 会場を設定するとコート名にも同じ名称が自動設定されます</p>
+                  <p className="text-xs text-gray-500">
+                    ※ 会場を設定するとコート名にも同じ名称が自動設定されます
+                  </p>
                 </div>
               </div>
               {/* コート名 */}
               <div className="flex items-start gap-2">
-                <Checkbox checked={bulkApplyCourt} onCheckedChange={(v) => setBulkApplyCourt(!!v)} className="mt-1.5" />
+                <Checkbox
+                  checked={bulkApplyCourt}
+                  onCheckedChange={(v) => setBulkApplyCourt(!!v)}
+                  className="mt-1.5"
+                />
                 <div className="flex-1 space-y-1">
                   <Label className="text-xs">コート名</Label>
                   <ComboInput
@@ -585,16 +653,31 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
               {bulkTargetMode === "selected" && (
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <button type="button" className="text-xs text-primary hover:underline" onClick={selectAllBulkMatchdays}>全選択</button>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={selectAllBulkMatchdays}
+                    >
+                      全選択
+                    </button>
                     <span className="text-xs text-gray-500">/</span>
-                    <button type="button" className="text-xs text-primary hover:underline" onClick={deselectAllBulkMatchdays}>全解除</button>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={deselectAllBulkMatchdays}
+                    >
+                      全解除
+                    </button>
                     <span className="text-xs text-gray-500 ml-1">
                       ({bulkSelectedMatchdays.size}/{matchesByMatchday.length}節選択中)
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {matchesByMatchday.map(({ matchday }) => (
-                      <label key={matchday} className="flex items-center gap-1 text-sm cursor-pointer">
+                      <label
+                        key={matchday}
+                        className="flex items-center gap-1 text-sm cursor-pointer"
+                      >
                         <Checkbox
                           checked={bulkSelectedMatchdays.has(matchday)}
                           onCheckedChange={() => toggleBulkMatchday(matchday)}
@@ -608,7 +691,9 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
             </div>
 
             <Button variant="outline" size="sm" onClick={applyBulkSettings}>
-              {bulkTargetMode === "all" ? "全節に適用" : `選択した${bulkSelectedMatchdays.size}節に適用`}
+              {bulkTargetMode === "all"
+                ? "全節に適用"
+                : `選択した${bulkSelectedMatchdays.size}節に適用`}
             </Button>
           </CardContent>
         )}
@@ -630,7 +715,8 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
               ))}
             </ul>
             <p className="text-xs text-gray-500 ml-6">
-              同じコートでは{matchDuration}分以上の間隔が必要です。時刻またはコート名を変更してください。
+              同じコートでは{matchDuration}
+              分以上の間隔が必要です。時刻またはコート名を変更してください。
             </p>
           </CardContent>
         </Card>
@@ -640,11 +726,14 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       <div className="space-y-4">
         {matchesByMatchday.map(({ matchday, matches: mdMatches }) => {
           const isCollapsed = collapsedMatchdays.has(matchday);
-          const allConfigured = mdMatches.every(m => m.tournament_date);
-          const noneConfigured = mdMatches.every(m => !m.tournament_date);
+          const allConfigured = mdMatches.every((m) => m.tournament_date);
+          const noneConfigured = mdMatches.every((m) => !m.tournament_date);
 
           return (
-            <Card key={matchday} className={noneConfigured ? "border-dashed border-amber-300 bg-amber-50/30" : ""}>
+            <Card
+              key={matchday}
+              className={noneConfigured ? "border-dashed border-amber-300 bg-amber-50/30" : ""}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <button
@@ -658,13 +747,13 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                         ({mdMatches.length}試合)
                       </span>
                     </CardTitle>
-                    {noneConfigured && (
-                      <span className="text-xs text-amber-600">未設定</span>
+                    {noneConfigured && <span className="text-xs text-amber-600">未設定</span>}
+                    {allConfigured && <span className="text-xs text-green-600">設定済</span>}
+                    {isCollapsed ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4" />
                     )}
-                    {allConfigured && (
-                      <span className="text-xs text-green-600">設定済</span>
-                    )}
-                    {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
                   </button>
                   <div className="flex items-center gap-1">
                     {matchday > 1 && (
@@ -689,7 +778,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                     return (
                       <div
                         key={match.match_id}
-                        className={`rounded-md border p-3 space-y-2 ${hasConflict ? 'border-destructive bg-destructive/5' : !hasDate ? 'border-dashed border-amber-200' : 'border-gray-200'}`}
+                        className={`rounded-md border p-3 space-y-2 ${hasConflict ? "border-destructive bg-destructive/5" : !hasDate ? "border-dashed border-amber-200" : "border-gray-200"}`}
                       >
                         {/* 試合情報ヘッダー */}
                         <div className="flex items-center justify-between">
@@ -711,7 +800,9 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                               className="h-8 text-sm"
                               type="date"
                               value={match.tournament_date}
-                              onChange={e => updateMatch(match.match_id, "tournament_date", e.target.value)}
+                              onChange={(e) =>
+                                updateMatch(match.match_id, "tournament_date", e.target.value)
+                              }
                             />
                           </div>
                           <div className="space-y-1">
@@ -720,7 +811,9 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                               className="h-8 text-sm"
                               type="time"
                               value={match.start_time}
-                              onChange={e => updateMatch(match.match_id, "start_time", e.target.value)}
+                              onChange={(e) =>
+                                updateMatch(match.match_id, "start_time", e.target.value)
+                              }
                             />
                           </div>
                           <div className="space-y-1">
@@ -740,8 +833,10 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="__empty__">未選択</SelectItem>
-                                {venues.map(v => (
-                                  <SelectItem key={v.venue_id} value={v.venue_name}>{v.venue_name}</SelectItem>
+                                {venues.map((v) => (
+                                  <SelectItem key={v.venue_id} value={v.venue_name}>
+                                    {v.venue_name}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -751,7 +846,7 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
                             <ComboInput
                               className="h-8 text-sm"
                               value={match.court_name}
-                              onChange={v => updateMatch(match.match_id, "court_name", v)}
+                              onChange={(v) => updateMatch(match.match_id, "court_name", v)}
                               suggestions={courtNameSuggestions}
                               placeholder="空欄可"
                             />
@@ -770,16 +865,25 @@ export default function MatchdaySettingsForm({ tournamentId }: Props) {
       {/* 保存ボタン（画面下部固定） */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-end gap-3">
-          <Button variant="outline" onClick={() => router.push('/my')}>
+          <Button variant="outline" onClick={() => router.push("/my")}>
             キャンセル
           </Button>
           <Button onClick={handleSave} disabled={saving || conflicts.length > 0}>
             {saving ? (
-              <><Loader2 className="w-4 h-4 animate-spin mr-2" />保存中...</>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                保存中...
+              </>
             ) : conflicts.length > 0 ? (
-              <><AlertTriangle className="w-4 h-4 mr-2" />重複あり</>
+              <>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                重複あり
+              </>
             ) : (
-              <><Save className="w-4 h-4 mr-2" />保存する</>
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                保存する
+              </>
             )}
           </Button>
         </div>

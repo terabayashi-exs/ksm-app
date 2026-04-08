@@ -1,12 +1,12 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from "fs";
+import path from "path";
 
 /**
  * PDFファイルの存在をチェックする関数
  */
 export async function checkPdfExists(filePath: string): Promise<boolean> {
   try {
-    const fullPath = path.join(process.cwd(), 'public', filePath);
+    const fullPath = path.join(process.cwd(), "public", filePath);
     await fs.access(fullPath);
     return true;
   } catch {
@@ -39,11 +39,11 @@ export async function checkTournamentPdfFiles(tournamentId: number): Promise<{
 }> {
   const [bracketPdfExists, resultsPdfExists] = await Promise.all([
     checkTournamentBracketPdfExists(tournamentId),
-    checkTournamentResultsPdfExists(tournamentId)
+    checkTournamentResultsPdfExists(tournamentId),
   ]);
 
   return {
     bracketPdfExists,
-    resultsPdfExists
+    resultsPdfExists,
   };
 }

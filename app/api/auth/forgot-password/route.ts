@@ -1,21 +1,18 @@
 // app/api/auth/forgot-password/route.ts
 // パスワードリセット申請API（m_login_users対応）
 
+import crypto from "crypto";
+import { format } from "date-fns";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import crypto from "crypto";
 import { sendEmail } from "@/lib/email/mailer";
-import { format } from "date-fns";
 
 export async function POST(request: Request) {
   try {
     const { email } = await request.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: "メールアドレスを入力してください" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "メールアドレスを入力してください" }, { status: 400 });
     }
 
     // m_login_users からメールアドレスで検索
@@ -23,7 +20,7 @@ export async function POST(request: Request) {
       `SELECT login_user_id, email, display_name, is_active
        FROM m_login_users
        WHERE email = ? AND is_active = 1`,
-      [email]
+      [email],
     );
 
     if (userResult.rows.length === 0) {
@@ -31,9 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: true,
-          message: "登録されているメールアドレスにパスワードリセットのご案内を送信しました。メールをご確認ください。"
+          message:
+            "登録されているメールアドレスにパスワードリセットのご案内を送信しました。メールをご確認ください。",
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -47,20 +45,20 @@ export async function POST(request: Request) {
     await db.execute(
       `DELETE FROM t_password_reset_tokens
        WHERE login_user_id = ? AND used_at IS NULL`,
-      [loginUserId]
+      [loginUserId],
     );
 
     // 新しいトークンを保存（有効期限は1時間後、JSTで保存）
     await db.execute(
       `INSERT INTO t_password_reset_tokens (login_user_id, reset_token, expires_at)
        VALUES (?, ?, datetime('now', '+9 hours', '+1 hour'))`,
-      [loginUserId, resetToken]
+      [loginUserId, resetToken],
     );
 
     // 保存した有効期限を取得
     const tokenResult = await db.execute(
       `SELECT expires_at FROM t_password_reset_tokens WHERE reset_token = ?`,
-      [resetToken]
+      [resetToken],
     );
     const expiresAtStr = tokenResult.rows[0].expires_at as string;
 
@@ -69,7 +67,10 @@ export async function POST(request: Request) {
     const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`;
 
     // 有効期限の日本語表記（データベースの値はJSTなのでそのまま使用）
-    const expiresAtFormatted = format(new Date(expiresAtStr.replace(' ', 'T')), "yyyy年MM月dd日 HH:mm");
+    const expiresAtFormatted = format(
+      new Date(expiresAtStr.replace(" ", "T")),
+      "yyyy年MM月dd日 HH:mm",
+    );
 
     // メールテンプレートの作成
     const emailSubject = "【大会GO】パスワードリセットのご案内";
@@ -159,23 +160,23 @@ ${resetUrl}
       console.error("Password reset email failed:", error);
       return NextResponse.json(
         { error: "メール送信に失敗しました。しばらく時間をおいて再度お試しください。" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json(
       {
         success: true,
-        message: "登録されているメールアドレスにパスワードリセットのご案内を送信しました。メールをご確認ください。"
+        message:
+          "登録されているメールアドレスにパスワードリセットのご案内を送信しました。メールをご確認ください。",
       },
-      { status: 200 }
+      { status: 200 },
     );
-
   } catch (error) {
     console.error("Forgot password error:", error);
     return NextResponse.json(
       { error: "パスワードリセット申請の処理中にエラーが発生しました" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

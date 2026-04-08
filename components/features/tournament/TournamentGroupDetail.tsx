@@ -1,14 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Plus, Loader2, Save, X, GripVertical, Trash2,
-  Calendar, MapPin, Users, Trophy 
-} from 'lucide-react';
-import Link from 'next/link';
+import {
+  Calendar,
+  GripVertical,
+  Loader2,
+  MapPin,
+  Plus,
+  Save,
+  Trash2,
+  Trophy,
+  Users,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Tournament {
   tournament_id: number;
@@ -51,7 +59,7 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
         setEditedTournaments(result.data);
       }
     } catch (err) {
-      console.error('グループ内大会取得エラー:', err);
+      console.error("グループ内大会取得エラー:", err);
     } finally {
       setLoading(false);
     }
@@ -59,13 +67,13 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
 
   const fetchAvailableTournaments = async () => {
     try {
-      const response = await fetch('/api/tournaments');
+      const response = await fetch("/api/tournaments");
       const result = await response.json();
 
       if (result.success) {
         // 現在のグループに属する大会のIDを取得
-        const currentGroupTournamentIds = tournaments.map(t => t.tournament_id);
-        
+        const currentGroupTournamentIds = tournaments.map((t) => t.tournament_id);
+
         // グループに属していない大会のみ（現在のグループに属する大会も除外）
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ungrouped = result.data.filter((t: any) => {
@@ -77,13 +85,13 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
         setAvailableTournaments(ungrouped);
       }
     } catch (err) {
-      console.error('利用可能大会取得エラー:', err);
+      console.error("利用可能大会取得エラー:", err);
     }
   };
 
   const handleAddTournaments = async () => {
     if (selectedTournamentIds.length === 0) {
-      alert('大会を選択してください');
+      alert("大会を選択してください");
       return;
     }
 
@@ -94,18 +102,18 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
       for (let i = 0; i < selectedTournamentIds.length; i++) {
         const tournamentId = selectedTournamentIds[i];
         const response = await fetch(`/api/tournament-groups/${groupId}/tournaments`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: 'add',
+            action: "add",
             tournamentId: tournamentId,
-            groupOrder: tournaments.length + i
-          })
+            groupOrder: tournaments.length + i,
+          }),
         });
 
         const result = await response.json();
         if (!result.success) {
-          throw new Error(result.error || '大会の追加に失敗しました');
+          throw new Error(result.error || "大会の追加に失敗しました");
         }
       }
 
@@ -115,8 +123,8 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
       fetchAvailableTournaments();
       alert(`${selectedTournamentIds.length}個の大会を追加しました`);
     } catch (err) {
-      console.error('大会追加エラー:', err);
-      alert(err instanceof Error ? err.message : '大会の追加に失敗しました');
+      console.error("大会追加エラー:", err);
+      alert(err instanceof Error ? err.message : "大会の追加に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -130,7 +138,7 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
     try {
       const response = await fetch(
         `/api/tournament-groups/${groupId}/tournaments/${tournamentId}`,
-        { method: 'DELETE' }
+        { method: "DELETE" },
       );
 
       const result = await response.json();
@@ -142,8 +150,8 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
         alert(`エラー: ${result.error}`);
       }
     } catch (err) {
-      console.error('大会削除エラー:', err);
-      alert('大会の削除に失敗しました');
+      console.error("大会削除エラー:", err);
+      alert("大会の削除に失敗しました");
     }
   };
 
@@ -153,44 +161,44 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
     try {
       // 順序を更新
       const reorderResponse = await fetch(`/api/tournament-groups/${groupId}/tournaments`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'reorder',
+          action: "reorder",
           tournaments: editedTournaments.map((t, index) => ({
             tournament_id: t.tournament_id,
-            group_order: index
-          }))
-        })
+            group_order: index,
+          })),
+        }),
       });
 
       if (!reorderResponse.ok) {
-        throw new Error('順序更新に失敗しました');
+        throw new Error("順序更新に失敗しました");
       }
 
       // カテゴリー名を更新
       const categoryResponse = await fetch(`/api/tournament-groups/${groupId}/tournaments`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'update_categories',
-          tournaments: editedTournaments.map(t => ({
+          action: "update_categories",
+          tournaments: editedTournaments.map((t) => ({
             tournament_id: t.tournament_id,
-            category_name: t.category_name
-          }))
-        })
+            category_name: t.category_name,
+          })),
+        }),
       });
 
       if (!categoryResponse.ok) {
-        throw new Error('カテゴリー名更新に失敗しました');
+        throw new Error("カテゴリー名更新に失敗しました");
       }
 
       setEditMode(false);
       fetchGroupTournaments();
-      alert('変更を保存しました');
+      alert("変更を保存しました");
     } catch (err) {
-      console.error('保存エラー:', err);
-      alert('保存に失敗しました');
+      console.error("保存エラー:", err);
+      alert("保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -262,9 +270,7 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
 
       {tournaments.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-600">
-            まだ大会が登録されていません
-          </p>
+          <p className="text-gray-600">まだ大会が登録されていません</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -273,11 +279,11 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
               key={tournament.tournament_id}
               className="border rounded-lg p-4 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
               draggable={editMode}
-              onDragStart={(e) => e.dataTransfer.setData('index', index.toString())}
+              onDragStart={(e) => e.dataTransfer.setData("index", index.toString())}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                const fromIndex = parseInt(e.dataTransfer.getData('index'));
+                const fromIndex = parseInt(e.dataTransfer.getData("index"));
                 moveItem(fromIndex, index);
               }}
             >
@@ -287,21 +293,19 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
                     <GripVertical className="h-5 w-5 text-gray-400" />
                   </div>
                 )}
-                
+
                 <div className="flex-1">
                   {editMode ? (
                     <div className="mb-3">
-                      <Label htmlFor={`category-${tournament.tournament_id}`}>
-                        カテゴリー名
-                      </Label>
+                      <Label htmlFor={`category-${tournament.tournament_id}`}>カテゴリー名</Label>
                       <Input
                         id={`category-${tournament.tournament_id}`}
-                        value={tournament.category_name || ''}
+                        value={tournament.category_name || ""}
                         onChange={(e) => {
-                          const updated = editedTournaments.map(t =>
+                          const updated = editedTournaments.map((t) =>
                             t.tournament_id === tournament.tournament_id
                               ? { ...t, category_name: e.target.value }
-                              : t
+                              : t,
                           );
                           setEditedTournaments(updated);
                         }}
@@ -314,9 +318,9 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
                       {tournament.category_name || tournament.tournament_name}
                     </h4>
                   )}
-                  
+
                   <p className="text-sm text-gray-600 mb-2">{tournament.tournament_name}</p>
-                  
+
                   <div className="flex flex-wrap gap-3 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       <Trophy className="h-4 w-4" />
@@ -333,9 +337,9 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
                           try {
                             const dates = JSON.parse(tournament.tournament_dates);
                             if (Array.isArray(dates)) {
-                              return dates.map((d: { date: string }) => d.date).join(', ');
-                            } else if (typeof dates === 'object' && dates !== null) {
-                              return Object.values(dates).join(', ');
+                              return dates.map((d: { date: string }) => d.date).join(", ");
+                            } else if (typeof dates === "object" && dates !== null) {
+                              return Object.values(dates).join(", ");
                             }
                             return tournament.tournament_dates;
                           } catch {
@@ -356,17 +360,14 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
                 {!editMode && (
                   <div className="flex items-center gap-2">
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/admin/tournaments/${tournament.tournament_id}`}>
-                        詳細
-                      </Link>
+                      <Link href={`/admin/tournaments/${tournament.tournament_id}`}>詳細</Link>
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleRemoveTournament(
-                        tournament.tournament_id,
-                        tournament.tournament_name
-                      )}
+                      onClick={() =>
+                        handleRemoveTournament(tournament.tournament_id, tournament.tournament_name)
+                      }
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -384,17 +385,15 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
         <div className="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 shadow-2xl border border-gray-200">
             <h3 className="text-xl font-semibold mb-6">大会をグループに追加</h3>
-            
+
             {availableTournaments.length === 0 ? (
-              <p className="text-gray-600 mb-4">
-                グループに追加可能な大会がありません
-              </p>
+              <p className="text-gray-600 mb-4">グループに追加可能な大会がありません</p>
             ) : (
               <>
                 <div className="mb-4">
                   <Label>追加する大会を選択（複数選択可能）</Label>
                   <div className="mt-2 max-h-80 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
-                    {availableTournaments.map(tournament => (
+                    {availableTournaments.map((tournament) => (
                       <label
                         key={tournament.tournament_id}
                         className="flex items-start gap-3 p-3 rounded border hover:bg-gray-50 hover:border-blue-300 cursor-pointer transition-colors"
@@ -404,9 +403,16 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
                           checked={selectedTournamentIds.includes(tournament.tournament_id)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedTournamentIds([...selectedTournamentIds, tournament.tournament_id]);
+                              setSelectedTournamentIds([
+                                ...selectedTournamentIds,
+                                tournament.tournament_id,
+                              ]);
                             } else {
-                              setSelectedTournamentIds(selectedTournamentIds.filter(id => id !== tournament.tournament_id));
+                              setSelectedTournamentIds(
+                                selectedTournamentIds.filter(
+                                  (id) => id !== tournament.tournament_id,
+                                ),
+                              );
                             }
                           }}
                           className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -460,7 +466,9 @@ export default function TournamentGroupDetail({ groupId }: TournamentGroupDetail
                   ) : (
                     <Plus className="h-4 w-4 mr-2" />
                   )}
-                  {selectedTournamentIds.length > 0 ? `${selectedTournamentIds.length}個追加` : '追加'}
+                  {selectedTournamentIds.length > 0
+                    ? `${selectedTournamentIds.length}個追加`
+                    : "追加"}
                 </Button>
               )}
             </div>

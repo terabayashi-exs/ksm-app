@@ -1,15 +1,15 @@
 // app/tournaments/[id]/entry/teams/page.tsx
 export const metadata = { title: "参加チーム管理" };
 
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import Link from 'next/link';
-import { Users, Edit, Eye } from 'lucide-react';
+import { Edit, Eye, Users } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,7 +31,8 @@ interface TournamentTeam {
 }
 
 async function getTournamentDetails(tournamentId: number): Promise<TournamentDetails | null> {
-  const result = await db.execute(`
+  const result = await db.execute(
+    `
     SELECT 
       t.tournament_id,
       t.tournament_name,
@@ -41,7 +42,9 @@ async function getTournamentDetails(tournamentId: number): Promise<TournamentDet
     LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
     LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
     WHERE t.tournament_id = ? AND t.visibility = 'open'
-  `, [tournamentId]);
+  `,
+    [tournamentId],
+  );
 
   const row = result.rows[0];
   if (!row) return null;
@@ -55,7 +58,8 @@ async function getTournamentDetails(tournamentId: number): Promise<TournamentDet
 }
 
 async function getTournamentTeams(tournamentId: number, teamId: string): Promise<TournamentTeam[]> {
-  const result = await db.execute(`
+  const result = await db.execute(
+    `
     SELECT 
       tt.tournament_team_id,
       tt.team_name,
@@ -69,14 +73,16 @@ async function getTournamentTeams(tournamentId: number, teamId: string): Promise
     WHERE tt.tournament_id = ? AND tt.team_id = ?
     GROUP BY tt.tournament_team_id, tt.team_name, tt.team_omission, tt.created_at
     ORDER BY tt.created_at ASC
-  `, [tournamentId, teamId]);
+  `,
+    [tournamentId, teamId],
+  );
 
-  return result.rows.map(row => ({
+  return result.rows.map((row) => ({
     tournament_team_id: Number(row.tournament_team_id),
     team_name: String(row.team_name),
     team_omission: String(row.team_omission),
     player_count: Number(row.player_count),
-    created_at: String(row.created_at)
+    created_at: String(row.created_at),
   }));
 }
 
@@ -84,26 +90,30 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
   const session = await auth();
   const resolvedParams = await params;
   const tournamentId = parseInt(resolvedParams.id);
-  
+
   // 認証チェック（チーム権限必須）
-  if (!session || session.user.role !== 'team') {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/entry/teams`)}`);
+  if (!session || session.user.role !== "team") {
+    redirect(
+      `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/entry/teams`)}`,
+    );
   }
 
   const teamId = session.user.teamId;
   if (!teamId) {
-    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/entry/teams`)}`);
+    redirect(
+      `/auth/login?callbackUrl=${encodeURIComponent(`/tournaments/${tournamentId}/entry/teams`)}`,
+    );
   }
 
   // 大会情報取得
   const tournament = await getTournamentDetails(tournamentId);
   if (!tournament) {
-    redirect('/tournaments');
+    redirect("/tournaments");
   }
 
   // 参加チーム一覧取得
   const tournamentTeams = await getTournamentTeams(tournamentId, teamId);
-  
+
   // 参加していない場合は大会詳細にリダイレクト
   if (tournamentTeams.length === 0) {
     redirect(`/tournaments/${tournamentId}`);
@@ -112,27 +122,19 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      
+
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">参加チーム管理</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                {tournament.tournament_name}
-              </p>
+              <p className="text-sm text-gray-500 mt-1">{tournament.tournament_name}</p>
             </div>
             <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                asChild
-              >
+              <Button variant="outline" asChild>
                 <Link href={`/tournaments/${tournamentId}`}>大会詳細に戻る</Link>
               </Button>
-              <Button
-                variant="outline"
-                asChild
-              >
+              <Button variant="outline" asChild>
                 <Link href="/">大会一覧に戻る</Link>
               </Button>
             </div>
@@ -163,7 +165,7 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {tournamentTeams.filter(team => team.player_count > 0).length}
+                  {tournamentTeams.filter((team) => team.player_count > 0).length}
                 </div>
                 <div className="text-sm text-gray-500">選手登録済み</div>
               </div>
@@ -184,8 +186,8 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
             ) : (
               <div className="space-y-4">
                 {tournamentTeams.map((team, index) => (
-                  <div 
-                    key={team.tournament_team_id} 
+                  <div
+                    key={team.tournament_team_id}
                     className="border rounded-lg p-4 hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
                   >
                     <div className="flex items-center justify-between">
@@ -194,42 +196,37 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                           #{index + 1}
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {team.team_name}
-                          </h3>
+                          <h3 className="text-lg font-semibold text-gray-900">{team.team_name}</h3>
                           <p className="text-sm text-gray-500">
                             略称: {team.team_omission} | 選手数: {team.player_count}人
                           </p>
                           <p className="text-xs text-gray-500/70">
-                            登録日: {new Date(team.created_at).toLocaleDateString('ja-JP')}
+                            登録日: {new Date(team.created_at).toLocaleDateString("ja-JP")}
                           </p>
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button 
-                          asChild 
-                          size="sm" 
-                          variant="outline"
-                          className="flex items-center"
-                        >
+                        <Button asChild size="sm" variant="outline" className="flex items-center">
                           <Link href={`/tournaments/${tournamentId}`}>
                             <Eye className="w-4 h-4 mr-1" />
                             詳細
                           </Link>
                         </Button>
-                        <Button 
-                          asChild 
-                          size="sm" 
+                        <Button
+                          asChild
+                          size="sm"
                           className="flex items-center bg-primary hover:bg-primary/90"
                         >
-                          <Link href={`/tournaments/${tournamentId}/entry/join?team=${team.tournament_team_id}`}>
+                          <Link
+                            href={`/tournaments/${tournamentId}/entry/join?team=${team.tournament_team_id}`}
+                          >
                             <Edit className="w-4 h-4 mr-1" />
                             参加選手変更
                           </Link>
                         </Button>
                       </div>
                     </div>
-                    
+
                     {team.player_count === 0 && (
                       <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <p className="text-sm text-yellow-800">
@@ -241,13 +238,13 @@ export default async function TournamentTeamsPage({ params }: PageProps) {
                 ))}
               </div>
             )}
-            
+
             {/* 追加参加ボタン */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="text-center">
-                <Button 
-                  asChild 
-                  variant="outline" 
+                <Button
+                  asChild
+                  variant="outline"
                   className="border-dashed border-2 border-muted hover:border-primary/30 hover:bg-gray-50"
                 >
                   <Link href={`/tournaments/${tournamentId}/entry/join?mode=new`}>

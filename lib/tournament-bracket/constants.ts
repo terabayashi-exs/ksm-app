@@ -28,27 +28,27 @@ export const LINE_OFFSET = 30;
  * NOTE: match_type は t_matches_live から取得（t_match_blocks.match_type は廃止予定）
  */
 export const ROUND_ORDER: Record<string, number> = {
-  'preliminary': 0,
-  'first_round': 1,
-  'quarterfinal': 2,
-  'semifinal': 3,
-  'final': 4,
-  'third_place': 99,  // 別ブロック扱い
+  preliminary: 0,
+  first_round: 1,
+  quarterfinal: 2,
+  semifinal: 3,
+  final: 4,
+  third_place: 99, // 別ブロック扱い
 };
 
-export const THIRD_PLACE_MATCH_TYPE = 'third_place';
+export const THIRD_PLACE_MATCH_TYPE = "third_place";
 
 // N位決定戦にマッチする正規表現（3位、5位、7位など）
 export const PLACEMENT_MATCH_PATTERN = /^(\d+)位決定戦$/;
 
 // match_type を日本語ラベルに変換
 export const MATCH_TYPE_LABELS: Record<string, string> = {
-  'preliminary': '予選',
-  'first_round': '1回戦',
-  'quarterfinal': '準々決勝',
-  'semifinal': '準決勝',
-  'final': '決勝',
-  'third_place': '3位決定戦',
+  preliminary: "予選",
+  first_round: "1回戦",
+  quarterfinal: "準々決勝",
+  semifinal: "準決勝",
+  final: "決勝",
+  third_place: "3位決定戦",
 };
 
 // 試合コード（8チーム固定）

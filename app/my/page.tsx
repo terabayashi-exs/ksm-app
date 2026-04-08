@@ -1,14 +1,21 @@
 // app/my/page.tsx
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+
+import { ChevronRight, Home } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
+import Footer from "@/components/layout/Footer";
 // TODO: ヘッダーロゴ対応時に有効化
 // import Image from "next/image";
 import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import { Home, ChevronRight } from "lucide-react";
-import MyDashboardTabs from "@/components/features/my/MyDashboardTabs";
-import { fetchDashboardData, fetchOperatorDashboardData, fetchTeamData, TournamentDashboardData, TeamDashboardItem } from "@/lib/dashboard-data";
+import { auth } from "@/lib/auth";
+import {
+  fetchDashboardData,
+  fetchOperatorDashboardData,
+  fetchTeamData,
+  TeamDashboardItem,
+  TournamentDashboardData,
+} from "@/lib/dashboard-data";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -55,10 +62,12 @@ export default async function MyDashboardPage() {
   }
 
   // 競技種別マスタをサーバー側で取得（管理者タブでのアイコン表示遅延を回避）
-  let sportTypes: Array<{sport_type_id: number; sport_name: string; sport_code: string}> = [];
+  let sportTypes: Array<{ sport_type_id: number; sport_name: string; sport_code: string }> = [];
   try {
-    const sportTypesResult = await db.execute('SELECT sport_type_id, sport_name, sport_code FROM m_sport_types ORDER BY sport_type_id');
-    sportTypes = sportTypesResult.rows.map(row => ({
+    const sportTypesResult = await db.execute(
+      "SELECT sport_type_id, sport_name, sport_code FROM m_sport_types ORDER BY sport_type_id",
+    );
+    sportTypes = sportTypesResult.rows.map((row) => ({
       sport_type_id: Number(row.sport_type_id),
       sport_name: String(row.sport_name),
       sport_code: String(row.sport_code),
@@ -102,9 +111,7 @@ export default async function MyDashboardPage() {
         </nav>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">マイダッシュボード</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            ようこそ、{session.user.name}さん
-          </p>
+          <p className="text-sm text-gray-500 mt-1">ようこそ、{session.user.name}さん</p>
         </div>
         <MyDashboardTabs
           roles={roles}

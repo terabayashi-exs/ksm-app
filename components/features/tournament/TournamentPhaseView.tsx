@@ -1,20 +1,20 @@
 // components/features/tournament/TournamentPhaseView.tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import TournamentResults from './TournamentResults';
-import TournamentBracket from './TournamentBracket';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2, Trophy, Download } from 'lucide-react';
-import type { BracketMatch, SportScoreConfig } from '@/lib/tournament-bracket';
+import { AlertCircle, Download, Loader2, Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type { BracketMatch, SportScoreConfig } from "@/lib/tournament-bracket";
+import TournamentBracket from "./TournamentBracket";
+import TournamentResults from "./TournamentResults";
 
 interface TournamentPhaseViewProps {
   tournamentId: number;
   phase: string; // フェーズID（例：'preliminary', 'final'）
   phaseName: string; // 表示用の名称（例：「予選」「決勝トーナメント」）
-  formatType?: 'league' | 'tournament'; // 形式タイプ（phases JSONから直接渡す）
+  formatType?: "league" | "tournament"; // 形式タイプ（phases JSONから直接渡す）
   initialBracketMatches?: BracketMatch[];
   initialBracketSportConfig?: SportScoreConfig;
 }
@@ -32,7 +32,7 @@ export default function TournamentPhaseView({
   initialBracketMatches,
   initialBracketSportConfig,
 }: TournamentPhaseViewProps) {
-  const [matchType, setMatchType] = useState<'league' | 'tournament' | null>(null);
+  const [matchType, setMatchType] = useState<"league" | "tournament" | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +44,9 @@ export default function TournamentPhaseView({
 
         // formatTypePropが直接渡されている場合はAPI呼び出し不要
         if (formatTypeProp) {
-          console.log(`[TournamentPhaseView] Phase ${phase}: formatType from props = "${formatTypeProp}"`);
+          console.log(
+            `[TournamentPhaseView] Phase ${phase}: formatType from props = "${formatTypeProp}"`,
+          );
           setMatchType(formatTypeProp);
           setLoading(false);
           return;
@@ -52,17 +54,17 @@ export default function TournamentPhaseView({
 
         // formatTypePropが未指定の場合のみAPIから判定
         const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (!tournamentResponse.ok) {
-          throw new Error('大会情報の取得に失敗しました');
+          throw new Error("大会情報の取得に失敗しました");
         }
 
         const tournamentData = await tournamentResponse.json();
 
         if (!tournamentData.success || !tournamentData.data) {
-          throw new Error('大会情報が見つかりません');
+          throw new Error("大会情報が見つかりません");
         }
 
         const tournament = tournamentData.data;
@@ -75,22 +77,26 @@ export default function TournamentPhaseView({
           resolvedFormatType = phaseConfig?.format_type;
         }
 
-        console.log(`[TournamentPhaseView] Phase ${phase}: resolved formatType = "${resolvedFormatType}"`);
+        console.log(
+          `[TournamentPhaseView] Phase ${phase}: resolved formatType = "${resolvedFormatType}"`,
+        );
 
-        if (resolvedFormatType === 'league') {
-          setMatchType('league');
-        } else if (resolvedFormatType === 'tournament') {
-          setMatchType('tournament');
+        if (resolvedFormatType === "league") {
+          setMatchType("league");
+        } else if (resolvedFormatType === "tournament") {
+          setMatchType("tournament");
         } else {
           // フォールバック: デフォルトはリーグ戦
-          console.warn(`[TournamentPhaseView] Unknown format type "${resolvedFormatType}", defaulting to league`);
-          setMatchType('league');
+          console.warn(
+            `[TournamentPhaseView] Unknown format type "${resolvedFormatType}", defaulting to league`,
+          );
+          setMatchType("league");
         }
 
         setLoading(false);
       } catch (err) {
-        console.error('Phase type fetch error:', err);
-        setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+        console.error("Phase type fetch error:", err);
+        setError(err instanceof Error ? err.message : "不明なエラーが発生しました");
         setLoading(false);
       }
     }
@@ -118,7 +124,7 @@ export default function TournamentPhaseView({
 
   // match_typeに応じてコンポーネントを表示
   // 試合データの有無は各子コンポーネント内でハンドリングされる
-  if (matchType === 'league') {
+  if (matchType === "league") {
     return (
       <div>
         <div className="mb-4 text-sm text-gray-500">
@@ -127,7 +133,7 @@ export default function TournamentPhaseView({
         <TournamentResults tournamentId={tournamentId} phase={phase} />
       </div>
     );
-  } else if (matchType === 'tournament') {
+  } else if (matchType === "tournament") {
     const handlePrint = () => {
       window.print();
     };
@@ -142,9 +148,7 @@ export default function TournamentPhaseView({
         <div className="text-center no-print">
           <div className="flex items-center justify-center mb-2">
             <Trophy className="h-6 w-6 mr-2 text-yellow-600" />
-            <h2 className="text-2xl font-bold text-gray-900">
-              {phaseName}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">{phaseName}</h2>
             <Button
               onClick={handlePrint}
               variant="outline"

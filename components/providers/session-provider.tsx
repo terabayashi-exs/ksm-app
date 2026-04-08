@@ -10,11 +10,7 @@ interface Props {
 
 export default function AuthSessionProvider({ children }: Props) {
   return (
-    <SessionProvider
-      basePath="/api/auth"
-      refetchOnWindowFocus={true}
-      refetchInterval={0}
-    >
+    <SessionProvider basePath="/api/auth" refetchOnWindowFocus={true} refetchInterval={0}>
       {children}
     </SessionProvider>
   );

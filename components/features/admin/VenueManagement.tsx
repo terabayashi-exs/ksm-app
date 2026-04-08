@@ -1,13 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Edit, Trash2, Plus, Building, MapPin, Users, ExternalLink, Globe } from 'lucide-react';
+import {
+  AlertCircle,
+  Building,
+  Edit,
+  ExternalLink,
+  Globe,
+  MapPin,
+  Plus,
+  Trash2,
+  Users,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Prefecture {
   prefecture_id: number;
@@ -60,15 +76,15 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<VenueFormData>({
-    venue_name: '',
-    address: '',
-    prefecture_id: '',
+    venue_name: "",
+    address: "",
+    prefecture_id: "",
     available_courts: 1,
-    google_maps_url: '',
-    latitude: '',
-    longitude: '',
+    google_maps_url: "",
+    latitude: "",
+    longitude: "",
     is_active: true,
-    is_shared: false
+    is_shared: false,
   });
   const [saving, setSaving] = useState(false);
 
@@ -76,19 +92,19 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
   const fetchVenues = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/venues?scope=managed');
+      const response = await fetch("/api/venues?scope=managed");
       if (!response.ok) {
-        throw new Error('会場データの取得に失敗しました');
+        throw new Error("会場データの取得に失敗しました");
       }
       const result = await response.json();
       if (result.success) {
         setVenues(result.data);
       } else {
-        throw new Error(result.error || '会場データの取得に失敗しました');
+        throw new Error(result.error || "会場データの取得に失敗しました");
       }
     } catch (err) {
-      console.error('Error fetching venues:', err);
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      console.error("Error fetching venues:", err);
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setLoading(false);
     }
@@ -97,14 +113,14 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
   // 都道府県マスタを取得
   const fetchPrefectures = async () => {
     try {
-      const response = await fetch('/api/prefectures');
+      const response = await fetch("/api/prefectures");
       if (!response.ok) return;
       const result = await response.json();
       if (result.success) {
         setPrefectures(result.prefectures);
       }
     } catch (err) {
-      console.error('Error fetching prefectures:', err);
+      console.error("Error fetching prefectures:", err);
     }
   };
 
@@ -116,15 +132,15 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
   // フォームリセット
   const resetForm = () => {
     setFormData({
-      venue_name: '',
-      address: '',
-      prefecture_id: '',
+      venue_name: "",
+      address: "",
+      prefecture_id: "",
       available_courts: 1,
-      google_maps_url: '',
-      latitude: '',
-      longitude: '',
+      google_maps_url: "",
+      latitude: "",
+      longitude: "",
       is_active: true,
-      is_shared: false
+      is_shared: false,
     });
     setEditingVenue(null);
     setIsCreating(false);
@@ -142,13 +158,13 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
     setFormData({
       venue_name: venue.venue_name,
       address: venue.address,
-      prefecture_id: venue.prefecture_id ? String(venue.prefecture_id) : '',
+      prefecture_id: venue.prefecture_id ? String(venue.prefecture_id) : "",
       available_courts: venue.available_courts,
-      google_maps_url: venue.google_maps_url || '',
-      latitude: venue.latitude != null ? String(venue.latitude) : '',
-      longitude: venue.longitude != null ? String(venue.longitude) : '',
+      google_maps_url: venue.google_maps_url || "",
+      latitude: venue.latitude != null ? String(venue.latitude) : "",
+      longitude: venue.longitude != null ? String(venue.longitude) : "",
       is_active: venue.is_active,
-      is_shared: venue.is_shared
+      is_shared: venue.is_shared,
     });
     setEditingVenue(venue);
     setIsCreating(false);
@@ -163,11 +179,11 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
   // 保存処理
   const handleSave = async () => {
     if (!formData.venue_name.trim()) {
-      setError('会場名を入力してください');
+      setError("会場名を入力してください");
       return;
     }
     if (formData.available_courts < 1) {
-      setError('利用可能コート数は1以上で入力してください');
+      setError("利用可能コート数は1以上で入力してください");
       return;
     }
 
@@ -175,11 +191,9 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
       setSaving(true);
       setError(null);
 
-      const url = editingVenue
-        ? `/api/venues/${editingVenue.venue_id}`
-        : '/api/venues';
+      const url = editingVenue ? `/api/venues/${editingVenue.venue_id}` : "/api/venues";
 
-      const method = editingVenue ? 'PUT' : 'POST';
+      const method = editingVenue ? "PUT" : "POST";
 
       const saveData: Record<string, unknown> = {
         venue_name: formData.venue_name,
@@ -189,7 +203,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
         google_maps_url: formData.google_maps_url || null,
         latitude: formData.latitude ? Number(formData.latitude) : null,
         longitude: formData.longitude ? Number(formData.longitude) : null,
-        is_active: formData.is_active
+        is_active: formData.is_active,
       };
 
       // superadminのみis_sharedを送信
@@ -200,28 +214,27 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(saveData),
       });
 
       if (!response.ok) {
         const result = await response.json();
-        throw new Error(result.error || '保存に失敗しました');
+        throw new Error(result.error || "保存に失敗しました");
       }
 
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error || '保存に失敗しました');
+        throw new Error(result.error || "保存に失敗しました");
       }
 
       // 一覧を再取得
       await fetchVenues();
       resetForm();
-
     } catch (err) {
-      console.error('Error saving venue:', err);
-      setError(err instanceof Error ? err.message : '保存中にエラーが発生しました');
+      console.error("Error saving venue:", err);
+      setError(err instanceof Error ? err.message : "保存中にエラーが発生しました");
     } finally {
       setSaving(false);
     }
@@ -229,13 +242,17 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
 
   // 削除処理
   const handleDelete = async (venue: Venue) => {
-    if (!confirm(`会場「${venue.venue_name}」を削除しますか？\n\n※この操作は取り消せません。\n※使用中の大会がある場合は削除できません。`)) {
+    if (
+      !confirm(
+        `会場「${venue.venue_name}」を削除しますか？\n\n※この操作は取り消せません。\n※使用中の大会がある場合は削除できません。`,
+      )
+    ) {
       return;
     }
 
     try {
       const response = await fetch(`/api/venues/${venue.venue_id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const result = await response.json();
@@ -244,12 +261,15 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
         // 使用中の大会がある場合の詳細エラー表示
         if (result.usedTournaments && result.usedTournaments.length > 0) {
           const tournamentList = result.usedTournaments
-            .map((t: { tournament_name: string; status: string }) => `・${t.tournament_name}（${t.status === 'planning' ? '準備中' : t.status === 'ongoing' ? '開催中' : '完了'}）`)
-            .join('\n');
+            .map(
+              (t: { tournament_name: string; status: string }) =>
+                `・${t.tournament_name}（${t.status === "planning" ? "準備中" : t.status === "ongoing" ? "開催中" : "完了"}）`,
+            )
+            .join("\n");
 
           setError(`${result.error}\n\n使用中の大会一覧:\n${tournamentList}`);
         } else {
-          setError(result.error || '削除に失敗しました');
+          setError(result.error || "削除に失敗しました");
         }
         return;
       }
@@ -257,10 +277,9 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
       // 一覧を再取得
       await fetchVenues();
       setError(null);
-
     } catch (err) {
-      console.error('Error deleting venue:', err);
-      setError(err instanceof Error ? err.message : '削除中にエラーが発生しました');
+      console.error("Error deleting venue:", err);
+      setError(err instanceof Error ? err.message : "削除中にエラーが発生しました");
     }
   };
 
@@ -303,28 +322,37 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
-              {editingVenue ? '会場編集' : '新規会場登録'}
+              {editingVenue ? "会場編集" : "新規会場登録"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="venue_name">会場名 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="venue_name">
+                  会場名 <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="venue_name"
                   value={formData.venue_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, venue_name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, venue_name: e.target.value }))}
                   placeholder="例: 中央スポーツパーク"
                 />
               </div>
               <div>
-                <Label htmlFor="available_courts">利用可能コート数 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="available_courts">
+                  利用可能コート数 <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="available_courts"
                   type="number"
                   min="1"
                   value={formData.available_courts}
-                  onChange={(e) => setFormData(prev => ({ ...prev, available_courts: parseInt(e.target.value) || 1 }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      available_courts: parseInt(e.target.value) || 1,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -333,7 +361,9 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
               <Label htmlFor="prefecture_id">都道府県</Label>
               <Select
                 value={formData.prefecture_id || "none"}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, prefecture_id: value === "none" ? "" : value }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, prefecture_id: value === "none" ? "" : value }))
+                }
               >
                 <SelectTrigger id="prefecture_id" className="bg-white">
                   <SelectValue placeholder="都道府県を選択してください" />
@@ -357,13 +387,11 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
               <Textarea
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
                 placeholder="例: 中央区スポーツ1-1-1"
                 rows={3}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                市区町村以降の住所を入力してください
-              </p>
+              <p className="text-xs text-gray-500 mt-1">市区町村以降の住所を入力してください</p>
             </div>
 
             <div>
@@ -372,7 +400,9 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                 id="google_maps_url"
                 type="url"
                 value={formData.google_maps_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, google_maps_url: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, google_maps_url: e.target.value }))
+                }
                 placeholder="https://maps.google.com/..."
               />
             </div>
@@ -385,7 +415,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                   type="number"
                   step="any"
                   value={formData.latitude}
-                  onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, latitude: e.target.value }))}
                   placeholder="例: 36.6953"
                 />
               </div>
@@ -396,7 +426,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                   type="number"
                   step="any"
                   value={formData.longitude}
-                  onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, longitude: e.target.value }))}
                   placeholder="例: 137.2113"
                 />
               </div>
@@ -407,7 +437,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                 type="checkbox"
                 id="is_active"
                 checked={formData.is_active}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
               />
               <Label htmlFor="is_active">利用可能</Label>
             </div>
@@ -419,7 +449,9 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                   type="checkbox"
                   id="is_shared"
                   checked={formData.is_shared}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_shared: e.target.checked }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, is_shared: e.target.checked }))
+                  }
                 />
                 <Label htmlFor="is_shared" className="flex items-center gap-1">
                   <Globe className="h-4 w-4" />
@@ -430,7 +462,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
 
             <div className="flex gap-2 pt-4">
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? '保存中...' : '保存'}
+                {saving ? "保存中..." : "保存"}
               </Button>
               <Button variant="outline" onClick={resetForm}>
                 キャンセル
@@ -445,14 +477,12 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            {isSuperadmin ? '全会場一覧' : '自分の会場一覧'}
+            {isSuperadmin ? "全会場一覧" : "自分の会場一覧"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {venues.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              登録された会場がありません
-            </div>
+            <div className="text-center py-8 text-gray-500">登録された会場がありません</div>
           ) : (
             <div className="space-y-4">
               {venues.map((venue) => (
@@ -489,9 +519,11 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                       <MapPin className="h-4 w-4" />
                       <span>
-                        {venue.prefecture_name && <span className="font-medium">{venue.prefecture_name}</span>}
+                        {venue.prefecture_name && (
+                          <span className="font-medium">{venue.prefecture_name}</span>
+                        )}
                         {venue.prefecture_name && venue.address && <span className="mx-1">·</span>}
-                        {venue.address || '（所在地未登録）'}
+                        {venue.address || "（所在地未登録）"}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -499,7 +531,7 @@ export default function VenueManagement({ loginUserId, isSuperadmin }: VenueMana
                         <Users className="h-4 w-4" />
                         {venue.available_courts}コート
                       </span>
-                      <span>登録日: {new Date(venue.created_at).toLocaleDateString('ja-JP')}</span>
+                      <span>登録日: {new Date(venue.created_at).toLocaleDateString("ja-JP")}</span>
                       {isSuperadmin && venue.created_by_name && (
                         <span>作成者: {venue.created_by_name}</span>
                       )}

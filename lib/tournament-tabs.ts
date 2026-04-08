@@ -3,7 +3,7 @@
  * Tournament detail page tab definitions
  */
 
-import { TARGET_TABS, type TargetTab } from './sponsor-banner-specs';
+import { TARGET_TABS, type TargetTab } from "./sponsor-banner-specs";
 
 /**
  * タブの定義
@@ -25,33 +25,33 @@ export interface TournamentTab {
 export const TOURNAMENT_TABS: readonly TournamentTab[] = [
   {
     id: TARGET_TABS.OVERVIEW,
-    label: '概要',
-    description: '大会の基本情報、日程、会場などの概要',
+    label: "概要",
+    description: "大会の基本情報、日程、会場などの概要",
   },
   {
     id: TARGET_TABS.SCHEDULE,
-    label: '日程・結果',
-    description: '試合スケジュールと結果の一覧',
+    label: "日程・結果",
+    description: "試合スケジュールと結果の一覧",
   },
   {
     id: TARGET_TABS.PRELIMINARY,
-    label: '予選',
-    description: '予選ブロックの試合結果と順位',
+    label: "予選",
+    description: "予選ブロックの試合結果と順位",
   },
   {
     id: TARGET_TABS.FINAL,
-    label: '決勝',
-    description: '決勝トーナメントのブラケットと結果',
+    label: "決勝",
+    description: "決勝トーナメントのブラケットと結果",
   },
   {
     id: TARGET_TABS.STANDINGS,
-    label: '順位表',
-    description: '大会全体の最終順位',
+    label: "順位表",
+    description: "大会全体の最終順位",
   },
   {
     id: TARGET_TABS.TEAMS,
-    label: '参加チーム',
-    description: '大会に参加するチームと選手の一覧',
+    label: "参加チーム",
+    description: "大会に参加するチームと選手の一覧",
   },
 ] as const;
 
@@ -72,7 +72,7 @@ export function getTournamentTab(tabId: TargetTab): TournamentTab | undefined {
  */
 export function getTournamentTabLabel(tabId: TargetTab): string {
   if (tabId === TARGET_TABS.ALL) {
-    return '全タブ共通';
+    return "全タブ共通";
   }
 
   const tab = getTournamentTab(tabId);

@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getGrantedFormatIds, annotateFormatsWithAccess } from "@/lib/format-access";
+import { annotateFormatsWithAccess, getGrantedFormatIds } from "@/lib/format-access";
 
 export async function GET() {
   try {
     const session = await auth();
 
     if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
-      return NextResponse.json(
-        { success: false, error: "管理者権限が必要です" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const loginUserId = session.user.loginUserId;
@@ -35,19 +32,22 @@ export async function GET() {
     const formatsWithCounts = [];
 
     for (const format of formatsResult.rows) {
-      const templateCountResult = await db.execute(`
+      const templateCountResult = await db.execute(
+        `
         SELECT COUNT(*) as template_count
         FROM m_match_templates
         WHERE format_id = ?
-      `, [format.format_id]);
+      `,
+        [format.format_id],
+      );
 
       const templateCount = templateCountResult.rows[0]?.template_count || 0;
 
       formatsWithCounts.push({
         ...format,
         format_id: Number(format.format_id),
-        visibility: String(format.visibility || 'public'),
-        template_count: templateCount
+        visibility: String(format.visibility || "public"),
+        template_count: templateCount,
       });
     }
 
@@ -56,14 +56,13 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      formats: annotatedFormats
+      formats: annotatedFormats,
     });
-
   } catch (error) {
     console.error("フォーマット取得エラー:", error);
     return NextResponse.json(
       { success: false, error: "フォーマット情報の取得中にエラーが発生しました" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

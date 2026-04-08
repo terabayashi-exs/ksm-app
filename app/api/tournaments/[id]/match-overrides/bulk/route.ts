@@ -1,11 +1,11 @@
 // app/api/tournaments/[id]/match-overrides/bulk/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { checkAndPromoteOnOverrideChange } from '@/lib/tournament-promotion';
-import { getTournamentFormatPhases } from '@/lib/tournament-phases';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getTournamentFormatPhases } from "@/lib/tournament-phases";
+import { checkAndPromoteOnOverrideChange } from "@/lib/tournament-promotion";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface RouteParams {
@@ -15,18 +15,12 @@ interface RouteParams {
 /**
  * POST: 進出条件の一括変更
  */
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -34,8 +28,8 @@ export async function POST(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
@@ -45,37 +39,38 @@ export async function POST(
     // バリデーション
     if (!from_source || !to_source) {
       return NextResponse.json(
-        { success: false, error: '変更元と変更先を指定してください' },
-        { status: 400 }
+        { success: false, error: "変更元と変更先を指定してください" },
+        { status: 400 },
       );
     }
 
     if (from_source === to_source) {
       return NextResponse.json(
-        { success: false, error: '変更元と変更先が同じです' },
-        { status: 400 }
+        { success: false, error: "変更元と変更先が同じです" },
+        { status: 400 },
       );
     }
 
     // 大会存在確認（phases JSONも取得）
-    const tournamentResult = await db.execute(`
+    const tournamentResult = await db.execute(
+      `
       SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (tournamentResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     // トーナメント形式のフェーズIDを取得
     const phasesJson = tournamentResult.rows[0].phases as string | null;
     const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
-    const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+    const phasePlaceholders = tournamentPhaseIds.map(() => "?").join(",");
 
     // 影響を受ける試合を取得
-    const templatesResult = await db.execute(`
+    const templatesResult = await db.execute(
+      `
       SELECT
         ml.match_code,
         ml.team1_source,
@@ -85,12 +80,14 @@ export async function POST(
       WHERE mb.tournament_id = ?
         AND mb.phase IN (${phasePlaceholders})
         AND (ml.team1_source = ? OR ml.team2_source = ?)
-    `, [tournamentId, ...tournamentPhaseIds, from_source, from_source]);
+    `,
+      [tournamentId, ...tournamentPhaseIds, from_source, from_source],
+    );
 
     if (templatesResult.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: '該当する試合がありません' },
-        { status: 400 }
+        { success: false, error: "該当する試合がありません" },
+        { status: 400 },
       );
     }
 
@@ -107,15 +104,19 @@ export async function POST(
       const team2Override = team2Source === from_source ? to_source : null;
 
       // オーバーライドが既に存在するかチェック
-      const checkResult = await db.execute(`
+      const checkResult = await db.execute(
+        `
         SELECT override_id FROM t_tournament_match_overrides
         WHERE tournament_id = ? AND match_code = ?
-      `, [tournamentId, matchCode]);
+      `,
+        [tournamentId, matchCode],
+      );
 
       if (checkResult.rows.length > 0) {
         // 既存のオーバーライドを更新
         const overrideId = checkResult.rows[0].override_id;
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_tournament_match_overrides
           SET
             team1_source_override = CASE
@@ -131,60 +132,71 @@ export async function POST(
             overridden_at = datetime('now', '+9 hours'),
             updated_at = datetime('now', '+9 hours')
           WHERE override_id = ?
-        `, [
-          team1Override, team1Override,
-          team2Override, team2Override,
-          override_reason || `${from_source}を${to_source}に一括変更`,
-          session.user.email || session.user.id,
-          overrideId
-        ]);
+        `,
+          [
+            team1Override,
+            team1Override,
+            team2Override,
+            team2Override,
+            override_reason || `${from_source}を${to_source}に一括変更`,
+            session.user.email || session.user.id,
+            overrideId,
+          ],
+        );
       } else {
         // 新規オーバーライドを作成
-        await db.execute(`
+        await db.execute(
+          `
           INSERT INTO t_tournament_match_overrides
             (tournament_id, match_code, team1_source_override, team2_source_override, override_reason, overridden_by)
           VALUES (?, ?, ?, ?, ?, ?)
-        `, [
-          tournamentId,
-          matchCode,
-          team1Override,
-          team2Override,
-          override_reason || `${from_source}を${to_source}に一括変更`,
-          session.user.email || session.user.id
-        ]);
+        `,
+          [
+            tournamentId,
+            matchCode,
+            team1Override,
+            team2Override,
+            override_reason || `${from_source}を${to_source}に一括変更`,
+            session.user.email || session.user.id,
+          ],
+        );
       }
 
       updateCount++;
     }
 
-    console.log(`[BULK_OVERRIDE] Updated ${updateCount} matches for tournament ${tournamentId}: ${from_source} -> ${to_source}`);
+    console.log(
+      `[BULK_OVERRIDE] Updated ${updateCount} matches for tournament ${tournamentId}: ${from_source} -> ${to_source}`,
+    );
 
     // 影響を受ける試合コードのリストを作成
-    const affectedMatchCodes = templatesResult.rows.map(row => String(row.match_code));
+    const affectedMatchCodes = templatesResult.rows.map((row) => String(row.match_code));
 
     // オーバーライド変更後の自動進出処理チェック
     try {
       await checkAndPromoteOnOverrideChange(tournamentId, affectedMatchCodes);
     } catch (promoteError) {
-      console.error(`[BULK_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`, promoteError);
+      console.error(
+        `[BULK_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`,
+        promoteError,
+      );
       // エラーが発生してもオーバーライド設定は成功とする
     }
 
     return NextResponse.json({
       success: true,
       message: `${updateCount}件の試合の進出条件を変更しました`,
-      updated_count: updateCount
+      updated_count: updateCount,
     });
-
   } catch (error) {
-    console.error('一括変更エラー:', error);
+    console.error("一括変更エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        error: '一括変更に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "一括変更に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

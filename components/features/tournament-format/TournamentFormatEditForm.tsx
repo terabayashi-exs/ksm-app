@@ -1,31 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Calendar,
+  Copy,
+  Layers,
+  Plus,
+  Save,
+  Settings,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { Badge } from "@/components/ui/badge";
 // import { zodResolver } from "@hookform/resolvers/zod";
 // import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
-  Settings,
-  Calendar,
-  Plus,
-  Trash2,
-  Copy,
-  AlertTriangle,
-  Save,
-  ArrowUp,
-  ArrowDown,
-  Layers
-} from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { generatePhasesFromLegacy, validatePhases } from "@/lib/tournament-phases";
 import type { TournamentPhases } from "@/lib/types/tournament-phases";
-import { validatePhases, generatePhasesFromLegacy } from "@/lib/tournament-phases";
 import { PhaseConfigurationSection } from "./PhaseConfigurationSection";
 import { isStandardTwoPhaseConfiguration } from "./phase-utils";
 import ScheduleSimulator from "./ScheduleSimulator";
@@ -39,8 +45,8 @@ interface TournamentFormatEditFormProps {
     format_description?: string;
     default_match_duration?: number | null;
     default_break_duration?: number | null;
-    preliminary_format_type?: string | null;  // レガシー: phases未設定データからの初期化用
-    final_format_type?: string | null;        // レガシー: phases未設定データからの初期化用
+    preliminary_format_type?: string | null; // レガシー: phases未設定データからの初期化用
+    final_format_type?: string | null; // レガシー: phases未設定データからの初期化用
     phases?: TournamentPhases;
   };
   templates: Array<{
@@ -52,8 +58,8 @@ interface TournamentFormatEditFormProps {
     block_name?: string;
     team1_source?: string;
     team2_source?: string;
-    team1_display_name: string;  // 空文字列許容（不戦勝試合対応）
-    team2_display_name: string;  // 空文字列許容（不戦勝試合対応）
+    team1_display_name: string; // 空文字列許容（不戦勝試合対応）
+    team2_display_name: string; // 空文字列許容（不戦勝試合対応）
     day_number: number;
     execution_priority: number;
     court_number?: number;
@@ -92,8 +98,8 @@ interface MatchTemplate {
   block_name: string;
   team1_source: string;
   team2_source: string;
-  team1_display_name: string;  // 空文字列許容（不戦勝試合対応）
-  team2_display_name: string;  // 空文字列許容（不戦勝試合対応）
+  team1_display_name: string; // 空文字列許容（不戦勝試合対応）
+  team2_display_name: string; // 空文字列許容（不戦勝試合対応）
   day_number: number;
   execution_priority: number;
   court_number?: number;
@@ -149,7 +155,10 @@ const formatSchema = z.object({
 type TournamentFormatForm = z.infer<typeof formatSchema>;
 */
 
-export default function TournamentFormatEditForm({ format, templates }: TournamentFormatEditFormProps) {
+export default function TournamentFormatEditForm({
+  format,
+  templates,
+}: TournamentFormatEditFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -159,8 +168,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
   const [phases, setPhases] = useState<TournamentPhases>({
     phases: [
       { id: "preliminary", order: 1, name: "予選", format_type: "league" },
-      { id: "final", order: 2, name: "決勝トーナメント", format_type: "tournament" }
-    ]
+      { id: "final", order: 2, name: "決勝トーナメント", format_type: "tournament" },
+    ],
   });
 
   const {
@@ -170,7 +179,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
     control,
     setValue,
     watch,
-    getValues
+    getValues,
   } = useForm<TournamentFormatFormData>({
     defaultValues: {
       format_name: format.format_name || "",
@@ -179,7 +188,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       format_description: format.format_description || "",
       default_match_duration: format.default_match_duration ?? null,
       default_break_duration: format.default_break_duration ?? null,
-      templates: templates.map(t => ({
+      templates: templates.map((t) => ({
         match_number: Number(t.match_number) || 1,
         match_code: t.match_code || "",
         match_type: t.match_type || "通常",
@@ -201,22 +210,22 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
         position_note: t.position_note || "",
         // リーグ戦対応フィールド
         matchday: t.matchday != null ? Number(t.matchday) : undefined,
-        cycle: t.cycle != null ? Number(t.cycle) : undefined
-      }))
-    }
+        cycle: t.cycle != null ? Number(t.cycle) : undefined,
+      })),
+    },
   });
 
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: "templates"
+    name: "templates",
   });
 
   const selectedSportTypeId = watch("sport_type_id");
   const watchedTemplates = watch("templates");
 
   // シンプルモード用: phasesステートから予選・決勝の形式を導出
-  const preliminaryPhase = phases.phases.find(p => p.id === 'preliminary');
-  const finalPhase = phases.phases.find(p => p.id === 'final');
+  const preliminaryPhase = phases.phases.find((p) => p.id === "preliminary");
+  const finalPhase = phases.phases.find((p) => p.id === "final");
   const preliminaryFormatType = preliminaryPhase ? preliminaryPhase.format_type : null;
   const finalFormatType = finalPhase ? finalPhase.format_type : null;
 
@@ -224,16 +233,16 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
   useEffect(() => {
     const fetchSportTypes = async () => {
       try {
-        const response = await fetch('/api/sport-types');
+        const response = await fetch("/api/sport-types");
         const result = await response.json();
-        
+
         if (result.success) {
           setSportTypes(result.data);
         } else {
-          console.error('競技種別取得エラー:', result.error);
+          console.error("競技種別取得エラー:", result.error);
         }
       } catch (error) {
-        console.error('競技種別取得エラー:', error);
+        console.error("競技種別取得エラー:", error);
       } finally {
         setSportTypesLoading(false);
       }
@@ -265,7 +274,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       // phasesフィールドがない場合: legacy fieldsから生成
       const generatedPhases = generatePhasesFromLegacy(
         format.preliminary_format_type || null,
-        format.final_format_type || null
+        format.final_format_type || null,
       );
       setPhases(generatedPhases);
       setUseAdvancedPhases(false); // レガシーデータはシンプルモード
@@ -297,7 +306,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       position_note: "",
       // リーグ戦対応フィールド
       matchday: undefined,
-      cycle: undefined
+      cycle: undefined,
     });
   };
 
@@ -309,18 +318,18 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       ...template,
       match_number: nextNumber,
       match_code: `${template.match_code}_copy`,
-      execution_priority: nextNumber
+      execution_priority: nextNumber,
     });
   };
 
   // 順番移動
-  const moveTemplate = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index > 0) {
+  const moveTemplate = (index: number, direction: "up" | "down") => {
+    if (direction === "up" && index > 0) {
       const temp = getValues(`templates.${index}`);
       const prev = getValues(`templates.${index - 1}`);
       update(index, prev);
       update(index - 1, temp);
-    } else if (direction === 'down' && index < fields.length - 1) {
+    } else if (direction === "down" && index < fields.length - 1) {
       const temp = getValues(`templates.${index}`);
       const next = getValues(`templates.${index + 1}`);
       update(index, next);
@@ -333,11 +342,14 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
     schedule: Array<Array<[string, string] | null>>,
     _blocks: Array<{ label: string; size: number }>,
     _courtCount: number,
-    slotRounds?: Array<number | undefined>
+    slotRounds?: Array<number | undefined>,
   ) => {
     // 既存テンプレートから最大値を取得
     const currentTemplates = watch("templates") || [];
-    const maxMatchNumber = currentTemplates.reduce((max, t) => Math.max(max, t.match_number || 0), 0);
+    const maxMatchNumber = currentTemplates.reduce(
+      (max, t) => Math.max(max, t.match_number || 0),
+      0,
+    );
     const maxMatchday = currentTemplates.reduce((max, t) => Math.max(max, t.matchday || 0), 0);
 
     let matchNumber = maxMatchNumber + 1;
@@ -377,7 +389,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
             winner_position: undefined,
             position_note: "",
             matchday: roundNumber ? roundNumber + matchdayOffset : undefined,
-            cycle: undefined
+            cycle: undefined,
           });
 
           matchNumber++;
@@ -386,9 +398,11 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
     });
 
     // 既存テンプレートに追加
-    newTemplates.forEach(template => append(template));
+    newTemplates.forEach((template) => append(template));
 
-    alert(`${newTemplates.length}試合を追加しました（合計${currentTemplates.length + newTemplates.length}試合）`);
+    alert(
+      `${newTemplates.length}試合を追加しました（合計${currentTemplates.length + newTemplates.length}試合）`,
+    );
   };
 
   // フォーム送信
@@ -407,17 +421,23 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       // バリデーション
       const validation = validatePhases(phasesToSave);
       if (!validation.valid) {
-        alert(`フェーズ設定エラー:\n${validation.errors.join('\n')}`);
+        alert(`フェーズ設定エラー:\n${validation.errors.join("\n")}`);
         setIsSubmitting(false);
         return;
       }
 
       // テンプレートのフェーズが有効なフェーズIDかチェック
-      const validPhaseIds = new Set(phasesToSave.phases.map(p => p.id));
-      const invalidTemplates = data.templates.filter(t => !t.phase || !validPhaseIds.has(t.phase));
+      const validPhaseIds = new Set(phasesToSave.phases.map((p) => p.id));
+      const invalidTemplates = data.templates.filter(
+        (t) => !t.phase || !validPhaseIds.has(t.phase),
+      );
       if (invalidTemplates.length > 0) {
-        const details = invalidTemplates.map(t => `試合No.${t.match_number}（${t.match_code}）`).join('、');
-        alert(`以下の試合でフェーズが未選択です:\n${details}\n\n全ての試合にフェーズを設定してください。`);
+        const details = invalidTemplates
+          .map((t) => `試合No.${t.match_number}（${t.match_code}）`)
+          .join("、");
+        alert(
+          `以下の試合でフェーズが未選択です:\n${details}\n\n全ての試合にフェーズを設定してください。`,
+        );
         setIsSubmitting(false);
         return;
       }
@@ -426,17 +446,17 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
       const processedData = {
         ...data,
         phases: phasesToSave,
-        templates: data.templates.map(template => ({
+        templates: data.templates.map((template) => ({
           ...template,
           team1_display_name: template.team1_display_name?.trim() || "",
           team2_display_name: template.team2_display_name?.trim() || "",
-        }))
+        })),
       };
 
       const response = await fetch(`/api/admin/tournament-formats/${format.format_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(processedData)
+        body: JSON.stringify(processedData),
       });
 
       const result = await response.json();
@@ -482,7 +502,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="format_name">フォーマット名 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="format_name">
+                  フォーマット名 <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="format_name"
                   {...register("format_name")}
@@ -495,7 +517,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sport_type_id">競技種別 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="sport_type_id">
+                  競技種別 <span className="text-destructive">*</span>
+                </Label>
                 {sportTypesLoading ? (
                   <div className="flex items-center space-x-2 p-3 border rounded-md">
                     <div className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
@@ -504,14 +528,19 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 ) : (
                   <Select
                     value={String(selectedSportTypeId || 1)}
-                    onValueChange={(value) => setValue("sport_type_id", parseInt(value), { shouldValidate: true })}
+                    onValueChange={(value) =>
+                      setValue("sport_type_id", parseInt(value), { shouldValidate: true })
+                    }
                   >
                     <SelectTrigger className={errors.sport_type_id ? "border-destructive" : ""}>
                       <SelectValue placeholder="競技種別を選択" />
                     </SelectTrigger>
                     <SelectContent>
                       {sportTypes.map((sportType) => (
-                        <SelectItem key={sportType.sport_type_id} value={String(sportType.sport_type_id)}>
+                        <SelectItem
+                          key={sportType.sport_type_id}
+                          value={String(sportType.sport_type_id)}
+                        >
                           {sportType.sport_name}
                         </SelectItem>
                       ))}
@@ -524,7 +553,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="target_team_count">対象チーム数 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="target_team_count">
+                  対象チーム数 <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="target_team_count"
                   type="number"
@@ -555,7 +586,10 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 <Input
                   id="default_match_duration"
                   type="number"
-                  {...register("default_match_duration", { valueAsNumber: true, setValueAs: (v: string) => v === '' ? null : Number(v) })}
+                  {...register("default_match_duration", {
+                    valueAsNumber: true,
+                    setValueAs: (v: string) => (v === "" ? null : Number(v)),
+                  })}
                   min={1}
                   max={120}
                   placeholder="未設定"
@@ -567,7 +601,10 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 <Input
                   id="default_break_duration"
                   type="number"
-                  {...register("default_break_duration", { valueAsNumber: true, setValueAs: (v: string) => v === '' ? null : Number(v) })}
+                  {...register("default_break_duration", {
+                    valueAsNumber: true,
+                    setValueAs: (v: string) => (v === "" ? null : Number(v)),
+                  })}
                   min={0}
                   max={30}
                   placeholder="未設定"
@@ -593,113 +630,119 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
 
               {!useAdvancedPhases ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 予選試合形式 */}
-                <div className="space-y-2">
-                  <Label htmlFor="preliminary_format_type">
-                    予選試合形式
-                    <span className="text-xs text-gray-500 ml-2">
-                      (予選がない場合は「なし」を選択)
-                    </span>
-                  </Label>
-                  <Select
-                    value={preliminaryFormatType || "none"}
-                    onValueChange={(value) => {
-                      const newType = value === "none" ? null : value;
-                      setPhases(prev => {
-                        const otherPhases = prev.phases.filter(p => p.id !== 'preliminary');
-                        if (newType) {
-                          const prelimPhase = { id: 'preliminary' as const, order: 1, name: '予選', format_type: newType as 'league' | 'tournament' };
-                          const allPhases = [prelimPhase, ...otherPhases.map((p, i) => ({ ...p, order: i + 2 }))];
-                          return { phases: allPhases };
-                        } else {
-                          return { phases: otherPhases.map((p, i) => ({ ...p, order: i + 1 })) };
-                        }
-                      });
-                      setHasChanges(true);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="予選形式を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">なし（予選なし）</SelectItem>
-                      <SelectItem value="league">リーグ戦</SelectItem>
-                      <SelectItem value="tournament">トーナメント戦</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {preliminaryFormatType === "league" && (
-                    <p className="text-xs text-gray-600">
-                      💡 複数ブロック（A, B, C...）でのリーグ戦形式
-                    </p>
-                  )}
-                  {preliminaryFormatType === "tournament" && (
-                    <p className="text-xs text-gray-600">
-                      💡 単一トーナメントブロックでの勝ち抜き形式
-                    </p>
-                  )}
-                  {preliminaryFormatType === null && (
-                    <p className="text-xs text-gray-600">
-                      💡 予選なし、いきなり決勝からスタート
-                    </p>
-                  )}
-                </div>
+                  {/* 予選試合形式 */}
+                  <div className="space-y-2">
+                    <Label htmlFor="preliminary_format_type">
+                      予選試合形式
+                      <span className="text-xs text-gray-500 ml-2">
+                        (予選がない場合は「なし」を選択)
+                      </span>
+                    </Label>
+                    <Select
+                      value={preliminaryFormatType || "none"}
+                      onValueChange={(value) => {
+                        const newType = value === "none" ? null : value;
+                        setPhases((prev) => {
+                          const otherPhases = prev.phases.filter((p) => p.id !== "preliminary");
+                          if (newType) {
+                            const prelimPhase = {
+                              id: "preliminary" as const,
+                              order: 1,
+                              name: "予選",
+                              format_type: newType as "league" | "tournament",
+                            };
+                            const allPhases = [
+                              prelimPhase,
+                              ...otherPhases.map((p, i) => ({ ...p, order: i + 2 })),
+                            ];
+                            return { phases: allPhases };
+                          } else {
+                            return { phases: otherPhases.map((p, i) => ({ ...p, order: i + 1 })) };
+                          }
+                        });
+                        setHasChanges(true);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="予選形式を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">なし（予選なし）</SelectItem>
+                        <SelectItem value="league">リーグ戦</SelectItem>
+                        <SelectItem value="tournament">トーナメント戦</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {preliminaryFormatType === "league" && (
+                      <p className="text-xs text-gray-600">
+                        💡 複数ブロック（A, B, C...）でのリーグ戦形式
+                      </p>
+                    )}
+                    {preliminaryFormatType === "tournament" && (
+                      <p className="text-xs text-gray-600">
+                        💡 単一トーナメントブロックでの勝ち抜き形式
+                      </p>
+                    )}
+                    {preliminaryFormatType === null && (
+                      <p className="text-xs text-gray-600">💡 予選なし、いきなり決勝からスタート</p>
+                    )}
+                  </div>
 
-                {/* 決勝試合形式 */}
-                <div className="space-y-2">
-                  <Label htmlFor="final_format_type">
-                    決勝試合形式
-                    <span className="text-xs text-gray-500 ml-2">
-                      (決勝がない場合は「なし」を選択)
-                    </span>
-                  </Label>
-                  <Select
-                    value={finalFormatType || "none"}
-                    onValueChange={(value) => {
-                      const newType = value === "none" ? null : value;
-                      setPhases(prev => {
-                        const otherPhases = prev.phases.filter(p => p.id !== 'final');
-                        if (newType) {
-                          const finalPhaseObj = { id: 'final' as const, order: otherPhases.length + 1, name: '決勝トーナメント', format_type: newType as 'league' | 'tournament' };
-                          return { phases: [...otherPhases, finalPhaseObj] };
-                        } else {
-                          return { phases: otherPhases };
-                        }
-                      });
-                      setHasChanges(true);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="決勝形式を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">なし（決勝なし）</SelectItem>
-                      <SelectItem value="league">リーグ戦</SelectItem>
-                      <SelectItem value="tournament">トーナメント戦</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {finalFormatType === "league" && (
-                    <p className="text-xs text-gray-600">
-                      💡 複数ブロック（1位リーグ、2位リーグ...）でのリーグ戦形式
-                    </p>
-                  )}
-                  {finalFormatType === "tournament" && (
-                    <p className="text-xs text-gray-600">
-                      💡 決勝トーナメントブロックでの勝ち抜き形式
-                    </p>
-                  )}
-                  {finalFormatType === null && (
-                    <p className="text-xs text-gray-600">
-                      💡 決勝なし、予選のみで大会終了
-                    </p>
-                  )}
+                  {/* 決勝試合形式 */}
+                  <div className="space-y-2">
+                    <Label htmlFor="final_format_type">
+                      決勝試合形式
+                      <span className="text-xs text-gray-500 ml-2">
+                        (決勝がない場合は「なし」を選択)
+                      </span>
+                    </Label>
+                    <Select
+                      value={finalFormatType || "none"}
+                      onValueChange={(value) => {
+                        const newType = value === "none" ? null : value;
+                        setPhases((prev) => {
+                          const otherPhases = prev.phases.filter((p) => p.id !== "final");
+                          if (newType) {
+                            const finalPhaseObj = {
+                              id: "final" as const,
+                              order: otherPhases.length + 1,
+                              name: "決勝トーナメント",
+                              format_type: newType as "league" | "tournament",
+                            };
+                            return { phases: [...otherPhases, finalPhaseObj] };
+                          } else {
+                            return { phases: otherPhases };
+                          }
+                        });
+                        setHasChanges(true);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="決勝形式を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">なし（決勝なし）</SelectItem>
+                        <SelectItem value="league">リーグ戦</SelectItem>
+                        <SelectItem value="tournament">トーナメント戦</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {finalFormatType === "league" && (
+                      <p className="text-xs text-gray-600">
+                        💡 複数ブロック（1位リーグ、2位リーグ...）でのリーグ戦形式
+                      </p>
+                    )}
+                    {finalFormatType === "tournament" && (
+                      <p className="text-xs text-gray-600">
+                        💡 決勝トーナメントブロックでの勝ち抜き形式
+                      </p>
+                    )}
+                    {finalFormatType === null && (
+                      <p className="text-xs text-gray-600">💡 決勝なし、予選のみで大会終了</p>
+                    )}
+                  </div>
                 </div>
-              </div>
               ) : (
                 /* 詳細フェーズ設定モード */
-                <PhaseConfigurationSection
-                  phases={phases}
-                  onPhasesChange={setPhases}
-                />
+                <PhaseConfigurationSection phases={phases} onPhasesChange={setPhases} />
               )}
             </div>
           </CardContent>
@@ -711,12 +754,16 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
             <CardTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5 text-purple-600" />
               <span>スケジュールシミュレーター</span>
-              <Badge variant="outline" className="ml-2">参考ツール</Badge>
+              <Badge variant="outline" className="ml-2">
+                参考ツール
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-3 p-3 bg-primary/5 border border-primary/20 rounded-md">
-              <p className="text-sm text-primary font-medium mb-1">💡 試合テンプレート作成の参考に</p>
+              <p className="text-sm text-primary font-medium mb-1">
+                💡 試合テンプレート作成の参考に
+              </p>
               <p className="text-xs text-primary">
                 このシミュレーターで生成されたスケジュールを、ボタン一つで試合テンプレートに展開できます。
                 <br />
@@ -736,12 +783,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                 <span>試合テンプレート</span>
                 <Badge variant="outline">{fields.length}試合</Badge>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addTemplate}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addTemplate}>
                 <Plus className="h-4 w-4 mr-1" />
                 試合追加
               </Button>
@@ -754,7 +796,8 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
               <p className="text-xs text-primary">
                 チーム数が2のべき乗でない場合（例: 5チーム）、不戦勝試合を設定できます。
                 <br />
-                <strong>チーム1表示名</strong>または<strong>チーム2表示名</strong>のどちらか一方を<strong>空欄</strong>にすると、自動的に不戦勝試合として扱われます。
+                <strong>チーム1表示名</strong>または<strong>チーム2表示名</strong>のどちらか一方を
+                <strong>空欄</strong>にすると、自動的に不戦勝試合として扱われます。
                 <br />
                 不戦勝試合ではコート番号は自動的にNULLに設定されます。
               </p>
@@ -773,13 +816,27 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
               <table className="min-w-full border border-gray-200 rounded-lg">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">順番</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合番号</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合コード</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">フェーズ</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合種別</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">ラウンド名</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">ブロック名</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      順番
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      試合番号
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      試合コード
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      フェーズ
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      試合種別
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      ラウンド名
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      ブロック名
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                       チーム1表示名
                       <div className="text-[10px] normal-case font-normal text-gray-400 mt-0.5">
@@ -792,19 +849,45 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                         不戦勝の場合は空欄可
                       </div>
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム1ソース</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">チーム2ソース</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">日付番号</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">実行優先度</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">コート番号</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">試合開始時間</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">敗者順位開始</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">敗者順位終了</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">勝者順位</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">順位説明</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">節</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">巡目</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      チーム1ソース
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      チーム2ソース
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      日付番号
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      実行優先度
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      コート番号
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      試合開始時間
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      敗者順位開始
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      敗者順位終了
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      勝者順位
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      順位説明
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      節
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                      巡目
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -816,7 +899,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => moveTemplate(index, 'up')}
+                            onClick={() => moveTemplate(index, "up")}
                             disabled={index === 0}
                           >
                             <ArrowUp className="h-3 w-3" />
@@ -825,7 +908,7 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => moveTemplate(index, 'down')}
+                            onClick={() => moveTemplate(index, "down")}
                             disabled={index === fields.length - 1}
                           >
                             <ArrowDown className="h-3 w-3" />
@@ -844,7 +927,11 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.match_code`)}
-                          className={errors.templates?.[index]?.match_code ? "border-destructive w-20" : "w-20"}
+                          className={
+                            errors.templates?.[index]?.match_code
+                              ? "border-destructive w-20"
+                              : "w-20"
+                          }
                           placeholder="A1"
                         />
                       </td>
@@ -876,7 +963,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Select
-                          value={watchedTemplates?.[index]?.match_type || field.match_type || "通常"}
+                          value={
+                            watchedTemplates?.[index]?.match_type || field.match_type || "通常"
+                          }
                           onValueChange={(value) => {
                             setValue(`templates.${index}.match_type`, value);
                             if (value === "FM") {
@@ -911,14 +1000,22 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team1_display_name`)}
-                          className={errors.templates?.[index]?.team1_display_name ? "border-destructive w-40" : "w-40"}
+                          className={
+                            errors.templates?.[index]?.team1_display_name
+                              ? "border-destructive w-40"
+                              : "w-40"
+                          }
                           placeholder="A1チーム (空欄=不戦勝)"
                         />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           {...register(`templates.${index}.team2_display_name`)}
-                          className={errors.templates?.[index]?.team2_display_name ? "border-destructive w-40" : "w-40"}
+                          className={
+                            errors.templates?.[index]?.team2_display_name
+                              ? "border-destructive w-40"
+                              : "w-40"
+                          }
                           placeholder="A2チーム (空欄=不戦勝)"
                         />
                       </td>
@@ -948,7 +1045,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           type="number"
-                          {...register(`templates.${index}.execution_priority`, { valueAsNumber: true })}
+                          {...register(`templates.${index}.execution_priority`, {
+                            valueAsNumber: true,
+                          })}
                           className="w-16"
                           min={1}
                           placeholder="1"
@@ -975,7 +1074,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           type="number"
-                          {...register(`templates.${index}.loser_position_start`, { valueAsNumber: true })}
+                          {...register(`templates.${index}.loser_position_start`, {
+                            valueAsNumber: true,
+                          })}
                           className="w-16"
                           min={1}
                           max={50}
@@ -985,7 +1086,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           type="number"
-                          {...register(`templates.${index}.loser_position_end`, { valueAsNumber: true })}
+                          {...register(`templates.${index}.loser_position_end`, {
+                            valueAsNumber: true,
+                          })}
                           className="w-16"
                           min={1}
                           max={50}
@@ -995,7 +1098,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
                       <td className="px-3 py-2 whitespace-nowrap border-r">
                         <Input
                           type="number"
-                          {...register(`templates.${index}.winner_position`, { valueAsNumber: true })}
+                          {...register(`templates.${index}.winner_position`, {
+                            valueAsNumber: true,
+                          })}
                           className="w-16"
                           min={1}
                           max={50}
@@ -1060,9 +1165,9 @@ export default function TournamentFormatEditForm({ format, templates }: Tourname
           <Button type="button" variant="outline" onClick={() => router.back()}>
             キャンセル
           </Button>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || !hasChanges} 
+          <Button
+            type="submit"
+            disabled={isSubmitting || !hasChanges}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Save className="h-4 w-4 mr-2" />

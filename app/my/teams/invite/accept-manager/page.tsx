@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { AlertCircle, CheckCircle, Loader2, Users } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle, AlertCircle, Users } from "lucide-react";
-import Link from "next/link";
 
 interface InvitationInfo {
   team_id: string;
@@ -18,11 +18,13 @@ interface InvitationInfo {
 
 export default function AcceptManagerInvitePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      }
+    >
       <AcceptManagerInviteContent />
     </Suspense>
   );
@@ -44,7 +46,11 @@ function AcceptManagerInviteContent() {
   const [password, setPassword] = useState("");
 
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string; needsLogin?: boolean } | null>(null);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+    needsLogin?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -76,8 +82,16 @@ function AcceptManagerInviteContent() {
     try {
       const body: Record<string, string> = { token };
       if (!hasAccount) {
-        if (!displayName.trim()) { setError("表示名を入力してください"); setProcessing(false); return; }
-        if (!password || password.length < 6) { setError("パスワードは6文字以上で入力してください"); setProcessing(false); return; }
+        if (!displayName.trim()) {
+          setError("表示名を入力してください");
+          setProcessing(false);
+          return;
+        }
+        if (!password || password.length < 6) {
+          setError("パスワードは6文字以上で入力してください");
+          setProcessing(false);
+          return;
+        }
         body.displayName = displayName.trim();
         body.password = password;
       }
@@ -171,7 +185,14 @@ function AcceptManagerInviteContent() {
                     {loggedInEmail} でログイン中です。このまま担当者として登録できます。
                   </p>
                   <Button onClick={handleAccept} disabled={processing} className="w-full">
-                    {processing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />登録中...</> : "担当者として登録する"}
+                    {processing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        登録中...
+                      </>
+                    ) : (
+                      "担当者として登録する"
+                    )}
                   </Button>
                 </div>
               )}
@@ -183,7 +204,9 @@ function AcceptManagerInviteContent() {
                     このメールアドレスのアカウントが見つかりました。ログインしてから担当者登録を完了してください。
                   </p>
                   <Button asChild className="w-full">
-                    <Link href={`/auth/login?callbackUrl=${encodeURIComponent(`/my/teams/invite/accept-manager?token=${token}`)}`}>
+                    <Link
+                      href={`/auth/login?callbackUrl=${encodeURIComponent(`/my/teams/invite/accept-manager?token=${token}`)}`}
+                    >
                       ログインして登録する
                     </Link>
                   </Button>
@@ -198,7 +221,9 @@ function AcceptManagerInviteContent() {
                   </p>
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="displayName">表示名（氏名） <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="displayName">
+                        表示名（氏名） <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         id="displayName"
                         autoComplete="off"
@@ -208,7 +233,9 @@ function AcceptManagerInviteContent() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="password">パスワード <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="password">
+                        パスワード <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         id="password"
                         type="password"
@@ -223,7 +250,14 @@ function AcceptManagerInviteContent() {
                     </p>
                   </div>
                   <Button onClick={handleAccept} disabled={processing} className="w-full">
-                    {processing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />作成中...</> : "アカウント作成して登録する"}
+                    {processing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        作成中...
+                      </>
+                    ) : (
+                      "アカウント作成して登録する"
+                    )}
                   </Button>
                 </div>
               )}

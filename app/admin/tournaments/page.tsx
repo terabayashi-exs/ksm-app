@@ -1,29 +1,34 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { ArrowLeft, Plus, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
+import { ArrowLeft, ChevronRight, Home, Plus } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  getStatusLabel,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   getStatusBadgeVariant,
+  getStatusLabel,
   type TournamentStatus,
-  type TournamentWithStatus
-} from '@/lib/tournament-status';
+  type TournamentWithStatus,
+} from "@/lib/tournament-status";
 
 interface SearchParams {
   year: string;
   month: string;
   day: string;
   tournament_name: string;
-  status: TournamentStatus | '';
+  status: TournamentStatus | "";
 }
 
 export default function AdminTournamentsList() {
@@ -32,60 +37,63 @@ export default function AdminTournamentsList() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useState<SearchParams>({
-    year: '',
-    month: '',
-    day: '',
-    tournament_name: '',
-    status: ''
+    year: "",
+    month: "",
+    day: "",
+    tournament_name: "",
+    status: "",
   });
-  
+
   // Selectの表示用値（空文字列の場合は'all'を表示）
-  const displayStatus = searchParams.status === '' ? 'all' : searchParams.status;
+  const displayStatus = searchParams.status === "" ? "all" : searchParams.status;
   const [pagination, setPagination] = useState({
     total: 0,
     limit: 20,
     offset: 0,
-    hasMore: false
+    hasMore: false,
   });
 
   // 大会データを取得する関数
-  const fetchTournaments = useCallback(async (params: SearchParams = searchParams, offset: number = 0) => {
-    setSearching(true);
-    setError(null);
-    
-    try {
-      const queryParams = new URLSearchParams();
-      
-      if (params.year) queryParams.set('year', params.year);
-      if (params.month) queryParams.set('month', params.month);
-      if (params.day) queryParams.set('day', params.day);
-      if (params.tournament_name) queryParams.set('tournament_name', params.tournament_name);
-      if (params.status) queryParams.set('status', params.status);
-      
-      queryParams.set('limit', pagination.limit.toString());
-      queryParams.set('offset', offset.toString());
+  const fetchTournaments = useCallback(
+    async (params: SearchParams = searchParams, offset: number = 0) => {
+      setSearching(true);
+      setError(null);
 
-      const response = await fetch(`/api/admin/tournaments?${queryParams}`);
-      const data = await response.json();
+      try {
+        const queryParams = new URLSearchParams();
 
-      if (!response.ok) {
-        throw new Error(data.error || '大会データの取得に失敗しました');
+        if (params.year) queryParams.set("year", params.year);
+        if (params.month) queryParams.set("month", params.month);
+        if (params.day) queryParams.set("day", params.day);
+        if (params.tournament_name) queryParams.set("tournament_name", params.tournament_name);
+        if (params.status) queryParams.set("status", params.status);
+
+        queryParams.set("limit", pagination.limit.toString());
+        queryParams.set("offset", offset.toString());
+
+        const response = await fetch(`/api/admin/tournaments?${queryParams}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "大会データの取得に失敗しました");
+        }
+
+        if (data.success) {
+          setTournaments(data.data.tournaments);
+          setPagination(data.data.pagination);
+        } else {
+          throw new Error(data.error || "大会データの取得に失敗しました");
+        }
+      } catch (err) {
+        console.error("大会取得エラー:", err);
+        setError(err instanceof Error ? err.message : "不明なエラーが発生しました");
+      } finally {
+        setSearching(false);
+        setLoading(false);
       }
-
-      if (data.success) {
-        setTournaments(data.data.tournaments);
-        setPagination(data.data.pagination);
-      } else {
-        throw new Error(data.error || '大会データの取得に失敗しました');
-      }
-    } catch (err) {
-      console.error('大会取得エラー:', err);
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-    } finally {
-      setSearching(false);
-      setLoading(false);
-    }
-  }, [searchParams, pagination.limit]);
+    },
+    [searchParams, pagination.limit],
+  );
 
   // 初回読み込み
   useEffect(() => {
@@ -101,11 +109,11 @@ export default function AdminTournamentsList() {
   // 検索条件クリア
   const handleClearSearch = () => {
     const clearedParams: SearchParams = {
-      year: '',
-      month: '',
-      day: '',
-      tournament_name: '',
-      status: ''
+      year: "",
+      month: "",
+      day: "",
+      tournament_name: "",
+      status: "",
     };
     setSearchParams(clearedParams);
     setPagination({ ...pagination, offset: 0 });
@@ -127,23 +135,25 @@ export default function AdminTournamentsList() {
 
   // 大会アーカイブ処理
   const handleArchiveTournament = async (tournamentId: number) => {
-    if (!confirm('この大会をアーカイブしますか？\nアーカイブ後は編集ができなくなります。')) {
+    if (!confirm("この大会をアーカイブしますか？\nアーカイブ後は編集ができなくなります。")) {
       return;
     }
 
     setSearching(true);
     try {
       const response = await fetch(`/api/tournaments/${tournamentId}/archive`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-        }
+          "Content-Type": "application/json",
+        },
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
-        const sizeKb = data.data?.file_size ? `\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB` : '';
+        const sizeKb = data.data?.file_size
+          ? `\nファイルサイズ: ${(data.data.file_size / 1024).toFixed(2)} KB`
+          : "";
         alert(`HTMLアーカイブが完了しました。\n保存先: ${data.storage_type}${sizeKb}`);
         // 大会一覧を再読み込み
         fetchTournaments();
@@ -151,8 +161,8 @@ export default function AdminTournamentsList() {
         alert(`アーカイブに失敗しました: ${data.error}`);
       }
     } catch (error) {
-      console.error('アーカイブエラー:', error);
-      alert('アーカイブ中にエラーが発生しました');
+      console.error("アーカイブエラー:", error);
+      alert("アーカイブ中にエラーが発生しました");
     } finally {
       setSearching(false);
     }
@@ -160,30 +170,34 @@ export default function AdminTournamentsList() {
 
   // アンアーカイブ処理（テスト用）
   const handleUnarchiveTournament = async (tournamentId: number) => {
-    if (!confirm('アーカイブを解除しますか？\n大会が通常の編集可能状態に戻ります。\n（Blob上のHTMLデータは保持されます）')) {
+    if (
+      !confirm(
+        "アーカイブを解除しますか？\n大会が通常の編集可能状態に戻ります。\n（Blob上のHTMLデータは保持されます）",
+      )
+    ) {
       return;
     }
 
     setSearching(true);
     try {
       const response = await fetch(`/api/admin/tournaments/${tournamentId}/unarchive`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-        }
+          "Content-Type": "application/json",
+        },
       });
 
       const data = await response.json();
 
       if (data.success) {
-        alert('アーカイブを解除しました。');
+        alert("アーカイブを解除しました。");
         fetchTournaments();
       } else {
         alert(`アーカイブ解除に失敗しました: ${data.error}`);
       }
     } catch (error) {
-      console.error('アンアーカイブエラー:', error);
-      alert('アーカイブ解除中にエラーが発生しました');
+      console.error("アンアーカイブエラー:", error);
+      alert("アーカイブ解除中にエラーが発生しました");
     } finally {
       setSearching(false);
     }
@@ -206,12 +220,18 @@ export default function AdminTournamentsList() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -282,7 +302,15 @@ export default function AdminTournamentsList() {
               </div>
               <div>
                 <Label htmlFor="status">ステータス</Label>
-                <Select value={displayStatus} onValueChange={(value) => setSearchParams({ ...searchParams, status: value === 'all' ? '' : value as TournamentStatus })}>
+                <Select
+                  value={displayStatus}
+                  onValueChange={(value) =>
+                    setSearchParams({
+                      ...searchParams,
+                      status: value === "all" ? "" : (value as TournamentStatus),
+                    })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="全て" />
                   </SelectTrigger>
@@ -303,16 +331,16 @@ export default function AdminTournamentsList() {
                 id="tournament_name"
                 placeholder="部門名で検索..."
                 value={searchParams.tournament_name}
-                onChange={(e) => setSearchParams({ ...searchParams, tournament_name: e.target.value })}
+                onChange={(e) =>
+                  setSearchParams({ ...searchParams, tournament_name: e.target.value })
+                }
               />
             </div>
             <div className="flex space-x-3">
-              <Button 
-                onClick={handleSearch} 
-                disabled={searching}
-                className="flex items-center"
-              >
-                {searching && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
+              <Button onClick={handleSearch} disabled={searching} className="flex items-center">
+                {searching && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                )}
                 検索
               </Button>
               <Button variant="outline" onClick={handleClearSearch}>
@@ -335,7 +363,8 @@ export default function AdminTournamentsList() {
             <CardTitle className="flex justify-between items-center">
               <span>検索結果</span>
               <span className="text-sm font-normal text-gray-500">
-                {pagination.total}件中 {pagination.offset + 1}-{Math.min(pagination.offset + tournaments.length, pagination.total)}件
+                {pagination.total}件中 {pagination.offset + 1}-
+                {Math.min(pagination.offset + tournaments.length, pagination.total)}件
               </span>
             </CardTitle>
           </CardHeader>
@@ -365,7 +394,9 @@ export default function AdminTournamentsList() {
                           <td className="px-4 py-3">
                             <div>
                               <div className="flex items-center">
-                                <span className="font-medium text-gray-900">{tournament.tournament_name}</span>
+                                <span className="font-medium text-gray-900">
+                                  {tournament.tournament_name}
+                                </span>
                                 {tournament.is_archived && (
                                   <Badge className="ml-2 bg-purple-100 text-purple-800 border border-purple-400">
                                     アーカイブ済み
@@ -390,7 +421,7 @@ export default function AdminTournamentsList() {
                             {tournament.registered_teams}チーム
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-500">
-                            {new Date(tournament.created_at).toLocaleDateString('ja-JP')}
+                            {new Date(tournament.created_at).toLocaleDateString("ja-JP")}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex space-x-2 flex-wrap">
@@ -402,41 +433,80 @@ export default function AdminTournamentsList() {
                               {!tournament.is_archived && (
                                 <>
                                   <Button asChild size="sm" variant="outline">
-                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/edit`}>
+                                    <Link
+                                      href={`/admin/tournaments/${tournament.tournament_id}/edit`}
+                                    >
                                       編集
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-primary/30 hover:bg-primary/5">
-                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/participants`}>
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-primary/30 hover:bg-primary/5"
+                                  >
+                                    <Link
+                                      href={`/admin/tournaments/${tournament.tournament_id}/participants`}
+                                    >
                                       参加チーム管理
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-green-300 hover:bg-green-50">
-                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/rules`}>
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-green-300 hover:bg-green-50"
+                                  >
+                                    <Link
+                                      href={`/admin/tournaments/${tournament.tournament_id}/rules`}
+                                    >
                                       ルール設定
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-primary/30 hover:bg-primary/5">
-                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/matches`}>
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-primary/30 hover:bg-primary/5"
+                                  >
+                                    <Link
+                                      href={`/admin/tournaments/${tournament.tournament_id}/matches`}
+                                    >
                                       試合結果入力
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-primary/30 hover:bg-primary/5">
-                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}>
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-primary/30 hover:bg-primary/5"
+                                  >
+                                    <Link
+                                      href={`/admin/tournaments/${tournament.tournament_id}/manual-rankings`}
+                                    >
                                       手動順位設定
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-yellow-300 hover:bg-yellow-50">
-                                    <Link href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}>
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-yellow-300 hover:bg-yellow-50"
+                                  >
+                                    <Link
+                                      href={`/admin/tournaments/${tournament.tournament_id}/sponsor-banners`}
+                                    >
                                       スポンサー管理
                                     </Link>
                                   </Button>
-                                  {tournament.calculated_status === 'completed' && (
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline" 
+                                  {tournament.calculated_status === "completed" && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
                                       className="hover:border-purple-300 hover:bg-purple-50"
-                                      onClick={() => handleArchiveTournament(tournament.tournament_id)}
+                                      onClick={() =>
+                                        handleArchiveTournament(tournament.tournament_id)
+                                      }
                                       disabled={searching}
                                     >
                                       アーカイブ
@@ -446,13 +516,28 @@ export default function AdminTournamentsList() {
                               )}
                               {tournament.is_archived && (
                                 <>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                                    <Link href={`/tournaments/${tournament.tournament_id}/archived`}>
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-purple-300 hover:bg-purple-50"
+                                  >
+                                    <Link
+                                      href={`/tournaments/${tournament.tournament_id}/archived`}
+                                    >
                                       アーカイブ表示
                                     </Link>
                                   </Button>
-                                  <Button asChild size="sm" variant="outline" className="hover:border-purple-300 hover:bg-purple-50">
-                                    <Link href={`/api/tournaments/${tournament.tournament_id}/archived-html`} target="_blank">
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:border-purple-300 hover:bg-purple-50"
+                                  >
+                                    <Link
+                                      href={`/api/tournaments/${tournament.tournament_id}/archived-html`}
+                                      target="_blank"
+                                    >
                                       HTMLプレビュー
                                     </Link>
                                   </Button>
@@ -460,7 +545,9 @@ export default function AdminTournamentsList() {
                                     size="sm"
                                     variant="outline"
                                     className="hover:border-orange-300 hover:bg-orange-50"
-                                    onClick={() => handleUnarchiveTournament(tournament.tournament_id)}
+                                    onClick={() =>
+                                      handleUnarchiveTournament(tournament.tournament_id)
+                                    }
                                     disabled={searching}
                                   >
                                     アーカイブ解除
@@ -486,7 +573,8 @@ export default function AdminTournamentsList() {
                       前のページ
                     </Button>
                     <span className="text-sm text-gray-500">
-                      ページ {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
+                      ページ {Math.floor(pagination.offset / pagination.limit) + 1} /{" "}
+                      {Math.ceil(pagination.total / pagination.limit)}
                     </span>
                     <Button
                       variant="outline"

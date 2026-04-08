@@ -1,17 +1,8 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Pencil, Power, Trash2, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +12,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Pencil, Trash2, UserPlus, Power } from 'lucide-react';
-import type { OperatorWithAccess } from '@/lib/types/operator';
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import type { OperatorWithAccess } from "@/lib/types/operator";
 
 interface OperatorListProps {
   groupId?: number;
@@ -37,16 +37,14 @@ export default function OperatorList({ groupId }: OperatorListProps) {
 
   const fetchOperators = useCallback(async () => {
     try {
-      const url = groupId
-        ? `/api/admin/operators?group_id=${groupId}`
-        : '/api/admin/operators';
+      const url = groupId ? `/api/admin/operators?group_id=${groupId}` : "/api/admin/operators";
       const response = await fetch(url);
-      if (!response.ok) throw new Error('運営者一覧の取得に失敗しました');
+      if (!response.ok) throw new Error("運営者一覧の取得に失敗しました");
       const data = await response.json();
       setOperators(data);
     } catch (error) {
-      console.error('運営者一覧の取得に失敗しました:', error);
-      alert('運営者一覧の取得に失敗しました');
+      console.error("運営者一覧の取得に失敗しました:", error);
+      alert("運営者一覧の取得に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -59,17 +57,17 @@ export default function OperatorList({ groupId }: OperatorListProps) {
   const handleToggleActive = async (operatorId: number) => {
     try {
       const response = await fetch(`/api/admin/operators/${operatorId}/toggle-active`, {
-        method: 'PUT',
+        method: "PUT",
       });
 
-      if (!response.ok) throw new Error('有効/無効の切り替えに失敗しました');
+      if (!response.ok) throw new Error("有効/無効の切り替えに失敗しました");
 
       const data = await response.json();
       alert(data.message);
       fetchOperators();
     } catch (error) {
-      console.error('有効/無効の切り替えに失敗しました:', error);
-      alert('有効/無効の切り替えに失敗しました');
+      console.error("有効/無効の切り替えに失敗しました:", error);
+      alert("有効/無効の切り替えに失敗しました");
     }
   };
 
@@ -78,17 +76,17 @@ export default function OperatorList({ groupId }: OperatorListProps) {
 
     try {
       const response = await fetch(`/api/admin/operators/${deleteTarget}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
-      if (!response.ok) throw new Error('運営者の削除に失敗しました');
+      if (!response.ok) throw new Error("運営者の削除に失敗しました");
 
-      alert('運営者を削除しました');
+      alert("運営者を削除しました");
       setDeleteTarget(null);
       fetchOperators();
     } catch (error) {
-      console.error('運営者の削除に失敗しました:', error);
-      alert('運営者の削除に失敗しました');
+      console.error("運営者の削除に失敗しました:", error);
+      alert("運営者の削除に失敗しました");
     }
   };
 
@@ -111,9 +109,7 @@ export default function OperatorList({ groupId }: OperatorListProps) {
           variant="outline"
           onClick={() =>
             router.push(
-              groupId
-                ? `/admin/operators/new?group_id=${groupId}`
-                : '/admin/operators/new'
+              groupId ? `/admin/operators/new?group_id=${groupId}` : "/admin/operators/new",
             )
           }
         >
@@ -158,9 +154,13 @@ export default function OperatorList({ groupId }: OperatorListProps) {
                   </TableCell>
                   <TableCell>
                     {operator.isActive ? (
-                      <Badge variant="default" className="text-sm">有効</Badge>
+                      <Badge variant="default" className="text-sm">
+                        有効
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-sm">無効</Badge>
+                      <Badge variant="secondary" className="text-sm">
+                        無効
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -169,7 +169,7 @@ export default function OperatorList({ groupId }: OperatorListProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleActive(operator.operatorId)}
-                        title={operator.isActive ? '無効にする' : '有効にする'}
+                        title={operator.isActive ? "無効にする" : "有効にする"}
                       >
                         <Power className="h-4 w-4" />
                       </Button>
@@ -211,7 +211,10 @@ export default function OperatorList({ groupId }: OperatorListProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               削除
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,6 +1,6 @@
 // プラン制限チェック機能
-import { db } from '@/lib/db';
-import { getCurrentPlan, getUsage, isTrialExpired } from './subscription-service';
+import { db } from "@/lib/db";
+import { getCurrentPlan, getUsage, isTrialExpired } from "./subscription-service";
 
 export interface PlanChangeBlocker {
   activeGroups: number;
@@ -30,7 +30,7 @@ export interface PlanCheckResult {
 async function getFreeTrialEndDate(adminLoginId: string): Promise<string | null> {
   const adminResult = await db.execute(
     `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-    [adminLoginId]
+    [adminLoginId],
   );
   if (adminResult.rows.length > 0) {
     return adminResult.rows[0]?.free_trial_end_date as string | null;
@@ -43,7 +43,7 @@ async function getFreeTrialEndDate(adminLoginId: string): Promise<string | null>
        FROM m_administrators a
        INNER JOIN m_login_users u ON a.email = u.email
        WHERE u.login_user_id = ?`,
-      [loginUserId]
+      [loginUserId],
     );
     if (result.rows.length > 0) {
       return result.rows[0]?.free_trial_end_date as string | null;
@@ -61,20 +61,20 @@ export async function canCreateTournamentGroup(adminLoginId: string): Promise<Pl
   if (!plan) {
     return {
       allowed: false,
-      reason: 'プラン情報が見つかりません',
+      reason: "プラン情報が見つかりません",
       current: 0,
       limit: 0,
     };
   }
 
   // 無料プラン期限チェック
-  if (plan.plan_code === 'free') {
+  if (plan.plan_code === "free") {
     const trialEndDate = await getFreeTrialEndDate(adminLoginId);
 
     if (isTrialExpired(trialEndDate)) {
       return {
         allowed: false,
-        reason: '無料プラン期限切れ。有料プランへのアップグレードが必要です',
+        reason: "無料プラン期限切れ。有料プランへのアップグレードが必要です",
         current: 0,
         limit: 0,
       };
@@ -86,7 +86,7 @@ export async function canCreateTournamentGroup(adminLoginId: string): Promise<Pl
   if (!usage) {
     return {
       allowed: false,
-      reason: '使用状況情報が見つかりません',
+      reason: "使用状況情報が見つかりません",
       current: 0,
       limit: 0,
     };
@@ -126,27 +126,27 @@ export async function canCreateTournamentGroup(adminLoginId: string): Promise<Pl
  */
 export async function canAddDivision(
   adminLoginId: string,
-  groupId: number
+  groupId: number,
 ): Promise<PlanCheckResult> {
   // プラン情報取得
   const plan = await getCurrentPlan(adminLoginId);
   if (!plan) {
     return {
       allowed: false,
-      reason: 'プラン情報が見つかりません',
+      reason: "プラン情報が見つかりません",
       current: 0,
       limit: 0,
     };
   }
 
   // 無料プラン期限チェック
-  if (plan.plan_code === 'free') {
+  if (plan.plan_code === "free") {
     const trialEndDate = await getFreeTrialEndDate(adminLoginId);
 
     if (isTrialExpired(trialEndDate)) {
       return {
         allowed: false,
-        reason: '無料プラン期限切れ。有料プランへのアップグレードが必要です',
+        reason: "無料プラン期限切れ。有料プランへのアップグレードが必要です",
         current: 0,
         limit: 0,
       };
@@ -156,7 +156,7 @@ export async function canAddDivision(
   // この大会グループの現在の部門数を取得
   const divisionsResult = await db.execute(
     `SELECT COUNT(*) as count FROM t_tournaments WHERE group_id = ?`,
-    [groupId]
+    [groupId],
   );
 
   const currentCount = (divisionsResult.rows[0]?.count as number) || 0;
@@ -193,14 +193,14 @@ export async function canAddDivision(
  */
 export async function canEditTournamentGroup(
   adminLoginId: string,
-  groupId: number
+  groupId: number,
 ): Promise<boolean> {
   // プラン情報取得
   const plan = await getCurrentPlan(adminLoginId);
   if (!plan) return false;
 
   // 無料プラン期限チェック
-  if (plan.plan_code === 'free') {
+  if (plan.plan_code === "free") {
     const trialEndDate = await getFreeTrialEndDate(adminLoginId);
     if (isTrialExpired(trialEndDate)) {
       return false; // 期限切れは編集不可
@@ -229,7 +229,7 @@ export async function canEditTournamentGroup(
        )
        ORDER BY created_at ASC
        LIMIT ?`,
-      [loginUserId, loginUserId, plan.max_tournaments]
+      [loginUserId, loginUserId, plan.max_tournaments],
     );
   } else {
     editableGroupsResult = await db.execute(
@@ -237,7 +237,7 @@ export async function canEditTournamentGroup(
        WHERE admin_login_id = ?
        ORDER BY created_at ASC
        LIMIT ?`,
-      [adminLoginId, plan.max_tournaments]
+      [adminLoginId, plan.max_tournaments],
     );
   }
 
@@ -251,14 +251,14 @@ export async function canEditTournamentGroup(
  */
 export async function canEditDivision(
   adminLoginId: string,
-  tournamentId: number
+  tournamentId: number,
 ): Promise<boolean> {
   // プラン情報取得
   const plan = await getCurrentPlan(adminLoginId);
   if (!plan) return false;
 
   // 無料プラン期限チェック
-  if (plan.plan_code === 'free') {
+  if (plan.plan_code === "free") {
     const trialEndDate = await getFreeTrialEndDate(adminLoginId);
     if (isTrialExpired(trialEndDate)) {
       return false;
@@ -273,7 +273,7 @@ export async function canEditDivision(
   // 大会が所属するグループIDを取得
   const tournamentResult = await db.execute(
     `SELECT group_id FROM t_tournaments WHERE tournament_id = ?`,
-    [tournamentId]
+    [tournamentId],
   );
 
   if (tournamentResult.rows.length === 0) return false;
@@ -289,18 +289,18 @@ export async function canEditDivision(
  */
 export async function canChangePlan(
   adminLoginId: string,
-  newPlanId: number
+  newPlanId: number,
 ): Promise<PlanChangeCheckResult> {
   // 新プランの情報を取得
   const newPlanResult = await db.execute(
     `SELECT plan_id, plan_name, max_tournaments, max_divisions_per_tournament
      FROM m_subscription_plans
      WHERE plan_id = ?`,
-    [newPlanId]
+    [newPlanId],
   );
 
   if (newPlanResult.rows.length === 0) {
-    return { allowed: false, reason: 'プランが見つかりません' };
+    return { allowed: false, reason: "プランが見つかりません" };
   }
 
   const newPlan = newPlanResult.rows[0] as unknown as {
@@ -333,7 +333,7 @@ export async function canChangePlan(
          WHERE t.group_id = tg.group_id
          AND (t.is_archived IS NULL OR t.is_archived = 0)
        )`,
-      [loginUserId, loginUserId]
+      [loginUserId, loginUserId],
     );
   } else {
     activeGroupsResult = await db.execute(
@@ -345,7 +345,7 @@ export async function canChangePlan(
          WHERE t.group_id = tg.group_id
          AND (t.is_archived IS NULL OR t.is_archived = 0)
        )`,
-      [adminLoginId]
+      [adminLoginId],
     );
   }
 
@@ -367,7 +367,7 @@ export async function canChangePlan(
          ))
        )
        AND (t.is_archived IS NULL OR t.is_archived = 0)`,
-      [loginUserId, loginUserId]
+      [loginUserId, loginUserId],
     );
   } else {
     activeDivisionsResult = await db.execute(
@@ -376,7 +376,7 @@ export async function canChangePlan(
        INNER JOIN t_tournament_groups tg ON t.group_id = tg.group_id
        WHERE tg.admin_login_id = ?
        AND (t.is_archived IS NULL OR t.is_archived = 0)`,
-      [adminLoginId]
+      [adminLoginId],
     );
   }
 
@@ -386,15 +386,15 @@ export async function canChangePlan(
   if (newPlan.max_tournaments !== -1 && activeGroups > newPlan.max_tournaments) {
     return {
       allowed: false,
-      reason: 'アクティブな大会数が新プランの上限を超えています',
+      reason: "アクティブな大会数が新プランの上限を超えています",
       blockers: {
         activeGroups,
         activeDivisions,
         maxGroupsInNewPlan: newPlan.max_tournaments,
         maxDivisionsPerTournamentInNewPlan: newPlan.max_divisions_per_tournament,
         excessGroups: activeGroups - newPlan.max_tournaments,
-        excessDivisions: []
-      }
+        excessDivisions: [],
+      },
     };
   }
 
@@ -417,7 +417,7 @@ export async function canChangePlan(
          )
          GROUP BY tg.group_id, tg.group_name
          HAVING division_count > ?`,
-        [loginUserId, loginUserId, newPlan.max_divisions_per_tournament]
+        [loginUserId, loginUserId, newPlan.max_divisions_per_tournament],
       );
     } else {
       divisionsResult = await db.execute(
@@ -428,26 +428,26 @@ export async function canChangePlan(
          WHERE tg.admin_login_id = ?
          GROUP BY tg.group_id, tg.group_name
          HAVING division_count > ?`,
-        [adminLoginId, newPlan.max_divisions_per_tournament]
+        [adminLoginId, newPlan.max_divisions_per_tournament],
       );
     }
 
     if (divisionsResult.rows.length > 0) {
       return {
         allowed: false,
-        reason: '一部の大会で部門数が新プランの上限を超えています',
+        reason: "一部の大会で部門数が新プランの上限を超えています",
         blockers: {
           activeGroups,
           activeDivisions,
           maxGroupsInNewPlan: newPlan.max_tournaments,
           maxDivisionsPerTournamentInNewPlan: newPlan.max_divisions_per_tournament,
           excessGroups: 0,
-          excessDivisions: divisionsResult.rows.map(row => ({
+          excessDivisions: divisionsResult.rows.map((row) => ({
             group_id: Number(row.group_id),
             group_name: String(row.group_name),
-            division_count: Number(row.division_count)
-          }))
-        }
+            division_count: Number(row.division_count),
+          })),
+        },
       };
     }
   }

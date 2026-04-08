@@ -1,8 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Check, Info, Users, Trophy, Lock } from 'lucide-react';
-import FormatDetailBadges, { getSportIcon } from '@/components/features/tournament-format/FormatDetailBadges';
+import { Check, Info, Lock, Trophy, Users } from "lucide-react";
+import { useState } from "react";
+import FormatDetailBadges, {
+  getSportIcon,
+} from "@/components/features/tournament-format/FormatDetailBadges";
 
 interface TournamentFormat {
   format_id: number;
@@ -14,7 +16,13 @@ interface TournamentFormat {
   default_match_duration?: number | null;
   default_break_duration?: number | null;
   matchday_count?: number;
-  phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }>;
+  phase_stats?: Array<{
+    phase: string;
+    phase_name: string;
+    order: number;
+    block_count: number;
+    max_court_number: number | null;
+  }>;
   visibility?: string;
   isAccessible?: boolean;
 }
@@ -32,17 +40,19 @@ export function FormatSelectionModal({
   currentFormatName,
   availableFormats,
   onSelect,
-  onCancel
+  onCancel,
 }: FormatSelectionModalProps) {
   const [selectedFormatId, setSelectedFormatId] = useState<number | null>(null);
 
   // 現在のフォーマット以外をフィルタリング
-  const selectableFormats = availableFormats.filter(f => f.format_id !== currentFormatId);
+  const selectableFormats = availableFormats.filter((f) => f.format_id !== currentFormatId);
 
   // チーム数でソート
-  const sortedFormats = [...selectableFormats].sort((a, b) => a.target_team_count - b.target_team_count);
+  const sortedFormats = [...selectableFormats].sort(
+    (a, b) => a.target_team_count - b.target_team_count,
+  );
 
-  const selectedFormat = sortedFormats.find(f => f.format_id === selectedFormatId);
+  const selectedFormat = sortedFormats.find((f) => f.format_id === selectedFormatId);
 
   const handleConfirm = () => {
     if (selectedFormat) {
@@ -55,15 +65,13 @@ export function FormatSelectionModal({
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* ヘッダー */}
         <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-blue-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            フォーマット変更
-          </h2>
-          <p className="text-sm text-gray-600">
-            変更先のフォーマットを選択してください
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">フォーマット変更</h2>
+          <p className="text-sm text-gray-600">変更先のフォーマットを選択してください</p>
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-700 bg-white px-3 py-2 rounded-md">
             <Trophy className="h-4 w-4 text-blue-600" />
-            <span>現在: <strong>{currentFormatName}</strong></span>
+            <span>
+              現在: <strong>{currentFormatName}</strong>
+            </span>
           </div>
         </div>
 
@@ -73,9 +81,7 @@ export function FormatSelectionModal({
             <div className="text-center py-12">
               <Trophy className="w-12 h-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-600">変更可能な他のフォーマットがありません</p>
-              <p className="text-sm text-gray-500 mt-2">
-                新しいフォーマットを作成してください
-              </p>
+              <p className="text-sm text-gray-500 mt-2">新しいフォーマットを作成してください</p>
             </div>
           ) : (
             <>
@@ -83,9 +89,7 @@ export function FormatSelectionModal({
                 <div className="flex items-start gap-2">
                   <Info className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-orange-900">
-                      注意事項
-                    </p>
+                    <p className="text-sm font-medium text-orange-900">注意事項</p>
                     <p className="text-sm text-orange-700 mt-1">
                       フォーマットを変更すると、全ての試合データ・ブロック情報・組合せ情報が削除されます。
                     </p>
@@ -105,10 +109,10 @@ export function FormatSelectionModal({
                       disabled={locked}
                       className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
                         locked
-                          ? 'opacity-50 cursor-not-allowed border-gray-200 bg-gray-50'
+                          ? "opacity-50 cursor-not-allowed border-gray-200 bg-gray-50"
                           : isSelected
-                            ? 'border-blue-500 bg-blue-50 shadow-md'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                            ? "border-blue-500 bg-blue-50 shadow-md"
+                            : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -118,11 +122,11 @@ export function FormatSelectionModal({
                             <Lock className="h-3 w-3 text-gray-400" />
                           </div>
                         ) : (
-                          <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
-                            isSelected
-                              ? 'border-blue-500 bg-blue-500'
-                              : 'border-gray-300'
-                          }`}>
+                          <div
+                            className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
+                              isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                            }`}
+                          >
                             {isSelected && <Check className="h-4 w-4 text-white" />}
                           </div>
                         )}
@@ -130,10 +134,18 @@ export function FormatSelectionModal({
                         {/* フォーマット情報 */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className={`font-bold text-lg ${
-                              locked ? 'text-gray-500' : isSelected ? 'text-blue-900' : 'text-gray-900'
-                            }`}>
-                              {format.sport_code && <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>}
+                            <h3
+                              className={`font-bold text-lg ${
+                                locked
+                                  ? "text-gray-500"
+                                  : isSelected
+                                    ? "text-blue-900"
+                                    : "text-gray-900"
+                              }`}
+                            >
+                              {format.sport_code && (
+                                <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>
+                              )}
                               {format.format_name}
                             </h3>
                             {locked && (
@@ -158,9 +170,11 @@ export function FormatSelectionModal({
                           </div>
 
                           {format.format_description && (
-                            <p className={`text-sm mb-2 ${
-                              isSelected ? 'text-blue-700' : 'text-gray-600'
-                            }`}>
+                            <p
+                              className={`text-sm mb-2 ${
+                                isSelected ? "text-blue-700" : "text-gray-600"
+                              }`}
+                            >
                               {format.format_description}
                             </p>
                           )}
@@ -186,7 +200,8 @@ export function FormatSelectionModal({
           {selectedFormat && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-900">
-                <strong>選択中:</strong> {selectedFormat.format_name} ({selectedFormat.target_team_count}チーム)
+                <strong>選択中:</strong> {selectedFormat.format_name} (
+                {selectedFormat.target_team_count}チーム)
               </p>
             </div>
           )}

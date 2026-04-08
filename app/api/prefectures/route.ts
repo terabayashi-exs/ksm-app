@@ -1,8 +1,8 @@
 // app/api/prefectures/route.ts
 // 都道府県マスタを取得するAPI
 
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -18,7 +18,7 @@ export async function GET() {
       ORDER BY display_order ASC
     `);
 
-    const prefectures = result.rows.map(row => ({
+    const prefectures = result.rows.map((row) => ({
       prefecture_id: Number(row.prefecture_id),
       prefecture_name: String(row.prefecture_name),
       prefecture_code: String(row.prefecture_code),
@@ -31,10 +31,10 @@ export async function GET() {
       prefectures,
     });
   } catch (error) {
-    console.error('Error fetching prefectures:', error);
+    console.error("Error fetching prefectures:", error);
     return NextResponse.json(
-      { success: false, error: '都道府県の取得に失敗しました' },
-      { status: 500 }
+      { success: false, error: "都道府県の取得に失敗しました" },
+      { status: 500 },
     );
   }
 }

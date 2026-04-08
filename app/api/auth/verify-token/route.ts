@@ -1,30 +1,27 @@
 // app/api/auth/verify-token/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
     const { token } = await request.json();
 
     if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'トークンが必要です' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "トークンが必要です" }, { status: 400 });
     }
 
     // トークンを検証
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT token_id, email, expires_at, used
       FROM t_email_verification_tokens
       WHERE token = ? AND purpose = 'registration'
-    `, [token]);
+    `,
+      [token],
+    );
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '無効なトークンです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効なトークンです" }, { status: 400 });
     }
 
     const tokenData = result.rows[0];
@@ -32,8 +29,8 @@ export async function POST(request: NextRequest) {
     // 使用済みチェック
     if (tokenData.used) {
       return NextResponse.json(
-        { success: false, error: 'このトークンは既に使用されています' },
-        { status: 400 }
+        { success: false, error: "このトークンは既に使用されています" },
+        { status: 400 },
       );
     }
 
@@ -41,20 +38,27 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(String(tokenData.expires_at));
     if (expiresAt < new Date()) {
       return NextResponse.json(
-        { success: false, error: 'トークンの有効期限が切れています' },
-        { status: 400 }
+        { success: false, error: "トークンの有効期限が切れています" },
+        { status: 400 },
       );
     }
 
     // メールアドレスの重複チェック（念のため再確認）
-    const existingLoginUser = await db.execute(`
+    const existingLoginUser = await db.execute(
+      `
       SELECT login_user_id FROM m_login_users WHERE email = ?
-    `, [tokenData.email]);
+    `,
+      [tokenData.email],
+    );
 
     if (existingLoginUser.rows.length > 0) {
       return NextResponse.json(
-        { success: false, error: 'このメールアドレスは既に登録されています。別のメールアドレスで再度お申し込みください。' },
-        { status: 400 }
+        {
+          success: false,
+          error:
+            "このメールアドレスは既に登録されています。別のメールアドレスで再度お申し込みください。",
+        },
+        { status: 400 },
       );
     }
 
@@ -62,17 +66,16 @@ export async function POST(request: NextRequest) {
       success: true,
       email: tokenData.email,
     });
-
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error("Token verification error:", error);
 
-    let errorMessage = 'トークン検証に失敗しました';
+    let errorMessage = "トークン検証に失敗しました";
 
     if (error instanceof Error) {
-      if (error.message.includes('no such column')) {
-        errorMessage = 'データベースエラーが発生しました。システム管理者にお問い合わせください。';
-      } else if (error.message.includes('no such table')) {
-        errorMessage = 'システムエラーが発生しました。管理者にお問い合わせください。';
+      if (error.message.includes("no such column")) {
+        errorMessage = "データベースエラーが発生しました。システム管理者にお問い合わせください。";
+      } else if (error.message.includes("no such table")) {
+        errorMessage = "システムエラーが発生しました。管理者にお問い合わせください。";
       }
     }
 
@@ -80,9 +83,9 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        details: process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

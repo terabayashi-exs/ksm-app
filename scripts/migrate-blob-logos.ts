@@ -13,44 +13,44 @@
  *   npx tsx scripts/migrate-blob-logos.ts stag --dry-run
  */
 
-import { put, del, list } from '@vercel/blob';
+import { del, list, put } from "@vercel/blob";
 
 // stag用トークンを直接定義（.env.localでコメントアウトしている場合でも使えるよう）
-const STAG_BLOB_TOKEN = 'vercel_blob_rw_7dFc9SEr26ki82tz_ZfDDkc7DIsGGSRgPoJaaZ1XaZ734Up';
+const STAG_BLOB_TOKEN = "vercel_blob_rw_7dFc9SEr26ki82tz_ZfDDkc7DIsGGSRgPoJaaZ1XaZ734Up";
 
 // 環境別トークン取得
 function getToken(env: string): string {
   switch (env) {
-    case 'main':
-    case 'prod':
-      return process.env.PROD_BLOB_READ_WRITE_TOKEN || '';
-    case 'stag':
+    case "main":
+    case "prod":
+      return process.env.PROD_BLOB_READ_WRITE_TOKEN || "";
+    case "stag":
       return process.env.BLOB_READ_WRITE_TOKEN || STAG_BLOB_TOKEN;
-    case 'dev':
+    case "dev":
     default:
-      return process.env.DEV_BLOB_READ_WRITE_TOKEN || '';
+      return process.env.DEV_BLOB_READ_WRITE_TOKEN || "";
   }
 }
 
 // DB接続（環境別）
 async function getDb(env: string) {
-  const { createClient } = await import('@libsql/client');
+  const { createClient } = await import("@libsql/client");
 
   let url: string, authToken: string;
   switch (env) {
-    case 'main':
-    case 'prod':
-      url = process.env.DATABASE_URL_MAIN || '';
-      authToken = process.env.DATABASE_AUTH_TOKEN_MAIN || '';
+    case "main":
+    case "prod":
+      url = process.env.DATABASE_URL_MAIN || "";
+      authToken = process.env.DATABASE_AUTH_TOKEN_MAIN || "";
       break;
-    case 'stag':
-      url = process.env.DATABASE_URL_STAG || '';
-      authToken = process.env.DATABASE_AUTH_TOKEN_STAG || '';
+    case "stag":
+      url = process.env.DATABASE_URL_STAG || "";
+      authToken = process.env.DATABASE_AUTH_TOKEN_STAG || "";
       break;
-    case 'dev':
+    case "dev":
     default:
-      url = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || '';
-      authToken = process.env.DATABASE_AUTH_TOKEN_DEV || process.env.DATABASE_AUTH_TOKEN || '';
+      url = process.env.DATABASE_URL_DEV || process.env.DATABASE_URL || "";
+      authToken = process.env.DATABASE_AUTH_TOKEN_DEV || process.env.DATABASE_AUTH_TOKEN || "";
       break;
   }
 
@@ -59,46 +59,46 @@ async function getDb(env: string) {
 
 async function main() {
   // .env.local 読み込み
-  const { config } = await import('dotenv');
-  config({ path: '.env.local' });
+  const { config } = await import("dotenv");
+  config({ path: ".env.local" });
 
   const args = process.argv.slice(2);
-  const env = args.find(a => !a.startsWith('--')) || 'dev';
-  const dryRun = args.includes('--dry-run');
+  const env = args.find((a) => !a.startsWith("--")) || "dev";
+  const dryRun = args.includes("--dry-run");
 
   console.log(`\n🔍 Blob ロゴ整理スクリプト`);
   console.log(`   環境: ${env}`);
-  console.log(`   モード: ${dryRun ? 'ドライラン（確認のみ）' : '実行'}`);
-  console.log('');
+  console.log(`   モード: ${dryRun ? "ドライラン（確認のみ）" : "実行"}`);
+  console.log("");
 
   const token = getToken(env);
   if (!token) {
-    console.error('❌ Blob トークンが見つかりません');
+    console.error("❌ Blob トークンが見つかりません");
     process.exit(1);
   }
 
   // 1. Blob 内の全ファイルを取得
-  console.log('📋 Blob内のファイル一覧を取得中...');
+  console.log("📋 Blob内のファイル一覧を取得中...");
   const { blobs } = await list({ token });
 
   console.log(`   全ファイル数: ${blobs.length}`);
 
   // ロゴファイルかどうか判定（TOPレベルにある画像ファイル）
-  const topLevelLogos = blobs.filter(b => {
+  const topLevelLogos = blobs.filter((b) => {
     const path = b.pathname;
     // logos/ フォルダ配下は既に正しい
-    if (path.startsWith('logos/')) return false;
+    if (path.startsWith("logos/")) return false;
     // tournaments/ など他のフォルダは対象外
-    if (path.includes('/')) return false;
+    if (path.includes("/")) return false;
     // 画像ファイルのみ
-    return /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(path) || path.includes('logo');
+    return /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(path) || path.includes("logo");
   });
 
   if (topLevelLogos.length === 0) {
-    console.log('✅ TOPレベルにロゴファイルはありません。整理不要です。');
+    console.log("✅ TOPレベルにロゴファイルはありません。整理不要です。");
 
     // 参考: 現在のファイル一覧
-    console.log('\n📂 全ファイル一覧:');
+    console.log("\n📂 全ファイル一覧:");
     for (const b of blobs) {
       console.log(`   ${b.pathname} (${(b.size / 1024).toFixed(1)} KB)`);
     }
@@ -111,11 +111,11 @@ async function main() {
   }
 
   // 2. DBからロゴ情報を取得
-  console.log('\n📊 DBからロゴ情報を取得中...');
+  console.log("\n📊 DBからロゴ情報を取得中...");
   const db = await getDb(env);
 
   const result = await db.execute(
-    'SELECT login_user_id, logo_blob_url, logo_filename, organization_name FROM m_login_users WHERE logo_blob_url IS NOT NULL'
+    "SELECT login_user_id, logo_blob_url, logo_filename, organization_name FROM m_login_users WHERE logo_blob_url IS NOT NULL",
   );
 
   console.log(`   ロゴ登録ユーザー数: ${result.rows.length}`);
@@ -126,13 +126,13 @@ async function main() {
     const url = row.logo_blob_url as string;
     urlToUser[url] = {
       loginUserId: row.login_user_id as number,
-      filename: (row.logo_filename as string) || '',
-      orgName: (row.organization_name as string) || '',
+      filename: (row.logo_filename as string) || "",
+      orgName: (row.organization_name as string) || "",
     };
   }
 
   // 3. 各ファイルを移動
-  console.log('\n🔄 ファイル移動を開始...');
+  console.log("\n🔄 ファイル移動を開始...");
   let movedCount = 0;
   let skippedCount = 0;
 
@@ -145,11 +145,13 @@ async function main() {
       continue;
     }
 
-    const extension = blob.pathname.split('.').pop() || 'png';
+    const extension = blob.pathname.split(".").pop() || "png";
     const newFilename = userInfo.filename || `logo-${Date.now()}.${extension}`;
     const newPath = `logos/${userInfo.loginUserId}/${newFilename}`;
 
-    console.log(`   📦 ${blob.pathname} → ${newPath} (user: ${userInfo.loginUserId}, org: ${userInfo.orgName})`);
+    console.log(
+      `   📦 ${blob.pathname} → ${newPath} (user: ${userInfo.loginUserId}, org: ${userInfo.orgName})`,
+    );
 
     if (dryRun) {
       movedCount++;
@@ -163,8 +165,8 @@ async function main() {
 
       // 新しいパスでアップロード
       const newBlob = await put(newPath, Buffer.from(fileData), {
-        access: 'public',
-        contentType: 'image/png',
+        access: "public",
+        contentType: "image/png",
         token,
         addRandomSuffix: false,
       });
@@ -172,7 +174,7 @@ async function main() {
       // DB更新
       await db.execute(
         `UPDATE m_login_users SET logo_blob_url = ?, logo_filename = ?, updated_at = datetime('now', '+9 hours') WHERE login_user_id = ?`,
-        [newBlob.url, newFilename, userInfo.loginUserId]
+        [newBlob.url, newFilename, userInfo.loginUserId],
       );
 
       // 旧ファイル削除
@@ -186,11 +188,11 @@ async function main() {
   }
 
   console.log(`\n📊 結果:`);
-  console.log(`   移動${dryRun ? '予定' : '完了'}: ${movedCount} 件`);
+  console.log(`   移動${dryRun ? "予定" : "完了"}: ${movedCount} 件`);
   console.log(`   スキップ: ${skippedCount} 件`);
 
   if (dryRun) {
-    console.log('\n💡 実行するには --dry-run を外してください');
+    console.log("\n💡 実行するには --dry-run を外してください");
   }
 
   db.close();

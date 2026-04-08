@@ -1,16 +1,16 @@
-import type { Metadata } from 'next';
-import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
-import { Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import BackButton from '@/components/ui/back-button';
-import TournamentBracket from '@/components/features/tournament/TournamentBracket';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import Link from 'next/link';
-import { ArrowLeft, Trophy } from 'lucide-react';
-import { Tournament } from '@/lib/types';
-import { getTournamentById } from '@/lib/tournament-detail';
+import { ArrowLeft, Trophy } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
+import TournamentBracket from "@/components/features/tournament/TournamentBracket";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
+import BackButton from "@/components/ui/back-button";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getTournamentNameForMetadata } from "@/lib/metadata-helpers";
+import { getTournamentById } from "@/lib/tournament-detail";
+import { Tournament } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,15 +19,15 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const name = await getTournamentNameForMetadata(id);
-  return { title: name ? `トーナメント表 - ${name}` : 'トーナメント表' };
+  return { title: name ? `トーナメント表 - ${name}` : "トーナメント表" };
 }
 
 // 大会詳細データを取得する関数
 async function getTournamentDetail(id: string): Promise<Tournament> {
   const tournamentId = parseInt(id);
-  
+
   if (isNaN(tournamentId)) {
-    throw new Error('有効な大会IDを指定してください');
+    throw new Error("有効な大会IDを指定してください");
   }
 
   return await getTournamentById(tournamentId);
@@ -42,12 +42,12 @@ function TournamentBracketLoading() {
         <div className="animate-pulse">
           <div className="h-8 bg-gray-50 rounded w-1/3 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-64 bg-gray-50 rounded"></div>
             ))}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2].map(i => (
+            {[1, 2].map((i) => (
               <div key={i} className="h-64 bg-gray-50 rounded"></div>
             ))}
           </div>
@@ -66,14 +66,17 @@ async function TournamentBracketContent({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ナビゲーション */}
         <div className="mb-6 no-print">
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
             <Button variant="ghost" asChild>
-              <Link href={`/tournaments/${tournament.tournament_id}`} className="flex items-center text-gray-500 hover:text-gray-900">
+              <Link
+                href={`/tournaments/${tournament.tournament_id}`}
+                className="flex items-center text-gray-500 hover:text-gray-900"
+              >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 大会詳細に戻る
               </Link>

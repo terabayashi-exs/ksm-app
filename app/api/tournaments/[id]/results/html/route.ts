@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { getTournamentResults } from '@/lib/match-results-calculator';
-import { buildPhaseFormatMap } from '@/lib/tournament-phases';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getTournamentResults } from "@/lib/match-results-calculator";
+import { buildPhaseFormatMap } from "@/lib/tournament-phases";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -14,14 +14,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const tournamentId = parseInt(resolvedParams.id);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     // 大会情報を取得
-    const tournamentResult = await db.execute(`
+    const tournamentResult = await db.execute(
+      `
       SELECT
         t.tournament_name,
         v.venue_name,
@@ -30,56 +28,63 @@ export async function GET(request: NextRequest, context: RouteContext) {
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (tournamentResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     const tournamentRow = tournamentResult.rows[0];
     const tournament = {
       tournament_name: tournamentRow.tournament_name as string,
       venue_name: tournamentRow.venue_name as string | undefined,
-      tournament_dates: tournamentRow.tournament_dates as string | undefined
+      tournament_dates: tournamentRow.tournament_dates as string | undefined,
     };
-    
+
     // 戦績表データを取得
     let blockResults;
     try {
       blockResults = await getTournamentResults(tournamentId);
     } catch {
       return NextResponse.json(
-        { success: false, error: '戦績表データの取得に失敗しました' },
-        { status: 500 }
+        { success: false, error: "戦績表データの取得に失敗しました" },
+        { status: 500 },
       );
     }
-    
+
     // リーグ形式フェーズのみをフィルタリング
     const phaseFormatMap = buildPhaseFormatMap(tournamentRow.phases as string | null);
-    const preliminaryBlocks = blockResults.filter(block => {
+    const preliminaryBlocks = blockResults.filter((block) => {
       const formatType = phaseFormatMap.get(block.phase);
-      if (formatType) return formatType === 'league';
+      if (formatType) return formatType === "league";
       // フォールバック: phases情報がない場合は従来の判定
-      return block.phase === 'preliminary' || block.phase.includes('予選') || block.phase.includes('リーグ');
+      return (
+        block.phase === "preliminary" ||
+        block.phase.includes("予選") ||
+        block.phase.includes("リーグ")
+      );
     });
 
     if (preliminaryBlocks.length === 0) {
       return NextResponse.json(
-        { success: false, error: '表示可能な戦績表がありません' },
-        { status: 404 }
+        { success: false, error: "表示可能な戦績表がありません" },
+        { status: 404 },
       );
     }
 
     // データ構造をHTML生成関数の期待する形式に変換
-    const htmlBlockData = preliminaryBlocks.map(block => ({
+    const htmlBlockData = preliminaryBlocks.map((block) => ({
       block_name: block.block_name,
       phase: block.phase,
       display_round_name: block.display_round_name,
-      results: block.match_matrix as unknown as { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } },
-      teams: block.teams // Keep the full team objects instead of just IDs
+      results: block.match_matrix as unknown as {
+        [teamId: string]: {
+          [opponentId: string]: { result: string; score: string; match_code: string };
+        };
+      },
+      teams: block.teams, // Keep the full team objects instead of just IDs
     }));
 
     // PDF用HTMLを生成（PDF APIと同じ関数を流用）
@@ -87,66 +92,78 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return new NextResponse(htmlContent, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
+        "Content-Type": "text/html; charset=utf-8",
       },
     });
-
   } catch (error) {
-    console.error('HTML生成エラー:', error);
+    console.error("HTML生成エラー:", error);
     return NextResponse.json(
-      { success: false, error: 'HTMLの生成に失敗しました' },
-      { status: 500 }
+      { success: false, error: "HTMLの生成に失敗しました" },
+      { status: 500 },
     );
   }
 }
 
 // PDF APIから同じ関数を再利用
-function generateResultsHTML(tournament: { tournament_name: string; venue_name?: string; tournament_dates?: string }, blockResults: { block_name: string; phase: string; display_round_name: string; results: { [teamId: string]: { [opponentId: string]: { result: string; score: string; match_code: string } } }; teams: { team_id: string; team_name: string; team_omission?: string; }[] }[]): string {
+function generateResultsHTML(
+  tournament: { tournament_name: string; venue_name?: string; tournament_dates?: string },
+  blockResults: {
+    block_name: string;
+    phase: string;
+    display_round_name: string;
+    results: {
+      [teamId: string]: {
+        [opponentId: string]: { result: string; score: string; match_code: string };
+      };
+    };
+    teams: { team_id: string; team_name: string; team_omission?: string }[];
+  }[],
+): string {
   const tournamentName = String(tournament.tournament_name);
-  const venueName = String(tournament.venue_name || '');
-  
+  const venueName = String(tournament.venue_name || "");
+
   // 日付のフォーマット
-  let tournamentDate = '';
+  let tournamentDate = "";
   try {
-    const dates = JSON.parse(tournament.tournament_dates || '[]');
+    const dates = JSON.parse(tournament.tournament_dates || "[]");
     if (dates.length > 0) {
-      tournamentDate = new Date(dates[0]).toLocaleDateString('ja-JP');
+      tournamentDate = new Date(dates[0]).toLocaleDateString("ja-JP");
     }
   } catch {
-    tournamentDate = '';
+    tournamentDate = "";
   }
 
   // ブロック色の取得
   const getBlockColor = (blockName: string): string => {
-    if (blockName.includes('A')) return '#3B82F6'; // blue
-    if (blockName.includes('B')) return '#10B981'; // green  
-    if (blockName.includes('C')) return '#F59E0B'; // yellow
-    if (blockName.includes('D')) return '#8B5CF6'; // purple
-    return '#6B7280'; // gray
+    if (blockName.includes("A")) return "#3B82F6"; // blue
+    if (blockName.includes("B")) return "#10B981"; // green
+    if (blockName.includes("C")) return "#F59E0B"; // yellow
+    if (blockName.includes("D")) return "#8B5CF6"; // purple
+    return "#6B7280"; // gray
   };
 
   // 結果の色分け
   const getResultColor = (result: string | null): string => {
-    if (!result) return '#F3F4F6'; // gray-100
+    if (!result) return "#F3F4F6"; // gray-100
 
-    if (result === 'win') return '#D1FAE5'; // green-100
-    if (result === 'loss') return '#FEE2E2'; // red-100
-    if (result === 'draw') return '#DBEAFE'; // blue-100
-    if (result === 'mixed') return '#F3F4F6'; // gray-100（勝敗混在）
+    if (result === "win") return "#D1FAE5"; // green-100
+    if (result === "loss") return "#FEE2E2"; // red-100
+    if (result === "draw") return "#DBEAFE"; // blue-100
+    if (result === "mixed") return "#F3F4F6"; // gray-100（勝敗混在）
 
-    return '#F3F4F6'; // gray-100
+    return "#F3F4F6"; // gray-100
   };
 
   // 結果表示のフォーマット
   const formatResult = (result: string | null, score: string): string => {
-    if (!score || score === '-') return score || '-';
-    
+    if (!score || score === "-") return score || "-";
+
     // スコアに含まれる記号で判定
-    if (score.includes('〇')) return score;
-    if (score.includes('●')) return score;
-    if (score.includes('△')) return score;
-    if (score.includes('不戦')) return score;
-    
+    if (score.includes("〇")) return score;
+    if (score.includes("●")) return score;
+    if (score.includes("△")) return score;
+    if (score.includes("不戦")) return score;
+
     return score;
   };
 
@@ -321,12 +338,14 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
     <body>
       <div class="header">
         <div class="tournament-title">${tournamentName} 戦績表</div>
-        ${venueName ? `<div class="tournament-info">会場: ${venueName}</div>` : ''}
-        ${tournamentDate ? `<div class="tournament-info">開催日: ${tournamentDate}</div>` : ''}
-        <div class="tournament-info">出力日時: ${new Date().toLocaleString('ja-JP')}</div>
+        ${venueName ? `<div class="tournament-info">会場: ${venueName}</div>` : ""}
+        ${tournamentDate ? `<div class="tournament-info">開催日: ${tournamentDate}</div>` : ""}
+        <div class="tournament-info">出力日時: ${new Date().toLocaleString("ja-JP")}</div>
       </div>
 
-      ${blockResults.map(block => `
+      ${blockResults
+        .map(
+          (block) => `
         <div class="block-section">
           <div class="block-header">
             <div class="block-title" style="background-color: ${getBlockColor(block.block_name)}">
@@ -339,42 +358,54 @@ function generateResultsHTML(tournament: { tournament_name: string; venue_name?:
             <thead>
               <tr>
                 <th class="team-name-header">チーム</th>
-                ${block.teams.map(opponent => `
+                ${block.teams
+                  .map(
+                    (opponent) => `
                   <th class="team-header-vertical">
                     ${(opponent.team_omission || opponent.team_name).substring(0, 8)}
                   </th>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
               </tr>
             </thead>
             <tbody>
-              ${block.teams.map(team => `
+              ${block.teams
+                .map(
+                  (team) => `
                 <tr>
                   <td class="team-name-cell">
                     ${(team.team_omission || team.team_name).substring(0, 12)}
                   </td>
-                  ${block.teams.map(opponent => {
-                    if (team.team_id === opponent.team_id) {
-                      return '<td class="match-result same-team">-</td>';
-                    }
-                    
-                    const matchData = block.results[team.team_id]?.[opponent.team_id];
-                    const result = matchData?.result || null;
-                    const score = matchData?.score || '-';
-                    const backgroundColor = getResultColor(result);
-                    const formattedScore = formatResult(result, score);
-                    
-                    return `
+                  ${block.teams
+                    .map((opponent) => {
+                      if (team.team_id === opponent.team_id) {
+                        return '<td class="match-result same-team">-</td>';
+                      }
+
+                      const matchData = block.results[team.team_id]?.[opponent.team_id];
+                      const result = matchData?.result || null;
+                      const score = matchData?.score || "-";
+                      const backgroundColor = getResultColor(result);
+                      const formattedScore = formatResult(result, score);
+
+                      return `
                       <td class="match-result" style="background-color: ${backgroundColor}">
                         ${formattedScore}
                       </td>
                     `;
-                  }).join('')}
+                    })
+                    .join("")}
                 </tr>
-              `).join('')}
+              `,
+                )
+                .join("")}
             </tbody>
           </table>
         </div>
-      `).join('')}
+      `,
+        )
+        .join("")}
       
       <div class="legend">
         <div class="legend-title">凡例</div>

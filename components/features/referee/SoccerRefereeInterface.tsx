@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Plus,
-  Minus,
-  AlertCircle,
-} from 'lucide-react';
-import { SportRuleConfig, PeriodConfig } from '@/lib/tournament-rules';
+import { AlertCircle, Minus, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PeriodConfig, SportRuleConfig } from "@/lib/tournament-rules";
 
 interface ExtendedMatchData {
   match_id: number;
@@ -48,7 +44,7 @@ interface MatchData {
   scheduled_time: string;
   period_count: number;
   current_period: number;
-  match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+  match_status: "scheduled" | "ongoing" | "completed" | "cancelled";
   team1_scores: number[];
   team2_scores: number[];
   winner_team_id?: string;
@@ -60,10 +56,10 @@ interface MatchData {
 interface Props {
   match: MatchData;
   extendedData: ExtendedMatchData;
-  scores: { team1: number[], team2: number[] };
-  setScores: React.Dispatch<React.SetStateAction<{ team1: number[], team2: number[] }>>;
-  winnerTeam: 'team1' | 'team2' | null;
-  setWinnerTeam: React.Dispatch<React.SetStateAction<'team1' | 'team2' | null>>;
+  scores: { team1: number[]; team2: number[] };
+  setScores: React.Dispatch<React.SetStateAction<{ team1: number[]; team2: number[] }>>;
+  winnerTeam: "team1" | "team2" | null;
+  setWinnerTeam: React.Dispatch<React.SetStateAction<"team1" | "team2" | null>>;
   matchRemarks: string;
   setMatchRemarks: React.Dispatch<React.SetStateAction<string>>;
   isConfirmed: boolean;
@@ -84,20 +80,20 @@ export default function SoccerRefereeInterface({
   isConfirmed,
   updating,
   updateMatchStatus: _updateMatchStatus,
-  getTotalScore
+  getTotalScore,
 }: Props) {
   const [availablePeriods, setAvailablePeriods] = useState<PeriodConfig[]>([]);
-  
+
   // PK戦用状態管理
   const [pkMode, setPkMode] = useState(false);
   const [pkScores, setPkScores] = useState({ team1: 0, team2: 0 });
   const [regularScores, setRegularScores] = useState({ team1: 0, team2: 0 });
-  
+
   useEffect(() => {
     if (extendedData.sport_config) {
       setAvailablePeriods(extendedData.sport_config.default_periods);
     }
-    
+
     // 初期スコアを分離
     const team1Total = getTotalScore(scores.team1);
     const team2Total = getTotalScore(scores.team2);
@@ -105,57 +101,63 @@ export default function SoccerRefereeInterface({
   }, [extendedData, scores, getTotalScore]);
 
   // ピリオドスコア変更（サッカー用）
-  const changeScore = (team: 'team1' | 'team2', period: number, delta: number) => {
-    setScores(prev => {
+  const changeScore = (team: "team1" | "team2", period: number, delta: number) => {
+    setScores((prev) => {
       const currentScore = Number(prev[team][period - 1]) || 0;
       const newScore = Math.max(0, currentScore + delta);
-      
+
       const newScores = { ...prev };
       newScores[team] = [...newScores[team]];
-      
+
       // 配列のサイズを必要に応じて拡張
       while (newScores[team].length < period) {
         newScores[team].push(0);
       }
-      
+
       newScores[team][period - 1] = newScore;
-      
+
       // PK戦を除いた通常ピリオドのみで勝者を自動決定
-      const regularPeriods = extendedData.active_periods.filter(p => {
+      const regularPeriods = extendedData.active_periods.filter((p) => {
         const periodName = getPeriodName(p);
-        return !periodName.includes('PK');
+        return !periodName.includes("PK");
       });
-      const team1Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team1[p - 1]) || 0), 0);
-      const team2Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team2[p - 1]) || 0), 0);
-      
+      const team1Regular = regularPeriods.reduce(
+        (sum, p) => sum + (Number(newScores.team1[p - 1]) || 0),
+        0,
+      );
+      const team2Regular = regularPeriods.reduce(
+        (sum, p) => sum + (Number(newScores.team2[p - 1]) || 0),
+        0,
+      );
+
       // PK戦モードでない場合は通常の勝者判定
       if (!pkMode) {
         if (team1Regular > team2Regular) {
-          setWinnerTeam('team1');
+          setWinnerTeam("team1");
         } else if (team2Regular > team1Regular) {
-          setWinnerTeam('team2');
+          setWinnerTeam("team2");
         } else {
           // 通常時間が同点の場合、PK戦のスコアがあるかチェック
-          const pkPeriods = extendedData.active_periods.filter(p => {
+          const pkPeriods = extendedData.active_periods.filter((p) => {
             const periodName = getPeriodName(p);
-            return periodName.includes('PK');
+            return periodName.includes("PK");
           });
-          
+
           if (pkPeriods.length > 0) {
             // PK戦のスコアを取得
             let team1PkTotal = 0;
             let team2PkTotal = 0;
-            
-            pkPeriods.forEach(p => {
+
+            pkPeriods.forEach((p) => {
               const scoreIndex = p - 1;
               team1PkTotal += Number(newScores.team1[scoreIndex]) || 0;
               team2PkTotal += Number(newScores.team2[scoreIndex]) || 0;
             });
-            
+
             if (team1PkTotal > team2PkTotal) {
-              setWinnerTeam('team1');
+              setWinnerTeam("team1");
             } else if (team2PkTotal > team1PkTotal) {
-              setWinnerTeam('team2');
+              setWinnerTeam("team2");
             } else {
               setWinnerTeam(null); // PK戦でも同点
             }
@@ -168,62 +170,68 @@ export default function SoccerRefereeInterface({
         setRegularScores({ team1: team1Regular, team2: team2Regular });
         // 勝者はPK戦スコアで決定（changePkScore関数内で処理）
       }
-      
+
       return newScores;
     });
   };
 
   // 直接スコア入力（サッカー用）
-  const setDirectScore = (team: 'team1' | 'team2', period: number, value: string) => {
+  const setDirectScore = (team: "team1" | "team2", period: number, value: string) => {
     const numValue = Math.max(0, parseInt(value) || 0);
-    
-    setScores(prev => {
+
+    setScores((prev) => {
       const newScores = { ...prev };
       newScores[team] = [...newScores[team]];
-      
+
       // 配列のサイズを必要に応じて拡張
       while (newScores[team].length < period) {
         newScores[team].push(0);
       }
-      
+
       newScores[team][period - 1] = numValue;
-      
+
       // PK戦を除いた通常ピリオドのみで勝者を自動決定
-      const regularPeriods = extendedData.active_periods.filter(p => {
+      const regularPeriods = extendedData.active_periods.filter((p) => {
         const periodName = getPeriodName(p);
-        return !periodName.includes('PK');
+        return !periodName.includes("PK");
       });
-      const team1Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team1[p - 1]) || 0), 0);
-      const team2Regular = regularPeriods.reduce((sum, p) => sum + (Number(newScores.team2[p - 1]) || 0), 0);
-      
+      const team1Regular = regularPeriods.reduce(
+        (sum, p) => sum + (Number(newScores.team1[p - 1]) || 0),
+        0,
+      );
+      const team2Regular = regularPeriods.reduce(
+        (sum, p) => sum + (Number(newScores.team2[p - 1]) || 0),
+        0,
+      );
+
       // PK戦モードでない場合は通常の勝者判定
       if (!pkMode) {
         if (team1Regular > team2Regular) {
-          setWinnerTeam('team1');
+          setWinnerTeam("team1");
         } else if (team2Regular > team1Regular) {
-          setWinnerTeam('team2');
+          setWinnerTeam("team2");
         } else {
           // 通常時間が同点の場合、PK戦のスコアがあるかチェック
-          const pkPeriods = extendedData.active_periods.filter(p => {
+          const pkPeriods = extendedData.active_periods.filter((p) => {
             const periodName = getPeriodName(p);
-            return periodName.includes('PK');
+            return periodName.includes("PK");
           });
-          
+
           if (pkPeriods.length > 0) {
             // PK戦のスコアを取得
             let team1PkTotal = 0;
             let team2PkTotal = 0;
-            
-            pkPeriods.forEach(p => {
+
+            pkPeriods.forEach((p) => {
               const scoreIndex = p - 1;
               team1PkTotal += Number(newScores.team1[scoreIndex]) || 0;
               team2PkTotal += Number(newScores.team2[scoreIndex]) || 0;
             });
-            
+
             if (team1PkTotal > team2PkTotal) {
-              setWinnerTeam('team1');
+              setWinnerTeam("team1");
             } else if (team2PkTotal > team1PkTotal) {
-              setWinnerTeam('team2');
+              setWinnerTeam("team2");
             } else {
               setWinnerTeam(null); // PK戦でも同点
             }
@@ -236,14 +244,14 @@ export default function SoccerRefereeInterface({
         setRegularScores({ team1: team1Regular, team2: team2Regular });
         // 勝者はPK戦スコアで決定（changePkScore関数内で処理）
       }
-      
+
       return newScores;
     });
   };
 
   // ピリオド名を取得
   const getPeriodName = (periodNumber: number): string => {
-    const period = availablePeriods.find(p => p.period_number === periodNumber);
+    const period = availablePeriods.find((p) => p.period_number === periodNumber);
     return period?.period_name || `第${periodNumber}ピリオド`;
   };
 
@@ -255,7 +263,9 @@ export default function SoccerRefereeInterface({
   // PK戦モード切り替え
   const togglePkMode = () => {
     if (!pkMode) {
-      const confirmed = confirm('PK戦モードに切り替えますか？\n通常ゴールとPKゴールが分離して記録されます。');
+      const confirmed = confirm(
+        "PK戦モードに切り替えますか？\n通常ゴールとPKゴールが分離して記録されます。",
+      );
       if (confirmed) {
         setPkMode(true);
         // 現在のスコアを通常ゴールとして保存
@@ -265,7 +275,7 @@ export default function SoccerRefereeInterface({
         setPkScores({ team1: 0, team2: 0 });
       }
     } else {
-      const confirmed = confirm('通常モードに戻りますか？\nPKスコアは保持されます。');
+      const confirmed = confirm("通常モードに戻りますか？\nPKスコアは保持されます。");
       if (confirmed) {
         setPkMode(false);
       }
@@ -273,28 +283,28 @@ export default function SoccerRefereeInterface({
   };
 
   // PKスコア変更
-  const changePkScore = (team: 'team1' | 'team2', delta: number) => {
-    setPkScores(prev => {
+  const changePkScore = (team: "team1" | "team2", delta: number) => {
+    setPkScores((prev) => {
       const currentScore = prev[team];
       const newScore = Math.max(0, currentScore + delta);
       const newScores = { ...prev, [team]: newScore };
-      
+
       // 勝者を決定（通常時間 → PK戦の順で判定）
       if (regularScores.team1 > regularScores.team2) {
-        setWinnerTeam('team1');
+        setWinnerTeam("team1");
       } else if (regularScores.team2 > regularScores.team1) {
-        setWinnerTeam('team2');
+        setWinnerTeam("team2");
       } else {
         // 通常時間が同点の場合、PKスコアで判定
         if (newScores.team1 > newScores.team2) {
-          setWinnerTeam('team1');
+          setWinnerTeam("team1");
         } else if (newScores.team2 > newScores.team1) {
-          setWinnerTeam('team2');
+          setWinnerTeam("team2");
         } else {
           setWinnerTeam(null); // 通常時間・PKともに同点
         }
       }
-      
+
       return newScores;
     });
   };
@@ -302,10 +312,10 @@ export default function SoccerRefereeInterface({
   // サッカー用スコア更新
   const updateSoccerScores = async () => {
     // ピリオド別スコアデータを構築
-    const periodScores = extendedData.active_periods.map(periodNumber => ({
+    const periodScores = extendedData.active_periods.map((periodNumber) => ({
       period: periodNumber,
       team1_score: scores.team1[periodNumber - 1] || 0,
-      team2_score: scores.team2[periodNumber - 1] || 0
+      team2_score: scores.team2[periodNumber - 1] || 0,
     }));
 
     // スコアと勝者選択の矛盾をチェック（PK戦モードの場合は通常ゴールのみを考慮）
@@ -315,29 +325,29 @@ export default function SoccerRefereeInterface({
       team2Total = regularScores.team2;
     } else {
       // 通常モードでもPK戦ピリオドを除外
-      const regularPeriods = extendedData.active_periods.filter(p => {
+      const regularPeriods = extendedData.active_periods.filter((p) => {
         const periodName = getPeriodName(p);
-        return !periodName.includes('PK');
+        return !periodName.includes("PK");
       });
       team1Total = regularPeriods.reduce((sum, p) => sum + (Number(scores.team1[p - 1]) || 0), 0);
       team2Total = regularPeriods.reduce((sum, p) => sum + (Number(scores.team2[p - 1]) || 0), 0);
     }
-    
+
     let scoreWinner = null;
-    if (team1Total > team2Total) scoreWinner = 'team1';
-    else if (team2Total > team1Total) scoreWinner = 'team2';
-    
+    if (team1Total > team2Total) scoreWinner = "team1";
+    else if (team2Total > team1Total) scoreWinner = "team2";
+
     // 矛盾がある場合は確認ダイアログを表示
     if (scoreWinner && winnerTeam && scoreWinner !== winnerTeam) {
-      const team1DisplayName = match.team1_omission || match.team1_name || 'チーム1';
-      const team2DisplayName = match.team2_omission || match.team2_name || 'チーム2';
-      const scoreWinnerName = scoreWinner === 'team1' ? team1DisplayName : team2DisplayName;
-      const selectedWinnerName = winnerTeam === 'team1' ? team1DisplayName : team2DisplayName;
-      
+      const team1DisplayName = match.team1_omission || match.team1_name || "チーム1";
+      const team2DisplayName = match.team2_omission || match.team2_name || "チーム2";
+      const scoreWinnerName = scoreWinner === "team1" ? team1DisplayName : team2DisplayName;
+      const selectedWinnerName = winnerTeam === "team1" ? team1DisplayName : team2DisplayName;
+
       const confirmed = window.confirm(
-        `スコア上は「${scoreWinnerName}」が勝利していますが、選択されているのは「${selectedWinnerName}」です。\n\nこのまま登録してもよろしいですか？`
+        `スコア上は「${scoreWinnerName}」が勝利していますが、選択されているのは「${selectedWinnerName}」です。\n\nこのまま登録してもよろしいですか？`,
       );
-      
+
       if (!confirmed) {
         return; // 登録をキャンセル
       }
@@ -345,9 +355,9 @@ export default function SoccerRefereeInterface({
 
     // 勝者IDを決定
     let winner_team_id = null;
-    if (winnerTeam === 'team1' && match.team1_id) {
+    if (winnerTeam === "team1" && match.team1_id) {
       winner_team_id = match.team1_id;
-    } else if (winnerTeam === 'team2' && match.team2_id) {
+    } else if (winnerTeam === "team2" && match.team2_id) {
       winner_team_id = match.team2_id;
     }
 
@@ -357,34 +367,34 @@ export default function SoccerRefereeInterface({
       winner_team_id: winner_team_id,
       is_draw: winnerTeam === null,
       remarks: matchRemarks.trim() || null,
-      updated_by: 'referee',
+      updated_by: "referee",
       // PK戦データを追加
       pk_mode: pkMode,
       regular_scores: pkMode ? regularScores : null,
-      pk_scores: pkMode ? pkScores : null
+      pk_scores: pkMode ? pkScores : null,
     };
 
     try {
       const response = await fetch(`/api/matches/${match.match_id}/scores-extended`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
       });
 
       const result = await response.json();
 
       if (result.success) {
         if (pkMode) {
-          alert('PK戦データを含むサッカー試合のスコアを保存しました！');
+          alert("PK戦データを含むサッカー試合のスコアを保存しました！");
         } else {
-          alert('サッカー試合のスコアを保存しました！');
+          alert("サッカー試合のスコアを保存しました！");
         }
       } else {
         alert(`エラー: ${result.error}`);
       }
     } catch (error) {
-      console.error('Soccer score update error:', error);
-      alert('スコア保存中にエラーが発生しました');
+      console.error("Soccer score update error:", error);
+      alert("スコア保存中にエラーが発生しました");
     }
   };
 
@@ -406,10 +416,12 @@ export default function SoccerRefereeInterface({
                   <Label className="block text-sm font-medium mb-3">
                     {periodName}
                     {!isAvailable && (
-                      <Badge variant="secondary" className="ml-2 bg-yellow-500 text-white">規定外</Badge>
+                      <Badge variant="secondary" className="ml-2 bg-yellow-500 text-white">
+                        規定外
+                      </Badge>
                     )}
                   </Label>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     {/* チーム1 */}
                     <div className="text-center">
@@ -418,8 +430,8 @@ export default function SoccerRefereeInterface({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => changeScore('team1', periodNumber, -1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changeScore("team1", periodNumber, -1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                         >
                           <Minus className="w-4 h-4" />
                         </Button>
@@ -429,8 +441,8 @@ export default function SoccerRefereeInterface({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => changeScore('team1', periodNumber, 1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changeScore("team1", periodNumber, 1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                         >
                           <Plus className="w-4 h-4" />
                         </Button>
@@ -439,8 +451,8 @@ export default function SoccerRefereeInterface({
                         type="number"
                         min="0"
                         value={scores.team1[periodNumber - 1] || 0}
-                        onChange={(e) => setDirectScore('team1', periodNumber, e.target.value)}
-                        disabled={match.match_status !== 'ongoing' || isConfirmed}
+                        onChange={(e) => setDirectScore("team1", periodNumber, e.target.value)}
+                        disabled={match.match_status !== "ongoing" || isConfirmed}
                         className="w-16 h-8 text-center text-sm mx-auto"
                         placeholder="0"
                       />
@@ -453,8 +465,8 @@ export default function SoccerRefereeInterface({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => changeScore('team2', periodNumber, -1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changeScore("team2", periodNumber, -1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                         >
                           <Minus className="w-4 h-4" />
                         </Button>
@@ -464,8 +476,8 @@ export default function SoccerRefereeInterface({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => changeScore('team2', periodNumber, 1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changeScore("team2", periodNumber, 1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                         >
                           <Plus className="w-4 h-4" />
                         </Button>
@@ -474,8 +486,8 @@ export default function SoccerRefereeInterface({
                         type="number"
                         min="0"
                         value={scores.team2[periodNumber - 1] || 0}
-                        onChange={(e) => setDirectScore('team2', periodNumber, e.target.value)}
-                        disabled={match.match_status !== 'ongoing' || isConfirmed}
+                        onChange={(e) => setDirectScore("team2", periodNumber, e.target.value)}
+                        disabled={match.match_status !== "ongoing" || isConfirmed}
                         className="w-16 h-8 text-center text-sm mx-auto"
                         placeholder="0"
                       />
@@ -494,33 +506,37 @@ export default function SoccerRefereeInterface({
                     size="sm"
                     variant="outline"
                     onClick={togglePkMode}
-                    disabled={isConfirmed || match.match_status !== 'ongoing'}
+                    disabled={isConfirmed || match.match_status !== "ongoing"}
                     className="text-xs border-orange-300 hover:bg-orange-50"
                   >
                     PK戦モード
                   </Button>
                 )}
               </div>
-              
+
               {!pkMode ? (
                 // 通常モード表示（PK戦ピリオドを除く）
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
                     <div className="text-xs text-gray-500">{match.team1_name}</div>
                     <div className="text-3xl font-bold text-blue-600">
-                      {extendedData.active_periods.filter(p => {
-                        const periodName = getPeriodName(p);
-                        return !periodName.includes('PK');
-                      }).reduce((sum, p) => sum + (Number(scores.team1[p - 1]) || 0), 0)}
+                      {extendedData.active_periods
+                        .filter((p) => {
+                          const periodName = getPeriodName(p);
+                          return !periodName.includes("PK");
+                        })
+                        .reduce((sum, p) => sum + (Number(scores.team1[p - 1]) || 0), 0)}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500">{match.team2_name}</div>
                     <div className="text-3xl font-bold text-red-600">
-                      {extendedData.active_periods.filter(p => {
-                        const periodName = getPeriodName(p);
-                        return !periodName.includes('PK');
-                      }).reduce((sum, p) => sum + (Number(scores.team2[p - 1]) || 0), 0)}
+                      {extendedData.active_periods
+                        .filter((p) => {
+                          const periodName = getPeriodName(p);
+                          return !periodName.includes("PK");
+                        })
+                        .reduce((sum, p) => sum + (Number(scores.team2[p - 1]) || 0), 0)}
                     </div>
                   </div>
                 </div>
@@ -539,13 +555,11 @@ export default function SoccerRefereeInterface({
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">{match.team2_name}</div>
-                        <div className="text-2xl font-bold text-red-600">
-                          {regularScores.team2}
-                        </div>
+                        <div className="text-2xl font-bold text-red-600">{regularScores.team2}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* PKゴール */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-center mb-2">
@@ -562,19 +576,15 @@ export default function SoccerRefereeInterface({
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div>
                         <div className="text-xs text-gray-500">{match.team1_name}</div>
-                        <div className="text-2xl font-bold text-orange-600">
-                          {pkScores.team1}
-                        </div>
+                        <div className="text-2xl font-bold text-orange-600">{pkScores.team1}</div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500">{match.team2_name}</div>
-                        <div className="text-2xl font-bold text-orange-600">
-                          {pkScores.team2}
-                        </div>
+                        <div className="text-2xl font-bold text-orange-600">{pkScores.team2}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* 総合結果 */}
                   <div className="border-t pt-4 bg-slate-50 p-3 rounded">
                     <div className="text-xs text-gray-500 mb-2 text-center">総合結果</div>
@@ -598,7 +608,7 @@ export default function SoccerRefereeInterface({
             </div>
 
             {/* PK戦専用入力UI */}
-            {pkMode && (match.match_status === 'ongoing' || match.match_status === 'completed') && (
+            {pkMode && (match.match_status === "ongoing" || match.match_status === "completed") && (
               <Card className="border-orange-200 bg-orange-50/30">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 text-orange-700">
@@ -612,13 +622,15 @@ export default function SoccerRefereeInterface({
                   <div className="grid grid-cols-2 gap-6">
                     {/* チーム1 PK */}
                     <div className="text-center">
-                      <div className="text-sm font-medium text-gray-500 mb-3">{match.team1_name}</div>
+                      <div className="text-sm font-medium text-gray-500 mb-3">
+                        {match.team1_name}
+                      </div>
                       <div className="flex items-center justify-center space-x-3 mb-3">
                         <Button
                           variant="outline"
                           size="lg"
-                          onClick={() => changePkScore('team1', -1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changePkScore("team1", -1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                           className="border-orange-300 hover:bg-orange-50"
                         >
                           <Minus className="w-5 h-5" />
@@ -629,8 +641,8 @@ export default function SoccerRefereeInterface({
                         <Button
                           variant="outline"
                           size="lg"
-                          onClick={() => changePkScore('team1', 1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changePkScore("team1", 1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                           className="border-orange-300 hover:bg-orange-50"
                         >
                           <Plus className="w-5 h-5" />
@@ -642,29 +654,29 @@ export default function SoccerRefereeInterface({
                         value={pkScores.team1}
                         onChange={(e) => {
                           const value = Math.max(0, parseInt(e.target.value) || 0);
-                          setPkScores(prev => {
+                          setPkScores((prev) => {
                             const newScores = { ...prev, team1: value };
-                            
+
                             // 勝者を決定（通常時間 → PK戦の順で判定）
                             if (regularScores.team1 > regularScores.team2) {
-                              setWinnerTeam('team1');
+                              setWinnerTeam("team1");
                             } else if (regularScores.team2 > regularScores.team1) {
-                              setWinnerTeam('team2');
+                              setWinnerTeam("team2");
                             } else {
                               // 通常時間が同点の場合、PKスコアで判定
                               if (newScores.team1 > newScores.team2) {
-                                setWinnerTeam('team1');
+                                setWinnerTeam("team1");
                               } else if (newScores.team2 > newScores.team1) {
-                                setWinnerTeam('team2');
+                                setWinnerTeam("team2");
                               } else {
                                 setWinnerTeam(null); // 通常時間・PKともに同点
                               }
                             }
-                            
+
                             return newScores;
                           });
                         }}
-                        disabled={match.match_status !== 'ongoing' || isConfirmed}
+                        disabled={match.match_status !== "ongoing" || isConfirmed}
                         className="w-20 h-10 text-center text-lg mx-auto border-orange-300"
                         placeholder="0"
                       />
@@ -672,13 +684,15 @@ export default function SoccerRefereeInterface({
 
                     {/* チーム2 PK */}
                     <div className="text-center">
-                      <div className="text-sm font-medium text-gray-500 mb-3">{match.team2_name}</div>
+                      <div className="text-sm font-medium text-gray-500 mb-3">
+                        {match.team2_name}
+                      </div>
                       <div className="flex items-center justify-center space-x-3 mb-3">
                         <Button
                           variant="outline"
                           size="lg"
-                          onClick={() => changePkScore('team2', -1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changePkScore("team2", -1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                           className="border-orange-300 hover:bg-orange-50"
                         >
                           <Minus className="w-5 h-5" />
@@ -689,8 +703,8 @@ export default function SoccerRefereeInterface({
                         <Button
                           variant="outline"
                           size="lg"
-                          onClick={() => changePkScore('team2', 1)}
-                          disabled={match.match_status !== 'ongoing' || isConfirmed}
+                          onClick={() => changePkScore("team2", 1)}
+                          disabled={match.match_status !== "ongoing" || isConfirmed}
                           className="border-orange-300 hover:bg-orange-50"
                         >
                           <Plus className="w-5 h-5" />
@@ -702,35 +716,35 @@ export default function SoccerRefereeInterface({
                         value={pkScores.team2}
                         onChange={(e) => {
                           const value = Math.max(0, parseInt(e.target.value) || 0);
-                          setPkScores(prev => {
+                          setPkScores((prev) => {
                             const newScores = { ...prev, team2: value };
-                            
+
                             // 勝者を決定（通常時間 → PK戦の順で判定）
                             if (regularScores.team1 > regularScores.team2) {
-                              setWinnerTeam('team1');
+                              setWinnerTeam("team1");
                             } else if (regularScores.team2 > regularScores.team1) {
-                              setWinnerTeam('team2');
+                              setWinnerTeam("team2");
                             } else {
                               // 通常時間が同点の場合、PKスコアで判定
                               if (newScores.team1 > newScores.team2) {
-                                setWinnerTeam('team1');
+                                setWinnerTeam("team1");
                               } else if (newScores.team2 > newScores.team1) {
-                                setWinnerTeam('team2');
+                                setWinnerTeam("team2");
                               } else {
                                 setWinnerTeam(null); // 通常時間・PKともに同点
                               }
                             }
-                            
+
                             return newScores;
                           });
                         }}
-                        disabled={match.match_status !== 'ongoing' || isConfirmed}
+                        disabled={match.match_status !== "ongoing" || isConfirmed}
                         className="w-20 h-10 text-center text-lg mx-auto border-orange-300"
                         placeholder="0"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="mt-4 text-center">
                     <Alert className="border-orange-200 bg-orange-50">
                       <AlertCircle className="h-4 w-4 text-orange-600" />
@@ -744,35 +758,47 @@ export default function SoccerRefereeInterface({
             )}
 
             {/* 勝者選択・備考・保存 */}
-            {(match.match_status === 'ongoing' || match.match_status === 'completed') && (
+            {(match.match_status === "ongoing" || match.match_status === "completed") && (
               <div className="mt-4 space-y-4">
                 <div>
                   <Label className="text-sm font-medium">勝利チーム選択</Label>
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <Button
-                      variant={winnerTeam === 'team1' ? 'default' : 'outline'}
+                      variant={winnerTeam === "team1" ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setWinnerTeam('team1')}
+                      onClick={() => setWinnerTeam("team1")}
                       disabled={isConfirmed}
-                      className={winnerTeam === 'team1' ? 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600' : 'hover:bg-blue-50 border-gray-300'}
+                      className={
+                        winnerTeam === "team1"
+                          ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                          : "hover:bg-blue-50 border-gray-300"
+                      }
                     >
                       {match.team1_omission || match.team1_name}
                     </Button>
                     <Button
-                      variant={winnerTeam === null ? 'default' : 'outline'}
+                      variant={winnerTeam === null ? "default" : "outline"}
                       size="sm"
                       onClick={() => setWinnerTeam(null)}
                       disabled={isConfirmed}
-                      className={winnerTeam === null ? 'bg-gray-100 text-white hover:bg-gray-100/80 border-secondary' : 'hover:bg-gray-50 border-gray-200'}
+                      className={
+                        winnerTeam === null
+                          ? "bg-gray-100 text-white hover:bg-gray-100/80 border-secondary"
+                          : "hover:bg-gray-50 border-gray-200"
+                      }
                     >
                       引分
                     </Button>
                     <Button
-                      variant={winnerTeam === 'team2' ? 'default' : 'outline'}
+                      variant={winnerTeam === "team2" ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setWinnerTeam('team2')}
+                      onClick={() => setWinnerTeam("team2")}
                       disabled={isConfirmed}
-                      className={winnerTeam === 'team2' ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' : 'hover:bg-red-50 border-gray-300'}
+                      className={
+                        winnerTeam === "team2"
+                          ? "bg-red-600 text-white hover:bg-red-700 border-red-600"
+                          : "hover:bg-red-50 border-gray-300"
+                      }
                     >
                       {match.team2_omission || match.team2_name}
                     </Button>
@@ -788,7 +814,7 @@ export default function SoccerRefereeInterface({
                     id="soccer-remarks"
                     value={matchRemarks}
                     onChange={(e) => setMatchRemarks(e.target.value)}
-                    disabled={match.match_status !== 'ongoing' || isConfirmed}
+                    disabled={match.match_status !== "ongoing" || isConfirmed}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 bg-white text-gray-900 rounded-md shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                     rows={2}
                     placeholder="延長戦・PK戦での決着、その他特記事項など..."
@@ -797,11 +823,15 @@ export default function SoccerRefereeInterface({
 
                 {/* スコア保存ボタン */}
                 <Button
-                  className={`w-full border-2 ${pkMode ? 'border-orange-600 bg-orange-600 hover:bg-orange-700' : 'border-blue-600'}`}
+                  className={`w-full border-2 ${pkMode ? "border-orange-600 bg-orange-600 hover:bg-orange-700" : "border-blue-600"}`}
                   onClick={updateSoccerScores}
-                  disabled={updating || match.match_status !== 'ongoing' || isConfirmed}
+                  disabled={updating || match.match_status !== "ongoing" || isConfirmed}
                 >
-                  {updating ? '保存中...' : pkMode ? 'PK戦込みスコア・結果を保存' : 'スコア・結果を保存'}
+                  {updating
+                    ? "保存中..."
+                    : pkMode
+                      ? "PK戦込みスコア・結果を保存"
+                      : "スコア・結果を保存"}
                 </Button>
               </div>
             )}

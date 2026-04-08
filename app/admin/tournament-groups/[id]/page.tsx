@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { Pencil, Plus, Calendar, MapPin, Users, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
+import { Calendar, ChevronRight, Home, MapPin, Pencil, Plus, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TournamentGroup {
   group_id: number;
@@ -67,11 +67,11 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
         if (data.success) {
           setGroup(data.data);
         } else {
-          setError(data.error || '大会の取得に失敗しました');
+          setError(data.error || "大会の取得に失敗しました");
         }
       } catch (err) {
-        console.error('大会取得エラー:', err);
-        setError('大会の取得中にエラーが発生しました');
+        console.error("大会取得エラー:", err);
+        setError("大会の取得中にエラーが発生しました");
       } finally {
         setLoading(false);
       }
@@ -81,12 +81,12 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
   }, [resolvedParams]);
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ja-JP');
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("ja-JP");
   };
 
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
-    if (!startDate && !endDate) return '-';
+    if (!startDate && !endDate) return "-";
     if (!endDate) return formatDate(startDate);
     if (startDate === endDate) return formatDate(startDate);
     const start = formatDate(startDate);
@@ -110,11 +110,8 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
       <div className="min-h-screen bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
-            <p className="text-destructive">{error || '大会が見つかりません'}</p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push('/my?tab=admin')}
-            >
+            <p className="text-destructive">{error || "大会が見つかりません"}</p>
+            <Button className="mt-4" onClick={() => router.push("/my?tab=admin")}>
               マイダッシュボードに戻る
             </Button>
           </div>
@@ -129,12 +126,18 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -145,15 +148,11 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
         <div className="mb-8">
           <div className="flex items-center space-x-3">
             <h1 className="text-2xl font-bold text-gray-900">{group.group_name}</h1>
-            <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
-              {group.visibility === 'open' ? '公開' : '非公開'}
+            <Badge variant={group.visibility === "open" ? "default" : "secondary"}>
+              {group.visibility === "open" ? "公開" : "非公開"}
             </Badge>
           </div>
-          {group.organizer && (
-            <p className="text-sm text-gray-500 mt-1">
-              主催: {group.organizer}
-            </p>
-          )}
+          {group.organizer && <p className="text-sm text-gray-500 mt-1">主催: {group.organizer}</p>}
         </div>
         <div className="flex items-center justify-end mb-6">
           <Button asChild variant="outline" size="sm">
@@ -233,7 +232,9 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                 <div className="flex items-center justify-between">
                   <CardTitle>所属部門 ({group.divisions.length})</CardTitle>
                   <Button variant="outline" asChild>
-                    <Link href={`/admin/tournaments/create-new?group_id=${group.group_id}${group.venue_id ? `&venue_id=${group.venue_id}` : ''}`}>
+                    <Link
+                      href={`/admin/tournaments/create-new?group_id=${group.group_id}${group.venue_id ? `&venue_id=${group.venue_id}` : ""}`}
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       部門を追加
                     </Link>
@@ -243,9 +244,7 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
               <CardContent>
                 {group.divisions.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">
-                      この大会にはまだ部門が作成されていません
-                    </p>
+                    <p className="text-gray-500">この大会にはまだ部門が作成されていません</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -259,14 +258,20 @@ export default function TournamentGroupDetailPage({ params }: { params: Promise<
                           <div className="flex items-start justify-between">
                             <div className="space-y-2 flex-1">
                               <div>
-                                <h4 className="font-bold text-gray-900">{division.tournament_name}</h4>
+                                <h4 className="font-bold text-gray-900">
+                                  {division.tournament_name}
+                                </h4>
                                 <p className="text-sm text-gray-500">{division.format_name}</p>
                               </div>
                               <div className="flex items-center space-x-4 text-sm text-gray-500">
-                                <span>{division.registered_teams}/{division.team_count}チーム</span>
+                                <span>
+                                  {division.registered_teams}/{division.team_count}チーム
+                                </span>
                                 <span>{division.court_count}コート</span>
-                                <Badge variant={division.visibility === 'open' ? 'default' : 'secondary'}>
-                                  {division.visibility === 'open' ? '公開' : '非公開'}
+                                <Badge
+                                  variant={division.visibility === "open" ? "default" : "secondary"}
+                                >
+                                  {division.visibility === "open" ? "公開" : "非公開"}
                                 </Badge>
                               </div>
                             </div>

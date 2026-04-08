@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { DEFAULT_OPERATOR_PERMISSIONS } from '@/lib/types/operator';
-import type { TournamentAccessConfig } from '@/lib/types/operator';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import type { TournamentAccessConfig } from "@/lib/types/operator";
+import { DEFAULT_OPERATOR_PERMISSIONS } from "@/lib/types/operator";
 
 interface Tournament {
   tournament_id: number;
@@ -31,7 +31,7 @@ export default function TournamentAccessSelector({
 
   useEffect(() => {
     fetchTournaments();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
   const fetchTournaments = async () => {
@@ -39,20 +39,26 @@ export default function TournamentAccessSelector({
       setLoading(true);
       const url = groupId
         ? `/api/tournament-groups/${groupId}/tournaments`
-        : '/api/admin/tournaments/all';
+        : "/api/admin/tournaments/all";
       const response = await fetch(url);
-      if (!response.ok) throw new Error('部門一覧の取得に失敗しました');
+      if (!response.ok) throw new Error("部門一覧の取得に失敗しました");
       const data = await response.json();
       setTournaments(data);
     } catch (error) {
-      console.error('部門一覧の取得に失敗しました:', error);
-      alert('部門一覧の取得に失敗しました');
+      console.error("部門一覧の取得に失敗しました:", error);
+      alert("部門一覧の取得に失敗しました");
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleTournament = (tournamentId: number, tournamentName: string, categoryName: string | null, groupId: number, groupName: string) => {
+  const toggleTournament = (
+    tournamentId: number,
+    tournamentName: string,
+    categoryName: string | null,
+    groupId: number,
+    groupName: string,
+  ) => {
     const existing = value.find((t) => t.tournamentId === tournamentId);
     if (existing) {
       onChange(value.filter((t) => t.tournamentId !== tournamentId));
@@ -62,7 +68,7 @@ export default function TournamentAccessSelector({
         {
           tournamentId,
           tournamentName,
-          categoryName: categoryName || '',
+          categoryName: categoryName || "",
           groupId,
           groupName,
           permissions: DEFAULT_OPERATOR_PERMISSIONS,
@@ -107,9 +113,7 @@ export default function TournamentAccessSelector({
     <Card>
       <CardHeader>
         <CardTitle>アクセス可能な部門</CardTitle>
-        <CardDescription>
-          この運営者がアクセスできる部門を選択してください
-        </CardDescription>
+        <CardDescription>この運営者がアクセスできる部門を選択してください</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -127,7 +131,7 @@ export default function TournamentAccessSelector({
                       tournament.tournament_name,
                       tournament.category_name,
                       tournament.group_id,
-                      tournament.group_name
+                      tournament.group_name,
                     )
                   }
                 />

@@ -1,42 +1,38 @@
 // app/api/admin/notifications/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { getAllUnresolvedNotifications } from '@/lib/notifications';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { getAllUnresolvedNotifications } from "@/lib/notifications";
 
 // 全未解決通知を取得（大会IDで絞り込み可能）
 export async function GET(request: NextRequest) {
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     // クエリパラメータから大会IDを取得
     const { searchParams } = new URL(request.url);
-    const tournamentId = searchParams.get('tournament_id');
+    const tournamentId = searchParams.get("tournament_id");
 
     const notifications = await getAllUnresolvedNotifications(
-      tournamentId ? parseInt(tournamentId) : undefined
+      tournamentId ? parseInt(tournamentId) : undefined,
     );
 
     return NextResponse.json({
       success: true,
-      data: notifications
+      data: notifications,
     });
-
   } catch (error) {
-    console.error('通知取得エラー:', error);
+    console.error("通知取得エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '通知の取得に失敗しました',
-        details: error instanceof Error ? error.message : String(error)
+      {
+        success: false,
+        error: "通知の取得に失敗しました",
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

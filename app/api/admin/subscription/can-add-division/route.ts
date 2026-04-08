@@ -1,21 +1,21 @@
 // 部門追加可否チェックAPI
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { canAddDivision } from '@/lib/subscription/plan-checker';
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { canAddDivision } from "@/lib/subscription/plan-checker";
 
 export async function GET(request: Request) {
   try {
     const session = await auth();
 
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const groupId = searchParams.get('group_id');
+    const groupId = searchParams.get("group_id");
 
     if (!groupId) {
-      return NextResponse.json({ error: 'group_idは必須です' }, { status: 400 });
+      return NextResponse.json({ error: "group_idは必須です" }, { status: 400 });
     }
 
     const adminLoginId = session.user.id;
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       limit: result.limit,
     });
   } catch (error) {
-    console.error('Division check error:', error);
-    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 });
+    console.error("Division check error:", error);
+    return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

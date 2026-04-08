@@ -1,29 +1,35 @@
 "use client";
 
+import { AlertTriangle, ArrowDown, ArrowUp, Info, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { TournamentPhase, TournamentPhases, PhaseFormatType } from "@/lib/types/tournament-phases";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import {
-  Plus,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
-  AlertTriangle,
-  Info
-} from "lucide-react";
-import { validatePhaseConfiguration, PHASE_PRESETS, reorderPhases } from "./phase-utils";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type {
+  PhaseFormatType,
+  TournamentPhase,
+  TournamentPhases,
+} from "@/lib/types/tournament-phases";
+import { PHASE_PRESETS, reorderPhases, validatePhaseConfiguration } from "./phase-utils";
 
 interface PhaseConfigurationSectionProps {
   phases: TournamentPhases;
   onPhasesChange: (phases: TournamentPhases) => void;
 }
 
-export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfigurationSectionProps) {
+export function PhaseConfigurationSection({
+  phases,
+  onPhasesChange,
+}: PhaseConfigurationSectionProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // フェーズ追加
@@ -35,10 +41,10 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
       name: `フェーズ${nextOrder}`,
       format_type: "league",
       display_name: "",
-      description: ""
+      description: "",
     };
     const newPhases = {
-      phases: [...phases.phases, newPhase]
+      phases: [...phases.phases, newPhase],
     };
     onPhasesChange(newPhases);
   };
@@ -56,20 +62,26 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
     const newPhasesArray = [...phases.phases];
     newPhasesArray[index] = {
       ...newPhasesArray[index],
-      [field]: value
+      [field]: value,
     };
     const newPhases = { phases: newPhasesArray };
     onPhasesChange(newPhases);
   };
 
   // フェーズ移動
-  const movePhase = (index: number, direction: 'up' | 'down') => {
+  const movePhase = (index: number, direction: "up" | "down") => {
     const newPhasesArray = [...phases.phases];
 
-    if (direction === 'up' && index > 0) {
-      [newPhasesArray[index - 1], newPhasesArray[index]] = [newPhasesArray[index], newPhasesArray[index - 1]];
-    } else if (direction === 'down' && index < newPhasesArray.length - 1) {
-      [newPhasesArray[index], newPhasesArray[index + 1]] = [newPhasesArray[index + 1], newPhasesArray[index]];
+    if (direction === "up" && index > 0) {
+      [newPhasesArray[index - 1], newPhasesArray[index]] = [
+        newPhasesArray[index],
+        newPhasesArray[index - 1],
+      ];
+    } else if (direction === "down" && index < newPhasesArray.length - 1) {
+      [newPhasesArray[index], newPhasesArray[index + 1]] = [
+        newPhasesArray[index + 1],
+        newPhasesArray[index],
+      ];
     }
 
     const reorderedPhases = reorderPhases(newPhasesArray);
@@ -123,13 +135,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addPhase}
-          className="shrink-0"
-        >
+        <Button type="button" variant="outline" size="sm" onClick={addPhase} className="shrink-0">
           <Plus className="h-4 w-4 mr-1" />
           フェーズ追加
         </Button>
@@ -152,12 +158,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
       {/* 手動バリデーションボタン */}
       <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleValidate}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={handleValidate}>
           <AlertTriangle className="h-4 w-4 mr-1" />
           設定を検証
         </Button>
@@ -186,7 +187,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => movePhase(index, 'up')}
+                  onClick={() => movePhase(index, "up")}
                   disabled={index === 0}
                   className="h-8 w-8 p-0"
                 >
@@ -196,7 +197,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => movePhase(index, 'down')}
+                  onClick={() => movePhase(index, "down")}
                   disabled={index === phases.phases.length - 1}
                   className="h-8 w-8 p-0"
                 >
@@ -208,11 +209,13 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
               <div className="col-span-10 grid grid-cols-1 md:grid-cols-4 gap-3">
                 {/* 順序 */}
                 <div className="space-y-1">
-                  <Label className="text-xs">順序 <span className="text-destructive">*</span></Label>
+                  <Label className="text-xs">
+                    順序 <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     type="number"
                     value={phase.order}
-                    onChange={(e) => updatePhase(index, 'order', parseInt(e.target.value) || 1)}
+                    onChange={(e) => updatePhase(index, "order", parseInt(e.target.value) || 1)}
                     className="h-9"
                     min={1}
                   />
@@ -220,24 +223,26 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
                 {/* ID */}
                 <div className="space-y-1">
-                  <Label className="text-xs">フェーズID <span className="text-destructive">*</span></Label>
+                  <Label className="text-xs">
+                    フェーズID <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     value={phase.id}
-                    onChange={(e) => updatePhase(index, 'id', e.target.value)}
+                    onChange={(e) => updatePhase(index, "id", e.target.value)}
                     placeholder="preliminary"
                     className="h-9"
                   />
-                  <p className="text-[10px] text-gray-500">
-                    英小文字・数字・_のみ
-                  </p>
+                  <p className="text-[10px] text-gray-500">英小文字・数字・_のみ</p>
                 </div>
 
                 {/* 名前 */}
                 <div className="space-y-1">
-                  <Label className="text-xs">フェーズ名 <span className="text-destructive">*</span></Label>
+                  <Label className="text-xs">
+                    フェーズ名 <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     value={phase.name}
-                    onChange={(e) => updatePhase(index, 'name', e.target.value)}
+                    onChange={(e) => updatePhase(index, "name", e.target.value)}
                     placeholder="予選"
                     className="h-9"
                   />
@@ -245,10 +250,14 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
 
                 {/* 形式 */}
                 <div className="space-y-1">
-                  <Label className="text-xs">形式 <span className="text-destructive">*</span></Label>
+                  <Label className="text-xs">
+                    形式 <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={phase.format_type}
-                    onValueChange={(value) => updatePhase(index, 'format_type', value as PhaseFormatType)}
+                    onValueChange={(value) =>
+                      updatePhase(index, "format_type", value as PhaseFormatType)
+                    }
                   >
                     <SelectTrigger className="h-9">
                       <SelectValue />
@@ -265,7 +274,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
                   <Label className="text-xs">表示名（オプション）</Label>
                   <Input
                     value={phase.display_name || ""}
-                    onChange={(e) => updatePhase(index, 'display_name', e.target.value)}
+                    onChange={(e) => updatePhase(index, "display_name", e.target.value)}
                     placeholder="名前と異なる場合のみ入力"
                     className="h-9"
                   />
@@ -276,7 +285,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
                   <Label className="text-xs">説明（オプション）</Label>
                   <Input
                     value={phase.description || ""}
-                    onChange={(e) => updatePhase(index, 'description', e.target.value)}
+                    onChange={(e) => updatePhase(index, "description", e.target.value)}
                     placeholder="フェーズの補足説明"
                     className="h-9"
                   />
@@ -304,14 +313,8 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
       {/* 空状態 */}
       {phases.phases.length === 0 && (
         <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-          <p className="text-sm text-gray-500 mb-3">
-            フェーズが設定されていません
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addPhase}
-          >
+          <p className="text-sm text-gray-500 mb-3">フェーズが設定されていません</p>
+          <Button type="button" variant="outline" onClick={addPhase}>
             <Plus className="h-4 w-4 mr-2" />
             最初のフェーズを追加
           </Button>
@@ -328,9 +331,7 @@ export function PhaseConfigurationSection({ phases, onPhasesChange }: PhaseConfi
                 <Badge variant="outline" className="text-xs">
                   {phase.display_name || phase.name}
                 </Badge>
-                {index < phases.phases.length - 1 && (
-                  <span className="text-gray-400 mx-2">→</span>
-                )}
+                {index < phases.phases.length - 1 && <span className="text-gray-400 mx-2">→</span>}
               </div>
             ))}
           </div>

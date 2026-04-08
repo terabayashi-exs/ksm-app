@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { getSportScoreConfig, getTournamentSportCode } from '@/lib/sport-standings-calculator';
-import { parseScoreArray } from '@/lib/score-parser';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { parseScoreArray } from "@/lib/score-parser";
+import { getSportScoreConfig, getTournamentSportCode } from "@/lib/sport-standings-calculator";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -13,23 +13,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const tournamentId = parseInt(resolvedParams.id);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     // 30分前の時刻を計算（JST）
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
     const thirtyMinutesAgoJST = new Date(thirtyMinutesAgo.getTime() + 9 * 60 * 60 * 1000)
-      .toISOString().replace('T', ' ').substring(0, 19);
+      .toISOString()
+      .replace("T", " ")
+      .substring(0, 19);
 
     // 競技設定を取得（修正）
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
-    
+
     // 速報対象の試合を取得
-    const matchesResult = await db.execute(`
+    const matchesResult = await db.execute(
+      `
         SELECT
           ml.match_id,
           ml.match_code,
@@ -76,17 +76,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
           END,
           ml.updated_at DESC
         LIMIT 6
-    `, [tournamentId, thirtyMinutesAgoJST]);
+    `,
+      [tournamentId, thirtyMinutesAgoJST],
+    );
 
     // データ整形（PK戦を考慮したスコア計算）
-    const formattedMatches = matchesResult.rows.map(row => {
+    const formattedMatches = matchesResult.rows.map((row) => {
       // スコアデータを取得（確定済み結果があればそちらを優先）
-      const scoreData = row.final_team1_scores !== null ? 
-        { team1_scores: row.final_team1_scores, team2_scores: row.final_team2_scores } :
-        { team1_scores: row.team1_scores, team2_scores: row.team2_scores };
+      const scoreData =
+        row.final_team1_scores !== null
+          ? { team1_scores: row.final_team1_scores, team2_scores: row.final_team2_scores }
+          : { team1_scores: row.team1_scores, team2_scores: row.team2_scores };
 
       // PK戦を考慮したスコア計算関数
-      const calculateDisplayScore = (team1ScoreData: string | null, team2ScoreData: string | null) => {
+      const calculateDisplayScore = (
+        team1ScoreData: string | null,
+        team2ScoreData: string | null,
+      ) => {
         if (team1ScoreData === null || team2ScoreData === null) {
           return { team1Goals: null, team2Goals: null, scoreDisplay: null };
         }
@@ -108,7 +114,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             return {
               team1Goals: regularTotal1,
               team2Goals: regularTotal2,
-              scoreDisplay: `${regularTotal1} - ${regularTotal2} (PK ${pkTotal1}-${pkTotal2})`
+              scoreDisplay: `${regularTotal1} - ${regularTotal2} (PK ${pkTotal1}-${pkTotal2})`,
             };
           }
 
@@ -116,24 +122,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
           return {
             team1Goals: regularTotal1,
             team2Goals: regularTotal2,
-            scoreDisplay: `${regularTotal1} - ${regularTotal2}`
+            scoreDisplay: `${regularTotal1} - ${regularTotal2}`,
           };
         }
 
         // 通常の処理（PK戦がない場合またはサッカー以外）
         const team1Total = team1Scores.reduce((sum, score) => sum + score, 0);
         const team2Total = team2Scores.reduce((sum, score) => sum + score, 0);
-        
+
         return {
           team1Goals: team1Total,
           team2Goals: team2Total,
-          scoreDisplay: `${team1Total} - ${team2Total}`
+          scoreDisplay: `${team1Total} - ${team2Total}`,
         };
       };
 
       const { team1Goals, team2Goals, scoreDisplay } = calculateDisplayScore(
-        scoreData.team1_scores ? String(scoreData.team1_scores) : null, 
-        scoreData.team2_scores ? String(scoreData.team2_scores) : null
+        scoreData.team1_scores ? String(scoreData.team1_scores) : null,
+        scoreData.team2_scores ? String(scoreData.team2_scores) : null,
       );
 
       return {
@@ -144,42 +150,50 @@ export async function GET(request: NextRequest, context: RouteContext) {
         team1_goals: team1Goals,
         team2_goals: team2Goals,
         score_display: scoreDisplay, // PK戦を考慮したスコア表示
-        winner_tournament_team_id: row.final_winner_tournament_team_id ? Number(row.final_winner_tournament_team_id) : null,
-        team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
-        team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
+        winner_tournament_team_id: row.final_winner_tournament_team_id
+          ? Number(row.final_winner_tournament_team_id)
+          : null,
+        team1_tournament_team_id: row.team1_tournament_team_id
+          ? Number(row.team1_tournament_team_id)
+          : null,
+        team2_tournament_team_id: row.team2_tournament_team_id
+          ? Number(row.team2_tournament_team_id)
+          : null,
         is_draw: Boolean(row.final_is_draw || false),
         is_walkover: Boolean(row.final_is_walkover || false),
         match_status: String(row.match_status),
         has_result: Boolean(row.has_result || false),
-        phase: String(row.phase || 'preliminary'),
-        block_name: String(row.block_name || ''),
+        phase: String(row.phase || "preliminary"),
+        block_name: String(row.block_name || ""),
         court_number: row.court_number ? Number(row.court_number) : null,
         court_name: row.court_name ? String(row.court_name) : null,
         start_time: row.start_time ? String(row.start_time) : null,
         end_time: null, // 終了時刻は別途取得が必要な場合は追加
-        updated_at: String(row.updated_at)
+        updated_at: String(row.updated_at),
       };
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      data: formattedMatches
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20',
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: formattedMatches,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=20",
+        },
       },
-    });
-
+    );
   } catch (error) {
-    console.error('試合速報データ取得エラー:', error);
+    console.error("試合速報データ取得エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '試合速報データの取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: "試合速報データの取得に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

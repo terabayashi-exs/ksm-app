@@ -1,14 +1,14 @@
 export const metadata = { title: "大会形式編集" };
 
-import { auth } from "@/lib/auth";
-import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
-import { db } from "@/lib/db";
-import Header from "@/components/layout/Header";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import TournamentFormatEditForm from "@/components/features/tournament-format/TournamentFormatEditForm";
+import Header from "@/components/layout/Header";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface Props {
@@ -34,7 +34,8 @@ export default async function EditTournamentFormatPage({ params }: Props) {
   }
 
   // フォーマット情報を取得（競技種別も含む）
-  const formatResult = await db.execute(`
+  const formatResult = await db.execute(
+    `
     SELECT 
       tf.*,
       st.sport_name,
@@ -42,7 +43,9 @@ export default async function EditTournamentFormatPage({ params }: Props) {
     FROM m_tournament_formats tf
     LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
     WHERE tf.format_id = ?
-  `, [resolvedParams.id]);
+  `,
+    [resolvedParams.id],
+  );
 
   if (formatResult.rows.length === 0) {
     notFound();
@@ -51,11 +54,14 @@ export default async function EditTournamentFormatPage({ params }: Props) {
   const format = formatResult.rows[0];
 
   // 関連する試合テンプレートを取得
-  const templatesResult = await db.execute(`
+  const templatesResult = await db.execute(
+    `
     SELECT * FROM m_match_templates 
     WHERE format_id = ? 
     ORDER BY match_number
-  `, [resolvedParams.id]);
+  `,
+    [resolvedParams.id],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -63,16 +69,25 @@ export default async function EditTournamentFormatPage({ params }: Props) {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/admin/tournament-formats" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/admin/tournament-formats"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             大会フォーマット管理
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -82,9 +97,7 @@ export default async function EditTournamentFormatPage({ params }: Props) {
         </nav>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">大会フォーマット編集</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {String(format.format_name)} の編集
-          </p>
+          <p className="text-sm text-gray-500 mt-1">{String(format.format_name)} の編集</p>
         </div>
         <TournamentFormatEditForm
           format={{
@@ -93,13 +106,19 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             sport_type_id: Number(format.sport_type_id || 1),
             target_team_count: Number(format.target_team_count),
             format_description: String(format.format_description || ""),
-            default_match_duration: format.default_match_duration ? Number(format.default_match_duration) : null,
-            default_break_duration: format.default_break_duration ? Number(format.default_break_duration) : null,
-            preliminary_format_type: format.preliminary_format_type ? String(format.preliminary_format_type) : null,
+            default_match_duration: format.default_match_duration
+              ? Number(format.default_match_duration)
+              : null,
+            default_break_duration: format.default_break_duration
+              ? Number(format.default_break_duration)
+              : null,
+            preliminary_format_type: format.preliminary_format_type
+              ? String(format.preliminary_format_type)
+              : null,
             final_format_type: format.final_format_type ? String(format.final_format_type) : null,
-            phases: format.phases ? JSON.parse(format.phases as string) : undefined
+            phases: format.phases ? JSON.parse(format.phases as string) : undefined,
           }}
-          templates={templatesResult.rows.map(t => ({
+          templates={templatesResult.rows.map((t) => ({
             match_number: Number(t.match_number),
             match_code: String(t.match_code),
             match_type: String(t.match_type || "通常"),
@@ -115,12 +134,14 @@ export default async function EditTournamentFormatPage({ params }: Props) {
             court_number: t.court_number ? Number(t.court_number) : undefined,
             suggested_start_time: formatTimeToHHMM(String(t.suggested_start_time || "")),
             // 新しい順位設定フィールド
-            loser_position_start: t.loser_position_start ? Number(t.loser_position_start) : undefined,
+            loser_position_start: t.loser_position_start
+              ? Number(t.loser_position_start)
+              : undefined,
             loser_position_end: t.loser_position_end ? Number(t.loser_position_end) : undefined,
             winner_position: t.winner_position ? Number(t.winner_position) : undefined,
             position_note: String(t.position_note || ""),
             matchday: t.matchday != null ? Number(t.matchday) : undefined,
-            cycle: t.cycle != null ? Number(t.cycle) : undefined
+            cycle: t.cycle != null ? Number(t.cycle) : undefined,
           }))}
         />
       </div>

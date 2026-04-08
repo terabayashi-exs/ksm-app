@@ -1,25 +1,25 @@
 // app/admin/blob-migration/page.tsx
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Database, 
-  HardDrive, 
-  CheckCircle, 
-  AlertTriangle, 
-  Clock, 
+import {
+  AlertTriangle,
+  BarChart3,
+  CheckCircle,
+  Clock,
+  Database,
   FileText,
-  RefreshCw,
+  HardDrive,
   PlayCircle,
+  RefreshCw,
   Shield,
-  BarChart3
-} from 'lucide-react';
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MigrationStatus {
   overview: {
@@ -57,7 +57,7 @@ interface MigrationStatus {
     average_archive_size_kb: number;
   };
   recommendations: Array<{
-    type: 'action' | 'warning' | 'info';
+    type: "action" | "warning" | "info";
     title: string;
     description: string;
     action_url?: string;
@@ -75,26 +75,26 @@ export default function BlobMigrationPage() {
   const fetchStatus = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/migration-status', {
-        cache: 'no-store'
+      const response = await fetch("/api/admin/migration-status", {
+        cache: "no-store",
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setStatus(data.data);
         setError(null);
         setLastUpdate(new Date());
       } else {
-        throw new Error(data.error || '不明なエラー');
+        throw new Error(data.error || "不明なエラー");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'データ取得エラー');
-      console.error('Status fetch error:', err);
+      setError(err instanceof Error ? err.message : "データ取得エラー");
+      console.error("Status fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -104,26 +104,26 @@ export default function BlobMigrationPage() {
   const executeMigration = async (dryRun = false) => {
     try {
       setMigrationInProgress(true);
-      
-      const response = await fetch('/api/admin/migrate-to-blob', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      const response = await fetch("/api/admin/migrate-to-blob", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: 'all',
-          dry_run: dryRun
-        })
+          mode: "all",
+          dry_run: dryRun,
+        }),
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
-        alert(`${dryRun ? 'ドライラン' : '移行'}完了: ${data.message}`);
+        alert(`${dryRun ? "ドライラン" : "移行"}完了: ${data.message}`);
         await fetchStatus(); // ステータス更新
       } else {
-        throw new Error(data.error || '移行に失敗しました');
+        throw new Error(data.error || "移行に失敗しました");
       }
     } catch (err) {
-      alert(`移行エラー: ${err instanceof Error ? err.message : '不明なエラー'}`);
+      alert(`移行エラー: ${err instanceof Error ? err.message : "不明なエラー"}`);
     } finally {
       setMigrationInProgress(false);
     }
@@ -133,26 +133,26 @@ export default function BlobMigrationPage() {
   const executeVerification = async () => {
     try {
       setMigrationInProgress(true);
-      
-      const response = await fetch('/api/admin/migration-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      const response = await fetch("/api/admin/migration-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          check_type: 'all',
-          deep_check: true
-        })
+          check_type: "all",
+          deep_check: true,
+        }),
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         alert(`検証完了: ${data.message}`);
         await fetchStatus(); // ステータス更新
       } else {
-        throw new Error(data.error || '検証に失敗しました');
+        throw new Error(data.error || "検証に失敗しました");
       }
     } catch (err) {
-      alert(`検証エラー: ${err instanceof Error ? err.message : '不明なエラー'}`);
+      alert(`検証エラー: ${err instanceof Error ? err.message : "不明なエラー"}`);
     } finally {
       setMigrationInProgress(false);
     }
@@ -182,12 +182,7 @@ export default function BlobMigrationPage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             データの取得に失敗しました: {error}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="ml-2"
-              onClick={fetchStatus}
-            >
+            <Button variant="outline" size="sm" className="ml-2" onClick={fetchStatus}>
               再試行
             </Button>
           </AlertDescription>
@@ -199,10 +194,10 @@ export default function BlobMigrationPage() {
   if (!status) return null;
 
   const getStatusColor = (percent: number) => {
-    if (percent >= 100) return 'text-green-600';
-    if (percent >= 75) return 'text-blue-600';
-    if (percent >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (percent >= 100) return "text-green-600";
+    if (percent >= 75) return "text-blue-600";
+    if (percent >= 50) return "text-yellow-600";
+    return "text-red-600";
   };
 
   return (
@@ -211,28 +206,22 @@ export default function BlobMigrationPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Blob移行管理</h1>
-          <p className="text-gray-600 mt-1">
-            アーカイブデータのVercel Blob移行状況
-          </p>
+          <p className="text-gray-600 mt-1">アーカイブデータのVercel Blob移行状況</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchStatus}
-            disabled={loading || migrationInProgress}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" onClick={fetchStatus} disabled={loading || migrationInProgress}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             更新
           </Button>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => executeMigration(true)}
             disabled={migrationInProgress}
           >
             <PlayCircle className="h-4 w-4 mr-2" />
             ドライラン
           </Button>
-          <Button 
+          <Button
             onClick={() => executeMigration(false)}
             disabled={migrationInProgress || status.categories.not_migrated.length === 0}
           >
@@ -266,12 +255,12 @@ export default function BlobMigrationPage() {
             <Shield className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold mb-2 ${getStatusColor(status.overview.data_consistency_score)}`}>
+            <div
+              className={`text-2xl font-bold mb-2 ${getStatusColor(status.overview.data_consistency_score)}`}
+            >
               {status.overview.data_consistency_score}%
             </div>
-            <p className="text-xs text-gray-500">
-              データ検証は「データ検証実行」で確認
-            </p>
+            <p className="text-xs text-gray-500">データ検証は「データ検証実行」で確認</p>
           </CardContent>
         </Card>
 
@@ -281,9 +270,7 @@ export default function BlobMigrationPage() {
             <HardDrive className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-2">
-              {status.storage_analysis.db_storage_mb}MB
-            </div>
+            <div className="text-2xl font-bold mb-2">{status.storage_analysis.db_storage_mb}MB</div>
             <p className="text-xs text-gray-500">
               Blob: {status.storage_analysis.blob_storage_mb}MB
             </p>
@@ -310,13 +297,10 @@ export default function BlobMigrationPage() {
       {status.recommendations.length > 0 && (
         <div className="space-y-2">
           {status.recommendations.map((rec, index) => (
-            <Alert 
-              key={index} 
-              variant={rec.type === 'warning' ? 'destructive' : 'default'}
-            >
-              {rec.type === 'action' ? (
+            <Alert key={index} variant={rec.type === "warning" ? "destructive" : "default"}>
+              {rec.type === "action" ? (
                 <PlayCircle className="h-4 w-4" />
-              ) : rec.type === 'warning' ? (
+              ) : rec.type === "warning" ? (
                 <AlertTriangle className="h-4 w-4" />
               ) : (
                 <CheckCircle className="h-4 w-4" />
@@ -332,9 +316,7 @@ export default function BlobMigrationPage() {
       {/* 詳細タブ */}
       <Tabs defaultValue="migrated" className="space-y-4">
         <TabsList className="grid-cols-3">
-          <TabsTrigger value="migrated">
-            移行済み ({status.categories.migrated.length})
-          </TabsTrigger>
+          <TabsTrigger value="migrated">移行済み ({status.categories.migrated.length})</TabsTrigger>
           <TabsTrigger value="not_migrated">
             未移行 ({status.categories.not_migrated.length})
           </TabsTrigger>
@@ -350,9 +332,7 @@ export default function BlobMigrationPage() {
                 <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
                 移行済みアーカイブ
               </CardTitle>
-              <CardDescription>
-                データベースとBlobの両方に存在するアーカイブ
-              </CardDescription>
+              <CardDescription>データベースとBlobの両方に存在するアーカイブ</CardDescription>
             </CardHeader>
             <CardContent>
               {status.categories.migrated.length === 0 ? (
@@ -360,7 +340,10 @@ export default function BlobMigrationPage() {
               ) : (
                 <div className="space-y-2">
                   {status.categories.migrated.map((item) => (
-                    <div key={item.tournament_id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div
+                      key={item.tournament_id}
+                      className="flex justify-between items-center p-3 border rounded-lg"
+                    >
                       <div>
                         <div className="font-medium">{item.tournament_name}</div>
                         <div className="text-sm text-gray-500">ID: {item.tournament_id}</div>
@@ -368,8 +351,8 @@ export default function BlobMigrationPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-sm">{item.file_size_kb} KB</div>
-                        <Badge variant={item.data_match ? 'default' : 'secondary'}>
-                          {item.data_match ? '整合性OK' : '要確認'}
+                        <Badge variant={item.data_match ? "default" : "secondary"}>
+                          {item.data_match ? "整合性OK" : "要確認"}
                         </Badge>
                       </div>
                     </div>
@@ -387,9 +370,7 @@ export default function BlobMigrationPage() {
                 <Clock className="h-5 w-5 mr-2 text-orange-600" />
                 未移行アーカイブ
               </CardTitle>
-              <CardDescription>
-                データベースにのみ存在するアーカイブ（移行が必要）
-              </CardDescription>
+              <CardDescription>データベースにのみ存在するアーカイブ（移行が必要）</CardDescription>
             </CardHeader>
             <CardContent>
               {status.categories.not_migrated.length === 0 ? (
@@ -397,7 +378,10 @@ export default function BlobMigrationPage() {
               ) : (
                 <div className="space-y-2">
                   {status.categories.not_migrated.map((item) => (
-                    <div key={item.tournament_id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div
+                      key={item.tournament_id}
+                      className="flex justify-between items-center p-3 border rounded-lg"
+                    >
                       <div>
                         <div className="font-medium">{item.tournament_name}</div>
                         <div className="text-sm text-gray-500">ID: {item.tournament_id}</div>
@@ -414,7 +398,6 @@ export default function BlobMigrationPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
 
         <TabsContent value="blob_only" className="space-y-4">
           <Card>
@@ -433,7 +416,10 @@ export default function BlobMigrationPage() {
               ) : (
                 <div className="space-y-2">
                   {status.categories.blob_only.map((item) => (
-                    <div key={item.tournament_id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div
+                      key={item.tournament_id}
+                      className="flex justify-between items-center p-3 border rounded-lg"
+                    >
                       <div>
                         <div className="font-medium">{item.tournament_name}</div>
                         <div className="text-sm text-gray-500">ID: {item.tournament_id}</div>
@@ -455,7 +441,7 @@ export default function BlobMigrationPage() {
 
       {/* フッター情報 */}
       <div className="text-center text-sm text-gray-500">
-        最終更新: {lastUpdate.toLocaleString('ja-JP')}
+        最終更新: {lastUpdate.toLocaleString("ja-JP")}
         {migrationInProgress && (
           <span className="ml-2 text-blue-600">
             <RefreshCw className="h-3 w-3 animate-spin inline mr-1" />
@@ -466,11 +452,7 @@ export default function BlobMigrationPage() {
 
       {/* アクションボタン */}
       <div className="flex justify-center gap-4 pt-4">
-        <Button 
-          variant="outline" 
-          onClick={executeVerification}
-          disabled={migrationInProgress}
-        >
+        <Button variant="outline" onClick={executeVerification} disabled={migrationInProgress}>
           <Shield className="h-4 w-4 mr-2" />
           データ検証実行
         </Button>

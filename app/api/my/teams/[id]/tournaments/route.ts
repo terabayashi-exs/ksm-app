@@ -1,8 +1,8 @@
 // app/api/my/teams/[id]/tournaments/route.ts
 // チームが参加できる大会一覧・参加済み大会一覧を返す
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -10,7 +10,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 function getFirstDate(tournamentDates: unknown): string | null {
   if (!tournamentDates) return null;
   try {
-    const parsed = typeof tournamentDates === 'string' ? JSON.parse(tournamentDates) : tournamentDates;
+    const parsed =
+      typeof tournamentDates === "string" ? JSON.parse(tournamentDates) : tournamentDates;
     const values = Object.values(parsed) as string[];
     return values.length > 0 ? values[0] : null;
   } catch {
@@ -21,7 +22,7 @@ function getFirstDate(tournamentDates: unknown): string | null {
 export async function GET(_request: NextRequest, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.loginUserId || session.user.loginUserId === 0) {
-    return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
+    return NextResponse.json({ success: false, error: "認証が必要です" }, { status: 401 });
   }
 
   const { id: teamId } = await context.params;
@@ -29,21 +30,22 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   // URLパラメータから検索条件を取得
   const url = new URL(_request.url);
-  const keyword = url.searchParams.get('keyword') || '';
-  const prefectureId = url.searchParams.get('prefectureId') || '';
-  const sportTypeId = url.searchParams.get('sportTypeId') || '';
+  const keyword = url.searchParams.get("keyword") || "";
+  const prefectureId = url.searchParams.get("prefectureId") || "";
+  const sportTypeId = url.searchParams.get("sportTypeId") || "";
 
   // 担当者チェック
   const memberCheck = await db.execute(
     `SELECT id FROM m_team_members WHERE team_id = ? AND login_user_id = ? AND is_active = 1`,
-    [teamId, loginUserId]
+    [teamId, loginUserId],
   );
   if (memberCheck.rows.length === 0) {
-    return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 });
+    return NextResponse.json({ success: false, error: "権限がありません" }, { status: 403 });
   }
 
   // 参加済み大会（t_tournament_teams経由）
-  const joinedRes = await db.execute(`
+  const joinedRes = await db.execute(
+    `
     SELECT
       t.tournament_id,
       t.tournament_name,
@@ -71,11 +73,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
     WHERE tt.team_id = ? AND t.is_archived = 0
     ORDER BY t.tournament_id DESC
-  `, [teamId]);
+  `,
+    [teamId],
+  );
 
   // 参加申込可能な大会（募集中の大会、複数チーム参加対応のため参加済みでも表示）
   // 同じマスターチームから2チーム目、3チーム目として参加できるようにするため、除外しない
-  const excludeClause = '';
+  const excludeClause = "";
 
   // 検索条件の構築
   const searchConditions: string[] = [];
@@ -96,9 +100,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     searchArgs.push(Number(sportTypeId));
   }
 
-  const searchClause = searchConditions.length > 0
-    ? `AND ${searchConditions.join(' AND ')}`
-    : '';
+  const searchClause = searchConditions.length > 0 ? `AND ${searchConditions.join(" AND ")}` : "";
 
   const availableRes = await db.execute({
     sql: `
@@ -150,7 +152,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   return NextResponse.json({
     success: true,
     data: {
-      joined: joinedRes.rows.map(row => ({
+      joined: joinedRes.rows.map((row) => ({
         tournament_id: Number(row.tournament_id),
         tournament_name: String(row.tournament_name),
         event_start_date: getFirstDate(row.tournament_dates),
@@ -161,8 +163,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         participation_status: String(row.participation_status),
         assigned_block: row.assigned_block ? String(row.assigned_block) : null,
         block_position: row.block_position != null ? Number(row.block_position) : null,
-        withdrawal_status: row.withdrawal_status ? String(row.withdrawal_status) : 'active',
-        withdrawal_requested_at: row.withdrawal_requested_at ? String(row.withdrawal_requested_at) : null,
+        withdrawal_status: row.withdrawal_status ? String(row.withdrawal_status) : "active",
+        withdrawal_requested_at: row.withdrawal_requested_at
+          ? String(row.withdrawal_requested_at)
+          : null,
         sport_type_id: row.sport_type_id ? Number(row.sport_type_id) : null,
         tournament_status: row.tournament_status ? String(row.tournament_status) : null,
         recruitment_end_date: row.recruitment_end_date ? String(row.recruitment_end_date) : null,
@@ -171,8 +175,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         logo_blob_url: row.logo_blob_url ? String(row.logo_blob_url) : null,
       })),
       available: availableRes.rows
-        .filter(row => Number(row.started_matches_count || 0) === 0) // 試合が開始されている部門を除外
-        .map(row => ({
+        .filter((row) => Number(row.started_matches_count || 0) === 0) // 試合が開始されている部門を除外
+        .map((row) => ({
           tournament_id: Number(row.tournament_id),
           tournament_name: String(row.tournament_name),
           event_start_date: row.event_start_date ? String(row.event_start_date) : null,

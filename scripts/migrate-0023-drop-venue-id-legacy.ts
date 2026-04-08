@@ -6,11 +6,18 @@
  */
 import { createClient } from "@libsql/client";
 import * as dotenv from "dotenv";
+
 dotenv.config({ path: ".env.local" });
 
 const env = process.argv[2] || "dev";
-const urlKey = env === "dev" ? "DATABASE_URL_DEV" : env === "stag" ? "DATABASE_URL_STAG" : "DATABASE_URL_MAIN";
-const tokenKey = env === "dev" ? "DATABASE_AUTH_TOKEN_DEV" : env === "stag" ? "DATABASE_AUTH_TOKEN_STAG" : "DATABASE_AUTH_TOKEN_MAIN";
+const urlKey =
+  env === "dev" ? "DATABASE_URL_DEV" : env === "stag" ? "DATABASE_URL_STAG" : "DATABASE_URL_MAIN";
+const tokenKey =
+  env === "dev"
+    ? "DATABASE_AUTH_TOKEN_DEV"
+    : env === "stag"
+      ? "DATABASE_AUTH_TOKEN_STAG"
+      : "DATABASE_AUTH_TOKEN_MAIN";
 
 const db = createClient({
   url: process.env[urlKey]!,
@@ -22,7 +29,7 @@ async function run() {
 
   // 1. t_tournaments_new が既に存在するか確認
   const tables = await db.execute(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='t_tournaments_new'"
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='t_tournaments_new'",
   );
 
   if (tables.rows.length === 0) {
@@ -106,7 +113,7 @@ async function run() {
     const cnt = count.rows[0].cnt;
     if (Number(cnt) > 0) {
       const exists = await db.execute(
-        `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}_bak0023'`
+        `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}_bak0023'`,
       );
       if (exists.rows.length === 0) {
         await db.execute(`CREATE TABLE ${table}_bak0023 AS SELECT * FROM ${table}`);
@@ -170,7 +177,7 @@ async function run() {
   const restoreOrder = [...deleteOrder].reverse();
   for (const table of restoreOrder) {
     const bakExists = await db.execute(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}_bak0023'`
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}_bak0023'`,
     );
     if (bakExists.rows.length > 0) {
       const count = await db.execute(`SELECT COUNT(*) as cnt FROM ${table}_bak0023`);
@@ -189,7 +196,7 @@ async function run() {
   console.log("\n🧹 バックアップテーブルを削除...");
   for (const table of childTables) {
     const bakExists = await db.execute(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}_bak0023'`
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}_bak0023'`,
     );
     if (bakExists.rows.length > 0) {
       await db.execute(`DROP TABLE ${table}_bak0023`);
@@ -199,7 +206,9 @@ async function run() {
 
   // 9. 検証
   console.log("\n✅ 検証...");
-  const result = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='t_tournaments'");
+  const result = await db.execute(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='t_tournaments'",
+  );
   const sql = result.rows[0].sql as string;
   if (sql.includes("venue_id_legacy")) {
     console.log("❌ venue_id_legacy がまだ残っています！");

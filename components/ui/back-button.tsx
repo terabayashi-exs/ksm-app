@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface BackButtonProps {
   className?: string;
@@ -17,13 +17,13 @@ export default function BackButton({ className, children }: BackButtonProps) {
   };
 
   return (
-    <Button 
-      variant="ghost" 
+    <Button
+      variant="ghost"
       onClick={handleBack}
-      className={`flex items-center text-gray-600 hover:text-gray-900 ${className || ''}`}
+      className={`flex items-center text-gray-600 hover:text-gray-900 ${className || ""}`}
     >
       <ArrowLeft className="h-4 w-4 mr-2" />
-      {children || '前の画面に戻る'}
+      {children || "前の画面に戻る"}
     </Button>
   );
 }

@@ -14,13 +14,12 @@ export function generateCustomBroadcastEmail(data: {
   const subject = data.title;
 
   // 大会詳細URLの生成
-  const baseUrl = data.baseUrl ||
-                  process.env.NEXT_PUBLIC_BASE_URL ||
-                  process.env.NEXTAUTH_URL ||
-                  'https://taikai-go.com';
-  const tournamentUrl = data.tournamentId
-    ? `${baseUrl}/tournaments/${data.tournamentId}`
-    : null;
+  const baseUrl =
+    data.baseUrl ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXTAUTH_URL ||
+    "https://taikai-go.com";
+  const tournamentUrl = data.tournamentId ? `${baseUrl}/tournaments/${data.tournamentId}` : null;
 
   // URL置換処理
   let processedBody = data.body;
@@ -30,29 +29,32 @@ export function generateCustomBroadcastEmail(data: {
 
   // 処理日時の置換
   const now = new Date();
-  const processedDate = now.toLocaleString('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  const processedDate = now.toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
-    timeZone: 'Asia/Tokyo'
+    timeZone: "Asia/Tokyo",
   });
   processedBody = processedBody.replace(/\[処理日時\]/g, processedDate);
 
   // フッター部分（問い合わせ先）
   const contactFooter = data.organizerEmail
-    ? `\n\nご不明な点がございましたら、${data.organizationName || '大会運営者'}までお問い合わせください。\n${data.organizerEmail}`
-    : '';
+    ? `\n\nご不明な点がございましたら、${data.organizationName || "大会運営者"}までお問い合わせください。\n${data.organizerEmail}`
+    : "";
 
   // 大会情報セクションの生成（大会名と部門名の表示）
-  const tournamentInfoText = (data.groupName || data.tournamentName) ? `━━━━━━━━━━━━━━━━━━━━━━━━
+  const tournamentInfoText =
+    data.groupName || data.tournamentName
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━
 ${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
-${data.groupName && data.tournamentName ? `部門名: ${data.tournamentName}` : ''}
+${data.groupName && data.tournamentName ? `部門名: ${data.tournamentName}` : ""}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-` : '';
+`
+      : "";
 
   const text = `
 ${processedBody}${contactFooter}
@@ -135,33 +137,45 @@ ${tournamentInfoText}大会GO大会運営システム
     </div>
 
     <div class="content">
-      <div class="message-body">${processedBody.replace(/\n/g, '<br>')}</div>
+      <div class="message-body">${processedBody.replace(/\n/g, "<br>")}</div>
 
-      ${data.organizerEmail ? `
+      ${
+        data.organizerEmail
+          ? `
       <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
         <p style="margin: 0; color: #92400e; font-size: 14px;">
           <strong>📧 お問い合わせ先</strong><br>
-          ご不明な点がございましたら、${data.organizationName || '大会運営者'}までお問い合わせください。<br>
+          ご不明な点がございましたら、${data.organizationName || "大会運営者"}までお問い合わせください。<br>
           <a href="mailto:${data.organizerEmail}" style="color: #2563eb; text-decoration: none;">${data.organizerEmail}</a>
         </p>
       </div>
-      ` : ''}
+      `
+          : ""
+      }
 
-      ${data.groupName || data.tournamentName ? `
+      ${
+        data.groupName || data.tournamentName
+          ? `
       <div class="tournament-info">
-        ${data.groupName ? `
+        ${
+          data.groupName
+            ? `
           <strong>📋 大会名: ${data.groupName}</strong>
-          ${data.tournamentName ? `<br><strong>部門名: ${data.tournamentName}</strong>` : ''}
-        ` : `
+          ${data.tournamentName ? `<br><strong>部門名: ${data.tournamentName}</strong>` : ""}
+        `
+            : `
           <strong>📋 大会名: ${data.tournamentName}</strong>
-        `}
+        `
+        }
       </div>
-      ` : ''}
+      `
+          : ""
+      }
     </div>
 
     <div class="footer">
       <p>大会GO大会運営システム</p>
-      <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは大会GOシステムを利用して、${data.organizationName || '大会管理者'}が送信しています。</p>
+      <p style="margin: 5px 0 0 0; font-size: 12px;">このメールは大会GOシステムを利用して、${data.organizationName || "大会管理者"}が送信しています。</p>
     </div>
   </div>
 </body>
@@ -176,15 +190,15 @@ ${tournamentInfoText}大会GO大会運営システム
  */
 export const EMAIL_PRESETS = {
   custom: {
-    id: 'custom',
-    name: 'カスタム（自由記述）',
-    title: '',
-    body: '',
+    id: "custom",
+    name: "カスタム（自由記述）",
+    title: "",
+    body: "",
   },
   scheduleChange: {
-    id: 'scheduleChange',
-    name: '試合日程変更のお知らせ',
-    title: '【重要】試合日程変更のお知らせ',
+    id: "scheduleChange",
+    name: "試合日程変更のお知らせ",
+    title: "【重要】試合日程変更のお知らせ",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -201,9 +215,9 @@ export const EMAIL_PRESETS = {
 ご確認の程、よろしくお願いいたします。`,
   },
   reminder: {
-    id: 'reminder',
-    name: '大会参加リマインド',
-    title: '【リマインド】大会参加について',
+    id: "reminder",
+    name: "大会参加リマインド",
+    title: "【リマインド】大会参加について",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -222,9 +236,9 @@ export const EMAIL_PRESETS = {
 ・持ち物: [ここに記載]`,
   },
   importantNotice: {
-    id: 'importantNotice',
-    name: '重要なお知らせ',
-    title: '【重要】大会に関するお知らせ',
+    id: "importantNotice",
+    name: "重要なお知らせ",
+    title: "【重要】大会に関するお知らせ",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -240,9 +254,9 @@ export const EMAIL_PRESETS = {
 ご確認の程、よろしくお願いいたします。`,
   },
   thankYou: {
-    id: 'thankYou',
-    name: '大会終了のお礼',
-    title: '【お礼】大会へのご参加ありがとうございました',
+    id: "thankYou",
+    name: "大会終了のお礼",
+    title: "【お礼】大会へのご参加ありがとうございました",
     body: `チーム代表者の皆様
 
 お疲れ様でした。大会運営事務局です。
@@ -263,9 +277,9 @@ export const EMAIL_PRESETS = {
 今後ともよろしくお願いいたします。`,
   },
   participationConfirmed: {
-    id: 'participationConfirmed',
-    name: '参加確定通知',
-    title: '【参加確定】大会への参加が確定しました',
+    id: "participationConfirmed",
+    name: "参加確定通知",
+    title: "【参加確定】大会への参加が確定しました",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -285,9 +299,9 @@ export const EMAIL_PRESETS = {
 引き続き、よろしくお願いいたします。`,
   },
   participationNotSelected: {
-    id: 'participationNotSelected',
-    name: '参加見送り通知',
-    title: '【選考結果】大会参加について',
+    id: "participationNotSelected",
+    name: "参加見送り通知",
+    title: "【選考結果】大会参加について",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -309,9 +323,9 @@ export const EMAIL_PRESETS = {
 今後ともよろしくお願いいたします。`,
   },
   withdrawal_approved: {
-    id: 'withdrawal_approved',
-    name: '辞退承認通知',
-    title: '【辞退承認】辞退申請が承認されました',
+    id: "withdrawal_approved",
+    name: "辞退承認通知",
+    title: "【辞退承認】辞退申請が承認されました",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -330,9 +344,9 @@ export const EMAIL_PRESETS = {
 今後ともよろしくお願いいたします。`,
   },
   withdrawal_rejected: {
-    id: 'withdrawal_rejected',
-    name: '辞退却下通知',
-    title: '【辞退却下】辞退申請について',
+    id: "withdrawal_rejected",
+    name: "辞退却下通知",
+    title: "【辞退却下】辞退申請について",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。
@@ -351,9 +365,9 @@ export const EMAIL_PRESETS = {
 ご理解のほど、よろしくお願いいたします。`,
   },
   scheduleAnnouncement: {
-    id: 'scheduleAnnouncement',
-    name: '大会日程・組合せ決定通知',
-    title: '大会日程・組合せが決定しました',
+    id: "scheduleAnnouncement",
+    name: "大会日程・組合せ決定通知",
+    title: "大会日程・組合せが決定しました",
     body: `チーム代表者の皆様
 
 お疲れ様です。大会運営事務局です。

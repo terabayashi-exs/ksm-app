@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { QrCode, Copy, Check, ExternalLink } from 'lucide-react';
+import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function QRCodeContent() {
   const searchParams = useSearchParams();
-  const url = searchParams.get('url');
-  const title = searchParams.get('title') || '';
+  const url = searchParams.get("url");
+  const title = searchParams.get("title") || "";
   const [copied, setCopied] = useState(false);
 
   if (!url) {
@@ -19,7 +19,9 @@ function QRCodeContent() {
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <p className="text-gray-500">URLが指定されていません</p>
-            <Button onClick={() => window.close()} className="mt-4">閉じる</Button>
+            <Button onClick={() => window.close()} className="mt-4">
+              閉じる
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -34,7 +36,7 @@ function QRCodeContent() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Copy failed:', err);
+      console.error("Copy failed:", err);
     }
   };
 
@@ -64,9 +66,9 @@ function QRCodeContent() {
                   className="mx-auto"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
+                    target.style.display = "none";
                     const fallback = target.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
+                    if (fallback) fallback.style.display = "flex";
                   }}
                 />
                 <div className="w-64 h-64 mx-auto bg-gray-50 rounded-lg items-center justify-center text-gray-500 hidden">
@@ -86,21 +88,18 @@ function QRCodeContent() {
 
             {/* アクションボタン */}
             <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={copyToClipboard}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={copyToClipboard} className="flex-1">
                 {copied ? (
-                  <><Check className="w-4 h-4 mr-1.5 text-green-600" /> コピー済み</>
+                  <>
+                    <Check className="w-4 h-4 mr-1.5 text-green-600" /> コピー済み
+                  </>
                 ) : (
-                  <><Copy className="w-4 h-4 mr-1.5" /> URLをコピー</>
+                  <>
+                    <Copy className="w-4 h-4 mr-1.5" /> URLをコピー
+                  </>
                 )}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => window.open(url, '_blank')}
-              >
+              <Button variant="outline" onClick={() => window.open(url, "_blank")}>
                 <ExternalLink className="w-4 h-4 mr-1.5" />
                 開く
               </Button>
@@ -109,7 +108,12 @@ function QRCodeContent() {
         </Card>
 
         <div className="text-center">
-          <Button variant="ghost" size="sm" onClick={() => window.close()} className="text-gray-500">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.close()}
+            className="text-gray-500"
+          >
             ウィンドウを閉じる
           </Button>
         </div>
@@ -120,14 +124,16 @@ function QRCodeContent() {
 
 export default function QRCodePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-          <p className="mt-3 text-sm text-gray-500">QRコード生成中...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+            <p className="mt-3 text-sm text-gray-500">QRコード生成中...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <QRCodeContent />
     </Suspense>
   );

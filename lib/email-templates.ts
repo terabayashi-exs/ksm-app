@@ -27,8 +27,9 @@ export interface WithdrawalEmailVariables {
  */
 export function getWithdrawalApprovedTemplate(): EmailTemplate {
   return {
-    subject: '【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}】辞退申請が承認されました',
-    
+    subject:
+      "【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}】辞退申請が承認されました",
+
     htmlBody: `
 <!DOCTYPE html>
 <html>
@@ -176,7 +177,7 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
 このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
-`
+`,
   };
 }
 
@@ -185,8 +186,8 @@ export function getWithdrawalApprovedTemplate(): EmailTemplate {
  */
 export function getWithdrawalRejectedTemplate(): EmailTemplate {
   return {
-    subject: '【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}】辞退申請について',
-    
+    subject: "【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}】辞退申請について",
+
     htmlBody: `
 <!DOCTYPE html>
 <html>
@@ -332,7 +333,7 @@ export function getWithdrawalRejectedTemplate(): EmailTemplate {
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
 このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
-`
+`,
   };
 }
 
@@ -348,7 +349,7 @@ export interface PasswordResetEmailVariables {
 
 export function getPasswordResetTemplate(): EmailTemplate {
   return {
-    subject: '【大会GO】パスワードリセットのご案内',
+    subject: "【大会GO】パスワードリセットのご案内",
 
     htmlBody: `
 <!DOCTYPE html>
@@ -458,7 +459,7 @@ export function getPasswordResetTemplate(): EmailTemplate {
 心当たりがない場合は、このメールを破棄してください。
 © 大会GO 運営事務局
 ───────────────────────────
-`
+`,
   };
 }
 
@@ -467,8 +468,9 @@ export function getPasswordResetTemplate(): EmailTemplate {
  */
 export function getWithdrawalReceivedTemplate(): EmailTemplate {
   return {
-    subject: '【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}{{#if categoryName}} ({{categoryName}}){{/if}}】辞退申請を受け付けました',
-    
+    subject:
+      "【{{#if groupName}}{{groupName}}{{else}}{{tournamentName}}{{/if}}{{#if categoryName}} ({{categoryName}}){{/if}}】辞退申請を受け付けました",
+
     htmlBody: `
 <!DOCTYPE html>
 <html>
@@ -562,6 +564,6 @@ export function getWithdrawalReceivedTemplate(): EmailTemplate {
 {{#if contactEmail}}お問い合わせ: {{contactEmail}}{{#if contactPhone}} | 電話: {{contactPhone}}{{/if}}{{/if}}
 このメールは大会GOシステムを利用して、{{#if organizationName}}{{organizationName}}{{else}}大会管理者{{/if}}が送信しています。
 ───────────────────────────
-`
+`,
   };
 }

@@ -1,25 +1,22 @@
 // app/api/admin/tournaments/search/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const keyword = searchParams.get('keyword') || '';
-    const prefectureId = searchParams.get('prefecture_id') || '';
-    const sportTypeId = searchParams.get('sport_type_id') || '';
+    const keyword = searchParams.get("keyword") || "";
+    const prefectureId = searchParams.get("prefecture_id") || "";
+    const sportTypeId = searchParams.get("sport_type_id") || "";
 
     const userId = session.user.id;
-    const isAdmin = userId === 'admin';
+    const isAdmin = userId === "admin";
 
     const params: (string | number)[] = [];
 
@@ -88,25 +85,28 @@ export async function GET(request: NextRequest) {
     const result = await db.execute(query, params);
 
     // グループ単位でまとめる
-    const groupMap = new Map<number, {
-      group_id: number;
-      group_name: string;
-      organizer: string | null;
-      event_start_date: string | null;
-      event_end_date: string | null;
-      divisions: Array<{
-        tournament_id: number;
-        tournament_name: string;
-        format_name: string | null;
-        sport_type_id: number | null;
-        sport_name: string | null;
-        sport_code: string | null;
-        team_count: number;
-        registered_teams: number;
-        status: string;
-        tournament_dates: string | null;
-      }>;
-    }>();
+    const groupMap = new Map<
+      number,
+      {
+        group_id: number;
+        group_name: string;
+        organizer: string | null;
+        event_start_date: string | null;
+        event_end_date: string | null;
+        divisions: Array<{
+          tournament_id: number;
+          tournament_name: string;
+          format_name: string | null;
+          sport_type_id: number | null;
+          sport_name: string | null;
+          sport_code: string | null;
+          team_count: number;
+          registered_teams: number;
+          status: string;
+          tournament_dates: string | null;
+        }>;
+      }
+    >();
 
     for (const row of result.rows) {
       const groupId = Number(row.group_id);
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
         sport_code: row.sport_code ? String(row.sport_code) : null,
         team_count: Number(row.team_count || 0),
         registered_teams: Number(row.registered_teams || 0),
-        status: String(row.status || 'planning'),
+        status: String(row.status || "planning"),
         tournament_dates: row.tournament_dates ? String(row.tournament_dates) : null,
       });
     }
@@ -140,10 +140,7 @@ export async function GET(request: NextRequest) {
       data: Array.from(groupMap.values()),
     });
   } catch (error) {
-    console.error('[SEARCH] 部門検索エラー:', error);
-    return NextResponse.json(
-      { success: false, error: '検索に失敗しました' },
-      { status: 500 }
-    );
+    console.error("[SEARCH] 部門検索エラー:", error);
+    return NextResponse.json({ success: false, error: "検索に失敗しました" }, { status: 500 });
   }
 }

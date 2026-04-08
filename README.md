@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KSM-App
 
-## Getting Started
+PK選手権大会の運営システム。大会情報の登録、チーム・選手管理、試合スケジュール作成、結果入力・公開まで、大会運営の全フローをカバーするWebアプリケーションです。
 
-First, run the development server:
+## 技術スタック
+
+- **フレームワーク**: Next.js 15.5.7 (App Router) + React 19.0.0
+- **言語**: TypeScript 5.x
+- **スタイリング**: Tailwind CSS 4 + shadcn/ui
+- **データベース**: Turso (libSQL) + Drizzle ORM
+- **認証**: NextAuth.js 4.24.11
+- **デプロイ**: Vercel
+
+## クイックスタート
 
 ```bash
+# 開発ツールのインストール（macOS）
+brew bundle
+
+# Node.jsバージョンの設定
+mise install
+
+# 依存関係のインストール
+npm install
+
+# 環境変数の設定
+cp .env.example .env.local
+# .env.localを編集（チームリーダーから取得）
+
+# データベースの初期化
+npm run db:migrate
+npm run db:seed-master
+
+# 開発サーバーの起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+詳細は[新規開発者ガイド](./docs/guides/onboarding.md)を参照してください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ドキュメント
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [プロジェクト仕様書](./CLAUDE.md) — 全体概要・開発ルール
+- [新規開発者ガイド](./docs/guides/onboarding.md) — セットアップ手順
+- [アーキテクチャ設計](./docs/specs/architecture.md) — 技術詳細
+- [データベース設計](./docs/specs/database.md) — テーブル設計
+- [実装済み機能一覧](./docs/features/implemented-features.md) — 機能仕様
+- [ドキュメント索引](./docs/README.md) — 全ドキュメント一覧

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Notice {
   tournament_notice_id: number;
@@ -16,10 +16,10 @@ interface Props {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
+  return date.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 }
 
@@ -64,13 +64,9 @@ export default function PublicNoticeList({ tournamentId }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
-                {notice.content}
-              </p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">{notice.content}</p>
               {notice.updated_at && (
-                <div className="text-xs text-gray-500">
-                  📅 {formatDate(notice.updated_at)}
-                </div>
+                <div className="text-xs text-gray-500">📅 {formatDate(notice.updated_at)}</div>
               )}
             </CardContent>
           </Card>

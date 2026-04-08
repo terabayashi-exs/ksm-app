@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useRef, useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ScrollableContainerProps {
   children: React.ReactNode;
@@ -56,10 +56,10 @@ export function ScrollableContainer({
   }, [updateScrollState]);
 
   // 矢印クリック
-  const scrollByAmount = (direction: 'left' | 'right') => {
+  const scrollByAmount = (direction: "left" | "right") => {
     scrollRef.current?.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
     });
   };
 
@@ -73,8 +73,8 @@ export function ScrollableContainer({
     hasMoved.current = false;
     startX.current = e.pageX;
     scrollLeftStart.current = el.scrollLeft;
-    el.style.cursor = 'grabbing';
-    el.style.userSelect = 'none';
+    el.style.cursor = "grabbing";
+    el.style.userSelect = "none";
   }, []);
 
   // ドラッグ中・終了（document に付与）
@@ -94,35 +94,35 @@ export function ScrollableContainer({
       isDragging.current = false;
       const el = scrollRef.current;
       if (el) {
-        el.style.cursor = '';
-        el.style.userSelect = '';
+        el.style.cursor = "";
+        el.style.userSelect = "";
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
 
   const isScrollable = canScrollLeft || canScrollRight;
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn("relative", className)}>
       {/* スクロール領域 */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         onMouseDown={handleMouseDown}
         className={cn(
-          'overflow-x-auto',
-          isScrollable && 'cursor-grab',
+          "overflow-x-auto",
+          isScrollable && "cursor-grab",
           // スクロールバー非表示
-          '[&::-webkit-scrollbar]:hidden',
+          "[&::-webkit-scrollbar]:hidden",
         )}
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
       >
         {children}
       </div>
@@ -130,15 +130,15 @@ export function ScrollableContainer({
       {/* 左矢印 */}
       <div
         className={cn(
-          'print:hidden absolute left-0 top-0 bottom-0 z-10 flex items-center',
-          'pointer-events-none transition-opacity duration-200',
-          canScrollLeft ? 'opacity-100' : 'opacity-0',
+          "print:hidden absolute left-0 top-0 bottom-0 z-10 flex items-center",
+          "pointer-events-none transition-opacity duration-200",
+          canScrollLeft ? "opacity-100" : "opacity-0",
         )}
       >
         <div className="pointer-events-auto pl-1">
           <button
             type="button"
-            onClick={() => scrollByAmount('left')}
+            onClick={() => scrollByAmount("left")}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/50 shadow-sm border border-gray-200/50 hover:bg-white/80 transition-colors"
             aria-label="左にスクロール"
           >
@@ -150,15 +150,15 @@ export function ScrollableContainer({
       {/* 右矢印 */}
       <div
         className={cn(
-          'print:hidden absolute right-0 top-0 bottom-0 z-10 flex items-center',
-          'pointer-events-none transition-opacity duration-200',
-          canScrollRight ? 'opacity-100' : 'opacity-0',
+          "print:hidden absolute right-0 top-0 bottom-0 z-10 flex items-center",
+          "pointer-events-none transition-opacity duration-200",
+          canScrollRight ? "opacity-100" : "opacity-0",
         )}
       >
         <div className="pointer-events-auto pr-1">
           <button
             type="button"
-            onClick={() => scrollByAmount('right')}
+            onClick={() => scrollByAmount("right")}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/50 shadow-sm border border-gray-200/50 hover:bg-white/80 transition-colors"
             aria-label="右にスクロール"
           >
@@ -170,20 +170,20 @@ export function ScrollableContainer({
       {/* 左グラデーション */}
       <div
         className={cn(
-          'print:hidden absolute left-0 top-0 bottom-0 w-8 pointer-events-none',
-          'bg-gradient-to-r from-white/40 to-transparent',
-          'transition-opacity duration-200',
-          canScrollLeft ? 'opacity-100' : 'opacity-0',
+          "print:hidden absolute left-0 top-0 bottom-0 w-8 pointer-events-none",
+          "bg-gradient-to-r from-white/40 to-transparent",
+          "transition-opacity duration-200",
+          canScrollLeft ? "opacity-100" : "opacity-0",
         )}
       />
 
       {/* 右グラデーション */}
       <div
         className={cn(
-          'print:hidden absolute right-0 top-0 bottom-0 w-8 pointer-events-none',
-          'bg-gradient-to-l from-white/40 to-transparent',
-          'transition-opacity duration-200',
-          canScrollRight ? 'opacity-100' : 'opacity-0',
+          "print:hidden absolute right-0 top-0 bottom-0 w-8 pointer-events-none",
+          "bg-gradient-to-l from-white/40 to-transparent",
+          "transition-opacity duration-200",
+          canScrollRight ? "opacity-100" : "opacity-0",
         )}
       />
     </div>

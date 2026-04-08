@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface ArchivedHtmlViewerProps {
   tournamentId: string;
@@ -12,13 +12,13 @@ export function ArchivedHtmlViewer({ tournamentId }: ArchivedHtmlViewerProps) {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'archive-height' && typeof event.data.height === 'number') {
+      if (event.data?.type === "archive-height" && typeof event.data.height === "number") {
         setHeight(event.data.height + 20); // Add small buffer
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   return (
@@ -26,7 +26,7 @@ export function ArchivedHtmlViewer({ tournamentId }: ArchivedHtmlViewerProps) {
       ref={iframeRef}
       src={`/api/tournaments/${tournamentId}/archived-html`}
       className="w-full border-0 rounded-lg"
-      style={{ minHeight: '100vh', height: `${height}px` }}
+      style={{ minHeight: "100vh", height: `${height}px` }}
       title="アーカイブ表示"
       sandbox="allow-scripts allow-same-origin"
     />

@@ -1,23 +1,25 @@
-import { createClient } from '@libsql/client';
-import * as dotenv from 'dotenv';
-import * as fs from 'fs';
-import * as path from 'path';
+import { createClient } from "@libsql/client";
+import * as dotenv from "dotenv";
+import * as fs from "fs";
+import * as path from "path";
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 
 // 環境に応じた接続情報を取得
-const env = process.argv[2] || 'dev';
-const dbUrl = env === 'stag'
-  ? process.env.DATABASE_URL_STAG
-  : env === 'main'
-  ? process.env.DATABASE_URL_MAIN
-  : process.env.DATABASE_URL;
+const env = process.argv[2] || "dev";
+const dbUrl =
+  env === "stag"
+    ? process.env.DATABASE_URL_STAG
+    : env === "main"
+      ? process.env.DATABASE_URL_MAIN
+      : process.env.DATABASE_URL;
 
-const dbToken = env === 'stag'
-  ? process.env.DATABASE_AUTH_TOKEN_STAG
-  : env === 'main'
-  ? process.env.DATABASE_AUTH_TOKEN_MAIN
-  : process.env.DATABASE_AUTH_TOKEN;
+const dbToken =
+  env === "stag"
+    ? process.env.DATABASE_AUTH_TOKEN_STAG
+    : env === "main"
+      ? process.env.DATABASE_AUTH_TOKEN_MAIN
+      : process.env.DATABASE_AUTH_TOKEN;
 
 const db = createClient({
   url: dbUrl!,
@@ -31,8 +33,8 @@ interface Migration {
 }
 
 async function getMigrationsJournal(): Promise<Migration[]> {
-  const journalPath = path.join(process.cwd(), 'drizzle/meta/_journal.json');
-  const journal = JSON.parse(fs.readFileSync(journalPath, 'utf-8'));
+  const journalPath = path.join(process.cwd(), "drizzle/meta/_journal.json");
+  const journal = JSON.parse(fs.readFileSync(journalPath, "utf-8"));
   return journal.entries;
 }
 
@@ -52,7 +54,7 @@ async function ensureMigrationsTable(): Promise<void> {
 
 async function getAppliedMigrations(): Promise<Set<string>> {
   try {
-    const result = await db.execute('SELECT hash FROM __drizzle_migrations');
+    const result = await db.execute("SELECT hash FROM __drizzle_migrations");
     return new Set(result.rows.map((row: any) => row.hash));
   } catch (error) {
     // テーブルが存在しない場合は空のセットを返す
@@ -63,26 +65,25 @@ async function getAppliedMigrations(): Promise<Set<string>> {
 async function executeMigrationFile(filePath: string, tag: string): Promise<void> {
   console.log(`\n📄 適用中: ${tag}`);
 
-  let sql = fs.readFileSync(filePath, 'utf-8');
+  let sql = fs.readFileSync(filePath, "utf-8");
 
   // ブロックコメント /* ... */ を削除
-  sql = sql.replace(/\/\*[\s\S]*?\*\//g, '');
+  sql = sql.replace(/\/\*[\s\S]*?\*\//g, "");
 
   // SQLをセミコロンで分割（空白行やコメントを除外）
   const statements = sql
-    .split(';')
-    .map(s => {
+    .split(";")
+    .map((s) => {
       // 各文からコメント行を除去して実際のSQLのみ抽出
-      const lines = s.split('\n').filter(line => {
+      const lines = s.split("\n").filter((line) => {
         const trimmed = line.trim();
-        return trimmed.length > 0 && !trimmed.startsWith('--');
+        return trimmed.length > 0 && !trimmed.startsWith("--");
       });
-      return lines.join('\n').trim();
+      return lines.join("\n").trim();
     })
-    .filter(s => {
+    .filter((s) => {
       // 空白、SELECTプレースホルダーを除外
-      return s.length > 0 &&
-             s !== 'SELECT 1';
+      return s.length > 0 && s !== "SELECT 1";
     });
 
   if (statements.length === 0) {
@@ -93,26 +94,26 @@ async function executeMigrationFile(filePath: string, tag: string): Promise<void
   for (const statement of statements) {
     try {
       await db.execute(statement);
-      console.log(`  ✓ ${statement.substring(0, 60).replace(/\n/g, ' ')}...`);
+      console.log(`  ✓ ${statement.substring(0, 60).replace(/\n/g, " ")}...`);
     } catch (error: any) {
       // 無視可能なエラー（既に適用済みの変更）
-      const ignorableErrors = [
-        'already exists',
-        'duplicate',
-        'no such column',
-      ];
+      const ignorableErrors = ["already exists", "duplicate", "no such column"];
 
       // DROP/ALTER文で「no such table」の場合もスキップ（既に削除/リネーム済み）
       const isDropOrAlterTable = /^\s*(DROP|ALTER)\s+TABLE/i.test(statement);
-      if (isDropOrAlterTable && error.message?.includes('no such table')) {
-        console.log(`  ⊘ スキップ: ${statement.substring(0, 60).replace(/\n/g, ' ')}... (既に適用済み)`);
+      if (isDropOrAlterTable && error.message?.includes("no such table")) {
+        console.log(
+          `  ⊘ スキップ: ${statement.substring(0, 60).replace(/\n/g, " ")}... (既に適用済み)`,
+        );
         continue;
       }
 
-      const shouldIgnore = ignorableErrors.some(msg => error.message?.includes(msg));
+      const shouldIgnore = ignorableErrors.some((msg) => error.message?.includes(msg));
 
       if (shouldIgnore) {
-        console.log(`  ⊘ スキップ: ${statement.substring(0, 60).replace(/\n/g, ' ')}... (既に適用済み)`);
+        console.log(
+          `  ⊘ スキップ: ${statement.substring(0, 60).replace(/\n/g, " ")}... (既に適用済み)`,
+        );
       } else {
         throw error;
       }
@@ -123,12 +124,12 @@ async function executeMigrationFile(filePath: string, tag: string): Promise<void
 async function recordMigration(idx: number, tag: string, when: number): Promise<void> {
   try {
     await db.execute({
-      sql: 'INSERT INTO __drizzle_migrations (id, hash, created_at) VALUES (?, ?, ?)',
-      args: [idx + 1, tag, when]
+      sql: "INSERT INTO __drizzle_migrations (id, hash, created_at) VALUES (?, ?, ?)",
+      args: [idx + 1, tag, when],
     });
     console.log(`  ✓ マイグレーション履歴に記録: ${tag}`);
   } catch (error: any) {
-    if (error.message?.includes('UNIQUE constraint')) {
+    if (error.message?.includes("UNIQUE constraint")) {
       console.log(`  ⊘ 既に記録済み: ${tag}`);
     } else {
       throw error;
@@ -137,9 +138,9 @@ async function recordMigration(idx: number, tag: string, when: number): Promise<
 }
 
 async function migrate() {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`  Turso対応マイグレーター (環境: ${env})`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   try {
     // マイグレーション履歴テーブルを作成（存在しない場合）
@@ -154,10 +155,10 @@ async function migrate() {
     console.log(`✓ 適用済み: ${appliedMigrations.size}件`);
 
     // 未適用のマイグレーションをフィルタリング
-    const pendingMigrations = allMigrations.filter(m => !appliedMigrations.has(m.tag));
+    const pendingMigrations = allMigrations.filter((m) => !appliedMigrations.has(m.tag));
 
     if (pendingMigrations.length === 0) {
-      console.log('\n✨ 全てのマイグレーションが適用済みです');
+      console.log("\n✨ 全てのマイグレーションが適用済みです");
       return;
     }
 
@@ -178,12 +179,11 @@ async function migrate() {
       await recordMigration(migration.idx, migration.tag, migration.when);
     }
 
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  ✅ マイグレーション完了');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("  ✅ マイグレーション完了");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   } catch (error) {
-    console.error('\n❌ エラーが発生しました:', error);
+    console.error("\n❌ エラーが発生しました:", error);
     throw error;
   }
 }

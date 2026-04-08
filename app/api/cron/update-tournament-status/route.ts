@@ -1,7 +1,7 @@
 // app/api/cron/update-tournament-status/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { calculateTournamentStatusSync } from '@/lib/tournament-status';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { calculateTournamentStatusSync } from "@/lib/tournament-status";
 
 /**
  * Vercel Cron: 大会ステータス自動更新
@@ -12,17 +12,14 @@ import { calculateTournamentStatusSync } from '@/lib/tournament-status';
 export async function GET(request: NextRequest) {
   try {
     // Vercel Cronからのリクエストか確認
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log('🔄 [CRON] 大会ステータス自動更新開始');
+    console.log("🔄 [CRON] 大会ステータス自動更新開始");
 
     // 1. 全大会を取得（アーカイブ済みを除く）
     const result = await db.execute(`
@@ -50,7 +47,7 @@ export async function GET(request: NextRequest) {
       const currentStatus = String(row.status);
 
       // 管理者が明示的に設定したステータスは保持
-      if (currentStatus === 'ongoing' || currentStatus === 'completed') {
+      if (currentStatus === "ongoing" || currentStatus === "completed") {
         unchanged++;
         continue;
       }
@@ -66,11 +63,14 @@ export async function GET(request: NextRequest) {
 
       // ステータスが変更された場合のみ更新
       if (currentStatus !== newStatus) {
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_tournaments
           SET status = ?, updated_at = datetime('now', '+9 hours')
           WHERE tournament_id = ?
-        `, [newStatus, row.tournament_id]);
+        `,
+          [newStatus, row.tournament_id],
+        );
 
         updates.push({
           id: Number(row.tournament_id),
@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
     console.log(`   更新: ${updated}件, 変更なし: ${unchanged}件`);
 
     if (updates.length > 0) {
-      console.log('📝 [CRON] 更新された大会:');
-      updates.forEach(u => {
+      console.log("📝 [CRON] 更新された大会:");
+      updates.forEach((u) => {
         console.log(`   ID:${u.id} ${u.name}: ${u.old} → ${u.new}`);
       });
     }
@@ -101,20 +101,19 @@ export async function GET(request: NextRequest) {
         total: result.rows.length,
         updated,
         unchanged,
-        updates
+        updates,
       },
-      message: `大会ステータスを自動更新しました（${updated}件更新）`
+      message: `大会ステータスを自動更新しました（${updated}件更新）`,
     });
-
   } catch (error) {
-    console.error('❌ [CRON] 大会ステータス自動更新エラー:', error);
+    console.error("❌ [CRON] 大会ステータス自動更新エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        error: '大会ステータスの自動更新に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "大会ステータスの自動更新に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -23,7 +23,7 @@
  * @returns 数値配列（パース失敗時は [0]）
  */
 export function parseScoreArray(
-  score: string | number | bigint | ArrayBuffer | null | undefined
+  score: string | number | bigint | ArrayBuffer | null | undefined,
 ): number[] {
   // null/undefinedの場合
   if (score === null || score === undefined) {
@@ -31,12 +31,12 @@ export function parseScoreArray(
   }
 
   // 数値型の場合
-  if (typeof score === 'number') {
+  if (typeof score === "number") {
     return isNaN(score) ? [0] : [score];
   }
 
   // bigint型の場合
-  if (typeof score === 'bigint') {
+  if (typeof score === "bigint") {
     return [Number(score)];
   }
 
@@ -48,33 +48,33 @@ export function parseScoreArray(
   }
 
   // 文字列型の場合
-  if (typeof score === 'string') {
+  if (typeof score === "string") {
     const trimmed = score.trim();
 
     // 空文字列
-    if (trimmed === '') {
+    if (trimmed === "") {
       return [0];
     }
 
     // JSON配列形式: "[2,1]" または "[2, 1]"
-    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsed.map(n => {
+          return parsed.map((n) => {
             const num = Number(n);
             return isNaN(num) ? 0 : num;
           });
         }
       } catch (error) {
-        console.warn('JSON parse failed for score:', trimmed, error);
+        console.warn("JSON parse failed for score:", trimmed, error);
         return [0];
       }
     }
 
     // カンマ区切り形式（レガシー）: "2,1"
-    if (trimmed.includes(',')) {
-      return trimmed.split(',').map(s => {
+    if (trimmed.includes(",")) {
+      return trimmed.split(",").map((s) => {
         const num = parseInt(s.trim(), 10);
         return isNaN(num) ? 0 : num;
       });
@@ -86,7 +86,7 @@ export function parseScoreArray(
   }
 
   // それ以外の型
-  console.warn('Unexpected score type:', typeof score, score);
+  console.warn("Unexpected score type:", typeof score, score);
   return [0];
 }
 
@@ -97,7 +97,7 @@ export function parseScoreArray(
  * @returns 合計スコア
  */
 export function parseTotalScore(
-  score: string | number | bigint | ArrayBuffer | null | undefined
+  score: string | number | bigint | ArrayBuffer | null | undefined,
 ): number {
   const scores = parseScoreArray(score);
   return scores.reduce((sum, s) => sum + s, 0);
@@ -112,11 +112,11 @@ export function parseTotalScore(
 export function formatScoreArray(scores: number[] | number | null | undefined): string {
   // null/undefinedの場合
   if (scores === null || scores === undefined) {
-    return '[0]';
+    return "[0]";
   }
 
   // 数値の場合
-  if (typeof scores === 'number') {
+  if (typeof scores === "number") {
     return JSON.stringify([scores]);
   }
 
@@ -124,11 +124,11 @@ export function formatScoreArray(scores: number[] | number | null | undefined): 
   if (Array.isArray(scores)) {
     // 空配列の場合
     if (scores.length === 0) {
-      return '[0]';
+      return "[0]";
     }
 
     // 数値に変換して整形
-    const sanitized = scores.map(s => {
+    const sanitized = scores.map((s) => {
       const num = Number(s);
       return isNaN(num) ? 0 : Math.floor(num);
     });
@@ -137,8 +137,8 @@ export function formatScoreArray(scores: number[] | number | null | undefined): 
   }
 
   // その他の型
-  console.warn('Unexpected scores type:', typeof scores, scores);
-  return '[0]';
+  console.warn("Unexpected scores type:", typeof scores, scores);
+  return "[0]";
 }
 
 /**
@@ -148,7 +148,7 @@ export function formatScoreArray(scores: number[] | number | null | undefined): 
  * @returns 有効な場合true
  */
 export function isValidScore(
-  score: string | number | bigint | ArrayBuffer | null | undefined
+  score: string | number | bigint | ArrayBuffer | null | undefined,
 ): boolean {
   if (score === null || score === undefined) {
     return false;
@@ -156,7 +156,7 @@ export function isValidScore(
 
   try {
     const parsed = parseScoreArray(score);
-    return parsed.length > 0 && parsed.some(s => s > 0);
+    return parsed.length > 0 && parsed.some((s) => s > 0);
   } catch {
     return false;
   }
@@ -171,11 +171,9 @@ export function isValidScore(
  */
 export function formatScoreDisplay(
   scores: number[] | string | null | undefined,
-  separator: string = '-'
+  separator: string = "-",
 ): string {
-  const scoreArray = typeof scores === 'string'
-    ? parseScoreArray(scores)
-    : (scores || [0]);
+  const scoreArray = typeof scores === "string" ? parseScoreArray(scores) : scores || [0];
 
   return scoreArray.join(separator);
 }

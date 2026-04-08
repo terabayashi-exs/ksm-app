@@ -1,11 +1,11 @@
 // lib/pk-detection-utils.ts
 
 export interface PKDetectionResult {
-  pkIndex: number;        // PK戦スコアの配列インデックス（-1の場合PK戦なし）
-  regularCount: number;   // 通常時間ピリオド数（延長含む）
+  pkIndex: number; // PK戦スコアの配列インデックス（-1の場合PK戦なし）
+  regularCount: number; // 通常時間ピリオド数（延長含む）
   totalRegularGoals: number; // 通常時間の合計得点
-  pkGoals: number;        // PK戦得点
-  hasPK: boolean;         // PK戦が実際に行われたか
+  pkGoals: number; // PK戦得点
+  hasPK: boolean; // PK戦が実際に行われたか
   detectionMethod: string; // 検出方法（デバッグ用）
 }
 
@@ -14,7 +14,7 @@ export interface PKDetectionResult {
  */
 export function detectPKData(scores: number[], rulePeriods?: string[]): PKDetectionResult {
   const scoresArray = Array.isArray(scores) ? scores : [];
-  
+
   // 空配列やnullの場合
   if (scoresArray.length === 0) {
     return {
@@ -23,7 +23,7 @@ export function detectPKData(scores: number[], rulePeriods?: string[]): PKDetect
       totalRegularGoals: 0,
       pkGoals: 0,
       hasPK: false,
-      detectionMethod: 'empty_array'
+      detectionMethod: "empty_array",
     };
   }
 
@@ -43,14 +43,14 @@ export function detectPKData(scores: number[], rulePeriods?: string[]): PKDetect
  * ルール設定に基づくPK戦検出
  */
 function detectPKByRule(scores: number[], rulePeriods: string[]): PKDetectionResult | null {
-  const hasFirstHalf = rulePeriods.includes('1');
-  const hasSecondHalf = rulePeriods.includes('2');
-  const hasExtraFirst = rulePeriods.includes('3');
-  const hasExtraSecond = rulePeriods.includes('4');
-  const hasPKRule = rulePeriods.includes('5');
+  const hasFirstHalf = rulePeriods.includes("1");
+  const hasSecondHalf = rulePeriods.includes("2");
+  const hasExtraFirst = rulePeriods.includes("3");
+  const hasExtraSecond = rulePeriods.includes("4");
+  const hasPKRule = rulePeriods.includes("5");
 
   if (!hasFirstHalf || !hasSecondHalf) {
-    console.warn('⚠️ 不正なルール設定: 前半・後半が必須です', rulePeriods);
+    console.warn("⚠️ 不正なルール設定: 前半・後半が必須です", rulePeriods);
     return null;
   }
 
@@ -67,7 +67,7 @@ function detectPKByRule(scores: number[], rulePeriods: string[]): PKDetectionRes
     const regularCount = hasPKRule ? expectedLength - 1 : expectedLength;
     const pkIndex = hasPKRule ? expectedLength - 1 : -1;
     const totalRegularGoals = scores.slice(0, regularCount).reduce((sum, score) => sum + score, 0);
-    const pkGoals = hasPKRule && pkIndex >= 0 ? (scores[pkIndex] || 0) : 0;
+    const pkGoals = hasPKRule && pkIndex >= 0 ? scores[pkIndex] || 0 : 0;
 
     return {
       pkIndex,
@@ -75,15 +75,18 @@ function detectPKByRule(scores: number[], rulePeriods: string[]): PKDetectionRes
       totalRegularGoals,
       pkGoals,
       hasPK: pkGoals > 0,
-      detectionMethod: `rule_based_${expectedLength}_elements`
+      detectionMethod: `rule_based_${expectedLength}_elements`,
     };
   }
 
-  console.warn(`⚠️ スコア配列長とルール設定が不整合: expected=${expectedLength}, actual=${scores.length}`, {
-    scores,
-    rulePeriods,
-    expectedLength
-  });
+  console.warn(
+    `⚠️ スコア配列長とルール設定が不整合: expected=${expectedLength}, actual=${scores.length}`,
+    {
+      scores,
+      rulePeriods,
+      expectedLength,
+    },
+  );
 
   return null; // ルールベース検出失敗、パターンベースにフォールバック
 }
@@ -102,7 +105,7 @@ function detectPKByPattern(scores: number[]): PKDetectionResult {
       totalRegularGoals: scores[0] + scores[1],
       pkGoals: 0,
       hasPK: false,
-      detectionMethod: 'pattern_2_no_pk'
+      detectionMethod: "pattern_2_no_pk",
     };
   }
 
@@ -115,7 +118,7 @@ function detectPKByPattern(scores: number[]): PKDetectionResult {
       totalRegularGoals: scores[0] + scores[1],
       pkGoals,
       hasPK: pkGoals > 0,
-      detectionMethod: 'pattern_3_regular_pk'
+      detectionMethod: "pattern_3_regular_pk",
     };
   }
 
@@ -127,7 +130,7 @@ function detectPKByPattern(scores: number[]): PKDetectionResult {
       totalRegularGoals: scores[0] + scores[1] + scores[2] + scores[3],
       pkGoals: 0,
       hasPK: false,
-      detectionMethod: 'pattern_4_extra_no_pk'
+      detectionMethod: "pattern_4_extra_no_pk",
     };
   }
 
@@ -140,7 +143,7 @@ function detectPKByPattern(scores: number[]): PKDetectionResult {
       totalRegularGoals: scores[0] + scores[1] + scores[2] + scores[3],
       pkGoals,
       hasPK: pkGoals > 0,
-      detectionMethod: 'pattern_5_extra_pk'
+      detectionMethod: "pattern_5_extra_pk",
     };
   }
 
@@ -158,35 +161,38 @@ function detectPKByPattern(scores: number[]): PKDetectionResult {
       totalRegularGoals,
       pkGoals,
       hasPK: pkGoals > 0,
-      detectionMethod: `pattern_${length}_abnormal_last_pk`
+      detectionMethod: `pattern_${length}_abnormal_last_pk`,
     };
   }
 
   // パターン6: 1要素のみ（異常）
-  console.warn('⚠️ スコア配列が1要素のみです', scores);
+  console.warn("⚠️ スコア配列が1要素のみです", scores);
   return {
     pkIndex: -1,
     regularCount: 1,
     totalRegularGoals: scores[0] || 0,
     pkGoals: 0,
     hasPK: false,
-    detectionMethod: 'pattern_1_abnormal'
+    detectionMethod: "pattern_1_abnormal",
   };
 }
 
 /**
  * スコア文字列からPK戦情報を検出
  */
-export function detectPKFromScoreString(scoreString: string, rulePeriods?: string[]): PKDetectionResult {
-  if (!scoreString || typeof scoreString !== 'string') {
+export function detectPKFromScoreString(
+  scoreString: string,
+  rulePeriods?: string[],
+): PKDetectionResult {
+  if (!scoreString || typeof scoreString !== "string") {
     return detectPKData([], rulePeriods);
   }
 
   try {
-    const scores = scoreString.split(',').map(s => parseInt(s.trim()) || 0);
+    const scores = scoreString.split(",").map((s) => parseInt(s.trim()) || 0);
     return detectPKData(scores, rulePeriods);
   } catch (error) {
-    console.error('❌ スコア文字列の解析エラー:', error, scoreString);
+    console.error("❌ スコア文字列の解析エラー:", error, scoreString);
     return detectPKData([], rulePeriods);
   }
 }
@@ -197,7 +203,7 @@ export function detectPKFromScoreString(scoreString: string, rulePeriods?: strin
 export function determinePKWinner(
   team1Scores: string | number[],
   team2Scores: string | number[],
-  rulePeriods?: string[]
+  rulePeriods?: string[],
 ): {
   team1PK: PKDetectionResult;
   team2PK: PKDetectionResult;
@@ -205,13 +211,17 @@ export function determinePKWinner(
   isActualPKGame: boolean;
 } {
   // スコア正規化
-  const scores1 = Array.isArray(team1Scores) 
-    ? team1Scores 
-    : (typeof team1Scores === 'string' ? team1Scores.split(',').map(s => parseInt(s.trim()) || 0) : []);
-  
+  const scores1 = Array.isArray(team1Scores)
+    ? team1Scores
+    : typeof team1Scores === "string"
+      ? team1Scores.split(",").map((s) => parseInt(s.trim()) || 0)
+      : [];
+
   const scores2 = Array.isArray(team2Scores)
     ? team2Scores
-    : (typeof team2Scores === 'string' ? team2Scores.split(',').map(s => parseInt(s.trim()) || 0) : []);
+    : typeof team2Scores === "string"
+      ? team2Scores.split(",").map((s) => parseInt(s.trim()) || 0)
+      : [];
 
   const team1PK = detectPKData(scores1, rulePeriods);
   const team2PK = detectPKData(scores2, rulePeriods);
@@ -229,7 +239,7 @@ export function determinePKWinner(
     team1PK,
     team2PK,
     pkWinnerIsTeam1,
-    isActualPKGame
+    isActualPKGame,
   };
 }
 
@@ -239,17 +249,17 @@ export function determinePKWinner(
 export function debugPKDetection(
   team1Scores: string | number[],
   team2Scores: string | number[],
-  rulePeriods?: string[]
+  rulePeriods?: string[],
 ): void {
-  console.log('🥅 PK戦検出デバッグ:');
-  console.log('  - チーム1スコア:', team1Scores);
-  console.log('  - チーム2スコア:', team2Scores);
-  console.log('  - ルール設定:', rulePeriods);
+  console.log("🥅 PK戦検出デバッグ:");
+  console.log("  - チーム1スコア:", team1Scores);
+  console.log("  - チーム2スコア:", team2Scores);
+  console.log("  - ルール設定:", rulePeriods);
 
   const result = determinePKWinner(team1Scores, team2Scores, rulePeriods);
-  
-  console.log('  - チーム1 PK検出:', result.team1PK);
-  console.log('  - チーム2 PK検出:', result.team2PK);
-  console.log('  - 実際のPK戦:', result.isActualPKGame);
-  console.log('  - PK戦勝者（チーム1）:', result.pkWinnerIsTeam1);
+
+  console.log("  - チーム1 PK検出:", result.team1PK);
+  console.log("  - チーム2 PK検出:", result.team2PK);
+  console.log("  - 実際のPK戦:", result.isActualPKGame);
+  console.log("  - PK戦勝者（チーム1）:", result.pkWinnerIsTeam1);
 }

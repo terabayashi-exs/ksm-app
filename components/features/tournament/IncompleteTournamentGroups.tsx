@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { AlertCircle, Plus, Trash2, Lock } from 'lucide-react';
+import { AlertCircle, Lock, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface IncompleteTournamentGroup {
   group_id: number;
@@ -29,40 +29,44 @@ interface IncompleteTournamentGroupsProps {
   onCountChange?: (count: number) => void;
 }
 
-export default function IncompleteTournamentGroups({ onCountChange }: IncompleteTournamentGroupsProps = {}) {
+export default function IncompleteTournamentGroups({
+  onCountChange,
+}: IncompleteTournamentGroupsProps = {}) {
   const [incompleteGroups, setIncompleteGroups] = useState<IncompleteTournamentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [divisionChecks, setDivisionChecks] = useState<Record<number, DivisionCheckResult>>({});
 
-  console.log('[IncompleteTournamentGroups] コンポーネントがマウントされました');
+  console.log("[IncompleteTournamentGroups] コンポーネントがマウントされました");
 
   const fetchIncompleteGroups = useCallback(async () => {
     try {
-      console.log('[IncompleteTournamentGroups] APIを呼び出し中...');
-      const response = await fetch('/api/tournament-groups/incomplete');
+      console.log("[IncompleteTournamentGroups] APIを呼び出し中...");
+      const response = await fetch("/api/tournament-groups/incomplete");
       const result = await response.json();
-      console.log('[IncompleteTournamentGroups] APIレスポンス:', result);
+      console.log("[IncompleteTournamentGroups] APIレスポンス:", result);
 
       if (result.success && result.data) {
-        console.log('[IncompleteTournamentGroups] 作成中の大会数:', result.data.length);
+        console.log("[IncompleteTournamentGroups] 作成中の大会数:", result.data.length);
         setIncompleteGroups(result.data);
         onCountChange?.(result.data.length);
 
         // 各大会の部門追加可否をチェック
         const checks: Record<number, DivisionCheckResult> = {};
         for (const group of result.data) {
-          const checkRes = await fetch(`/api/admin/subscription/can-add-division?group_id=${group.group_id}`);
+          const checkRes = await fetch(
+            `/api/admin/subscription/can-add-division?group_id=${group.group_id}`,
+          );
           const checkData = await checkRes.json();
           checks[group.group_id] = checkData;
         }
         setDivisionChecks(checks);
       } else {
-        console.log('[IncompleteTournamentGroups] データなしまたはエラー');
+        console.log("[IncompleteTournamentGroups] データなしまたはエラー");
         onCountChange?.(0);
       }
     } catch (err) {
-      console.error('作成中の大会取得エラー:', err);
+      console.error("作成中の大会取得エラー:", err);
       onCountChange?.(0);
     } finally {
       setLoading(false);
@@ -75,7 +79,9 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
 
   const handleDelete = async (groupId: number, groupName: string) => {
     // 確認ダイアログ
-    if (!confirm(`大会「${groupName}」を削除してもよろしいですか？\n\nこの操作は取り消せません。`)) {
+    if (
+      !confirm(`大会「${groupName}」を削除してもよろしいですか？\n\nこの操作は取り消せません。`)
+    ) {
       return;
     }
 
@@ -83,7 +89,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
 
     try {
       const response = await fetch(`/api/tournament-groups/${groupId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const result = await response.json();
@@ -96,54 +102,37 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
         alert(`削除に失敗しました: ${result.error}`);
       }
     } catch (err) {
-      console.error('大会削除エラー:', err);
-      alert('削除中にエラーが発生しました');
+      console.error("大会削除エラー:", err);
+      alert("削除中にエラーが発生しました");
     } finally {
       setDeleting(null);
     }
   };
 
   if (loading) {
-    return (
-      <div className="text-sm text-gray-500">
-        読み込み中...
-      </div>
-    );
+    return <div className="text-sm text-gray-500">読み込み中...</div>;
   }
 
   if (incompleteGroups.length === 0) {
-    return (
-      <div className="text-sm text-gray-500">
-        作成中の大会はありません
-      </div>
-    );
+    return <div className="text-sm text-gray-500">作成中の大会はありません</div>;
   }
 
   return (
     <div className="space-y-3">
       {incompleteGroups.map((group) => (
-        <div
-          key={group.group_id}
-          className="p-4 border-2 border-amber-200 bg-amber-50 rounded-lg"
-        >
+        <div key={group.group_id} className="p-4 border-2 border-amber-200 bg-amber-50 rounded-lg">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="w-5 h-5 text-amber-600" />
-                <h3 className="font-semibold text-amber-900">
-                  {group.group_name}
-                </h3>
+                <h3 className="font-semibold text-amber-900">{group.group_name}</h3>
               </div>
               {group.event_description && (
-                <p className="text-sm text-amber-700 mb-2">
-                  {group.event_description}
-                </p>
+                <p className="text-sm text-amber-700 mb-2">{group.event_description}</p>
               )}
               <div className="flex items-center gap-4 text-xs text-amber-600">
-                {group.organizer && (
-                  <span>主催: {group.organizer}</span>
-                )}
-                <span>作成日: {new Date(group.created_at).toLocaleDateString('ja-JP')}</span>
+                {group.organizer && <span>主催: {group.organizer}</span>}
+                <span>作成日: {new Date(group.created_at).toLocaleDateString("ja-JP")}</span>
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -160,9 +149,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                       部門設定
                     </Link>
                   </Button>
-                  <p className="text-xs text-amber-600">
-                    ※大会編集画面で部門を設定できます
-                  </p>
+                  <p className="text-xs text-amber-600">※大会編集画面で部門を設定できます</p>
                 </>
               ) : (
                 // グループありの場合：従来通り
@@ -194,9 +181,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                         variant="outline"
                         className="w-full border-blue-500 text-blue-700 hover:bg-blue-50 text-xs"
                       >
-                        <Link href="/admin/subscription/plans">
-                          プラン変更
-                        </Link>
+                        <Link href="/admin/subscription/plans">プラン変更</Link>
                       </Button>
                     </div>
                   )}
@@ -206,9 +191,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                     variant="outline"
                     className="border-amber-300 hover:bg-amber-100"
                   >
-                    <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>
-                      編集
-                    </Link>
+                    <Link href={`/admin/tournament-groups/${group.group_id}/edit`}>編集</Link>
                   </Button>
                   <Button
                     size="sm"
@@ -218,7 +201,7 @@ export default function IncompleteTournamentGroups({ onCountChange }: Incomplete
                     disabled={deleting === group.group_id}
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
-                    {deleting === group.group_id ? '削除中...' : '削除'}
+                    {deleting === group.group_id ? "削除中..." : "削除"}
                   </Button>
                 </>
               )}

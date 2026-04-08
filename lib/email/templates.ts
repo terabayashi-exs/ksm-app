@@ -13,7 +13,7 @@ export function generateTournamentApplicationConfirmation(data: {
   tournamentUrl: string;
 }): { subject: string; text: string; html: string } {
   const displayTournamentName = data.groupName || data.tournamentName;
-  const categoryPart = data.categoryName ? ` (${data.categoryName})` : '';
+  const categoryPart = data.categoryName ? ` (${data.categoryName})` : "";
   const subject = `【受付完了】${displayTournamentName}${categoryPart} - 参加申請を受け付けました`;
 
   const text = `
@@ -25,10 +25,10 @@ ${data.teamName} 様
 ■ 申請内容
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
-${data.categoryName ? `部門名: ${data.categoryName}\n` : ''}開催日: ${data.tournamentDate}
-${data.venueName ? `会場: ${data.venueName}` : ''}
+${data.categoryName ? `部門名: ${data.categoryName}\n` : ""}開催日: ${data.tournamentDate}
+${data.venueName ? `会場: ${data.venueName}` : ""}
 登録選手数: ${data.playerCount}名
-申請日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+申請日時: ${new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 今後の流れ
@@ -192,29 +192,37 @@ ${data.contactEmail}
           <span class="info-label">大会名:</span>
           <span class="info-value">${data.groupName || data.tournamentName}</span>
         </div>
-        ${data.categoryName ? `
+        ${
+          data.categoryName
+            ? `
         <div class="info-row">
           <span class="info-label">部門名:</span>
           <span class="info-value">${data.categoryName}</span>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="info-row">
           <span class="info-label">開催日:</span>
           <span class="info-value">${data.tournamentDate}</span>
         </div>
-        ${data.venueName ? `
+        ${
+          data.venueName
+            ? `
         <div class="info-row">
           <span class="info-label">会場:</span>
           <span class="info-value">${data.venueName}</span>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="info-row">
           <span class="info-label">登録選手数:</span>
           <span class="info-value">${data.playerCount}名</span>
         </div>
         <div class="info-row">
           <span class="info-label">申請日時:</span>
-          <span class="info-value">${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
+          <span class="info-value">${new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</span>
         </div>
       </div>
 
@@ -270,7 +278,7 @@ export function generateTournamentJoinConfirmation(data: {
 }): { subject: string; text: string; html: string } {
   // 大会名の表示を決定（グループ大会の場合はグループ名を使用）
   const displayTournamentName = data.groupName || data.tournamentName;
-  const categoryPart = data.categoryName ? ` (${data.categoryName})` : '';
+  const categoryPart = data.categoryName ? ` (${data.categoryName})` : "";
   const subject = `【大会参加確定】${displayTournamentName}${categoryPart} - 参加登録が完了しました`;
 
   const text = `
@@ -283,9 +291,9 @@ ${data.teamName} 様
 ■ 大会情報
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
-${data.categoryName ? `部門名: ${data.categoryName}` : ''}
+${data.categoryName ? `部門名: ${data.categoryName}` : ""}
 開催日: ${data.tournamentDate}
-${data.venueName ? `会場: ${data.venueName}` : ''}
+${data.venueName ? `会場: ${data.venueName}` : ""}
 登録選手数: ${data.playerCount}名
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -451,22 +459,30 @@ ${data.contactEmail}
           <span class="info-label">大会名:</span>
           <span class="info-value">${data.groupName || data.tournamentName}</span>
         </div>
-        ${data.categoryName ? `
+        ${
+          data.categoryName
+            ? `
         <div class="info-row">
           <span class="info-label">部門名:</span>
           <span class="info-value">${data.categoryName}</span>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="info-row">
           <span class="info-label">開催日:</span>
           <span class="info-value">${data.tournamentDate}</span>
         </div>
-        ${data.venueName ? `
+        ${
+          data.venueName
+            ? `
         <div class="info-row">
           <span class="info-label">会場:</span>
           <span class="info-value">${data.venueName}</span>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="info-row">
           <span class="info-label">登録選手数:</span>
           <span class="info-value">${data.playerCount}名</span>
@@ -521,7 +537,7 @@ export function generateTournamentWaitlistConfirmation(data: {
   waitlistPosition: number;
 }): { subject: string; text: string; html: string } {
   const displayTournamentName = data.groupName || data.tournamentName;
-  const categoryPart = data.categoryName ? ` (${data.categoryName})` : '';
+  const categoryPart = data.categoryName ? ` (${data.categoryName})` : "";
   const subject = `【キャンセル待ち登録】${displayTournamentName}${categoryPart} - キャンセル待ちとして受付しました`;
 
   const text = `
@@ -534,9 +550,9 @@ ${data.teamName} 様
 ■ 登録情報
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ${data.groupName ? `大会名: ${data.groupName}` : `大会名: ${data.tournamentName}`}
-${data.categoryName ? `部門名: ${data.categoryName}` : ''}
+${data.categoryName ? `部門名: ${data.categoryName}` : ""}
 開催日: ${data.tournamentDate}
-${data.venueName ? `会場: ${data.venueName}` : ''}
+${data.venueName ? `会場: ${data.venueName}` : ""}
 登録選手数: ${data.playerCount}名
 キャンセル待ち順位: ${data.waitlistPosition}位
 
@@ -678,22 +694,30 @@ ${data.contactEmail}
           <span class="info-label">大会名:</span>
           <span class="info-value">${data.groupName || data.tournamentName}</span>
         </div>
-        ${data.categoryName ? `
+        ${
+          data.categoryName
+            ? `
         <div class="info-row">
           <span class="info-label">部門名:</span>
           <span class="info-value">${data.categoryName}</span>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="info-row">
           <span class="info-label">開催日:</span>
           <span class="info-value">${data.tournamentDate}</span>
         </div>
-        ${data.venueName ? `
+        ${
+          data.venueName
+            ? `
         <div class="info-row">
           <span class="info-label">会場:</span>
           <span class="info-value">${data.venueName}</span>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         <div class="info-row">
           <span class="info-label">登録選手数:</span>
           <span class="info-value">${data.playerCount}名</span>
@@ -750,10 +774,14 @@ ${data.teamName} 様
 大会名: ${data.tournamentName}
 ステータス: 参加確定
 
-${data.adminComment ? `
+${
+  data.adminComment
+    ? `
 運営からのメッセージ:
 ${data.adminComment}
-` : ''}
+`
+    : ""
+}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 次のステップ
@@ -851,12 +879,16 @@ ${data.adminComment}
         <p style="margin: 0;">この度は「${data.tournamentName}」への参加申請をいただき、ありがとうございました。${data.teamName} 様の参加が正式に確定しました。</p>
       </div>
 
-      ${data.adminComment ? `
+      ${
+        data.adminComment
+          ? `
       <div class="info-section">
         <h2>💬 運営からのメッセージ</h2>
         <p>${data.adminComment}</p>
       </div>
-      ` : ''}
+      `
+          : ""
+      }
 
       <div class="info-section">
         <h2>📌 次のステップ</h2>
@@ -900,10 +932,14 @@ ${data.teamName} 様
 大会名: ${data.tournamentName}
 新しいステータス: キャンセル待ち
 
-${data.adminComment ? `
+${
+  data.adminComment
+    ? `
 運営からのメッセージ:
 ${data.adminComment}
-` : ''}
+`
+    : ""
+}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 今後の流れ
@@ -1001,12 +1037,16 @@ ${data.adminComment}
         <p style="margin: 0;">「${data.tournamentName}」の参加状態がキャンセル待ちに変更されました。</p>
       </div>
 
-      ${data.adminComment ? `
+      ${
+        data.adminComment
+          ? `
       <div class="info-section">
         <h2>💬 運営からのメッセージ</h2>
         <p>${data.adminComment}</p>
       </div>
-      ` : ''}
+      `
+          : ""
+      }
 
       <div class="info-section">
         <h2>📌 今後の流れ</h2>
@@ -1050,10 +1090,14 @@ ${data.teamName} 様
 大会名: ${data.tournamentName}
 ステータス: キャンセル済み
 
-${data.adminComment ? `
+${
+  data.adminComment
+    ? `
 運営からのメッセージ:
 ${data.adminComment}
-` : ''}
+`
+    : ""
+}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1147,12 +1191,16 @@ ${data.adminComment}
         <p style="margin: 0;">「${data.tournamentName}」の参加がキャンセルされました。</p>
       </div>
 
-      ${data.adminComment ? `
+      ${
+        data.adminComment
+          ? `
       <div class="info-section">
         <h2>💬 運営からのメッセージ</h2>
         <p>${data.adminComment}</p>
       </div>
-      ` : ''}
+      `
+          : ""
+      }
 
       <p style="text-align: center; margin: 30px 0;">またのご参加をお待ちしております。</p>
     </div>

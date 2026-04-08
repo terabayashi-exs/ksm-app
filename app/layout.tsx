@@ -1,7 +1,8 @@
 // app/layout.tsx
-import AuthSessionProvider from "@/components/providers/session-provider";
+
 import { Analytics } from "@vercel/analytics/react";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import AuthSessionProvider from "@/components/providers/session-provider";
 import "./globals.css";
 
 export const metadata = {
@@ -11,7 +12,7 @@ export const metadata = {
   },
   description: "あらゆるスポーツ大会の運営から結果公開まで、簡単に大会運営ができる総合管理システム",
   robots: "index, follow",
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
 };
 
 export const viewport = {
@@ -22,11 +23,7 @@ export const viewport = {
   themeColor: "#2563eb",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
       <head>
@@ -100,9 +97,7 @@ export default function RootLayout({
         <GoogleAnalytics />
       </head>
       <body suppressHydrationWarning>
-        <AuthSessionProvider>
-            {children}
-          </AuthSessionProvider>
+        <AuthSessionProvider>{children}</AuthSessionProvider>
         <Analytics />
       </body>
     </html>

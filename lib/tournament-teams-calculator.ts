@@ -1,5 +1,5 @@
 // lib/tournament-teams-calculator.ts
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 export interface TournamentPlayer {
   tournament_player_id: number;
@@ -38,22 +38,22 @@ export interface TournamentTeamsData {
  */
 export async function getTournamentTeams(tournamentId: number): Promise<TournamentTeamsData> {
   try {
-    console.log('getTournamentTeams called with ID:', tournamentId);
-    
+    console.log("getTournamentTeams called with ID:", tournamentId);
+
     // 大会情報を取得
     const tournamentResult = await db.execute({
       sql: `SELECT tournament_name FROM t_tournaments WHERE tournament_id = ?`,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
-    console.log('Tournament query result:', tournamentResult.rows);
+    console.log("Tournament query result:", tournamentResult.rows);
 
     if (!tournamentResult.rows || tournamentResult.rows.length === 0) {
-      throw new Error('大会が見つかりません');
+      throw new Error("大会が見つかりません");
     }
 
     const tournamentName = tournamentResult.rows[0].tournament_name as string;
-    console.log('Tournament name:', tournamentName);
+    console.log("Tournament name:", tournamentName);
 
     // 参加チーム一覧を取得
     const teamsResult = await db.execute({
@@ -71,7 +71,7 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
         WHERE tt.tournament_id = ?
         ORDER BY tt.assigned_block, tt.block_position, t.team_name
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
     const teams: TournamentTeam[] = [];
@@ -96,10 +96,10 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
             AND tp.player_status = 'active'
             ORDER BY tp.jersey_number, p.player_name
           `,
-          args: [tournamentId, teamRow.tournament_team_id]
+          args: [tournamentId, teamRow.tournament_team_id],
         });
 
-        const players: TournamentPlayer[] = (playersResult.rows || []).map(row => ({
+        const players: TournamentPlayer[] = (playersResult.rows || []).map((row) => ({
           tournament_player_id: row.tournament_player_id as number,
           player_id: row.player_id as number,
           player_name: row.player_name as string,
@@ -120,7 +120,7 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
           block_position: teamRow.block_position ? (teamRow.block_position as number) : undefined,
           contact_phone: teamRow.contact_phone ? (teamRow.contact_phone as string) : undefined,
           players,
-          player_count: players.length
+          player_count: players.length,
         });
       }
     }
@@ -132,17 +132,16 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
       tournament_name: tournamentName,
       teams,
       total_teams: teams.length,
-      total_players: totalPlayers
+      total_players: totalPlayers,
     };
-
   } catch (error) {
-    console.error('参加チーム情報取得エラー:', error);
-    console.error('Error details:', {
+    console.error("参加チーム情報取得エラー:", error);
+    console.error("Error details:", {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      tournamentId
+      tournamentId,
     });
-    throw error instanceof Error ? error : new Error('参加チーム情報の取得に失敗しました');
+    throw error instanceof Error ? error : new Error("参加チーム情報の取得に失敗しました");
   }
 }
 
@@ -151,7 +150,7 @@ export async function getTournamentTeams(tournamentId: number): Promise<Tourname
  */
 export async function getTeamPlayers(
   tournamentId: number,
-  tournamentTeamId: number
+  tournamentTeamId: number,
 ): Promise<TournamentPlayer[]> {
   try {
     const playersResult = await db.execute({
@@ -170,10 +169,10 @@ export async function getTeamPlayers(
         WHERE tp.tournament_id = ? AND tp.tournament_team_id = ?
         ORDER BY tp.jersey_number, p.player_name
       `,
-      args: [tournamentId, tournamentTeamId]
+      args: [tournamentId, tournamentTeamId],
     });
 
-    return (playersResult.rows || []).map(row => ({
+    return (playersResult.rows || []).map((row) => ({
       tournament_player_id: row.tournament_player_id as number,
       player_id: row.player_id as number,
       player_name: row.player_name as string,
@@ -183,10 +182,9 @@ export async function getTeamPlayers(
       withdrawal_date: row.withdrawal_date ? (row.withdrawal_date as string) : undefined,
       remarks: row.remarks ? (row.remarks as string) : undefined,
     }));
-
   } catch (error) {
     console.error(`大会参加チーム ${tournamentTeamId} の選手一覧取得エラー:`, error);
-    throw new Error('選手一覧の取得に失敗しました');
+    throw new Error("選手一覧の取得に失敗しました");
   }
 }
 
@@ -196,8 +194,8 @@ export async function getTeamPlayers(
 export function groupTeamsByBlock(teams: TournamentTeam[]): Record<string, TournamentTeam[]> {
   const grouped: Record<string, TournamentTeam[]> = {};
 
-  teams.forEach(team => {
-    const blockName = team.assigned_block || '未分類';
+  teams.forEach((team) => {
+    const blockName = team.assigned_block || "未分類";
     if (!grouped[blockName]) {
       grouped[blockName] = [];
     }
@@ -211,27 +209,27 @@ export function groupTeamsByBlock(teams: TournamentTeam[]): Record<string, Tourn
  * チーム状態の取得
  */
 export function getTeamStatus(team: TournamentTeam): {
-  status: 'complete' | 'incomplete' | 'empty';
+  status: "complete" | "incomplete" | "empty";
   statusText: string;
   statusColor: string;
 } {
   if (team.player_count === 0) {
     return {
-      status: 'empty',
-      statusText: '選手未登録',
-      statusColor: 'text-red-600 bg-red-50'
+      status: "empty",
+      statusText: "選手未登録",
+      statusColor: "text-red-600 bg-red-50",
     };
   } else if (team.player_count < 5) {
     return {
-      status: 'incomplete',
+      status: "incomplete",
       statusText: `選手${team.player_count}名`,
-      statusColor: 'text-yellow-600 bg-yellow-50'
+      statusColor: "text-yellow-600 bg-yellow-50",
     };
   } else {
     return {
-      status: 'complete',
+      status: "complete",
       statusText: `選手${team.player_count}名`,
-      statusColor: 'text-green-600 bg-green-50'
+      statusColor: "text-green-600 bg-green-50",
     };
   }
 }
@@ -244,25 +242,25 @@ export function getPlayerStatus(player: TournamentPlayer): {
   statusColor: string;
 } {
   switch (player.player_status) {
-    case 'active':
+    case "active":
       return {
-        statusText: '出場',
-        statusColor: 'text-green-600 bg-green-50'
+        statusText: "出場",
+        statusColor: "text-green-600 bg-green-50",
       };
-    case 'inactive':
+    case "inactive":
       return {
-        statusText: '不参加',
-        statusColor: 'text-gray-600 bg-gray-50'
+        statusText: "不参加",
+        statusColor: "text-gray-600 bg-gray-50",
       };
-    case 'withdrawn':
+    case "withdrawn":
       return {
-        statusText: '棄権',
-        statusColor: 'text-red-600 bg-red-50'
+        statusText: "棄権",
+        statusColor: "text-red-600 bg-red-50",
       };
     default:
       return {
         statusText: player.player_status,
-        statusColor: 'text-gray-600 bg-gray-50'
+        statusColor: "text-gray-600 bg-gray-50",
       };
   }
 }

@@ -1,21 +1,23 @@
 // lib/match-results-calculator.ts
 // MIGRATION NOTE: tournament_team_idベースで実装済み（2026-02-04）
 // team_idはTeamInfo構造体に保持（マスターチームとの関連維持のため）
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
+import { parseScoreArray, parseTotalScore } from "@/lib/score-parser";
 import {
+  extractSoccerScoreData,
   getSportScoreConfig,
   getTournamentSportCode,
-  extractSoccerScoreData,
+  SoccerScoreData,
   SportScoreConfig,
-  SoccerScoreData
-} from '@/lib/sport-standings-calculator';
-import { parseTotalScore, parseScoreArray } from '@/lib/score-parser';
+} from "@/lib/sport-standings-calculator";
 
 /**
  * スコア文字列を数値に変換（全形式対応）
  * @deprecated 新しいコードでは parseTotalScore を使用してください
  */
-function parseScore(score: string | number | bigint | ArrayBuffer | null | undefined): number | null {
+function parseScore(
+  score: string | number | bigint | ArrayBuffer | null | undefined,
+): number | null {
   const result = parseTotalScore(score);
   return result === 0 && !score ? null : result;
 }
@@ -75,14 +77,14 @@ export interface BlockResults {
 }
 
 export interface MatchMatrixEntry {
-  result: 'win' | 'loss' | 'draw' | null;
+  result: "win" | "loss" | "draw" | null;
   score: string;
   match_code: string;
   soccer_data?: SoccerScoreData;
 }
 
 export interface MatchMatrixCell {
-  result: 'win' | 'loss' | 'draw' | 'mixed' | null; // 集約結果（mixed=複数試合で勝敗混在）
+  result: "win" | "loss" | "draw" | "mixed" | null; // 集約結果（mixed=複数試合で勝敗混在）
   score: string; // 表示用フォーマット済み文字列
   match_code: string; // 代表match_code
   soccer_data?: SoccerScoreData;
@@ -98,12 +100,15 @@ export interface MatchMatrix {
 /**
  * 大会の戦績表データを取得する（多競技対応版）
  */
-export async function getTournamentResults(tournamentId: number, isAdmin: boolean = false): Promise<BlockResults[]> {
+export async function getTournamentResults(
+  tournamentId: number,
+  isAdmin: boolean = false,
+): Promise<BlockResults[]> {
   try {
     // 競技種別を取得
     const sportCode = await getTournamentSportCode(tournamentId);
     const sportConfig = getSportScoreConfig(sportCode);
-    
+
     // ブロック情報を取得
     const blocks = await db.execute({
       sql: `
@@ -118,7 +123,7 @@ export async function getTournamentResults(tournamentId: number, isAdmin: boolea
         WHERE mb.tournament_id = ?
         ORDER BY mb.block_order, mb.match_block_id
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
     if (!blocks.rows || blocks.rows.length === 0) {
@@ -133,7 +138,7 @@ export async function getTournamentResults(tournamentId: number, isAdmin: boolea
         block.match_block_id as number,
         tournamentId,
         sportCode,
-        isAdmin
+        isAdmin,
       );
 
       // 対象試合が0件のブロック（全試合がエキシビジョン等）は非表示
@@ -151,18 +156,20 @@ export async function getTournamentResults(tournamentId: number, isAdmin: boolea
         matches: blockResult.matches,
         match_matrix: blockResult.match_matrix,
         remarks: block.remarks as string | null,
-        sport_config: sportConfig
+        sport_config: sportConfig,
       });
     }
 
     return results;
   } catch (error) {
-    console.error('戦績表取得エラー:', error);
-    console.error('Tournament ID:', tournamentId);
+    console.error("戦績表取得エラー:", error);
+    console.error("Tournament ID:", tournamentId);
     if (error instanceof Error) {
-      console.error('Stack trace:', error.stack);
+      console.error("Stack trace:", error.stack);
     }
-    throw new Error(`戦績表の取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `戦績表の取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -173,7 +180,7 @@ async function getBlockResults(
   matchBlockId: number,
   tournamentId: number,
   sportCode: string,
-  isAdmin: boolean = false
+  isAdmin: boolean = false,
 ): Promise<{
   teams: TeamInfo[];
   matches: MatchResult[];
@@ -187,10 +194,10 @@ async function getBlockResults(
         FROM t_match_blocks mb
         WHERE mb.match_block_id = ?
       `,
-      args: [matchBlockId]
+      args: [matchBlockId],
     });
 
-    const blockName = tournamentInfoResult.rows[0]?.block_name as string || '';
+    const blockName = (tournamentInfoResult.rows[0]?.block_name as string) || "";
 
     // ブロック内のチーム一覧を取得（試合データから実際に使用されているdisplay_nameを取得）
     // tournament_team_idを使ってJOINすることで複数エントリーチームを正しく区別
@@ -246,18 +253,21 @@ async function getBlockResults(
           )
         ORDER BY template_display_name NULLS LAST, tt.block_position NULLS LAST
       `,
-      args: [matchBlockId, matchBlockId, matchBlockId, matchBlockId, tournamentId, matchBlockId]
+      args: [matchBlockId, matchBlockId, matchBlockId, matchBlockId, tournamentId, matchBlockId],
     });
 
-    let teams: TeamInfo[] = (teamsResult.rows || []).map(row => ({
+    let teams: TeamInfo[] = (teamsResult.rows || []).map((row) => ({
       tournament_team_id: row.tournament_team_id as number,
       team_id: row.team_id as string,
       team_name: row.team_name as string,
-      team_omission: row.team_omission as string || undefined,
-      display_name: row.display_name as string  // 試合データから取得したdisplay_nameを使用
+      team_omission: (row.team_omission as string) || undefined,
+      display_name: row.display_name as string, // 試合データから取得したdisplay_nameを使用
     }));
 
-    console.log(`[TEAMS] Block ${blockName}: Found ${teams.length} teams:`, teams.map(t => `${t.team_id}:${t.display_name}`).join(', '));
+    console.log(
+      `[TEAMS] Block ${blockName}: Found ${teams.length} teams:`,
+      teams.map((t) => `${t.team_id}:${t.display_name}`).join(", "),
+    );
 
     // チーム登録がない場合、試合から実際のチーム情報を取得（略称含む、未確定チームも含む）
     // 決勝リーグ対応: tournament_team_idを使用し、テンプレート表示名でソート
@@ -302,18 +312,20 @@ async function getBlockResults(
           GROUP BY template_display_name
           ORDER BY template_display_name
         `,
-        args: [matchBlockId, matchBlockId]
+        args: [matchBlockId, matchBlockId],
       });
 
       teams = (placeholderTeamsResult.rows || []).map((row, index) => {
         const teamData = {
-          tournament_team_id: row.tournament_team_id as number || -(matchBlockId * 1000 + index),  // プレースホルダーの場合は負の値
-          team_id: row.team_id as string || `placeholder_${matchBlockId}_${index}`,
-          team_name: row.team_name as string || row.template_display_name as string,
-          team_omission: row.team_omission as string || undefined,
-          display_name: (row.team_display_name as string) || (row.template_display_name as string)  // 実際の試合のdisplay_nameを優先
+          tournament_team_id: (row.tournament_team_id as number) || -(matchBlockId * 1000 + index), // プレースホルダーの場合は負の値
+          team_id: (row.team_id as string) || `placeholder_${matchBlockId}_${index}`,
+          team_name: (row.team_name as string) || (row.template_display_name as string),
+          team_omission: (row.team_omission as string) || undefined,
+          display_name: (row.team_display_name as string) || (row.template_display_name as string), // 実際の試合のdisplay_nameを優先
         };
-        console.log(`[PLACEHOLDER_TEAM] ${teamData.display_name} (tournament_team_id: ${teamData.tournament_team_id}, team_display: ${row.team_display_name}, template: ${row.template_display_name}, omission: ${row.team_omission}, name: ${row.team_name})`);
+        console.log(
+          `[PLACEHOLDER_TEAM] ${teamData.display_name} (tournament_team_id: ${teamData.tournament_team_id}, team_display: ${row.team_display_name}, template: ${row.template_display_name}, omission: ${row.team_omission}, name: ${row.team_name})`,
+        );
         return teamData;
       });
     }
@@ -351,10 +363,10 @@ async function getBlockResults(
         AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.cycle, ml.match_code
       `,
-      args: [matchBlockId]
+      args: [matchBlockId],
     });
 
-    const matches: MatchResult[] = (matchesResult.rows || []).map(row => {
+    const matches: MatchResult[] = (matchesResult.rows || []).map((row) => {
       // チームIDがnullの場合、プレースホルダーIDを生成
       const team1TournamentTeamId = row.team1_tournament_team_id as number | null;
       const team2TournamentTeamId = row.team2_tournament_team_id as number | null;
@@ -365,12 +377,12 @@ async function getBlockResults(
       // tournament_team_idが設定されている場合は優先使用（複数エントリーチーム対応）
       const getTeamId = (tournamentTeamId: number | null, displayName: string): string => {
         if (tournamentTeamId) {
-          const teamWithTournamentId = teams.find(t => t.tournament_team_id === tournamentTeamId);
+          const teamWithTournamentId = teams.find((t) => t.tournament_team_id === tournamentTeamId);
           if (teamWithTournamentId) {
             return teamWithTournamentId.team_id;
           }
         }
-        const placeholderTeam = teams.find(t => t.display_name === displayName);
+        const placeholderTeam = teams.find((t) => t.display_name === displayName);
         return placeholderTeam?.team_id || `placeholder_${displayName}`;
       };
 
@@ -380,9 +392,13 @@ async function getBlockResults(
       const is_confirmed = Boolean(row.is_confirmed);
 
       // デバッグログ: A2試合の詳細
-      if (row.match_code === 'A2') {
-        console.log(`[RAW_A2] row.team1_scores="${row.team1_scores}", row.team2_scores="${row.team2_scores}", row.is_confirmed=${row.is_confirmed}`);
-        console.log(`[PARSED_A2] team1_goals=${team1_goals}, team2_goals=${team2_goals}, is_confirmed=${is_confirmed}`);
+      if (row.match_code === "A2") {
+        console.log(
+          `[RAW_A2] row.team1_scores="${row.team1_scores}", row.team2_scores="${row.team2_scores}", row.is_confirmed=${row.is_confirmed}`,
+        );
+        console.log(
+          `[PARSED_A2] team1_goals=${team1_goals}, team2_goals=${team2_goals}, is_confirmed=${is_confirmed}`,
+        );
         console.log(`[PARSED_A2] team1Name="${team1DisplayName}", team2Name="${team2DisplayName}"`);
       }
 
@@ -408,7 +424,7 @@ async function getBlockResults(
         cancellation_type: row.cancellation_type as string | null,
         live_team1_scores: row.live_team1_scores as string | null,
         live_team2_scores: row.live_team2_scores as string | null,
-        cycle: row.cycle as number | undefined
+        cycle: row.cycle as number | undefined,
       };
 
       // 多競技対応の拡張データ
@@ -424,15 +440,20 @@ async function getBlockResults(
 
           baseMatch.team1_scores = team1Scores;
           baseMatch.team2_scores = team2Scores;
-          
+
           // period_countからactive_periodsを生成
           if (periodCount && periodCount > 0) {
             baseMatch.active_periods = Array.from({ length: periodCount }, (_, i) => i + 1);
           }
 
           // サッカーの場合はPKデータを抽出
-          if (sportCode === 'soccer' && baseMatch.is_confirmed && baseMatch.active_periods &&
-              baseMatch.team1_tournament_team_id && baseMatch.team2_tournament_team_id) {
+          if (
+            sportCode === "soccer" &&
+            baseMatch.is_confirmed &&
+            baseMatch.active_periods &&
+            baseMatch.team1_tournament_team_id &&
+            baseMatch.team2_tournament_team_id
+          ) {
             const team1SoccerData = extractSoccerScoreData(
               team1Scores,
               team2Scores,
@@ -440,7 +461,7 @@ async function getBlockResults(
               baseMatch.team1_tournament_team_id,
               baseMatch.team2_tournament_team_id,
               baseMatch.winner_tournament_team_id,
-              baseMatch.active_periods
+              baseMatch.active_periods,
             );
 
             baseMatch.soccer_data = team1SoccerData;
@@ -459,16 +480,18 @@ async function getBlockResults(
     return {
       teams,
       matches,
-      match_matrix
+      match_matrix,
     };
   } catch (error) {
     console.error(`ブロック ${matchBlockId} の戦績データ取得エラー:`, error);
-    console.error('Match Block ID:', matchBlockId);
-    console.error('Tournament ID:', tournamentId);
+    console.error("Match Block ID:", matchBlockId);
+    console.error("Tournament ID:", tournamentId);
     if (error instanceof Error) {
-      console.error('Stack trace:', error.stack);
+      console.error("Stack trace:", error.stack);
     }
-    throw new Error(`ブロック戦績データの取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `ブロック戦績データの取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -479,27 +502,27 @@ function createMatchMatrix(
   teams: TeamInfo[],
   matches: MatchResult[],
   sportCode: string,
-  isAdmin: boolean = false
+  isAdmin: boolean = false,
 ): MatchMatrix {
   const matrix: MatchMatrix = {};
 
   // 初期化：全チーム同士の組み合わせをentries:[]付きで初期化
-  teams.forEach(team => {
+  teams.forEach((team) => {
     matrix[team.tournament_team_id] = {};
-    teams.forEach(opponent => {
+    teams.forEach((opponent) => {
       if (team.tournament_team_id !== opponent.tournament_team_id) {
         matrix[team.tournament_team_id][opponent.tournament_team_id] = {
           result: null,
-          score: '-',
-          match_code: '',
-          entries: []
+          score: "-",
+          match_code: "",
+          entries: [],
         };
       }
     });
   });
 
   // 試合結果をentries配列に蓄積
-  matches.forEach(match => {
+  matches.forEach((match) => {
     const team1Name = match.team1_display_name;
     const team2Name = match.team2_display_name;
 
@@ -509,71 +532,90 @@ function createMatchMatrix(
 
     // チームIDが存在するかチェック
     if (!team1Id || !team2Id) {
-      console.log(`[MATRIX] Missing tournament_team_id: ${match.match_code}, team1="${team1Name}"(${team1Id}), team2="${team2Name}"(${team2Id})`);
+      console.log(
+        `[MATRIX] Missing tournament_team_id: ${match.match_code}, team1="${team1Name}"(${team1Id}), team2="${team2Name}"(${team2Id})`,
+      );
       return;
     }
 
     if (!matrix[team1Id] || !matrix[team2Id]) {
-      console.log(`[MATRIX] Matrix not initialized for tournament_team_id: ${match.match_code}, team1Id=${team1Id} exists:${!!matrix[team1Id]}, team2Id=${team2Id} exists:${!!matrix[team2Id]}`);
-      console.log(`[MATRIX] Available team IDs in matrix: ${Object.keys(matrix).join(', ')}`);
+      console.log(
+        `[MATRIX] Matrix not initialized for tournament_team_id: ${match.match_code}, team1Id=${team1Id} exists:${!!matrix[team1Id]}, team2Id=${team2Id} exists:${!!matrix[team2Id]}`,
+      );
+      console.log(`[MATRIX] Available team IDs in matrix: ${Object.keys(matrix).join(", ")}`);
       return;
     }
 
     // 中止された試合の場合（ただし、確定済み不戦勝は除く）
-    if (match.match_status === 'cancelled' && !match.is_confirmed) {
+    if (match.match_status === "cancelled" && !match.is_confirmed) {
       console.log(`[MATRIX] Unconfirmed cancelled match: ${match.match_code}`);
-      let cancelLabel = '中止';
-      if (match.cancellation_type === 'no_count') {
-        cancelLabel = '中止';
-      } else if (match.cancellation_type === 'no_show_both') {
-        cancelLabel = '中止\n（両者不参加）';
-      } else if (match.cancellation_type === 'no_show_team1' || match.cancellation_type === 'no_show_team2') {
-        cancelLabel = '中止\n（不戦勝）';
+      let cancelLabel = "中止";
+      if (match.cancellation_type === "no_count") {
+        cancelLabel = "中止";
+      } else if (match.cancellation_type === "no_show_both") {
+        cancelLabel = "中止\n（両者不参加）";
+      } else if (
+        match.cancellation_type === "no_show_team1" ||
+        match.cancellation_type === "no_show_team2"
+      ) {
+        cancelLabel = "中止\n（不戦勝）";
       }
 
       matrix[team1Id][team2Id].entries.push({
         result: null,
         score: cancelLabel,
-        match_code: match.match_code
+        match_code: match.match_code,
       });
 
       matrix[team2Id][team1Id].entries.push({
         result: null,
         score: cancelLabel,
-        match_code: match.match_code
+        match_code: match.match_code,
       });
       return;
     }
 
     // 確定済み不戦勝試合のデバッグログ
-    if (match.match_status === 'cancelled' && match.is_confirmed && match.is_walkover) {
-      console.log(`[MATRIX] Confirmed walkover match: ${match.match_code}, team1_goals=${match.team1_goals}, team2_goals=${match.team2_goals}, winner=${match.winner_team_id}`);
+    if (match.match_status === "cancelled" && match.is_confirmed && match.is_walkover) {
+      console.log(
+        `[MATRIX] Confirmed walkover match: ${match.match_code}, team1_goals=${match.team1_goals}, team2_goals=${match.team2_goals}, winner=${match.winner_team_id}`,
+      );
     }
 
     // 未実施・進行中・完了（未確定）の試合の場合は状態を表示
     if (!match.is_confirmed || match.team1_goals === null || match.team2_goals === null) {
-      console.log(`[MATRIX] Unconfirmed match: ${match.match_code}, is_confirmed=${match.is_confirmed}, team1_goals=${match.team1_goals}, team2_goals=${match.team2_goals}, team1Name="${team1Name}", team2Name="${team2Name}"`);
+      console.log(
+        `[MATRIX] Unconfirmed match: ${match.match_code}, is_confirmed=${match.is_confirmed}, team1_goals=${match.team1_goals}, team2_goals=${match.team2_goals}, team1Name="${team1Name}", team2Name="${team2Name}"`,
+      );
       let displayText = match.match_code; // デフォルトは試合コード
 
       // 試合状態に応じて表示テキストを決定（試合コード付き）
-      if (isAdmin && (match.match_status === 'ongoing' || match.match_status === 'completed') && match.live_team1_scores && match.live_team2_scores) {
+      if (
+        isAdmin &&
+        (match.match_status === "ongoing" || match.match_status === "completed") &&
+        match.live_team1_scores &&
+        match.live_team2_scores
+      ) {
         try {
           const t1 = parseTotalScore(match.live_team1_scores);
           const t2 = parseTotalScore(match.live_team2_scores);
-          const statusLabel = match.match_status === 'ongoing' ? '試合中' : '確定待ち';
+          const statusLabel = match.match_status === "ongoing" ? "試合中" : "確定待ち";
           displayText = `${t1} - ${t2}\n${statusLabel}`;
         } catch {
-          displayText = match.match_status === 'ongoing' ? `${match.match_code}\n試合中` : `${match.match_code}\n試合完了`;
+          displayText =
+            match.match_status === "ongoing"
+              ? `${match.match_code}\n試合中`
+              : `${match.match_code}\n試合完了`;
         }
       } else {
         switch (match.match_status) {
-          case 'scheduled':
+          case "scheduled":
             displayText = `${match.match_code}`;
             break;
-          case 'ongoing':
+          case "ongoing":
             displayText = `${match.match_code}\n試合中`;
             break;
-          case 'completed':
+          case "completed":
             displayText = `${match.match_code}\n試合完了`;
             break;
           default:
@@ -584,13 +626,13 @@ function createMatchMatrix(
       matrix[team1Id][team2Id].entries.push({
         result: null,
         score: displayText,
-        match_code: match.match_code
+        match_code: match.match_code,
       });
 
       matrix[team2Id][team1Id].entries.push({
         result: null,
         score: displayText,
-        match_code: match.match_code
+        match_code: match.match_code,
       });
       return;
     }
@@ -602,25 +644,34 @@ function createMatchMatrix(
     if (match.is_walkover && match.is_draw) {
       console.log(`[MATRIX] Processing walkover draw (both teams absent): ${match.match_code}`);
 
-      if (matrix[team1Id] && matrix[team2Id] && matrix[team1Id][team2Id] && matrix[team2Id][team1Id]) {
+      if (
+        matrix[team1Id] &&
+        matrix[team2Id] &&
+        matrix[team1Id][team2Id] &&
+        matrix[team2Id][team1Id]
+      ) {
         const team1GoalsDisplay = isNaN(team1Goals) ? 0 : Math.floor(team1Goals);
         const team2GoalsDisplay = isNaN(team2Goals) ? 0 : Math.floor(team2Goals);
 
         matrix[team1Id][team2Id].entries.push({
-          result: 'draw',
+          result: "draw",
           score: `不戦引分\n${team1GoalsDisplay}-${team2GoalsDisplay}`,
-          match_code: match.match_code
+          match_code: match.match_code,
         });
         matrix[team2Id][team1Id].entries.push({
-          result: 'draw',
+          result: "draw",
           score: `不戦引分\n${team2GoalsDisplay}-${team1GoalsDisplay}`,
-          match_code: match.match_code
+          match_code: match.match_code,
         });
-        console.log(`[MATRIX] Set walkover draw for ${team1Name}(${team1Id}) vs ${team2Name}(${team2Id})`);
+        console.log(
+          `[MATRIX] Set walkover draw for ${team1Name}(${team1Id}) vs ${team2Name}(${team2Id})`,
+        );
       }
     } else if (match.is_walkover) {
       // 不戦勝の場合（片方チーム不参加）
-      console.log(`[MATRIX] Processing walkover: ${match.match_code}, winner_tournament_team_id=${match.winner_tournament_team_id}`);
+      console.log(
+        `[MATRIX] Processing walkover: ${match.match_code}, winner_tournament_team_id=${match.winner_tournament_team_id}`,
+      );
 
       const winnerTournamentTeamId = match.winner_tournament_team_id;
 
@@ -651,35 +702,46 @@ function createMatchMatrix(
         return;
       }
 
-      console.log(`[MATRIX] Walkover result: winner=${winnerName}(${winnerTournamentId}), loser=${loserName}(${loserTournamentId})`);
+      console.log(
+        `[MATRIX] Walkover result: winner=${winnerName}(${winnerTournamentId}), loser=${loserName}(${loserTournamentId})`,
+      );
 
       const team1Goals = match.team1_goals ?? 0;
       const team2Goals = match.team2_goals ?? 0;
 
       if (matrix[winnerTournamentId] && matrix[loserTournamentId]) {
-        const winnerScore = winnerTournamentTeamId === match.team1_tournament_team_id
-          ? `不戦勝\n${team1Goals}-${team2Goals}`
-          : `不戦勝\n${team2Goals}-${team1Goals}`;
-        const loserScore = winnerTournamentTeamId === match.team1_tournament_team_id
-          ? `不戦敗\n${team2Goals}-${team1Goals}`
-          : `不戦敗\n${team1Goals}-${team2Goals}`;
+        const winnerScore =
+          winnerTournamentTeamId === match.team1_tournament_team_id
+            ? `不戦勝\n${team1Goals}-${team2Goals}`
+            : `不戦勝\n${team2Goals}-${team1Goals}`;
+        const loserScore =
+          winnerTournamentTeamId === match.team1_tournament_team_id
+            ? `不戦敗\n${team2Goals}-${team1Goals}`
+            : `不戦敗\n${team1Goals}-${team2Goals}`;
 
         matrix[winnerTournamentId][loserTournamentId].entries.push({
-          result: 'win',
+          result: "win",
           score: winnerScore,
-          match_code: match.match_code
+          match_code: match.match_code,
         });
-        console.log(`[MATRIX] Set walkover win for ${winnerName}(${winnerTournamentId}) vs ${loserName}(${loserTournamentId})`);
+        console.log(
+          `[MATRIX] Set walkover win for ${winnerName}(${winnerTournamentId}) vs ${loserName}(${loserTournamentId})`,
+        );
 
         matrix[loserTournamentId][winnerTournamentId].entries.push({
-          result: 'loss',
+          result: "loss",
           score: loserScore,
-          match_code: match.match_code
+          match_code: match.match_code,
         });
       }
     } else if (match.is_draw) {
       // 引き分けの場合（多競技対応）
-      if (matrix[team1Id] && matrix[team2Id] && matrix[team1Id][team2Id] && matrix[team2Id][team1Id]) {
+      if (
+        matrix[team1Id] &&
+        matrix[team2Id] &&
+        matrix[team1Id][team2Id] &&
+        matrix[team2Id][team1Id]
+      ) {
         const team1GoalsDisplay = isNaN(team1Goals) ? 0 : Math.floor(team1Goals);
         const team2GoalsDisplay = isNaN(team2Goals) ? 0 : Math.floor(team2Goals);
 
@@ -687,7 +749,7 @@ function createMatchMatrix(
         let team2ScoreDisplay = `△\n${team2GoalsDisplay}-${team1GoalsDisplay}`;
 
         // サッカーでPK戦がある場合の特別表示
-        if (sportCode === 'soccer' && match.soccer_data?.is_pk_game) {
+        if (sportCode === "soccer" && match.soccer_data?.is_pk_game) {
           const team1PkScore = `${match.soccer_data.pk_goals_for || 0}-${match.soccer_data.pk_goals_against || 0}`;
           const team2PkScore = `${match.soccer_data.pk_goals_against || 0}-${match.soccer_data.pk_goals_for || 0}`;
 
@@ -696,17 +758,17 @@ function createMatchMatrix(
         }
 
         matrix[team1Id][team2Id].entries.push({
-          result: 'draw',
+          result: "draw",
           score: team1ScoreDisplay,
           match_code: match.match_code,
-          soccer_data: match.soccer_data
+          soccer_data: match.soccer_data,
         });
 
         matrix[team2Id][team1Id].entries.push({
-          result: 'draw',
+          result: "draw",
           score: team2ScoreDisplay,
           match_code: match.match_code,
-          soccer_data: match.soccer_data
+          soccer_data: match.soccer_data,
         });
       }
     } else {
@@ -746,9 +808,16 @@ function createMatchMatrix(
         return;
       }
 
-      console.log(`[MATRIX_WIN] ${match.match_code}: winnerName="${winnerName}"(${winnerTournamentId}), loserName="${loserName}"(${loserTournamentId}), matrix[${winnerTournamentId}]=${!!matrix[winnerTournamentId]}, matrix[${loserTournamentId}]=${!!matrix[loserTournamentId]}`);
+      console.log(
+        `[MATRIX_WIN] ${match.match_code}: winnerName="${winnerName}"(${winnerTournamentId}), loserName="${loserName}"(${loserTournamentId}), matrix[${winnerTournamentId}]=${!!matrix[winnerTournamentId]}, matrix[${loserTournamentId}]=${!!matrix[loserTournamentId]}`,
+      );
 
-      if (matrix[winnerTournamentId] && matrix[loserTournamentId] && matrix[winnerTournamentId][loserTournamentId] && matrix[loserTournamentId][winnerTournamentId]) {
+      if (
+        matrix[winnerTournamentId] &&
+        matrix[loserTournamentId] &&
+        matrix[winnerTournamentId][loserTournamentId] &&
+        matrix[loserTournamentId][winnerTournamentId]
+      ) {
         const winnerGoalsDisplay = isNaN(winnerGoals) ? 0 : Math.floor(winnerGoals);
         const loserGoalsDisplay = isNaN(loserGoals) ? 0 : Math.floor(loserGoals);
 
@@ -756,30 +825,38 @@ function createMatchMatrix(
         let loserScoreDisplay = `×\n${loserGoalsDisplay}-${winnerGoalsDisplay}`;
 
         // サッカーでPK戦がある場合の特別表示
-        if (sportCode === 'soccer' && match.soccer_data?.is_pk_game) {
-          const pkScoreWinner = winnerTournamentTeamId === match.team1_tournament_team_id
-            ? `${match.soccer_data.pk_goals_for || 0}-${match.soccer_data.pk_goals_against || 0}`
-            : `${match.soccer_data.pk_goals_against || 0}-${match.soccer_data.pk_goals_for || 0}`;
-          const pkScoreLoser = winnerTournamentTeamId === match.team1_tournament_team_id
-            ? `${match.soccer_data.pk_goals_against || 0}-${match.soccer_data.pk_goals_for || 0}`
-            : `${match.soccer_data.pk_goals_for || 0}-${match.soccer_data.pk_goals_against || 0}`;
+        if (sportCode === "soccer" && match.soccer_data?.is_pk_game) {
+          const pkScoreWinner =
+            winnerTournamentTeamId === match.team1_tournament_team_id
+              ? `${match.soccer_data.pk_goals_for || 0}-${match.soccer_data.pk_goals_against || 0}`
+              : `${match.soccer_data.pk_goals_against || 0}-${match.soccer_data.pk_goals_for || 0}`;
+          const pkScoreLoser =
+            winnerTournamentTeamId === match.team1_tournament_team_id
+              ? `${match.soccer_data.pk_goals_against || 0}-${match.soccer_data.pk_goals_for || 0}`
+              : `${match.soccer_data.pk_goals_for || 0}-${match.soccer_data.pk_goals_against || 0}`;
 
           winnerScoreDisplay = `〇\n${winnerGoalsDisplay}-${loserGoalsDisplay}\n(PK ${pkScoreWinner})`;
           loserScoreDisplay = `×\n${loserGoalsDisplay}-${winnerGoalsDisplay}\n(PK ${pkScoreLoser})`;
         }
 
         matrix[winnerTournamentId][loserTournamentId].entries.push({
-          result: 'win',
+          result: "win",
           score: winnerScoreDisplay,
           match_code: match.match_code,
-          soccer_data: winnerTournamentTeamId === match.team1_tournament_team_id ? match.soccer_data : undefined
+          soccer_data:
+            winnerTournamentTeamId === match.team1_tournament_team_id
+              ? match.soccer_data
+              : undefined,
         });
 
         matrix[loserTournamentId][winnerTournamentId].entries.push({
-          result: 'loss',
+          result: "loss",
           score: loserScoreDisplay,
           match_code: match.match_code,
-          soccer_data: winnerTournamentTeamId !== match.team1_tournament_team_id ? match.soccer_data : undefined
+          soccer_data:
+            winnerTournamentTeamId !== match.team1_tournament_team_id
+              ? match.soccer_data
+              : undefined,
         });
       }
     }
@@ -792,9 +869,9 @@ function createMatchMatrix(
 
       if (cell.entries.length === 0) {
         // エントリなし：初期値のまま
-        cell.score = '-';
+        cell.score = "-";
         cell.result = null;
-        cell.match_code = '';
+        cell.match_code = "";
       } else if (cell.entries.length === 1) {
         // 1試合のみ：従来の表示形式をそのまま使用（後方互換）
         const entry = cell.entries[0];
@@ -808,15 +885,15 @@ function createMatchMatrix(
         cell.soccer_data = cell.entries[0].soccer_data;
 
         // result集約: 全同一→その結果、異なる→'mixed'、null含む→null
-        const nonNullResults = cell.entries.filter(e => e.result !== null).map(e => e.result);
+        const nonNullResults = cell.entries.filter((e) => e.result !== null).map((e) => e.result);
         if (nonNullResults.length === 0) {
           cell.result = null;
         } else if (nonNullResults.length < cell.entries.length) {
           // null含む（未確定試合あり）
           cell.result = null;
         } else {
-          const allSame = nonNullResults.every(r => r === nonNullResults[0]);
-          cell.result = allSame ? nonNullResults[0] : 'mixed';
+          const allSame = nonNullResults.every((r) => r === nonNullResults[0]);
+          cell.result = allSame ? nonNullResults[0] : "mixed";
         }
 
         // score集約: 各エントリの表示を1行ずつ結合
@@ -825,24 +902,24 @@ function createMatchMatrix(
           if (entry.result === null) {
             // 未確定: エントリのscore（状態表示テキスト含む）をインライン化
             // score例: "A1", "A1\n試合中", "A1\n試合完了", "1 - 2\n確定待ち"
-            const parts = entry.score.split('\n');
+            const parts = entry.score.split("\n");
             if (parts.length >= 2) {
-              lines.push(`${parts[0]} ${parts.slice(1).join(' ')}`);
+              lines.push(`${parts[0]} ${parts.slice(1).join(" ")}`);
             } else {
               lines.push(entry.score);
             }
           } else {
             // 確定: スコア文字列から記号とスコアを抽出してインライン化
             // score例: "〇\n1-0", "△\n0-0", "不戦勝\n3-0"
-            const parts = entry.score.split('\n');
+            const parts = entry.score.split("\n");
             if (parts.length >= 2) {
-              lines.push(`${parts[0]} ${parts.slice(1).join(' ')}`);
+              lines.push(`${parts[0]} ${parts.slice(1).join(" ")}`);
             } else {
               lines.push(entry.score);
             }
           }
         }
-        cell.score = lines.join('\n');
+        cell.score = lines.join("\n");
       }
     }
   }
@@ -860,29 +937,32 @@ export function getDisplayName(team: TeamInfo): string {
 /**
  * 結果の色を取得
  */
-export function getResultColor(result: 'win' | 'loss' | 'draw' | 'mixed' | null, score?: string): string {
+export function getResultColor(
+  result: "win" | "loss" | "draw" | "mixed" | null,
+  score?: string,
+): string {
   switch (result) {
-    case 'win':
-      return 'text-black bg-white';
-    case 'loss':
-      return 'text-gray-500 bg-white';
-    case 'draw':
-      return 'text-black bg-white';
-    case 'mixed':
-      return 'text-black bg-white';
+    case "win":
+      return "text-black bg-white";
+    case "loss":
+      return "text-gray-500 bg-white";
+    case "draw":
+      return "text-black bg-white";
+    case "mixed":
+      return "text-black bg-white";
     default:
       // 状態表示の色分け
-      if (score === '未実施') {
-        return 'text-gray-500 bg-white font-medium';
-      } else if (score?.includes('試合中')) {
-        return 'text-orange-600 bg-white font-medium animate-pulse';
-      } else if (score?.includes('確定待ち')) {
-        return 'text-purple-600 bg-white font-medium';
-      } else if (score?.includes('試合完了')) {
-        return 'text-purple-600 bg-white font-medium';
-      } else if (score?.includes('中止')) {
-        return 'text-red-600 bg-white font-medium';
+      if (score === "未実施") {
+        return "text-gray-500 bg-white font-medium";
+      } else if (score?.includes("試合中")) {
+        return "text-orange-600 bg-white font-medium animate-pulse";
+      } else if (score?.includes("確定待ち")) {
+        return "text-purple-600 bg-white font-medium";
+      } else if (score?.includes("試合完了")) {
+        return "text-purple-600 bg-white font-medium";
+      } else if (score?.includes("中止")) {
+        return "text-red-600 bg-white font-medium";
       }
-      return 'text-gray-600 bg-white font-medium'; // 試合コード用にスタイルを調整
+      return "text-gray-600 bg-white font-medium"; // 試合コード用にスタイルを調整
   }
 }

@@ -1,19 +1,20 @@
 // app/admin/tournaments/[id]/results/page.tsx
 export const metadata = { title: "試合結果管理" };
 
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Trophy, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
-import { db } from '@/lib/db';
-import { Tournament } from '@/lib/types';
-import type { TournamentStatus } from '@/lib/tournament-status';
+import { ChevronRight, Home, Trophy } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import type { TournamentStatus } from "@/lib/tournament-status";
+import { Tournament } from "@/lib/types";
 
 async function getTournament(id: string): Promise<Tournament | null> {
   try {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT 
         t.tournament_id,
         t.tournament_name,
@@ -37,7 +38,9 @@ async function getTournament(id: string): Promise<Tournament | null> {
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
       WHERE t.tournament_id = ?
-    `, [parseInt(id)]);
+    `,
+      [parseInt(id)],
+    );
 
     if (result.rows.length === 0) {
       return null;
@@ -55,17 +58,17 @@ async function getTournament(id: string): Promise<Tournament | null> {
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
       status: row.status as TournamentStatus,
-      visibility: row.visibility === 'open' ? 1 : 0,
+      visibility: row.visibility === "open" ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
-      format_name: row.format_name as string
+      format_name: row.format_name as string,
     };
   } catch (error) {
-    console.error('大会データの取得に失敗:', error);
+    console.error("大会データの取得に失敗:", error);
     return null;
   }
 }
@@ -75,21 +78,21 @@ interface ResultsPageProps {
 }
 
 // キャッシュを無効化
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function TournamentResultsPage({ params }: ResultsPageProps) {
   const session = await auth();
-  
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-    redirect('/auth/login');
+
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+    redirect("/auth/login");
   }
 
   const resolvedParams = await params;
   const tournament = await getTournament(resolvedParams.id);
 
   if (!tournament) {
-    redirect('/admin');
+    redirect("/admin");
   }
 
   return (
@@ -99,12 +102,18 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
       {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -120,14 +129,13 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
         </div>
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <Trophy className="w-16 h-16 mx-auto text-gray-500 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            結果入力画面
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">結果入力画面</h2>
           <p className="text-gray-500 mb-6">
-            この画面では試合結果の入力・編集・確定を行います。<br />
+            この画面では試合結果の入力・編集・確定を行います。
+            <br />
             現在実装中です。
           </p>
-          
+
           {/* 大会情報表示 */}
           <div className="bg-gray-50 rounded-lg p-6 mt-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">大会情報</h3>
@@ -153,9 +161,7 @@ export default async function TournamentResultsPage({ params }: ResultsPageProps
 
           <div className="mt-8">
             <Button variant="outline" asChild>
-              <Link href="/my?tab=admin">
-                マイダッシュボードに戻る
-              </Link>
+              <Link href="/my?tab=admin">マイダッシュボードに戻る</Link>
             </Button>
           </div>
         </div>

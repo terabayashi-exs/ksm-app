@@ -1,6 +1,6 @@
 // lib/blob-storage.ts
-import { put, del, head, list, type PutBlobResult } from '@vercel/blob';
-import { getBlobToken } from './blob-config';
+import { del, head, list, type PutBlobResult, put } from "@vercel/blob";
+import { getBlobToken } from "./blob-config";
 
 /**
  * Vercel Blob ストレージ操作のラッパー
@@ -15,15 +15,15 @@ export class BlobStorage {
     options?: {
       contentType?: string;
       cacheControlMaxAge?: number;
-    }
+    },
   ): Promise<PutBlobResult> {
     const startTime = performance.now();
 
     try {
       // データサイズを計算
       let dataSize = 0;
-      if (typeof data === 'string') {
-        dataSize = Buffer.byteLength(data, 'utf8');
+      if (typeof data === "string") {
+        dataSize = Buffer.byteLength(data, "utf8");
       } else if (data instanceof Buffer) {
         dataSize = data.length;
       } else if (data instanceof Blob) {
@@ -32,17 +32,17 @@ export class BlobStorage {
 
       const token = getBlobToken();
       const result = await put(pathname, data, {
-        access: 'public',
+        access: "public",
         addRandomSuffix: false,
         allowOverwrite: true,
-        contentType: options?.contentType || 'application/json',
+        contentType: options?.contentType || "application/json",
         cacheControlMaxAge: options?.cacheControlMaxAge || 31536000, // 1 year
         ...(token ? { token } : {}),
       });
-      
+
       const duration = Math.round(performance.now() - startTime);
       console.log(`✅ Blob saved: ${pathname} (${(dataSize / 1024).toFixed(2)} KB, ${duration}ms)`);
-      
+
       return result;
     } catch (error) {
       const duration = Math.round(performance.now() - startTime);
@@ -50,9 +50,9 @@ export class BlobStorage {
       console.error(`❌ Blob save failed: ${pathname} (${duration}ms)`, {
         error: errorDetails,
         pathname,
-        dataSize: typeof data === 'string' ? `${Buffer.byteLength(data, 'utf8')} bytes` : 'unknown'
+        dataSize: typeof data === "string" ? `${Buffer.byteLength(data, "utf8")} bytes` : "unknown",
       });
-      throw this.enhanceError(error, 'PUT', pathname);
+      throw this.enhanceError(error, "PUT", pathname);
     }
   }
 
@@ -61,33 +61,36 @@ export class BlobStorage {
    */
   static async get(pathname: string): Promise<Response> {
     const startTime = performance.now();
-    
+
     try {
       // Blobの直接URLを構築する方法
       const blobUrl = await this.getBlobUrl(pathname);
       const response = await fetch(blobUrl);
-      
+
       if (!response.ok) {
         throw new Error(`Blob not found: ${pathname} (Status: ${response.status})`);
       }
-      
+
       const duration = Math.round(performance.now() - startTime);
-      const contentLength = response.headers.get('content-length');
-      const sizeInfo = contentLength ? ` (${(parseInt(contentLength) / 1024).toFixed(2)} KB)` : '';
-      
+      const contentLength = response.headers.get("content-length");
+      const sizeInfo = contentLength ? ` (${(parseInt(contentLength) / 1024).toFixed(2)} KB)` : "";
+
       console.log(`✅ Blob retrieved: ${pathname}${sizeInfo} (${duration}ms)`);
-      
+
       return response;
     } catch (error) {
       const duration = Math.round(performance.now() - startTime);
-      
+
       // 404エラーの場合はログを出力しない
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      if (!errorMessage.includes('404') && !errorMessage.includes('does not exist')) {
-        console.error(`❌ Blob get failed: ${pathname} (${duration}ms)`, this.getErrorDetails(error));
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      if (!errorMessage.includes("404") && !errorMessage.includes("does not exist")) {
+        console.error(
+          `❌ Blob get failed: ${pathname} (${duration}ms)`,
+          this.getErrorDetails(error),
+        );
       }
-      
-      throw this.enhanceError(error, 'GET', pathname);
+
+      throw this.enhanceError(error, "GET", pathname);
     }
   }
 
@@ -96,20 +99,23 @@ export class BlobStorage {
    */
   static async getJson<T>(pathname: string, retryCount = 0): Promise<T> {
     const maxRetries = 2;
-    
+
     try {
       const response = await this.get(pathname);
       return response.json() as Promise<T>;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
       // 404エラーで、まだリトライ回数が残っている場合（ログなし）
-      if ((errorMessage.includes('404') || errorMessage.includes('does not exist')) && retryCount < maxRetries) {
+      if (
+        (errorMessage.includes("404") || errorMessage.includes("does not exist")) &&
+        retryCount < maxRetries
+      ) {
         const delay = (retryCount + 1) * 300; // 300ms, 600ms
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         return this.getJson<T>(pathname, retryCount + 1);
       }
-      
+
       // リトライ上限に達した、または他のエラー
       throw error;
     }
@@ -133,7 +139,7 @@ export class BlobStorage {
    */
   static async delete(pathname: string): Promise<void> {
     const startTime = performance.now();
-    
+
     try {
       const token = getBlobToken();
       await del(pathname, { ...(token ? { token } : {}) });
@@ -141,18 +147,18 @@ export class BlobStorage {
       console.log(`✅ Blob deleted: ${pathname} (${duration}ms)`);
     } catch (error) {
       const duration = Math.round(performance.now() - startTime);
-      console.error(`❌ Blob delete failed: ${pathname} (${duration}ms)`, this.getErrorDetails(error));
-      throw this.enhanceError(error, 'DELETE', pathname);
+      console.error(
+        `❌ Blob delete failed: ${pathname} (${duration}ms)`,
+        this.getErrorDetails(error),
+      );
+      throw this.enhanceError(error, "DELETE", pathname);
     }
   }
 
   /**
    * ファイル一覧を取得
    */
-  static async list(options?: {
-    prefix?: string;
-    limit?: number;
-  }): Promise<string[]> {
+  static async list(options?: { prefix?: string; limit?: number }): Promise<string[]> {
     try {
       const token = getBlobToken();
       const { blobs } = await list({
@@ -160,10 +166,10 @@ export class BlobStorage {
         limit: options?.limit || 1000,
         ...(token ? { token } : {}),
       });
-      
-      return blobs.map(blob => blob.pathname);
+
+      return blobs.map((blob) => blob.pathname);
     } catch (error) {
-      console.error('❌ Blob list failed:', error);
+      console.error("❌ Blob list failed:", error);
       throw error;
     }
   }
@@ -180,7 +186,7 @@ export class BlobStorage {
       return metadata.url;
     } catch {
       // head操作が失敗した場合は再試行（ログなし）
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       const metadata = await head(pathname, opts);
       return metadata.url;
     }
@@ -194,11 +200,11 @@ export class BlobStorage {
     data: Record<string, unknown>,
     options?: {
       cacheControlMaxAge?: number;
-    }
+    },
   ): Promise<PutBlobResult> {
     const jsonString = JSON.stringify(data, null, 2);
     return this.put(pathname, jsonString, {
-      contentType: 'application/json',
+      contentType: "application/json",
       ...options,
     });
   }
@@ -212,7 +218,7 @@ export class BlobStorage {
     options?: {
       maxRetries?: number;
       defaultValue?: T;
-    }
+    },
   ): Promise<void> {
     const maxRetries = options?.maxRetries || 3;
     let retries = 0;
@@ -226,7 +232,12 @@ export class BlobStorage {
         } catch (error) {
           // ファイルが存在しない場合（404）またはその他のエラー
           const errorDetails = this.getErrorDetails(error);
-          if (!(error instanceof Error && (error.message.includes('404') || error.message.includes('does not exist')))) {
+          if (
+            !(
+              error instanceof Error &&
+              (error.message.includes("404") || error.message.includes("does not exist"))
+            )
+          ) {
             console.warn(`⚠️ ファイル読み取りエラー、デフォルト値使用: ${pathname}`, errorDetails);
           }
           currentData = options?.defaultValue || ({} as T);
@@ -240,16 +251,21 @@ export class BlobStorage {
         return;
       } catch (error) {
         retries++;
-        console.error(`❌ JSON更新失敗 ${retries}/${maxRetries}: ${pathname}`, this.getErrorDetails(error));
-        
+        console.error(
+          `❌ JSON更新失敗 ${retries}/${maxRetries}: ${pathname}`,
+          this.getErrorDetails(error),
+        );
+
         if (retries >= maxRetries) {
           const duration = performance.now();
-          throw new Error(`Failed to update JSON after ${maxRetries} retries: ${pathname} (${Math.round(duration)}ms)`);
+          throw new Error(
+            `Failed to update JSON after ${maxRetries} retries: ${pathname} (${Math.round(duration)}ms)`,
+          );
         }
-        
+
         // 指数バックオフでリトライ（ログなし）
         const delay = Math.min(1000 * Math.pow(2, retries - 1), 5000);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -262,7 +278,7 @@ export class BlobStorage {
       return {
         name: error.name,
         message: error.message,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n') // スタックトレースの最初の3行のみ
+        stack: error.stack?.split("\n").slice(0, 3).join("\n"), // スタックトレースの最初の3行のみ
       };
     }
     return { raw: error };
@@ -272,19 +288,19 @@ export class BlobStorage {
    * エラーを拡張（追加情報付与）
    */
   private static enhanceError(error: unknown, operation: string, pathname: string): Error {
-    const baseMessage = error instanceof Error ? error.message : 'Unknown error';
+    const baseMessage = error instanceof Error ? error.message : "Unknown error";
     const enhancedError = new Error(`Blob ${operation} failed for '${pathname}': ${baseMessage}`);
-    
+
     // 元のエラーの情報を保持
     if (error instanceof Error) {
       enhancedError.stack = error.stack;
       (enhancedError as unknown as Record<string, unknown>).originalError = error;
     }
-    
+
     (enhancedError as unknown as Record<string, unknown>).operation = operation;
     (enhancedError as unknown as Record<string, unknown>).pathname = pathname;
     (enhancedError as unknown as Record<string, unknown>).timestamp = new Date().toISOString();
-    
+
     return enhancedError;
   }
 
@@ -298,37 +314,36 @@ export class BlobStorage {
   }> {
     const testPath = `health-check/${Date.now()}.json`;
     const testData = { timestamp: new Date().toISOString(), test: true };
-    
+
     try {
       const startTime = performance.now();
-      
+
       // 書き込みテスト
       await this.putJson(testPath, testData);
-      
+
       // 読み取りテスト
       const retrieved = await this.getJson(testPath);
-      
+
       // 削除テスト
       await this.delete(testPath);
-      
+
       const endTime = performance.now();
       const latency = Math.round(endTime - startTime);
-      
+
       // データ整合性チェック
       if ((retrieved as Record<string, unknown>).timestamp !== testData.timestamp) {
-        throw new Error('Data integrity check failed');
+        throw new Error("Data integrity check failed");
       }
-      
+
       return {
         healthy: true,
-        latency_ms: latency
+        latency_ms: latency,
       };
-      
     } catch (error) {
       return {
         healthy: false,
         latency_ms: 0,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }

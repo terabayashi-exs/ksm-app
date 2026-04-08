@@ -1,16 +1,19 @@
 // components/features/admin/ParticipantManagement.tsx
 // 参加チーム統合管理コンポーネント
 
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Users, Clock, XCircle, CheckCircle } from 'lucide-react';
-import ParticipantCard from './ParticipantCard';
-import ParticipantActionsModal, { type ParticipantTeam, type ActionType } from './ParticipantActionsModal';
+import { AlertTriangle, CheckCircle, Clock, Users, XCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ParticipantActionsModal, {
+  type ActionType,
+  type ParticipantTeam,
+} from "./ParticipantActionsModal";
+import ParticipantCard from "./ParticipantCard";
 
 interface ParticipantStatistics {
   confirmed: number;
@@ -43,7 +46,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
   const [data, setData] = useState<ParticipantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
 
   // モーダル関連
   const [modalOpen, setModalOpen] = useState(false);
@@ -61,11 +64,11 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
         setData(result.data);
         setError(null);
       } else {
-        setError(result.error || '参加チーム情報の取得に失敗しました');
+        setError(result.error || "参加チーム情報の取得に失敗しました");
       }
     } catch (err) {
-      setError('参加チーム情報の取得中にエラーが発生しました');
-      console.error('参加チーム取得エラー:', err);
+      setError("参加チーム情報の取得中にエラーが発生しました");
+      console.error("参加チーム取得エラー:", err);
     } finally {
       setLoading(false);
     }
@@ -87,19 +90,19 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
   const handleSubmitAction = async (
     tournamentTeamId: number,
     action: ActionType,
-    adminComment: string
+    adminComment: string,
   ) => {
     try {
       const response = await fetch(`/api/admin/tournaments/${tournamentId}/participants`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           tournament_team_id: tournamentTeamId,
           action,
-          admin_comment: adminComment
-        })
+          admin_comment: adminComment,
+        }),
       });
 
       const result = await response.json();
@@ -108,10 +111,10 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
         // データ再取得
         await fetchData();
       } else {
-        throw new Error(result.error || '操作に失敗しました');
+        throw new Error(result.error || "操作に失敗しました");
       }
     } catch (error) {
-      console.error('アクション実行エラー:', error);
+      console.error("アクション実行エラー:", error);
       throw error;
     }
   };
@@ -121,19 +124,20 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
     if (!data) return [];
 
     switch (activeTab) {
-      case 'all':
+      case "all":
         return data.participants;
-      case 'confirmed':
-        return data.participants.filter(p =>
-          p.participation_status === 'confirmed' &&
-          p.withdrawal_status !== 'withdrawal_requested'
+      case "confirmed":
+        return data.participants.filter(
+          (p) =>
+            p.participation_status === "confirmed" &&
+            p.withdrawal_status !== "withdrawal_requested",
         );
-      case 'waitlisted':
-        return data.participants.filter(p => p.participation_status === 'waitlisted');
-      case 'withdrawal_requested':
-        return data.participants.filter(p => p.withdrawal_status === 'withdrawal_requested');
-      case 'cancelled':
-        return data.participants.filter(p => p.participation_status === 'cancelled');
+      case "waitlisted":
+        return data.participants.filter((p) => p.participation_status === "waitlisted");
+      case "withdrawal_requested":
+        return data.participants.filter((p) => p.withdrawal_status === "withdrawal_requested");
+      case "cancelled":
+        return data.participants.filter((p) => p.participation_status === "cancelled");
       default:
         return data.participants;
     }
@@ -152,7 +156,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
     return (
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>{error || 'データの読み込みに失敗しました'}</AlertDescription>
+        <AlertDescription>{error || "データの読み込みに失敗しました"}</AlertDescription>
       </Alert>
     );
   }
@@ -179,9 +183,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
               <div className="text-sm text-green-700 mb-1">参加確定</div>
               <div className="text-3xl font-bold text-green-600">
                 {stats.confirmed}
-                <span className="text-sm font-normal text-gray-500 ml-1">
-                  / {stats.max_teams}
-                </span>
+                <span className="text-sm font-normal text-gray-500 ml-1">/ {stats.max_teams}</span>
               </div>
             </div>
 
@@ -215,7 +217,8 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
           {stats.confirmed < stats.max_teams ? (
             <Alert className="mt-4 bg-blue-50 border-blue-200">
               <AlertDescription className="text-blue-800">
-                現在の空き枠: <span className="font-bold">{stats.max_teams - stats.confirmed}</span> チーム
+                現在の空き枠: <span className="font-bold">{stats.max_teams - stats.confirmed}</span>{" "}
+                チーム
                 {stats.waitlisted > 0 && (
                   <span className="ml-2">
                     （キャンセル待ち {stats.waitlisted} チームを繰り上げ可能）
@@ -228,9 +231,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
               <AlertDescription className="text-amber-800">
                 ✓ 参加枠が満員です
                 {stats.waitlisted > 0 && (
-                  <span className="ml-2">
-                    （キャンセル待ち {stats.waitlisted} チーム）
-                  </span>
+                  <span className="ml-2">（キャンセル待ち {stats.waitlisted} チーム）</span>
                 )}
               </AlertDescription>
             </Alert>
@@ -269,9 +270,7 @@ export default function ParticipantManagement({ tournamentId }: ParticipantManag
           {filteredParticipants.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
-                <div className="text-center text-gray-500 py-8">
-                  該当するチームがありません
-                </div>
+                <div className="text-center text-gray-500 py-8">該当するチームがありません</div>
               </CardContent>
             </Card>
           ) : (

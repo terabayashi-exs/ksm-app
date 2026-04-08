@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { OperatorPermissions } from '@/lib/types/operator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import type { OperatorPermissions } from "@/lib/types/operator";
 
 interface PermissionEditorProps {
   permissions: OperatorPermissions;
@@ -11,7 +11,11 @@ interface PermissionEditorProps {
   compact?: boolean;
 }
 
-export default function PermissionEditor({ permissions, onChange, compact = false }: PermissionEditorProps) {
+export default function PermissionEditor({
+  permissions,
+  onChange,
+  compact = false,
+}: PermissionEditorProps) {
   const updatePermission = (key: keyof OperatorPermissions, value: boolean) => {
     onChange({
       ...permissions,
@@ -26,7 +30,9 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
         checked={permissions[id]}
         onCheckedChange={(checked) => updatePermission(id, checked as boolean)}
       />
-      <Label htmlFor={id} className="cursor-pointer text-base">{label}</Label>
+      <Label htmlFor={id} className="cursor-pointer text-base">
+        {label}
+      </Label>
     </div>
   );
 
@@ -90,9 +96,7 @@ export default function PermissionEditor({ permissions, onChange, compact = fals
           この運営者に許可する操作を選択してください（部門編集・アーカイブ・削除は管理者のみ）
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {content}
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }

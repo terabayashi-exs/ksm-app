@@ -24,366 +24,374 @@ export interface TieBreakingRuleType {
  */
 export const SPORT_TIE_BREAKING_RULES: Record<string, TieBreakingRuleType[]> = {
   // PK選手権
-  'pk_championship': [
+  pk_championship: [
     {
-      type: 'points',
-      label: '勝点',
-      description: '勝利3点、引分1点、敗北0点',
-      calculation_note: '勝利数×3 + 引分数×1'
+      type: "points",
+      label: "勝点",
+      description: "勝利3点、引分1点、敗北0点",
+      calculation_note: "勝利数×3 + 引分数×1",
     },
     {
-      type: 'goal_difference',
-      label: '得失点差',
-      description: '総得点 - 総失点',
-      calculation_note: '得点合計 - 失点合計'
+      type: "goal_difference",
+      label: "得失点差",
+      description: "総得点 - 総失点",
+      calculation_note: "得点合計 - 失点合計",
     },
     {
-      type: 'goals_for',
-      label: '総得点',
-      description: '獲得した総得点数',
-      calculation_note: '全試合の得点の合計'
+      type: "goals_for",
+      label: "総得点",
+      description: "獲得した総得点数",
+      calculation_note: "全試合の得点の合計",
     },
     {
-      type: 'h2h_points',
-      label: '当該チーム間の勝点',
-      description: '直接対決での勝点比較',
-      calculation_note: '同順位チーム間の対戦における勝点'
+      type: "h2h_points",
+      label: "当該チーム間の勝点",
+      description: "直接対決での勝点比較",
+      calculation_note: "同順位チーム間の対戦における勝点",
     },
     {
-      type: 'h2h_goal_difference',
-      label: '当該チーム間の得失点差',
-      description: '直接対決での得失点差比較',
-      calculation_note: '同順位チーム間の対戦における得失点差'
+      type: "h2h_goal_difference",
+      label: "当該チーム間の得失点差",
+      description: "直接対決での得失点差比較",
+      calculation_note: "同順位チーム間の対戦における得失点差",
     },
     {
-      type: 'h2h_goals_for',
-      label: '当該チーム間の総得点',
-      description: '直接対決での総得点比較',
-      calculation_note: '同順位チーム間の対戦における総得点'
+      type: "h2h_goals_for",
+      label: "当該チーム間の総得点",
+      description: "直接対決での総得点比較",
+      calculation_note: "同順位チーム間の対戦における総得点",
     },
     {
-      type: 'lottery',
-      label: '抽選',
-      description: '運営による抽選で決定',
-      calculation_note: '手動で順位を設定する必要があります'
-    }
+      type: "lottery",
+      label: "抽選",
+      description: "運営による抽選で決定",
+      calculation_note: "手動で順位を設定する必要があります",
+    },
   ],
 
   // サッカー
-  'soccer': [
+  soccer: [
     {
-      type: 'points',
-      label: '勝点',
-      description: '勝利3点、引分1点、敗北0点',
-      calculation_note: '勝利数×3 + 引分数×1'
+      type: "points",
+      label: "勝点",
+      description: "勝利3点、引分1点、敗北0点",
+      calculation_note: "勝利数×3 + 引分数×1",
     },
     {
-      type: 'goal_difference',
-      label: '得失点差',
-      description: '総得点 - 総失点',
-      calculation_note: '得点合計 - 失点合計'
+      type: "goal_difference",
+      label: "得失点差",
+      description: "総得点 - 総失点",
+      calculation_note: "得点合計 - 失点合計",
     },
     {
-      type: 'goals_for',
-      label: '総得点',
-      description: '獲得した総得点数',
-      calculation_note: '全試合の得点の合計'
+      type: "goals_for",
+      label: "総得点",
+      description: "獲得した総得点数",
+      calculation_note: "全試合の得点の合計",
     },
     {
-      type: 'h2h_points',
-      label: '当該チーム間の勝点',
-      description: '直接対決での勝点比較',
-      calculation_note: '同順位チーム間の対戦における勝点'
+      type: "h2h_points",
+      label: "当該チーム間の勝点",
+      description: "直接対決での勝点比較",
+      calculation_note: "同順位チーム間の対戦における勝点",
     },
     {
-      type: 'h2h_goal_difference',
-      label: '当該チーム間の得失点差',
-      description: '直接対決での得失点差比較',
-      calculation_note: '同順位チーム間の対戦における得失点差'
+      type: "h2h_goal_difference",
+      label: "当該チーム間の得失点差",
+      description: "直接対決での得失点差比較",
+      calculation_note: "同順位チーム間の対戦における得失点差",
     },
     {
-      type: 'h2h_goals_for',
-      label: '当該チーム間の総得点',
-      description: '直接対決での総得点比較',
-      calculation_note: '同順位チーム間の対戦における総得点'
+      type: "h2h_goals_for",
+      label: "当該チーム間の総得点",
+      description: "直接対決での総得点比較",
+      calculation_note: "同順位チーム間の対戦における総得点",
     },
     {
-      type: 'lottery',
-      label: '抽選',
-      description: '運営による抽選で決定',
-      calculation_note: '手動で順位を設定する必要があります'
-    }
+      type: "lottery",
+      label: "抽選",
+      description: "運営による抽選で決定",
+      calculation_note: "手動で順位を設定する必要があります",
+    },
   ],
 
   // 野球
-  'baseball': [
+  baseball: [
     {
-      type: 'win_rate',
-      label: '勝率',
-      description: '勝利数 ÷ (勝利数 + 敗北数)',
-      calculation_note: '勝利数 ÷ (勝利数 + 敗北数)'
+      type: "win_rate",
+      label: "勝率",
+      description: "勝利数 ÷ (勝利数 + 敗北数)",
+      calculation_note: "勝利数 ÷ (勝利数 + 敗北数)",
     },
     {
-      type: 'win_count',
-      label: '勝利数',
-      description: '勝利した試合数',
-      calculation_note: '勝利した試合の合計数'
+      type: "win_count",
+      label: "勝利数",
+      description: "勝利した試合数",
+      calculation_note: "勝利した試合の合計数",
     },
     {
-      type: 'run_difference',
-      label: '得失点差',
-      description: '総得点 - 総失点',
-      calculation_note: '得点合計 - 失点合計'
+      type: "run_difference",
+      label: "得失点差",
+      description: "総得点 - 総失点",
+      calculation_note: "得点合計 - 失点合計",
     },
     {
-      type: 'runs_scored',
-      label: '総得点',
-      description: '獲得した総得点数',
-      calculation_note: '全試合の得点の合計'
+      type: "runs_scored",
+      label: "総得点",
+      description: "獲得した総得点数",
+      calculation_note: "全試合の得点の合計",
     },
     {
-      type: 'h2h_points',
-      label: '当該チーム間の勝点',
-      description: '直接対決での勝点比較',
-      calculation_note: '同順位チーム間の対戦における勝点'
+      type: "h2h_points",
+      label: "当該チーム間の勝点",
+      description: "直接対決での勝点比較",
+      calculation_note: "同順位チーム間の対戦における勝点",
     },
     {
-      type: 'h2h_goal_difference',
-      label: '当該チーム間の得失点差',
-      description: '直接対決での得失点差比較',
-      calculation_note: '同順位チーム間の対戦における得失点差'
+      type: "h2h_goal_difference",
+      label: "当該チーム間の得失点差",
+      description: "直接対決での得失点差比較",
+      calculation_note: "同順位チーム間の対戦における得失点差",
     },
     {
-      type: 'h2h_goals_for',
-      label: '当該チーム間の総得点',
-      description: '直接対決での総得点比較',
-      calculation_note: '同順位チーム間の対戦における総得点'
+      type: "h2h_goals_for",
+      label: "当該チーム間の総得点",
+      description: "直接対決での総得点比較",
+      calculation_note: "同順位チーム間の対戦における総得点",
     },
     {
-      type: 'lottery',
-      label: '抽選',
-      description: '運営による抽選で決定',
-      calculation_note: '手動で順位を設定する必要があります'
-    }
+      type: "lottery",
+      label: "抽選",
+      description: "運営による抽選で決定",
+      calculation_note: "手動で順位を設定する必要があります",
+    },
   ],
 
   // 陸上競技（短距離）
-  'track_and_field': [
-    { 
-      type: 'best_time', 
-      label: 'ベストタイム', 
-      description: '最速記録での順位決定',
-      calculation_note: '全種目を通じた最速記録（秒単位、少ない方が上位）' 
+  track_and_field: [
+    {
+      type: "best_time",
+      label: "ベストタイム",
+      description: "最速記録での順位決定",
+      calculation_note: "全種目を通じた最速記録（秒単位、少ない方が上位）",
     },
-    { 
-      type: 'points', 
-      label: '総合得点', 
-      description: '各種目の得点合計',
-      calculation_note: '全種目の得点を合計（多い方が上位）' 
+    {
+      type: "points",
+      label: "総合得点",
+      description: "各種目の得点合計",
+      calculation_note: "全種目の得点を合計（多い方が上位）",
     },
-    { 
-      type: 'win_count', 
-      label: '優勝種目数', 
-      description: '1位獲得種目数',
-      calculation_note: '1位を獲得した種目の数（多い方が上位）' 
+    {
+      type: "win_count",
+      label: "優勝種目数",
+      description: "1位獲得種目数",
+      calculation_note: "1位を獲得した種目の数（多い方が上位）",
     },
-    { 
-      type: 'podium_count', 
-      label: '表彰台回数', 
-      description: '3位以内の回数',
-      calculation_note: '3位以内に入った種目の数（多い方が上位）' 
+    {
+      type: "podium_count",
+      label: "表彰台回数",
+      description: "3位以内の回数",
+      calculation_note: "3位以内に入った種目の数（多い方が上位）",
     },
-    { 
-      type: 'lottery', 
-      label: '抽選', 
-      description: '運営による抽選で決定',
-      calculation_note: '手動で順位を設定する必要があります' 
-    }
+    {
+      type: "lottery",
+      label: "抽選",
+      description: "運営による抽選で決定",
+      calculation_note: "手動で順位を設定する必要があります",
+    },
   ],
 
   // バスケットボール
-  'basketball': [
+  basketball: [
     {
-      type: 'win_rate',
-      label: '勝率',
-      description: '勝利数 ÷ 試合数',
-      calculation_note: '勝利数 ÷ 試合数'
+      type: "win_rate",
+      label: "勝率",
+      description: "勝利数 ÷ 試合数",
+      calculation_note: "勝利数 ÷ 試合数",
     },
     {
-      type: 'point_difference',
-      label: '得失点差',
-      description: '総得点 - 総失点',
-      calculation_note: '得点合計 - 失点合計'
+      type: "point_difference",
+      label: "得失点差",
+      description: "総得点 - 総失点",
+      calculation_note: "得点合計 - 失点合計",
     },
     {
-      type: 'points_scored',
-      label: '総得点',
-      description: '獲得した総得点数',
-      calculation_note: '全試合の得点の合計'
+      type: "points_scored",
+      label: "総得点",
+      description: "獲得した総得点数",
+      calculation_note: "全試合の得点の合計",
     },
     {
-      type: 'h2h_points',
-      label: '当該チーム間の勝点',
-      description: '直接対決での勝点比較',
-      calculation_note: '同順位チーム間の対戦における勝点'
+      type: "h2h_points",
+      label: "当該チーム間の勝点",
+      description: "直接対決での勝点比較",
+      calculation_note: "同順位チーム間の対戦における勝点",
     },
     {
-      type: 'h2h_goal_difference',
-      label: '当該チーム間の得失点差',
-      description: '直接対決での得失点差比較',
-      calculation_note: '同順位チーム間の対戦における得失点差'
+      type: "h2h_goal_difference",
+      label: "当該チーム間の得失点差",
+      description: "直接対決での得失点差比較",
+      calculation_note: "同順位チーム間の対戦における得失点差",
     },
     {
-      type: 'h2h_goals_for',
-      label: '当該チーム間の総得点',
-      description: '直接対決での総得点比較',
-      calculation_note: '同順位チーム間の対戦における総得点'
+      type: "h2h_goals_for",
+      label: "当該チーム間の総得点",
+      description: "直接対決での総得点比較",
+      calculation_note: "同順位チーム間の対戦における総得点",
     },
     {
-      type: 'lottery',
-      label: '抽選',
-      description: '運営による抽選で決定',
-      calculation_note: '手動で順位を設定する必要があります'
-    }
-  ]
+      type: "lottery",
+      label: "抽選",
+      description: "運営による抽選で決定",
+      calculation_note: "手動で順位を設定する必要があります",
+    },
+  ],
 };
 
 /**
  * デフォルトの順位決定ルール設定（競技種別ごと）
  */
 export const DEFAULT_TIE_BREAKING_RULES: Record<string, TieBreakingRule[]> = {
-  'pk_championship': [
-    { type: 'points', order: 1 },
-    { type: 'goal_difference', order: 2 },
-    { type: 'goals_for', order: 3 },
-    { type: 'h2h_points', order: 4 },
-    { type: 'h2h_goal_difference', order: 5 },
-    { type: 'h2h_goals_for', order: 6 },
-    { type: 'lottery', order: 7 }
+  pk_championship: [
+    { type: "points", order: 1 },
+    { type: "goal_difference", order: 2 },
+    { type: "goals_for", order: 3 },
+    { type: "h2h_points", order: 4 },
+    { type: "h2h_goal_difference", order: 5 },
+    { type: "h2h_goals_for", order: 6 },
+    { type: "lottery", order: 7 },
   ],
-  'soccer': [
-    { type: 'points', order: 1 },
-    { type: 'goal_difference', order: 2 },
-    { type: 'goals_for', order: 3 },
-    { type: 'h2h_points', order: 4 },
-    { type: 'h2h_goal_difference', order: 5 },
-    { type: 'h2h_goals_for', order: 6 },
-    { type: 'lottery', order: 7 }
+  soccer: [
+    { type: "points", order: 1 },
+    { type: "goal_difference", order: 2 },
+    { type: "goals_for", order: 3 },
+    { type: "h2h_points", order: 4 },
+    { type: "h2h_goal_difference", order: 5 },
+    { type: "h2h_goals_for", order: 6 },
+    { type: "lottery", order: 7 },
   ],
-  'baseball': [
-    { type: 'win_rate', order: 1 },
-    { type: 'run_difference', order: 2 },
-    { type: 'runs_scored', order: 3 },
-    { type: 'h2h_points', order: 4 },
-    { type: 'h2h_goal_difference', order: 5 },
-    { type: 'h2h_goals_for', order: 6 },
-    { type: 'lottery', order: 7 }
+  baseball: [
+    { type: "win_rate", order: 1 },
+    { type: "run_difference", order: 2 },
+    { type: "runs_scored", order: 3 },
+    { type: "h2h_points", order: 4 },
+    { type: "h2h_goal_difference", order: 5 },
+    { type: "h2h_goals_for", order: 6 },
+    { type: "lottery", order: 7 },
   ],
-  'track_and_field': [
-    { type: 'best_time', order: 1 },
-    { type: 'points', order: 2 },
-    { type: 'win_count', order: 3 },
-    { type: 'podium_count', order: 4 },
-    { type: 'lottery', order: 5 }
+  track_and_field: [
+    { type: "best_time", order: 1 },
+    { type: "points", order: 2 },
+    { type: "win_count", order: 3 },
+    { type: "podium_count", order: 4 },
+    { type: "lottery", order: 5 },
   ],
-  'basketball': [
-    { type: 'win_rate', order: 1 },
-    { type: 'point_difference', order: 2 },
-    { type: 'points_scored', order: 3 },
-    { type: 'h2h_points', order: 4 },
-    { type: 'h2h_goal_difference', order: 5 },
-    { type: 'h2h_goals_for', order: 6 },
-    { type: 'lottery', order: 7 }
-  ]
+  basketball: [
+    { type: "win_rate", order: 1 },
+    { type: "point_difference", order: 2 },
+    { type: "points_scored", order: 3 },
+    { type: "h2h_points", order: 4 },
+    { type: "h2h_goal_difference", order: 5 },
+    { type: "h2h_goals_for", order: 6 },
+    { type: "lottery", order: 7 },
+  ],
 };
 
 /**
  * プリセット定義
  */
-export const TIE_BREAKING_PRESETS: Record<string, { label: string; description: string; getRules: (sportCode: string) => TieBreakingRule[] }> = {
-  'head_to_head_first': {
-    label: 'Head-to-Head優先',
-    description: '勝点 → 当該チーム間の勝点 → 当該チーム間の得失点差 → 当該チーム間の総得点 → 全体得失点差 → 全体総得点 → 抽選',
+export const TIE_BREAKING_PRESETS: Record<
+  string,
+  { label: string; description: string; getRules: (sportCode: string) => TieBreakingRule[] }
+> = {
+  head_to_head_first: {
+    label: "Head-to-Head優先",
+    description:
+      "勝点 → 当該チーム間の勝点 → 当該チーム間の得失点差 → 当該チーム間の総得点 → 全体得失点差 → 全体総得点 → 抽選",
     getRules: (sportCode: string) => {
-      if (sportCode === 'baseball') {
+      if (sportCode === "baseball") {
         return [
-          { type: 'win_rate', order: 1 },
-          { type: 'h2h_points', order: 2 },
-          { type: 'h2h_goal_difference', order: 3 },
-          { type: 'h2h_goals_for', order: 4 },
-          { type: 'run_difference', order: 5 },
-          { type: 'runs_scored', order: 6 },
-          { type: 'lottery', order: 7 }
+          { type: "win_rate", order: 1 },
+          { type: "h2h_points", order: 2 },
+          { type: "h2h_goal_difference", order: 3 },
+          { type: "h2h_goals_for", order: 4 },
+          { type: "run_difference", order: 5 },
+          { type: "runs_scored", order: 6 },
+          { type: "lottery", order: 7 },
         ];
       }
-      if (sportCode === 'basketball') {
+      if (sportCode === "basketball") {
         return [
-          { type: 'win_rate', order: 1 },
-          { type: 'h2h_points', order: 2 },
-          { type: 'h2h_goal_difference', order: 3 },
-          { type: 'h2h_goals_for', order: 4 },
-          { type: 'point_difference', order: 5 },
-          { type: 'points_scored', order: 6 },
-          { type: 'lottery', order: 7 }
+          { type: "win_rate", order: 1 },
+          { type: "h2h_points", order: 2 },
+          { type: "h2h_goal_difference", order: 3 },
+          { type: "h2h_goals_for", order: 4 },
+          { type: "point_difference", order: 5 },
+          { type: "points_scored", order: 6 },
+          { type: "lottery", order: 7 },
         ];
       }
       // soccer, pk_championship
       return [
-        { type: 'points', order: 1 },
-        { type: 'h2h_points', order: 2 },
-        { type: 'h2h_goal_difference', order: 3 },
-        { type: 'h2h_goals_for', order: 4 },
-        { type: 'goal_difference', order: 5 },
-        { type: 'goals_for', order: 6 },
-        { type: 'lottery', order: 7 }
+        { type: "points", order: 1 },
+        { type: "h2h_points", order: 2 },
+        { type: "h2h_goal_difference", order: 3 },
+        { type: "h2h_goals_for", order: 4 },
+        { type: "goal_difference", order: 5 },
+        { type: "goals_for", order: 6 },
+        { type: "lottery", order: 7 },
       ];
-    }
+    },
   },
-  'overall_first': {
-    label: 'Overall優先',
-    description: '勝点 → 全体得失点差 → 全体総得点 → 当該チーム間の勝点 → 当該チーム間の得失点差 → 当該チーム間の総得点 → 抽選',
+  overall_first: {
+    label: "Overall優先",
+    description:
+      "勝点 → 全体得失点差 → 全体総得点 → 当該チーム間の勝点 → 当該チーム間の得失点差 → 当該チーム間の総得点 → 抽選",
     getRules: (sportCode: string) => {
-      return DEFAULT_TIE_BREAKING_RULES[sportCode] || DEFAULT_TIE_BREAKING_RULES['pk_championship'];
-    }
-  }
+      return DEFAULT_TIE_BREAKING_RULES[sportCode] || DEFAULT_TIE_BREAKING_RULES["pk_championship"];
+    },
+  },
 };
 
 /**
  * 競技種別から利用可能な順位決定ルールタイプを取得
  */
 export function getAvailableTieBreakingRules(sportCode: string): TieBreakingRuleType[] {
-  return SPORT_TIE_BREAKING_RULES[sportCode] || SPORT_TIE_BREAKING_RULES['pk_championship'];
+  return SPORT_TIE_BREAKING_RULES[sportCode] || SPORT_TIE_BREAKING_RULES["pk_championship"];
 }
 
 /**
  * 競技種別からデフォルト順位決定ルールを取得
  */
 export function getDefaultTieBreakingRules(sportCode: string): TieBreakingRule[] {
-  return DEFAULT_TIE_BREAKING_RULES[sportCode] || DEFAULT_TIE_BREAKING_RULES['pk_championship'];
+  return DEFAULT_TIE_BREAKING_RULES[sportCode] || DEFAULT_TIE_BREAKING_RULES["pk_championship"];
 }
 
 /**
  * 順位決定ルールの妥当性をチェック
  */
-export function validateTieBreakingRules(rules: TieBreakingRule[], sportCode: string): { isValid: boolean; errors: string[] } {
+export function validateTieBreakingRules(
+  rules: TieBreakingRule[],
+  sportCode: string,
+): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
-  const availableTypes = getAvailableTieBreakingRules(sportCode).map(rule => rule.type);
+  const availableTypes = getAvailableTieBreakingRules(sportCode).map((rule) => rule.type);
 
   // 基本的なバリデーション
   if (!Array.isArray(rules) || rules.length === 0) {
-    errors.push('順位決定ルールが設定されていません');
+    errors.push("順位決定ルールが設定されていません");
     return { isValid: false, errors };
   }
 
   if (rules.length > 8) {
-    errors.push('順位決定ルールは最大8つまでです');
+    errors.push("順位決定ルールは最大8つまでです");
   }
 
   // ルールの重複チェック
-  const types = rules.map(rule => rule.type);
+  const types = rules.map((rule) => rule.type);
   const uniqueTypes = new Set(types);
   if (types.length !== uniqueTypes.size) {
-    errors.push('同じルールタイプを複数設定することはできません');
+    errors.push("同じルールタイプを複数設定することはできません");
   }
 
   // 利用可能なルールタイプかチェック
@@ -394,17 +402,17 @@ export function validateTieBreakingRules(rules: TieBreakingRule[], sportCode: st
   }
 
   // order の連続性チェック
-  const orders = rules.map(rule => rule.order).sort((a, b) => a - b);
+  const orders = rules.map((rule) => rule.order).sort((a, b) => a - b);
   for (let i = 0; i < orders.length; i++) {
     if (orders[i] !== i + 1) {
-      errors.push('順位決定ルールの順序は1から連続である必要があります');
+      errors.push("順位決定ルールの順序は1から連続である必要があります");
       break;
     }
   }
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -421,10 +429,10 @@ export function parseTieBreakingRules(rulesJson: string | null): TieBreakingRule
     // 後方互換: head_to_head → h2h_points, h2h_goal_difference, h2h_goals_for に展開
     const migrated: TieBreakingRule[] = [];
     for (const rule of parsed) {
-      if (rule.type === 'head_to_head') {
-        migrated.push({ type: 'h2h_points', order: 0 });
-        migrated.push({ type: 'h2h_goal_difference', order: 0 });
-        migrated.push({ type: 'h2h_goals_for', order: 0 });
+      if (rule.type === "head_to_head") {
+        migrated.push({ type: "h2h_points", order: 0 });
+        migrated.push({ type: "h2h_goal_difference", order: 0 });
+        migrated.push({ type: "h2h_goals_for", order: 0 });
       } else {
         migrated.push({ type: String(rule.type), order: 0 });
       }
@@ -448,7 +456,7 @@ export function stringifyTieBreakingRules(rules: TieBreakingRule[]): string {
  */
 export function requiresLottery(rules: TieBreakingRule[]): boolean {
   const lastRule = rules.sort((a, b) => b.order - a.order)[0];
-  return lastRule?.type === 'lottery';
+  return lastRule?.type === "lottery";
 }
 
 /**
@@ -456,7 +464,7 @@ export function requiresLottery(rules: TieBreakingRule[]): boolean {
  */
 export function getTieBreakingRuleLabel(ruleType: string, sportCode: string): string {
   const availableRules = getAvailableTieBreakingRules(sportCode);
-  const rule = availableRules.find(r => r.type === ruleType);
+  const rule = availableRules.find((r) => r.type === ruleType);
   return rule?.label || ruleType;
 }
 
@@ -465,6 +473,6 @@ export function getTieBreakingRuleLabel(ruleType: string, sportCode: string): st
  */
 export function getTieBreakingRuleDescription(ruleType: string, sportCode: string): string {
   const availableRules = getAvailableTieBreakingRules(sportCode);
-  const rule = availableRules.find(r => r.type === ruleType);
-  return rule?.description || '';
+  const rule = availableRules.find((r) => r.type === ruleType);
+  return rule?.description || "";
 }

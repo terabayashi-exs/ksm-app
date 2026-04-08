@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, Info, XCircle, X } from 'lucide-react';
-import Link from 'next/link';
+import { AlertTriangle, Info, X, XCircle } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface TournamentNotification {
   notification_id: number;
@@ -12,7 +12,7 @@ interface TournamentNotification {
   notification_type: string;
   title: string;
   message: string;
-  severity: 'info' | 'warning' | 'error';
+  severity: "info" | "warning" | "error";
   is_resolved: boolean;
   metadata?: Record<string, unknown>;
   created_at: string;
@@ -24,7 +24,10 @@ interface NotificationBannerProps {
   tournamentId?: number; // 特定の大会の通知のみ表示する場合
 }
 
-export default function NotificationBanner({ refreshInterval = 30000, tournamentId }: NotificationBannerProps) {
+export default function NotificationBanner({
+  refreshInterval = 30000,
+  tournamentId,
+}: NotificationBannerProps) {
   const [notifications, setNotifications] = useState<TournamentNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,19 +35,19 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
   const fetchNotifications = async () => {
     try {
       // 特定の大会IDが指定されている場合はクエリパラメータで絞り込み
-      const url = tournamentId 
+      const url = tournamentId
         ? `/api/admin/notifications?tournament_id=${tournamentId}`
-        : '/api/admin/notifications';
-      
-      const response = await fetch(url, { cache: 'no-store' });
+        : "/api/admin/notifications";
+
+      const response = await fetch(url, { cache: "no-store" });
       const result = await response.json();
-      
+
       if (result.success) {
-        console.log('取得した通知データ:', result.data); // デバッグログ
+        console.log("取得した通知データ:", result.data); // デバッグログ
         setNotifications(result.data);
       }
     } catch (error) {
-      console.error('通知取得エラー:', error);
+      console.error("通知取得エラー:", error);
     } finally {
       setLoading(false);
     }
@@ -54,20 +57,20 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
   const resolveNotification = async (notificationId: number) => {
     try {
       const response = await fetch(`/api/admin/notifications/${notificationId}/resolve`, {
-        method: 'POST'
+        method: "POST",
       });
-      
+
       if (response.ok) {
-        setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
+        setNotifications((prev) => prev.filter((n) => n.notification_id !== notificationId));
       }
     } catch (error) {
-      console.error('通知解決エラー:', error);
+      console.error("通知解決エラー:", error);
     }
   };
 
   useEffect(() => {
     fetchNotifications();
-    
+
     // 定期更新
     const interval = setInterval(fetchNotifications, refreshInterval);
     return () => clearInterval(interval);
@@ -76,9 +79,9 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
   // 通知アイコン
   const getNotificationIcon = (severity: string) => {
     switch (severity) {
-      case 'warning':
+      case "warning":
         return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
-      case 'error':
+      case "error":
         return <XCircle className="w-5 h-5 text-red-600" />;
       default:
         return <Info className="w-5 h-5 text-blue-600" />;
@@ -88,12 +91,12 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
   // 通知の背景色
   const getNotificationBgColor = (severity: string) => {
     switch (severity) {
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-200';
-      case 'error':
-        return 'bg-red-50 border-red-200';
+      case "warning":
+        return "bg-yellow-50 border-yellow-200";
+      case "error":
+        return "bg-red-50 border-red-200";
       default:
-        return 'bg-blue-50 border-blue-200';
+        return "bg-blue-50 border-blue-200";
     }
   };
 
@@ -111,9 +114,12 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
         <AlertTriangle className="w-5 h-5 mr-2 text-yellow-600" />
         要対応事項 ({notifications.length}件)
       </h3>
-      
+
       {notifications.map((notification) => (
-        <Card key={notification.notification_id} className={`${getNotificationBgColor(notification.severity)} border`}>
+        <Card
+          key={notification.notification_id}
+          className={`${getNotificationBgColor(notification.severity)} border`}
+        >
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3 flex-1">
@@ -123,7 +129,10 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                     {notification.title}
                     {(() => {
                       const blockName = notification.metadata?.block_name;
-                      if (typeof blockName === 'string' && !notification.title.includes(blockName)) {
+                      if (
+                        typeof blockName === "string" &&
+                        !notification.title.includes(blockName)
+                      ) {
                         return (
                           <span className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
                             {blockName}ブロック
@@ -133,9 +142,7 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                       return null;
                     })()}
                   </h4>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {notification.message}
-                  </p>
+                  <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
                   {(() => {
                     const tiedTeams = notification.metadata?.tied_teams;
                     if (Array.isArray(tiedTeams)) {
@@ -143,11 +150,13 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                         <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                           <strong>同順位チーム:</strong>
                           <ul className="mt-1 space-y-1">
-                            {(tiedTeams as Array<{team_id: string, team_name: string}>).map((team, index) => (
-                              <li key={team.team_id || index} className="ml-4">
-                                • {team.team_name}
-                              </li>
-                            ))}
+                            {(tiedTeams as Array<{ team_id: string; team_name: string }>).map(
+                              (team, index) => (
+                                <li key={team.team_id || index} className="ml-4">
+                                  • {team.team_name}
+                                </li>
+                              ),
+                            )}
                           </ul>
                         </div>
                       );
@@ -156,19 +165,17 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                   })()}
                   <div className="flex items-center space-x-4 mt-3">
                     {!tournamentId && (
-                      <span className="text-xs text-gray-500">
-                        {notification.tournament_name}
-                      </span>
+                      <span className="text-xs text-gray-500">{notification.tournament_name}</span>
                     )}
                     <span className="text-xs text-gray-500">
-                      {new Date(notification.created_at).toLocaleString('ja-JP')}
+                      {new Date(notification.created_at).toLocaleString("ja-JP")}
                     </span>
                     {(() => {
                       const tieType = notification.metadata?.tie_type;
-                      if (typeof tieType === 'string') {
+                      if (typeof tieType === "string") {
                         return (
                           <span className="text-xs text-gray-500">
-                            ({tieType === 'first_place' ? '1位' : '2位'}同点)
+                            ({tieType === "first_place" ? "1位" : "2位"}同点)
                           </span>
                         );
                       }
@@ -177,16 +184,22 @@ export default function NotificationBanner({ refreshInterval = 30000, tournament
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-2 ml-4">
-                {(notification.notification_type === 'manual_ranking_needed' || notification.notification_type === 'manual_ranking_required') && (
-                  <Button asChild size="sm" variant="outline" className="border-blue-500 text-blue-700 hover:bg-blue-50">
+                {(notification.notification_type === "manual_ranking_needed" ||
+                  notification.notification_type === "manual_ranking_required") && (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                  >
                     <Link href={`/admin/tournaments/${notification.tournament_id}/manual-rankings`}>
                       順位設定
                     </Link>
                   </Button>
                 )}
-                
+
                 <Button
                   size="sm"
                   variant="ghost"

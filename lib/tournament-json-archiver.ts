@@ -1,8 +1,9 @@
 // lib/tournament-json-archiver.ts
-import { db } from '@/lib/db';
+
+import { ArchiveVersionManager } from "@/lib/archive-version-manager";
+import { db } from "@/lib/db";
 // import { Tournament } from '@/lib/types';
-import { getRawTournamentById } from '@/lib/tournament-detail';
-import { ArchiveVersionManager } from '@/lib/archive-version-manager';
+import { getRawTournamentById } from "@/lib/tournament-detail";
 
 /**
  * アーカイブ結果の型定義
@@ -22,26 +23,27 @@ interface ArchiveResult {
  * 大会の全データをJSON形式で収集・保存
  */
 export async function archiveTournamentAsJson(
-  tournamentId: number, 
-  archivedBy: string
+  tournamentId: number,
+  archivedBy: string,
 ): Promise<ArchiveResult> {
   try {
     console.log(`🎯 大会ID ${tournamentId} のJSONアーカイブを開始...`);
 
     // 1. 大会基本情報を取得（アーカイブフラグに関係なく生データを取得）
     const tournament = await getRawTournamentById(tournamentId);
-    
+
     if (!tournament) {
       return {
         success: false,
-        error: '大会情報が見つかりません'
+        error: "大会情報が見つかりません",
       };
     }
 
     // 2. 大会フォーマット詳細情報を取得（現在のスキーマに対応）
     let formatDetails = null;
     try {
-      const formatResult = await db.execute(`
+      const formatResult = await db.execute(
+        `
         SELECT
           t.format_id,
           t.format_name,
@@ -51,7 +53,9 @@ export async function archiveTournamentAsJson(
         FROM t_tournaments t
         LEFT JOIN m_tournament_formats f ON t.format_id = f.format_id
         WHERE t.tournament_id = ?
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       if (formatResult.rows && formatResult.rows.length > 0) {
         const format = formatResult.rows[0];
@@ -59,7 +63,8 @@ export async function archiveTournamentAsJson(
         // 試合データから試合構造情報を取得（m_match_templates の代替）
         // t_matches_live には phase, round_name, block_name, match_type,
         // execution_priority, team1_source, team2_source が直接格納されている
-        const matchStructureResult = await db.execute(`
+        const matchStructureResult = await db.execute(
+          `
           SELECT DISTINCT
             ml.match_code,
             mb.phase,
@@ -73,15 +78,20 @@ export async function archiveTournamentAsJson(
           JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           WHERE mb.tournament_id = ?
           ORDER BY ml.execution_priority, ml.match_code
-        `, [tournamentId]);
+        `,
+          [tournamentId],
+        );
 
         // 実際のブロック情報から予選・決勝情報を推測
-        const blocksInfo = await db.execute(`
+        const blocksInfo = await db.execute(
+          `
           SELECT DISTINCT phase, COUNT(*) as block_count
           FROM t_match_blocks
           WHERE tournament_id = ?
           GROUP BY phase
-        `, [tournamentId]);
+        `,
+          [tournamentId],
+        );
 
         // フェーズごとのブロック数を動的に集計
         const phaseBlockCounts: Record<string, number> = {};
@@ -97,14 +107,14 @@ export async function archiveTournamentAsJson(
             target_team_count: format.target_team_count,
             format_description: format.format_description,
             // 推測された情報（後方互換性のためpreliminary/finalも維持）
-            preliminary_format: (phaseBlockCounts['preliminary'] || 0) > 0 ? 'league' : 'none',
-            final_format: (phaseBlockCounts['final'] || 0) > 0 ? 'tournament' : 'none',
+            preliminary_format: (phaseBlockCounts["preliminary"] || 0) > 0 ? "league" : "none",
+            final_format: (phaseBlockCounts["final"] || 0) > 0 ? "tournament" : "none",
             phase_block_counts: phaseBlockCounts,
             preliminary_advance_count: 2, // デフォルト値
-            has_third_place_match: matchStructureResult.rows.some(t => t.match_code === 'T7'),
-            format_created_at: format.format_created_at
+            has_third_place_match: matchStructureResult.rows.some((t) => t.match_code === "T7"),
+            format_created_at: format.format_created_at,
           },
-          match_templates: matchStructureResult.rows.map(match => ({
+          match_templates: matchStructureResult.rows.map((match) => ({
             match_code: match.match_code,
             phase: match.phase,
             round_name: match.round_name,
@@ -112,26 +122,32 @@ export async function archiveTournamentAsJson(
             match_type: match.match_type,
             execution_priority: match.execution_priority,
             team1_source: match.team1_source,
-            team2_source: match.team2_source
-          }))
+            team2_source: match.team2_source,
+          })),
         };
 
-        console.log(`✅ 大会フォーマット詳細取得成功: ${format.format_name} (試合構造数: ${matchStructureResult.rows.length})`);
+        console.log(
+          `✅ 大会フォーマット詳細取得成功: ${format.format_name} (試合構造数: ${matchStructureResult.rows.length})`,
+        );
       }
     } catch (error) {
-      console.warn(`Warning: Could not fetch tournament format details for tournament ${tournamentId}:`, error);
+      console.warn(
+        `Warning: Could not fetch tournament format details for tournament ${tournamentId}:`,
+        error,
+      );
       formatDetails = {
         format_info: {
-          format_name: 'Unknown Format',
+          format_name: "Unknown Format",
           target_team_count: 0,
-          format_description: 'フォーマット情報が取得できませんでした'
+          format_description: "フォーマット情報が取得できませんでした",
         },
-        match_templates: []
+        match_templates: [],
       };
     }
 
     // 3. 参加チーム情報を取得
-    const teamsResult = await db.execute(`
+    const teamsResult = await db.execute(
+      `
       SELECT 
         tt.team_id,
         tt.team_name,
@@ -145,10 +161,13 @@ export async function archiveTournamentAsJson(
       LEFT JOIN m_teams t ON tt.team_id = t.team_id
       WHERE tt.tournament_id = ?
       ORDER BY tt.assigned_block, tt.block_position
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     // 3. 試合データを取得（ライブ + 確定結果）
-    const matchesResult = await db.execute(`
+    const matchesResult = await db.execute(
+      `
       SELECT
         ml.match_id,
         ml.match_block_id,
@@ -177,10 +196,13 @@ export async function archiveTournamentAsJson(
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
       ORDER BY ml.tournament_date, ml.match_number
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     // 4. 順位表データを取得（フェーズ順はblock_orderで制御）
-    const standingsResult = await db.execute(`
+    const standingsResult = await db.execute(
+      `
       SELECT
         mb.block_name,
         mb.phase,
@@ -189,10 +211,13 @@ export async function archiveTournamentAsJson(
       FROM t_match_blocks mb
       WHERE mb.tournament_id = ?
       ORDER BY mb.block_order, mb.block_name
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     // 5. 戦績表用の結果データを取得
-    const resultsResult = await db.execute(`
+    const resultsResult = await db.execute(
+      `
       SELECT
         ml.match_code,
         COALESCE(tt1.team_name, ml.team1_display_name) as team1_name,
@@ -209,24 +234,28 @@ export async function archiveTournamentAsJson(
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ? AND mf.match_id IS NOT NULL
       ORDER BY ml.match_code
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     // 6. PDF情報を取得
-    const { checkTournamentBracketPdfExists, checkTournamentResultsPdfExists } = await import('@/lib/pdf-utils');
+    const { checkTournamentBracketPdfExists, checkTournamentResultsPdfExists } = await import(
+      "@/lib/pdf-utils"
+    );
     const bracketPdfExists = await checkTournamentBracketPdfExists(tournamentId);
     const resultsPdfExists = await checkTournamentResultsPdfExists(tournamentId);
 
     // 7. スコアの計算処理を追加（現在のスキーマに対応）
-    const processedMatches = matchesResult.rows.map(match => {
+    const processedMatches = matchesResult.rows.map((match) => {
       // 実際のスキーマに合わせてteam1_scores/team2_scoresを使用
-      const team1Scores = match.team1_scores as number || 0;
-      const team2Scores = match.team2_scores as number || 0;
+      const team1Scores = (match.team1_scores as number) || 0;
+      const team2Scores = (match.team2_scores as number) || 0;
 
       return {
         ...match,
         team1_goals: team1Scores, // 表示用にgoalsプロパティも設定
         team2_goals: team2Scores,
-        has_result: Boolean(match.has_result)
+        has_result: Boolean(match.has_result),
       };
     });
 
@@ -238,20 +267,20 @@ export async function archiveTournamentAsJson(
     const resultsData = JSON.stringify(resultsResult.rows);
     const pdfInfoData = JSON.stringify({
       bracketPdfExists,
-      resultsPdfExists
+      resultsPdfExists,
     });
 
-    const currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const currentTime = new Date().toISOString().replace("T", " ").substring(0, 19);
     const currentVersion = ArchiveVersionManager.getCurrentVersion();
     // 詳細な競技設定情報を取得（テーブル存在チェック込み）
     let sportSettings = {
       supports_pk: false,
       period_count: 2,
       has_extra_time: false,
-      sport_code: 'soccer', // デフォルト値
+      sport_code: "soccer", // デフォルト値
       tie_breaking_rules: [] as string[],
       score_format_rules: {},
-      competition_format: 'knockout_preliminary'
+      competition_format: "knockout_preliminary",
     };
 
     // デフォルトのサッカー競技設定を適用（DB依存処理を回避）
@@ -261,17 +290,17 @@ export async function archiveTournamentAsJson(
         supports_pk: true, // サッカーではPK戦をサポート
         period_count: 2, // 前半・後半
         has_extra_time: false, // 基本は延長戦なし
-        sport_code: 'soccer', // デフォルトはサッカー
-        tie_breaking_rules: ['points', 'goal_difference', 'goals_for'],
+        sport_code: "soccer", // デフォルトはサッカー
+        tie_breaking_rules: ["points", "goal_difference", "goals_for"],
         score_format_rules: {
           regular_time: true,
           extra_time: false,
           penalty_shootout: true,
-          periods_structure: [1, 2]
+          periods_structure: [1, 2],
         },
-        competition_format: 'standard_tournament'
+        competition_format: "standard_tournament",
       };
-      
+
       console.log(`✅ デフォルトサッカー競技設定を適用: tournament_id=${tournamentId}`);
     } catch (error) {
       console.warn(`Warning: Could not set sport settings for tournament ${tournamentId}:`, error);
@@ -281,7 +310,7 @@ export async function archiveTournamentAsJson(
     // 実際の試合データから競技設定を推測・補完（現在のスキーマに対応）
     if (matchesResult.rows.length > 0) {
       // 現在のスキーマでは単純な数値形式なので、デフォルト値を維持
-      const hasConfirmedMatches = matchesResult.rows.some(m => m.has_result);
+      const hasConfirmedMatches = matchesResult.rows.some((m) => m.has_result);
       if (hasConfirmedMatches) {
         // 確定済み試合があれば基本的なサッカー設定を適用
         sportSettings.supports_pk = true;
@@ -291,10 +320,12 @@ export async function archiveTournamentAsJson(
           regular_time: true,
           extra_time: false,
           penalty_shootout: true,
-          periods_structure: [1, 2]
+          periods_structure: [1, 2],
         };
-        
-        console.log(`📊 試合データから競技設定を補完: サッカー基本設定適用 (確定試合数: ${matchesResult.rows.filter(m => m.has_result).length})`);
+
+        console.log(
+          `📊 試合データから競技設定を補完: サッカー基本設定適用 (確定試合数: ${matchesResult.rows.filter((m) => m.has_result).length})`,
+        );
       }
     }
 
@@ -302,7 +333,8 @@ export async function archiveTournamentAsJson(
     let blockStructure = null;
     try {
       // ブロック情報を詳細に取得
-      const blocksResult = await db.execute(`
+      const blocksResult = await db.execute(
+        `
         SELECT DISTINCT
           mb.match_block_id,
           mb.phase,
@@ -317,10 +349,13 @@ export async function archiveTournamentAsJson(
         WHERE mb.tournament_id = ?
         GROUP BY mb.match_block_id, mb.phase, mb.block_name, mb.display_round_name, mb.block_order
         ORDER BY mb.phase, mb.block_order
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // ブロック別チーム配置詳細を取得
-      const blockTeamsResult = await db.execute(`
+      const blockTeamsResult = await db.execute(
+        `
         SELECT 
           tt.assigned_block,
           tt.block_position,
@@ -333,7 +368,9 @@ export async function archiveTournamentAsJson(
         WHERE tt.tournament_id = ? AND tt.assigned_block IS NOT NULL
         GROUP BY tt.assigned_block, tt.block_position, tt.team_id, tt.team_name, tt.team_omission
         ORDER BY tt.assigned_block, tt.block_position
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // フェーズごとのブロック分類を動的に構築
       const blocksByPhase: Record<string, string[]> = {};
@@ -349,44 +386,54 @@ export async function archiveTournamentAsJson(
       }
 
       blockStructure = {
-        blocks_info: blocksResult.rows.map(block => ({
+        blocks_info: blocksResult.rows.map((block) => ({
           match_block_id: block.match_block_id,
           phase: block.phase,
           block_name: block.block_name,
           display_round_name: block.display_round_name,
           block_order: block.block_order,
           teams_count: block.teams_in_block,
-          matches_count: block.matches_in_block
+          matches_count: block.matches_in_block,
         })),
-        block_assignments: blockTeamsResult.rows.reduce((acc, team) => {
-          const blockName = String(team.assigned_block);
-          if (!acc[blockName]) {
-            acc[blockName] = [];
-          }
-          acc[blockName].push({
-            team_id: team.team_id,
-            team_name: team.team_name,
-            team_omission: team.team_omission,
-            block_position: team.block_position,
-            player_count: team.player_count
-          });
-          return acc;
-        }, {} as Record<string, unknown[]>),
+        block_assignments: blockTeamsResult.rows.reduce(
+          (acc, team) => {
+            const blockName = String(team.assigned_block);
+            if (!acc[blockName]) {
+              acc[blockName] = [];
+            }
+            acc[blockName].push({
+              team_id: team.team_id,
+              team_name: team.team_name,
+              team_omission: team.team_omission,
+              block_position: team.block_position,
+              player_count: team.player_count,
+            });
+            return acc;
+          },
+          {} as Record<string, unknown[]>,
+        ),
         // 後方互換性のためpreliminary/finalも維持
-        preliminary_blocks: blocksByPhase['preliminary'] || [],
-        final_blocks: blocksByPhase['final'] || [],
+        preliminary_blocks: blocksByPhase["preliminary"] || [],
+        final_blocks: blocksByPhase["final"] || [],
         // 動的フェーズ対応
         blocks_by_phase: blocksByPhase,
         blocks_count_by_phase: blocksCountByPhase,
         total_blocks_count: blocksResult.rows.length,
-        preliminary_blocks_count: blocksCountByPhase['preliminary'] || 0,
-        final_blocks_count: blocksCountByPhase['final'] || 0
+        preliminary_blocks_count: blocksCountByPhase["preliminary"] || 0,
+        final_blocks_count: blocksCountByPhase["final"] || 0,
       };
 
-      const phaseCountsLog = Object.entries(blocksCountByPhase).map(([p, c]) => `${p}:${c}`).join(', ');
-      console.log(`✅ ブロック構成情報取得成功: ${blockStructure.total_blocks_count}ブロック (${phaseCountsLog})`);
+      const phaseCountsLog = Object.entries(blocksCountByPhase)
+        .map(([p, c]) => `${p}:${c}`)
+        .join(", ");
+      console.log(
+        `✅ ブロック構成情報取得成功: ${blockStructure.total_blocks_count}ブロック (${phaseCountsLog})`,
+      );
     } catch (error) {
-      console.warn(`Warning: Could not fetch block structure for tournament ${tournamentId}:`, error);
+      console.warn(
+        `Warning: Could not fetch block structure for tournament ${tournamentId}:`,
+        error,
+      );
       blockStructure = {
         blocks_info: [],
         block_assignments: {},
@@ -396,7 +443,7 @@ export async function archiveTournamentAsJson(
         blocks_count_by_phase: {},
         total_blocks_count: 0,
         preliminary_blocks_count: 0,
-        final_blocks_count: 0
+        final_blocks_count: 0,
       };
     }
 
@@ -404,7 +451,8 @@ export async function archiveTournamentAsJson(
     let extendedMetadata = null;
     try {
       // 会場情報を取得（venue_idはJSON配列）
-      const venueResult = await db.execute(`
+      const venueResult = await db.execute(
+        `
         SELECT v.venue_id, v.venue_name, v.address, v.available_courts
         FROM m_venues v
         WHERE v.venue_id IN (
@@ -412,40 +460,49 @@ export async function archiveTournamentAsJson(
             (SELECT venue_id FROM t_tournaments WHERE tournament_id = ?)
           )
         )
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // UI表示に影響する設定情報を収集
       const displaySettings = {
-        team_display_preference: 'omission_priority', // 略称優先
-        score_display_format: 'goals_with_pk_separate', // ゴール数+PK別表示
-        bracket_layout_style: 'vertical_flow', // 縦流しレイアウト
-        standings_sort_criteria: sportSettings.tie_breaking_rules || ['points', 'goal_difference', 'goals_for'],
+        team_display_preference: "omission_priority", // 略称優先
+        score_display_format: "goals_with_pk_separate", // ゴール数+PK別表示
+        bracket_layout_style: "vertical_flow", // 縦流しレイアウト
+        standings_sort_criteria: sportSettings.tie_breaking_rules || [
+          "points",
+          "goal_difference",
+          "goals_for",
+        ],
         color_scheme: {
-          preliminary_blocks: ['blue', 'green', 'yellow', 'purple'], // A,B,C,Dブロックの色分け
-          final_tournament: 'red',
-          completed_match: 'white',
-          ongoing_match: 'green',
-          scheduled_match: 'gray'
-        }
+          preliminary_blocks: ["blue", "green", "yellow", "purple"], // A,B,C,Dブロックの色分け
+          final_tournament: "red",
+          completed_match: "white",
+          ongoing_match: "green",
+          scheduled_match: "gray",
+        },
       };
 
       // 時点情報を記録（将来の変更検出用）
       const snapshotInfo = {
         archived_timestamp: new Date().toISOString(),
-        system_version: '2.0', // アーカイブシステムのバージョン
-        data_structure_version: '1.0', // データ構造のバージョン
+        system_version: "2.0", // アーカイブシステムのバージョン
+        data_structure_version: "1.0", // データ構造のバージョン
         ui_compatibility_version: currentVersion, // UI互換性バージョン
         database_schema_checksum: `tournament_${tournamentId}_${new Date().getTime()}`,
-        total_data_size: 0 // 後で計算
+        total_data_size: 0, // 後で計算
       };
 
       extendedMetadata = {
-        venue_info: venueResult.rows.length > 0 ? {
-          venue_id: venueResult.rows[0].venue_id,
-          venue_name: venueResult.rows[0].venue_name,
-          address: venueResult.rows[0].address,
-          available_courts: venueResult.rows[0].available_courts
-        } : null,
+        venue_info:
+          venueResult.rows.length > 0
+            ? {
+                venue_id: venueResult.rows[0].venue_id,
+                venue_name: venueResult.rows[0].venue_name,
+                address: venueResult.rows[0].address,
+                available_courts: venueResult.rows[0].available_courts,
+              }
+            : null,
         display_settings: displaySettings,
         snapshot_info: snapshotInfo,
         archive_completeness_check: {
@@ -455,31 +512,36 @@ export async function archiveTournamentAsJson(
           has_standings_data: standingsResult.rows.length > 0,
           has_sport_settings: !!sportSettings,
           has_format_details: !!formatDetails,
-          has_block_structure: !!blockStructure
-        }
+          has_block_structure: !!blockStructure,
+        },
       };
 
-      console.log(`✅ 拡張メタデータ収集完了: 会場情報=${extendedMetadata.venue_info ? 'あり' : 'なし'}`);
+      console.log(
+        `✅ 拡張メタデータ収集完了: 会場情報=${extendedMetadata.venue_info ? "あり" : "なし"}`,
+      );
     } catch (error) {
-      console.warn(`Warning: Could not collect extended metadata for tournament ${tournamentId}:`, error);
+      console.warn(
+        `Warning: Could not collect extended metadata for tournament ${tournamentId}:`,
+        error,
+      );
       extendedMetadata = {
         venue_info: null,
         display_settings: {},
         snapshot_info: {
           archived_timestamp: new Date().toISOString(),
-          system_version: '2.0',
-          data_structure_version: '1.0',
-          ui_compatibility_version: currentVersion
+          system_version: "2.0",
+          data_structure_version: "1.0",
+          ui_compatibility_version: currentVersion,
         },
-        archive_completeness_check: {}
+        archive_completeness_check: {},
       };
     }
 
     const metadata = JSON.stringify({
       total_teams: teamsResult.rows.length,
       total_matches: processedMatches.length,
-      completed_matches: matchesResult.rows.filter(m => m.has_result === 1).length,
-      blocks_count: new Set(standingsResult.rows.map(s => s.block_name)).size,
+      completed_matches: matchesResult.rows.filter((m) => m.has_result === 1).length,
+      blocks_count: new Set(standingsResult.rows.map((s) => s.block_name)).size,
       archive_ui_version: currentVersion,
       // 拡張された競技設定情報
       sport_settings: {
@@ -491,7 +553,7 @@ export async function archiveTournamentAsJson(
         score_format_rules: sportSettings.score_format_rules,
         competition_format: sportSettings.competition_format,
         // 後方互換性のために従来のフィールドも保持
-        score_format: sportSettings.has_extra_time ? "regular_extra_pk" : "regular_pk"
+        score_format: sportSettings.has_extra_time ? "regular_extra_pk" : "regular_pk",
       },
       // 大会フォーマット詳細情報
       format_details: formatDetails,
@@ -504,13 +566,14 @@ export async function archiveTournamentAsJson(
         has_extra_time: Boolean(sportSettings.has_extra_time),
         period_count: Number(sportSettings.period_count || 2),
         supports_pk: Boolean(sportSettings.supports_pk),
-        score_format: sportSettings.has_extra_time ? "regular_extra_pk" : "regular_pk"
-      }
+        score_format: sportSettings.has_extra_time ? "regular_extra_pk" : "regular_pk",
+      },
     });
 
     // 9. データベースに保存
     try {
-      await db.execute(`
+      await db.execute(
+        `
         INSERT OR REPLACE INTO t_archived_tournament_json (
           tournament_id,
           tournament_name,
@@ -525,64 +588,76 @@ export async function archiveTournamentAsJson(
           archived_by,
           metadata
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), ?, ?)
-      `, [
-        tournamentId,
-        tournament.tournament_name,
-        tournamentData,
-        teamsData,
-        matchesData,
-        standingsData,
-        resultsData,
-        pdfInfoData,
-        currentVersion,
-        archivedBy,
-        metadata
-      ]);
-      
+      `,
+        [
+          tournamentId,
+          tournament.tournament_name,
+          tournamentData,
+          teamsData,
+          matchesData,
+          standingsData,
+          resultsData,
+          pdfInfoData,
+          currentVersion,
+          archivedBy,
+          metadata,
+        ],
+      );
+
       console.log(`✅ アーカイブデータベース保存完了: tournament_id=${tournamentId}`);
     } catch (dbError) {
-      console.error('🔥 アーカイブデータベース保存エラー:', dbError);
-      
+      console.error("🔥 アーカイブデータベース保存エラー:", dbError);
+
       // データベース保存に失敗した場合、アーカイブフラグもfalseに戻す
       try {
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_tournaments 
           SET is_archived = 0 
           WHERE tournament_id = ?
-        `, [tournamentId]);
+        `,
+          [tournamentId],
+        );
         console.log(`🔄 アーカイブフラグをリセットしました: tournament_id=${tournamentId}`);
       } catch (rollbackError) {
-        console.error('🔥 アーカイブフラグリセット失敗:', rollbackError);
+        console.error("🔥 アーカイブフラグリセット失敗:", rollbackError);
       }
-      
-      throw new Error(`アーカイブの保存に失敗しました: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+
+      throw new Error(
+        `アーカイブの保存に失敗しました: ${dbError instanceof Error ? dbError.message : String(dbError)}`,
+      );
     }
 
     // 10. アーカイブバージョン情報を記録
     try {
       await ArchiveVersionManager.recordArchiveVersion(tournamentId, archivedBy);
     } catch (versionError) {
-      console.error('🔥 アーカイブバージョン記録エラー:', versionError);
+      console.error("🔥 アーカイブバージョン記録エラー:", versionError);
       // バージョン記録エラーは致命的ではないので処理継続
     }
 
     // 11. 大会にアーカイブフラグを設定（データ保存成功後）
     try {
-      await db.execute(`
+      await db.execute(
+        `
         UPDATE t_tournaments 
         SET is_archived = 1, archived_at = datetime('now', '+9 hours'), archived_by = ?
         WHERE tournament_id = ?
-      `, [archivedBy, tournamentId]);
-      
+      `,
+        [archivedBy, tournamentId],
+      );
+
       console.log(`✅ アーカイブフラグ設定完了: tournament_id=${tournamentId}`);
     } catch (flagError) {
-      console.error('🔥 アーカイブフラグ設定エラー:', flagError);
-      throw new Error(`アーカイブフラグの設定に失敗しました: ${flagError instanceof Error ? flagError.message : String(flagError)}`);
+      console.error("🔥 アーカイブフラグ設定エラー:", flagError);
+      throw new Error(
+        `アーカイブフラグの設定に失敗しました: ${flagError instanceof Error ? flagError.message : String(flagError)}`,
+      );
     }
 
     const totalSize = Buffer.byteLength(
       tournamentData + teamsData + matchesData + standingsData + resultsData + pdfInfoData,
-      'utf8'
+      "utf8",
     );
 
     console.log(`✅ JSONアーカイブ完了: ${tournament.tournament_name}`);
@@ -594,15 +669,14 @@ export async function archiveTournamentAsJson(
         tournament_id: tournamentId,
         tournament_name: tournament.tournament_name,
         file_size: totalSize,
-        archived_at: currentTime
-      }
+        archived_at: currentTime,
+      },
     };
-
   } catch (error) {
     console.error(`🔥 JSONアーカイブエラー (大会ID: ${tournamentId}):`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'アーカイブ処理中にエラーが発生しました'
+      error: error instanceof Error ? error.message : "アーカイブ処理中にエラーが発生しました",
     };
   }
 }
@@ -613,11 +687,14 @@ export async function archiveTournamentAsJson(
 export async function getArchivedTournamentJson(tournamentId: number) {
   try {
     console.log(`🗃️ getArchivedTournamentJson開始: tournament_id=${tournamentId}`);
-    
-    const result = await db.execute(`
+
+    const result = await db.execute(
+      `
       SELECT * FROM t_archived_tournament_json 
       WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     console.log(`🗃️ SQLクエリ結果: ${result.rows.length} 件`);
 
@@ -627,15 +704,18 @@ export async function getArchivedTournamentJson(tournamentId: number) {
     }
 
     // アクセス日時を更新
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_archived_tournament_json 
       SET last_accessed = datetime('now', '+9 hours') 
       WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     const archive = result.rows[0];
     console.log(`🗃️ アーカイブデータ構築: ${archive.tournament_name}`);
-    
+
     const returnData = {
       tournament_id: archive.tournament_id,
       tournament_name: archive.tournament_name,
@@ -647,13 +727,13 @@ export async function getArchivedTournamentJson(tournamentId: number) {
       pdfInfo: JSON.parse(archive.pdf_info_data as string),
       archived_at: archive.archived_at,
       archived_by: archive.archived_by,
-      metadata: archive.metadata ? JSON.parse(archive.metadata as string) : null
+      metadata: archive.metadata ? JSON.parse(archive.metadata as string) : null,
     };
-    
+
     console.log(`🗃️ 正常に返却: tournament_id=${returnData.tournament_id}`);
     return returnData;
   } catch (error) {
-    console.error('🗃️ アーカイブデータ取得エラー:', error);
+    console.error("🗃️ アーカイブデータ取得エラー:", error);
     return null;
   }
 }
@@ -674,15 +754,15 @@ export async function getArchivedTournamentsList() {
       ORDER BY archived_at DESC
     `);
 
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       tournament_id: row.tournament_id,
       tournament_name: row.tournament_name,
       archived_at: row.archived_at,
       archived_by: row.archived_by,
-      metadata: row.metadata ? JSON.parse(row.metadata as string) : null
+      metadata: row.metadata ? JSON.parse(row.metadata as string) : null,
     }));
   } catch (error) {
-    console.error('アーカイブ一覧取得エラー:', error);
+    console.error("アーカイブ一覧取得エラー:", error);
     return [];
   }
 }

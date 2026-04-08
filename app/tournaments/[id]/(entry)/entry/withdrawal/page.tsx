@@ -3,13 +3,13 @@
 
 export const metadata = { title: "エントリー辞退" };
 
-import { Suspense } from 'react';
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { db } from '@/lib/db';
-import WithdrawalForm from '@/components/features/tournament/WithdrawalForm';
-import BackButton from '@/components/ui/back-button';
-import { Card, CardContent } from '@/components/ui/card';
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import WithdrawalForm from "@/components/features/tournament/WithdrawalForm";
+import BackButton from "@/components/ui/back-button";
+import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,7 +17,8 @@ interface PageProps {
 
 async function getTournamentInfo(tournamentId: number, loginUserId: number) {
   // 大会情報と参加状況を取得（m_team_members + m_login_users 経由）
-  const result = await db.execute(`
+  const result = await db.execute(
+    `
     SELECT
       t.tournament_name,
       t.status as tournament_status,
@@ -30,7 +31,9 @@ async function getTournamentInfo(tournamentId: number, loginUserId: number) {
     LEFT JOIN m_login_users lu ON tm.login_user_id = lu.login_user_id
     WHERE t.tournament_id = ? AND (lu.login_user_id = ? OR tt.tournament_team_id IS NULL)
     LIMIT 1
-  `, [tournamentId, loginUserId]);
+  `,
+    [tournamentId, loginUserId],
+  );
 
   if (result.rows.length === 0) {
     return null;
@@ -43,25 +46,25 @@ export default async function WithdrawalPage({ params }: PageProps) {
   const session = await auth();
 
   if (!session) {
-    redirect('/auth/login');
+    redirect("/auth/login");
   }
 
   const resolvedParams = await params;
   const tournamentId = parseInt(resolvedParams.id);
-  
+
   if (isNaN(tournamentId)) {
-    redirect('/my');
+    redirect("/my");
   }
 
   const loginUserId = session.user.loginUserId;
   if (!loginUserId || loginUserId === 0) {
-    redirect('/my');
+    redirect("/my");
   }
 
   const tournamentInfo = await getTournamentInfo(tournamentId, loginUserId);
 
   if (!tournamentInfo) {
-    redirect('/my');
+    redirect("/my");
   }
 
   return (
@@ -77,15 +80,17 @@ export default async function WithdrawalPage({ params }: PageProps) {
         </div>
 
         {/* 辞退申請フォーム */}
-        <Suspense fallback={
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">読み込み中...</div>
-              </div>
-            </CardContent>
-          </Card>
-        }>
+        <Suspense
+          fallback={
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-gray-500">読み込み中...</div>
+                </div>
+              </CardContent>
+            </Card>
+          }
+        >
           <WithdrawalForm tournamentId={tournamentId} />
         </Suspense>
 

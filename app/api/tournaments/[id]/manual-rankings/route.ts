@@ -1,10 +1,13 @@
 // app/api/tournaments/[id]/manual-rankings/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { promoteTeamsToFinalTournament } from '@/lib/tournament-promotion';
-import { autoResolveManualRankingNotifications, resolveManualRankingNotificationsImmediately } from '@/lib/notifications';
-import { getTournamentFormatPhases, getLeagueFormatPhases } from '@/lib/tournament-phases';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+  autoResolveManualRankingNotifications,
+  resolveManualRankingNotificationsImmediately,
+} from "@/lib/notifications";
+import { getLeagueFormatPhases, getTournamentFormatPhases } from "@/lib/tournament-phases";
+import { promoteTeamsToFinalTournament } from "@/lib/tournament-promotion";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -42,18 +45,12 @@ interface FinalTournamentUpdate {
 }
 
 // 手動順位の更新
-export async function PUT(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     // Next.js 15対応：paramsは常にPromise
@@ -61,38 +58,38 @@ export async function PUT(
 
     const tournamentId = parseInt(resolvedParams.id);
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     // リクエストボディの取得
     const body = await request.json();
-    const { blocks, finalTournament }: { 
-      blocks: BlockUpdate[]; 
+    const {
+      blocks,
+      finalTournament,
+    }: {
+      blocks: BlockUpdate[];
       finalTournament?: FinalTournamentUpdate | null;
     } = body;
 
     if (!blocks || !Array.isArray(blocks)) {
       return NextResponse.json(
-        { success: false, error: 'ブロックデータが不正です' },
-        { status: 400 }
+        { success: false, error: "ブロックデータが不正です" },
+        { status: 400 },
       );
     }
 
     // 各ブロックの順位表を更新
     for (const block of blocks) {
       // 順位の妥当性チェック
-      const positions = block.team_rankings.map(t => t.position).sort((a, b) => a - b);
+      const positions = block.team_rankings.map((t) => t.position).sort((a, b) => a - b);
       const teamCount = block.team_rankings.length;
-      
+
       // 順位が1からteamCountの範囲内かチェック
-      const invalidPositions = positions.filter(pos => pos < 1 || pos > teamCount);
+      const invalidPositions = positions.filter((pos) => pos < 1 || pos > teamCount);
       if (invalidPositions.length > 0) {
         return NextResponse.json(
-          { success: false, error: `不正な順位が設定されています: ${invalidPositions.join(', ')}` },
-          { status: 400 }
+          { success: false, error: `不正な順位が設定されています: ${invalidPositions.join(", ")}` },
+          { status: 400 },
         );
       }
 
@@ -103,7 +100,7 @@ export async function PUT(
           SET team_rankings = ?, remarks = ?, updated_at = datetime('now', '+9 hours') 
           WHERE match_block_id = ?
         `,
-        args: [JSON.stringify(block.team_rankings), block.remarks || null, block.match_block_id]
+        args: [JSON.stringify(block.team_rankings), block.remarks || null, block.match_block_id],
       });
     }
 
@@ -111,12 +108,12 @@ export async function PUT(
     if (finalTournament) {
       // トーナメント形式フェーズのブロックを取得
       const phasesResult = await db.execute({
-        sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
-        args: [tournamentId]
+        sql: "SELECT phases FROM t_tournaments WHERE tournament_id = ?",
+        args: [tournamentId],
       });
       const phasesJson = phasesResult.rows[0]?.phases as string | null;
       const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
-      const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+      const phasePlaceholders = tournamentPhaseIds.map(() => "?").join(",");
 
       const finalBlockResult = await db.execute({
         sql: `
@@ -124,21 +121,26 @@ export async function PUT(
           FROM t_match_blocks
           WHERE tournament_id = ? AND phase IN (${phasePlaceholders})
         `,
-        args: [tournamentId, ...tournamentPhaseIds]
+        args: [tournamentId, ...tournamentPhaseIds],
       });
 
       if (finalBlockResult.rows.length > 0) {
         const finalBlockId = finalBlockResult.rows[0].match_block_id as number;
-        
+
         // 順位の妥当性チェック
-        const positions = finalTournament.team_rankings.map(t => t.position).sort((a, b) => a - b);
+        const positions = finalTournament.team_rankings
+          .map((t) => t.position)
+          .sort((a, b) => a - b);
         const teamCount = finalTournament.team_rankings.length;
-        
-        const invalidPositions = positions.filter(pos => pos < 1 || pos > teamCount);
+
+        const invalidPositions = positions.filter((pos) => pos < 1 || pos > teamCount);
         if (invalidPositions.length > 0) {
           return NextResponse.json(
-            { success: false, error: `決勝トーナメントで不正な順位が設定されています: ${invalidPositions.join(', ')}` },
-            { status: 400 }
+            {
+              success: false,
+              error: `決勝トーナメントで不正な順位が設定されています: ${invalidPositions.join(", ")}`,
+            },
+            { status: 400 },
           );
         }
 
@@ -149,7 +151,11 @@ export async function PUT(
             SET team_rankings = ?, remarks = ?, updated_at = datetime('now', '+9 hours') 
             WHERE match_block_id = ?
           `,
-          args: [JSON.stringify(finalTournament.team_rankings), finalTournament.remarks || null, finalBlockId]
+          args: [
+            JSON.stringify(finalTournament.team_rankings),
+            finalTournament.remarks || null,
+            finalBlockId,
+          ],
         });
       }
     }
@@ -157,11 +163,11 @@ export async function PUT(
     // 決勝トーナメント進出処理をトリガー
     try {
       await promoteTeamsToFinalTournament(tournamentId);
-      
+
       // 進出完了後、手動順位設定通知を自動解決
       await autoResolveManualRankingNotifications(tournamentId);
     } catch (promotionError) {
-      console.error('[MANUAL_RANKINGS] 進出処理エラー:', promotionError);
+      console.error("[MANUAL_RANKINGS] 進出処理エラー:", promotionError);
       // 進出処理エラーでも順位更新は成功とする
     }
 
@@ -169,43 +175,36 @@ export async function PUT(
     try {
       await resolveManualRankingNotificationsImmediately(tournamentId);
     } catch (notificationError) {
-      console.error('[MANUAL_RANKINGS] 通知即座解決エラー:', notificationError);
+      console.error("[MANUAL_RANKINGS] 通知即座解決エラー:", notificationError);
       // 通知解決エラーでも順位更新は成功とする
     }
 
     return NextResponse.json({
       success: true,
-      message: '順位表を更新しました',
+      message: "順位表を更新しました",
       updatedBlocks: blocks.length,
-      promotionExecuted: true
+      promotionExecuted: true,
     });
-
   } catch (error) {
-    console.error('[MANUAL_RANKINGS] 手動順位更新エラー:', error);
+    console.error("[MANUAL_RANKINGS] 手動順位更新エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '順位表の更新に失敗しました',
-        details: error instanceof Error ? error.message : String(error)
+      {
+        success: false,
+        error: "順位表の更新に失敗しました",
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // 現在の順位表を取得（GET）
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     // Next.js 15対応：paramsは常にPromise
@@ -213,23 +212,20 @@ export async function GET(
 
     const tournamentId = parseInt(resolvedParams.id);
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     // フェーズ情報を取得
     const phasesResult = await db.execute({
-      sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
-      args: [tournamentId]
+      sql: "SELECT phases FROM t_tournaments WHERE tournament_id = ?",
+      args: [tournamentId],
     });
     const phasesJson = phasesResult.rows[0]?.phases as string | null;
     const leaguePhaseIds = getLeagueFormatPhases(phasesJson);
     const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
 
     // ブロック情報と順位表を取得（リーグ形式フェーズのみ）
-    const leaguePlaceholders = leaguePhaseIds.map(() => '?').join(',');
+    const leaguePlaceholders = leaguePhaseIds.map(() => "?").join(",");
     const blocksResult = await db.execute({
       sql: `
         SELECT
@@ -244,20 +240,20 @@ export async function GET(
         AND phase IN (${leaguePlaceholders})
         ORDER BY block_order, match_block_id
       `,
-      args: [tournamentId, ...leaguePhaseIds]
+      args: [tournamentId, ...leaguePhaseIds],
     });
 
-    const blocks = blocksResult.rows.map(row => ({
+    const blocks = blocksResult.rows.map((row) => ({
       match_block_id: row.match_block_id as number,
       phase: row.phase as string,
       display_round_name: row.display_round_name as string,
       block_name: row.block_name as string,
       team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : [],
-      remarks: row.remarks as string | null
+      remarks: row.remarks as string | null,
     }));
 
     // トーナメント形式フェーズの順位データを取得
-    const tournamentPlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+    const tournamentPlaceholders = tournamentPhaseIds.map(() => "?").join(",");
     const finalBlockResult = await db.execute({
       sql: `
         SELECT
@@ -272,21 +268,23 @@ export async function GET(
         AND phase IN (${tournamentPlaceholders})
         LIMIT 1
       `,
-      args: [tournamentId, ...tournamentPhaseIds]
+      args: [tournamentId, ...tournamentPhaseIds],
     });
 
     let finalTournament = null;
     if (finalBlockResult.rows.length > 0) {
       const finalBlock = finalBlockResult.rows[0];
-      const teamRankings = finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [];
-      
+      const teamRankings = finalBlock.team_rankings
+        ? JSON.parse(finalBlock.team_rankings as string)
+        : [];
+
       finalTournament = {
         match_block_id: finalBlock.match_block_id as number,
         phase: finalBlock.phase as string,
         display_round_name: finalBlock.display_round_name as string,
         block_name: finalBlock.block_name as string,
         team_rankings: teamRankings,
-        remarks: finalBlock.remarks as string | null
+        remarks: finalBlock.remarks as string | null,
       };
     }
 
@@ -294,19 +292,18 @@ export async function GET(
       success: true,
       data: {
         preliminaryBlocks: blocks,
-        finalTournament: finalTournament
-      }
-    });
-
-  } catch (error) {
-    console.error('手動順位取得エラー:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '順位表の取得に失敗しました',
-        details: error instanceof Error ? error.message : String(error)
+        finalTournament: finalTournament,
       },
-      { status: 500 }
+    });
+  } catch (error) {
+    console.error("手動順位取得エラー:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "順位表の取得に失敗しました",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }

@@ -1,5 +1,5 @@
 // lib/notifications.ts
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 export interface TournamentNotification {
   notification_id?: number;
@@ -7,7 +7,7 @@ export interface TournamentNotification {
   notification_type: string;
   title: string;
   message: string;
-  severity: 'info' | 'warning' | 'error';
+  severity: "info" | "warning" | "error";
   is_resolved: boolean;
   metadata?: Record<string, unknown>;
   created_at?: string;
@@ -22,12 +22,12 @@ export async function createTournamentNotification(
   type: string,
   title: string,
   message: string,
-  severity: 'info' | 'warning' | 'error' = 'info',
-  metadata?: Record<string, unknown>
+  severity: "info" | "warning" | "error" = "info",
+  metadata?: Record<string, unknown>,
 ): Promise<number> {
   try {
     console.log(`[NOTIFICATIONS] 通知作成: ${title}`);
-    
+
     // 既存の同じ内容の通知があるかチェック
     const existingNotification = await db.execute({
       sql: `
@@ -38,22 +38,22 @@ export async function createTournamentNotification(
         AND title = ?
         AND is_resolved = 0
       `,
-      args: [tournamentId, type, title]
+      args: [tournamentId, type, title],
     });
-    
+
     if (existingNotification.rows.length > 0) {
       console.log(`[NOTIFICATIONS] 既存の通知を更新`);
       const notificationId = existingNotification.rows[0].notification_id as number;
-      
+
       await db.execute({
         sql: `
           UPDATE t_tournament_notifications 
           SET message = ?, severity = ?, metadata = ?, updated_at = datetime('now', '+9 hours')
           WHERE notification_id = ?
         `,
-        args: [message, severity, metadata ? JSON.stringify(metadata) : null, notificationId]
+        args: [message, severity, metadata ? JSON.stringify(metadata) : null, notificationId],
       });
-      
+
       return notificationId;
     } else {
       console.log(`[NOTIFICATIONS] 新規通知を作成`);
@@ -69,14 +69,14 @@ export async function createTournamentNotification(
           title,
           message,
           severity,
-          metadata ? JSON.stringify(metadata) : null
-        ]
+          metadata ? JSON.stringify(metadata) : null,
+        ],
       });
-      
+
       return Number(result.lastInsertRowid);
     }
   } catch (error) {
-    console.error('[NOTIFICATIONS] 通知作成エラー:', error);
+    console.error("[NOTIFICATIONS] 通知作成エラー:", error);
     throw error;
   }
 }
@@ -92,11 +92,11 @@ export async function resolveNotification(notificationId: number): Promise<void>
         SET is_resolved = 1, updated_at = datetime('now', '+9 hours')
         WHERE notification_id = ?
       `,
-      args: [notificationId]
+      args: [notificationId],
     });
     console.log(`[NOTIFICATIONS] 通知解決: ID ${notificationId}`);
   } catch (error) {
-    console.error('[NOTIFICATIONS] 通知解決エラー:', error);
+    console.error("[NOTIFICATIONS] 通知解決エラー:", error);
     throw error;
   }
 }
@@ -105,8 +105,8 @@ export async function resolveNotification(notificationId: number): Promise<void>
  * 大会の未解決通知を取得
  */
 export async function getTournamentNotifications(
-  tournamentId: number, 
-  includeResolved: boolean = false
+  tournamentId: number,
+  includeResolved: boolean = false,
 ): Promise<TournamentNotification[]> {
   try {
     const sql = `
@@ -123,29 +123,29 @@ export async function getTournamentNotifications(
         updated_at
       FROM t_tournament_notifications
       WHERE tournament_id = ?
-      ${includeResolved ? '' : 'AND is_resolved = 0'}
+      ${includeResolved ? "" : "AND is_resolved = 0"}
       ORDER BY created_at DESC
     `;
-    
+
     const result = await db.execute({
       sql,
-      args: [tournamentId]
+      args: [tournamentId],
     });
-    
-    return result.rows.map(row => ({
+
+    return result.rows.map((row) => ({
       notification_id: row.notification_id as number,
       tournament_id: row.tournament_id as number,
       notification_type: row.notification_type as string,
       title: row.title as string,
       message: row.message as string,
-      severity: row.severity as 'info' | 'warning' | 'error',
+      severity: row.severity as "info" | "warning" | "error",
       is_resolved: Boolean(row.is_resolved),
       metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
       created_at: row.created_at as string,
-      updated_at: row.updated_at as string
+      updated_at: row.updated_at as string,
     }));
   } catch (error) {
-    console.error('[NOTIFICATIONS] 通知取得エラー:', error);
+    console.error("[NOTIFICATIONS] 通知取得エラー:", error);
     return [];
   }
 }
@@ -154,7 +154,9 @@ export async function getTournamentNotifications(
  * トーナメント形式フェーズの進出チームが決定しているかチェック
  * 動的フェーズ対応: match_type がトーナメント形式のブロックを対象
  */
-export async function checkFinalTournamentPromotionCompleted(tournamentId: number): Promise<boolean> {
+export async function checkFinalTournamentPromotionCompleted(
+  tournamentId: number,
+): Promise<boolean> {
   try {
     // トーナメント形式の試合ブロックを取得（動的フェーズ対応）
     // match_typeはt_match_blocksではなくt_matches_liveに存在するためJOINで取得
@@ -166,7 +168,7 @@ export async function checkFinalTournamentPromotionCompleted(tournamentId: numbe
         WHERE mb.tournament_id = ?
           AND ml.match_type IN ('quarterfinal', 'semifinal', 'final', 'third_place', 'first_round')
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
     if (tournamentBlockResult.rows.length === 0) {
@@ -174,8 +176,8 @@ export async function checkFinalTournamentPromotionCompleted(tournamentId: numbe
       return true;
     }
 
-    const blockIds = tournamentBlockResult.rows.map(r => r.match_block_id as number);
-    const placeholders = blockIds.map(() => '?').join(',');
+    const blockIds = tournamentBlockResult.rows.map((r) => r.match_block_id as number);
+    const placeholders = blockIds.map(() => "?").join(",");
 
     // トーナメント形式試合で実チーム名が設定されているかチェック
     const matchesResult = await db.execute({
@@ -188,16 +190,16 @@ export async function checkFinalTournamentPromotionCompleted(tournamentId: numbe
         FROM t_matches_live
         WHERE match_block_id IN (${placeholders})
       `,
-      args: blockIds
+      args: blockIds,
     });
 
-    const totalMatches = matchesResult.rows[0]?.total_matches as number || 0;
-    const realTeamMatches = matchesResult.rows[0]?.real_team_matches as number || 0;
+    const totalMatches = (matchesResult.rows[0]?.total_matches as number) || 0;
+    const realTeamMatches = (matchesResult.rows[0]?.real_team_matches as number) || 0;
 
     // 全ての試合で実チーム名が設定されていれば進出完了
     return totalMatches > 0 && realTeamMatches === totalMatches;
   } catch (error) {
-    console.error('[NOTIFICATIONS] 進出完了チェックエラー:', error);
+    console.error("[NOTIFICATIONS] 進出完了チェックエラー:", error);
     return false;
   }
 }
@@ -208,10 +210,10 @@ export async function checkFinalTournamentPromotionCompleted(tournamentId: numbe
 export async function autoResolveManualRankingNotifications(tournamentId: number): Promise<void> {
   try {
     const isPromotionCompleted = await checkFinalTournamentPromotionCompleted(tournamentId);
-    
+
     if (isPromotionCompleted) {
       console.log(`[NOTIFICATIONS] 大会${tournamentId}: 進出決定により手動順位設定通知を自動解決`);
-      
+
       await db.execute({
         sql: `
           UPDATE t_tournament_notifications 
@@ -220,21 +222,23 @@ export async function autoResolveManualRankingNotifications(tournamentId: number
           AND notification_type = 'manual_ranking_needed' 
           AND is_resolved = 0
         `,
-        args: [tournamentId]
+        args: [tournamentId],
       });
     }
   } catch (error) {
-    console.error('[NOTIFICATIONS] 自動解決エラー:', error);
+    console.error("[NOTIFICATIONS] 自動解決エラー:", error);
   }
 }
 
 /**
  * 手動順位設定後に同着問題解決通知を即座に削除
  */
-export async function resolveManualRankingNotificationsImmediately(tournamentId: number): Promise<void> {
+export async function resolveManualRankingNotificationsImmediately(
+  tournamentId: number,
+): Promise<void> {
   try {
     console.log(`[NOTIFICATIONS] 大会${tournamentId}: 手動順位設定により通知を即座に解決`);
-    
+
     await db.execute({
       sql: `
         UPDATE t_tournament_notifications 
@@ -243,19 +247,21 @@ export async function resolveManualRankingNotificationsImmediately(tournamentId:
         AND notification_type = 'manual_ranking_needed' 
         AND is_resolved = 0
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
-    
+
     console.log(`[NOTIFICATIONS] 大会${tournamentId}: 手動順位設定通知の即座解決完了`);
   } catch (error) {
-    console.error('[NOTIFICATIONS] 即座解決エラー:', error);
+    console.error("[NOTIFICATIONS] 即座解決エラー:", error);
   }
 }
 
 /**
  * 管理者ダッシュボード用：全大会の未解決通知を取得（大会IDで絞り込み可能）
  */
-export async function getAllUnresolvedNotifications(tournamentId?: number): Promise<(TournamentNotification & { tournament_name: string })[]> {
+export async function getAllUnresolvedNotifications(
+  tournamentId?: number,
+): Promise<(TournamentNotification & { tournament_name: string })[]> {
   try {
     // まず手動順位設定通知の自動解決を実行
     if (tournamentId) {
@@ -268,13 +274,13 @@ export async function getAllUnresolvedNotifications(tournamentId?: number): Prom
         FROM t_tournament_notifications 
         WHERE notification_type = 'manual_ranking_needed' AND is_resolved = 0
       `);
-      
+
       for (const row of tournamentIds.rows) {
         const tournamentIdToProcess = row.tournament_id as number;
         await autoResolveManualRankingNotifications(tournamentIdToProcess);
       }
     }
-    
+
     // 通知を取得（大会IDで絞り込み）
     const sql = `
       SELECT 
@@ -292,30 +298,30 @@ export async function getAllUnresolvedNotifications(tournamentId?: number): Prom
       FROM t_tournament_notifications tn
       JOIN t_tournaments t ON tn.tournament_id = t.tournament_id
       WHERE tn.is_resolved = 0
-      ${tournamentId ? 'AND tn.tournament_id = ?' : ''}
+      ${tournamentId ? "AND tn.tournament_id = ?" : ""}
       ORDER BY tn.created_at DESC
     `;
-    
+
     const result = await db.execute({
       sql,
-      args: tournamentId ? [tournamentId] : []
+      args: tournamentId ? [tournamentId] : [],
     });
-    
-    return result.rows.map(row => ({
+
+    return result.rows.map((row) => ({
       notification_id: row.notification_id as number,
       tournament_id: row.tournament_id as number,
       notification_type: row.notification_type as string,
       title: row.title as string,
       message: row.message as string,
-      severity: row.severity as 'info' | 'warning' | 'error',
+      severity: row.severity as "info" | "warning" | "error",
       is_resolved: Boolean(row.is_resolved),
       metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
-      tournament_name: row.tournament_name as string
+      tournament_name: row.tournament_name as string,
     }));
   } catch (error) {
-    console.error('[NOTIFICATIONS] 全通知取得エラー:', error);
+    console.error("[NOTIFICATIONS] 全通知取得エラー:", error);
     return [];
   }
 }

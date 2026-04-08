@@ -1,1052 +1,1522 @@
-import { sqliteTable, index, check, integer, text, numeric, real } from "drizzle-orm/sqlite-core"
-  import { sql } from "drizzle-orm"
-  import type { TournamentPhases } from "../../lib/types/tournament-phases"
+import { sql } from "drizzle-orm";
+import { check, index, integer, numeric, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type { TournamentPhases } from "../../lib/types/tournament-phases";
 
-export const mPrefectures = sqliteTable("m_prefectures", {
-	prefectureId: integer("prefecture_id").primaryKey(),
-	prefectureName: text("prefecture_name").notNull(),
-	prefectureCode: text("prefecture_code").notNull(),
-	regionName: text("region_name").notNull(),
-	displayOrder: integer("display_order").notNull(),
-	isActive: integer("is_active").default(1).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mPrefectures = sqliteTable(
+  "m_prefectures",
+  {
+    prefectureId: integer("prefecture_id").primaryKey(),
+    prefectureName: text("prefecture_name").notNull(),
+    prefectureCode: text("prefecture_code").notNull(),
+    regionName: text("region_name").notNull(),
+    displayOrder: integer("display_order").notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tMatchesFinal = sqliteTable("t_matches_final", {
-	matchId: integer("match_id").primaryKey({ autoIncrement: true }),
-	matchBlockId: integer("match_block_id").notNull().references(() => tMatchBlocks.matchBlockId),
-	tournamentDate: text("tournament_date").notNull(),
-	matchNumber: integer("match_number").notNull(),
-	matchCode: text("match_code").notNull(),
-	team1DisplayName: text("team1_display_name").notNull(),
-	team2DisplayName: text("team2_display_name").notNull(),
-	courtNumber: integer("court_number"),
-	startTime: text("start_time"),
-	team1Scores: text("team1_scores"),
-	team2Scores: text("team2_scores"),
-	periodCount: integer("period_count").default(1).notNull(),
-	isDraw: integer("is_draw").default(0).notNull(),
-	isWalkover: integer("is_walkover").default(0).notNull(),
-	matchStatus: text("match_status").default("completed").notNull(),
-	resultStatus: text("result_status").default("confirmed").notNull(),
-	remarks: text(),
-	matchComment: text("match_comment"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	cancellationType: text("cancellation_type"),
-	team1TournamentTeamId: integer("team1_tournament_team_id"),
-	team2TournamentTeamId: integer("team2_tournament_team_id"),
-	winnerTournamentTeamId: integer("winner_tournament_team_id"),
-	// テンプレート独立化: m_match_templatesからコピーされたフィールド
-	phase: text("phase"),
-	matchType: text("match_type"),
-	roundName: text("round_name"),
-	blockName: text("block_name"),
-	team1Source: text("team1_source"),
-	team2Source: text("team2_source"),
-	dayNumber: integer("day_number"),
-	executionPriority: integer("execution_priority"),
-	suggestedStartTime: text("suggested_start_time"),
-	loserPositionStart: integer("loser_position_start"),
-	loserPositionEnd: integer("loser_position_end"),
-	positionNote: text("position_note"),
-	winnerPosition: integer("winner_position"),
-	isByeMatch: integer("is_bye_match").default(0),
-	matchday: integer("matchday"),
-	cycle: integer("cycle").default(1),
-	venueName: text("venue_name"),
-	courtName: text("court_name"),
-	venueId: integer("venue_id"),
-},
-(_table) => [
-	index("idx_matches_final_winner_tournament").on(_table.winnerTournamentTeamId),
-	index("idx_matches_final_team2_tournament").on(_table.team2TournamentTeamId),
-	index("idx_matches_final_team1_tournament").on(_table.team1TournamentTeamId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tMatchesFinal = sqliteTable(
+  "t_matches_final",
+  {
+    matchId: integer("match_id").primaryKey({ autoIncrement: true }),
+    matchBlockId: integer("match_block_id")
+      .notNull()
+      .references(() => tMatchBlocks.matchBlockId),
+    tournamentDate: text("tournament_date").notNull(),
+    matchNumber: integer("match_number").notNull(),
+    matchCode: text("match_code").notNull(),
+    team1DisplayName: text("team1_display_name").notNull(),
+    team2DisplayName: text("team2_display_name").notNull(),
+    courtNumber: integer("court_number"),
+    startTime: text("start_time"),
+    team1Scores: text("team1_scores"),
+    team2Scores: text("team2_scores"),
+    periodCount: integer("period_count").default(1).notNull(),
+    isDraw: integer("is_draw").default(0).notNull(),
+    isWalkover: integer("is_walkover").default(0).notNull(),
+    matchStatus: text("match_status").default("completed").notNull(),
+    resultStatus: text("result_status").default("confirmed").notNull(),
+    remarks: text(),
+    matchComment: text("match_comment"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    cancellationType: text("cancellation_type"),
+    team1TournamentTeamId: integer("team1_tournament_team_id"),
+    team2TournamentTeamId: integer("team2_tournament_team_id"),
+    winnerTournamentTeamId: integer("winner_tournament_team_id"),
+    // テンプレート独立化: m_match_templatesからコピーされたフィールド
+    phase: text("phase"),
+    matchType: text("match_type"),
+    roundName: text("round_name"),
+    blockName: text("block_name"),
+    team1Source: text("team1_source"),
+    team2Source: text("team2_source"),
+    dayNumber: integer("day_number"),
+    executionPriority: integer("execution_priority"),
+    suggestedStartTime: text("suggested_start_time"),
+    loserPositionStart: integer("loser_position_start"),
+    loserPositionEnd: integer("loser_position_end"),
+    positionNote: text("position_note"),
+    winnerPosition: integer("winner_position"),
+    isByeMatch: integer("is_bye_match").default(0),
+    matchday: integer("matchday"),
+    cycle: integer("cycle").default(1),
+    venueName: text("venue_name"),
+    courtName: text("court_name"),
+    venueId: integer("venue_id"),
+  },
+  (_table) => [
+    index("idx_matches_final_winner_tournament").on(_table.winnerTournamentTeamId),
+    index("idx_matches_final_team2_tournament").on(_table.team2TournamentTeamId),
+    index("idx_matches_final_team1_tournament").on(_table.team1TournamentTeamId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mTeams = sqliteTable("m_teams", {
-	teamId: text("team_id").primaryKey(),
-	teamName: text("team_name").notNull(),
-	teamOmission: text("team_omission"),
-	contactPhone: text("contact_phone"),
-	representativePlayerId: integer("representative_player_id"),
-	prefectureId: integer("prefecture_id"),
-	isActive: integer("is_active").default(1).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	registrationType: text("registration_type").default("self_registered"),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mTeams = sqliteTable(
+  "m_teams",
+  {
+    teamId: text("team_id").primaryKey(),
+    teamName: text("team_name").notNull(),
+    teamOmission: text("team_omission"),
+    contactPhone: text("contact_phone"),
+    representativePlayerId: integer("representative_player_id"),
+    prefectureId: integer("prefecture_id"),
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    registrationType: text("registration_type").default("self_registered"),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tMatchesLive = sqliteTable("t_matches_live", {
-	matchId: integer("match_id").primaryKey({ autoIncrement: true }),
-	matchBlockId: integer("match_block_id").notNull(),
-	tournamentDate: text("tournament_date").notNull(),
-	matchNumber: integer("match_number").notNull(),
-	matchCode: text("match_code").notNull(),
-	team1DisplayName: text("team1_display_name").notNull(),
-	team2DisplayName: text("team2_display_name").notNull(),
-	courtNumber: integer("court_number"),
-	startTime: text("start_time"),
-	team1Scores: text("team1_scores"),
-	team2Scores: text("team2_scores"),
-	periodCount: integer("period_count").default(1).notNull(),
-	isDraw: integer("is_draw").default(0).notNull(),
-	isWalkover: integer("is_walkover").default(0).notNull(),
-	matchStatus: text("match_status").default("scheduled").notNull(),
-	resultStatus: text("result_status").default("none").notNull(),
-	remarks: text(),
-	matchComment: text("match_comment"),
-	confirmedBy: text("confirmed_by"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	cancellationType: text("cancellation_type"),
-	team1TournamentTeamId: integer("team1_tournament_team_id"),
-	team2TournamentTeamId: integer("team2_tournament_team_id"),
-	winnerTournamentTeamId: integer("winner_tournament_team_id"),
-	// テンプレート独立化: m_match_templatesからコピーされたフィールド
-	phase: text("phase"),
-	matchType: text("match_type"),
-	roundName: text("round_name"),
-	blockName: text("block_name"),
-	team1Source: text("team1_source"),
-	team2Source: text("team2_source"),
-	dayNumber: integer("day_number"),
-	executionPriority: integer("execution_priority"),
-	suggestedStartTime: text("suggested_start_time"),
-	loserPositionStart: integer("loser_position_start"),
-	loserPositionEnd: integer("loser_position_end"),
-	positionNote: text("position_note"),
-	winnerPosition: integer("winner_position"),
-	isByeMatch: integer("is_bye_match").default(0),
-	matchday: integer("matchday"),
-	cycle: integer("cycle").default(1),
-	venueName: text("venue_name"),
-	courtName: text("court_name"),
-	venueId: integer("venue_id"),
-},
-(_table) => [
-	index("idx_matches_live_team1_tournament").on(_table.team1TournamentTeamId),
-	index("idx_matches_live_winner_tournament").on(_table.winnerTournamentTeamId),
-	index("idx_matches_live_team2_tournament").on(_table.team2TournamentTeamId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tMatchesLive = sqliteTable(
+  "t_matches_live",
+  {
+    matchId: integer("match_id").primaryKey({ autoIncrement: true }),
+    matchBlockId: integer("match_block_id").notNull(),
+    tournamentDate: text("tournament_date").notNull(),
+    matchNumber: integer("match_number").notNull(),
+    matchCode: text("match_code").notNull(),
+    team1DisplayName: text("team1_display_name").notNull(),
+    team2DisplayName: text("team2_display_name").notNull(),
+    courtNumber: integer("court_number"),
+    startTime: text("start_time"),
+    team1Scores: text("team1_scores"),
+    team2Scores: text("team2_scores"),
+    periodCount: integer("period_count").default(1).notNull(),
+    isDraw: integer("is_draw").default(0).notNull(),
+    isWalkover: integer("is_walkover").default(0).notNull(),
+    matchStatus: text("match_status").default("scheduled").notNull(),
+    resultStatus: text("result_status").default("none").notNull(),
+    remarks: text(),
+    matchComment: text("match_comment"),
+    confirmedBy: text("confirmed_by"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    cancellationType: text("cancellation_type"),
+    team1TournamentTeamId: integer("team1_tournament_team_id"),
+    team2TournamentTeamId: integer("team2_tournament_team_id"),
+    winnerTournamentTeamId: integer("winner_tournament_team_id"),
+    // テンプレート独立化: m_match_templatesからコピーされたフィールド
+    phase: text("phase"),
+    matchType: text("match_type"),
+    roundName: text("round_name"),
+    blockName: text("block_name"),
+    team1Source: text("team1_source"),
+    team2Source: text("team2_source"),
+    dayNumber: integer("day_number"),
+    executionPriority: integer("execution_priority"),
+    suggestedStartTime: text("suggested_start_time"),
+    loserPositionStart: integer("loser_position_start"),
+    loserPositionEnd: integer("loser_position_end"),
+    positionNote: text("position_note"),
+    winnerPosition: integer("winner_position"),
+    isByeMatch: integer("is_bye_match").default(0),
+    matchday: integer("matchday"),
+    cycle: integer("cycle").default(1),
+    venueName: text("venue_name"),
+    courtName: text("court_name"),
+    venueId: integer("venue_id"),
+  },
+  (_table) => [
+    index("idx_matches_live_team1_tournament").on(_table.team1TournamentTeamId),
+    index("idx_matches_live_winner_tournament").on(_table.winnerTournamentTeamId),
+    index("idx_matches_live_team2_tournament").on(_table.team2TournamentTeamId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mVenues = sqliteTable("m_venues", {
-	venueId: integer("venue_id").primaryKey({ autoIncrement: true }),
-	venueName: text("venue_name").notNull(),
-	address: text(),
-	prefectureId: integer("prefecture_id").references(() => mPrefectures.prefectureId),
-	availableCourts: integer("available_courts").default(4).notNull(),
-	googleMapsUrl: text("google_maps_url"),
-	latitude: real("latitude"),
-	longitude: real("longitude"),
-	isActive: integer("is_active").default(1).notNull(),
-	createdByLoginUserId: integer("created_by_login_user_id"),
-	isShared: integer("is_shared").default(0).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mVenues = sqliteTable(
+  "m_venues",
+  {
+    venueId: integer("venue_id").primaryKey({ autoIncrement: true }),
+    venueName: text("venue_name").notNull(),
+    address: text(),
+    prefectureId: integer("prefecture_id").references(() => mPrefectures.prefectureId),
+    availableCourts: integer("available_courts").default(4).notNull(),
+    googleMapsUrl: text("google_maps_url"),
+    latitude: real("latitude"),
+    longitude: real("longitude"),
+    isActive: integer("is_active").default(1).notNull(),
+    createdByLoginUserId: integer("created_by_login_user_id"),
+    isShared: integer("is_shared").default(0).notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mTournamentFormats = sqliteTable("m_tournament_formats", {
-	formatId: integer("format_id").primaryKey({ autoIncrement: true }),
-	formatName: text("format_name").notNull(),
-	targetTeamCount: integer("target_team_count").notNull(),
-	formatDescription: text("format_description"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	sportTypeId: integer("sport_type_id").default(1),
-	defaultMatchDuration: integer("default_match_duration"),
-	defaultBreakDuration: integer("default_break_duration"),
-	// 新規フィールド: 柔軟なフェーズ構成をJSON形式で保存
-	phases: text("phases", { mode: 'json' }).$type<TournamentPhases>(),
-	// フォーマット公開制御: "public" = 全ユーザー使用可能, "restricted" = アクセス権を持つユーザーのみ
-	visibility: text("visibility").default("public").notNull(),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mTournamentFormats = sqliteTable(
+  "m_tournament_formats",
+  {
+    formatId: integer("format_id").primaryKey({ autoIncrement: true }),
+    formatName: text("format_name").notNull(),
+    targetTeamCount: integer("target_team_count").notNull(),
+    formatDescription: text("format_description"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    sportTypeId: integer("sport_type_id").default(1),
+    defaultMatchDuration: integer("default_match_duration"),
+    defaultBreakDuration: integer("default_break_duration"),
+    // 新規フィールド: 柔軟なフェーズ構成をJSON形式で保存
+    phases: text("phases", { mode: "json" }).$type<TournamentPhases>(),
+    // フォーマット公開制御: "public" = 全ユーザー使用可能, "restricted" = アクセス権を持つユーザーのみ
+    visibility: text("visibility").default("public").notNull(),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tMatchBlocks = sqliteTable("t_match_blocks", {
-	matchBlockId: integer("match_block_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
-	phase: text().notNull(),
-	displayRoundName: text("display_round_name"),
-	blockName: text("block_name").notNull(),
-	blockOrder: integer("block_order").default(0).notNull(),
-	teamRankings: text("team_rankings"),
-	remarks: text(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tMatchBlocks = sqliteTable(
+  "t_match_blocks",
+  {
+    matchBlockId: integer("match_block_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId),
+    phase: text().notNull(),
+    displayRoundName: text("display_round_name"),
+    blockName: text("block_name").notNull(),
+    blockOrder: integer("block_order").default(0).notNull(),
+    teamRankings: text("team_rankings"),
+    remarks: text(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tMatchStatus = sqliteTable("t_match_status", {
-	matchId: integer("match_id").primaryKey(),
-	matchBlockId: integer("match_block_id").notNull().references(() => tMatchBlocks.matchBlockId),
-	matchStatus: text("match_status").default("scheduled").notNull(),
-	actualStartTime: numeric("actual_start_time"),
-	actualEndTime: numeric("actual_end_time"),
-	currentPeriod: integer("current_period").default(1),
-	updatedBy: text("updated_by"),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tMatchStatus = sqliteTable(
+  "t_match_status",
+  {
+    matchId: integer("match_id").primaryKey(),
+    matchBlockId: integer("match_block_id")
+      .notNull()
+      .references(() => tMatchBlocks.matchBlockId),
+    matchStatus: text("match_status").default("scheduled").notNull(),
+    actualStartTime: numeric("actual_start_time"),
+    actualEndTime: numeric("actual_end_time"),
+    currentPeriod: integer("current_period").default(1),
+    updatedBy: text("updated_by"),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentNotifications = sqliteTable("t_tournament_notifications", {
-	notificationId: integer("notification_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
-	notificationType: text("notification_type").notNull(),
-	title: text().notNull(),
-	message: text().notNull(),
-	severity: text().default("info").notNull(),
-	isResolved: integer("is_resolved").default(0).notNull(),
-	metadata: text(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentNotifications = sqliteTable(
+  "t_tournament_notifications",
+  {
+    notificationId: integer("notification_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId),
+    notificationType: text("notification_type").notNull(),
+    title: text().notNull(),
+    message: text().notNull(),
+    severity: text().default("info").notNull(),
+    isResolved: integer("is_resolved").default(0).notNull(),
+    metadata: text(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tArchivedTournamentJson = sqliteTable("t_archived_tournament_json", {
-	tournamentId: integer("tournament_id").primaryKey(),
-	tournamentName: text("tournament_name").notNull(),
-	tournamentData: text("tournament_data").notNull(),
-	teamsData: text("teams_data").notNull(),
-	matchesData: text("matches_data").notNull(),
-	standingsData: text("standings_data").notNull(),
-	resultsData: text("results_data"),
-	pdfInfoData: text("pdf_info_data"),
-	archiveVersion: text("archive_version").default("v1_json"),
-	archivedAt: numeric("archived_at").notNull(),
-	archivedBy: text("archived_by").notNull(),
-	lastAccessed: numeric("last_accessed"),
-	metadata: text(),
-},
-(_table) => [
-	index("idx_archived_json_version").on(_table.archiveVersion),
-	index("idx_archived_json_date").on(_table.archivedAt),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tArchivedTournamentJson = sqliteTable(
+  "t_archived_tournament_json",
+  {
+    tournamentId: integer("tournament_id").primaryKey(),
+    tournamentName: text("tournament_name").notNull(),
+    tournamentData: text("tournament_data").notNull(),
+    teamsData: text("teams_data").notNull(),
+    matchesData: text("matches_data").notNull(),
+    standingsData: text("standings_data").notNull(),
+    resultsData: text("results_data"),
+    pdfInfoData: text("pdf_info_data"),
+    archiveVersion: text("archive_version").default("v1_json"),
+    archivedAt: numeric("archived_at").notNull(),
+    archivedBy: text("archived_by").notNull(),
+    lastAccessed: numeric("last_accessed"),
+    metadata: text(),
+  },
+  (_table) => [
+    index("idx_archived_json_version").on(_table.archiveVersion),
+    index("idx_archived_json_date").on(_table.archivedAt),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mMatchTemplates = sqliteTable("m_match_templates", {
-	templateId: integer("template_id").primaryKey({ autoIncrement: true }),
-	formatId: integer("format_id").notNull().references(() => mTournamentFormats.formatId),
-	matchNumber: integer("match_number").notNull(),
-	matchCode: text("match_code").notNull(),
-	matchType: text("match_type").notNull(),
-	phase: text().notNull(),
-	roundName: text("round_name"),
-	blockName: text("block_name"),
-	team1Source: text("team1_source"),
-	team2Source: text("team2_source"),
-	team1DisplayName: text("team1_display_name").notNull(),
-	team2DisplayName: text("team2_display_name").notNull(),
-	dayNumber: integer("day_number").notNull(),
-	executionPriority: integer("execution_priority").notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	courtNumber: integer("court_number"),
-	suggestedStartTime: text("suggested_start_time"),
-	startTime: text("start_time"),
-	loserPositionStart: integer("loser_position_start"),
-	loserPositionEnd: integer("loser_position_end"),
-	positionNote: text("position_note"),
-	winnerPosition: integer("winner_position"),
-	isByeMatch: integer("is_bye_match").default(0).notNull(),
-	matchday: integer("matchday"),
-	cycle: integer("cycle").default(1),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mMatchTemplates = sqliteTable(
+  "m_match_templates",
+  {
+    templateId: integer("template_id").primaryKey({ autoIncrement: true }),
+    formatId: integer("format_id")
+      .notNull()
+      .references(() => mTournamentFormats.formatId),
+    matchNumber: integer("match_number").notNull(),
+    matchCode: text("match_code").notNull(),
+    matchType: text("match_type").notNull(),
+    phase: text().notNull(),
+    roundName: text("round_name"),
+    blockName: text("block_name"),
+    team1Source: text("team1_source"),
+    team2Source: text("team2_source"),
+    team1DisplayName: text("team1_display_name").notNull(),
+    team2DisplayName: text("team2_display_name").notNull(),
+    dayNumber: integer("day_number").notNull(),
+    executionPriority: integer("execution_priority").notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    courtNumber: integer("court_number"),
+    suggestedStartTime: text("suggested_start_time"),
+    startTime: text("start_time"),
+    loserPositionStart: integer("loser_position_start"),
+    loserPositionEnd: integer("loser_position_end"),
+    positionNote: text("position_note"),
+    winnerPosition: integer("winner_position"),
+    isByeMatch: integer("is_bye_match").default(0).notNull(),
+    matchday: integer("matchday"),
+    cycle: integer("cycle").default(1),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mSportTypes = sqliteTable("m_sport_types", {
-	sportTypeId: integer("sport_type_id").primaryKey({ autoIncrement: true }),
-	sportName: text("sport_name").notNull(),
-	sportCode: text("sport_code").notNull(),
-	maxPeriodCount: integer("max_period_count").notNull(),
-	regularPeriodCount: integer("regular_period_count").notNull(),
-	scoreType: text("score_type").default("numeric").notNull(),
-	defaultMatchDuration: integer("default_match_duration"),
-	scoreUnit: text("score_unit").default("ゴール"),
-	periodDefinitions: text("period_definitions").notNull(),
-	resultFormat: text("result_format").default("score"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	supportsPointSystem: integer("supports_point_system").default(1),
-	supportsDraws: integer("supports_draws").default(1),
-	rankingMethod: text("ranking_method").default("points"),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mSportTypes = sqliteTable(
+  "m_sport_types",
+  {
+    sportTypeId: integer("sport_type_id").primaryKey({ autoIncrement: true }),
+    sportName: text("sport_name").notNull(),
+    sportCode: text("sport_code").notNull(),
+    maxPeriodCount: integer("max_period_count").notNull(),
+    regularPeriodCount: integer("regular_period_count").notNull(),
+    scoreType: text("score_type").default("numeric").notNull(),
+    defaultMatchDuration: integer("default_match_duration"),
+    scoreUnit: text("score_unit").default("ゴール"),
+    periodDefinitions: text("period_definitions").notNull(),
+    resultFormat: text("result_format").default("score"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    supportsPointSystem: integer("supports_point_system").default(1),
+    supportsDraws: integer("supports_draws").default(1),
+    rankingMethod: text("ranking_method").default("points"),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentFiles = sqliteTable("t_tournament_files", {
-	fileId: integer("file_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),
-	fileTitle: text("file_title").notNull(),
-	fileDescription: text("file_description"),
-	originalFilename: text("original_filename").notNull(),
-	blobUrl: text("blob_url").notNull(),
-	fileSize: integer("file_size").notNull(),
-	mimeType: text("mime_type").default("application/pdf").notNull(),
-	uploadOrder: integer("upload_order").default(0),
-	isPublic: numeric("is_public").default("1"),
-	uploadedBy: text("uploaded_by").notNull(),
-	uploadedAt: numeric("uploaded_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	externalUrl: text("external_url"),
-	linkType: text("link_type").default("upload"),
-	displayDate: text("display_date"),
-},
-(_table) => [
-	index("idx_tournament_files_order").on(_table.tournamentId, _table.uploadOrder),
-	index("idx_tournament_files_public").on(_table.tournamentId, _table.isPublic),
-	index("idx_tournament_files_tournament_id").on(_table.tournamentId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentFiles = sqliteTable(
+  "t_tournament_files",
+  {
+    fileId: integer("file_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    fileTitle: text("file_title").notNull(),
+    fileDescription: text("file_description"),
+    originalFilename: text("original_filename").notNull(),
+    blobUrl: text("blob_url").notNull(),
+    fileSize: integer("file_size").notNull(),
+    mimeType: text("mime_type").default("application/pdf").notNull(),
+    uploadOrder: integer("upload_order").default(0),
+    isPublic: numeric("is_public").default("1"),
+    uploadedBy: text("uploaded_by").notNull(),
+    uploadedAt: numeric("uploaded_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    externalUrl: text("external_url"),
+    linkType: text("link_type").default("upload"),
+    displayDate: text("display_date"),
+  },
+  (_table) => [
+    index("idx_tournament_files_order").on(_table.tournamentId, _table.uploadOrder),
+    index("idx_tournament_files_public").on(_table.tournamentId, _table.isPublic),
+    index("idx_tournament_files_tournament_id").on(_table.tournamentId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mAdministrators = sqliteTable("m_administrators", {
-	administratorId: integer("administrator_id").primaryKey({ autoIncrement: true }),
-	adminLoginId: text("admin_login_id").notNull(),
-	passwordHash: text("password_hash").notNull(),
-	email: text().notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	logoBlobUrl: text("logo_blob_url"),
-	logoFilename: text("logo_filename"),
-	organizationName: text("organization_name"),
-	currentPlanId: integer("current_plan_id").references(() => mSubscriptionPlans.planId),
-	subscriptionStatus: text("subscription_status").default("free"),
-	trialStartDate: text("trial_start_date"),
-	trialEndDate: text("trial_end_date"),
-	squareCustomerId: text("square_customer_id"),
-	freeTrialEndDate: text("free_trial_end_date"),
-	planChangedAt: text("plan_changed_at"),
-},
-(_table) => [
-	index("idx_admin_sub_status").on(_table.subscriptionStatus),
-	index("idx_admin_plan").on(_table.currentPlanId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mAdministrators = sqliteTable(
+  "m_administrators",
+  {
+    administratorId: integer("administrator_id").primaryKey({ autoIncrement: true }),
+    adminLoginId: text("admin_login_id").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    email: text().notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    logoBlobUrl: text("logo_blob_url"),
+    logoFilename: text("logo_filename"),
+    organizationName: text("organization_name"),
+    currentPlanId: integer("current_plan_id").references(() => mSubscriptionPlans.planId),
+    subscriptionStatus: text("subscription_status").default("free"),
+    trialStartDate: text("trial_start_date"),
+    trialEndDate: text("trial_end_date"),
+    squareCustomerId: text("square_customer_id"),
+    freeTrialEndDate: text("free_trial_end_date"),
+    planChangedAt: text("plan_changed_at"),
+  },
+  (_table) => [
+    index("idx_admin_sub_status").on(_table.subscriptionStatus),
+    index("idx_admin_plan").on(_table.currentPlanId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentGroups = sqliteTable("t_tournament_groups", {
-	groupId: integer("group_id").primaryKey({ autoIncrement: true }),
-	groupName: text("group_name").notNull(),
-	organizer: text(),
-	venueId: integer("venue_id").references(() => mVenues.venueId),
-	eventStartDate: text("event_start_date"),
-	eventEndDate: text("event_end_date"),
-	recruitmentStartDate: text("recruitment_start_date"),
-	recruitmentEndDate: text("recruitment_end_date"),
-	visibility: text().default("open"),
-	eventDescription: text("event_description"),
-	createdAt: numeric("created_at").notNull(),
-	updatedAt: numeric("updated_at").notNull(),
-	adminLoginId: text("admin_login_id").references(() => mAdministrators.adminLoginId),
-	loginUserId: integer("login_user_id").references(() => mLoginUsers.loginUserId),
-},
-(_table) => [
-	index("idx_tournament_groups_admin").on(_table.adminLoginId),
-	index("idx_tournament_groups_venue").on(_table.venueId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentGroups = sqliteTable(
+  "t_tournament_groups",
+  {
+    groupId: integer("group_id").primaryKey({ autoIncrement: true }),
+    groupName: text("group_name").notNull(),
+    organizer: text(),
+    venueId: integer("venue_id").references(() => mVenues.venueId),
+    eventStartDate: text("event_start_date"),
+    eventEndDate: text("event_end_date"),
+    recruitmentStartDate: text("recruitment_start_date"),
+    recruitmentEndDate: text("recruitment_end_date"),
+    visibility: text().default("open"),
+    eventDescription: text("event_description"),
+    createdAt: numeric("created_at").notNull(),
+    updatedAt: numeric("updated_at").notNull(),
+    adminLoginId: text("admin_login_id").references(() => mAdministrators.adminLoginId),
+    loginUserId: integer("login_user_id").references(() => mLoginUsers.loginUserId),
+  },
+  (_table) => [
+    index("idx_tournament_groups_admin").on(_table.adminLoginId),
+    index("idx_tournament_groups_venue").on(_table.venueId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mSubscriptionPlans = sqliteTable("m_subscription_plans", {
-	planId: integer("plan_id").primaryKey({ autoIncrement: true }),
-	planName: text("plan_name").notNull(),
-	planCode: text("plan_code").notNull(),
-	planDescription: text("plan_description"),
-	monthlyPrice: integer("monthly_price").notNull(),
-	yearlyPrice: integer("yearly_price"),
-	currency: text().default("JPY"),
-	maxTournaments: integer("max_tournaments").notNull(),
-	maxDivisionsPerTournament: integer("max_divisions_per_tournament"),
-	totalMaxDivisions: integer("total_max_divisions"),
-	maxTeamsPerTournament: integer("max_teams_per_tournament"),
-	allowCsvImport: integer("allow_csv_import").default(0),
-	allowAdvancedStats: integer("allow_advanced_stats").default(0),
-	allowCustomBranding: integer("allow_custom_branding").default(0),
-	displayOrder: integer("display_order").default(0),
-	isActive: integer("is_active").default(1),
-	isVisible: integer("is_visible").default(1),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-	updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mSubscriptionPlans = sqliteTable(
+  "m_subscription_plans",
+  {
+    planId: integer("plan_id").primaryKey({ autoIncrement: true }),
+    planName: text("plan_name").notNull(),
+    planCode: text("plan_code").notNull(),
+    planDescription: text("plan_description"),
+    monthlyPrice: integer("monthly_price").notNull(),
+    yearlyPrice: integer("yearly_price"),
+    currency: text().default("JPY"),
+    maxTournaments: integer("max_tournaments").notNull(),
+    maxDivisionsPerTournament: integer("max_divisions_per_tournament"),
+    totalMaxDivisions: integer("total_max_divisions"),
+    maxTeamsPerTournament: integer("max_teams_per_tournament"),
+    allowCsvImport: integer("allow_csv_import").default(0),
+    allowAdvancedStats: integer("allow_advanced_stats").default(0),
+    allowCustomBranding: integer("allow_custom_branding").default(0),
+    displayOrder: integer("display_order").default(0),
+    isActive: integer("is_active").default(1),
+    isVisible: integer("is_visible").default(1),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+    updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournaments = sqliteTable("t_tournaments", {
-	tournamentId: integer("tournament_id").primaryKey({ autoIncrement: true }),
-	tournamentName: text("tournament_name").notNull(),
-	formatId: integer("format_id").notNull().references(() => mTournamentFormats.formatId),
-	venueId: text("venue_id"),  // JSON配列 例: "[1, 3]"
-	teamCount: integer("team_count").notNull(),
-	courtCount: integer("court_count").notNull(),
-	tournamentDates: text("tournament_dates").notNull(),
-	matchDurationMinutes: integer("match_duration_minutes").notNull(),
-	breakDurationMinutes: integer("break_duration_minutes").notNull(),
-	displayMatchDuration: text("display_match_duration"),
-	status: text().default("planning").notNull(),
-	visibility: text().default("draft").notNull(),
-	publicStartDate: text("public_start_date"),
-	recruitmentStartDate: text("recruitment_start_date"),
-	recruitmentEndDate: text("recruitment_end_date"),
-	sportTypeId: integer("sport_type_id"),
-	createdBy: text("created_by"),
-	archiveUiVersion: text("archive_ui_version"),
-	isArchived: integer("is_archived").default(0),
-	archivedAt: numeric("archived_at"),
-	archivedBy: text("archived_by"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	filesCount: integer("files_count").default(0),
-	groupOrder: integer("group_order"),
-	categoryName: text("category_name"),
-	groupId: integer("group_id").references(() => tTournamentGroups.groupId),
-	showPlayersPublic: integer("show_players_public").default(0),
-	// テンプレート独立化: フォーマット情報のコピー
-	formatName: text("format_name"),
-	phases: text("phases", { mode: 'json' }).$type<TournamentPhases>(),
-},
-(_table) => [
-	index("idx_tournaments_status").on(_table.status),
-	index("idx_tournament_group").on(_table.groupId),
-	index("idx_tournament_status").on(_table.status),
-	index("idx_tournament_creator").on(_table.createdBy),
-	index("idx_tournament_venue").on(_table.venueId),
-	index("idx_tournament_format").on(_table.formatId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournaments = sqliteTable(
+  "t_tournaments",
+  {
+    tournamentId: integer("tournament_id").primaryKey({ autoIncrement: true }),
+    tournamentName: text("tournament_name").notNull(),
+    formatId: integer("format_id")
+      .notNull()
+      .references(() => mTournamentFormats.formatId),
+    venueId: text("venue_id"), // JSON配列 例: "[1, 3]"
+    teamCount: integer("team_count").notNull(),
+    courtCount: integer("court_count").notNull(),
+    tournamentDates: text("tournament_dates").notNull(),
+    matchDurationMinutes: integer("match_duration_minutes").notNull(),
+    breakDurationMinutes: integer("break_duration_minutes").notNull(),
+    displayMatchDuration: text("display_match_duration"),
+    status: text().default("planning").notNull(),
+    visibility: text().default("draft").notNull(),
+    publicStartDate: text("public_start_date"),
+    recruitmentStartDate: text("recruitment_start_date"),
+    recruitmentEndDate: text("recruitment_end_date"),
+    sportTypeId: integer("sport_type_id"),
+    createdBy: text("created_by"),
+    archiveUiVersion: text("archive_ui_version"),
+    isArchived: integer("is_archived").default(0),
+    archivedAt: numeric("archived_at"),
+    archivedBy: text("archived_by"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    filesCount: integer("files_count").default(0),
+    groupOrder: integer("group_order"),
+    categoryName: text("category_name"),
+    groupId: integer("group_id").references(() => tTournamentGroups.groupId),
+    showPlayersPublic: integer("show_players_public").default(0),
+    // テンプレート独立化: フォーマット情報のコピー
+    formatName: text("format_name"),
+    phases: text("phases", { mode: "json" }).$type<TournamentPhases>(),
+  },
+  (_table) => [
+    index("idx_tournaments_status").on(_table.status),
+    index("idx_tournament_group").on(_table.groupId),
+    index("idx_tournament_status").on(_table.status),
+    index("idx_tournament_creator").on(_table.createdBy),
+    index("idx_tournament_venue").on(_table.venueId),
+    index("idx_tournament_format").on(_table.formatId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentPlayers = sqliteTable("t_tournament_players", {
-	tournamentPlayerId: integer("tournament_player_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
-	teamId: text("team_id").notNull().references(() => mTeams.teamId),
-	playerId: integer("player_id").notNull().references(() => mPlayers.playerId),
-	playerName: text("player_name"),
-	jerseyNumber: integer("jersey_number"),
-	playerStatus: text("player_status").default("active").notNull(),
-	registrationDate: numeric("registration_date").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
-	withdrawalDate: numeric("withdrawal_date"),
-	remarks: text(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	playerOmission: text("player_omission"),
-	tournamentTeamId: integer("tournament_team_id"),
-},
-(_table) => [
-	index("idx_tournament_players_tournament_team_id").on(_table.tournamentTeamId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentPlayers = sqliteTable(
+  "t_tournament_players",
+  {
+    tournamentPlayerId: integer("tournament_player_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => mTeams.teamId),
+    playerId: integer("player_id")
+      .notNull()
+      .references(() => mPlayers.playerId),
+    playerName: text("player_name"),
+    jerseyNumber: integer("jersey_number"),
+    playerStatus: text("player_status").default("active").notNull(),
+    registrationDate: numeric("registration_date").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+    withdrawalDate: numeric("withdrawal_date"),
+    remarks: text(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    playerOmission: text("player_omission"),
+    tournamentTeamId: integer("tournament_team_id"),
+  },
+  (_table) => [
+    index("idx_tournament_players_tournament_team_id").on(_table.tournamentTeamId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentTeams = sqliteTable("t_tournament_teams", {
-	tournamentTeamId: integer("tournament_team_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
-	teamId: text("team_id").notNull().references(() => mTeams.teamId),
-	teamName: text("team_name").default("").notNull(),
-	teamOmission: text("team_omission").default("").notNull(),
-	assignedBlock: text("assigned_block"),
-	blockPosition: integer("block_position"),
-	withdrawalStatus: text("withdrawal_status").default("active"),
-	withdrawalReason: text("withdrawal_reason"),
-	withdrawalRequestedAt: numeric("withdrawal_requested_at"),
-	withdrawalProcessedAt: numeric("withdrawal_processed_at"),
-	withdrawalProcessedBy: text("withdrawal_processed_by"),
-	withdrawalAdminComment: text("withdrawal_admin_comment"),
-	registrationMethod: text("registration_method"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	participationStatus: text("participation_status").default("confirmed"),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentTeams = sqliteTable(
+  "t_tournament_teams",
+  {
+    tournamentTeamId: integer("tournament_team_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => mTeams.teamId),
+    teamName: text("team_name").default("").notNull(),
+    teamOmission: text("team_omission").default("").notNull(),
+    assignedBlock: text("assigned_block"),
+    blockPosition: integer("block_position"),
+    withdrawalStatus: text("withdrawal_status").default("active"),
+    withdrawalReason: text("withdrawal_reason"),
+    withdrawalRequestedAt: numeric("withdrawal_requested_at"),
+    withdrawalProcessedAt: numeric("withdrawal_processed_at"),
+    withdrawalProcessedBy: text("withdrawal_processed_by"),
+    withdrawalAdminComment: text("withdrawal_admin_comment"),
+    registrationMethod: text("registration_method"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    participationStatus: text("participation_status").default("confirmed"),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentMatchOverrides = sqliteTable("t_tournament_match_overrides", {
-	overrideId: integer("override_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),
-	matchCode: text("match_code").notNull(),
-	team1SourceOverride: text("team1_source_override"),
-	team2SourceOverride: text("team2_source_override"),
-	overrideReason: text("override_reason"),
-	overriddenBy: text("overridden_by"),
-	overriddenAt: text("overridden_at").default("sql`(datetime('now', '+9 hours'))`"),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-	updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	index("idx_tournament_match_overrides_match_code").on(_table.matchCode),
-	index("idx_tournament_match_overrides_tournament").on(_table.tournamentId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentMatchOverrides = sqliteTable(
+  "t_tournament_match_overrides",
+  {
+    overrideId: integer("override_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    matchCode: text("match_code").notNull(),
+    team1SourceOverride: text("team1_source_override"),
+    team2SourceOverride: text("team2_source_override"),
+    overrideReason: text("override_reason"),
+    overriddenBy: text("overridden_by"),
+    overriddenAt: text("overridden_at").default("sql`(datetime('now', '+9 hours'))`"),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+    updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
+  },
+  (_table) => [
+    index("idx_tournament_match_overrides_match_code").on(_table.matchCode),
+    index("idx_tournament_match_overrides_tournament").on(_table.tournamentId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const mPlayers = sqliteTable("m_players", {
-	playerId: integer("player_id").primaryKey({ autoIncrement: true }),
-	playerName: text("player_name").notNull(),
-	jerseyNumber: integer("jersey_number"),
-	currentTeamId: text("current_team_id").references(() => mTeams.teamId),
-	isActive: integer("is_active").default(1).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const mPlayers = sqliteTable(
+  "m_players",
+  {
+    playerId: integer("player_id").primaryKey({ autoIncrement: true }),
+    playerName: text("player_name").notNull(),
+    jerseyNumber: integer("jersey_number"),
+    currentTeamId: text("current_team_id").references(() => mTeams.teamId),
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentRules = sqliteTable("t_tournament_rules", {
-	tournamentRuleId: integer("tournament_rule_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),
-	phase: text().notNull(),
-	useExtraTime: integer("use_extra_time").default(0),
-	usePenalty: integer("use_penalty").default(0),
-	activePeriods: text("active_periods").default("[\"1\"]"),
-	notes: text(),
-	pointSystem: text("point_system"),
-	walkoverSettings: text("walkover_settings"),
-	tieBreakingRules: text("tie_breaking_rules"),
-	tieBreakingEnabled: integer("tie_breaking_enabled").default(1),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-	updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tTournamentRules = sqliteTable(
+  "t_tournament_rules",
+  {
+    tournamentRuleId: integer("tournament_rule_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    phase: text().notNull(),
+    useExtraTime: integer("use_extra_time").default(0),
+    usePenalty: integer("use_penalty").default(0),
+    activePeriods: text("active_periods").default('["1"]'),
+    notes: text(),
+    pointSystem: text("point_system"),
+    walkoverSettings: text("walkover_settings"),
+    tieBreakingRules: text("tie_breaking_rules"),
+    tieBreakingEnabled: integer("tie_breaking_enabled").default(1),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+    updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
+  },
+  (_table) => [
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tEmailSendHistory = sqliteTable("t_email_send_history", {
-	historyId: integer("history_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
-	tournamentTeamId: integer("tournament_team_id").notNull().references(() => tTournamentTeams.tournamentTeamId),
-	sentAt: numeric("sent_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
-	sentBy: text("sent_by").notNull(),
-	templateId: text("template_id"),
-	subject: text().notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
-},
-(_table) => [
-	index("idx_email_history_sent_at").on(_table.sentAt),
-	index("idx_email_history_tournament_team").on(_table.tournamentId, _table.tournamentTeamId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tEmailSendHistory = sqliteTable(
+  "t_email_send_history",
+  {
+    historyId: integer("history_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId),
+    tournamentTeamId: integer("tournament_team_id")
+      .notNull()
+      .references(() => tTournamentTeams.tournamentTeamId),
+    sentAt: numeric("sent_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
+    sentBy: text("sent_by").notNull(),
+    templateId: text("template_id"),
+    subject: text().notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`).notNull(),
+  },
+  (_table) => [
+    index("idx_email_history_sent_at").on(_table.sentAt),
+    index("idx_email_history_tournament_team").on(_table.tournamentId, _table.tournamentTeamId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tPasswordResetTokens = sqliteTable("t_password_reset_tokens", {
-	tokenId: integer("token_id").primaryKey({ autoIncrement: true }),
-	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" } ),
-	resetToken: text("reset_token").notNull(),
-	expiresAt: numeric("expires_at").notNull(),
-	usedAt: numeric("used_at"),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_expires_at").on(_table.expiresAt),
-	index("idx_login_user_reset_tokens").on(_table.loginUserId),
-	index("idx_reset_token").on(_table.resetToken),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tPasswordResetTokens = sqliteTable(
+  "t_password_reset_tokens",
+  {
+    tokenId: integer("token_id").primaryKey({ autoIncrement: true }),
+    loginUserId: integer("login_user_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+    resetToken: text("reset_token").notNull(),
+    expiresAt: numeric("expires_at").notNull(),
+    usedAt: numeric("used_at"),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_expires_at").on(_table.expiresAt),
+    index("idx_login_user_reset_tokens").on(_table.loginUserId),
+    index("idx_reset_token").on(_table.resetToken),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tAdministratorSubscriptions = sqliteTable("t_administrator_subscriptions", {
-	subscriptionId: integer("subscription_id").primaryKey({ autoIncrement: true }),
-	adminLoginId: text("admin_login_id").notNull().references(() => mAdministrators.adminLoginId, { onDelete: "cascade" } ),
-	planId: integer("plan_id").notNull().references(() => mSubscriptionPlans.planId),
-	subscriptionStatus: text("subscription_status").default("active"),
-	startDate: text("start_date").notNull(),
-	endDate: text("end_date"),
-	trialEndDate: text("trial_end_date"),
-	changedFromPlanId: integer("changed_from_plan_id"),
-	changeReason: text("change_reason"),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	index("idx_subscription_status").on(_table.subscriptionStatus),
-	index("idx_subscription_admin").on(_table.adminLoginId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tAdministratorSubscriptions = sqliteTable(
+  "t_administrator_subscriptions",
+  {
+    subscriptionId: integer("subscription_id").primaryKey({ autoIncrement: true }),
+    adminLoginId: text("admin_login_id")
+      .notNull()
+      .references(() => mAdministrators.adminLoginId, { onDelete: "cascade" }),
+    planId: integer("plan_id")
+      .notNull()
+      .references(() => mSubscriptionPlans.planId),
+    subscriptionStatus: text("subscription_status").default("active"),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date"),
+    trialEndDate: text("trial_end_date"),
+    changedFromPlanId: integer("changed_from_plan_id"),
+    changeReason: text("change_reason"),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+  },
+  (_table) => [
+    index("idx_subscription_status").on(_table.subscriptionStatus),
+    index("idx_subscription_admin").on(_table.adminLoginId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tSubscriptionUsage = sqliteTable("t_subscription_usage", {
-	usageId: integer("usage_id").primaryKey({ autoIncrement: true }),
-	adminLoginId: text("admin_login_id").notNull().references(() => mAdministrators.adminLoginId, { onDelete: "cascade" } ),
-	currentTournamentGroupsCount: integer("current_tournament_groups_count").default(0),
-	currentTournamentsCount: integer("current_tournaments_count").default(0),
-	lastCalculatedAt: text("last_calculated_at"),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-	updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	index("idx_usage_admin").on(_table.adminLoginId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tSubscriptionUsage = sqliteTable(
+  "t_subscription_usage",
+  {
+    usageId: integer("usage_id").primaryKey({ autoIncrement: true }),
+    adminLoginId: text("admin_login_id")
+      .notNull()
+      .references(() => mAdministrators.adminLoginId, { onDelete: "cascade" }),
+    currentTournamentGroupsCount: integer("current_tournament_groups_count").default(0),
+    currentTournamentsCount: integer("current_tournaments_count").default(0),
+    lastCalculatedAt: text("last_calculated_at"),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+    updatedAt: text("updated_at").default("sql`(datetime('now', '+9 hours'))`"),
+  },
+  (_table) => [
+    index("idx_usage_admin").on(_table.adminLoginId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tPaymentHistory = sqliteTable("t_payment_history", {
-	paymentId: integer("payment_id").primaryKey({ autoIncrement: true }),
-	subscriptionId: integer("subscription_id").notNull(),
-	adminLoginId: text("admin_login_id").notNull().references(() => mAdministrators.adminLoginId, { onDelete: "cascade" } ),
-	planId: integer("plan_id").notNull().references(() => mSubscriptionPlans.planId),
-	amount: integer().notNull(),
-	paymentStatus: text("payment_status").default("pending"),
-	squarePaymentId: text("square_payment_id"),
-	paidAt: text("paid_at"),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-},
-(_table) => [
-	index("idx_payment_admin").on(_table.adminLoginId),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tPaymentHistory = sqliteTable(
+  "t_payment_history",
+  {
+    paymentId: integer("payment_id").primaryKey({ autoIncrement: true }),
+    subscriptionId: integer("subscription_id").notNull(),
+    adminLoginId: text("admin_login_id")
+      .notNull()
+      .references(() => mAdministrators.adminLoginId, { onDelete: "cascade" }),
+    planId: integer("plan_id")
+      .notNull()
+      .references(() => mSubscriptionPlans.planId),
+    amount: integer().notNull(),
+    paymentStatus: text("payment_status").default("pending"),
+    squarePaymentId: text("square_payment_id"),
+    paidAt: text("paid_at"),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+  },
+  (_table) => [
+    index("idx_payment_admin").on(_table.adminLoginId),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tEmailVerificationTokens = sqliteTable("t_email_verification_tokens", {
-	tokenId: integer("token_id").primaryKey({ autoIncrement: true }),
-	email: text().notNull(),
-	token: text().notNull(),
-	purpose: text().notNull(),
-	expiresAt: text("expires_at").notNull(),
-	used: integer().default(0),
-	createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
-	usedAt: text("used_at"),
-},
-(_table) => [
-	index("idx_email_verification_expires").on(_table.expiresAt),
-	index("idx_email_verification_email").on(_table.email),
-	index("idx_email_verification_token").on(_table.token),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tEmailVerificationTokens = sqliteTable(
+  "t_email_verification_tokens",
+  {
+    tokenId: integer("token_id").primaryKey({ autoIncrement: true }),
+    email: text().notNull(),
+    token: text().notNull(),
+    purpose: text().notNull(),
+    expiresAt: text("expires_at").notNull(),
+    used: integer().default(0),
+    createdAt: text("created_at").default("sql`(datetime('now', '+9 hours'))`"),
+    usedAt: text("used_at"),
+  },
+  (_table) => [
+    index("idx_email_verification_expires").on(_table.expiresAt),
+    index("idx_email_verification_email").on(_table.email),
+    index("idx_email_verification_token").on(_table.token),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tAnnouncements = sqliteTable("t_announcements", {
-	announcementId: integer("announcement_id").primaryKey({ autoIncrement: true }),
-	title: text().notNull(),
-	content: text().notNull(),
-	status: text().default("draft").notNull(),
-	displayOrder: integer("display_order").default(0).notNull(),
-	createdBy: text("created_by").notNull().references(() => mAdministrators.adminLoginId),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_announcements_display").on(_table.status, _table.displayOrder, _table.createdAt),
-	check("t_match_status_check_1", sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`),
-	check("t_tournament_teams_check_2", sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`),
-	check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
-	check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
-	check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
-	check("t_sponsor_banners_check_6", sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`),
-	check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
-	check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
-]);
+export const tAnnouncements = sqliteTable(
+  "t_announcements",
+  {
+    announcementId: integer("announcement_id").primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    content: text().notNull(),
+    status: text().default("draft").notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => mAdministrators.adminLoginId),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_announcements_display").on(_table.status, _table.displayOrder, _table.createdAt),
+    check(
+      "t_match_status_check_1",
+      sql`match_status IN ('scheduled', 'ongoing', 'completed', 'cancelled'`,
+    ),
+    check(
+      "t_tournament_teams_check_2",
+      sql`participation_status IN ('confirmed', 'waitlisted', 'cancelled'`,
+    ),
+    check("t_tournament_rules_check_3", sql`phase IN ('preliminary', 'final'`),
+    check("t_email_verification_tokens_check_4", sql`purpose IN ('registration', 'password_reset'`),
+    check("t_sponsor_banners_check_5", sql`display_position IN ('top', 'bottom', 'sidebar'`),
+    check(
+      "t_sponsor_banners_check_6",
+      sql`target_tab IN ('all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'`,
+    ),
+    check("t_sponsor_banners_check_7", sql`is_active IN (0, 1`),
+    check("t_sponsor_banners_check_8", sql`banner_size IN ('large', 'small'`),
+  ],
+);
 
-export const tTournamentNotices = sqliteTable("t_tournament_notices", {
-	tournamentNoticeId: integer("tournament_notice_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
-	content: text().notNull(),
-	displayOrder: integer("display_order").default(0).notNull(),
-	isActive: integer("is_active").default(1).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_tournament_notices_tournament").on(_table.tournamentId),
-]);
+export const tTournamentNotices = sqliteTable(
+  "t_tournament_notices",
+  {
+    tournamentNoticeId: integer("tournament_notice_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    content: text().notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [index("idx_tournament_notices_tournament").on(_table.tournamentId)],
+);
 
-export const tSponsorBanners = sqliteTable("t_sponsor_banners", {
-	bannerId: integer("banner_id").primaryKey({ autoIncrement: true }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" } ),
-	bannerName: text("banner_name").notNull(),
-	bannerUrl: text("banner_url"),
-	imageBlobUrl: text("image_blob_url").notNull(),
-	imageFilename: text("image_filename"),
-	fileSize: integer("file_size"),
-	displayPosition: text("display_position").notNull(),
-	targetTab: text("target_tab").default("all").notNull(),
-	displayOrder: integer("display_order").default(0),
-	isActive: integer("is_active").default(1),
-	startDate: numeric("start_date"),
-	endDate: numeric("end_date"),
-	clickCount: integer("click_count").default(0),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-	bannerSize: text("banner_size").default("large"),
-},
-(_table) => [
-	index("idx_sponsor_banners_dates").on(_table.startDate, _table.endDate),
-	index("idx_sponsor_banners_active").on(_table.tournamentId, _table.isActive),
-	index("idx_sponsor_banners_display").on(_table.tournamentId, _table.targetTab, _table.displayPosition, _table.displayOrder),
-]);
+export const tSponsorBanners = sqliteTable(
+  "t_sponsor_banners",
+  {
+    bannerId: integer("banner_id").primaryKey({ autoIncrement: true }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    bannerName: text("banner_name").notNull(),
+    bannerUrl: text("banner_url"),
+    imageBlobUrl: text("image_blob_url").notNull(),
+    imageFilename: text("image_filename"),
+    fileSize: integer("file_size"),
+    displayPosition: text("display_position").notNull(),
+    targetTab: text("target_tab").default("all").notNull(),
+    displayOrder: integer("display_order").default(0),
+    isActive: integer("is_active").default(1),
+    startDate: numeric("start_date"),
+    endDate: numeric("end_date"),
+    clickCount: integer("click_count").default(0),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+    bannerSize: text("banner_size").default("large"),
+  },
+  (_table) => [
+    index("idx_sponsor_banners_dates").on(_table.startDate, _table.endDate),
+    index("idx_sponsor_banners_active").on(_table.tournamentId, _table.isActive),
+    index("idx_sponsor_banners_display").on(
+      _table.tournamentId,
+      _table.targetTab,
+      _table.displayPosition,
+      _table.displayOrder,
+    ),
+  ],
+);
 
 // 注: m_operatorsテーブルは廃止されました。
 // 運営者（operator）の管理はm_login_usersテーブルに統合されています。
 
-export const tOperatorTournamentAccess = sqliteTable("t_operator_tournament_access", {
-	accessId: integer("access_id").primaryKey({ autoIncrement: true }),
-	operatorId: integer("operator_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
-	permissions: text("permissions").notNull(),
-	assignedByLoginUserId: integer("assigned_by_login_user_id").references(() => mLoginUsers.loginUserId, { onDelete: "set null" }),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_operator_access_operator").on(_table.operatorId),
-	index("idx_operator_access_tournament").on(_table.tournamentId),
-	index("idx_operator_access_assigned_by").on(_table.assignedByLoginUserId),
-]);
+export const tOperatorTournamentAccess = sqliteTable(
+  "t_operator_tournament_access",
+  {
+    accessId: integer("access_id").primaryKey({ autoIncrement: true }),
+    operatorId: integer("operator_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    permissions: text("permissions").notNull(),
+    assignedByLoginUserId: integer("assigned_by_login_user_id").references(
+      () => mLoginUsers.loginUserId,
+      { onDelete: "set null" },
+    ),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_operator_access_operator").on(_table.operatorId),
+    index("idx_operator_access_tournament").on(_table.tournamentId),
+    index("idx_operator_access_assigned_by").on(_table.assignedByLoginUserId),
+  ],
+);
 
 // ==========================================
 // フォーマットアクセス付与テーブル
 // ==========================================
 
-export const tFormatAccessGrants = sqliteTable("t_format_access_grants", {
-	grantId: integer("grant_id").primaryKey({ autoIncrement: true }),
-	formatId: integer("format_id").notNull().references(() => mTournamentFormats.formatId, { onDelete: "cascade" }),
-	loginUserId: integer("login_user_id").notNull(),
-	grantedByLoginUserId: integer("granted_by_login_user_id"),
-	grantedAt: numeric("granted_at").default(sql`(datetime('now', '+9 hours'))`),
-	expiresAt: numeric("expires_at"),  // NULL = 無期限、将来の課金連動用
-	notes: text("notes"),
-},
-(_table) => [
-	index("idx_format_grants_format").on(_table.formatId),
-	index("idx_format_grants_user").on(_table.loginUserId),
-]);
+export const tFormatAccessGrants = sqliteTable(
+  "t_format_access_grants",
+  {
+    grantId: integer("grant_id").primaryKey({ autoIncrement: true }),
+    formatId: integer("format_id")
+      .notNull()
+      .references(() => mTournamentFormats.formatId, { onDelete: "cascade" }),
+    loginUserId: integer("login_user_id").notNull(),
+    grantedByLoginUserId: integer("granted_by_login_user_id"),
+    grantedAt: numeric("granted_at").default(sql`(datetime('now', '+9 hours'))`),
+    expiresAt: numeric("expires_at"), // NULL = 無期限、将来の課金連動用
+    notes: text("notes"),
+  },
+  (_table) => [
+    index("idx_format_grants_format").on(_table.formatId),
+    index("idx_format_grants_user").on(_table.loginUserId),
+  ],
+);
 
 // ==========================================
 // 統合ログインユーザー管理テーブル（新設）
 // ==========================================
 
-export const mLoginUsers = sqliteTable("m_login_users", {
-	loginUserId: integer("login_user_id").primaryKey({ autoIncrement: true }),
-	email: text("email").unique().notNull(),
-	passwordHash: text("password_hash").notNull(),
-	displayName: text("display_name").notNull(),
-	isSuperadmin: integer("is_superadmin").default(0).notNull(),
-	isActive: integer("is_active").default(1).notNull(),
-	currentPlanId: integer("current_plan_id").references(() => mSubscriptionPlans.planId),
-	createdByLoginUserId: integer("created_by_login_user_id"), // 作成者（管理者）のID
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_login_users_email").on(_table.email),
-	index("idx_login_users_active").on(_table.isActive),
-	index("idx_login_users_created_by").on(_table.createdByLoginUserId),
-]);
+export const mLoginUsers = sqliteTable(
+  "m_login_users",
+  {
+    loginUserId: integer("login_user_id").primaryKey({ autoIncrement: true }),
+    email: text("email").unique().notNull(),
+    passwordHash: text("password_hash").notNull(),
+    displayName: text("display_name").notNull(),
+    isSuperadmin: integer("is_superadmin").default(0).notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    currentPlanId: integer("current_plan_id").references(() => mSubscriptionPlans.planId),
+    createdByLoginUserId: integer("created_by_login_user_id"), // 作成者（管理者）のID
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_login_users_email").on(_table.email),
+    index("idx_login_users_active").on(_table.isActive),
+    index("idx_login_users_created_by").on(_table.createdByLoginUserId),
+  ],
+);
 
-export const mLoginUserRoles = sqliteTable("m_login_user_roles", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
-	role: text("role").notNull(), // "admin" | "operator" | "team"
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_login_user_roles_user").on(_table.loginUserId),
-	index("idx_login_user_roles_role").on(_table.role),
-]);
+export const mLoginUserRoles = sqliteTable(
+  "m_login_user_roles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    loginUserId: integer("login_user_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+    role: text("role").notNull(), // "admin" | "operator" | "team"
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_login_user_roles_user").on(_table.loginUserId),
+    index("idx_login_user_roles_role").on(_table.role),
+  ],
+);
 
-export const mLoginUserAuthority = sqliteTable("m_login_user_authority", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
-	permissions: text("permissions").notNull(), // JSON: 既存の OperatorPermissions 12項目と同じ形式
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_login_user_authority_user").on(_table.loginUserId),
-	index("idx_login_user_authority_tournament").on(_table.tournamentId),
-]);
+export const mLoginUserAuthority = sqliteTable(
+  "m_login_user_authority",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    loginUserId: integer("login_user_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId, { onDelete: "cascade" }),
+    permissions: text("permissions").notNull(), // JSON: 既存の OperatorPermissions 12項目と同じ形式
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_login_user_authority_user").on(_table.loginUserId),
+    index("idx_login_user_authority_tournament").on(_table.tournamentId),
+  ],
+);
 
-export const mTeamMembers = sqliteTable("m_team_members", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	teamId: text("team_id").notNull().references(() => mTeams.teamId, { onDelete: "cascade" }),
-	loginUserId: integer("login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
-	memberRole: text("member_role").notNull().default("primary"), // "primary" | "secondary"
-	isActive: integer("is_active").default(1).notNull(),
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_team_members_team").on(_table.teamId),
-	index("idx_team_members_user").on(_table.loginUserId),
-	index("idx_team_members_active").on(_table.teamId, _table.isActive),
-]);
+export const mTeamMembers = sqliteTable(
+  "m_team_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => mTeams.teamId, { onDelete: "cascade" }),
+    loginUserId: integer("login_user_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+    memberRole: text("member_role").notNull().default("primary"), // "primary" | "secondary"
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_team_members_team").on(_table.teamId),
+    index("idx_team_members_user").on(_table.loginUserId),
+    index("idx_team_members_active").on(_table.teamId, _table.isActive),
+  ],
+);
 
 // チーム担当者招待テーブル
-export const tTeamInvitations = sqliteTable("t_team_invitations", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	teamId: text("team_id").notNull().references(() => mTeams.teamId, { onDelete: "cascade" }),
-	invitedByLoginUserId: integer("invited_by_login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
-	invitedEmail: text("invited_email").notNull(), // 招待先メールアドレス
-	token: text("token").notNull().unique(),        // 招待トークン（UUID）
-	status: text("status").notNull().default("pending"), // "pending" | "accepted" | "cancelled"
-	expiresAt: numeric("expires_at").notNull(),     // 有効期限（72時間）
-	acceptedAt: numeric("accepted_at"),             // 承認日時
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_team_invitations_team").on(_table.teamId),
-	index("idx_team_invitations_token").on(_table.token),
-	index("idx_team_invitations_email").on(_table.invitedEmail),
-	index("idx_team_invitations_status").on(_table.status),
-]);
+export const tTeamInvitations = sqliteTable(
+  "t_team_invitations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => mTeams.teamId, { onDelete: "cascade" }),
+    invitedByLoginUserId: integer("invited_by_login_user_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }),
+    invitedEmail: text("invited_email").notNull(), // 招待先メールアドレス
+    token: text("token").notNull().unique(), // 招待トークン（UUID）
+    status: text("status").notNull().default("pending"), // "pending" | "accepted" | "cancelled"
+    expiresAt: numeric("expires_at").notNull(), // 有効期限（72時間）
+    acceptedAt: numeric("accepted_at"), // 承認日時
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_team_invitations_team").on(_table.teamId),
+    index("idx_team_invitations_token").on(_table.token),
+    index("idx_team_invitations_email").on(_table.invitedEmail),
+    index("idx_team_invitations_status").on(_table.status),
+  ],
+);
 
 // 運営者招待テーブル
-export const tOperatorInvitations = sqliteTable("t_operator_invitations", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	email: text("email").notNull(),                          // 招待先メールアドレス
-	invitedByLoginUserId: integer("invited_by_login_user_id").notNull().references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }), // 招待した管理者
-	tournamentAccess: text("tournament_access").notNull(),   // JSON: 部門と権限の配列
-	token: text("token").notNull().unique(),                 // 認証トークン（UUID）
-	expiresAt: numeric("expires_at").notNull(),              // 有効期限（7日間）
-	status: text("status").notNull().default("pending"),     // "pending" | "accepted" | "expired" | "cancelled"
-	acceptedByLoginUserId: integer("accepted_by_login_user_id").references(() => mLoginUsers.loginUserId), // 承諾後のユーザーID
-	acceptedAt: numeric("accepted_at"),                      // 承認日時
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_operator_invitations_email").on(_table.email),
-	index("idx_operator_invitations_token").on(_table.token),
-	index("idx_operator_invitations_status").on(_table.status),
-	index("idx_operator_invitations_invited_by").on(_table.invitedByLoginUserId),
-]);
+export const tOperatorInvitations = sqliteTable(
+  "t_operator_invitations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    email: text("email").notNull(), // 招待先メールアドレス
+    invitedByLoginUserId: integer("invited_by_login_user_id")
+      .notNull()
+      .references(() => mLoginUsers.loginUserId, { onDelete: "cascade" }), // 招待した管理者
+    tournamentAccess: text("tournament_access").notNull(), // JSON: 部門と権限の配列
+    token: text("token").notNull().unique(), // 認証トークン（UUID）
+    expiresAt: numeric("expires_at").notNull(), // 有効期限（7日間）
+    status: text("status").notNull().default("pending"), // "pending" | "accepted" | "expired" | "cancelled"
+    acceptedByLoginUserId: integer("accepted_by_login_user_id").references(
+      () => mLoginUsers.loginUserId,
+    ), // 承諾後のユーザーID
+    acceptedAt: numeric("accepted_at"), // 承認日時
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_operator_invitations_email").on(_table.email),
+    index("idx_operator_invitations_token").on(_table.token),
+    index("idx_operator_invitations_status").on(_table.status),
+    index("idx_operator_invitations_invited_by").on(_table.invitedByLoginUserId),
+  ],
+);
 
 // 懲罰設定テーブル（大会グループ単位）
 export const tDisciplinarySettings = sqliteTable("t_disciplinary_settings", {
-	settingId: integer("setting_id").primaryKey({ autoIncrement: true }),
-	groupId: integer("group_id").notNull().unique().references(() => tTournamentGroups.groupId, { onDelete: "cascade" }),
-	yellowThreshold: integer("yellow_threshold").notNull().default(2),  // イエロー累積閾値
-	isEnabled: integer("is_enabled").notNull().default(1),              // 有効/無効
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  settingId: integer("setting_id").primaryKey({ autoIncrement: true }),
+  groupId: integer("group_id")
+    .notNull()
+    .unique()
+    .references(() => tTournamentGroups.groupId, { onDelete: "cascade" }),
+  yellowThreshold: integer("yellow_threshold").notNull().default(2), // イエロー累積閾値
+  isEnabled: integer("is_enabled").notNull().default(1), // 有効/無効
+  createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
 });
 
 // 懲罰記録テーブル（カード記録）
-export const tDisciplinaryActions = sqliteTable("t_disciplinary_actions", {
-	actionId: integer("action_id").primaryKey({ autoIncrement: true }),
-	groupId: integer("group_id").notNull().references(() => tTournamentGroups.groupId, { onDelete: "cascade" }),
-	tournamentId: integer("tournament_id").notNull().references(() => tTournaments.tournamentId),
-	matchId: integer("match_id").notNull(),
-	tournamentTeamId: integer("tournament_team_id").notNull().references(() => tTournamentTeams.tournamentTeamId),
-	playerName: text("player_name").notNull(),              // 正規化済み選手名
-	cardType: text("card_type").notNull(),                  // 'yellow' | 'red' | 'second_yellow'
-	reasonCode: integer("reason_code").notNull(),           // 理由プリセット（1-7）
-	reasonText: text("reason_text"),                        // 自由記述の補足（任意）
-	suspensionMatches: integer("suspension_matches").notNull().default(0), // 出場停止試合数
-	isVoid: integer("is_void").notNull().default(0),        // 取消フラグ
-	recordedBy: text("recorded_by"),                        // 記録者ログインID
-	createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
-	updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
-},
-(_table) => [
-	index("idx_disciplinary_group").on(_table.groupId),
-	index("idx_disciplinary_tournament").on(_table.tournamentId),
-	index("idx_disciplinary_team").on(_table.tournamentTeamId),
-	index("idx_disciplinary_match").on(_table.matchId),
-	index("idx_disciplinary_player").on(_table.tournamentTeamId, _table.playerName),
-]);
+export const tDisciplinaryActions = sqliteTable(
+  "t_disciplinary_actions",
+  {
+    actionId: integer("action_id").primaryKey({ autoIncrement: true }),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => tTournamentGroups.groupId, { onDelete: "cascade" }),
+    tournamentId: integer("tournament_id")
+      .notNull()
+      .references(() => tTournaments.tournamentId),
+    matchId: integer("match_id").notNull(),
+    tournamentTeamId: integer("tournament_team_id")
+      .notNull()
+      .references(() => tTournamentTeams.tournamentTeamId),
+    playerName: text("player_name").notNull(), // 正規化済み選手名
+    cardType: text("card_type").notNull(), // 'yellow' | 'red' | 'second_yellow'
+    reasonCode: integer("reason_code").notNull(), // 理由プリセット（1-7）
+    reasonText: text("reason_text"), // 自由記述の補足（任意）
+    suspensionMatches: integer("suspension_matches").notNull().default(0), // 出場停止試合数
+    isVoid: integer("is_void").notNull().default(0), // 取消フラグ
+    recordedBy: text("recorded_by"), // 記録者ログインID
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+    updatedAt: numeric("updated_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_disciplinary_group").on(_table.groupId),
+    index("idx_disciplinary_tournament").on(_table.tournamentId),
+    index("idx_disciplinary_team").on(_table.tournamentTeamId),
+    index("idx_disciplinary_match").on(_table.matchId),
+    index("idx_disciplinary_player").on(_table.tournamentTeamId, _table.playerName),
+  ],
+);

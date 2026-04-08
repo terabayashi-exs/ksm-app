@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
-import { CARD_HEIGHT, CARD_GAP, HEADER_HEIGHT } from "./constants";
-import type { PatternType, PatternConfig } from "./patterns";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CARD_GAP, CARD_HEIGHT, HEADER_HEIGHT } from "./constants";
+import type { PatternConfig, PatternType } from "./patterns";
 import type { BracketMatch } from "./types";
 
 // MatchCard内のチーム行の縦位置オフセット
 const TEAM1_CENTER_OFFSET = 28; // p-3 (12px) + h-8/2 (16px)
 const TEAM2_CENTER_OFFSET = 68; // p-3 (12px) + h-8 (32px) + mb-2 (8px) + h-8/2 (16px)
-const SEED_CENTER_OFFSET = 28;  // SeedCardも同じ
+const SEED_CENTER_OFFSET = 28; // SeedCardも同じ
 
 // 色定義（Tailwindカラーに合わせる）
 const WINNER_COLOR = "#ef4444"; // red-500: MatchCardの勝者色と統一
@@ -47,9 +47,9 @@ interface ConnectionLayerProps {
 
 interface SourceInfo {
   type: "match" | "seed";
-  y?: number;           // seed用
-  team1Y?: number;      // match用
-  team2Y?: number;      // match用
+  y?: number; // seed用
+  team1Y?: number; // match用
+  team2Y?: number; // match用
   winnerIndex?: number | null;
 }
 
@@ -80,12 +80,24 @@ function bracket(
   team1Y: number,
   team2Y: number,
   winnerIndex: number | null,
-  idPrefix?: string
+  idPrefix?: string,
 ): PathData[] {
   const centerY = (team1Y + team2Y) / 2;
   return [
-    vLine(x, team1Y, centerY, winnerIndex === 0 ? WINNER_COLOR : DEFAULT_COLOR, idPrefix ? `${idPrefix}-top` : undefined),
-    vLine(x, centerY, team2Y, winnerIndex === 1 ? WINNER_COLOR : DEFAULT_COLOR, idPrefix ? `${idPrefix}-btm` : undefined),
+    vLine(
+      x,
+      team1Y,
+      centerY,
+      winnerIndex === 0 ? WINNER_COLOR : DEFAULT_COLOR,
+      idPrefix ? `${idPrefix}-top` : undefined,
+    ),
+    vLine(
+      x,
+      centerY,
+      team2Y,
+      winnerIndex === 1 ? WINNER_COLOR : DEFAULT_COLOR,
+      idPrefix ? `${idPrefix}-btm` : undefined,
+    ),
   ];
 }
 
@@ -101,21 +113,41 @@ function getColumnWidth(columnCount: number, stageGap: number, containerWidth: n
   return (containerWidth - stageGap * (columnCount - 1)) / columnCount;
 }
 
-function getColumnStartX(colIndex: number, columnCount: number, stageGap: number, containerWidth: number): number {
+function getColumnStartX(
+  colIndex: number,
+  columnCount: number,
+  stageGap: number,
+  containerWidth: number,
+): number {
   const columnWidth = getColumnWidth(columnCount, stageGap, containerWidth);
   return colIndex * (columnWidth + stageGap);
 }
 
-function getColumnEndX(colIndex: number, columnCount: number, stageGap: number, containerWidth: number): number {
+function getColumnEndX(
+  colIndex: number,
+  columnCount: number,
+  stageGap: number,
+  containerWidth: number,
+): number {
   const columnWidth = getColumnWidth(columnCount, stageGap, containerWidth);
   return (colIndex + 1) * columnWidth + colIndex * stageGap;
 }
 
-function getGapMidX(colIndex: number, columnCount: number, stageGap: number, containerWidth: number): number {
+function getGapMidX(
+  colIndex: number,
+  columnCount: number,
+  stageGap: number,
+  containerWidth: number,
+): number {
   return getColumnEndX(colIndex, columnCount, stageGap, containerWidth) + stageGap / 2;
 }
 
-function getMergePointX(targetColIndex: number, columnCount: number, stageGap: number, containerWidth: number): number {
+function getMergePointX(
+  targetColIndex: number,
+  columnCount: number,
+  stageGap: number,
+  containerWidth: number,
+): number {
   return getColumnStartX(targetColIndex, columnCount, stageGap, containerWidth) - 12;
 }
 
@@ -146,7 +178,7 @@ function createConnector(
   sources: SourceInfo[],
   targetY: number,
   xCoords: XCoords,
-  debugPrefix?: string
+  debugPrefix?: string,
 ): PathData[] {
   const { sourceX, midX, mergeX, targetX } = xCoords;
   const paths: PathData[] = [];
@@ -158,7 +190,9 @@ function createConnector(
 
     if (src.type === "seed" && src.y !== undefined) {
       // シード: 水平線をmergeXまで
-      paths.push(hLine(sourceX, mergeX, src.y, WINNER_COLOR, srcPrefix ? `${srcPrefix}-h` : undefined));
+      paths.push(
+        hLine(sourceX, mergeX, src.y, WINNER_COLOR, srcPrefix ? `${srcPrefix}-h` : undefined),
+      );
       outputYs.push(src.y);
     } else if (src.type === "match" && src.team1Y !== undefined && src.team2Y !== undefined) {
       const centerY = (src.team1Y + src.team2Y) / 2;
@@ -166,21 +200,47 @@ function createConnector(
       const winColor = winner !== null ? WINNER_COLOR : DEFAULT_COLOR;
 
       // team1, team2 水平線
-      paths.push(hLine(sourceX, midX, src.team1Y, winner === 0 ? WINNER_COLOR : DEFAULT_COLOR, srcPrefix ? `${srcPrefix}-t1` : undefined));
-      paths.push(hLine(sourceX, midX, src.team2Y, winner === 1 ? WINNER_COLOR : DEFAULT_COLOR, srcPrefix ? `${srcPrefix}-t2` : undefined));
+      paths.push(
+        hLine(
+          sourceX,
+          midX,
+          src.team1Y,
+          winner === 0 ? WINNER_COLOR : DEFAULT_COLOR,
+          srcPrefix ? `${srcPrefix}-t1` : undefined,
+        ),
+      );
+      paths.push(
+        hLine(
+          sourceX,
+          midX,
+          src.team2Y,
+          winner === 1 ? WINNER_COLOR : DEFAULT_COLOR,
+          srcPrefix ? `${srcPrefix}-t2` : undefined,
+        ),
+      );
 
       // ブラケット縦線
-      paths.push(...bracket(midX, src.team1Y, src.team2Y, winner ?? null, srcPrefix ? `${srcPrefix}-bkt` : undefined));
+      paths.push(
+        ...bracket(
+          midX,
+          src.team1Y,
+          src.team2Y,
+          winner ?? null,
+          srcPrefix ? `${srcPrefix}-bkt` : undefined,
+        ),
+      );
 
       // 中央からmergeXへの水平線
-      paths.push(hLine(midX, mergeX, centerY, winColor, srcPrefix ? `${srcPrefix}-out` : undefined));
+      paths.push(
+        hLine(midX, mergeX, centerY, winColor, srcPrefix ? `${srcPrefix}-out` : undefined),
+      );
       outputYs.push(centerY);
     }
   });
 
   // マージ縦線（全outputYsを繋ぐ）
-  const hasWinner = sources.some(s => s.type === "seed" || s.winnerIndex !== null);
-  const allSeeds = sources.every(s => s.type === "seed");
+  const hasWinner = sources.some((s) => s.type === "seed" || s.winnerIndex !== null);
+  const allSeeds = sources.every((s) => s.type === "seed");
 
   if (allSeeds && outputYs.length >= 2) {
     // 全ソースがシードの場合: シード間のマージ縦線を描画し、その中心から水平線を出す
@@ -189,10 +249,26 @@ function createConnector(
     const mergeCenter = (seedMinY + seedMaxY) / 2;
 
     // マージ縦線（シード間のみ）
-    paths.push(vLine(mergeX, seedMinY, seedMaxY, WINNER_COLOR, debugPrefix ? `${debugPrefix}-merge` : undefined));
+    paths.push(
+      vLine(
+        mergeX,
+        seedMinY,
+        seedMaxY,
+        WINNER_COLOR,
+        debugPrefix ? `${debugPrefix}-merge` : undefined,
+      ),
+    );
 
     // マージ中心からターゲットへの水平線
-    paths.push(hLine(mergeX, targetX, mergeCenter, WINNER_COLOR, debugPrefix ? `${debugPrefix}-target` : undefined));
+    paths.push(
+      hLine(
+        mergeX,
+        targetX,
+        mergeCenter,
+        WINNER_COLOR,
+        debugPrefix ? `${debugPrefix}-target` : undefined,
+      ),
+    );
   } else {
     // 通常パターン: 全outputYsとtargetYを繋ぐ
     const allYs = [...outputYs, targetY];
@@ -200,11 +276,27 @@ function createConnector(
     const maxY = Math.max(...allYs);
 
     if (maxY - minY > 1) {
-      paths.push(vLine(mergeX, minY, maxY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-merge` : undefined));
+      paths.push(
+        vLine(
+          mergeX,
+          minY,
+          maxY,
+          hasWinner ? WINNER_COLOR : DEFAULT_COLOR,
+          debugPrefix ? `${debugPrefix}-merge` : undefined,
+        ),
+      );
     }
 
     // ターゲットへの水平線
-    paths.push(hLine(mergeX, targetX, targetY, hasWinner ? WINNER_COLOR : DEFAULT_COLOR, debugPrefix ? `${debugPrefix}-target` : undefined));
+    paths.push(
+      hLine(
+        mergeX,
+        targetX,
+        targetY,
+        hasWinner ? WINNER_COLOR : DEFAULT_COLOR,
+        debugPrefix ? `${debugPrefix}-target` : undefined,
+      ),
+    );
   }
 
   return paths;
@@ -259,7 +351,8 @@ export function ConnectionLayer({
       const firstConn = conns[0];
       const targetRound = firstConn.toRound;
       const targetRoundConfig = config.rounds[targetRound];
-      const targetPosition = targetRoundConfig?.positions[firstConn.toPosition] ?? firstConn.toPosition;
+      const targetPosition =
+        targetRoundConfig?.positions[firstConn.toPosition] ?? firstConn.toPosition;
       const targetCardTop = getCardTopY(targetPosition);
       const targetCenterY = targetCardTop + (TEAM1_CENTER_OFFSET + TEAM2_CENTER_OFFSET) / 2;
 
@@ -320,7 +413,15 @@ export function ConnectionLayer({
       style={{ width: "100%", height: "100%", zIndex: 1 }}
     >
       {allPaths.map((p, i) => (
-        <path key={p.id ?? i} id={p.id} d={p.d} stroke={p.color} strokeWidth="2" fill="none" className="bracket-line" />
+        <path
+          key={p.id ?? i}
+          id={p.id}
+          d={p.d}
+          stroke={p.color}
+          strokeWidth="2"
+          fill="none"
+          className="bracket-line"
+        />
       ))}
     </svg>
   );
@@ -330,7 +431,10 @@ export function ConnectionLayer({
 // 接続定義生成
 // ============================================================
 
-export function getConnectionsForPattern(pattern: PatternType, config: PatternConfig): ConnectionDef[] {
+export function getConnectionsForPattern(
+  pattern: PatternType,
+  config: PatternConfig,
+): ConnectionDef[] {
   const connections: ConnectionDef[] = [];
 
   // シード接続
@@ -353,19 +457,38 @@ export function getConnectionsForPattern(pattern: PatternType, config: PatternCo
   const patternConnections: Record<string, Array<{ from: number[]; to: [number, number] }>> = {
     P3: [{ from: [0], to: [1, 0] }],
     P4: [{ from: [0, 1], to: [1, 0] }],
-    P5: [{ from: [0], to: [1, 1] }, { from: [0, 1], to: [2, 0] }],
-    P6: [{ from: [0], to: [1, 0] }, { from: [1], to: [1, 1] }, { from: [0, 1], to: [2, 0] }],
-    P7: [{ from: [0], to: [1, 0] }, { from: [1, 2], to: [1, 1] }, { from: [0, 1], to: [2, 0] }],
-    P8: [{ from: [0, 1], to: [1, 0] }, { from: [2, 3], to: [1, 1] }, { from: [0, 1], to: [2, 0] }],
+    P5: [
+      { from: [0], to: [1, 1] },
+      { from: [0, 1], to: [2, 0] },
+    ],
+    P6: [
+      { from: [0], to: [1, 0] },
+      { from: [1], to: [1, 1] },
+      { from: [0, 1], to: [2, 0] },
+    ],
+    P7: [
+      { from: [0], to: [1, 0] },
+      { from: [1, 2], to: [1, 1] },
+      { from: [0, 1], to: [2, 0] },
+    ],
+    P8: [
+      { from: [0, 1], to: [1, 0] },
+      { from: [2, 3], to: [1, 1] },
+      { from: [0, 1], to: [2, 0] },
+    ],
   };
 
   // P6隣接配置: 両シードが同じ試合（SF1）に接続する場合、M1とM2は両方SF2に接続
-  const isP6Adjacent = pattern === "P6" &&
+  const isP6Adjacent =
+    pattern === "P6" &&
     config.seedSlots?.length === 2 &&
     config.seedSlots[0].connectTo === config.seedSlots[1].connectTo;
 
   const conns = isP6Adjacent
-    ? [{ from: [0, 1], to: [1, 1] }, { from: [0, 1], to: [2, 0] }]  // M1, M2 → SF2; SF1, SF2 → Final
+    ? [
+        { from: [0, 1], to: [1, 1] },
+        { from: [0, 1], to: [2, 0] },
+      ] // M1, M2 → SF2; SF1, SF2 → Final
     : patternConnections[pattern];
   if (conns) {
     conns.forEach(({ from, to }) => {

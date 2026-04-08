@@ -1,17 +1,17 @@
 // lib/types/tournament-files.ts
 // 大会ファイル管理の型定義
 
-export type LinkType = 'upload' | 'external';
+export type LinkType = "upload" | "external";
 
 export interface TournamentFile {
   file_id: number;
   tournament_id: number;
-  link_type: LinkType;         // 'upload': ファイルアップロード, 'external': 外部URLリンク
+  link_type: LinkType; // 'upload': ファイルアップロード, 'external': 外部URLリンク
   file_title: string;
   file_description?: string;
   original_filename: string;
   blob_url: string;
-  external_url?: string;       // 外部URLリンク用
+  external_url?: string; // 外部URLリンク用
   file_size: number;
   mime_type: string;
   upload_order: number;
@@ -19,7 +19,7 @@ export interface TournamentFile {
   uploaded_by: string;
   uploaded_at: string;
   updated_at: string;
-  display_date?: string;       // 表示用添付日付
+  display_date?: string; // 表示用添付日付
 }
 
 export interface FileUploadRequest {
@@ -58,17 +58,17 @@ export interface FileDeleteResponse {
 // ファイルバリデーション設定
 export const FILE_VALIDATION = {
   maxSize: 10 * 1024 * 1024, // 10MB
-  allowedTypes: ['application/pdf'],
-  allowedExtensions: ['.pdf'],
+  allowedTypes: ["application/pdf"],
+  allowedExtensions: [".pdf"],
   maxFilesPerTournament: 20,
-  maxTotalSizePerTournament: 100 * 1024 * 1024 // 100MB
+  maxTotalSizePerTournament: 100 * 1024 * 1024, // 100MB
 } as const;
 
 // エラー定義
-export type FileUploadError = 
-  | 'FILE_TOO_LARGE'
-  | 'INVALID_TYPE'
-  | 'UPLOAD_FAILED'
-  | 'STORAGE_FULL'
-  | 'TOO_MANY_FILES'
-  | 'TOTAL_SIZE_EXCEEDED';
+export type FileUploadError =
+  | "FILE_TOO_LARGE"
+  | "INVALID_TYPE"
+  | "UPLOAD_FAILED"
+  | "STORAGE_FULL"
+  | "TOO_MANY_FILES"
+  | "TOTAL_SIZE_EXCEEDED";

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isByeMatchToNumber, validateMatchTeams } from "@/lib/bye-match-utils";
 import { db } from "@/lib/db";
-import { validateMatchTeams, isByeMatchToNumber } from "@/lib/bye-match-utils";
 
 // GET: 個別フォーマット詳細取得
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -14,9 +14,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const formatId = parseInt(resolvedParams.id);
-    
+
     // フォーマット情報取得（競技種別も含む）
-    const formatResult = await db.execute(`
+    const formatResult = await db.execute(
+      `
       SELECT 
         tf.*,
         st.sport_name,
@@ -24,25 +25,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       FROM m_tournament_formats tf
       LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
       WHERE tf.format_id = ?
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     if (formatResult.rows.length === 0) {
       return NextResponse.json({ error: "フォーマットが見つかりません" }, { status: 404 });
     }
 
     // テンプレート情報取得
-    const templatesResult = await db.execute(`
+    const templatesResult = await db.execute(
+      `
       SELECT * FROM m_match_templates 
       WHERE format_id = ? 
       ORDER BY execution_priority, match_number
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     return NextResponse.json({
       success: true,
       format: formatResult.rows[0],
-      templates: templatesResult.rows
+      templates: templatesResult.rows,
     });
-
   } catch (error) {
     console.error("フォーマット詳細取得エラー:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });
@@ -54,14 +59,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
+
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const formatId = parseInt(resolvedParams.id);
     const body = await request.json();
-    const { format_name, sport_type_id, target_team_count, format_description, default_match_duration, default_break_duration, phases, templates } = body;
+    const {
+      format_name,
+      sport_type_id,
+      target_team_count,
+      format_description,
+      default_match_duration,
+      default_break_duration,
+      phases,
+      templates,
+    } = body;
 
     // バリデーション
     if (!format_name || !sport_type_id || !target_team_count || !Array.isArray(templates)) {
@@ -69,35 +83,68 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (templates.length === 0) {
-      return NextResponse.json({ error: "試合テンプレートを最低1つ作成してください" }, { status: 400 });
+      return NextResponse.json(
+        { error: "試合テンプレートを最低1つ作成してください" },
+        { status: 400 },
+      );
     }
 
     // テンプレートのフェーズバリデーション
     if (phases?.phases) {
       const validPhaseIds = new Set(phases.phases.map((p: { id: string }) => p.id));
-      const invalidTemplates = templates.filter((t: { phase?: string; match_number?: number; match_code?: string }) => !t.phase || !validPhaseIds.has(t.phase));
+      const invalidTemplates = templates.filter(
+        (t: { phase?: string; match_number?: number; match_code?: string }) =>
+          !t.phase || !validPhaseIds.has(t.phase),
+      );
       if (invalidTemplates.length > 0) {
-        const details = invalidTemplates.map((t: { match_number?: number; match_code?: string }) => `試合No.${t.match_number}（${t.match_code}）`).join('、');
-        return NextResponse.json({ error: `以下の試合でフェーズが未選択です: ${details}` }, { status: 400 });
+        const details = invalidTemplates
+          .map(
+            (t: { match_number?: number; match_code?: string }) =>
+              `試合No.${t.match_number}（${t.match_code}）`,
+          )
+          .join("、");
+        return NextResponse.json(
+          { error: `以下の試合でフェーズが未選択です: ${details}` },
+          { status: 400 },
+        );
       }
     }
 
     // フォーマット更新
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE m_tournament_formats
       SET format_name = ?, sport_type_id = ?, target_team_count = ?, format_description = ?, default_match_duration = ?, default_break_duration = ?, phases = ?, updated_at = datetime('now', '+9 hours')
       WHERE format_id = ?
-    `, [format_name, sport_type_id, target_team_count, format_description || "", default_match_duration ?? null, default_break_duration ?? null, phases ? JSON.stringify(phases) : null, formatId]);
+    `,
+      [
+        format_name,
+        sport_type_id,
+        target_team_count,
+        format_description || "",
+        default_match_duration ?? null,
+        default_break_duration ?? null,
+        phases ? JSON.stringify(phases) : null,
+        formatId,
+      ],
+    );
 
     // 既存テンプレートを削除
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM m_match_templates WHERE format_id = ?
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     // 新しいテンプレートを作成
     for (const template of templates) {
       // バリデーション
-      const validation = validateMatchTeams(template.team1_display_name, template.team2_display_name, template.match_type);
+      const validation = validateMatchTeams(
+        template.team1_display_name,
+        template.team2_display_name,
+        template.match_type,
+      );
       if (!validation.valid) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
@@ -106,9 +153,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const isByeMatch = isByeMatchToNumber(validation.isByeMatch);
 
       // 不戦勝試合の場合、コート番号はNULL
-      const courtNumber = validation.isByeMatch ? null : (template.court_number || null);
+      const courtNumber = validation.isByeMatch ? null : template.court_number || null;
 
-      await db.execute(`
+      await db.execute(
+        `
         INSERT INTO m_match_templates (
           format_id, match_number, match_code, match_type, phase, round_name,
           block_name, team1_source, team2_source, team1_display_name, team2_display_name,
@@ -118,39 +166,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           created_at, updated_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [
-        formatId,
-        template.match_number || 1,
-        template.match_code,
-        template.match_type || "通常",
-        template.phase || "preliminary",
-        template.round_name || "",
-        template.block_name || "",
-        template.team1_source || "",
-        template.team2_source || "",
-        template.team1_display_name || "",  // 空文字列を使用
-        template.team2_display_name || "",  // 空文字列を使用
-        template.day_number || 1,
-        template.execution_priority || 1,
-        courtNumber,
-        template.suggested_start_time || null,
-        // 新しい順位設定フィールド
-        template.loser_position_start || null,
-        template.loser_position_end || null,
-        template.winner_position || null,
-        template.position_note || null,
-        isByeMatch,
-        // リーグ戦対応フィールド
-        template.matchday || null,
-        template.cycle || null
-      ]);
+      `,
+        [
+          formatId,
+          template.match_number || 1,
+          template.match_code,
+          template.match_type || "通常",
+          template.phase || "preliminary",
+          template.round_name || "",
+          template.block_name || "",
+          template.team1_source || "",
+          template.team2_source || "",
+          template.team1_display_name || "", // 空文字列を使用
+          template.team2_display_name || "", // 空文字列を使用
+          template.day_number || 1,
+          template.execution_priority || 1,
+          courtNumber,
+          template.suggested_start_time || null,
+          // 新しい順位設定フィールド
+          template.loser_position_start || null,
+          template.loser_position_end || null,
+          template.winner_position || null,
+          template.position_note || null,
+          isByeMatch,
+          // リーグ戦対応フィールド
+          template.matchday || null,
+          template.cycle || null,
+        ],
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: "フォーマットを更新しました"
+      message: "フォーマットを更新しました",
     });
-
   } catch (error) {
     console.error("フォーマット更新エラー:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });
@@ -158,11 +207,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // DELETE: フォーマット削除
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
+
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
@@ -170,31 +222,42 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const formatId = parseInt(resolvedParams.id);
 
     // 既存の大会で使用されているかチェック
-    const usageCheck = await db.execute(`
+    const usageCheck = await db.execute(
+      `
       SELECT COUNT(*) as count FROM t_tournaments WHERE format_id = ?
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     if (Number(usageCheck.rows[0].count) > 0) {
-      return NextResponse.json({ 
-        error: "このフォーマットは既存の大会で使用されているため削除できません" 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "このフォーマットは既存の大会で使用されているため削除できません",
+        },
+        { status: 400 },
+      );
     }
 
     // テンプレートを削除
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM m_match_templates WHERE format_id = ?
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     // フォーマットを削除
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM m_tournament_formats WHERE format_id = ?
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     return NextResponse.json({
       success: true,
-      message: "フォーマットを削除しました"
+      message: "フォーマットを削除しました",
     });
-
   } catch (error) {
     console.error("フォーマット削除エラー:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });

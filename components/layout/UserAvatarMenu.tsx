@@ -1,15 +1,15 @@
 // components/layout/UserAvatarMenu.tsx
 "use client";
 
-import { signOut } from "next-auth/react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, ChevronDown } from "lucide-react";
 
 interface UserAvatarMenuProps {
   userName: string;
@@ -17,17 +17,19 @@ interface UserAvatarMenuProps {
   showDashboardLink?: boolean;
 }
 
-export default function UserAvatarMenu({ userName, userEmail, showDashboardLink = true }: UserAvatarMenuProps) {
+export default function UserAvatarMenu({
+  userName,
+  userEmail,
+  showDashboardLink = true,
+}: UserAvatarMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 px-2 py-1.5 rounded-full text-white/90 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-            {userName?.charAt(0) || 'U'}
+            {userName?.charAt(0) || "U"}
           </div>
-          <span className="text-sm font-medium">
-            {userName}
-          </span>
+          <span className="text-sm font-medium">{userName}</span>
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </button>
       </DropdownMenuTrigger>
@@ -47,7 +49,7 @@ export default function UserAvatarMenu({ userName, userEmail, showDashboardLink 
         )}
 
         <DropdownMenuItem
-          onClick={() => signOut({ redirect: false }).then(() => window.location.href = '/')}
+          onClick={() => signOut({ redirect: false }).then(() => (window.location.href = "/"))}
           className="text-destructive cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />

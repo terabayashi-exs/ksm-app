@@ -1,16 +1,16 @@
 // app/api/admin/announcements/route.ts
 // 管理者用お知らせ管理API（一覧取得・作成）
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 // お知らせ一覧取得（管理者用：全件取得）
 export async function GET() {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
     const result = await db.execute(`
@@ -31,11 +31,8 @@ export async function GET() {
       announcements: result.rows,
     });
   } catch (error) {
-    console.error('お知らせ取得エラー:', error);
-    return NextResponse.json(
-      { error: 'お知らせの取得に失敗しました' },
-      { status: 500 }
-    );
+    console.error("お知らせ取得エラー:", error);
+    return NextResponse.json({ error: "お知らせの取得に失敗しました" }, { status: 500 });
   }
 }
 
@@ -43,8 +40,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -52,16 +49,13 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (!title || !content) {
-      return NextResponse.json(
-        { error: 'タイトルと本文は必須です' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "タイトルと本文は必須です" }, { status: 400 });
     }
 
-    if (status && !['draft', 'published'].includes(status)) {
+    if (status && !["draft", "published"].includes(status)) {
       return NextResponse.json(
-        { error: 'ステータスはdraftまたはpublishedのみ有効です' },
-        { status: 400 }
+        { error: "ステータスはdraftまたはpublishedのみ有効です" },
+        { status: 400 },
       );
     }
 
@@ -78,22 +72,19 @@ export async function POST(request: NextRequest) {
       [
         title,
         content,
-        status || 'draft',
+        status || "draft",
         display_order !== undefined ? display_order : 0,
         session.user.id,
-      ]
+      ],
     );
 
     return NextResponse.json({
       success: true,
       announcement_id: Number(result.lastInsertRowid),
-      message: 'お知らせを作成しました',
+      message: "お知らせを作成しました",
     });
   } catch (error) {
-    console.error('お知らせ作成エラー:', error);
-    return NextResponse.json(
-      { error: 'お知らせの作成に失敗しました' },
-      { status: 500 }
-    );
+    console.error("お知らせ作成エラー:", error);
+    return NextResponse.json({ error: "お知らせの作成に失敗しました" }, { status: 500 });
   }
 }

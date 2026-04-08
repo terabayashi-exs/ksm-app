@@ -1,20 +1,28 @@
 // components/features/tournament/PublicFilesList.tsx
 // お知らせ・大会資料等の統合表示コンポーネント
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Bell,
+  Calendar,
+  ExternalLink,
+  FileText,
+  Link as LinkIcon,
+  Maximize2,
+  RefreshCw,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { FileText, Calendar, ExternalLink, RefreshCw, Link as LinkIcon, Bell, Maximize2 } from 'lucide-react';
-import type { LinkType } from '@/lib/types/tournament-files';
+} from "@/components/ui/dialog";
+import type { LinkType } from "@/lib/types/tournament-files";
 
 interface PublicFile {
   file_id: number;
@@ -45,25 +53,25 @@ interface PublicFilesListProps {
   tournamentId: number;
   showTitle?: boolean;
   maxFiles?: number;
-  layout?: 'card' | 'compact';
+  layout?: "card" | "compact";
 }
 
 // ファイルサイズを人間が読みやすい形式に変換
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
 
 // 日付をフォーマット
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
+  return date.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 }
 
@@ -101,9 +109,7 @@ function NoticeCard({ notice }: { notice: Notice }) {
                     お知らせ
                   </DialogTitle>
                 </DialogHeader>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {notice.content}
-                </p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{notice.content}</p>
                 {notice.updated_at && (
                   <div className="text-xs text-gray-500 flex items-center mt-3">
                     <Calendar className="h-3 w-3 mr-1" />
@@ -116,10 +122,7 @@ function NoticeCard({ notice }: { notice: Notice }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <p
-          ref={contentRef}
-          className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3 mb-3"
-        >
+        <p ref={contentRef} className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3 mb-3">
           {notice.content}
         </p>
         {notice.updated_at && (
@@ -137,7 +140,7 @@ export default function PublicFilesList({
   tournamentId,
   showTitle = true,
   maxFiles,
-  layout = 'card'
+  layout = "card",
 }: PublicFilesListProps) {
   const [data, setData] = useState<PublicFilesData | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -151,8 +154,8 @@ export default function PublicFilesList({
       setError(null);
 
       const [filesRes, noticesRes] = await Promise.all([
-        fetch(`/api/tournaments/${tournamentId}/public-files`, { cache: 'no-store' }),
-        fetch(`/api/tournaments/${tournamentId}/notices`, { cache: 'no-store' }),
+        fetch(`/api/tournaments/${tournamentId}/public-files`, { cache: "no-store" }),
+        fetch(`/api/tournaments/${tournamentId}/notices`, { cache: "no-store" }),
       ]);
 
       const filesResult = await filesRes.json();
@@ -163,7 +166,7 @@ export default function PublicFilesList({
         }
         setData({ files, total_files: filesResult.data.total_files });
       } else {
-        setError(filesResult.error || 'ファイル一覧の取得に失敗しました');
+        setError(filesResult.error || "ファイル一覧の取得に失敗しました");
       }
 
       const noticesResult = await noticesRes.json();
@@ -171,8 +174,8 @@ export default function PublicFilesList({
         setNotices(noticesResult.notices || []);
       }
     } catch (err) {
-      console.error('公開ファイル取得エラー:', err);
-      setError('ネットワークエラーが発生しました');
+      console.error("公開ファイル取得エラー:", err);
+      setError("ネットワークエラーが発生しました");
     } finally {
       setLoading(false);
     }
@@ -215,18 +218,17 @@ export default function PublicFilesList({
   }
 
   // ファイルをアップロード→外部リンクの順に並べる
-  const uploadFiles = data?.files.filter(f => f.link_type === 'upload') || [];
-  const externalFiles = data?.files.filter(f => f.link_type === 'external') || [];
+  const uploadFiles = data?.files.filter((f) => f.link_type === "upload") || [];
+  const externalFiles = data?.files.filter((f) => f.link_type === "external") || [];
 
   // カードレイアウト
-  if (layout === 'card') {
+  if (layout === "card") {
     return (
       <div className="space-y-4">
         {showTitle && (
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-blue-600" />
-              📎 お知らせ・大会資料等
+              <FileText className="h-5 w-5 mr-2 text-blue-600" />📎 お知らせ・大会資料等
             </h3>
           </div>
         )}
@@ -258,9 +260,7 @@ export default function PublicFilesList({
               </CardHeader>
               <CardContent className="pt-0">
                 {file.file_description && (
-                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-                    {file.file_description}
-                  </p>
+                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">{file.file_description}</p>
                 )}
                 <div className="text-xs text-gray-500 space-y-1">
                   <div>📏 {formatFileSize(file.file_size)}</div>
@@ -294,9 +294,7 @@ export default function PublicFilesList({
               </CardHeader>
               <CardContent className="pt-0">
                 {file.file_description && (
-                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-                    {file.file_description}
-                  </p>
+                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">{file.file_description}</p>
                 )}
                 <div className="text-xs text-gray-500 space-y-1">
                   <div className="flex items-center">
@@ -322,8 +320,7 @@ export default function PublicFilesList({
       {showTitle && (
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center">
-            <FileText className="h-5 w-5 mr-2 text-blue-600" />
-            📎 お知らせ・大会資料等
+            <FileText className="h-5 w-5 mr-2 text-blue-600" />📎 お知らせ・大会資料等
           </h3>
         </div>
       )}
@@ -340,9 +337,7 @@ export default function PublicFilesList({
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{notice.content}</p>
                 {notice.updated_at && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatDate(notice.updated_at)}
-                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{formatDate(notice.updated_at)}</div>
                 )}
               </div>
             </div>
@@ -360,7 +355,8 @@ export default function PublicFilesList({
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{file.file_title}</div>
                 <div className="text-sm text-gray-500">
-                  {formatFileSize(file.file_size)} • {file.display_date || formatDate(file.uploaded_at)}
+                  {formatFileSize(file.file_size)} •{" "}
+                  {file.display_date || formatDate(file.uploaded_at)}
                 </div>
               </div>
             </div>

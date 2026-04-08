@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Coffee, Calendar, LayoutGrid, Monitor } from "lucide-react";
+import { Calendar, Clock, Coffee, LayoutGrid, Monitor } from "lucide-react";
 
 interface PhaseStat {
   phase: string;
@@ -20,11 +20,16 @@ interface FormatDetailBadgesProps {
 
 const getSportIcon = (sportCode: string) => {
   switch (sportCode) {
-    case 'soccer': return '\u26BD';
-    case 'baseball': return '\u26BE';
-    case 'basketball': return '\u{1F3C0}';
-    case 'pk': return '\u{1F945}';
-    default: return '\u26BD';
+    case "soccer":
+      return "\u26BD";
+    case "baseball":
+      return "\u26BE";
+    case "basketball":
+      return "\u{1F3C0}";
+    case "pk":
+      return "\u{1F945}";
+    default:
+      return "\u26BD";
   }
 };
 
@@ -37,7 +42,8 @@ export default function FormatDetailBadges({
   phase_stats,
 }: FormatDetailBadgesProps) {
   const hasDuration = default_match_duration != null || default_break_duration != null;
-  const hasTemplates = (phase_stats && phase_stats.length > 0) || (matchday_count && matchday_count > 1);
+  const hasTemplates =
+    (phase_stats && phase_stats.length > 0) || (matchday_count && matchday_count > 1);
 
   if (!hasDuration && !hasTemplates) return null;
 
@@ -67,7 +73,7 @@ export default function FormatDetailBadges({
               <Calendar className="h-3.5 w-3.5" />
               {matchday_count}節
             </div>
-          ) : (phase_stats && phase_stats.length > 0) ? (
+          ) : phase_stats && phase_stats.length > 0 ? (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {phase_stats.map((ps) => (
                 <span key={ps.phase} className="flex items-center gap-1">

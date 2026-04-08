@@ -1,8 +1,9 @@
 // components/features/archived/ArchiveLoadingState.tsx
-import { Card, CardContent } from '@/components/ui/card';
-import { Archive, AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+
+import { AlertCircle, Archive, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 /**
  * アーカイブ読み込み中の表示
@@ -17,9 +18,7 @@ export function ArchiveLoadingState() {
               <Archive className="h-12 w-12 text-gray-500 animate-pulse" />
             </div>
             <h2 className="text-lg font-semibold mb-2">アーカイブを読み込み中...</h2>
-            <p className="text-gray-500">
-              大会データを取得しています
-            </p>
+            <p className="text-gray-500">大会データを取得しています</p>
             <div className="mt-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
@@ -41,29 +40,29 @@ interface ArchiveErrorStateProps {
 
 export function ArchiveErrorState({ error, tournamentId, onRetry }: ArchiveErrorStateProps) {
   const getErrorDetails = (errorMessage: string) => {
-    if (errorMessage.includes('見つかりません') || errorMessage.includes('404')) {
+    if (errorMessage.includes("見つかりません") || errorMessage.includes("404")) {
       return {
-        title: 'アーカイブが見つかりません',
-        description: 'この大会はまだアーカイブされていない可能性があります。',
+        title: "アーカイブが見つかりません",
+        description: "この大会はまだアーカイブされていない可能性があります。",
         icon: <Archive className="h-12 w-12 text-amber-500" />,
-        canRetry: false
+        canRetry: false,
       };
     }
-    
-    if (errorMessage.includes('401') || errorMessage.includes('権限')) {
+
+    if (errorMessage.includes("401") || errorMessage.includes("権限")) {
       return {
-        title: 'アクセス権限がありません',
-        description: 'このアーカイブにアクセスする権限がありません。',
+        title: "アクセス権限がありません",
+        description: "このアーカイブにアクセスする権限がありません。",
         icon: <AlertCircle className="h-12 w-12 text-red-500" />,
-        canRetry: false
+        canRetry: false,
       };
     }
 
     return {
-      title: 'アーカイブの読み込みに失敗しました',
-      description: '一時的な問題の可能性があります。しばらくしてから再試行してください。',
+      title: "アーカイブの読み込みに失敗しました",
+      description: "一時的な問題の可能性があります。しばらくしてから再試行してください。",
       icon: <AlertCircle className="h-12 w-12 text-red-500" />,
-      canRetry: true
+      canRetry: true,
     };
   };
 
@@ -74,16 +73,10 @@ export function ArchiveErrorState({ error, tournamentId, onRetry }: ArchiveError
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-lg mx-auto">
           <CardContent className="pt-8 pb-6 text-center">
-            <div className="flex justify-center mb-4">
-              {errorDetails.icon}
-            </div>
-            <h2 className="text-lg font-semibold mb-2 text-gray-900">
-              {errorDetails.title}
-            </h2>
-            <p className="text-gray-500 mb-4">
-              {errorDetails.description}
-            </p>
-            
+            <div className="flex justify-center mb-4">{errorDetails.icon}</div>
+            <h2 className="text-lg font-semibold mb-2 text-gray-900">{errorDetails.title}</h2>
+            <p className="text-gray-500 mb-4">{errorDetails.description}</p>
+
             <div className="text-sm text-gray-500 mb-6 p-3 bg-gray-50 rounded-lg">
               <p className="font-medium mb-1">詳細エラー:</p>
               <p className="break-words">{error}</p>
@@ -94,18 +87,16 @@ export function ArchiveErrorState({ error, tournamentId, onRetry }: ArchiveError
               <Button variant="outline" onClick={() => window.history.back()}>
                 戻る
               </Button>
-              
+
               {errorDetails.canRetry && onRetry && (
                 <Button onClick={onRetry} className="flex items-center">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   再試行
                 </Button>
               )}
-              
+
               <Button variant="outline" asChild>
-                <Link href="/tournaments">
-                  大会一覧へ
-                </Link>
+                <Link href="/tournaments">大会一覧へ</Link>
               </Button>
             </div>
           </CardContent>
@@ -121,19 +112,24 @@ export function ArchiveErrorState({ error, tournamentId, onRetry }: ArchiveError
 interface ArchiveInfoBannerProps {
   archivedAt: string;
   archivedBy: string;
-  source?: 'blob' | 'database';
+  source?: "blob" | "database";
   fileSize?: number;
 }
 
-export function ArchiveInfoBanner({ archivedAt, archivedBy, source, fileSize }: ArchiveInfoBannerProps) {
+export function ArchiveInfoBanner({
+  archivedAt,
+  archivedBy,
+  source,
+  fileSize,
+}: ArchiveInfoBannerProps) {
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(dateString).toLocaleDateString("ja-JP", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch {
       return dateString;
@@ -148,12 +144,12 @@ export function ArchiveInfoBanner({ archivedAt, archivedBy, source, fileSize }: 
 
   const getSourceInfo = (source?: string) => {
     switch (source) {
-      case 'blob':
-        return { label: 'Blob Storage', color: 'bg-blue-100 text-blue-800 border-blue-200' };
-      case 'database':
-        return { label: 'Database', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+      case "blob":
+        return { label: "Blob Storage", color: "bg-blue-100 text-blue-800 border-blue-200" };
+      case "database":
+        return { label: "Database", color: "bg-gray-100 text-gray-800 border-gray-200" };
       default:
-        return { label: 'Unknown', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+        return { label: "Unknown", color: "bg-gray-100 text-gray-800 border-gray-200" };
     }
   };
 
@@ -166,15 +162,13 @@ export function ArchiveInfoBanner({ archivedAt, archivedBy, source, fileSize }: 
           <div className="flex items-center space-x-4">
             <Archive className="h-5 w-5 text-purple-600" />
             <div className="text-sm">
-              <p className="font-medium text-purple-900">
-                アーカイブ済みデータ
-              </p>
+              <p className="font-medium text-purple-900">アーカイブ済みデータ</p>
               <p className="text-purple-700">
                 {formatDate(archivedAt)} に {archivedBy} によってアーカイブされました
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <span className={`px-2 py-1 rounded-md text-xs font-medium border ${sourceInfo.color}`}>
               {sourceInfo.label}

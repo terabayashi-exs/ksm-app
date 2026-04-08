@@ -1,22 +1,33 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo, useRef, use } from 'react';
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
-import { Save, MapPin, Loader2, Calendar, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
+import { Calendar, ChevronRight, Home, Loader2, MapPin, Save } from "lucide-react";
+import Link from "next/link";
+import { use, useEffect, useMemo, useRef, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // コート名プリセット
 const COURT_NAME_PRESETS = [
-  "メインコート", "サブコート",
-  "第1コート", "第2コート",
-  "Aピッチ", "Bピッチ", "Cピッチ",
-  "第1グラウンド", "第2グラウンド",
+  "メインコート",
+  "サブコート",
+  "第1コート",
+  "第2コート",
+  "Aピッチ",
+  "Bピッチ",
+  "Cピッチ",
+  "第1グラウンド",
+  "第2グラウンド",
 ];
 
 /** 手動入力可能なコンボボックス */
@@ -43,7 +54,7 @@ function ComboInput({
           ref={inputRef}
           className={className}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
         />
@@ -53,15 +64,15 @@ function ComboInput({
           className="p-1 w-[var(--radix-popover-trigger-width)]"
           align="start"
           sideOffset={2}
-          onOpenAutoFocus={e => e.preventDefault()}
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="max-h-40 overflow-y-auto">
-            {suggestions.map(name => (
+            {suggestions.map((name) => (
               <button
                 key={name}
                 type="button"
                 className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 cursor-pointer"
-                onMouseDown={e => {
+                onMouseDown={(e) => {
                   e.preventDefault();
                   onChange(name);
                   setOpen(false);
@@ -114,9 +125,9 @@ interface TournamentInfo {
 }
 
 function formatDateLabel(date: string): string {
-  if (date === '未設定') return '日付未設定';
+  if (date === "未設定") return "日付未設定";
   const d = new Date(date);
-  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
   return `${d.getMonth() + 1}月${d.getDate()}日(${dayOfWeek})`;
 }
 
@@ -136,10 +147,10 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
   // 使用済みコート名を収集（プリセット候補に追加）
   const courtNameSuggestions = useMemo(() => {
     const names = new Set<string>();
-    dateCourtSettings.forEach(cs => {
+    dateCourtSettings.forEach((cs) => {
       if (cs.court_name) names.add(cs.court_name);
     });
-    matches.forEach(m => {
+    matches.forEach((m) => {
       if (m.court_name) names.add(m.court_name);
     });
     return Array.from(new Set([...names, ...COURT_NAME_PRESETS]));
@@ -148,8 +159,8 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
   // 日程→コート番号の2段階でグループ化
   const dateCourtGroups = useMemo(() => {
     const byDate: Record<string, Record<number, Match[]>> = {};
-    matches.forEach(m => {
-      const date = m.tournament_date || '未設定';
+    matches.forEach((m) => {
+      const date = m.tournament_date || "未設定";
       const cn = m.court_number || 0;
       if (!byDate[date]) byDate[date] = {};
       if (!byDate[date][cn]) byDate[date][cn] = [];
@@ -174,7 +185,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
         const res = await fetch(`/api/tournaments/${tournamentId}/court-venue-settings`);
         const result = await res.json();
         if (!result.success) {
-          setError(result.error || '取得に失敗しました');
+          setError(result.error || "取得に失敗しました");
           return;
         }
 
@@ -189,8 +200,8 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
 
         // 試合データから日付×コート番号の組み合わせを取得し、設定を生成
         const dateCourtMap = new Map<string, DateCourtSetting>();
-        matchList.forEach(m => {
-          const date = m.tournament_date || '未設定';
+        matchList.forEach((m) => {
+          const date = m.tournament_date || "未設定";
           const cn = m.court_number || 0;
           const key = `${date}__${cn}`;
           if (!dateCourtMap.has(key)) {
@@ -206,13 +217,13 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
         });
 
         setDateCourtSettings(
-          Array.from(dateCourtMap.values()).sort((a, b) =>
-            a.date.localeCompare(b.date) || a.court_number - b.court_number
-          )
+          Array.from(dateCourtMap.values()).sort(
+            (a, b) => a.date.localeCompare(b.date) || a.court_number - b.court_number,
+          ),
         );
       } catch (err) {
-        console.error('データ取得エラー:', err);
-        setError('データの取得に失敗しました');
+        console.error("データ取得エラー:", err);
+        setError("データの取得に失敗しました");
       } finally {
         setLoading(false);
       }
@@ -222,32 +233,36 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
   }, [tournamentId]);
 
   const getDateCourtSetting = (date: string, courtNumber: number): DateCourtSetting | undefined => {
-    return dateCourtSettings.find(s => s.date === date && s.court_number === courtNumber);
+    return dateCourtSettings.find((s) => s.date === date && s.court_number === courtNumber);
   };
 
   const handleVenueChange = (date: string, courtNumber: number, venueIdStr: string) => {
-    const venueId = venueIdStr === 'none' ? null : Number(venueIdStr);
-    const venue = venues.find(v => v.venue_id === venueId);
+    const venueId = venueIdStr === "none" ? null : Number(venueIdStr);
+    const venue = venues.find((v) => v.venue_id === venueId);
 
-    setDateCourtSettings(prev => prev.map(cs =>
-      cs.date === date && cs.court_number === courtNumber
-        ? {
-            ...cs,
-            venue_id: venueId,
-            court_name: venue ? venue.venue_name : cs.court_name,
-          }
-        : cs
-    ));
+    setDateCourtSettings((prev) =>
+      prev.map((cs) =>
+        cs.date === date && cs.court_number === courtNumber
+          ? {
+              ...cs,
+              venue_id: venueId,
+              court_name: venue ? venue.venue_name : cs.court_name,
+            }
+          : cs,
+      ),
+    );
   };
 
   const handleCourtNameChange = (date: string, courtNumber: number, value: string) => {
-    setDateCourtSettings(prev => prev.map(cs =>
-      cs.date === date && cs.court_number === courtNumber ? { ...cs, court_name: value } : cs
-    ));
+    setDateCourtSettings((prev) =>
+      prev.map((cs) =>
+        cs.date === date && cs.court_number === courtNumber ? { ...cs, court_name: value } : cs,
+      ),
+    );
   };
 
   const handleMatchOverride = (matchId: number, courtName: string) => {
-    setMatchOverrides(prev => ({ ...prev, [matchId]: courtName }));
+    setMatchOverrides((prev) => ({ ...prev, [matchId]: courtName }));
   };
 
   const handleSave = async () => {
@@ -257,25 +272,25 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
 
     try {
       const overrides = Object.entries(matchOverrides)
-        .filter(([, name]) => name !== '')
+        .filter(([, name]) => name !== "")
         .map(([id, name]) => ({ match_id: Number(id), court_name: name }));
 
       const res = await fetch(`/api/tournaments/${tournamentId}/court-venue-settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dateCourtSettings, matchOverrides: overrides }),
       });
 
       const result = await res.json();
       if (result.success) {
-        setSuccessMessage('設定を保存しました');
+        setSuccessMessage("設定を保存しました");
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
-        setError(result.error || '保存に失敗しました');
+        setError(result.error || "保存に失敗しました");
       }
     } catch (err) {
-      console.error('保存エラー:', err);
-      setError('保存に失敗しました');
+      console.error("保存エラー:", err);
+      setError("保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -291,11 +306,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
   }
 
   if (!tournament) {
-    return (
-      <div className="text-center py-16 text-gray-500">
-        部門が見つかりません
-      </div>
-    );
+    return <div className="text-center py-16 text-gray-500">部門が見つかりません</div>;
   }
 
   return (
@@ -304,11 +315,24 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            マイダッシュボード
+          </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">会場・コート設定</span>
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            会場・コート設定
+          </span>
         </nav>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">会場・コート設定</h1>
@@ -319,10 +343,14 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
 
         {/* メッセージ */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{error}</div>
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+            {error}
+          </div>
         )}
         {successMessage && (
-          <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 text-sm">{successMessage}</div>
+          <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-3 text-sm">
+            {successMessage}
+          </div>
         )}
 
         {/* 日程×コート設定 + 試合一覧 */}
@@ -350,12 +378,14 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                   const setting = getDateCourtSetting(date, court_number);
                   return (
                     <div key={court_number} className="p-3 border rounded-lg space-y-2">
-                      <span className="text-xs font-medium text-gray-500">コート {court_number}</span>
+                      <span className="text-xs font-medium text-gray-500">
+                        コート {court_number}
+                      </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <Label className="text-xs">会場</Label>
                           <Select
-                            value={setting?.venue_id?.toString() || 'none'}
+                            value={setting?.venue_id?.toString() || "none"}
                             onValueChange={(value) => handleVenueChange(date, court_number, value)}
                           >
                             <SelectTrigger className="bg-white h-9">
@@ -363,7 +393,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                             </SelectTrigger>
                             <SelectContent className="bg-white border border-gray-200">
                               <SelectItem value="none">未設定</SelectItem>
-                              {venues.map(v => (
+                              {venues.map((v) => (
                                 <SelectItem key={v.venue_id} value={v.venue_id.toString()}>
                                   {v.venue_name}
                                 </SelectItem>
@@ -375,7 +405,7 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                           <Label className="text-xs">コート名</Label>
                           <ComboInput
                             className="h-9"
-                            value={setting?.court_name || ''}
+                            value={setting?.court_name || ""}
                             onChange={(v) => handleCourtNameChange(date, court_number, v)}
                             suggestions={courtNameSuggestions}
                             placeholder={`コート${court_number}`}
@@ -409,20 +439,23 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                         </tr>
                       </thead>
                       <tbody>
-                        {courtMatches.map(match => (
+                        {courtMatches.map((match) => (
                           <tr key={match.match_id} className="border-b hover:bg-gray-50/50">
                             <td className="py-2 px-2 font-medium">{match.match_code}</td>
-                            <td className="py-2 px-2">{match.start_time || '-'}</td>
+                            <td className="py-2 px-2">{match.start_time || "-"}</td>
                             <td className="py-2 px-2">
                               {match.team1_display_name} vs {match.team2_display_name}
                             </td>
                             <td className="py-2 px-2">
                               <ComboInput
                                 className="h-7 text-xs w-32"
-                                value={matchOverrides[match.match_id] || ''}
+                                value={matchOverrides[match.match_id] || ""}
                                 onChange={(v) => handleMatchOverride(match.match_id, v)}
                                 suggestions={courtNameSuggestions}
-                                placeholder={getDateCourtSetting(date, court_number)?.court_name || `コート${court_number}`}
+                                placeholder={
+                                  getDateCourtSetting(date, court_number)?.court_name ||
+                                  `コート${court_number}`
+                                }
                               />
                             </td>
                           </tr>
@@ -432,21 +465,24 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
                   </div>
                   {/* スマホ表示 */}
                   <div className="sm:hidden space-y-2">
-                    {courtMatches.map(match => (
+                    {courtMatches.map((match) => (
                       <div key={match.match_id} className="border rounded-md p-2.5 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm">{match.match_code}</span>
-                          <span className="text-xs text-gray-500">{match.start_time || '-'}</span>
+                          <span className="text-xs text-gray-500">{match.start_time || "-"}</span>
                         </div>
                         <div className="text-sm">
                           {match.team1_display_name} vs {match.team2_display_name}
                         </div>
                         <ComboInput
                           className="h-7 text-xs"
-                          value={matchOverrides[match.match_id] || ''}
+                          value={matchOverrides[match.match_id] || ""}
                           onChange={(v) => handleMatchOverride(match.match_id, v)}
                           suggestions={courtNameSuggestions}
-                          placeholder={getDateCourtSetting(date, court_number)?.court_name || `コート${court_number}`}
+                          placeholder={
+                            getDateCourtSetting(date, court_number)?.court_name ||
+                            `コート${court_number}`
+                          }
                         />
                       </div>
                     ))}
@@ -466,9 +502,15 @@ export default function CourtVenueSettingsPage({ params }: { params: Promise<{ i
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? (
-              <><Loader2 className="w-4 h-4 animate-spin mr-2" />保存中...</>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                保存中...
+              </>
             ) : (
-              <><Save className="w-4 h-4 mr-2" />保存する</>
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                保存する
+              </>
             )}
           </Button>
         </div>

@@ -13,7 +13,7 @@
 - **Lucide React**: 0.534.0（アイコンライブラリ）
 
 ### **バックエンド・API**
-- **Next.js API Routes**: 100+エンドポイント実装
+- **Next.js API Routes**: 180エンドポイント実装
 - **Server-Sent Events**: リアルタイム更新
 - **Server Actions**: フォーム処理最適化
 
@@ -62,8 +62,13 @@
 
 ### **開発ツール**
 - **tsx**: 4.20.3（TypeScript実行）
-- **ESLint**: 9.x（コード品質）
+- **ESLint**: 9.x（コード品質・Next.js固有ルール）
+- **Biome**: フォーマッター・Import整理
+- **Vitest**: 4.0.16（ユニットテスト）
+- **Playwright**: 1.57.0（E2Eテスト）
+- **Storybook**: 10.1.10（UIコンポーネント開発）
 - **cross-env**: 10.0.0（環境変数管理）
+- **mise**: Node.jsバージョン管理（v22.17.1固定）
 
 
 ## 🧩 設計方針と制約
@@ -246,7 +251,7 @@ ksm-app/
 │   │
 │   ├── test/page.tsx             # テストページ
 │   │
-│   └── api/                      # API Routes（100+エンドポイント）
+│   └── api/                      # API Routes（180エンドポイント）
 │       ├── auth/[...nextauth]/route.ts   # NextAuth設定
 │       ├── debug/                # デバッグAPI
 │       │   ├── session/route.ts

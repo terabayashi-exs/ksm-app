@@ -1,15 +1,15 @@
 // app/admin/tournaments/[id]/manual-rankings/page.tsx
 export const metadata = { title: "順位手動調整" };
 
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
-import ManualRankingsEditor from "@/components/features/tournament/ManualRankingsEditor";
-import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import ManualRankingsEditor from "@/components/features/tournament/ManualRankingsEditor";
 import Header from "@/components/layout/Header";
-import { buildPhaseFormatMap } from "@/lib/tournament-phases";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { calculateBlockStandings } from "@/lib/standings-calculator";
+import { buildPhaseFormatMap } from "@/lib/tournament-phases";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,7 +17,7 @@ interface PageProps {
 
 export default async function ManualRankingsPage({ params }: PageProps) {
   const session = await auth();
-  
+
   if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
     redirect("/auth/login");
   }
@@ -46,7 +46,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
       LEFT JOIN m_tournament_formats tf ON t.format_id = tf.format_id
       WHERE t.tournament_id = ?
     `,
-    args: [tournamentId]
+    args: [tournamentId],
   });
 
   if (!tournamentResult.rows || tournamentResult.rows.length === 0) {
@@ -60,7 +60,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
     status: tournamentResult.rows[0].status as string,
     venue_name: tournamentResult.rows[0].venue_name as string,
     format_name: tournamentResult.rows[0].format_name as string,
-    phases: tournamentResult.rows[0].phases as string | null
+    phases: tournamentResult.rows[0].phases as string | null,
   };
 
   // ブロック情報と順位表を取得
@@ -80,46 +80,48 @@ export default async function ManualRankingsPage({ params }: PageProps) {
       WHERE mb.tournament_id = ?
       ORDER BY mb.block_order, mb.match_block_id
     `,
-    args: [tournamentId]
+    args: [tournamentId],
   });
 
   // format_typeに応じてブロックをフィルタリング
-  const filteredBlocks = allBlocksResult.rows.filter(block => {
+  const filteredBlocks = allBlocksResult.rows.filter((block) => {
     const blockPhase = block.phase as string;
     const blockName = block.block_name as string;
     const formatType = manualPhaseFormatMap.get(blockPhase);
-    if (formatType === 'tournament') return blockName.endsWith('_unified');
-    if (formatType === 'league') return !blockName.endsWith('_unified');
+    if (formatType === "tournament") return blockName.endsWith("_unified");
+    if (formatType === "league") return !blockName.endsWith("_unified");
     return true;
   });
   const blocksResult = { rows: filteredBlocks };
 
-  const blocks = await Promise.all(blocksResult.rows.map(async (row) => {
-    const matchBlockId = row.match_block_id as number;
-    let teamRankings = row.team_rankings ? JSON.parse(row.team_rankings as string) : [];
+  const blocks = await Promise.all(
+    blocksResult.rows.map(async (row) => {
+      const matchBlockId = row.match_block_id as number;
+      let teamRankings = row.team_rankings ? JSON.parse(row.team_rankings as string) : [];
 
-    // team_rankingsが空の場合、試合結果から順位を計算して補完
-    if (teamRankings.length === 0) {
-      try {
-        teamRankings = await calculateBlockStandings(matchBlockId, tournamentId);
-      } catch {
-        teamRankings = [];
+      // team_rankingsが空の場合、試合結果から順位を計算して補完
+      if (teamRankings.length === 0) {
+        try {
+          teamRankings = await calculateBlockStandings(matchBlockId, tournamentId);
+        } catch {
+          teamRankings = [];
+        }
       }
-    }
 
-    return {
-      match_block_id: matchBlockId,
-      phase: row.phase as string,
-      display_round_name: row.actual_round_name as string,
-      block_name: row.block_name as string,
-      team_rankings: teamRankings,
-      remarks: row.remarks as string | null
-    };
-  }));
+      return {
+        match_block_id: matchBlockId,
+        phase: row.phase as string,
+        display_round_name: row.actual_round_name as string,
+        block_name: row.block_name as string,
+        team_rankings: teamRankings,
+        remarks: row.remarks as string | null,
+      };
+    }),
+  );
 
   // トーナメント形式のフェーズIDを動的に取得
   const tournamentPhaseIds = Array.from(manualPhaseFormatMap.entries())
-    .filter(([, formatType]) => formatType === 'tournament')
+    .filter(([, formatType]) => formatType === "tournament")
     .map(([phaseId]) => phaseId);
 
   // トーナメント形式フェーズの試合情報を取得
@@ -142,7 +144,7 @@ export default async function ManualRankingsPage({ params }: PageProps) {
   }> = [];
 
   if (tournamentPhaseIds.length > 0) {
-    const placeholders = tournamentPhaseIds.map(() => '?').join(', ');
+    const placeholders = tournamentPhaseIds.map(() => "?").join(", ");
     const finalTournamentResult = await db.execute({
       sql: `
         SELECT
@@ -171,10 +173,10 @@ export default async function ManualRankingsPage({ params }: PageProps) {
           AND (ml.match_type IS NULL OR ml.match_type != 'FM')
         ORDER BY ml.match_number, ml.match_code
       `,
-      args: [tournamentId, ...tournamentPhaseIds]
+      args: [tournamentId, ...tournamentPhaseIds],
     });
 
-    finalMatches = finalTournamentResult.rows.map(row => ({
+    finalMatches = finalTournamentResult.rows.map((row) => ({
       match_id: row.match_id as number,
       match_code: row.match_code as string,
       team1_tournament_team_id: row.team1_tournament_team_id as number | null,
@@ -189,14 +191,14 @@ export default async function ManualRankingsPage({ params }: PageProps) {
       is_confirmed: Boolean(row.is_confirmed),
       match_status: row.match_status as string,
       start_time: row.start_time as string | null,
-      court_number: row.court_number as number | null
+      court_number: row.court_number as number | null,
     }));
   }
 
   // トーナメント形式フェーズの順位データを取得（_unifiedブロックから）
   let finalRankings = null;
   if (tournamentPhaseIds.length > 0) {
-    const placeholders = tournamentPhaseIds.map(() => '?').join(', ');
+    const placeholders = tournamentPhaseIds.map(() => "?").join(", ");
     const finalBlockResult = await db.execute({
       sql: `
         SELECT
@@ -209,15 +211,17 @@ export default async function ManualRankingsPage({ params }: PageProps) {
           AND block_name LIKE '%_unified'
         LIMIT 1
       `,
-      args: [tournamentId, ...tournamentPhaseIds]
+      args: [tournamentId, ...tournamentPhaseIds],
     });
 
     if (finalBlockResult.rows.length > 0) {
       const finalBlock = finalBlockResult.rows[0];
       finalRankings = {
         match_block_id: finalBlock.match_block_id as number,
-        team_rankings: finalBlock.team_rankings ? JSON.parse(finalBlock.team_rankings as string) : [],
-        remarks: finalBlock.remarks as string | null
+        team_rankings: finalBlock.team_rankings
+          ? JSON.parse(finalBlock.team_rankings as string)
+          : [],
+        remarks: finalBlock.remarks as string | null,
       };
     }
   }
@@ -238,10 +242,10 @@ export default async function ManualRankingsPage({ params }: PageProps) {
         AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
         AND (ml.team1_source LIKE '%_%' OR ml.team2_source LIKE '%_%')
     `,
-    args: [tournamentId, tournamentId]
+    args: [tournamentId, tournamentId],
   });
 
-  const promotionRequirements = promotionRequirementsResult.rows.flatMap(row => {
+  const promotionRequirements = promotionRequirementsResult.rows.flatMap((row) => {
     const sources = [];
     if (row.team1_source) sources.push(String(row.team1_source));
     if (row.team2_source) sources.push(String(row.team2_source));
@@ -254,12 +258,18 @@ export default async function ManualRankingsPage({ params }: PageProps) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />

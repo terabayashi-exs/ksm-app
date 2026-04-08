@@ -1,51 +1,64 @@
 // app/api/auth/request-verification/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import crypto from 'crypto';
-import { sendEmail } from '@/lib/email/mailer';
+
+import crypto from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email/mailer";
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
 
-    if (!email || !email.includes('@')) {
+    if (!email || !email.includes("@")) {
       return NextResponse.json(
-        { success: false, error: 'メールアドレスを正しく入力してください' },
-        { status: 400 }
+        { success: false, error: "メールアドレスを正しく入力してください" },
+        { status: 400 },
       );
     }
 
     // メールアドレスの重複チェック（m_login_users）
-    const existingLoginUser = await db.execute(`
+    const existingLoginUser = await db.execute(
+      `
       SELECT login_user_id FROM m_login_users WHERE email = ?
-    `, [email]);
+    `,
+      [email],
+    );
 
     if (existingLoginUser.rows.length > 0) {
       return NextResponse.json(
-        { success: false, error: 'このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。' },
-        { status: 400 }
+        {
+          success: false,
+          error: "このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。",
+        },
+        { status: 400 },
       );
     }
 
     // 既存のトークンを無効化
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_email_verification_tokens
       SET used = 1
       WHERE email = ? AND purpose = 'registration' AND used = 0
-    `, [email]);
+    `,
+      [email],
+    );
 
     // 新しいトークンを生成
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10分後
 
     // トークンをDBに保存
-    await db.execute(`
+    await db.execute(
+      `
       INSERT INTO t_email_verification_tokens (email, token, purpose, expires_at)
       VALUES (?, ?, 'registration', ?)
-    `, [email, token, expiresAt.toISOString()]);
+    `,
+      [email, token, expiresAt.toISOString()],
+    );
 
     // 認証用URL
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const verificationUrl = `${baseUrl}/auth/register?token=${token}`;
 
     // メール送信
@@ -87,29 +100,29 @@ ${verificationUrl}
 
     await sendEmail({
       to: email,
-      subject: '【大会GO】アカウント登録のご案内',
+      subject: "【大会GO】アカウント登録のご案内",
       text: textContent,
       html: htmlContent,
     });
 
     return NextResponse.json({
       success: true,
-      message: 'メールを送信しました。メールボックスをご確認ください。',
+      message: "メールを送信しました。メールボックスをご確認ください。",
     });
-
   } catch (error) {
-    console.error('Verification email error:', error);
+    console.error("Verification email error:", error);
 
     // エラーメッセージを詳細に分類
-    let errorMessage = 'メール送信に失敗しました';
+    let errorMessage = "メール送信に失敗しました";
 
     if (error instanceof Error) {
-      if (error.message.includes('no such column')) {
-        errorMessage = 'データベースエラーが発生しました。システム管理者にお問い合わせください。';
-      } else if (error.message.includes('SMTP')) {
-        errorMessage = 'メール送信サーバーに接続できませんでした。しばらく経ってから再度お試しください。';
-      } else if (error.message.includes('invalid email')) {
-        errorMessage = 'メールアドレスの形式が正しくありません。';
+      if (error.message.includes("no such column")) {
+        errorMessage = "データベースエラーが発生しました。システム管理者にお問い合わせください。";
+      } else if (error.message.includes("SMTP")) {
+        errorMessage =
+          "メール送信サーバーに接続できませんでした。しばらく経ってから再度お試しください。";
+      } else if (error.message.includes("invalid email")) {
+        errorMessage = "メールアドレスの形式が正しくありません。";
       }
     }
 
@@ -117,9 +130,9 @@ ${verificationUrl}
       {
         success: false,
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        details: process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

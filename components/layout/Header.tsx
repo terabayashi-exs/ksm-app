@@ -1,14 +1,14 @@
 // components/layout/Header.tsx
 "use client";
 
-import { useState } from "react";
-import { useSession, signOut } from "next-auth/react";
-import Link from "next/link";
+import { LogOut, Menu, Search, User, X } from "lucide-react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
+import { useState } from "react";
 import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
-import { User, LogOut, Menu, X, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   hideSearchButton?: boolean;
@@ -32,7 +32,7 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
                   width={500}
                   height={148}
                   className="h-full w-auto"
-                  style={{ objectFit: 'contain' }}
+                  style={{ objectFit: "contain" }}
                   priority
                 />
               </div>
@@ -41,7 +41,10 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
               β版
             </Badge>
             {session?.user && (
-              <Link href="/my" className="text-white/70 hover:text-white text-sm font-medium transition-colors ml-1">
+              <Link
+                href="/my"
+                className="text-white/70 hover:text-white text-sm font-medium transition-colors ml-1"
+              >
                 ｜管理
               </Link>
             )}
@@ -53,8 +56,8 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
               <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : session?.user ? (
               <UserAvatarMenu
-                userName={session.user.name || ''}
-                userEmail={session.user.email || ''}
+                userName={session.user.name || ""}
+                userEmail={session.user.email || ""}
               />
             ) : (
               <>
@@ -66,7 +69,12 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
                     </Link>
                   </Button>
                 )}
-                <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white"
+                >
                   <Link href="/auth/login" className="flex items-center">
                     ログイン
                   </Link>
@@ -118,7 +126,7 @@ export default function Header({ hideSearchButton = false }: HeaderProps) {
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      signOut({ redirect: false }).then(() => window.location.href = '/');
+                      signOut({ redirect: false }).then(() => (window.location.href = "/"));
                     }}
                     className="flex items-center gap-2 w-full px-3 py-3 text-sm text-red-400 rounded-md hover:bg-white/10 text-left"
                   >

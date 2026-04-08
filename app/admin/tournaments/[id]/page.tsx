@@ -1,5 +1,5 @@
 // app/admin/tournaments/[id]/page.tsx
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{

@@ -1,9 +1,9 @@
 // app/api/admin/withdrawal-statistics/route.ts
 // 辞退申請統計レポートAPI
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 // interface StatisticsQuery { // 未使用のため削除
 //   period?: string; // 'all', '3months', '6months', '1year'
@@ -60,27 +60,34 @@ export async function GET(request: NextRequest) {
   try {
     // 管理者権限チェック
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: '管理者権限が必要です' }, { status: 401 });
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || 'all';
-    const tournamentId = searchParams.get('tournament_id');
-    const status = searchParams.get('status');
+    const period = searchParams.get("period") || "all";
+    const tournamentId = searchParams.get("tournament_id");
+    const status = searchParams.get("status");
 
     // 期間フィルター作成
-    let dateFilter = '';
+    let dateFilter = "";
     const params: (string | number)[] = [];
-    
-    if (period !== 'all') {
+
+    if (period !== "all") {
       let months = 12;
       switch (period) {
-        case '3months': months = 3; break;
-        case '6months': months = 6; break;
-        case '1year': months = 12; break;
+        case "3months":
+          months = 3;
+          break;
+        case "6months":
+          months = 6;
+          break;
+        case "1year":
+          months = 12;
+          break;
       }
-      dateFilter = "AND tt.withdrawal_requested_at >= datetime('now', '-" + months + " months', '+9 hours')";
+      dateFilter =
+        "AND tt.withdrawal_requested_at >= datetime('now', '-" + months + " months', '+9 hours')";
     }
 
     // 基本統計の取得
@@ -93,13 +100,13 @@ export async function GET(request: NextRequest) {
       FROM t_tournament_teams tt
       WHERE tt.withdrawal_status != 'active'
       ${dateFilter}
-      ${tournamentId ? 'AND tt.tournament_id = ?' : ''}
-      ${status ? 'AND tt.withdrawal_status = ?' : ''}
+      ${tournamentId ? "AND tt.tournament_id = ?" : ""}
+      ${status ? "AND tt.withdrawal_status = ?" : ""}
     `;
-    
+
     if (tournamentId) params.push(parseInt(tournamentId));
     if (status) params.push(status);
-    
+
     const overview = await db.execute(overviewQuery, params);
     const overviewData = overview.rows[0];
 
@@ -113,11 +120,11 @@ export async function GET(request: NextRequest) {
       FROM t_tournament_teams tt
       WHERE tt.withdrawal_status != 'active'
       AND tt.withdrawal_requested_at >= datetime('now', '-30 days', '+9 hours')
-      ${tournamentId ? 'AND tt.tournament_id = ?' : ''}
+      ${tournamentId ? "AND tt.tournament_id = ?" : ""}
       GROUP BY DATE(tt.withdrawal_requested_at)
       ORDER BY DATE(tt.withdrawal_requested_at)
     `;
-    
+
     const timelineParams = tournamentId ? [parseInt(tournamentId)] : [];
     const timeline = await db.execute(timelineQuery, timelineParams);
 
@@ -135,15 +142,18 @@ export async function GET(request: NextRequest) {
       LEFT JOIN t_tournament_teams tt_all ON t.tournament_id = tt_all.tournament_id
       LEFT JOIN t_tournament_teams tt_withdrawn ON t.tournament_id = tt_withdrawn.tournament_id 
         AND tt_withdrawn.withdrawal_status != 'active'
-        ${dateFilter.replace('tt.', 'tt_withdrawn.')}
+        ${dateFilter.replace("tt.", "tt_withdrawn.")}
       WHERE t.created_at >= datetime('now', '-1 year', '+9 hours')
-      ${tournamentId ? 'AND t.tournament_id = ?' : ''}
+      ${tournamentId ? "AND t.tournament_id = ?" : ""}
       GROUP BY t.tournament_id, t.tournament_name
       HAVING withdrawal_requests > 0
       ORDER BY withdrawal_requests DESC
     `;
 
-    const tournamentStats = await db.execute(tournamentStatsQuery, tournamentId ? [parseInt(tournamentId)] : []);
+    const tournamentStats = await db.execute(
+      tournamentStatsQuery,
+      tournamentId ? [parseInt(tournamentId)] : [],
+    );
 
     // 辞退理由の分析
     const reasonsQuery = `
@@ -163,7 +173,7 @@ export async function GET(request: NextRequest) {
       WHERE tt.withdrawal_status != 'active'
       AND tt.withdrawal_reason IS NOT NULL
       ${dateFilter}
-      ${tournamentId ? 'AND tt.tournament_id = ?' : ''}
+      ${tournamentId ? "AND tt.tournament_id = ?" : ""}
       GROUP BY category
       ORDER BY count DESC
     `;
@@ -185,10 +195,13 @@ export async function GET(request: NextRequest) {
       AND tt.withdrawal_requested_at IS NOT NULL
       AND tt.withdrawal_processed_at IS NOT NULL
       ${dateFilter}
-      ${tournamentId ? 'AND tt.tournament_id = ?' : ''}
+      ${tournamentId ? "AND tt.tournament_id = ?" : ""}
     `;
 
-    const processingTime = await db.execute(processingTimeQuery, tournamentId ? [parseInt(tournamentId)] : []);
+    const processingTime = await db.execute(
+      processingTimeQuery,
+      tournamentId ? [parseInt(tournamentId)] : [],
+    );
 
     // ブロック別影響統計
     const blocksQuery = `
@@ -200,7 +213,7 @@ export async function GET(request: NextRequest) {
       WHERE tt.withdrawal_status IN ('withdrawal_approved')
       AND tt.assigned_block IS NOT NULL
       ${dateFilter}
-      ${tournamentId ? 'AND tt.tournament_id = ?' : ''}
+      ${tournamentId ? "AND tt.tournament_id = ?" : ""}
       GROUP BY tt.assigned_block
       ORDER BY affected_teams DESC
     `;
@@ -218,15 +231,15 @@ export async function GET(request: NextRequest) {
         pending_requests: Number(overviewData?.pending_requests || 0),
         approved_requests: approved,
         rejected_requests: Number(overviewData?.rejected_requests || 0),
-        approval_rate: Math.round(approvalRate * 100) / 100
+        approval_rate: Math.round(approvalRate * 100) / 100,
       },
-      timeline: timeline.rows.map(row => ({
+      timeline: timeline.rows.map((row) => ({
         date: String(row.date),
         requests: Number(row.requests),
         approvals: Number(row.approvals),
-        rejections: Number(row.rejections)
+        rejections: Number(row.rejections),
       })),
-      tournaments: tournamentStats.rows.map(row => {
+      tournaments: tournamentStats.rows.map((row) => {
         const totalTeams = Number(row.total_teams || 0);
         const withdrawalRequests = Number(row.withdrawal_requests || 0);
         return {
@@ -234,42 +247,43 @@ export async function GET(request: NextRequest) {
           tournament_name: String(row.tournament_name),
           total_teams: totalTeams,
           withdrawal_requests: withdrawalRequests,
-          withdrawal_rate: totalTeams > 0 ? Math.round((withdrawalRequests / totalTeams) * 10000) / 100 : 0,
+          withdrawal_rate:
+            totalTeams > 0 ? Math.round((withdrawalRequests / totalTeams) * 10000) / 100 : 0,
           approved: Number(row.approved || 0),
           rejected: Number(row.rejected || 0),
-          pending: Number(row.pending || 0)
+          pending: Number(row.pending || 0),
         };
       }),
-      reasons: reasons.rows.map(row => ({
+      reasons: reasons.rows.map((row) => ({
         category: String(row.category),
         count: Number(row.count),
-        percentage: totalReasons > 0 ? Math.round((Number(row.count) / totalReasons) * 10000) / 100 : 0
+        percentage:
+          totalReasons > 0 ? Math.round((Number(row.count) / totalReasons) * 10000) / 100 : 0,
       })),
       processing_times: {
-        average_days: Math.round((Number(processingTime.rows[0]?.avg_days || 0)) * 100) / 100,
-        fastest_hours: Math.round((Number(processingTime.rows[0]?.fastest_hours || 0)) * 100) / 100,
-        slowest_days: Math.round((Number(processingTime.rows[0]?.slowest_days || 0)) * 100) / 100,
+        average_days: Math.round(Number(processingTime.rows[0]?.avg_days || 0) * 100) / 100,
+        fastest_hours: Math.round(Number(processingTime.rows[0]?.fastest_hours || 0) * 100) / 100,
+        slowest_days: Math.round(Number(processingTime.rows[0]?.slowest_days || 0) * 100) / 100,
         within_24h: Number(processingTime.rows[0]?.within_24h || 0),
         within_72h: Number(processingTime.rows[0]?.within_72h || 0),
-        over_week: Number(processingTime.rows[0]?.over_week || 0)
+        over_week: Number(processingTime.rows[0]?.over_week || 0),
       },
-      blocks_impact: blocks.rows.map(row => ({
+      blocks_impact: blocks.rows.map((row) => ({
         block_name: String(row.block_name),
         affected_teams: Number(row.affected_teams),
-        affected_matches: Number(row.affected_matches)
-      }))
+        affected_matches: Number(row.affected_matches),
+      })),
     };
 
     return NextResponse.json({
       success: true,
-      data: statistics
+      data: statistics,
     });
-
   } catch (error) {
-    console.error('統計レポート取得エラー:', error);
+    console.error("統計レポート取得エラー:", error);
     return NextResponse.json(
-      { error: '統計レポートの取得中にエラーが発生しました' },
-      { status: 500 }
+      { error: "統計レポートの取得中にエラーが発生しました" },
+      { status: 500 },
     );
   }
 }

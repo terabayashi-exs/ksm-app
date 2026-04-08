@@ -1,33 +1,36 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const tournamentGroupSchema = z.object({
-  group_name: z.string().min(1, '大会名は必須です').max(100, '大会名は100文字以内で入力してください'),
-  organizer: z.string().max(100, '主催者名は100文字以内で入力してください').optional(),
+  group_name: z
+    .string()
+    .min(1, "大会名は必須です")
+    .max(100, "大会名は100文字以内で入力してください"),
+  organizer: z.string().max(100, "主催者名は100文字以内で入力してください").optional(),
   venue_id: z.string().optional(),
   event_start_date: z.string().optional(),
   event_end_date: z.string().optional(),
   recruitment_start_date: z.string().optional(),
   recruitment_end_date: z.string().optional(),
-  visibility: z.enum(['open', 'closed']),
-  event_description: z.string().max(500, '説明は500文字以内で入力してください').optional(),
+  visibility: z.enum(["open", "closed"]),
+  event_description: z.string().max(500, "説明は500文字以内で入力してください").optional(),
 });
 
 type TournamentGroupFormData = z.infer<typeof tournamentGroupSchema>;
@@ -62,18 +65,18 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
     resolver: zodResolver(tournamentGroupSchema),
     defaultValues: {
       group_name: initialData.group_name,
-      organizer: initialData.organizer || '',
-      venue_id: initialData.venue_id ? String(initialData.venue_id) : 'none',
-      event_start_date: initialData.event_start_date || '',
-      event_end_date: initialData.event_end_date || '',
-      recruitment_start_date: initialData.recruitment_start_date || '',
-      recruitment_end_date: initialData.recruitment_end_date || '',
-      visibility: (initialData.visibility as 'open' | 'closed') || 'open',
-      event_description: initialData.event_description || '',
+      organizer: initialData.organizer || "",
+      venue_id: initialData.venue_id ? String(initialData.venue_id) : "none",
+      event_start_date: initialData.event_start_date || "",
+      event_end_date: initialData.event_end_date || "",
+      recruitment_start_date: initialData.recruitment_start_date || "",
+      recruitment_end_date: initialData.recruitment_end_date || "",
+      visibility: (initialData.visibility as "open" | "closed") || "open",
+      event_description: initialData.event_description || "",
     },
   });
 
-  const selectedVisibility = watch('visibility');
+  const selectedVisibility = watch("visibility");
 
   const onSubmit = async (data: TournamentGroupFormData) => {
     setIsSubmitting(true);
@@ -81,13 +84,13 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
 
     try {
       const response = await fetch(`/api/tournament-groups/${initialData.group_id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...data,
-          venue_id: data.venue_id && data.venue_id !== 'none' ? parseInt(data.venue_id) : null,
+          venue_id: data.venue_id && data.venue_id !== "none" ? parseInt(data.venue_id) : null,
           organizer: data.organizer || null,
           event_start_date: data.event_start_date || null,
           event_end_date: data.event_end_date || null,
@@ -102,11 +105,11 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
       if (result.success) {
         router.push(`/admin/tournament-groups/${initialData.group_id}`);
       } else {
-        setError(result.error || '大会の更新に失敗しました');
+        setError(result.error || "大会の更新に失敗しました");
       }
     } catch (err) {
-      console.error('大会更新エラー:', err);
-      setError('大会の更新中にエラーが発生しました');
+      console.error("大会更新エラー:", err);
+      setError("大会の更新中にエラーが発生しました");
     } finally {
       setIsSubmitting(false);
     }
@@ -121,10 +124,12 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
         <CardContent className="space-y-4">
           {/* 大会名 */}
           <div>
-            <Label htmlFor="group_name">大会名 <span className="text-destructive">*</span></Label>
+            <Label htmlFor="group_name">
+              大会名 <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="group_name"
-              {...register('group_name')}
+              {...register("group_name")}
               placeholder="例: 富山県PK選手権大会2025"
             />
             {errors.group_name && (
@@ -135,11 +140,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
           {/* 主催者 */}
           <div>
             <Label htmlFor="organizer">主催者</Label>
-            <Input
-              id="organizer"
-              {...register('organizer')}
-              placeholder="例: 富山県サッカー協会"
-            />
+            <Input id="organizer" {...register("organizer")} placeholder="例: 富山県サッカー協会" />
             {errors.organizer && (
               <p className="text-sm text-red-500 mt-1">{errors.organizer.message}</p>
             )}
@@ -150,7 +151,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
             <Label htmlFor="event_description">大会説明</Label>
             <Textarea
               id="event_description"
-              {...register('event_description')}
+              {...register("event_description")}
               placeholder="大会の概要や特徴を入力してください"
               rows={4}
             />
@@ -170,19 +171,11 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="event_start_date">大会開始日</Label>
-              <Input
-                id="event_start_date"
-                type="date"
-                {...register('event_start_date')}
-              />
+              <Input id="event_start_date" type="date" {...register("event_start_date")} />
             </div>
             <div>
               <Label htmlFor="event_end_date">大会終了日</Label>
-              <Input
-                id="event_end_date"
-                type="date"
-                {...register('event_end_date')}
-              />
+              <Input id="event_end_date" type="date" {...register("event_end_date")} />
             </div>
           </div>
 
@@ -193,16 +186,12 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
               <Input
                 id="recruitment_start_date"
                 type="date"
-                {...register('recruitment_start_date')}
+                {...register("recruitment_start_date")}
               />
             </div>
             <div>
               <Label htmlFor="recruitment_end_date">募集終了日</Label>
-              <Input
-                id="recruitment_end_date"
-                type="date"
-                {...register('recruitment_end_date')}
-              />
+              <Input id="recruitment_end_date" type="date" {...register("recruitment_end_date")} />
             </div>
           </div>
         </CardContent>
@@ -216,7 +205,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
           <div>
             <Label htmlFor="visibility">公開状態</Label>
             <Select
-              onValueChange={(value) => setValue('visibility', value as 'open' | 'closed')}
+              onValueChange={(value) => setValue("visibility", value as "open" | "closed")}
               value={selectedVisibility}
             >
               <SelectTrigger>
@@ -249,7 +238,7 @@ export default function TournamentGroupEditForm({ initialData }: TournamentGroup
           キャンセル
         </Button>
         <Button type="submit" variant="outline" disabled={isSubmitting}>
-          {isSubmitting ? '更新中...' : '✏️ 大会を更新'}
+          {isSubmitting ? "更新中..." : "✏️ 大会を更新"}
         </Button>
       </div>
     </form>

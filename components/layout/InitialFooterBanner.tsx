@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 /**
  * 初期表示時のみ表示される固定フッターバナー
@@ -26,10 +26,10 @@ export default function InitialFooterBanner() {
       scrollTimeout = setTimeout(handleScroll, 10);
     };
 
-    window.addEventListener('scroll', debouncedHandleScroll, { passive: true });
+    window.addEventListener("scroll", debouncedHandleScroll, { passive: true });
 
     return () => {
-      window.removeEventListener('scroll', debouncedHandleScroll);
+      window.removeEventListener("scroll", debouncedHandleScroll);
       clearTimeout(scrollTimeout);
     };
   }, []);
@@ -37,7 +37,7 @@ export default function InitialFooterBanner() {
   return (
     <div
       className={`fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg z-40 transition-all duration-500 ease-in-out ${
-        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+        isVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       }`}
     >
       <div className="container mx-auto px-4 py-3">

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { QrCode, Copy, ExternalLink, Clock, Users } from 'lucide-react';
+import { Clock, Copy, ExternalLink, QrCode, Users } from "lucide-react";
+import Image from "next/image";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface QRData {
   match_id: number;
@@ -31,7 +31,7 @@ interface QRData {
 export default function MatchQRCodePage() {
   const params = useParams();
   const matchId = params.id as string;
-  
+
   const [qrData, setQRData] = useState<QRData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +42,14 @@ export default function MatchQRCodePage() {
       try {
         const response = await fetch(`/api/matches/${matchId}/qr`);
         const result = await response.json();
-        
+
         if (result.success) {
           setQRData(result.data);
         } else {
-          setError(result.error || 'QRコードの取得に失敗しました');
+          setError(result.error || "QRコードの取得に失敗しました");
         }
       } catch {
-        setError('サーバーとの通信に失敗しました');
+        setError("サーバーとの通信に失敗しました");
       } finally {
         setLoading(false);
       }
@@ -67,7 +67,7 @@ export default function MatchQRCodePage() {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error('Copy failed:', err);
+        console.error("Copy failed:", err);
       }
     }
   };
@@ -153,22 +153,20 @@ export default function MatchQRCodePage() {
           <CardContent className="p-8">
             <div className="text-center">
               <div className="inline-block p-4 bg-white rounded-lg shadow-inner">
-                <Image 
-                  src={qrCodeImageUrl} 
+                <Image
+                  src={qrCodeImageUrl}
                   alt="QRコード"
                   width={288}
                   height={288}
                   className="mx-auto"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
+                    target.style.display = "none";
                     const fallback = target.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'block';
+                    if (fallback) fallback.style.display = "block";
                   }}
                 />
-                <div 
-                  className="w-72 h-72 mx-auto bg-gray-50 rounded-lg flex items-center justify-center text-gray-500 hidden"
-                >
+                <div className="w-72 h-72 mx-auto bg-gray-50 rounded-lg flex items-center justify-center text-gray-500 hidden">
                   <div className="text-center">
                     <QrCode className="w-16 h-16 mx-auto mb-2" />
                     <p>QRコード画像を読み込めませんでした</p>
@@ -176,7 +174,8 @@ export default function MatchQRCodePage() {
                 </div>
               </div>
               <p className="mt-4 text-sm text-gray-500">
-                審判の方はこのQRコードをスキャンして{qrData.sport_config?.score_label || '得点'}結果入力画面にアクセスしてください
+                審判の方はこのQRコードをスキャンして{qrData.sport_config?.score_label || "得点"}
+                結果入力画面にアクセスしてください
               </p>
             </div>
           </CardContent>
@@ -192,9 +191,9 @@ export default function MatchQRCodePage() {
                 className="flex items-center space-x-2"
               >
                 <Copy className="w-4 h-4" />
-                <span>{copied ? 'コピー済み!' : 'URLをコピー'}</span>
+                <span>{copied ? "コピー済み!" : "URLをコピー"}</span>
               </Button>
-              
+
               <Button
                 variant="outline"
                 onClick={openInNewTab}
@@ -212,10 +211,16 @@ export default function MatchQRCodePage() {
           <CardContent className="p-4">
             <h3 className="font-medium text-gray-500 mb-2">アクセス情報</h3>
             <div className="text-sm text-gray-500 space-y-1">
-              <p>• 有効期間: {new Date(qrData.valid_from).toLocaleString('ja-JP')} ～ {new Date(qrData.valid_until).toLocaleString('ja-JP')}</p>
+              <p>
+                • 有効期間: {new Date(qrData.valid_from).toLocaleString("ja-JP")} ～{" "}
+                {new Date(qrData.valid_until).toLocaleString("ja-JP")}
+              </p>
               <p>• 試合開始30分前から終了90分後まで有効</p>
-              <p>• QRコードまたはURLから審判用{qrData.sport_config?.score_label || '得点'}結果入力画面にアクセスできます</p>
-              {process.env.NODE_ENV === 'development' && (
+              <p>
+                • QRコードまたはURLから審判用{qrData.sport_config?.score_label || "得点"}
+                結果入力画面にアクセスできます
+              </p>
+              {process.env.NODE_ENV === "development" && (
                 <div className="mt-4 p-2 bg-gray-50 rounded text-xs break-all">
                   <strong>Debug URL:</strong> {qrData.qr_url}
                 </div>

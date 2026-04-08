@@ -17,24 +17,26 @@
  *   npx tsx scripts/migrate-0003-add-phases-field.ts main
  */
 
-import { createClient } from '@libsql/client';
-import * as dotenv from 'dotenv';
+import { createClient } from "@libsql/client";
+import * as dotenv from "dotenv";
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 
 // 環境に応じた接続情報を取得
-const env = process.argv[2] || 'stag';
-const dbUrl = env === 'stag'
-  ? process.env.DATABASE_URL_STAG
-  : env === 'main'
-  ? process.env.DATABASE_URL_MAIN
-  : process.env.DATABASE_URL;
+const env = process.argv[2] || "stag";
+const dbUrl =
+  env === "stag"
+    ? process.env.DATABASE_URL_STAG
+    : env === "main"
+      ? process.env.DATABASE_URL_MAIN
+      : process.env.DATABASE_URL;
 
-const dbToken = env === 'stag'
-  ? process.env.DATABASE_AUTH_TOKEN_STAG
-  : env === 'main'
-  ? process.env.DATABASE_AUTH_TOKEN_MAIN
-  : process.env.DATABASE_AUTH_TOKEN;
+const dbToken =
+  env === "stag"
+    ? process.env.DATABASE_AUTH_TOKEN_STAG
+    : env === "main"
+      ? process.env.DATABASE_AUTH_TOKEN_MAIN
+      : process.env.DATABASE_AUTH_TOKEN;
 
 const db = createClient({
   url: dbUrl!,
@@ -53,7 +55,7 @@ interface TournamentPhase {
   id: string;
   order: number;
   name: string;
-  format_type: 'league' | 'tournament';
+  format_type: "league" | "tournament";
 }
 
 interface TournamentPhases {
@@ -65,15 +67,15 @@ interface TournamentPhases {
  * 'league', 'リーグ戦' -> 'league'
  * 'tournament', 'トーナメント' -> 'tournament'
  */
-function normalizeFormatType(formatType: string | null): 'league' | 'tournament' | null {
+function normalizeFormatType(formatType: string | null): "league" | "tournament" | null {
   if (!formatType) return null;
 
   const normalized = formatType.toLowerCase();
-  if (normalized.includes('league') || normalized.includes('リーグ')) {
-    return 'league';
+  if (normalized.includes("league") || normalized.includes("リーグ")) {
+    return "league";
   }
-  if (normalized.includes('tournament') || normalized.includes('トーナメント')) {
-    return 'tournament';
+  if (normalized.includes("tournament") || normalized.includes("トーナメント")) {
+    return "tournament";
   }
 
   return null;
@@ -85,7 +87,7 @@ function normalizeFormatType(formatType: string | null): 'league' | 'tournament'
  */
 function generatePhases(
   preliminaryType: string | null,
-  finalType: string | null
+  finalType: string | null,
 ): TournamentPhases | null {
   const phases: TournamentPhase[] = [];
 
@@ -94,9 +96,9 @@ function generatePhases(
     const formatType = normalizeFormatType(preliminaryType);
     if (formatType) {
       phases.push({
-        id: 'preliminary',
+        id: "preliminary",
         order: 1,
-        name: '予選',
+        name: "予選",
         format_type: formatType,
       });
     }
@@ -107,9 +109,9 @@ function generatePhases(
     const formatType = normalizeFormatType(finalType);
     if (formatType) {
       phases.push({
-        id: 'final',
+        id: "final",
         order: phases.length + 1,
-        name: '決勝トーナメント',
+        name: "決勝トーナメント",
         format_type: formatType,
       });
     }
@@ -123,13 +125,13 @@ function generatePhases(
 }
 
 async function main() {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`  マイグレーション 0003: phases フィールド移行 (環境: ${env})`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   try {
     // 現在のデータを取得
-    console.log('📖 現在のm_tournament_formatsデータを取得中...\n');
+    console.log("📖 現在のm_tournament_formatsデータを取得中...\n");
     const result = await db.execute(`
       SELECT
         format_id,
@@ -150,9 +152,9 @@ async function main() {
 
     for (const format of formats) {
       console.log(`\n📋 フォーマットID ${format.format_id}: ${format.format_name}`);
-      console.log(`   preliminary_format_type: ${format.preliminary_format_type || '(null)'}`);
-      console.log(`   final_format_type: ${format.final_format_type || '(null)'}`);
-      console.log(`   現在のphases: ${format.phases || '(null)'}`);
+      console.log(`   preliminary_format_type: ${format.preliminary_format_type || "(null)"}`);
+      console.log(`   final_format_type: ${format.final_format_type || "(null)"}`);
+      console.log(`   現在のphases: ${format.phases || "(null)"}`);
 
       // phasesが既に設定されている場合はスキップ
       if (format.phases) {
@@ -162,10 +164,7 @@ async function main() {
       }
 
       // phasesオブジェクトを生成
-      const phases = generatePhases(
-        format.preliminary_format_type,
-        format.final_format_type
-      );
+      const phases = generatePhases(format.preliminary_format_type, format.final_format_type);
 
       if (!phases) {
         console.log(`   ⊘ スキップ: 有効なformat_typeが見つかりません`);
@@ -186,15 +185,15 @@ async function main() {
       updatedCount++;
     }
 
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  ✅ 移行完了');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("  ✅ 移行完了");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(`更新: ${updatedCount}件`);
     console.log(`スキップ: ${skippedCount}件`);
     console.log(`合計: ${formats.length}件\n`);
 
     // 更新後のデータを確認
-    console.log('📊 更新後のデータ確認:\n');
+    console.log("📊 更新後のデータ確認:\n");
     const verifyResult = await db.execute(`
       SELECT
         format_id,
@@ -210,9 +209,8 @@ async function main() {
       console.log(`ID ${format.format_id}: ${format.format_name}`);
       console.log(`  ${format.phases}\n`);
     }
-
   } catch (error) {
-    console.error('❌ エラーが発生しました:', error);
+    console.error("❌ エラーが発生しました:", error);
     process.exit(1);
   } finally {
     db.close();

@@ -1,22 +1,27 @@
 // app/admin/tournaments/[id]/edit/page.tsx
 export const metadata = { title: "部門編集" };
 
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
-import TournamentEditForm from '@/components/forms/TournamentEditForm';
-import { db } from '@/lib/db';
-import { Tournament } from '@/lib/types';
-import type { TournamentStatus } from '@/lib/tournament-status';
+import { ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import TournamentEditForm from "@/components/forms/TournamentEditForm";
+import Header from "@/components/layout/Header";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import type { TournamentStatus } from "@/lib/tournament-status";
+import { Tournament } from "@/lib/types";
 
-type TournamentWithExtras = Tournament & { sport_name: string | null; default_match_duration: number | null; default_break_duration: number | null };
+type TournamentWithExtras = Tournament & {
+  sport_name: string | null;
+  default_match_duration: number | null;
+  default_break_duration: number | null;
+};
 
 async function getTournament(id: string): Promise<TournamentWithExtras | null> {
   try {
     // Fetching tournament data server-side
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT
         t.tournament_id,
         t.tournament_name,
@@ -49,7 +54,9 @@ async function getTournament(id: string): Promise<TournamentWithExtras | null> {
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       WHERE t.tournament_id = ?
-    `, [parseInt(id)]);
+    `,
+      [parseInt(id)],
+    );
 
     if (result.rows.length === 0) {
       return null;
@@ -67,7 +74,7 @@ async function getTournament(id: string): Promise<TournamentWithExtras | null> {
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
       status: row.status as TournamentStatus,
-      visibility: row.visibility === 'open' ? 1 : 0,
+      visibility: row.visibility === "open" ? 1 : 0,
       show_players_public: Number(row.show_players_public) === 1,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
@@ -80,11 +87,19 @@ async function getTournament(id: string): Promise<TournamentWithExtras | null> {
       format_name: row.format_name as string,
       group_name: row.group_name ? String(row.group_name) : null,
       sport_name: row.sport_name ? String(row.sport_name) : null,
-      default_match_duration: row.default_match_duration ? Number(row.default_match_duration) : null,
-      default_break_duration: row.default_break_duration ? Number(row.default_break_duration) : null,
-    } as Tournament & { sport_name: string | null; default_match_duration: number | null; default_break_duration: number | null };
+      default_match_duration: row.default_match_duration
+        ? Number(row.default_match_duration)
+        : null,
+      default_break_duration: row.default_break_duration
+        ? Number(row.default_break_duration)
+        : null,
+    } as Tournament & {
+      sport_name: string | null;
+      default_match_duration: number | null;
+      default_break_duration: number | null;
+    };
   } catch (error) {
-    console.error('大会データの取得に失敗:', error);
+    console.error("大会データの取得に失敗:", error);
     return null;
   }
 }
@@ -94,21 +109,21 @@ interface EditTournamentPageProps {
 }
 
 // キャッシュを無効化
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function EditTournamentPage({ params }: EditTournamentPageProps) {
   const session = await auth();
 
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-    redirect('/auth/admin/login');
+  if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+    redirect("/auth/admin/login");
   }
 
   const resolvedParams = await params;
   const tournament = await getTournament(resolvedParams.id);
 
   if (!tournament) {
-    redirect('/admin');
+    redirect("/admin");
   }
 
   return (
@@ -118,12 +133,18 @@ export default async function EditTournamentPage({ params }: EditTournamentPageP
       {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />

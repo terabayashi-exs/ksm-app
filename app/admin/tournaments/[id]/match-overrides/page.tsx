@@ -1,17 +1,17 @@
 // app/admin/tournaments/[id]/match-overrides/page.tsx
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { ArrowRight, Pencil, AlertCircle, List, RefreshCw, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
-import { MatchOverrideDialog } from '@/components/features/admin/MatchOverrideDialog';
-import { BulkMatchOverrideDialog } from '@/components/features/admin/BulkMatchOverrideDialog';
-import { formatTeamSourceDisplay } from '@/lib/team-source-display';
+import { AlertCircle, ArrowRight, ChevronRight, Home, List, Pencil, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { BulkMatchOverrideDialog } from "@/components/features/admin/BulkMatchOverrideDialog";
+import { MatchOverrideDialog } from "@/components/features/admin/MatchOverrideDialog";
+import Header from "@/components/layout/Header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatTeamSourceDisplay } from "@/lib/team-source-display";
 
 interface MatchTemplate {
   match_code: string;
@@ -38,7 +38,7 @@ interface PhaseConfig {
   id: string;
   name: string;
   order: number;
-  format_type: 'league' | 'tournament';
+  format_type: "league" | "tournament";
 }
 
 interface MatchDataForSources {
@@ -56,13 +56,13 @@ interface TournamentTeam {
 
 function buildSourceCandidates(
   allMatches: MatchDataForSources[],
-  blockTeamCounts: { block_name: string; expected_team_count: number }[]
+  blockTeamCounts: { block_name: string; expected_team_count: number }[],
 ) {
   const referencedMatchCodes = new Set<string>();
   const leagueSet = new Set<string>();
 
-  allMatches.forEach(match => {
-    [match.team1_source, match.team2_source].forEach(source => {
+  allMatches.forEach((match) => {
+    [match.team1_source, match.team2_source].forEach((source) => {
       if (!source) return;
       const m = source.match(/^([A-Z]+\d+)_(winner|loser)$/);
       if (m) {
@@ -74,28 +74,29 @@ function buildSourceCandidates(
   });
 
   const tournamentSet = new Set<string>();
-  referencedMatchCodes.forEach(code => {
+  referencedMatchCodes.forEach((code) => {
     tournamentSet.add(`${code}_winner`);
     tournamentSet.add(`${code}_loser`);
   });
 
-  blockTeamCounts.forEach(block => {
+  blockTeamCounts.forEach((block) => {
     for (let i = 1; i <= block.expected_team_count; i++) {
       leagueSet.add(`${block.block_name}_${i}`);
     }
   });
 
-  const sortSources = (sources: string[]) => sources.sort((a, b) => {
-    const blockA = a.match(/^([A-Z])_(\d+)$/);
-    const blockB = b.match(/^([A-Z])_(\d+)$/);
-    if (blockA && blockB) {
-      if (blockA[1] !== blockB[1]) return blockA[1].localeCompare(blockB[1]);
-      return parseInt(blockA[2]) - parseInt(blockB[2]);
-    }
-    if (blockA) return -1;
-    if (blockB) return 1;
-    return a.localeCompare(b);
-  });
+  const sortSources = (sources: string[]) =>
+    sources.sort((a, b) => {
+      const blockA = a.match(/^([A-Z])_(\d+)$/);
+      const blockB = b.match(/^([A-Z])_(\d+)$/);
+      if (blockA && blockB) {
+        if (blockA[1] !== blockB[1]) return blockA[1].localeCompare(blockB[1]);
+        return parseInt(blockA[2]) - parseInt(blockB[2]);
+      }
+      if (blockA) return -1;
+      if (blockB) return 1;
+      return a.localeCompare(b);
+    });
 
   return {
     tournamentSources: sortSources(Array.from(tournamentSet)),
@@ -111,9 +112,11 @@ export default function MatchOverridesPage() {
   const [overrides, setOverrides] = useState<MatchOverride[]>([]);
   const [allMatches, setAllMatches] = useState<MatchDataForSources[]>([]);
   const [phases, setPhases] = useState<PhaseConfig[]>([]);
-  const [blockTeamCounts, setBlockTeamCounts] = useState<{ block_name: string; expected_team_count: number }[]>([]);
+  const [blockTeamCounts, setBlockTeamCounts] = useState<
+    { block_name: string; expected_team_count: number }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activePhase, setActivePhase] = useState<string>('');
+  const [activePhase, setActivePhase] = useState<string>("");
   const [selectedMatch, setSelectedMatch] = useState<{
     matchCode: string;
     phase: string;
@@ -128,15 +131,13 @@ export default function MatchOverridesPage() {
 
   const sourceCandidates = useMemo(
     () => buildSourceCandidates(allMatches, blockTeamCounts),
-    [allMatches, blockTeamCounts]
+    [allMatches, blockTeamCounts],
   );
 
   // テンプレートからフェーズ一覧を抽出
   const phasesWithTemplates = useMemo(() => {
-    const phaseIds = new Set(templates.map(t => t.phase));
-    return phases
-      .filter(p => phaseIds.has(p.id))
-      .sort((a, b) => a.order - b.order);
+    const phaseIds = new Set(templates.map((t) => t.phase));
+    return phases.filter((p) => phaseIds.has(p.id)).sort((a, b) => a.order - b.order);
   }, [templates, phases]);
 
   useEffect(() => {
@@ -146,7 +147,13 @@ export default function MatchOverridesPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [tournamentResponse, matchesResponse, blockCountsResponse, overridesResponse, teamsResponse] = await Promise.all([
+      const [
+        tournamentResponse,
+        matchesResponse,
+        blockCountsResponse,
+        overridesResponse,
+        teamsResponse,
+      ] = await Promise.all([
         fetch(`/api/tournaments/${tournamentId}`),
         fetch(`/api/tournaments/${tournamentId}/matches`),
         fetch(`/api/tournaments/${tournamentId}/block-team-counts`),
@@ -154,13 +161,14 @@ export default function MatchOverridesPage() {
         fetch(`/api/admin/tournaments/${tournamentId}/teams`),
       ]);
 
-      const [tournamentData, matchesData, blockCountsData, overridesData, teamsData] = await Promise.all([
-        tournamentResponse.json(),
-        matchesResponse.json(),
-        blockCountsResponse.json(),
-        overridesResponse.json(),
-        teamsResponse.json(),
-      ]);
+      const [tournamentData, matchesData, blockCountsData, overridesData, teamsData] =
+        await Promise.all([
+          tournamentResponse.json(),
+          matchesResponse.json(),
+          blockCountsResponse.json(),
+          overridesResponse.json(),
+          teamsResponse.json(),
+        ]);
 
       if (tournamentData.success && tournamentData.data?.phases?.phases) {
         setPhases(tournamentData.data.phases.phases);
@@ -173,15 +181,18 @@ export default function MatchOverridesPage() {
       if (matchesData.success && Array.isArray(matchesData.data)) {
         setAllMatches(matchesData.data);
         const matchesWithSource = matchesData.data
-          .filter((m: MatchTemplate & { round_name?: string; display_round_name?: string }) => m.team1_source || m.team2_source)
+          .filter(
+            (m: MatchTemplate & { round_name?: string; display_round_name?: string }) =>
+              m.team1_source || m.team2_source,
+          )
           .map((m: MatchTemplate & { round_name?: string; display_round_name?: string }) => ({
             match_code: m.match_code,
             phase: m.phase,
-            round_name: m.round_name || m.display_round_name || '',
+            round_name: m.round_name || m.display_round_name || "",
             team1_source: m.team1_source,
             team2_source: m.team2_source,
-            team1_display_name: m.team1_display_name || '',
-            team2_display_name: m.team2_display_name || '',
+            team1_display_name: m.team1_display_name || "",
+            team2_display_name: m.team2_display_name || "",
           }));
         setTemplates(matchesWithSource);
       } else {
@@ -194,15 +205,17 @@ export default function MatchOverridesPage() {
       }
 
       if (teamsData.success && teamsData.data?.teams) {
-        setTournamentTeams(teamsData.data.teams.map((t: TournamentTeam) => ({
-          tournament_team_id: t.tournament_team_id,
-          team_name: t.team_name,
-          team_omission: t.team_omission || '',
-        })));
+        setTournamentTeams(
+          teamsData.data.teams.map((t: TournamentTeam) => ({
+            tournament_team_id: t.tournament_team_id,
+            team_name: t.team_name,
+            team_omission: t.team_omission || "",
+          })),
+        );
       }
     } catch (error) {
-      console.error('データ取得エラー:', error);
-      alert('データの取得に失敗しました');
+      console.error("データ取得エラー:", error);
+      alert("データの取得に失敗しました");
     } finally {
       setIsLoading(false);
     }
@@ -215,8 +228,13 @@ export default function MatchOverridesPage() {
     }
   }, [phasesWithTemplates, activePhase]);
 
-  const handleEditMatch = (matchCode: string, phase: string, originalTeam1Source: string | null, originalTeam2Source: string | null) => {
-    const override = overrides.find(o => o.match_code === matchCode);
+  const handleEditMatch = (
+    matchCode: string,
+    phase: string,
+    originalTeam1Source: string | null,
+    originalTeam2Source: string | null,
+  ) => {
+    const override = overrides.find((o) => o.match_code === matchCode);
     setSelectedMatch({
       matchCode,
       phase,
@@ -227,19 +245,23 @@ export default function MatchOverridesPage() {
     });
   };
 
-  const getCurrentSource = (matchCode: string, position: 'team1' | 'team2', originalSource: string | null): string | null => {
-    const override = overrides.find(o => o.match_code === matchCode);
+  const getCurrentSource = (
+    matchCode: string,
+    position: "team1" | "team2",
+    originalSource: string | null,
+  ): string | null => {
+    const override = overrides.find((o) => o.match_code === matchCode);
     if (override) {
-      return position === 'team1' ? override.team1_source_override : override.team2_source_override;
+      return position === "team1" ? override.team1_source_override : override.team2_source_override;
     }
     return originalSource;
   };
 
   const hasOverride = (matchCode: string): boolean => {
-    return overrides.some(o => o.match_code === matchCode);
+    return overrides.some((o) => o.match_code === matchCode);
   };
 
-  const filteredTemplates = templates.filter(t => t.phase === activePhase);
+  const filteredTemplates = templates.filter((t) => t.phase === activePhase);
 
   if (isLoading) {
     return (
@@ -254,11 +276,24 @@ export default function MatchOverridesPage() {
       <Header />
       <div className="container mx-auto py-8 max-w-6xl">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            マイダッシュボード
+          </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">個別ルール設定</span>
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            個別ルール設定
+          </span>
         </nav>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">試合進出条件の設定</h1>
@@ -276,29 +311,34 @@ export default function MatchOverridesPage() {
               size="sm"
               disabled={isPromoting}
               onClick={async () => {
-                if (!confirm('チーム進出処理を実行しますか？\n現在の順位表に基づいて、決勝トーナメント等の試合にチームを割り当てます。')) return;
+                if (
+                  !confirm(
+                    "チーム進出処理を実行しますか？\n現在の順位表に基づいて、決勝トーナメント等の試合にチームを割り当てます。",
+                  )
+                )
+                  return;
                 setIsPromoting(true);
                 try {
                   const res = await fetch(`/api/tournaments/${tournamentId}/update-rankings`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'promote_only' })
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "promote_only" }),
                   });
                   const data = await res.json();
                   if (data.success) {
-                    alert('チーム進出処理が完了しました。');
+                    alert("チーム進出処理が完了しました。");
                   } else {
-                    alert(`エラー: ${data.error || '進出処理に失敗しました'}`);
+                    alert(`エラー: ${data.error || "進出処理に失敗しました"}`);
                   }
                 } catch {
-                  alert('進出処理中にエラーが発生しました。');
+                  alert("進出処理中にエラーが発生しました。");
                 } finally {
                   setIsPromoting(false);
                 }
               }}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isPromoting ? 'animate-spin' : ''}`} />
-              {isPromoting ? '処理中...' : 'チーム進出処理'}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isPromoting ? "animate-spin" : ""}`} />
+              {isPromoting ? "処理中..." : "チーム進出処理"}
             </Button>
           </div>
         </div>
@@ -318,19 +358,20 @@ export default function MatchOverridesPage() {
         {/* フェーズタブ */}
         {phasesWithTemplates.length > 1 && (
           <nav className={`grid gap-1 mb-6 grid-cols-${Math.min(phasesWithTemplates.length, 4)}`}>
-            {phasesWithTemplates.map(phase => (
+            {phasesWithTemplates.map((phase) => (
               <button
                 key={phase.id}
                 onClick={() => setActivePhase(phase.id)}
                 className={`py-2.5 px-3 text-sm font-medium rounded-md transition-colors whitespace-nowrap
-                  ${activePhase === phase.id
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                  ${
+                    activePhase === phase.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                   }`}
               >
                 {phase.name}
                 <span className="ml-1 text-xs opacity-70">
-                  ({templates.filter(t => t.phase === phase.id).length})
+                  ({templates.filter((t) => t.phase === phase.id).length})
                 </span>
               </button>
             ))}
@@ -345,20 +386,33 @@ export default function MatchOverridesPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredTemplates.map(template => {
-              const currentTeam1Source = getCurrentSource(template.match_code, 'team1', template.team1_source);
-              const currentTeam2Source = getCurrentSource(template.match_code, 'team2', template.team2_source);
+            {filteredTemplates.map((template) => {
+              const currentTeam1Source = getCurrentSource(
+                template.match_code,
+                "team1",
+                template.team1_source,
+              );
+              const currentTeam2Source = getCurrentSource(
+                template.match_code,
+                "team2",
+                template.team2_source,
+              );
               const isOverridden = hasOverride(template.match_code);
-              const override = overrides.find(o => o.match_code === template.match_code);
+              const override = overrides.find((o) => o.match_code === template.match_code);
 
               return (
-                <Card key={template.match_code} className={isOverridden ? 'border-primary/30 bg-primary/5' : ''}>
+                <Card
+                  key={template.match_code}
+                  className={isOverridden ? "border-primary/30 bg-primary/5" : ""}
+                >
                   <CardContent className="py-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="text-base font-semibold">{template.match_code}</h3>
-                          <Badge variant="outline" className="text-xs">{template.round_name}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {template.round_name}
+                          </Badge>
                           {isOverridden && <Badge className="bg-primary text-xs">変更済み</Badge>}
                         </div>
 
@@ -366,36 +420,64 @@ export default function MatchOverridesPage() {
                           <div>
                             <p className="text-xs text-gray-500 mb-0.5">チーム1</p>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {isOverridden && currentTeam1Source !== template.team1_source && currentTeam1Source ? (
+                              {isOverridden &&
+                              currentTeam1Source !== template.team1_source &&
+                              currentTeam1Source ? (
                                 <>
-                                  <span className="text-gray-400 line-through text-xs">{template.team1_source ? formatTeamSourceDisplay(template.team1_source) : '未設定'}</span>
+                                  <span className="text-gray-400 line-through text-xs">
+                                    {template.team1_source
+                                      ? formatTeamSourceDisplay(template.team1_source)
+                                      : "未設定"}
+                                  </span>
                                   <ArrowRight className="h-3 w-3 text-primary" />
-                                  <span className="text-primary font-medium">{formatTeamSourceDisplay(currentTeam1Source)}</span>
+                                  <span className="text-primary font-medium">
+                                    {formatTeamSourceDisplay(currentTeam1Source)}
+                                  </span>
                                 </>
                               ) : (
-                                <span className="font-medium">{currentTeam1Source ? formatTeamSourceDisplay(currentTeam1Source) : '未設定'}</span>
+                                <span className="font-medium">
+                                  {currentTeam1Source
+                                    ? formatTeamSourceDisplay(currentTeam1Source)
+                                    : "未設定"}
+                                </span>
                               )}
                             </div>
                             {template.team1_display_name && (
-                              <p className="text-xs text-gray-400 mt-0.5">現在: {template.team1_display_name}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                現在: {template.team1_display_name}
+                              </p>
                             )}
                           </div>
 
                           <div>
                             <p className="text-xs text-gray-500 mb-0.5">チーム2</p>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {isOverridden && currentTeam2Source !== template.team2_source && currentTeam2Source ? (
+                              {isOverridden &&
+                              currentTeam2Source !== template.team2_source &&
+                              currentTeam2Source ? (
                                 <>
-                                  <span className="text-gray-400 line-through text-xs">{template.team2_source ? formatTeamSourceDisplay(template.team2_source) : '未設定'}</span>
+                                  <span className="text-gray-400 line-through text-xs">
+                                    {template.team2_source
+                                      ? formatTeamSourceDisplay(template.team2_source)
+                                      : "未設定"}
+                                  </span>
                                   <ArrowRight className="h-3 w-3 text-primary" />
-                                  <span className="text-primary font-medium">{formatTeamSourceDisplay(currentTeam2Source)}</span>
+                                  <span className="text-primary font-medium">
+                                    {formatTeamSourceDisplay(currentTeam2Source)}
+                                  </span>
                                 </>
                               ) : (
-                                <span className="font-medium">{currentTeam2Source ? formatTeamSourceDisplay(currentTeam2Source) : '未設定'}</span>
+                                <span className="font-medium">
+                                  {currentTeam2Source
+                                    ? formatTeamSourceDisplay(currentTeam2Source)
+                                    : "未設定"}
+                                </span>
                               )}
                             </div>
                             {template.team2_display_name && (
-                              <p className="text-xs text-gray-400 mt-0.5">現在: {template.team2_display_name}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                現在: {template.team2_display_name}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -413,7 +495,14 @@ export default function MatchOverridesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditMatch(template.match_code, template.phase, template.team1_source, template.team2_source)}
+                        onClick={() =>
+                          handleEditMatch(
+                            template.match_code,
+                            template.phase,
+                            template.team1_source,
+                            template.team2_source,
+                          )
+                        }
                       >
                         <Pencil className="h-4 w-4 mr-1" />
                         編集
@@ -429,7 +518,9 @@ export default function MatchOverridesPage() {
         {selectedMatch && (
           <MatchOverrideDialog
             open={!!selectedMatch}
-            onOpenChange={(open) => { if (!open) setSelectedMatch(null); }}
+            onOpenChange={(open) => {
+              if (!open) setSelectedMatch(null);
+            }}
             tournamentId={tournamentId}
             matchCode={selectedMatch.matchCode}
             leagueSources={sourceCandidates.leagueSources}

@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Shield, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Shield, XCircle } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface InviteInfo {
   email: string;
@@ -20,7 +20,7 @@ interface InviteInfo {
 
 function AcceptInviteContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,13 +29,13 @@ function AcceptInviteContent() {
   const [accepted, setAccepted] = useState(false);
 
   // 新規アカウント作成フォーム
-  const [displayName, setDisplayName] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const fetchInviteInfo = useCallback(async () => {
     if (!token) {
-      setError('招待トークンが見つかりません');
+      setError("招待トークンが見つかりません");
       setLoading(false);
       return;
     }
@@ -48,7 +48,7 @@ function AcceptInviteContent() {
         setError(result.error);
       }
     } catch {
-      setError('招待情報の取得に失敗しました');
+      setError("招待情報の取得に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -62,15 +62,15 @@ function AcceptInviteContent() {
     // 新規アカウント作成の場合のバリデーション
     if (inviteInfo && !inviteInfo.hasAccount) {
       if (!displayName.trim()) {
-        setError('名前を入力してください');
+        setError("名前を入力してください");
         return;
       }
       if (!password || password.length < 6) {
-        setError('パスワードは6文字以上で入力してください');
+        setError("パスワードは6文字以上で入力してください");
         return;
       }
       if (password !== passwordConfirm) {
-        setError('パスワードが一致しません');
+        setError("パスワードが一致しません");
         return;
       }
     }
@@ -78,13 +78,13 @@ function AcceptInviteContent() {
     setAccepting(true);
     setError(null);
     try {
-      const res = await fetch('/api/operators/invite/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/operators/invite/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
           displayName: inviteInfo?.hasAccount ? undefined : displayName.trim(),
-          password: inviteInfo?.hasAccount ? undefined : password
+          password: inviteInfo?.hasAccount ? undefined : password,
         }),
       });
       const result = await res.json();
@@ -94,7 +94,7 @@ function AcceptInviteContent() {
         setError(result.error);
       }
     } catch {
-      setError('承認処理に失敗しました');
+      setError("承認処理に失敗しました");
     } finally {
       setAccepting(false);
     }
@@ -122,7 +122,7 @@ function AcceptInviteContent() {
             )}
           </div>
           <CardTitle className="text-xl">
-            {accepted ? '運営者として登録されました' : error ? '招待エラー' : '運営者への招待'}
+            {accepted ? "運営者として登録されました" : error ? "招待エラー" : "運営者への招待"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,7 +166,7 @@ function AcceptInviteContent() {
                   </ul>
                 </div>
                 <div className="text-xs text-gray-500">
-                  有効期限: {new Date(inviteInfo.expiresAt).toLocaleString('ja-JP')}
+                  有効期限: {new Date(inviteInfo.expiresAt).toLocaleString("ja-JP")}
                 </div>
               </div>
 
@@ -186,9 +186,7 @@ function AcceptInviteContent() {
                 /* 新規アカウント作成フォーム */
                 <div className="space-y-3">
                   <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <p className="text-sm text-yellow-800">
-                      ℹ アカウントを作成してください
-                    </p>
+                    <p className="text-sm text-yellow-800">ℹ アカウントを作成してください</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">メールアドレス</Label>
@@ -244,7 +242,11 @@ function AcceptInviteContent() {
                 disabled={accepting}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                {accepting ? '処理中...' : inviteInfo.hasAccount ? '運営者として登録' : 'アカウントを作成して登録'}
+                {accepting
+                  ? "処理中..."
+                  : inviteInfo.hasAccount
+                    ? "運営者として登録"
+                    : "アカウントを作成して登録"}
               </Button>
             </div>
           ) : null}
@@ -256,11 +258,13 @@ function AcceptInviteContent() {
 
 export default function AcceptInvitePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
       <AcceptInviteContent />
     </Suspense>
   );

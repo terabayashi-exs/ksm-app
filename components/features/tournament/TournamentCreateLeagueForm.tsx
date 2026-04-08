@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Building2, Calendar, Check, ChevronsUpDown, Info, Loader2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Loader2, Info, Building2, X, ChevronsUpDown, Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface Venue {
   venue_id: number;
@@ -45,7 +45,10 @@ interface LeagueContext {
 
 const leagueCreateSchema = z.object({
   group_id: z.number().min(1, "所属する大会が必要です"),
-  tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
+  tournament_name: z
+    .string()
+    .min(1, "部門名は必須です")
+    .max(100, "部門名は100文字以内で入力してください"),
   venue_ids: z.array(z.number()).min(1, "会場を1つ以上選択してください"),
   match_duration_minutes: z.number().min(5, "試合時間は5分以上").max(120, "試合時間は120分以下"),
   break_duration_minutes: z.number().min(0).max(60),
@@ -84,9 +87,10 @@ export default function TournamentCreateLeagueForm() {
       venue_ids: [],
       is_public: true,
       show_players_public: false,
-      public_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
-      recruitment_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
-      recruitment_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00',
+      public_start_date: new Date().toISOString().split("T")[0] + "T00:00",
+      recruitment_start_date: new Date().toISOString().split("T")[0] + "T00:00",
+      recruitment_end_date:
+        new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] + "T00:00",
     },
   });
 
@@ -94,9 +98,9 @@ export default function TournamentCreateLeagueForm() {
 
   // マウント時にcontextを読み取り
   useEffect(() => {
-    const stored = sessionStorage.getItem('create-league-context');
+    const stored = sessionStorage.getItem("create-league-context");
     if (!stored) {
-      router.push('/admin/tournaments/create-new');
+      router.push("/admin/tournaments/create-new");
       return;
     }
     try {
@@ -104,17 +108,17 @@ export default function TournamentCreateLeagueForm() {
       setLeagueContext(ctx);
       // group_idをフォームにセット
       if (ctx.group_id) {
-        setValue('group_id', ctx.group_id);
+        setValue("group_id", ctx.group_id);
       }
       // フォーマットのデフォルト試合時間・休憩時間をセット
       if (ctx.default_match_duration != null) {
-        setValue('match_duration_minutes', ctx.default_match_duration);
+        setValue("match_duration_minutes", ctx.default_match_duration);
       }
       if (ctx.default_break_duration != null) {
-        setValue('break_duration_minutes', ctx.default_break_duration);
+        setValue("break_duration_minutes", ctx.default_break_duration);
       }
     } catch {
-      router.push('/admin/tournaments/create-new');
+      router.push("/admin/tournaments/create-new");
     }
   }, [router, setValue]);
 
@@ -145,7 +149,7 @@ export default function TournamentCreateLeagueForm() {
   const templatesByMatchday = useMemo(() => {
     if (!leagueContext?.templates) return [];
     const grouped: Record<number, TemplateItem[]> = {};
-    leagueContext.templates.forEach(t => {
+    leagueContext.templates.forEach((t) => {
       const md = t.matchday ?? 0;
       if (!grouped[md]) grouped[md] = [];
       grouped[md].push(t);
@@ -171,31 +175,35 @@ export default function TournamentCreateLeagueForm() {
         venue_ids: data.venue_ids,
       };
 
-      const res = await fetch('/api/tournaments/create-league', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/tournaments/create-league", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const result = await res.json();
 
       if (result.success && result.tournament) {
-        sessionStorage.removeItem('create-league-context');
+        sessionStorage.removeItem("create-league-context");
         const tournamentId = result.tournament.tournament_id;
         router.push(`/admin/tournaments/${tournamentId}/matchday-settings`);
       } else {
-        alert(result.error || '部門作成に失敗しました');
+        alert(result.error || "部門作成に失敗しました");
       }
     } catch (err) {
-      console.error('作成エラー:', err);
-      alert('部門作成中にエラーが発生しました');
+      console.error("作成エラー:", err);
+      alert("部門作成中にエラーが発生しました");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (!leagueContext) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
   }
 
   const totalMatches = leagueContext.matches_by_matchday.reduce((sum, m) => sum + m.matchCount, 0);
@@ -223,7 +231,9 @@ export default function TournamentCreateLeagueForm() {
           </div>
           <div>
             <span className="text-gray-500">節数:</span>{" "}
-            <span className="font-medium">{leagueContext.matchday_count}節（全{totalMatches}試合）</span>
+            <span className="font-medium">
+              {leagueContext.matchday_count}節（全{totalMatches}試合）
+            </span>
           </div>
         </div>
       </div>
@@ -233,27 +243,35 @@ export default function TournamentCreateLeagueForm() {
         <Label>所属する大会</Label>
         <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
           <Building2 className="w-4 h-4 text-gray-500" />
-          <span className="font-medium">{leagueContext.group_name || '未設定'}</span>
+          <span className="font-medium">{leagueContext.group_name || "未設定"}</span>
         </div>
         {!leagueContext.group_id && (
-          <p className="text-sm text-destructive">大会が選択されていません。部門作成画面からやり直してください。</p>
+          <p className="text-sm text-destructive">
+            大会が選択されていません。部門作成画面からやり直してください。
+          </p>
         )}
       </div>
 
       {/* 部門名 */}
       <div className="space-y-2">
-        <Label htmlFor="tournament_name">部門名 <span className="text-destructive">*</span></Label>
+        <Label htmlFor="tournament_name">
+          部門名 <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="tournament_name"
           placeholder="例: U-12リーグ前期"
           {...register("tournament_name")}
         />
-        {errors.tournament_name && <p className="text-sm text-destructive">{errors.tournament_name.message}</p>}
+        {errors.tournament_name && (
+          <p className="text-sm text-destructive">{errors.tournament_name.message}</p>
+        )}
       </div>
 
       {/* 会場（複数選択） */}
       <div className="space-y-2">
-        <Label>会場 <span className="text-destructive">*</span></Label>
+        <Label>
+          会場 <span className="text-destructive">*</span>
+        </Label>
         {loadingVenues ? (
           <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -264,15 +282,24 @@ export default function TournamentCreateLeagueForm() {
             {selectedVenues.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedVenues.map((venue) => (
-                  <Badge key={venue.venue_id} variant="secondary" className="text-sm py-1 px-2 gap-1">
+                  <Badge
+                    key={venue.venue_id}
+                    variant="secondary"
+                    className="text-sm py-1 px-2 gap-1"
+                  >
                     {venue.venue_name}（{venue.available_courts}コート）
                     <button
                       type="button"
                       className="ml-1 hover:text-destructive"
                       onClick={() => {
-                        const newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                        const newVenues = selectedVenues.filter(
+                          (v) => v.venue_id !== venue.venue_id,
+                        );
                         setSelectedVenues(newVenues);
-                        setValue('venue_ids', newVenues.map(v => v.venue_id));
+                        setValue(
+                          "venue_ids",
+                          newVenues.map((v) => v.venue_id),
+                        );
                       }}
                     >
                       <X className="h-3 w-3" />
@@ -306,28 +333,41 @@ export default function TournamentCreateLeagueForm() {
                 />
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {venues
-                    .filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                    .filter((v) =>
+                      v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()),
+                    )
                     .map((venue) => {
-                      const isSelected = selectedVenues.some(sv => sv.venue_id === venue.venue_id);
+                      const isSelected = selectedVenues.some(
+                        (sv) => sv.venue_id === venue.venue_id,
+                      );
                       return (
                         <button
                           key={venue.venue_id}
                           type="button"
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? 'bg-gray-100/50' : ''}`}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? "bg-gray-100/50" : ""}`}
                           onClick={() => {
                             let newVenues: Venue[];
                             if (isSelected) {
-                              newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                              newVenues = selectedVenues.filter(
+                                (v) => v.venue_id !== venue.venue_id,
+                              );
                             } else {
                               newVenues = [...selectedVenues, venue];
                             }
                             setSelectedVenues(newVenues);
-                            setValue('venue_ids', newVenues.map(v => v.venue_id));
+                            setValue(
+                              "venue_ids",
+                              newVenues.map((v) => v.venue_id),
+                            );
                           }}
                         >
-                          <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                          <Check
+                            className={`h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                          />
                           <span>{venue.venue_name}</span>
-                          <span className="text-gray-500 ml-auto text-xs">{venue.available_courts}コート</span>
+                          <span className="text-gray-500 ml-auto text-xs">
+                            {venue.available_courts}コート
+                          </span>
                         </button>
                       );
                     })}
@@ -345,7 +385,9 @@ export default function TournamentCreateLeagueForm() {
       {/* 試合時間 */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="match_duration_minutes">試合時間(分) <span className="text-destructive">*</span></Label>
+          <Label htmlFor="match_duration_minutes">
+            試合時間(分) <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="match_duration_minutes"
             type="number"
@@ -358,7 +400,9 @@ export default function TournamentCreateLeagueForm() {
           ) : (
             <p className="text-xs text-gray-500">節設定で日時の重複チェックに使用されます</p>
           )}
-          {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
+          {errors.match_duration_minutes && (
+            <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="display_match_duration">表示用試合時間</Label>
@@ -369,7 +413,9 @@ export default function TournamentCreateLeagueForm() {
             placeholder="例: 80, 40-10-40"
             {...register("display_match_duration")}
           />
-          <p className="text-xs text-gray-500">概要ページに表示する試合時間（未入力時はシステム値を表示）</p>
+          <p className="text-xs text-gray-500">
+            概要ページに表示する試合時間（未入力時はシステム値を表示）
+          </p>
         </div>
       </div>
 
@@ -378,37 +424,47 @@ export default function TournamentCreateLeagueForm() {
         <h3 className="text-sm font-semibold">公開設定</h3>
 
         <div className="space-y-2">
-          <Label htmlFor="public_start_date">公開開始日時 <span className="text-destructive">*</span></Label>
-          <Input
-            id="public_start_date"
-            type="datetime-local"
-            {...register("public_start_date")}
-          />
-          {errors.public_start_date && <p className="text-sm text-destructive">{errors.public_start_date.message}</p>}
+          <Label htmlFor="public_start_date">
+            公開開始日時 <span className="text-destructive">*</span>
+          </Label>
+          <Input id="public_start_date" type="datetime-local" {...register("public_start_date")} />
+          {errors.public_start_date && (
+            <p className="text-sm text-destructive">{errors.public_start_date.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recruitment_start_date">募集開始日時 <span className="text-destructive">*</span></Label>
+          <Label htmlFor="recruitment_start_date">
+            募集開始日時 <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="recruitment_start_date"
             type="datetime-local"
             {...register("recruitment_start_date")}
           />
-          {errors.recruitment_start_date && <p className="text-sm text-destructive">{errors.recruitment_start_date.message}</p>}
+          {errors.recruitment_start_date && (
+            <p className="text-sm text-destructive">{errors.recruitment_start_date.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recruitment_end_date">募集終了日時 <span className="text-destructive">*</span></Label>
+          <Label htmlFor="recruitment_end_date">
+            募集終了日時 <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="recruitment_end_date"
             type="datetime-local"
             {...register("recruitment_end_date")}
           />
-          {errors.recruitment_end_date && <p className="text-sm text-destructive">{errors.recruitment_end_date.message}</p>}
+          {errors.recruitment_end_date && (
+            <p className="text-sm text-destructive">{errors.recruitment_end_date.message}</p>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
-          <Label htmlFor="is_public" className="cursor-pointer">公開する</Label>
+          <Label htmlFor="is_public" className="cursor-pointer">
+            公開する
+          </Label>
           <Switch
             id="is_public"
             checked={isPublic}
@@ -418,7 +474,9 @@ export default function TournamentCreateLeagueForm() {
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <Label htmlFor="show_players_public" className="cursor-pointer">選手情報を一般公開する</Label>
+            <Label htmlFor="show_players_public" className="cursor-pointer">
+              選手情報を一般公開する
+            </Label>
             <Switch
               id="show_players_public"
               checked={watch("show_players_public")}
@@ -481,7 +539,10 @@ export default function TournamentCreateLeagueForm() {
       {/* 送信ボタン */}
       <Button type="submit" className="w-full" disabled={isSubmitting || !leagueContext.group_id}>
         {isSubmitting ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />作成中...</>
+          <>
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            作成中...
+          </>
         ) : (
           "作成する"
         )}

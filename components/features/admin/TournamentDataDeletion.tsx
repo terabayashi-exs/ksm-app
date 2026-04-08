@@ -1,11 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Trash2, Download, CheckCircle, XCircle, Clock, Database } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Database,
+  Download,
+  Trash2,
+  XCircle,
+} from "lucide-react";
+import React, { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Tournament {
   tournament_id: number;
@@ -47,9 +55,9 @@ interface TournamentDataDeletionProps {
   onDeletionComplete?: () => void;
 }
 
-export default function TournamentDataDeletion({ 
-  tournament, 
-  onDeletionComplete 
+export default function TournamentDataDeletion({
+  tournament,
+  onDeletionComplete,
 }: TournamentDataDeletionProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -65,29 +73,32 @@ export default function TournamentDataDeletion({
 
     setIsDeleting(true);
     setShowConfirmDialog(false);
-    
+
     try {
-      const response = await fetch(`/api/admin/tournaments/${tournament.tournament_id}/delete-data`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/admin/tournaments/${tournament.tournament_id}/delete-data`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       const data = await response.json();
-      
+
       if (data.success) {
         setDeletionResult(data);
         if (onDeletionComplete) {
           onDeletionComplete();
         }
       } else {
-        console.error('削除処理エラー:', data);
+        console.error("削除処理エラー:", data);
         alert(`削除処理でエラーが発生しました: ${data.error}`);
       }
     } catch (error) {
-      console.error('削除API呼び出しエラー:', error);
-      alert('削除処理中にネットワークエラーが発生しました。');
+      console.error("削除API呼び出しエラー:", error);
+      alert("削除処理中にネットワークエラーが発生しました。");
     } finally {
       setIsDeleting(false);
     }
@@ -95,9 +106,17 @@ export default function TournamentDataDeletion({
 
   const getStatusBadge = () => {
     if (!tournament.is_archived) {
-      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">未アーカイブ</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          未アーカイブ
+        </Badge>
+      );
     }
-    return <Badge variant="default" className="bg-green-100 text-green-800">アーカイブ済み</Badge>;
+    return (
+      <Badge variant="default" className="bg-green-100 text-green-800">
+        アーカイブ済み
+      </Badge>
+    );
   };
 
   const formatExecutionTime = (ms: number) => {
@@ -148,14 +167,14 @@ export default function TournamentDataDeletion({
           {/* アクションボタン */}
           <div className="flex flex-wrap gap-3">
             <Button
-              onClick={() => window.open(`/scripts/create-tournament-backup.js`, '_blank')}
+              onClick={() => window.open(`/scripts/create-tournament-backup.js`, "_blank")}
               variant="outline"
               className="flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
               バックアップ作成スクリプト
             </Button>
-            
+
             <Button
               onClick={() => setShowConfirmDialog(true)}
               variant="destructive"
@@ -177,7 +196,9 @@ export default function TournamentDataDeletion({
 
             {deletionResult && (
               <Button
-                onClick={() => window.open(`/tournaments/${tournament.tournament_id}/archived`, '_blank')}
+                onClick={() =>
+                  window.open(`/tournaments/${tournament.tournament_id}/archived`, "_blank")
+                }
                 variant="outline"
                 className="flex items-center gap-2"
               >
@@ -201,23 +222,27 @@ export default function TournamentDataDeletion({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-gray-700">
-                <p className="mb-2"><strong>削除対象:</strong> {tournament.tournament_name}</p>
-                <p className="mb-2"><strong>大会ID:</strong> {tournament.tournament_id}</p>
+                <p className="mb-2">
+                  <strong>削除対象:</strong> {tournament.tournament_name}
+                </p>
+                <p className="mb-2">
+                  <strong>大会ID:</strong> {tournament.tournament_id}
+                </p>
                 <p className="mb-4 text-red-600 font-medium">
                   この操作により、データベースから関連データが完全に削除されます。
                   削除後の表示はアーカイブデータからのみ可能になります。
                 </p>
               </div>
-              
+
               <div className="bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
                 <p className="text-sm text-yellow-800">
-                  <strong>確認事項:</strong><br />
-                  ✓ バックアップテーブルを作成済み<br />
-                  ✓ アーカイブページが正常に表示される<br />
-                  ✓ この操作の影響を理解している
+                  <strong>確認事項:</strong>
+                  <br />✓ バックアップテーブルを作成済み
+                  <br />✓ アーカイブページが正常に表示される
+                  <br />✓ この操作の影響を理解している
                 </p>
               </div>
-              
+
               <div className="flex gap-2">
                 <Button
                   onClick={() => setShowConfirmDialog(false)}
@@ -226,11 +251,7 @@ export default function TournamentDataDeletion({
                 >
                   キャンセル
                 </Button>
-                <Button
-                  onClick={handleDeleteData}
-                  variant="destructive"
-                  className="flex-1"
-                >
+                <Button onClick={handleDeleteData} variant="destructive" className="flex-1">
                   削除実行
                 </Button>
               </div>
@@ -241,11 +262,13 @@ export default function TournamentDataDeletion({
 
       {/* 削除結果表示 */}
       {deletionResult && (
-        <Card className={`border-2 ${
-          deletionResult.deletionSummary.failedSteps === 0 
-            ? 'border-green-200 bg-green-50' 
-            : 'border-yellow-200 bg-yellow-50'
-        }`}>
+        <Card
+          className={`border-2 ${
+            deletionResult.deletionSummary.failedSteps === 0
+              ? "border-green-200 bg-green-50"
+              : "border-yellow-200 bg-yellow-50"
+          }`}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {deletionResult.deletionSummary.failedSteps === 0 ? (
@@ -255,9 +278,7 @@ export default function TournamentDataDeletion({
               )}
               削除処理完了
             </CardTitle>
-            <CardDescription>
-              {deletionResult.message}
-            </CardDescription>
+            <CardDescription>{deletionResult.message}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* 削除サマリー */}
@@ -302,7 +323,7 @@ export default function TournamentDataDeletion({
               variant="outline"
               className="w-full"
             >
-              {showDetails ? '詳細を閉じる' : '詳細を表示'}
+              {showDetails ? "詳細を閉じる" : "詳細を表示"}
             </Button>
 
             {/* 詳細結果 */}
@@ -315,7 +336,7 @@ export default function TournamentDataDeletion({
                       <div
                         key={result.step}
                         className={`flex items-center justify-between p-2 rounded ${
-                          result.success ? 'bg-green-50' : 'bg-red-50'
+                          result.success ? "bg-green-50" : "bg-red-50"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -325,7 +346,9 @@ export default function TournamentDataDeletion({
                             <XCircle className="h-4 w-4 text-red-600" />
                           )}
                           <div>
-                            <div className="font-medium">Step {result.step}: {result.table}</div>
+                            <div className="font-medium">
+                              Step {result.step}: {result.table}
+                            </div>
                             <div className="text-sm text-gray-600">{result.description}</div>
                             {result.error && (
                               <div className="text-sm text-red-600">エラー: {result.error}</div>
@@ -334,7 +357,9 @@ export default function TournamentDataDeletion({
                         </div>
                         <div className="text-right text-sm">
                           <div>{result.rowsDeleted} 件削除</div>
-                          <div className="text-gray-500">{formatExecutionTime(result.executionTime)}</div>
+                          <div className="text-gray-500">
+                            {formatExecutionTime(result.executionTime)}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -353,7 +378,7 @@ export default function TournamentDataDeletion({
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{preCount} 件</Badge>
                             <span>→</span>
-                            <Badge 
+                            <Badge
                               variant={postCount === 0 ? "default" : "destructive"}
                               className={postCount === 0 ? "bg-green-100 text-green-800" : ""}
                             >

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Loader2, Search, Trash2, UserPlus, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Trash2, UserPlus, Search, Loader2 } from "lucide-react";
 
 interface Grant {
   grant_id: number;
@@ -60,13 +60,15 @@ export function FormatAccessModal({ formatId, formatName, onClose }: FormatAcces
     if (!searchQuery.trim()) return;
     setSearching(true);
     try {
-      const response = await fetch(`/api/admin/format-access-grants?search_users=${encodeURIComponent(searchQuery.trim())}`);
+      const response = await fetch(
+        `/api/admin/format-access-grants?search_users=${encodeURIComponent(searchQuery.trim())}`,
+      );
       const data = await response.json();
       if (data.success) {
         // 既にgrantされているユーザーを除外
-        const grantedUserIds = new Set(grants.map(g => g.login_user_id));
+        const grantedUserIds = new Set(grants.map((g) => g.login_user_id));
         setSearchResults(
-          (data.users || []).filter((u: SearchUser) => !grantedUserIds.has(u.login_user_id))
+          (data.users || []).filter((u: SearchUser) => !grantedUserIds.has(u.login_user_id)),
         );
       }
     } catch (error) {
@@ -88,7 +90,7 @@ export function FormatAccessModal({ formatId, formatName, onClose }: FormatAcces
       const data = await response.json();
       if (data.success) {
         await fetchGrants();
-        setSearchResults(searchResults.filter(u => u.login_user_id !== userId));
+        setSearchResults(searchResults.filter((u) => u.login_user_id !== userId));
       } else {
         alert(`付与エラー: ${data.error}`);
       }
@@ -111,7 +113,7 @@ export function FormatAccessModal({ formatId, formatName, onClose }: FormatAcces
       });
       const data = await response.json();
       if (data.success) {
-        setGrants(grants.filter(g => g.grant_id !== grantId));
+        setGrants(grants.filter((g) => g.grant_id !== grantId));
       } else {
         alert(`取消エラー: ${data.error}`);
       }
@@ -146,7 +148,11 @@ export function FormatAccessModal({ formatId, formatName, onClose }: FormatAcces
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
             <Button onClick={handleSearch} disabled={searching} size="sm">
-              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {searching ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
             </Button>
           </div>
 
@@ -154,7 +160,10 @@ export function FormatAccessModal({ formatId, formatName, onClose }: FormatAcces
           {searchResults.length > 0 && (
             <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
               {searchResults.map((user) => (
-                <div key={user.login_user_id} className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0">
+                <div
+                  key={user.login_user_id}
+                  className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0"
+                >
                   <div>
                     <p className="text-sm font-medium">{user.display_name}</p>
                     <p className="text-xs text-gray-500">{user.email}</p>
@@ -189,7 +198,10 @@ export function FormatAccessModal({ formatId, formatName, onClose }: FormatAcces
           ) : (
             <div className="space-y-2">
               {grants.map((grant) => (
-                <div key={grant.grant_id} className="flex items-center justify-between p-3 border rounded-md">
+                <div
+                  key={grant.grant_id}
+                  className="flex items-center justify-between p-3 border rounded-md"
+                >
                   <div>
                     <p className="text-sm font-medium">{grant.user_display_name}</p>
                     <p className="text-xs text-gray-500">{grant.user_email}</p>

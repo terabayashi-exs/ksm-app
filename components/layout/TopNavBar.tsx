@@ -1,13 +1,13 @@
 // components/layout/TopNavBar.tsx
 "use client";
 
-import { useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { LogOut, Menu, User, X } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { signOut, useSession } from "next-auth/react";
+import { useState } from "react";
 import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
-import { User, LogOut, Menu, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function TopNavBar() {
   const { data: session, status } = useSession();
@@ -30,11 +30,16 @@ export default function TopNavBar() {
               <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : session?.user ? (
               <UserAvatarMenu
-                userName={session.user.name || ''}
-                userEmail={session.user.email || ''}
+                userName={session.user.name || ""}
+                userEmail={session.user.email || ""}
               />
             ) : (
-              <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white"
+              >
                 <Link href="/auth/login" className="flex items-center">
                   ログイン
                 </Link>
@@ -80,7 +85,7 @@ export default function TopNavBar() {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    signOut({ redirect: false }).then(() => window.location.href = '/');
+                    signOut({ redirect: false }).then(() => (window.location.href = "/"));
                   }}
                   className="flex items-center gap-2 w-full px-3 py-3 text-sm text-red-400 rounded-md hover:bg-white/10 text-left"
                 >

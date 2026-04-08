@@ -62,17 +62,17 @@ export interface FormatChangeResponse {
  * フォーマット変更可否をチェック
  */
 export async function checkFormatChangeEligibility(
-  tournamentId: number
+  tournamentId: number,
 ): Promise<FormatChangeCheckResponse> {
   try {
     const response = await fetch(`/api/admin/tournaments/${tournamentId}/change-format`);
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Format change check error:', error);
+    console.error("Format change check error:", error);
     return {
       success: false,
-      error: 'フォーマット変更可否チェックに失敗しました'
+      error: "フォーマット変更可否チェックに失敗しました",
     };
   }
 }
@@ -83,28 +83,27 @@ export async function checkFormatChangeEligibility(
 export async function changeFormat(
   tournamentId: number,
   newFormatId: number,
-  confirmation: boolean = true
+  confirmation: boolean = true,
 ): Promise<FormatChangeResponse> {
   try {
     const response = await fetch(`/api/admin/tournaments/${tournamentId}/change-format`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         new_format_id: newFormatId,
-        confirmation: confirmation
-      })
+        confirmation: confirmation,
+      }),
     });
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Format change error:', error);
+    console.error("Format change error:", error);
     return {
       success: false,
-      error: 'フォーマット変更に失敗しました'
+      error: "フォーマット変更に失敗しました",
     };
   }
 }
-

@@ -42,7 +42,8 @@ html {
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* Edge specific fixes */
@@ -54,7 +55,7 @@ body {
 }
 
 /* Microsoft Edge Chromium */
-@media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: 0.001dpcm) {
   body {
     font-feature-settings: normal;
   }
@@ -104,7 +105,9 @@ body {
 /* インタラクティブカード — クリック可能なカードに適用 */
 .card-interactive {
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .card-interactive:hover {
   border-color: hsl(var(--primary));

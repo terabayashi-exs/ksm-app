@@ -17,61 +17,61 @@ export interface MatchTeamsValidation {
 export function validateMatchTeams(
   team1: string | null | undefined,
   team2: string | null | undefined,
-  matchType?: string
+  matchType?: string,
 ): MatchTeamsValidation {
   // FM（フレンドリーマッチ）の場合、両方空欄を許容（不戦勝ではない）
   if (matchType === "FM") {
     return {
       valid: true,
-      isByeMatch: false
+      isByeMatch: false,
     };
   }
 
   // 両方がnullまたは空の場合はエラー
-  if ((!team1 || team1.trim() === '') && (!team2 || team2.trim() === '')) {
+  if ((!team1 || team1.trim() === "") && (!team2 || team2.trim() === "")) {
     return {
       valid: false,
-      error: 'チーム1またはチーム2の少なくとも一方を指定してください',
-      isByeMatch: false
+      error: "チーム1またはチーム2の少なくとも一方を指定してください",
+      isByeMatch: false,
     };
   }
 
   // 片方が「不戦勝」の場合、もう片方は必須
-  if (team1 === '不戦勝' && (!team2 || team2.trim() === '')) {
+  if (team1 === "不戦勝" && (!team2 || team2.trim() === "")) {
     return {
       valid: false,
-      error: 'チーム1が「不戦勝」の場合、チーム2を指定してください',
-      isByeMatch: false
+      error: "チーム1が「不戦勝」の場合、チーム2を指定してください",
+      isByeMatch: false,
     };
   }
 
-  if (team2 === '不戦勝' && (!team1 || team1.trim() === '')) {
+  if (team2 === "不戦勝" && (!team1 || team1.trim() === "")) {
     return {
       valid: false,
-      error: 'チーム2が「不戦勝」の場合、チーム1を指定してください',
-      isByeMatch: false
+      error: "チーム2が「不戦勝」の場合、チーム1を指定してください",
+      isByeMatch: false,
     };
   }
 
   // 両方が「不戦勝」はエラー
-  if (team1 === '不戦勝' && team2 === '不戦勝') {
+  if (team1 === "不戦勝" && team2 === "不戦勝") {
     return {
       valid: false,
-      error: '両方のチームを「不戦勝」にすることはできません',
-      isByeMatch: false
+      error: "両方のチームを「不戦勝」にすることはできません",
+      isByeMatch: false,
     };
   }
 
   // 不戦勝試合かどうかを判定
   // 1. 明示的に「不戦勝」という文字列が指定されている場合
   // 2. 片方のチーム名が空文字列で、もう片方が空でない場合
-  const team1Empty = !team1 || team1.trim() === '';
-  const team2Empty = !team2 || team2.trim() === '';
-  const isByeMatch = team1 === '不戦勝' || team2 === '不戦勝' || (team1Empty !== team2Empty);
+  const team1Empty = !team1 || team1.trim() === "";
+  const team2Empty = !team2 || team2.trim() === "";
+  const isByeMatch = team1 === "不戦勝" || team2 === "不戦勝" || team1Empty !== team2Empty;
 
   return {
     valid: true,
-    isByeMatch
+    isByeMatch,
   };
 }
 

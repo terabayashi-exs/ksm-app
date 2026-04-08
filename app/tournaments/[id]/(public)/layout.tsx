@@ -1,27 +1,30 @@
 // app/tournaments/[id]/layout.tsx
-import { ReactNode } from 'react';
-import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import ShareButton from '@/components/public/ShareButton';
-import TournamentTabNav from '@/components/public/TournamentTabNav';
-import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
-import { Home, ChevronRight, FileText } from 'lucide-react';
-import { db } from '@/lib/db';
-import type { TournamentPhase } from '@/lib/types/tournament-phases';
+
+import { ChevronRight, FileText, Home } from "lucide-react";
+import Link from "next/link";
+import { ReactNode } from "react";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
+import ShareButton from "@/components/public/ShareButton";
+import TournamentTabNav from "@/components/public/TournamentTabNav";
+import { db } from "@/lib/db";
+import { getTournamentWithGroupInfo } from "@/lib/tournament-detail";
+import type { TournamentPhase } from "@/lib/types/tournament-phases";
 
 interface LayoutProps {
   children: ReactNode;
   params: Promise<{ id: string }>;
 }
 
-function getPhaseList(tournament: { phases?: { phases: TournamentPhase[] } | null }): TournamentPhase[] {
+function getPhaseList(tournament: {
+  phases?: { phases: TournamentPhase[] } | null;
+}): TournamentPhase[] {
   if (tournament.phases?.phases && tournament.phases.phases.length > 0) {
     return [...tournament.phases.phases].sort((a, b) => a.order - b.order);
   }
   return [
-    { id: 'preliminary', order: 1, name: '予選', format_type: 'league' as const },
-    { id: 'final', order: 2, name: '決勝', format_type: 'tournament' as const },
+    { id: "preliminary", order: 1, name: "予選", format_type: "league" as const },
+    { id: "final", order: 2, name: "決勝", format_type: "tournament" as const },
   ];
 }
 
@@ -30,30 +33,37 @@ export default async function TournamentDetailLayout({ children, params }: Layou
   const tournamentId = parseInt(resolvedParams.id);
 
   if (isNaN(tournamentId)) {
-    throw new Error('有効な大会IDを指定してください');
+    throw new Error("有効な大会IDを指定してください");
   }
 
   const [data, publicFilesResult, noticesResult, sportCodeResult] = await Promise.all([
     getTournamentWithGroupInfo(tournamentId),
-    db.execute(
-      `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
-      [tournamentId]
-    ).catch(() => ({ rows: [{ count: 0 }] })),
-    db.execute(
-      `SELECT COUNT(*) as count FROM t_tournament_notices WHERE tournament_id = ? AND is_active = 1`,
-      [tournamentId]
-    ).catch(() => ({ rows: [{ count: 0 }] })),
-    db.execute(
-      `SELECT st.sport_code FROM t_tournaments t
+    db
+      .execute(
+        `SELECT COUNT(*) as count FROM t_tournament_files WHERE tournament_id = ? AND is_public = 1`,
+        [tournamentId],
+      )
+      .catch(() => ({ rows: [{ count: 0 }] })),
+    db
+      .execute(
+        `SELECT COUNT(*) as count FROM t_tournament_notices WHERE tournament_id = ? AND is_active = 1`,
+        [tournamentId],
+      )
+      .catch(() => ({ rows: [{ count: 0 }] })),
+    db
+      .execute(
+        `SELECT st.sport_code FROM t_tournaments t
        JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
        WHERE t.tournament_id = ?`,
-      [tournamentId]
-    ).catch(() => ({ rows: [] })),
+        [tournamentId],
+      )
+      .catch(() => ({ rows: [] })),
   ]);
   const { tournament, group } = data;
   const hasPublicFiles = Number(publicFilesResult.rows[0]?.count ?? 0) > 0;
   const hasNotices = Number(noticesResult.rows[0]?.count ?? 0) > 0;
-  const sportCode = sportCodeResult.rows.length > 0 ? String(sportCodeResult.rows[0].sport_code) : '';
+  const sportCode =
+    sportCodeResult.rows.length > 0 ? String(sportCodeResult.rows[0].sport_code) : "";
 
   // アーカイブ済みの場合: archived/page.tsx が独自レイアウトを持つので
   // layout のUI（タブ等）はスキップして children をそのまま返す
@@ -61,7 +71,7 @@ export default async function TournamentDetailLayout({ children, params }: Layou
     return <>{children}</>;
   }
 
-  const phaseList = getPhaseList(tournament).filter(p => p.is_visible !== false);
+  const phaseList = getPhaseList(tournament).filter((p) => p.is_visible !== false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -97,14 +107,14 @@ export default async function TournamentDetailLayout({ children, params }: Layou
         {/* ページヘッダー */}
         <div className="mb-8 no-print">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900 truncate">{tournament.tournament_name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 truncate">
+              {tournament.tournament_name}
+            </h1>
             <div className="shrink-0">
               <ShareButton tournamentName={tournament.tournament_name} />
             </div>
           </div>
-          {group && (
-            <p className="text-gray-500 mt-1">（{group.group_name}）</p>
-          )}
+          {group && <p className="text-gray-500 mt-1">（{group.group_name}）</p>}
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {hasNotices && (
               <Link

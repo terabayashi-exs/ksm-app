@@ -1,16 +1,16 @@
 // components/features/admin/ParticipantCard.tsx
 // 参加チームカードコンポーネント
 
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Phone, Calendar, Info, UserPlus } from 'lucide-react';
-import ParticipantStatusBadge from './ParticipantStatusBadge';
-import TeamManagerInviteDialog from './TeamManagerInviteDialog';
-import type { ParticipantTeam, ActionType } from './ParticipantActionsModal';
+import { AlertTriangle, Calendar, Info, Phone, UserPlus } from "lucide-react";
+import React, { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ActionType, ParticipantTeam } from "./ParticipantActionsModal";
+import ParticipantStatusBadge from "./ParticipantStatusBadge";
+import TeamManagerInviteDialog from "./TeamManagerInviteDialog";
 
 interface ParticipantCardProps {
   team: ParticipantTeam;
@@ -22,28 +22,27 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   // カードのスタイルを状態に応じて変更
   const getCardClassName = () => {
-    if (team.withdrawal_status === 'withdrawal_requested') {
-      return 'border-2 border-red-300 bg-red-50/50';
+    if (team.withdrawal_status === "withdrawal_requested") {
+      return "border-2 border-red-300 bg-red-50/50";
     }
-    if (team.participation_status === 'waitlisted') {
-      return 'border-2 border-amber-300 bg-amber-50/50';
+    if (team.participation_status === "waitlisted") {
+      return "border-2 border-amber-300 bg-amber-50/50";
     }
-    if (team.participation_status === 'cancelled') {
-      return 'border-2 border-gray-300 bg-gray-50/50 opacity-75';
+    if (team.participation_status === "cancelled") {
+      return "border-2 border-gray-300 bg-gray-50/50 opacity-75";
     }
-    return 'border-2 border-green-200 bg-green-50/20';
+    return "border-2 border-green-200 bg-green-50/20";
   };
-
 
   // 日時フォーマット
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '';
-    return new Date(dateStr).toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -78,7 +77,9 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
               <div key={index} className="flex items-start gap-2 text-base">
                 <Info className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-medium">担当者{index + 1}: {member.name}</span>
+                  <span className="font-medium">
+                    担当者{index + 1}: {member.name}
+                  </span>
                   <span className="ml-3">メールアドレス: {member.email}</span>
                 </div>
               </div>
@@ -109,7 +110,7 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
         </div>
 
         {/* 辞退申請情報 */}
-        {team.withdrawal_status === 'withdrawal_requested' && (
+        {team.withdrawal_status === "withdrawal_requested" && (
           <Alert variant="destructive" className="bg-red-50">
             <AlertTriangle className="h-5 w-5" />
             <AlertDescription>
@@ -134,49 +135,45 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
 
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2 pt-2">
-          {team.withdrawal_status === 'withdrawal_requested' ? (
+          {team.withdrawal_status === "withdrawal_requested" ? (
             <>
               <Button
                 size="sm"
                 variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50"
-                onClick={() => onAction(team, 'approve_withdrawal')}
+                onClick={() => onAction(team, "approve_withdrawal")}
               >
                 ✓ 辞退承認
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onAction(team, 'reject_withdrawal')}
+                onClick={() => onAction(team, "reject_withdrawal")}
               >
                 ✕ 却下
               </Button>
             </>
-          ) : team.participation_status === 'confirmed' ? (
+          ) : team.participation_status === "confirmed" ? (
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onAction(team, 'waitlist')}
-              >
+              <Button size="sm" variant="outline" onClick={() => onAction(team, "waitlist")}>
                 → 待機へ
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 className="border-red-600 text-red-600 hover:bg-red-50"
-                onClick={() => onAction(team, 'cancel')}
+                onClick={() => onAction(team, "cancel")}
               >
                 ✕ キャンセル
               </Button>
             </>
-          ) : team.participation_status === 'waitlisted' ? (
+          ) : team.participation_status === "waitlisted" ? (
             <>
               <Button
                 size="sm"
                 variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50"
-                onClick={() => onAction(team, 'confirm')}
+                onClick={() => onAction(team, "confirm")}
               >
                 ✓ 確定に変更
               </Button>
@@ -184,18 +181,18 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
                 size="sm"
                 variant="outline"
                 className="border-red-600 text-red-600 hover:bg-red-50"
-                onClick={() => onAction(team, 'cancel')}
+                onClick={() => onAction(team, "cancel")}
               >
                 ✕ キャンセル
               </Button>
             </>
-          ) : team.participation_status === 'cancelled' ? (
+          ) : team.participation_status === "cancelled" ? (
             <>
               <Button
                 size="sm"
                 variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50"
-                onClick={() => onAction(team, 'confirm')}
+                onClick={() => onAction(team, "confirm")}
               >
                 ✓ 確定に戻す
               </Button>
@@ -203,7 +200,7 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
                 size="sm"
                 variant="outline"
                 className="border-amber-600 text-amber-600 hover:bg-amber-50"
-                onClick={() => onAction(team, 'waitlist')}
+                onClick={() => onAction(team, "waitlist")}
               >
                 → 待機に戻す
               </Button>
@@ -212,10 +209,13 @@ export default function ParticipantCard({ team, onAction, onTeamUpdated }: Parti
         </div>
 
         {/* 処理済み辞退情報 */}
-        {(team.withdrawal_status === 'withdrawal_approved' || team.withdrawal_status === 'withdrawal_rejected') && (
+        {(team.withdrawal_status === "withdrawal_approved" ||
+          team.withdrawal_status === "withdrawal_rejected") && (
           <div className="text-base text-gray-500 pt-2 border-t space-y-1">
             <div className="font-semibold">
-              {team.withdrawal_status === 'withdrawal_approved' ? '✓ 辞退承認済み' : '✕ 辞退却下済み'}
+              {team.withdrawal_status === "withdrawal_approved"
+                ? "✓ 辞退承認済み"
+                : "✕ 辞退却下済み"}
             </div>
             {team.withdrawal_processed_at && (
               <div>処理日時: {formatDate(team.withdrawal_processed_at)}</div>

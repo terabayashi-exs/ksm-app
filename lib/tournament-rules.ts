@@ -27,139 +27,139 @@ export interface SportRuleConfig {
   sport_name: string;
   sport_code: string;
   default_periods: PeriodConfig[];
-  default_preliminary_rules: Omit<TournamentRule, 'tournament_id' | 'tournament_rule_id'>;
-  default_final_rules: Omit<TournamentRule, 'tournament_id' | 'tournament_rule_id'>;
+  default_preliminary_rules: Omit<TournamentRule, "tournament_id" | "tournament_rule_id">;
+  default_final_rules: Omit<TournamentRule, "tournament_id" | "tournament_rule_id">;
 }
 
 // 競技種別ごとのデフォルトルール設定
 export const SPORT_RULE_CONFIGS: Record<string, SportRuleConfig> = {
   pk: {
     sport_type_id: 1,
-    sport_name: 'PK戦',
-    sport_code: 'pk',
+    sport_name: "PK戦",
+    sport_code: "pk",
     default_periods: [
       {
         period_number: 1,
-        period_name: 'PK戦',
+        period_name: "PK戦",
         is_default: true,
-        is_required: true
-      }
+        is_required: true,
+      },
     ],
     default_preliminary_rules: {
-      phase: 'preliminary',
+      phase: "preliminary",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]'
+      active_periods: '["1"]',
     },
     default_final_rules: {
-      phase: 'final',
+      phase: "final",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]'
-    }
+      active_periods: '["1"]',
+    },
   },
-  
+
   soccer: {
     sport_type_id: 2,
-    sport_name: 'サッカー',
-    sport_code: 'soccer',
+    sport_name: "サッカー",
+    sport_code: "soccer",
     default_periods: [
       {
         period_number: 1,
-        period_name: '前半',
+        period_name: "前半",
         is_default: true,
-        is_required: false  // 1本制対応のため必須解除（バリデーションで制御）
+        is_required: false, // 1本制対応のため必須解除（バリデーションで制御）
       },
       {
         period_number: 2,
-        period_name: '後半',
+        period_name: "後半",
         is_default: true,
-        is_required: false  // 1本制対応のため必須解除（バリデーションで制御）
+        is_required: false, // 1本制対応のため必須解除（バリデーションで制御）
       },
       {
         period_number: 3,
-        period_name: '延長前半',
+        period_name: "延長前半",
         is_default: false,
-        is_required: false
+        is_required: false,
       },
       {
         period_number: 4,
-        period_name: '延長後半',
+        period_name: "延長後半",
         is_default: false,
-        is_required: false
+        is_required: false,
       },
       {
         period_number: 5,
-        period_name: 'PK戦',
+        period_name: "PK戦",
         is_default: false,
-        is_required: false
-      }
+        is_required: false,
+      },
     ],
     default_preliminary_rules: {
-      phase: 'preliminary',
+      phase: "preliminary",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1", "2"]' // 前半・後半のみ
+      active_periods: '["1", "2"]', // 前半・後半のみ
     },
     default_final_rules: {
-      phase: 'final',
+      phase: "final",
       use_extra_time: true,
       use_penalty: true,
-      active_periods: '["1", "2", "3", "4", "5"]' // 全ピリオド使用可能
-    }
+      active_periods: '["1", "2", "3", "4", "5"]', // 全ピリオド使用可能
+    },
   },
-  
+
   baseball: {
     sport_type_id: 3,
-    sport_name: '野球',
-    sport_code: 'baseball',
+    sport_name: "野球",
+    sport_code: "baseball",
     default_periods: [
       {
         period_number: 1,
-        period_name: '9回制',
+        period_name: "9回制",
         is_default: true,
-        is_required: true
-      }
+        is_required: true,
+      },
     ],
     default_preliminary_rules: {
-      phase: 'preliminary',
+      phase: "preliminary",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]'
+      active_periods: '["1"]',
     },
     default_final_rules: {
-      phase: 'final',
+      phase: "final",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]'
-    }
+      active_periods: '["1"]',
+    },
   },
-  
+
   track: {
     sport_type_id: 4,
-    sport_name: '陸上（短距離）',
-    sport_code: 'track',
+    sport_name: "陸上（短距離）",
+    sport_code: "track",
     default_periods: [
       {
         period_number: 1,
-        period_name: '計測',
+        period_name: "計測",
         is_default: true,
-        is_required: true
-      }
+        is_required: true,
+      },
     ],
     default_preliminary_rules: {
-      phase: 'preliminary',
+      phase: "preliminary",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]'
+      active_periods: '["1"]',
     },
     default_final_rules: {
-      phase: 'final',
+      phase: "final",
       use_extra_time: false,
       use_penalty: false,
-      active_periods: '["1"]'
-    }
-  }
+      active_periods: '["1"]',
+    },
+  },
 };
 
 // 競技種別コードからルール設定を取得
@@ -169,7 +169,9 @@ export function getSportRuleConfig(sportCode: string): SportRuleConfig | null {
 
 // 競技種別IDからルール設定を取得
 export function getSportRuleConfigById(sportTypeId: number): SportRuleConfig | null {
-  return Object.values(SPORT_RULE_CONFIGS).find(config => config.sport_type_id === sportTypeId) || null;
+  return (
+    Object.values(SPORT_RULE_CONFIGS).find((config) => config.sport_type_id === sportTypeId) || null
+  );
 }
 
 // デフォルトルールを生成
@@ -179,7 +181,7 @@ export function generateDefaultRules(
   tournamentId: number,
   sportTypeId: number,
   phaseIds?: string[],
-  formatTypes?: Map<string, string>
+  formatTypes?: Map<string, string>,
 ): TournamentRule[] {
   const config = getSportRuleConfigById(sportTypeId);
   if (!config) {
@@ -191,27 +193,26 @@ export function generateDefaultRules(
     return [
       {
         tournament_id: tournamentId,
-        ...config.default_preliminary_rules
+        ...config.default_preliminary_rules,
       },
       {
         tournament_id: tournamentId,
-        ...config.default_final_rules
-      }
+        ...config.default_final_rules,
+      },
     ];
   }
 
   // 実際のフェーズIDに合わせてルールを生成
-  return phaseIds.map(phaseId => {
+  return phaseIds.map((phaseId) => {
     // format_typeが tournament ならfinalルール、それ以外はpreliminaryルール
     const ft = formatTypes?.get(phaseId);
-    const baseRule = ft === 'tournament'
-      ? config.default_final_rules
-      : config.default_preliminary_rules;
+    const baseRule =
+      ft === "tournament" ? config.default_final_rules : config.default_preliminary_rules;
 
     return {
       tournament_id: tournamentId,
       ...baseRule,
-      phase: phaseId
+      phase: phaseId,
     };
   });
 }
@@ -220,7 +221,7 @@ export function generateDefaultRules(
 export function parseActivePeriods(activePeriodsJson: string): number[] {
   try {
     const periods = JSON.parse(activePeriodsJson);
-    return Array.isArray(periods) ? periods.map(p => parseInt(p)) : [];
+    return Array.isArray(periods) ? periods.map((p) => parseInt(p)) : [];
   } catch {
     return [1]; // デフォルトはピリオド1のみ
   }
@@ -228,7 +229,7 @@ export function parseActivePeriods(activePeriodsJson: string): number[] {
 
 // ピリオド設定のJSON化
 export function stringifyActivePeriods(periods: number[]): string {
-  return JSON.stringify(periods.map(p => p.toString()));
+  return JSON.stringify(periods.map((p) => p.toString()));
 }
 
 // 既存のPK戦大会との互換性確保
@@ -239,13 +240,13 @@ export function isLegacyTournament(tournamentId: number, sportTypeId: number): b
 
 // 既存大会用のデフォルトルール（後方互換性）
 export function getLegacyDefaultRules(tournamentId: number, phaseIds?: string[]): TournamentRule[] {
-  const phases = (phaseIds && phaseIds.length > 0) ? phaseIds : ['preliminary', 'final'];
-  return phases.map(phase => ({
+  const phases = phaseIds && phaseIds.length > 0 ? phaseIds : ["preliminary", "final"];
+  return phases.map((phase) => ({
     tournament_id: tournamentId,
     phase,
     use_extra_time: false,
     use_penalty: false,
-    active_periods: '["1"]'
+    active_periods: '["1"]',
   }));
 }
 
@@ -267,7 +268,7 @@ export function parseWalkoverSettings(walkoverSettingsJson?: string): WalkoverSe
     return {
       draw_goals: Number(settings.draw_goals) || 0,
       winner_goals: Number(settings.winner_goals) || 3,
-      loser_goals: Number(settings.loser_goals) || 0
+      loser_goals: Number(settings.loser_goals) || 0,
     };
   } catch {
     return { winner_goals: 3, loser_goals: 0, draw_goals: 0 }; // パースエラー時のデフォルト値
@@ -278,33 +279,37 @@ export function parseWalkoverSettings(walkoverSettingsJson?: string): WalkoverSe
 export function stringifyWalkoverSettings(settings: WalkoverSettings): string {
   return JSON.stringify({
     winner_goals: settings.winner_goals,
-    loser_goals: settings.loser_goals
+    loser_goals: settings.loser_goals,
   });
 }
 
 // 大会の不戦勝設定を取得（全フェーズ共通設定のため先頭レコードを使用）
-export async function getTournamentWalkoverSettings(tournamentId: number): Promise<WalkoverSettings> {
+export async function getTournamentWalkoverSettings(
+  tournamentId: number,
+): Promise<WalkoverSettings> {
   try {
-    const { db } = await import('./db');
+    const { db } = await import("./db");
 
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT walkover_settings
       FROM t_tournament_rules
       WHERE tournament_id = ?
       ORDER BY tournament_rule_id
       LIMIT 1
-    `, [tournamentId]);
-    
+    `,
+      [tournamentId],
+    );
+
     if (result.rows.length > 0) {
       const walkoverSettingsJson = result.rows[0].walkover_settings as string;
       return parseWalkoverSettings(walkoverSettingsJson);
     }
-    
+
     // ルール設定がない場合はデフォルト値を返す
     return { winner_goals: 3, loser_goals: 0, draw_goals: 0 };
-    
   } catch (error) {
-    console.error('不戦勝設定の取得に失敗:', error);
+    console.error("不戦勝設定の取得に失敗:", error);
     // エラー時もデフォルト値を返す
     return { winner_goals: 3, loser_goals: 0, draw_goals: 0 };
   }

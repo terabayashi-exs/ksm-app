@@ -1,9 +1,9 @@
 "use client";
 
-import { TournamentBlock } from "./TournamentBlock";
 import { ScrollableContainer } from "@/components/ui/scrollable-container";
+import type { P6SeedLayout, PatternType } from "./patterns";
+import { TournamentBlock } from "./TournamentBlock";
 import type { BracketMatch, SportScoreConfig } from "./types";
-import type { PatternType, P6SeedLayout } from "./patterns";
 
 interface BlockData {
   /** ブロック識別子（例: "A", "B", "C", "D"） */
@@ -60,10 +60,7 @@ export function MultiBlockBracket({
     <div className="space-y-8">
       {/* 各ブロックを縦に配置 */}
       {blocks.map((block) => (
-        <div
-          key={block.blockId}
-          className="border border-gray-200 rounded-lg p-4 bg-white"
-        >
+        <div key={block.blockId} className="border border-gray-200 rounded-lg p-4 bg-white">
           <ScrollableContainer>
             <TournamentBlock
               blockId={block.blockId}

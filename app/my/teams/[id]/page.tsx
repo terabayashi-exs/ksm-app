@@ -1,15 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
-  Users, UserPlus, Trash2, Mail, ArrowLeft,
-  AlertCircle, Clock, CheckCircle, Trophy, Plus, Pencil, X, Save,
-} from 'lucide-react';
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  Mail,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  Trophy,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 // ── 型定義 ────────────────────────────────────────────
 interface TeamInfo {
@@ -73,23 +84,30 @@ interface AvailableTournament {
   confirmed_count: number;
 }
 
-type TabKey = 'managers' | 'players' | 'tournaments';
+type TabKey = "managers" | "players" | "tournaments";
 
 // ── メッセージバナー ──────────────────────────────────
-function MessageBanner({ message, onClose }: {
-  message: { type: 'success' | 'error'; text: string };
+function MessageBanner({
+  message,
+  onClose,
+}: {
+  message: { type: "success" | "error"; text: string };
   onClose: () => void;
 }) {
   return (
-    <div className={`flex items-start justify-between gap-2 p-4 rounded-lg text-sm ${
-      message.type === 'success'
-        ? 'bg-green-50 border border-green-200 text-green-800'
-        : 'bg-destructive/5 border border-destructive/20 text-destructive'
-    }`}>
+    <div
+      className={`flex items-start justify-between gap-2 p-4 rounded-lg text-sm ${
+        message.type === "success"
+          ? "bg-green-50 border border-green-200 text-green-800"
+          : "bg-destructive/5 border border-destructive/20 text-destructive"
+      }`}
+    >
       <div className="flex items-start gap-2">
-        {message.type === 'success'
-          ? <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+        {message.type === "success" ? (
+          <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        ) : (
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        )}
         <span>{message.text}</span>
       </div>
       <button onClick={onClose} className="flex-shrink-0 opacity-60 hover:opacity-100">
@@ -100,19 +118,26 @@ function MessageBanner({ message, onClose }: {
 }
 
 // ── 担当者タブ ────────────────────────────────────────
-function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, setMessage }: {
+function ManagersTab({
+  teamId,
+  managers,
+  invitations,
+  managerCount,
+  onRefresh,
+  setMessage,
+}: {
   teamId: string;
   managers: Manager[];
   invitations: Invitation[];
   managerCount: number;
   onRefresh: () => void;
-  setMessage: (msg: { type: 'success' | 'error'; text: string } | null) => void;
+  setMessage: (msg: { type: "success" | "error"; text: string } | null) => void;
 }) {
-  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [cancelling, setCancelling] = useState<number | null>(null);
 
-  const pendingInvites = invitations.filter(i => i.status === 'pending');
+  const pendingInvites = invitations.filter((i) => i.status === "pending");
   const canInvite = managerCount < 2 && pendingInvites.length === 0;
 
   const handleInvite = async () => {
@@ -120,44 +145,44 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
     setInviting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/my/teams/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/my/teams/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ team_id: teamId, invited_email: inviteEmail.trim() }),
       });
       const result = await res.json();
       if (result.success) {
-        setMessage({ type: 'success', text: `${inviteEmail} に招待メールを送信しました` });
-        setInviteEmail('');
+        setMessage({ type: "success", text: `${inviteEmail} に招待メールを送信しました` });
+        setInviteEmail("");
         onRefresh();
       } else {
-        setMessage({ type: 'error', text: result.error });
+        setMessage({ type: "error", text: result.error });
       }
     } catch {
-      setMessage({ type: 'error', text: '招待の送信に失敗しました' });
+      setMessage({ type: "error", text: "招待の送信に失敗しました" });
     } finally {
       setInviting(false);
     }
   };
 
   const handleCancelInvite = async (invitationId: number) => {
-    if (!confirm('この招待をキャンセルしますか？')) return;
+    if (!confirm("この招待をキャンセルしますか？")) return;
     setCancelling(invitationId);
     try {
-      const res = await fetch('/api/my/teams/invite', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/my/teams/invite", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invitation_id: invitationId }),
       });
       const result = await res.json();
       if (result.success) {
-        setMessage({ type: 'success', text: '招待をキャンセルしました' });
+        setMessage({ type: "success", text: "招待をキャンセルしました" });
         onRefresh();
       } else {
-        setMessage({ type: 'error', text: result.error });
+        setMessage({ type: "error", text: result.error });
       }
     } catch {
-      setMessage({ type: 'error', text: 'キャンセルに失敗しました' });
+      setMessage({ type: "error", text: "キャンセルに失敗しました" });
     } finally {
       setCancelling(null);
     }
@@ -175,8 +200,10 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
         </CardHeader>
         <CardContent className="space-y-3">
           {managers.map((manager) => (
-            <div key={manager.login_user_id}
-              className="flex items-center gap-3 p-3 bg-gray-50/40 rounded-lg">
+            <div
+              key={manager.login_user_id}
+              className="flex items-center gap-3 p-3 bg-gray-50/40 rounded-lg"
+            >
               <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                 <Users className="w-4 h-4 text-green-700" />
               </div>
@@ -196,30 +223,34 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
         <Card className="border-amber-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-amber-800">
-              <Clock className="w-5 h-5" />招待中（承認待ち）
+              <Clock className="w-5 h-5" />
+              招待中（承認待ち）
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {pendingInvites.map((inv) => (
-              <div key={inv.id}
-                className="flex items-center justify-between p-3 bg-amber-50/60 rounded-lg border border-amber-200">
+              <div
+                key={inv.id}
+                className="flex items-center justify-between p-3 bg-amber-50/60 rounded-lg border border-amber-200"
+              >
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-amber-600" />
                   <div>
                     <div className="font-medium text-gray-900">{inv.invited_email}</div>
                     <div className="text-xs text-gray-500">
-                      有効期限: {new Date(inv.expires_at).toLocaleString('ja-JP')}
+                      有効期限: {new Date(inv.expires_at).toLocaleString("ja-JP")}
                     </div>
                   </div>
                 </div>
                 <Button
-                  size="sm" variant="outline"
+                  size="sm"
+                  variant="outline"
                   className="border-red-300 text-red-600 hover:border-red-400 hover:bg-red-50"
                   onClick={() => handleCancelInvite(inv.id)}
                   disabled={cancelling === inv.id}
                 >
                   <Trash2 className="w-3 h-3 mr-1" />
-                  {cancelling === inv.id ? 'キャンセル中...' : '取消'}
+                  {cancelling === inv.id ? "キャンセル中..." : "取消"}
                 </Button>
               </div>
             ))}
@@ -228,18 +259,19 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
       )}
 
       {/* 招待フォーム */}
-      <Card className={!canInvite ? 'opacity-60' : ''}>
+      <Card className={!canInvite ? "opacity-60" : ""}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <UserPlus className="w-5 h-5" />2人目の担当者を招待
+            <UserPlus className="w-5 h-5" />
+            2人目の担当者を招待
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!canInvite ? (
             <p className="text-sm text-gray-500">
               {managerCount >= 2
-                ? 'すでに2名の担当者が登録されています。'
-                : '承認待ちの招待があります。先に現在の招待をキャンセルしてください。'}
+                ? "すでに2名の担当者が登録されています。"
+                : "承認待ちの招待があります。先に現在の招待をキャンセルしてください。"}
             </p>
           ) : (
             <div className="space-y-3">
@@ -250,9 +282,9 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
                 <Input
                   type="email"
                   value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
+                  onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="メールアドレス"
-                  onKeyDown={e => e.key === 'Enter' && handleInvite()}
+                  onKeyDown={(e) => e.key === "Enter" && handleInvite()}
                   disabled={inviting}
                 />
                 <Button
@@ -261,7 +293,7 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
                   className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0"
                 >
                   <Mail className="w-4 h-4 mr-1" />
-                  {inviting ? '送信中...' : '招待を送る'}
+                  {inviting ? "送信中..." : "招待を送る"}
                 </Button>
               </div>
             </div>
@@ -273,9 +305,12 @@ function ManagersTab({ teamId, managers, invitations, managerCount, onRefresh, s
 }
 
 // ── 選手管理タブ ─────────────────────────────────────
-function PlayersTab({ teamId, setMessage }: {
+function PlayersTab({
+  teamId,
+  setMessage,
+}: {
   teamId: string;
-  setMessage: (msg: { type: 'success' | 'error'; text: string } | null) => void;
+  setMessage: (msg: { type: "success" | "error"; text: string } | null) => void;
 }) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -290,80 +325,86 @@ function PlayersTab({ teamId, setMessage }: {
       const result = await res.json();
       if (result.success) setPlayers(result.data);
     } catch {
-      setMessage({ type: 'error', text: '選手情報の取得に失敗しました' });
+      setMessage({ type: "error", text: "選手情報の取得に失敗しました" });
     } finally {
       setLoading(false);
     }
   }, [teamId, setMessage]);
 
-  useEffect(() => { fetchPlayers(); }, [fetchPlayers]);
+  useEffect(() => {
+    fetchPlayers();
+  }, [fetchPlayers]);
 
   const startEdit = () => {
-    setFormPlayers(players.map(p => ({
-      player_id: p.player_id,
-      player_name: p.player_name,
-      jersey_number: p.jersey_number != null ? String(p.jersey_number) : '',
-    })));
+    setFormPlayers(
+      players.map((p) => ({
+        player_id: p.player_id,
+        player_name: p.player_name,
+        jersey_number: p.jersey_number != null ? String(p.jersey_number) : "",
+      })),
+    );
     setEditMode(true);
     setMessage(null);
   };
 
-  const cancelEdit = () => { setEditMode(false); };
+  const cancelEdit = () => {
+    setEditMode(false);
+  };
 
   const addPlayer = () => {
     if (formPlayers.length >= 20) return;
-    setFormPlayers(prev => [...prev, { player_name: '', jersey_number: '' }]);
+    setFormPlayers((prev) => [...prev, { player_name: "", jersey_number: "" }]);
   };
 
   const removePlayer = (idx: number) => {
     if (formPlayers.length <= 1) return;
-    setFormPlayers(prev => prev.filter((_, i) => i !== idx));
+    setFormPlayers((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const updatePlayer = (idx: number, field: 'player_name' | 'jersey_number', value: string) => {
-    setFormPlayers(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  const updatePlayer = (idx: number, field: "player_name" | "jersey_number", value: string) => {
+    setFormPlayers((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   };
 
   const handleSave = async () => {
     // クライアントバリデーション
-    const names = formPlayers.map(p => p.player_name.trim()).filter(Boolean);
+    const names = formPlayers.map((p) => p.player_name.trim()).filter(Boolean);
     if (names.length !== formPlayers.length) {
-      setMessage({ type: 'error', text: '選手名を入力してください' });
+      setMessage({ type: "error", text: "選手名を入力してください" });
       return;
     }
     if (new Set(names).size !== names.length) {
-      setMessage({ type: 'error', text: '選手名が重複しています' });
+      setMessage({ type: "error", text: "選手名が重複しています" });
       return;
     }
-    const jerseys = formPlayers.map(p => p.jersey_number).filter(n => n !== '');
+    const jerseys = formPlayers.map((p) => p.jersey_number).filter((n) => n !== "");
     if (new Set(jerseys).size !== jerseys.length) {
-      setMessage({ type: 'error', text: '背番号が重複しています' });
+      setMessage({ type: "error", text: "背番号が重複しています" });
       return;
     }
 
     setSaving(true);
     setMessage(null);
     try {
-      const payload = formPlayers.map(p => ({
+      const payload = formPlayers.map((p) => ({
         ...(p.player_id ? { player_id: p.player_id } : {}),
         player_name: p.player_name.trim(),
-        jersey_number: p.jersey_number !== '' ? Number(p.jersey_number) : null,
+        jersey_number: p.jersey_number !== "" ? Number(p.jersey_number) : null,
       }));
       const res = await fetch(`/api/my/teams/${teamId}/players`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ players: payload }),
       });
       const result = await res.json();
       if (result.success) {
-        setMessage({ type: 'success', text: '選手情報を保存しました' });
+        setMessage({ type: "success", text: "選手情報を保存しました" });
         setEditMode(false);
         await fetchPlayers();
       } else {
-        setMessage({ type: 'error', text: result.error });
+        setMessage({ type: "error", text: result.error });
       }
     } catch {
-      setMessage({ type: 'error', text: '保存に失敗しました' });
+      setMessage({ type: "error", text: "保存に失敗しました" });
     } finally {
       setSaving(false);
     }
@@ -382,11 +423,13 @@ function PlayersTab({ teamId, setMessage }: {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Users className="w-5 h-5" />選手一覧（{players.length}名）
+            <Users className="w-5 h-5" />
+            選手一覧（{players.length}名）
           </CardTitle>
           {!editMode && (
             <Button size="sm" variant="outline" onClick={startEdit}>
-              <Pencil className="w-3 h-3 mr-1" />編集
+              <Pencil className="w-3 h-3 mr-1" />
+              編集
             </Button>
           )}
         </div>
@@ -399,16 +442,19 @@ function PlayersTab({ teamId, setMessage }: {
               <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">選手が登録されていません</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={startEdit}>
-                <Plus className="w-3 h-3 mr-1" />選手を追加
+                <Plus className="w-3 h-3 mr-1" />
+                選手を追加
               </Button>
             </div>
           ) : (
             <div className="space-y-2">
-              {players.map(player => (
-                <div key={player.player_id}
-                  className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50/30">
+              {players.map((player) => (
+                <div
+                  key={player.player_id}
+                  className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50/30"
+                >
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
-                    {player.jersey_number != null ? player.jersey_number : '—'}
+                    {player.jersey_number != null ? player.jersey_number : "—"}
                   </div>
                   <span className="text-sm font-medium">{player.player_name}</span>
                 </div>
@@ -421,7 +467,9 @@ function PlayersTab({ teamId, setMessage }: {
             <div className="space-y-2">
               {/* ヘッダー */}
               <div className="grid grid-cols-[1fr_80px_32px] gap-2 text-xs text-gray-500 px-1">
-                <span>選手名 <span className="text-destructive">*</span></span>
+                <span>
+                  選手名 <span className="text-destructive">*</span>
+                </span>
                 <span>背番号</span>
                 <span />
               </div>
@@ -429,7 +477,7 @@ function PlayersTab({ teamId, setMessage }: {
                 <div key={idx} className="grid grid-cols-[1fr_80px_32px] gap-2 items-center">
                   <Input
                     value={player.player_name}
-                    onChange={e => updatePlayer(idx, 'player_name', e.target.value)}
+                    onChange={(e) => updatePlayer(idx, "player_name", e.target.value)}
                     placeholder="例: 山田太郎"
                     maxLength={50}
                     className="text-sm"
@@ -437,7 +485,7 @@ function PlayersTab({ teamId, setMessage }: {
                   <Input
                     type="number"
                     value={player.jersey_number}
-                    onChange={e => updatePlayer(idx, 'jersey_number', e.target.value)}
+                    onChange={(e) => updatePlayer(idx, "jersey_number", e.target.value)}
                     placeholder="—"
                     min={1}
                     max={99}
@@ -456,7 +504,8 @@ function PlayersTab({ teamId, setMessage }: {
 
             {formPlayers.length < 20 && (
               <Button size="sm" variant="outline" onClick={addPlayer} className="w-full">
-                <Plus className="w-3 h-3 mr-1" />選手を追加
+                <Plus className="w-3 h-3 mr-1" />
+                選手を追加
               </Button>
             )}
 
@@ -467,7 +516,7 @@ function PlayersTab({ teamId, setMessage }: {
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Save className="w-4 h-4 mr-1" />
-                {saving ? '保存中...' : '保存する'}
+                {saving ? "保存中..." : "保存する"}
               </Button>
               <Button variant="outline" onClick={cancelEdit} disabled={saving}>
                 キャンセル
@@ -506,10 +555,14 @@ function TournamentsTab({ teamId }: { teamId: string }) {
 
   const statusLabel = (status: string) => {
     switch (status) {
-      case 'confirmed': return { label: '参加確定', cls: 'bg-green-100 text-green-800' };
-      case 'waitlisted': return { label: 'キャンセル待ち', cls: 'bg-amber-100 text-amber-800' };
-      case 'cancelled': return { label: 'キャンセル', cls: 'bg-gray-100 text-gray-600' };
-      default: return { label: status, cls: 'bg-gray-100 text-gray-600' };
+      case "confirmed":
+        return { label: "参加確定", cls: "bg-green-100 text-green-800" };
+      case "waitlisted":
+        return { label: "キャンセル待ち", cls: "bg-amber-100 text-amber-800" };
+      case "cancelled":
+        return { label: "キャンセル", cls: "bg-gray-100 text-gray-600" };
+      default:
+        return { label: status, cls: "bg-gray-100 text-gray-600" };
     }
   };
 
@@ -527,7 +580,8 @@ function TournamentsTab({ teamId }: { teamId: string }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Trophy className="w-5 h-5" />参加申込できる大会
+            <Trophy className="w-5 h-5" />
+            参加申込できる大会
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -537,9 +591,11 @@ function TournamentsTab({ teamId }: { teamId: string }) {
             </p>
           ) : (
             <div className="space-y-3">
-              {available.map(t => (
-                <div key={t.tournament_id}
-                  className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg">
+              {available.map((t) => (
+                <div
+                  key={t.tournament_id}
+                  className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg"
+                >
                   <div>
                     <div className="font-medium text-gray-900">{t.tournament_name}</div>
                     <div className="text-xs text-gray-500 mt-0.5 space-x-2">
@@ -548,7 +604,11 @@ function TournamentsTab({ teamId }: { teamId: string }) {
                       {t.recruitment_end_date && <span>締切: {t.recruitment_end_date}</span>}
                     </div>
                   </div>
-                  <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0 ml-3">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground flex-shrink-0 ml-3"
+                  >
                     <Link href={`/my/tournaments/${t.tournament_id}/apply?team=${teamId}`}>
                       参加申込
                     </Link>
@@ -564,29 +624,34 @@ function TournamentsTab({ teamId }: { teamId: string }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <CheckCircle className="w-5 h-5" />参加済み・申込済み大会
+            <CheckCircle className="w-5 h-5" />
+            参加済み・申込済み大会
           </CardTitle>
         </CardHeader>
         <CardContent>
           {joined.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center">
-              参加申込した大会はありません
-            </p>
+            <p className="text-sm text-gray-500 py-4 text-center">参加申込した大会はありません</p>
           ) : (
             <div className="space-y-3">
-              {joined.map(t => {
+              {joined.map((t) => {
                 const { label, cls } = statusLabel(t.participation_status);
                 return (
-                  <div key={t.tournament_team_id}
-                    className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg">
+                  <div
+                    key={t.tournament_team_id}
+                    className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg"
+                  >
                     <div>
                       <div className="font-medium text-gray-900">{t.tournament_name}</div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}
+                        >
                           {label}
                         </span>
                         {t.assigned_block && (
-                          <span className="text-xs text-gray-500">ブロック: {t.assigned_block}</span>
+                          <span className="text-xs text-gray-500">
+                            ブロック: {t.assigned_block}
+                          </span>
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
@@ -615,35 +680,42 @@ export default function TeamManagePage() {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabKey>('managers');
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("managers");
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       const [teamsRes, managersRes, invitesRes] = await Promise.all([
-        fetch('/api/my/teams'),
+        fetch("/api/my/teams"),
         fetch(`/api/my/teams/${teamId}/managers`),
         fetch(`/api/my/teams/invite?team_id=${teamId}`),
       ]);
       const [teamsData, managersData, invitesData] = await Promise.all([
-        teamsRes.json(), managersRes.json(), invitesRes.json(),
+        teamsRes.json(),
+        managersRes.json(),
+        invitesRes.json(),
       ]);
 
       if (teamsData.success) {
         const found = teamsData.data.find((t: TeamInfo) => t.team_id === teamId);
-        if (!found) { router.push('/my'); return; }
+        if (!found) {
+          router.push("/my");
+          return;
+        }
         setTeam(found);
       }
       if (managersData.success) setManagers(managersData.data);
       if (invitesData.success) setInvitations(invitesData.data);
     } catch (err) {
-      console.error('データ取得エラー:', err);
+      console.error("データ取得エラー:", err);
     } finally {
       setLoading(false);
     }
   }, [teamId, router]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -656,9 +728,9 @@ export default function TeamManagePage() {
   if (!team) return null;
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-    { key: 'managers', label: '担当者管理', icon: <Users className="w-4 h-4" /> },
-    { key: 'players',  label: '選手管理',   icon: <UserPlus className="w-4 h-4" /> },
-    { key: 'tournaments', label: '大会参加', icon: <Trophy className="w-4 h-4" /> },
+    { key: "managers", label: "担当者管理", icon: <Users className="w-4 h-4" /> },
+    { key: "players", label: "選手管理", icon: <UserPlus className="w-4 h-4" /> },
+    { key: "tournaments", label: "大会参加", icon: <Trophy className="w-4 h-4" /> },
   ];
 
   return (
@@ -669,7 +741,9 @@ export default function TeamManagePage() {
           <h1 className="text-2xl font-bold text-white">
             {team.team_name}
             {team.team_omission && (
-              <span className="text-base font-normal text-white/70 ml-2">（{team.team_omission}）</span>
+              <span className="text-base font-normal text-white/70 ml-2">
+                （{team.team_omission}）
+              </span>
             )}
           </h1>
         </div>
@@ -677,19 +751,22 @@ export default function TeamManagePage() {
         {/* タブ */}
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-3">
           <div className="grid grid-cols-3 gap-1">
-            {tabs.map(tab => (
+            {tabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => { setActiveTab(tab.key); setMessage(null); }}
+                onClick={() => {
+                  setActiveTab(tab.key);
+                  setMessage(null);
+                }}
                 className={`flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   activeTab === tab.key
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
                 }`}
               >
                 {tab.icon}
                 <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.label.split('管理')[0].split('参加')[0]}</span>
+                <span className="sm:hidden">{tab.label.split("管理")[0].split("参加")[0]}</span>
               </button>
             ))}
           </div>
@@ -706,11 +783,9 @@ export default function TeamManagePage() {
             </Link>
           </Button>
         </div>
-        {message && (
-          <MessageBanner message={message} onClose={() => setMessage(null)} />
-        )}
+        {message && <MessageBanner message={message} onClose={() => setMessage(null)} />}
 
-        {activeTab === 'managers' && (
+        {activeTab === "managers" && (
           <ManagersTab
             teamId={teamId}
             managers={managers}
@@ -720,12 +795,8 @@ export default function TeamManagePage() {
             setMessage={setMessage}
           />
         )}
-        {activeTab === 'players' && (
-          <PlayersTab teamId={teamId} setMessage={setMessage} />
-        )}
-        {activeTab === 'tournaments' && (
-          <TournamentsTab teamId={teamId} />
-        )}
+        {activeTab === "players" && <PlayersTab teamId={teamId} setMessage={setMessage} />}
+        {activeTab === "tournaments" && <TournamentsTab teamId={teamId} />}
       </div>
     </div>
   );

@@ -1,32 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Hash, ChevronDown, ChevronRight } from 'lucide-react';
-import { 
-  SimpleTournamentTeamsData, 
-  SimpleTournamentTeam
-} from '@/lib/tournament-teams-simple';
+import { ChevronDown, ChevronRight, Hash, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SimpleTournamentTeam, SimpleTournamentTeamsData } from "@/lib/tournament-teams-simple";
 
 // 基本的なヘルパー関数をローカルで定義
 const getTeamStatus = (team: SimpleTournamentTeam) => {
   if (team.player_count === 0) {
     return {
-      status: 'empty',
-      statusText: '選手未登録',
-      statusColor: 'text-red-600 bg-red-50'
+      status: "empty",
+      statusText: "選手未登録",
+      statusColor: "text-red-600 bg-red-50",
     };
   } else if (team.player_count < 5) {
     return {
-      status: 'incomplete',
+      status: "incomplete",
       statusText: `選手${team.player_count}名`,
-      statusColor: 'text-yellow-600 bg-yellow-50'
+      statusColor: "text-yellow-600 bg-yellow-50",
     };
   } else {
     return {
-      status: 'complete',
+      status: "complete",
       statusText: `選手${team.player_count}名`,
-      statusColor: 'text-green-600 bg-green-50'
+      statusColor: "text-green-600 bg-green-50",
     };
   }
 };
@@ -37,10 +34,18 @@ interface TournamentTeamsProps {
   initialCanViewPlayers?: boolean;
 }
 
-export default function TournamentTeams({ tournamentId, initialTeamsData, initialCanViewPlayers }: TournamentTeamsProps) {
-  const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(initialTeamsData || null);
+export default function TournamentTeams({
+  tournamentId,
+  initialTeamsData,
+  initialCanViewPlayers,
+}: TournamentTeamsProps) {
+  const [teamsData, setTeamsData] = useState<SimpleTournamentTeamsData | null>(
+    initialTeamsData || null,
+  );
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
-  const [teamPlayers, setTeamPlayers] = useState<Record<number, Array<{player_name: string; jersey_number?: number; position?: string}>>>({});
+  const [teamPlayers, setTeamPlayers] = useState<
+    Record<number, Array<{ player_name: string; jersey_number?: number; position?: string }>>
+  >({});
   const [loading, setLoading] = useState(!initialTeamsData);
   const [error, setError] = useState<string | null>(null);
   const [canViewPlayers, setCanViewPlayers] = useState(initialCanViewPlayers ?? false);
@@ -54,7 +59,7 @@ export default function TournamentTeams({ tournamentId, initialTeamsData, initia
       setError(null);
       try {
         const response = await fetch(`/api/tournaments/${tournamentId}/teams`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (!response.ok) {
@@ -67,12 +72,14 @@ export default function TournamentTeams({ tournamentId, initialTeamsData, initia
           setTeamsData(result.data);
           setCanViewPlayers(result.canViewPlayers || false);
         } else {
-          console.error('API Error Details:', result);
-          setError(result.error || '参加チーム情報の取得に失敗しました');
+          console.error("API Error Details:", result);
+          setError(result.error || "参加チーム情報の取得に失敗しました");
         }
       } catch (err) {
-        console.error('参加チーム情報取得エラー:', err);
-        setError(`参加チーム情報の取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`);
+        console.error("参加チーム情報取得エラー:", err);
+        setError(
+          `参加チーム情報の取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         setLoading(false);
       }
@@ -92,13 +99,15 @@ export default function TournamentTeams({ tournamentId, initialTeamsData, initia
       // 選手情報閲覧権限がある場合のみ選手データを取得
       if (canViewPlayers && !teamPlayers[tournamentTeamId]) {
         try {
-          const response = await fetch(`/api/tournaments/${tournamentId}/teams/${tournamentTeamId}/players`);
+          const response = await fetch(
+            `/api/tournaments/${tournamentId}/teams/${tournamentTeamId}/players`,
+          );
           if (response.ok) {
             const result = await response.json();
             if (result.success) {
-              setTeamPlayers(prev => ({
+              setTeamPlayers((prev) => ({
                 ...prev,
-                [tournamentTeamId]: result.data
+                [tournamentTeamId]: result.data,
               }));
             }
           }
@@ -184,113 +193,121 @@ export default function TournamentTeams({ tournamentId, initialTeamsData, initia
         <CardContent>
           <div className="space-y-4">
             {teamsData.teams.map((team) => {
-                const teamStatus = getTeamStatus(team);
-                const isExpanded = expandedTeams.has(team.tournament_team_id);
+              const teamStatus = getTeamStatus(team);
+              const isExpanded = expandedTeams.has(team.tournament_team_id);
 
-                return (
-                  <div key={team.tournament_team_id} className="border rounded-lg">
-                    {/* チーム基本情報 */}
-                    <div
-                      className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => toggleTeamExpansion(team.tournament_team_id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-gray-500" />
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {team.display_name}
-                            </h3>
-                            {team.team_omission && team.team_omission !== team.team_name && (
-                              <p className="text-sm text-gray-500">({team.team_name})</p>
-                            )}
-                          </div>
+              return (
+                <div key={team.tournament_team_id} className="border rounded-lg">
+                  {/* チーム基本情報 */}
+                  <div
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => toggleTeamExpansion(team.tournament_team_id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-gray-500" />
+                          )}
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${teamStatus.statusColor}`}>
-                            {teamStatus.statusText}
-                          </span>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {team.display_name}
+                          </h3>
+                          {team.team_omission && team.team_omission !== team.team_name && (
+                            <p className="text-sm text-gray-500">({team.team_name})</p>
+                          )}
                         </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${teamStatus.statusColor}`}
+                        >
+                          {teamStatus.statusText}
+                        </span>
                       </div>
                     </div>
-
-                    {/* 展開時の詳細情報 */}
-                    {isExpanded && (
-                      <div className="border-t bg-gray-50">
-                        <div className="p-4 space-y-4">
-                          {/* ブロック情報 */}
-                          {team.assigned_block && (
-                            <div className="text-sm text-gray-500">
-                              所属ブロック: {team.assigned_block}
-                            </div>
-                          )}
-
-                          {/* 選手一覧 */}
-                          {canViewPlayers ? (
-                            teamPlayers[team.tournament_team_id] && teamPlayers[team.tournament_team_id].length > 0 ? (
-                              <div>
-                                <h4 className="font-medium text-gray-500 mb-3 flex items-center">
-                                  <Users className="h-4 w-4 mr-1" />
-                                  参加選手一覧
-                                </h4>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-sm">
-                                    <thead>
-                                      <tr className="border-b bg-white">
-                                        <th className="text-left py-2 px-3 font-medium">背番号</th>
-                                        <th className="text-left py-2 px-3 font-medium">選手名</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {teamPlayers[team.tournament_team_id]?.map((player, index) => (
-                                        <tr key={`${team.tournament_team_id}-${index}`} className="border-b">
-                                          <td className="py-2 px-3">
-                                            {player.jersey_number ? (
-                                              <span className="flex items-center">
-                                                <Hash className="h-3 w-3 mr-1 text-gray-500" />
-                                                {player.jersey_number}
-                                              </span>
-                                            ) : (
-                                              <span className="text-gray-500">-</span>
-                                            )}
-                                          </td>
-                                          <td className="py-2 px-3 font-medium">{player.player_name}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-center py-6 text-gray-500">
-                                <Users className="h-8 w-8 mx-auto mb-2 text-gray-500" />
-                                <p>このチームにはまだ選手が登録されていません</p>
-                              </div>
-                            )
-                          ) : (
-                            <div className="text-center py-6 bg-yellow-50 rounded-lg border border-yellow-200">
-                              <Users className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
-                              <p className="font-medium text-yellow-800">選手情報は非公開です</p>
-                              <p className="text-sm text-yellow-700 mt-1">
-                                大会運営者のみ閲覧可能です
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+
+                  {/* 展開時の詳細情報 */}
+                  {isExpanded && (
+                    <div className="border-t bg-gray-50">
+                      <div className="p-4 space-y-4">
+                        {/* ブロック情報 */}
+                        {team.assigned_block && (
+                          <div className="text-sm text-gray-500">
+                            所属ブロック: {team.assigned_block}
+                          </div>
+                        )}
+
+                        {/* 選手一覧 */}
+                        {canViewPlayers ? (
+                          teamPlayers[team.tournament_team_id] &&
+                          teamPlayers[team.tournament_team_id].length > 0 ? (
+                            <div>
+                              <h4 className="font-medium text-gray-500 mb-3 flex items-center">
+                                <Users className="h-4 w-4 mr-1" />
+                                参加選手一覧
+                              </h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b bg-white">
+                                      <th className="text-left py-2 px-3 font-medium">背番号</th>
+                                      <th className="text-left py-2 px-3 font-medium">選手名</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {teamPlayers[team.tournament_team_id]?.map((player, index) => (
+                                      <tr
+                                        key={`${team.tournament_team_id}-${index}`}
+                                        className="border-b"
+                                      >
+                                        <td className="py-2 px-3">
+                                          {player.jersey_number ? (
+                                            <span className="flex items-center">
+                                              <Hash className="h-3 w-3 mr-1 text-gray-500" />
+                                              {player.jersey_number}
+                                            </span>
+                                          ) : (
+                                            <span className="text-gray-500">-</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-3 font-medium">
+                                          {player.player_name}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-gray-500">
+                              <Users className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                              <p>このチームにはまだ選手が登録されていません</p>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center py-6 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <Users className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
+                            <p className="font-medium text-yellow-800">選手情報は非公開です</p>
+                            <p className="text-sm text-yellow-700 mt-1">
+                              大会運営者のみ閲覧可能です
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,21 +1,21 @@
 // app/tournaments/groups/[id]/page.tsx
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Home, ChevronRight, Calendar, MapPin, Users, Trophy } from 'lucide-react';
-import ShareButton from '@/components/public/ShareButton';
+import { Calendar, ChevronRight, Home, MapPin, Trophy, Users } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
+import ShareButton from "@/components/public/ShareButton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  getStatusLabel,
   getStatusBadgeVariant,
-  type TournamentStatus
-} from '@/lib/tournament-status';
+  getStatusLabel,
+  type TournamentStatus,
+} from "@/lib/tournament-status";
 
 interface Division {
   tournament_id: number;
@@ -69,18 +69,18 @@ export default function TournamentGroupPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || '大会データの取得に失敗しました');
+          throw new Error(data.error || "大会データの取得に失敗しました");
         }
 
         if (data.success) {
           setGroup(data.data.group);
           setDivisions(data.data.divisions);
         } else {
-          throw new Error(data.error || '大会データの取得に失敗しました');
+          throw new Error(data.error || "大会データの取得に失敗しました");
         }
       } catch (err) {
-        console.error('大会取得エラー:', err);
-        setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+        console.error("大会取得エラー:", err);
+        setError(err instanceof Error ? err.message : "不明なエラーが発生しました");
       } finally {
         setLoading(false);
       }
@@ -90,12 +90,12 @@ export default function TournamentGroupPage() {
   }, [groupId]);
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ja-JP');
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("ja-JP");
   };
 
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
-    if (!startDate && !endDate) return '-';
+    if (!startDate && !endDate) return "-";
     if (!endDate || startDate === endDate) return formatDate(startDate);
     return `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
   };
@@ -121,11 +121,8 @@ export default function TournamentGroupPage() {
         <Header hideSearchButton />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
-            <p className="text-destructive">{error || '大会が見つかりません'}</p>
-            <Button
-              className="mt-4"
-              asChild
-            >
+            <p className="text-destructive">{error || "大会が見つかりません"}</p>
+            <Button className="mt-4" asChild>
               <Link href="/">TOPページに戻る</Link>
             </Button>
           </div>
@@ -161,11 +158,7 @@ export default function TournamentGroupPage() {
               <h1 className="text-2xl font-bold text-gray-900">{group.group_name}</h1>
               <ShareButton tournamentName={group.group_name} />
             </div>
-            {group.organizer && (
-              <p className="text-sm text-gray-500">
-                主催: {group.organizer}
-              </p>
-            )}
+            {group.organizer && <p className="text-sm text-gray-500">主催: {group.organizer}</p>}
           </div>
         </div>
       </div>
@@ -265,9 +258,7 @@ export default function TournamentGroupPage() {
               <CardContent>
                 {divisions.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">
-                      現在公開中の部門はありません。
-                    </p>
+                    <p className="text-gray-500">現在公開中の部門はありません。</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -275,7 +266,9 @@ export default function TournamentGroupPage() {
                       <Card
                         key={division.tournament_id}
                         className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => window.location.href = `/tournaments/${division.tournament_id}/schedule`}
+                        onClick={() =>
+                          (window.location.href = `/tournaments/${division.tournament_id}/schedule`)
+                        }
                       >
                         <CardContent className="p-4">
                           <div className="space-y-3">
@@ -284,15 +277,16 @@ export default function TournamentGroupPage() {
                               <h3 className="font-bold text-lg text-gray-900 min-w-0">
                                 {division.tournament_name}
                               </h3>
-                              <Badge variant={getStatusBadgeVariant(division.status)} className="shrink-0 whitespace-nowrap">
+                              <Badge
+                                variant={getStatusBadgeVariant(division.status)}
+                                className="shrink-0 whitespace-nowrap"
+                              >
                                 {getStatusLabel(division.status)}
                               </Badge>
                             </div>
 
                             {/* フォーマット */}
-                            <p className="text-sm text-gray-500">
-                              {division.format_name}
-                            </p>
+                            <p className="text-sm text-gray-500">{division.format_name}</p>
 
                             {/* 会場（大会と異なる場合のみ表示） */}
                             {division.venue_name && division.venue_name !== group.venue_name && (
@@ -309,14 +303,17 @@ export default function TournamentGroupPage() {
 
                             {/* 大会期間（大会と異なる場合のみ表示） */}
                             {division.event_start_date &&
-                             division.event_end_date &&
-                             (division.event_start_date !== group.event_start_date ||
-                              division.event_end_date !== group.event_end_date) && (
-                              <div className="flex items-center text-xs text-gray-500 pt-2 border-t">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                {formatDateRange(division.event_start_date, division.event_end_date)}
-                              </div>
-                            )}
+                              division.event_end_date &&
+                              (division.event_start_date !== group.event_start_date ||
+                                division.event_end_date !== group.event_end_date) && (
+                                <div className="flex items-center text-xs text-gray-500 pt-2 border-t">
+                                  <Calendar className="h-3 w-3 mr-1" />
+                                  {formatDateRange(
+                                    division.event_start_date,
+                                    division.event_end_date,
+                                  )}
+                                </div>
+                              )}
                           </div>
                         </CardContent>
                       </Card>

@@ -1,7 +1,7 @@
 // app/api/admin/tournaments/[id]/teams/delete/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -11,21 +11,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     // 管理者認証チェック
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await context.params;
     const tournamentId = parseInt(resolvedParams.id);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     const body = await request.json();
@@ -33,19 +27,20 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     if (!tournamentTeamId) {
       return NextResponse.json(
-        { success: false, error: '大会チームIDが必要です' },
-        { status: 400 }
+        { success: false, error: "大会チームIDが必要です" },
+        { status: 400 },
       );
     }
 
-    console.log('Admin team deletion request:', {
+    console.log("Admin team deletion request:", {
       tournamentId,
       tournamentTeamId,
-      adminId: session.user.id
+      adminId: session.user.id,
     });
 
     // 削除対象チームの詳細情報を取得
-    const teamInfoResult = await db.execute(`
+    const teamInfoResult = await db.execute(
+      `
       SELECT
         tt.tournament_team_id,
         tt.team_id,
@@ -55,118 +50,151 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
       WHERE tt.tournament_id = ? AND tt.tournament_team_id = ?
-    `, [tournamentId, tournamentTeamId]);
+    `,
+      [tournamentId, tournamentTeamId],
+    );
 
     if (teamInfoResult.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'チームが見つかりません' },
-        { status: 404 }
+        { success: false, error: "チームが見つかりません" },
+        { status: 404 },
       );
     }
 
     const teamInfo = teamInfoResult.rows[0];
 
     // 管理者代行登録チームのみ削除可能
-    if (teamInfo.registration_type !== 'admin_proxy') {
+    if (teamInfo.registration_type !== "admin_proxy") {
       return NextResponse.json(
         {
           success: false,
-          error: '管理者代行登録されたチームのみ削除可能です'
+          error: "管理者代行登録されたチームのみ削除可能です",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // 組合せ作成済みのチームは削除不可（試合データの整合性保護）
-    const matchCount = await db.execute(`
+    const matchCount = await db.execute(
+      `
       SELECT COUNT(*) AS cnt FROM t_matches_live
       WHERE match_block_id IN (
         SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
       ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ?)
-    `, [tournamentId, tournamentTeamId, tournamentTeamId]);
+    `,
+      [tournamentId, tournamentTeamId, tournamentTeamId],
+    );
 
-    const matchFinalCount = await db.execute(`
+    const matchFinalCount = await db.execute(
+      `
       SELECT COUNT(*) AS cnt FROM t_matches_final
       WHERE match_block_id IN (
         SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
       ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ?)
-    `, [tournamentId, tournamentTeamId, tournamentTeamId]);
+    `,
+      [tournamentId, tournamentTeamId, tournamentTeamId],
+    );
 
-    const totalMatchCount = Number(matchCount.rows[0]?.cnt ?? 0) + Number(matchFinalCount.rows[0]?.cnt ?? 0);
+    const totalMatchCount =
+      Number(matchCount.rows[0]?.cnt ?? 0) + Number(matchFinalCount.rows[0]?.cnt ?? 0);
     if (totalMatchCount > 0) {
       return NextResponse.json(
         {
           success: false,
-          error: '組合せ作成済みのチームは削除できません。先に組合せを削除してください。'
+          error: "組合せ作成済みのチームは削除できません。先に組合せを削除してください。",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     // トランザクション開始（削除の順序が重要）
-    console.log('Starting team deletion transaction...');
+    console.log("Starting team deletion transaction...");
 
     // 1. このチームが参加している試合を確認して削除（外部キー制約対応）
     // 1-1. t_matches_liveから削除（tournament_team_idを参照）
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_matches_live
       WHERE match_block_id IN (
         SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
       ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ? OR winner_tournament_team_id = ?)
-    `, [tournamentId, tournamentTeamId, tournamentTeamId, tournamentTeamId]);
-    console.log('Deleted live matches');
+    `,
+      [tournamentId, tournamentTeamId, tournamentTeamId, tournamentTeamId],
+    );
+    console.log("Deleted live matches");
 
     // 1-2. t_matches_finalから削除（tournament_team_idを参照）
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_matches_final
       WHERE match_block_id IN (
         SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
       ) AND (team1_tournament_team_id = ? OR team2_tournament_team_id = ? OR winner_tournament_team_id = ?)
-    `, [tournamentId, tournamentTeamId, tournamentTeamId, tournamentTeamId]);
-    console.log('Deleted final matches');
+    `,
+      [tournamentId, tournamentTeamId, tournamentTeamId, tournamentTeamId],
+    );
+    console.log("Deleted final matches");
 
     // 2. 大会参加選手を削除（tournament_team_idを使用して特定のエントリーのみ削除）
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_tournament_players
       WHERE tournament_team_id = ?
-    `, [tournamentTeamId]);
-    console.log('Deleted tournament players');
+    `,
+      [tournamentTeamId],
+    );
+    console.log("Deleted tournament players");
 
     // 3. 大会参加チームを削除（tournament_team_idを使用して特定のエントリーのみ削除）
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_tournament_teams
       WHERE tournament_team_id = ?
-    `, [tournamentTeamId]);
-    console.log('Deleted tournament team');
+    `,
+      [tournamentTeamId],
+    );
+    console.log("Deleted tournament team");
 
     // 4. m_team_members に紐付くアカウントがないマスターチームは孤立するため削除
     const teamId = String(teamInfo.team_id);
     let masterTeamDeleted = false;
 
-    const linkedMembers = await db.execute(`
+    const linkedMembers = await db.execute(
+      `
       SELECT COUNT(*) AS cnt FROM m_team_members
       WHERE team_id = ? AND is_active = 1
-    `, [teamId]);
+    `,
+      [teamId],
+    );
 
     if (Number(linkedMembers.rows[0]?.cnt ?? 0) === 0) {
       // 他の大会にも参加していないことを確認
-      const otherEntries = await db.execute(`
+      const otherEntries = await db.execute(
+        `
         SELECT COUNT(*) AS cnt FROM t_tournament_teams
         WHERE team_id = ?
-      `, [teamId]);
+      `,
+        [teamId],
+      );
 
       if (Number(otherEntries.rows[0]?.cnt ?? 0) === 0) {
         // m_players（このチーム所属の選手）を削除
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM m_players WHERE current_team_id = ?
-        `, [teamId]);
-        console.log('Deleted orphan master players for team:', teamId);
+        `,
+          [teamId],
+        );
+        console.log("Deleted orphan master players for team:", teamId);
 
         // m_teams を削除
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM m_teams WHERE team_id = ?
-        `, [teamId]);
-        console.log('Deleted orphan master team:', teamId);
+        `,
+          [teamId],
+        );
+        console.log("Deleted orphan master team:", teamId);
         masterTeamDeleted = true;
       }
     }
@@ -174,28 +202,27 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return NextResponse.json({
       success: true,
       message: masterTeamDeleted
-        ? 'チームを正常に削除しました（紐付けのないマスターチーム・選手も削除済み）'
-        : 'チームを正常に削除しました',
+        ? "チームを正常に削除しました（紐付けのないマスターチーム・選手も削除済み）"
+        : "チームを正常に削除しました",
       data: {
         deletedTeam: {
           tournament_team_id: tournamentTeamId,
           team_id: teamId,
           tournament_team_name: String(teamInfo.tournament_team_name),
           master_team_name: String(teamInfo.master_team_name),
-          master_team_deleted: masterTeamDeleted
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Admin team deletion error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'チーム削除に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+          master_team_deleted: masterTeamDeleted,
+        },
       },
-      { status: 500 }
+    });
+  } catch (error) {
+    console.error("Admin team deletion error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "チーム削除に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }

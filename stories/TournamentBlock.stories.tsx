@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { TournamentBlock, MultiBlockBracket } from "@/lib/tournament-bracket";
 import type { BracketMatch, SportScoreConfig } from "@/lib/tournament-bracket";
+import { MultiBlockBracket, TournamentBlock } from "@/lib/tournament-bracket";
 
 const meta: Meta<typeof TournamentBlock> = {
   title: "Tournament/TournamentBlock",
@@ -38,7 +38,7 @@ function createMatch(
   score1: number,
   score2: number,
   completed = true,
-  matchType = "final"
+  matchType = "final",
 ): BracketMatch {
   const winner = score1 > score2 ? `team-${id * 2 - 1}` : `team-${id * 2}`;
   return {
@@ -53,11 +53,7 @@ function createMatch(
     team1_goals: score1,
     team2_goals: score2,
     winner_team_id: completed ? winner : undefined,
-    winner_tournament_team_id: completed
-      ? score1 > score2
-        ? id * 2 - 1
-        : id * 2
-      : undefined,
+    winner_tournament_team_id: completed ? (score1 > score2 ? id * 2 - 1 : id * 2) : undefined,
     is_draw: false,
     is_walkover: false,
     match_status: completed ? "completed" : "scheduled",
@@ -71,9 +67,7 @@ function createMatch(
 // ========================================
 // P2: 2チーム（決勝のみ）
 // ========================================
-const p2Matches: BracketMatch[] = [
-  createMatch(1, "FCバルセロナ", "レアル・マドリード", 3, 1),
-];
+const p2Matches: BracketMatch[] = [createMatch(1, "FCバルセロナ", "レアル・マドリード", 3, 1)];
 
 /**
  * P2パターン: 2チーム
@@ -337,9 +331,7 @@ const blockBMatches: BracketMatch[] = [
 ];
 
 // 決勝ブロック: 2チーム（P2パターン）
-const finalMatches: BracketMatch[] = [
-  createMatch(301, "チームA1", "チームB1", 2, 1),
-];
+const finalMatches: BracketMatch[] = [createMatch(301, "チームA1", "チームB1", 2, 1)];
 
 /**
  * 2ブロック構成（16チーム）
@@ -351,8 +343,18 @@ export const TwoBlocks_16Teams: StoryObj<typeof MultiBlockBracket> = {
   render: () => (
     <MultiBlockBracket
       blocks={[
-        { blockId: "A", title: "ブロックA", matches: blockAMatches, roundLabels: ["準々決勝", "準決勝", "決勝"] },
-        { blockId: "B", title: "ブロックB", matches: blockBMatches, roundLabels: ["準々決勝", "準決勝", "決勝"] },
+        {
+          blockId: "A",
+          title: "ブロックA",
+          matches: blockAMatches,
+          roundLabels: ["準々決勝", "準決勝", "決勝"],
+        },
+        {
+          blockId: "B",
+          title: "ブロックB",
+          matches: blockBMatches,
+          roundLabels: ["準々決勝", "準決勝", "決勝"],
+        },
       ]}
       finalBlockMatches={finalMatches}
       finalBlockRoundLabels={["決勝"]}
@@ -375,9 +377,7 @@ const blockDMatches: BracketMatch[] = [
 ];
 
 // 決勝ブロック: 2チーム
-const finalMatchesSmall: BracketMatch[] = [
-  createMatch(501, "チームC1", "チームD1", 2, 1),
-];
+const finalMatchesSmall: BracketMatch[] = [createMatch(501, "チームC1", "チームD1", 2, 1)];
 
 /**
  * 2ブロック構成（8チーム: 4+4）
@@ -389,8 +389,18 @@ export const TwoBlocks_8Teams: StoryObj<typeof MultiBlockBracket> = {
   render: () => (
     <MultiBlockBracket
       blocks={[
-        { blockId: "C", title: "ブロックA", matches: blockCMatches, roundLabels: ["準決勝", "決勝"] },
-        { blockId: "D", title: "ブロックB", matches: blockDMatches, roundLabels: ["準決勝", "決勝"] },
+        {
+          blockId: "C",
+          title: "ブロックA",
+          matches: blockCMatches,
+          roundLabels: ["準決勝", "決勝"],
+        },
+        {
+          blockId: "D",
+          title: "ブロックB",
+          matches: blockDMatches,
+          roundLabels: ["準決勝", "決勝"],
+        },
       ]}
       finalBlockMatches={finalMatchesSmall}
       finalBlockRoundLabels={["決勝"]}

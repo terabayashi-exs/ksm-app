@@ -1,12 +1,15 @@
-'use client';
+"use client";
 
 // components/features/my/WithdrawalModal.tsx
 // マイダッシュボード用の辞退申請モーダル
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle, CheckCircle } from "lucide-react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,19 +17,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // バリデーションスキーマ
 const withdrawalSchema = z.object({
   withdrawal_reason: z
     .string()
-    .min(5, '辞退理由は5文字以上で入力してください')
-    .max(50, '辞退理由は50文字以内で入力してください')
+    .min(5, "辞退理由は5文字以上で入力してください")
+    .max(50, "辞退理由は50文字以内で入力してください"),
 });
 
 type WithdrawalFormData = z.infer<typeof withdrawalSchema>;
@@ -59,12 +59,12 @@ export default function WithdrawalModal({
     handleSubmit,
     formState: { errors },
     reset,
-    watch
+    watch,
   } = useForm<WithdrawalFormData>({
-    resolver: zodResolver(withdrawalSchema)
+    resolver: zodResolver(withdrawalSchema),
   });
 
-  const withdrawalReason = watch('withdrawal_reason', '');
+  const withdrawalReason = watch("withdrawal_reason", "");
   const charCount = withdrawalReason?.length || 0;
 
   const onSubmit = async (data: WithdrawalFormData) => {
@@ -73,20 +73,23 @@ export default function WithdrawalModal({
       setError(null);
       setSuccess(null);
 
-      const response = await fetch(`/api/my/teams/${teamId}/tournaments/${tournamentTeamId}/withdraw`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/my/teams/${teamId}/tournaments/${tournamentTeamId}/withdraw`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            withdrawal_reason: data.withdrawal_reason,
+          }),
         },
-        body: JSON.stringify({
-          withdrawal_reason: data.withdrawal_reason
-        }),
-      });
+      );
 
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setSuccess(result.message || '辞退申請を受け付けました');
+        setSuccess(result.message || "辞退申請を受け付けました");
         reset();
 
         // 成功メッセージを表示後、少し待ってから閉じる
@@ -95,11 +98,11 @@ export default function WithdrawalModal({
           onClose();
         }, 1500);
       } else {
-        setError(result.error || '辞退申請に失敗しました');
+        setError(result.error || "辞退申請に失敗しました");
       }
     } catch (err) {
-      setError('辞退申請中にエラーが発生しました');
-      console.error('辞退申請エラー:', err);
+      setError("辞退申請中にエラーが発生しました");
+      console.error("辞退申請エラー:", err);
     } finally {
       setSubmitting(false);
     }
@@ -128,7 +131,8 @@ export default function WithdrawalModal({
                 <span className="font-medium text-gray-900">大会名:</span> {tournamentName}
               </div>
               <div className="text-sm">
-                <span className="font-medium text-gray-900">参加チーム名:</span> {tournamentTeamName}
+                <span className="font-medium text-gray-900">参加チーム名:</span>{" "}
+                {tournamentTeamName}
               </div>
             </div>
           </DialogDescription>
@@ -144,17 +148,17 @@ export default function WithdrawalModal({
               placeholder="辞退理由を入力してください（5文字以上50文字以内）"
               className="min-h-[80px] resize-y"
               disabled={submitting || !!success}
-              {...register('withdrawal_reason')}
+              {...register("withdrawal_reason")}
             />
             <div className="flex justify-between items-center">
               <div>
                 {errors.withdrawal_reason && (
-                  <p className="text-sm text-red-600">
-                    {errors.withdrawal_reason.message}
-                  </p>
+                  <p className="text-sm text-red-600">{errors.withdrawal_reason.message}</p>
                 )}
               </div>
-              <p className={`text-xs ${charCount < 5 ? 'text-red-500' : charCount > 50 ? 'text-red-500' : 'text-gray-500'}`}>
+              <p
+                className={`text-xs ${charCount < 5 ? "text-red-500" : charCount > 50 ? "text-red-500" : "text-gray-500"}`}
+              >
                 {charCount} / 50文字
               </p>
             </div>
@@ -202,7 +206,7 @@ export default function WithdrawalModal({
               disabled={submitting || !!success}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {submitting ? '申請中...' : success ? '申請完了' : '辞退申請を送信'}
+              {submitting ? "申請中..." : success ? "申請完了" : "辞退申請を送信"}
             </Button>
           </DialogFooter>
         </form>

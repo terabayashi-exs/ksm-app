@@ -1,44 +1,42 @@
 // MIGRATION NOTE: team_id → tournament_team_id 移行済み (2026-02-04)
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
 interface CancelRequest {
-  cancellation_type: 'no_show_both' | 'no_show_team1' | 'no_show_team2' | 'no_count';
+  cancellation_type: "no_show_both" | "no_show_team1" | "no_show_team2" | "no_count";
 }
 
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json({ error: '管理者権限が必要です' }, { status: 401 });
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const params = await context.params;
     const matchId = parseInt(params.id);
     if (isNaN(matchId)) {
-      return NextResponse.json({ error: '無効な試合IDです' }, { status: 400 });
+      return NextResponse.json({ error: "無効な試合IDです" }, { status: 400 });
     }
 
-    const body = await request.json() as CancelRequest;
+    const body = (await request.json()) as CancelRequest;
     const { cancellation_type } = body;
 
     // cancellation_typeの妥当性チェック
-    const validTypes = ['no_show_both', 'no_show_team1', 'no_show_team2', 'no_count'];
+    const validTypes = ["no_show_both", "no_show_team1", "no_show_team2", "no_count"];
     if (!validTypes.includes(cancellation_type)) {
-      return NextResponse.json({ error: '無効な中止種別です' }, { status: 400 });
+      return NextResponse.json({ error: "無効な中止種別です" }, { status: 400 });
     }
 
     // まず試合情報を取得
     // MIGRATION NOTE: team1_tournament_team_id, team2_tournament_team_id を追加取得
-    const matchResult = await db.execute(`
+    const matchResult = await db.execute(
+      `
       SELECT
         ml.match_id,
         ml.match_code,
@@ -54,10 +52,12 @@ export async function POST(
       LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
       LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE ml.match_id = ?
-    `, [matchId]);
+    `,
+      [matchId],
+    );
 
     if (matchResult.rows.length === 0) {
-      return NextResponse.json({ error: '試合が見つかりません' }, { status: 404 });
+      return NextResponse.json({ error: "試合が見つかりません" }, { status: 404 });
     }
 
     // MIGRATION NOTE: team1_tournament_team_id, team2_tournament_team_id を型定義に追加
@@ -74,37 +74,46 @@ export async function POST(
       is_confirmed: number;
     };
 
-    if (match.match_status === 'cancelled') {
-      return NextResponse.json({ error: 'この試合は既に中止されています' }, { status: 400 });
+    if (match.match_status === "cancelled") {
+      return NextResponse.json({ error: "この試合は既に中止されています" }, { status: 400 });
     }
 
     if (match.is_confirmed) {
-      return NextResponse.json({ error: 'この試合は確定済みです。確定解除してから中止してください。' }, { status: 400 });
+      return NextResponse.json(
+        { error: "この試合は確定済みです。確定解除してから中止してください。" },
+        { status: 400 },
+      );
     }
 
     // 1. t_matches_liveのステータスを中止に更新
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_matches_live 
       SET match_status = 'cancelled',
           cancellation_type = ?,
           updated_at = datetime('now', '+9 hours')
       WHERE match_id = ?
-    `, [cancellation_type, matchId]);
+    `,
+      [cancellation_type, matchId],
+    );
 
     // 1.1. t_match_statusテーブルも中止に更新（存在する場合）
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_match_status 
       SET match_status = 'cancelled',
           updated_at = datetime('now', '+9 hours')
       WHERE match_id = ?
-    `, [matchId]);
+    `,
+      [matchId],
+    );
 
     console.log(`✓ 試合${match.match_code}を中止しました（種別: ${cancellation_type}）`);
 
     // 2. t_matches_finalへの記録（中止種別に応じて）
-    if (cancellation_type !== 'no_count') {
+    if (cancellation_type !== "no_count") {
       // 大会の不戦勝設定を取得
-      const { getTournamentWalkoverSettings } = await import('@/lib/tournament-rules');
+      const { getTournamentWalkoverSettings } = await import("@/lib/tournament-rules");
       const walkoverSettings = await getTournamentWalkoverSettings(match.tournament_id);
       const walkoverWinnerGoals = walkoverSettings.winner_goals;
       const walkoverLoserGoals = walkoverSettings.loser_goals;
@@ -115,11 +124,12 @@ export async function POST(
         match.team1_tournament_team_id,
         match.team2_tournament_team_id,
         walkoverWinnerGoals,
-        walkoverLoserGoals
+        walkoverLoserGoals,
       );
 
       // MIGRATION NOTE: tournament_team_id フィールドをINSERT文に追加
-      await db.execute(`
+      await db.execute(
+        `
         INSERT INTO t_matches_final (
           match_id, match_block_id, tournament_date, match_number, match_code,
           team1_tournament_team_id, team2_tournament_team_id,
@@ -142,27 +152,31 @@ export async function POST(
           datetime('now', '+9 hours') as updated_at
         FROM t_matches_live
         WHERE match_id = ?
-      `, [
-        cancelResult.team1_scores,
-        cancelResult.team2_scores,
-        cancelResult.winner_tournament_team_id,
-        cancelResult.is_draw ? 1 : 0,
-        cancellation_type,
-        matchId
-      ]);
+      `,
+        [
+          cancelResult.team1_scores,
+          cancelResult.team2_scores,
+          cancelResult.winner_tournament_team_id,
+          cancelResult.is_draw ? 1 : 0,
+          cancellation_type,
+          matchId,
+        ],
+      );
 
-      console.log(`✓ 試合${match.match_code}の中止結果をt_matches_finalに記録しました（不戦勝: ${walkoverWinnerGoals}点, 不戦敗: ${walkoverLoserGoals}点）`);
+      console.log(
+        `✓ 試合${match.match_code}の中止結果をt_matches_finalに記録しました（不戦勝: ${walkoverWinnerGoals}点, 不戦敗: ${walkoverLoserGoals}点）`,
+      );
     }
 
     // 3. 順位表の再計算（不戦勝の場合は常に更新）
-    if (cancellation_type !== 'no_count') {
+    if (cancellation_type !== "no_count") {
       try {
         console.log(`✓ ブロック ${match.match_block_id} の順位表を再計算します`);
-        const { updateBlockRankingsOnMatchConfirm } = await import('@/lib/standings-calculator');
+        const { updateBlockRankingsOnMatchConfirm } = await import("@/lib/standings-calculator");
         await updateBlockRankingsOnMatchConfirm(match.match_block_id, match.tournament_id);
         console.log(`✓ ブロック ${match.match_block_id} の順位表を再計算しました`);
       } catch (error) {
-        console.error('順位表再計算エラー:', error);
+        console.error("順位表再計算エラー:", error);
         // 順位表の再計算に失敗しても、中止処理は成功として扱う
       }
     }
@@ -174,18 +188,22 @@ export async function POST(
       console.log(`[MATCH_CANCEL] Checking if tournament ${tournamentId} is complete...`);
 
       // 大会の全試合数を取得（BYE試合のみ除外、チーム割当の有無は関係なし）
-      const totalMatchesResult = await db.execute(`
+      const totalMatchesResult = await db.execute(
+        `
         SELECT COUNT(*) as total_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ?
           AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
-      const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+      const totalMatches = (totalMatchesResult.rows[0]?.total_matches as number) || 0;
 
       // 完了済み試合数を取得（確定済み OR 中止、BYE試合を除外）
-      const completedMatchesResult = await db.execute(`
+      const completedMatchesResult = await db.execute(
+        `
         SELECT COUNT(*) as completed_matches
         FROM t_matches_live ml
         INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
@@ -193,26 +211,38 @@ export async function POST(
         WHERE mb.tournament_id = ?
           AND (ml.is_bye_match IS NULL OR ml.is_bye_match != 1)
           AND (mf.match_id IS NOT NULL OR ml.match_status = 'cancelled')
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
-      const completedMatches = completedMatchesResult.rows[0]?.completed_matches as number || 0;
+      const completedMatches = (completedMatchesResult.rows[0]?.completed_matches as number) || 0;
 
-      console.log(`[MATCH_CANCEL] Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`);
+      console.log(
+        `[MATCH_CANCEL] Tournament ${tournamentId}: ${completedMatches}/${totalMatches} matches completed (confirmed or cancelled)`,
+      );
 
       // 全試合が完了している場合
       if (totalMatches > 0 && completedMatches >= totalMatches) {
-        console.log(`[MATCH_CANCEL] All matches completed for tournament ${tournamentId}. Setting status to completed.`);
+        console.log(
+          `[MATCH_CANCEL] All matches completed for tournament ${tournamentId}. Setting status to completed.`,
+        );
 
-        await db.execute(`
+        await db.execute(
+          `
           UPDATE t_tournaments
           SET status = 'completed', updated_at = datetime('now', '+9 hours')
           WHERE tournament_id = ?
-        `, [tournamentId]);
+        `,
+          [tournamentId],
+        );
 
         console.log(`[MATCH_CANCEL] ✅ Tournament ${tournamentId} status updated to completed`);
       }
     } catch (completionError) {
-      console.error(`[MATCH_CANCEL] ❌ Failed to check tournament completion for tournament ID ${match.tournament_id}:`, completionError);
+      console.error(
+        `[MATCH_CANCEL] ❌ Failed to check tournament completion for tournament ID ${match.tournament_id}:`,
+        completionError,
+      );
       // 大会完了チェックエラーでも中止処理は成功とする（ログのみ）
     }
 
@@ -224,16 +254,18 @@ export async function POST(
         match_code: match.match_code,
         cancellation_type: cancellation_type,
         is_cancelled: true,
-        affects_standings: cancellation_type !== 'no_count'
-      }
+        affects_standings: cancellation_type !== "no_count",
+      },
     });
-
   } catch (error) {
-    console.error('試合中止エラー:', error);
-    return NextResponse.json({
-      error: '試合の中止処理中にエラーが発生しました',
-      details: error instanceof Error ? error.message : '不明なエラー'
-    }, { status: 500 });
+    console.error("試合中止エラー:", error);
+    return NextResponse.json(
+      {
+        error: "試合の中止処理中にエラーが発生しました",
+        details: error instanceof Error ? error.message : "不明なエラー",
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -244,29 +276,29 @@ function calculateCancelResult(
   team1TournamentTeamId: number | null,
   team2TournamentTeamId: number | null,
   walkoverWinnerGoals: number,
-  walkoverLoserGoals: number
+  walkoverLoserGoals: number,
 ) {
   switch (cancellation_type) {
-    case 'no_show_both':
+    case "no_show_both":
       return {
-        team1_scores: '0',      // TEXT型、カンマ区切り対応
-        team2_scores: '0',
-        winner_tournament_team_id: null,  // MIGRATION NOTE: 追加
-        is_draw: true           // 0-0引き分け扱い（FIFA/JFA規定に準拠）
+        team1_scores: "0", // TEXT型、カンマ区切り対応
+        team2_scores: "0",
+        winner_tournament_team_id: null, // MIGRATION NOTE: 追加
+        is_draw: true, // 0-0引き分け扱い（FIFA/JFA規定に準拠）
       };
-    case 'no_show_team1':
+    case "no_show_team1":
       return {
-        team1_scores: String(walkoverLoserGoals),   // 不参加チーム（不戦敗）
-        team2_scores: String(walkoverWinnerGoals),  // 不戦勝チーム
-        winner_tournament_team_id: team2TournamentTeamId,  // MIGRATION NOTE: 追加
-        is_draw: false
+        team1_scores: String(walkoverLoserGoals), // 不参加チーム（不戦敗）
+        team2_scores: String(walkoverWinnerGoals), // 不戦勝チーム
+        winner_tournament_team_id: team2TournamentTeamId, // MIGRATION NOTE: 追加
+        is_draw: false,
       };
-    case 'no_show_team2':
+    case "no_show_team2":
       return {
-        team1_scores: String(walkoverWinnerGoals),  // 不戦勝チーム
-        team2_scores: String(walkoverLoserGoals),   // 不参加チーム（不戦敗）
-        winner_tournament_team_id: team1TournamentTeamId,  // MIGRATION NOTE: 追加
-        is_draw: false
+        team1_scores: String(walkoverWinnerGoals), // 不戦勝チーム
+        team2_scores: String(walkoverLoserGoals), // 不参加チーム（不戦敗）
+        winner_tournament_team_id: team1TournamentTeamId, // MIGRATION NOTE: 追加
+        is_draw: false,
       };
     default:
       throw new Error(`未対応の中止種別: ${cancellation_type}`);

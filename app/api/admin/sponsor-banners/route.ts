@@ -1,27 +1,24 @@
 // app/api/admin/sponsor-banners/route.ts
 // スポンサーバナー管理API（一覧取得・作成）
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { CreateSponsorBannerInput } from '@/lib/sponsor-banner-specs';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { CreateSponsorBannerInput } from "@/lib/sponsor-banner-specs";
 
 // バナー一覧取得（管理者用）
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
-    const tournamentId = searchParams.get('tournament_id');
+    const tournamentId = searchParams.get("tournament_id");
 
     if (!tournamentId) {
-      return NextResponse.json(
-        { error: 'tournament_idが必要です' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "tournament_idが必要です" }, { status: 400 });
     }
 
     const result = await db.execute({
@@ -55,11 +52,8 @@ export async function GET(request: NextRequest) {
       banners: result.rows,
     });
   } catch (error) {
-    console.error('バナー取得エラー:', error);
-    return NextResponse.json(
-      { error: 'バナーの取得に失敗しました' },
-      { status: 500 }
-    );
+    console.error("バナー取得エラー:", error);
+    return NextResponse.json({ error: "バナーの取得に失敗しました" }, { status: 500 });
   }
 }
 
@@ -67,12 +61,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
     const body: CreateSponsorBannerInput = await request.json();
-    console.log('📝 バナー作成リクエスト受信:', JSON.stringify(body, null, 2));
+    console.log("📝 バナー作成リクエスト受信:", JSON.stringify(body, null, 2));
 
     const {
       tournament_id,
@@ -82,8 +76,8 @@ export async function POST(request: NextRequest) {
       image_filename,
       file_size,
       display_position,
-      target_tab = 'all',
-      banner_size = 'large',
+      target_tab = "all",
+      banner_size = "large",
       display_order = 0,
       is_active = 1,
       start_date,
@@ -92,46 +86,31 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (!tournament_id || !banner_name || !image_blob_url || !display_position) {
-      return NextResponse.json(
-        { error: '必須フィールドが不足しています' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "必須フィールドが不足しています" }, { status: 400 });
     }
 
     // display_positionの値チェック
-    if (!['top', 'bottom', 'sidebar'].includes(display_position)) {
-      return NextResponse.json(
-        { error: '無効なdisplay_positionです' },
-        { status: 400 }
-      );
+    if (!["top", "bottom", "sidebar"].includes(display_position)) {
+      return NextResponse.json({ error: "無効なdisplay_positionです" }, { status: 400 });
     }
 
     // banner_sizeの値チェック
-    if (!['large', 'small'].includes(banner_size)) {
-      return NextResponse.json(
-        { error: '無効なbanner_sizeです' },
-        { status: 400 }
-      );
+    if (!["large", "small"].includes(banner_size)) {
+      return NextResponse.json({ error: "無効なbanner_sizeです" }, { status: 400 });
     }
 
     // 小バナーがサイドバーに配置されていないかチェック
-    if (banner_size === 'small' && display_position === 'sidebar') {
-      return NextResponse.json(
-        { error: '小バナーはサイドバーに配置できません' },
-        { status: 400 }
-      );
+    if (banner_size === "small" && display_position === "sidebar") {
+      return NextResponse.json({ error: "小バナーはサイドバーに配置できません" }, { status: 400 });
     }
 
     // target_tabの値チェック
-    const validTabs = ['all', 'overview', 'schedule', 'preliminary', 'final', 'standings', 'teams'];
+    const validTabs = ["all", "overview", "schedule", "preliminary", "final", "standings", "teams"];
     if (!validTabs.includes(target_tab)) {
-      return NextResponse.json(
-        { error: '無効なtarget_tabです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "無効なtarget_tabです" }, { status: 400 });
     }
 
-    console.log('💾 データベースに登録中...');
+    console.log("💾 データベースに登録中...");
     const result = await db.execute({
       sql: `
         INSERT INTO t_sponsor_banners (
@@ -167,29 +146,26 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    console.log('✅ データベース登録完了:', { lastInsertRowid: result.lastInsertRowid });
+    console.log("✅ データベース登録完了:", { lastInsertRowid: result.lastInsertRowid });
 
     // 作成したバナーを取得
     const bannerId = Number(result.lastInsertRowid);
     const createdBanner = await db.execute({
-      sql: 'SELECT * FROM t_sponsor_banners WHERE banner_id = ?',
+      sql: "SELECT * FROM t_sponsor_banners WHERE banner_id = ?",
       args: [bannerId],
     });
 
-    console.log('📤 レスポンス返却:', createdBanner.rows[0]);
+    console.log("📤 レスポンス返却:", createdBanner.rows[0]);
 
     return NextResponse.json(
       {
-        message: 'バナーを作成しました',
+        message: "バナーを作成しました",
         banner: createdBanner.rows[0],
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
-    console.error('バナー作成エラー:', error);
-    return NextResponse.json(
-      { error: 'バナーの作成に失敗しました' },
-      { status: 500 }
-    );
+    console.error("バナー作成エラー:", error);
+    return NextResponse.json({ error: "バナーの作成に失敗しました" }, { status: 500 });
   }
 }

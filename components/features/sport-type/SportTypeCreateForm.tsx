@@ -1,29 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { AlertTriangle, ArrowDown, ArrowUp, Plus, Settings, Timer, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Settings, 
-  Timer,
-  Plus, 
-  Trash2,
-  AlertTriangle,
-  ArrowUp,
-  ArrowDown
-} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PeriodDefinition {
   period_id: number;
   period_name: string;
   duration: number | null;
-  type: 'regular' | 'extra' | 'penalty';
+  type: "regular" | "extra" | "penalty";
   display_order: number;
 }
 
@@ -32,10 +30,10 @@ interface SportTypeFormData {
   sport_code: string;
   max_period_count: number;
   regular_period_count: number;
-  score_type: 'numeric' | 'time' | 'rank';
+  score_type: "numeric" | "time" | "rank";
   default_match_duration: number;
   score_unit: string;
-  result_format: 'score' | 'time' | 'ranking';
+  result_format: "score" | "time" | "ranking";
   period_definitions: PeriodDefinition[];
 }
 
@@ -49,30 +47,32 @@ export default function SportTypeCreateForm() {
     formState: { errors },
     control,
     watch,
-    setValue
+    setValue,
   } = useForm<SportTypeFormData>({
     defaultValues: {
       sport_name: "",
       sport_code: "",
       max_period_count: 1,
       regular_period_count: 1,
-      score_type: 'numeric',
+      score_type: "numeric",
       default_match_duration: 90,
       score_unit: "ゴール",
-      result_format: 'score',
-      period_definitions: [{
-        period_id: 1,
-        period_name: "通常時間",
-        duration: 90,
-        type: 'regular',
-        display_order: 1
-      }]
-    }
+      result_format: "score",
+      period_definitions: [
+        {
+          period_id: 1,
+          period_name: "通常時間",
+          duration: 90,
+          type: "regular",
+          display_order: 1,
+        },
+      ],
+    },
   });
 
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: "period_definitions"
+    name: "period_definitions",
   });
 
   const scoreType = watch("score_type");
@@ -84,19 +84,19 @@ export default function SportTypeCreateForm() {
       period_id: nextId,
       period_name: `ピリオド${nextId}`,
       duration: null,
-      type: 'regular',
-      display_order: nextId
+      type: "regular",
+      display_order: nextId,
     });
   };
 
   // ピリオド順序変更
-  const movePeriod = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index > 0) {
+  const movePeriod = (index: number, direction: "up" | "down") => {
+    if (direction === "up" && index > 0) {
       const temp = fields[index];
       const prev = fields[index - 1];
       update(index, { ...prev, display_order: index + 1 });
       update(index - 1, { ...temp, display_order: index });
-    } else if (direction === 'down' && index < fields.length - 1) {
+    } else if (direction === "down" && index < fields.length - 1) {
       const temp = fields[index];
       const next = fields[index + 1];
       update(index, { ...next, display_order: index + 1 });
@@ -107,26 +107,26 @@ export default function SportTypeCreateForm() {
   // ピリオド数の自動更新
   const updatePeriodCounts = () => {
     const maxCount = fields.length;
-    const regularCount = fields.filter(f => f.type === 'regular').length;
-    setValue('max_period_count', maxCount);
-    setValue('regular_period_count', regularCount);
+    const regularCount = fields.filter((f) => f.type === "regular").length;
+    setValue("max_period_count", maxCount);
+    setValue("regular_period_count", regularCount);
   };
 
   // フォーム送信
   const onSubmit = async (data: SportTypeFormData) => {
     setIsSubmitting(true);
-    
+
     try {
       // ピリオド数を自動計算
       updatePeriodCounts();
-      
+
       const response = await fetch("/api/admin/sport-types", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          period_definitions: JSON.stringify(data.period_definitions)
-        })
+          period_definitions: JSON.stringify(data.period_definitions),
+        }),
       });
 
       const result = await response.json();
@@ -158,7 +158,9 @@ export default function SportTypeCreateForm() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sport_name">競技名 <span className="text-destructive">*</span></Label>
+              <Label htmlFor="sport_name">
+                競技名 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="sport_name"
                 {...register("sport_name", { required: "競技名は必須です" })}
@@ -171,15 +173,17 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sport_code">競技コード <span className="text-destructive">*</span></Label>
+              <Label htmlFor="sport_code">
+                競技コード <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="sport_code"
-                {...register("sport_code", { 
+                {...register("sport_code", {
                   required: "競技コードは必須です",
                   pattern: {
                     value: /^[a-z_]+$/,
-                    message: "英小文字とアンダースコアのみ使用可能です"
-                  }
+                    message: "英小文字とアンダースコアのみ使用可能です",
+                  },
                 })}
                 placeholder="例: soccer"
                 className={errors.sport_code ? "border-red-500" : ""}
@@ -190,21 +194,23 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="score_type">スコアタイプ <span className="text-destructive">*</span></Label>
+              <Label htmlFor="score_type">
+                スコアタイプ <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={scoreType}
                 onValueChange={(value) => {
-                  setValue('score_type', value as 'numeric' | 'time' | 'rank');
+                  setValue("score_type", value as "numeric" | "time" | "rank");
                   // スコアタイプに応じてデフォルト値を設定
-                  if (value === 'time') {
-                    setValue('score_unit', '秒');
-                    setValue('result_format', 'time');
-                  } else if (value === 'rank') {
-                    setValue('score_unit', '位');
-                    setValue('result_format', 'ranking');
+                  if (value === "time") {
+                    setValue("score_unit", "秒");
+                    setValue("result_format", "time");
+                  } else if (value === "rank") {
+                    setValue("score_unit", "位");
+                    setValue("result_format", "ranking");
                   } else {
-                    setValue('score_unit', 'ゴール');
-                    setValue('result_format', 'score');
+                    setValue("score_unit", "ゴール");
+                    setValue("result_format", "score");
                   }
                 }}
               >
@@ -220,7 +226,9 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="score_unit">スコア単位 <span className="text-destructive">*</span></Label>
+              <Label htmlFor="score_unit">
+                スコア単位 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="score_unit"
                 {...register("score_unit", { required: "スコア単位は必須です" })}
@@ -233,13 +241,15 @@ export default function SportTypeCreateForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="default_match_duration">標準試合時間（分） <span className="text-destructive">*</span></Label>
+              <Label htmlFor="default_match_duration">
+                標準試合時間（分） <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="default_match_duration"
                 type="number"
-                {...register("default_match_duration", { 
+                {...register("default_match_duration", {
                   required: "標準試合時間は必須です",
-                  min: { value: 1, message: "1分以上で入力してください" }
+                  min: { value: 1, message: "1分以上で入力してください" },
                 })}
                 className={errors.default_match_duration ? "border-red-500" : ""}
               />
@@ -260,12 +270,7 @@ export default function SportTypeCreateForm() {
               <span>ピリオド設定</span>
               <Badge variant="outline">{fields.length}ピリオド</Badge>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addPeriod}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={addPeriod}>
               <Plus className="h-4 w-4 mr-1" />
               ピリオド追加
             </Button>
@@ -289,7 +294,12 @@ export default function SportTypeCreateForm() {
                       <Label>タイプ</Label>
                       <Select
                         value={field.type}
-                        onValueChange={(value) => update(index, { ...field, type: value as 'regular' | 'extra' | 'penalty' })}
+                        onValueChange={(value) =>
+                          update(index, {
+                            ...field,
+                            type: value as "regular" | "extra" | "penalty",
+                          })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -306,7 +316,9 @@ export default function SportTypeCreateForm() {
                       <Label>時間（分）</Label>
                       <Input
                         type="number"
-                        {...register(`period_definitions.${index}.duration`, { valueAsNumber: true })}
+                        {...register(`period_definitions.${index}.duration`, {
+                          valueAsNumber: true,
+                        })}
                         placeholder="未設定"
                       />
                     </div>
@@ -316,7 +328,7 @@ export default function SportTypeCreateForm() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => movePeriod(index, 'up')}
+                        onClick={() => movePeriod(index, "up")}
                         disabled={index === 0}
                       >
                         <ArrowUp className="h-4 w-4" />
@@ -325,7 +337,7 @@ export default function SportTypeCreateForm() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => movePeriod(index, 'down')}
+                        onClick={() => movePeriod(index, "down")}
                         disabled={index === fields.length - 1}
                       >
                         <ArrowDown className="h-4 w-4" />
@@ -346,7 +358,7 @@ export default function SportTypeCreateForm() {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <p className="text-sm text-primary flex items-center">
               <AlertTriangle className="h-4 w-4 mr-2" />

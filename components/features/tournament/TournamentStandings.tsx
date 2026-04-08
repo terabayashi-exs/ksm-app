@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Trophy, Medal, Award, TrendingUp, Users, Target, Hash, RefreshCw } from 'lucide-react';
-import { ScrollableContainer } from '@/components/ui/scrollable-container';
-import { useSession } from 'next-auth/react';
+import { Award, Hash, Medal, RefreshCw, Target, TrendingUp, Trophy, Users } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollableContainer } from "@/components/ui/scrollable-container";
 
 // 多競技対応の型定義
 interface SportConfig {
@@ -72,23 +72,30 @@ interface TournamentStandingsProps {
   initialData?: StandingsInitialData;
 }
 
-export default function TournamentStandings({ tournamentId, initialData }: TournamentStandingsProps) {
+export default function TournamentStandings({
+  tournamentId,
+  initialData,
+}: TournamentStandingsProps) {
   const { data: session } = useSession();
   const [standings, setStandings] = useState<BlockStanding[]>(initialData?.standings || []);
   const [totalMatches, setTotalMatches] = useState<number>(initialData?.totalMatches || 0);
   const [totalTeams, setTotalTeams] = useState<number>(initialData?.totalTeams || 0);
-  const [sportConfig, setSportConfig] = useState<SportConfig | null>(initialData ? {
-    sport_code: 'pk_championship',
-    score_label: '得点',
-    score_against_label: '失点',
-    difference_label: '得失点差',
-    supports_pk: false
-  } : null);
+  const [sportConfig, setSportConfig] = useState<SportConfig | null>(
+    initialData
+      ? {
+          sport_code: "pk_championship",
+          score_label: "得点",
+          score_against_label: "失点",
+          difference_label: "得失点差",
+          supports_pk: false,
+        }
+      : null,
+  );
   const [phaseFormatMap, setPhaseFormatMap] = useState<Map<string, string>>(
-    initialData ? new Map(Object.entries(initialData.phaseFormatMap)) : new Map()
+    initialData ? new Map(Object.entries(initialData.phaseFormatMap)) : new Map(),
   );
   const [phaseNameMap, setPhaseNameMap] = useState<Map<string, string>>(
-    initialData ? new Map(Object.entries(initialData.phaseNameMap)) : new Map()
+    initialData ? new Map(Object.entries(initialData.phaseNameMap)) : new Map(),
   );
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
@@ -105,11 +112,11 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
       try {
         // 大会情報を取得してフォーマットタイプを取得
         const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (!tournamentResponse.ok) {
-          throw new Error('大会情報の取得に失敗しました');
+          throw new Error("大会情報の取得に失敗しました");
         }
 
         const tournamentData = await tournamentResponse.json();
@@ -131,7 +138,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
 
         // 順位表データを取得
         const response = await fetch(`/api/tournaments/${tournamentId}/standings`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (!response.ok) {
@@ -151,20 +158,22 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
           } else {
             // フォールバック: PK選手権設定
             setSportConfig({
-              sport_code: 'pk_championship',
-              score_label: '得点',
-              score_against_label: '失点',
-              difference_label: '得失点差',
-              supports_pk: false
+              sport_code: "pk_championship",
+              score_label: "得点",
+              score_against_label: "失点",
+              difference_label: "得失点差",
+              supports_pk: false,
             });
           }
         } else {
-          console.error('API Error Details:', result);
-          setError(result.error || '順位表データの取得に失敗しました');
+          console.error("API Error Details:", result);
+          setError(result.error || "順位表データの取得に失敗しました");
         }
       } catch (err) {
-        console.error('順位表データ取得エラー:', err);
-        setError(`順位表データの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`);
+        console.error("順位表データ取得エラー:", err);
+        setError(
+          `順位表データの取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         setLoading(false);
       }
@@ -176,7 +185,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
   // 順位表の再計算
   const handleRecalculate = async () => {
     if (!session) {
-      setRecalculateMessage('ログインが必要です');
+      setRecalculateMessage("ログインが必要です");
       return;
     }
 
@@ -185,10 +194,10 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
 
     try {
       const response = await fetch(`/api/tournaments/${tournamentId}/recalculate-standings`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       });
 
       const result = await response.json();
@@ -198,7 +207,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
 
         // 順位表を再取得
         const standingsResponse = await fetch(`/api/tournaments/${tournamentId}/standings`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (standingsResponse.ok) {
@@ -218,28 +227,35 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
         setRecalculateMessage(`エラー: ${result.error}`);
       }
     } catch (error) {
-      console.error('順位表再計算エラー:', error);
-      setRecalculateMessage(`エラー: ${error instanceof Error ? error.message : '再計算に失敗しました'}`);
+      console.error("順位表再計算エラー:", error);
+      setRecalculateMessage(
+        `エラー: ${error instanceof Error ? error.message : "再計算に失敗しました"}`,
+      );
     } finally {
       setRecalculating(false);
     }
   };
 
   // ブロック分類関数（round_name優先で動的に判定）
-  const getBlockKey = (phase: string, blockName: string, displayRoundName?: string, roundName?: string | null): string => {
+  const getBlockKey = (
+    phase: string,
+    blockName: string,
+    displayRoundName?: string,
+    roundName?: string | null,
+  ): string => {
     // round_name（t_matches_liveから取得）があれば最優先で使用
     if (roundName) return roundName;
 
     // _unifiedブロックの場合はdisplay_round_nameを使用
-    if (blockName && blockName.endsWith('_unified')) {
+    if (blockName && blockName.endsWith("_unified")) {
       if (displayRoundName) return displayRoundName;
       const phaseName = phaseNameMap.get(phase);
       if (phaseName) return phaseName;
-      return 'トーナメント';
+      return "トーナメント";
     }
 
     // block_nameが意味のある値（A, B, 1位リーグ等）ならそれを使用
-    if (blockName && blockName !== 'default') {
+    if (blockName && blockName !== "default") {
       // 1文字のブロック名（A, B, C...）は「Xブロック」形式で表示
       if (blockName.length === 1) {
         return `${blockName}ブロック`;
@@ -255,56 +271,56 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
     const phaseName = phaseNameMap.get(phase);
     if (phaseName) return phaseName;
 
-    return phase || 'その他';
+    return phase || "その他";
   };
 
   // ブロック色の取得（ブロック名ベースで動的に色分け）
   const blockColors = [
-    'bg-blue-100 text-blue-800',
-    'bg-green-100 text-green-800',
-    'bg-yellow-100 text-yellow-800',
-    'bg-purple-100 text-purple-800',
-    'bg-orange-100 text-orange-800',
-    'bg-cyan-100 text-cyan-800',
-    'bg-rose-100 text-rose-800',
-    'bg-teal-100 text-teal-800',
-    'bg-indigo-100 text-indigo-800',
-    'bg-lime-100 text-lime-800',
-    'bg-amber-100 text-amber-800',
-    'bg-sky-100 text-sky-800',
-    'bg-fuchsia-100 text-fuchsia-800',
-    'bg-emerald-100 text-emerald-800',
-    'bg-violet-100 text-violet-800',
-    'bg-red-100 text-red-800',
+    "bg-blue-100 text-blue-800",
+    "bg-green-100 text-green-800",
+    "bg-yellow-100 text-yellow-800",
+    "bg-purple-100 text-purple-800",
+    "bg-orange-100 text-orange-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-rose-100 text-rose-800",
+    "bg-teal-100 text-teal-800",
+    "bg-indigo-100 text-indigo-800",
+    "bg-lime-100 text-lime-800",
+    "bg-amber-100 text-amber-800",
+    "bg-sky-100 text-sky-800",
+    "bg-fuchsia-100 text-fuchsia-800",
+    "bg-emerald-100 text-emerald-800",
+    "bg-violet-100 text-violet-800",
+    "bg-red-100 text-red-800",
   ];
   const getBlockColor = (blockKey: string): string => {
     // 「Xブロック」「予選Xブロック」等からブロック文字を抽出して色分け（A～Zまで対応）
     const blockMatch = blockKey.match(/([A-Z])ブロック/);
     if (blockMatch) {
-      const index = blockMatch[1].charCodeAt(0) - 'A'.charCodeAt(0);
+      const index = blockMatch[1].charCodeAt(0) - "A".charCodeAt(0);
       return blockColors[index % blockColors.length];
     }
     // 「X位リーグ」形式の色分け
-    if (blockKey.includes('1位')) return 'bg-yellow-100 text-yellow-800';
-    if (blockKey.includes('2位')) return 'bg-blue-100 text-blue-800';
-    if (blockKey.includes('3位')) return 'bg-green-100 text-green-800';
-    if (blockKey.includes('4位')) return 'bg-purple-100 text-purple-800';
+    if (blockKey.includes("1位")) return "bg-yellow-100 text-yellow-800";
+    if (blockKey.includes("2位")) return "bg-blue-100 text-blue-800";
+    if (blockKey.includes("3位")) return "bg-green-100 text-green-800";
+    if (blockKey.includes("4位")) return "bg-purple-100 text-purple-800";
     // 「交流ブロック」「決勝ブロック」等、A-Z以外のブロック名は文字コード合計で色分け
-    if (blockKey.includes('ブロック') || blockKey.length > 0) {
+    if (blockKey.includes("ブロック") || blockKey.length > 0) {
       const charSum = Array.from(blockKey).reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
       return blockColors[charSum % blockColors.length];
     }
-    return 'bg-gray-50 text-gray-500';
+    return "bg-gray-50 text-gray-500";
   };
 
   // フォーマットタイプに基づいた表示判定（リーグ戦形式かどうか）
   const isLeagueFormat = (phase: string): boolean => {
-    return phaseFormatMap.get(phase) === 'league';
+    return phaseFormatMap.get(phase) === "league";
   };
 
   // トーナメント形式かどうかの判定
   const isTournamentFormat = (phase: string): boolean => {
-    return phaseFormatMap.get(phase) === 'tournament';
+    return phaseFormatMap.get(phase) === "tournament";
   };
 
   // 順位アイコンの取得
@@ -325,13 +341,13 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
   const getPositionBgColor = (position: number): string => {
     switch (position) {
       case 1:
-        return 'bg-yellow-50 border-l-4 border-yellow-400950/20500';
+        return "bg-yellow-50 border-l-4 border-yellow-400950/20500";
       case 2:
-        return 'bg-gray-50 border-l-4 border-gray-400800500';
+        return "bg-gray-50 border-l-4 border-gray-400800500";
       case 3:
-        return 'bg-amber-50 border-l-4 border-amber-400950/20500';
+        return "bg-amber-50 border-l-4 border-amber-400950/20500";
       default:
-        return 'hover:bg-gray-50:bg-gray-800';
+        return "hover:bg-gray-50:bg-gray-800";
     }
   };
 
@@ -341,16 +357,16 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
   const getScoreLabels = () => {
     if (!sportConfig) {
       return {
-        scoreFor: '得点',
-        scoreAgainst: '失点',
-        scoreDifference: '得失点差'
+        scoreFor: "得点",
+        scoreAgainst: "失点",
+        scoreDifference: "得失点差",
       };
     }
-    
+
     return {
       scoreFor: sportConfig.score_label,
       scoreAgainst: sportConfig.score_against_label,
-      scoreDifference: sportConfig.difference_label
+      scoreDifference: sportConfig.difference_label,
     };
   };
 
@@ -408,8 +424,8 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                 size="sm"
                 className="flex items-center gap-2"
               >
-                <RefreshCw className={`h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
-                {recalculating ? '再計算中...' : '順位表を再計算'}
+                <RefreshCw className={`h-4 w-4 ${recalculating ? "animate-spin" : ""}`} />
+                {recalculating ? "再計算中..." : "順位表を再計算"}
               </Button>
             )}
           </CardTitle>
@@ -417,11 +433,13 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
         <CardContent>
           {/* 再計算メッセージ */}
           {recalculateMessage && (
-            <div className={`mb-4 p-3 rounded-lg ${
-              recalculateMessage.includes('エラー')
-                ? 'bg-red-50 text-red-700 border border-red-200'
-                : 'bg-green-50 text-green-700 border border-green-200'
-            }`}>
+            <div
+              className={`mb-4 p-3 rounded-lg ${
+                recalculateMessage.includes("エラー")
+                  ? "bg-red-50 text-red-700 border border-red-200"
+                  : "bg-green-50 text-green-700 border border-green-200"
+              }`}
+            >
               {recalculateMessage}
             </div>
           )}
@@ -432,15 +450,11 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
               <div className="text-sm text-gray-600300">ブロック数</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {totalTeams}
-              </div>
+              <div className="text-2xl font-bold text-green-600">{totalTeams}</div>
               <div className="text-sm text-gray-600300">参加チーム数</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {totalMatches}
-              </div>
+              <div className="text-2xl font-bold text-purple-600">{totalMatches}</div>
               <div className="text-sm text-gray-600300">実施済み試合数</div>
             </div>
           </div>
@@ -454,7 +468,7 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
 
         // フェーズごとにグループ化
         const phaseGroups = new Map<string, BlockStanding[]>();
-        standings.forEach(block => {
+        standings.forEach((block) => {
           if (!phaseGroups.has(block.phase)) {
             phaseGroups.set(block.phase, []);
           }
@@ -468,8 +482,8 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
             // 1. 全チームを収集
             const teamMap = new Map<number, TeamStanding>();
 
-            blocks.forEach(block => {
-              block.teams.forEach(team => {
+            blocks.forEach((block) => {
+              block.teams.forEach((team) => {
                 const existingTeam = teamMap.get(team.tournament_team_id);
 
                 if (!existingTeam) {
@@ -479,7 +493,10 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                   // 既存チーム：より有効な順位を選択
                   // 順位が設定されている（position > 0）方を優先
                   // 両方設定されている場合は、より小さい順位（上位）を優先
-                  if (team.position > 0 && (existingTeam.position === 0 || team.position < existingTeam.position)) {
+                  if (
+                    team.position > 0 &&
+                    (existingTeam.position === 0 || team.position < existingTeam.position)
+                  ) {
                     teamMap.set(team.tournament_team_id, team);
                   }
                 }
@@ -499,8 +516,8 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
             standingsToDisplay.push({
               match_block_id: blocks[0].match_block_id, // 代表ID
               phase: phase,
-              display_round_name: phaseNameMap.get(phase) || 'トーナメント',
-              block_name: '', // 統合のためブロック名なし
+              display_round_name: phaseNameMap.get(phase) || "トーナメント",
+              block_name: "", // 統合のためブロック名なし
               round_name: blocks[0].round_name,
               teams: sortedTeams,
               remarks: blocks[0].remarks,
@@ -518,9 +535,16 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 {(() => {
-                  const blockKey = getBlockKey(block.phase, block.block_name, block.display_round_name, block.round_name);
+                  const blockKey = getBlockKey(
+                    block.phase,
+                    block.block_name,
+                    block.display_round_name,
+                    block.round_name,
+                  );
                   return (
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium mr-3 ${getBlockColor(blockKey)}`}
+                    >
                       {blockKey}
                     </span>
                   );
@@ -541,220 +565,270 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                 <p className="text-sm">試合結果が確定次第、順位が表示されます。</p>
               </div>
             ) : (
-            <ScrollableContainer>
-              <table className="w-full border-collapse min-w-[700px] md:min-w-0">
-                <thead>
-                  <tr className="border-b bg-gray-50800">
-                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[50px] md:min-w-[60px]">順位</th>
-                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[90px] md:min-w-[120px]">チーム名</th>
-                    {isLeagueFormat(block.phase) && (
-                      <>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
-                          <span className="md:hidden">点</span>
-                          <span className="hidden md:inline">勝点</span>
-                        </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
-                          <span className="md:hidden">試</span>
-                          <span className="hidden md:inline">試合数</span>
-                        </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">勝</th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">分</th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">敗</th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
-                          <span className="md:hidden">得</span>
-                          <span className="hidden md:inline">総{scoreLabels.scoreFor}</span>
-                        </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
-                          <span className="md:hidden">失</span>
-                          <span className="hidden md:inline">総{scoreLabels.scoreAgainst}</span>
-                        </th>
-                        <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
-                          <span className="md:hidden">差</span>
-                          <span className="hidden md:inline">{scoreLabels.scoreDifference}</span>
-                        </th>
-                      </>
-                    )}
-                    {isTournamentFormat(block.phase) && (
-                      <th className="text-center py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[80px] md:min-w-[100px]">備考</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {block.teams.map((team, teamIndex) => (
-                    <tr
-                      key={`${block.block_name}-${team.tournament_team_id || team.team_id}-${teamIndex}`} 
-                      className={`border-b transition-colors ${
-                        team.position === 0 
-                          ? 'bg-gray-100 hover:bg-gray-200700:bg-gray-600' 
-                          : team.position > 0 
-                            ? getPositionBgColor(team.position) 
-                            : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <td className="py-2 md:py-3 px-2 md:px-3">
-                        <div className="flex items-center">
-                          <span className="hidden md:inline-block mr-2">
-                            {/* トーナメント形式ではmatches_playedに関わらず順位を表示 */}
-                            {isTournamentFormat(block.phase) ? (
-                              team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />
-                            ) : (
-                              team.matches_played === 0 ? <span className="text-gray-400">-</span> : team.position > 0 ? getPositionIcon(team.position) : <Hash className="h-4 w-4 text-gray-400" />
-                            )}
-                          </span>
-                          <span className="font-bold text-base md:text-lg">
-                            {/* トーナメント形式ではmatches_playedに関わらず順位を表示 */}
-                            {isTournamentFormat(block.phase) ? (
-                              team.position > 0 ? team.position : '-'
-                            ) : (
-                              team.matches_played === 0 ? '-' : team.position
-                            )}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 md:px-3">
-                        <div>
-                          {/* モバイルでは略称優先、デスクトップでは正式名称 */}
-                          <div className="font-medium text-gray-900100 text-sm md:text-base">
-                            <span className="md:hidden">
-                              {(team.team_omission || team.team_name).substring(0, 6)}
-                            </span>
-                            <span className="hidden md:inline">
-                              {team.team_name}
-                            </span>
-                          </div>
-                          {team.team_omission && (
-                            <div className="text-xs text-gray-500400 hidden md:block">({team.team_omission})</div>
-                          )}
-                        </div>
-                      </td>
+              <ScrollableContainer>
+                <table className="w-full border-collapse min-w-[700px] md:min-w-0">
+                  <thead>
+                    <tr className="border-b bg-gray-50800">
+                      <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[50px] md:min-w-[60px]">
+                        順位
+                      </th>
+                      <th className="text-left py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[90px] md:min-w-[120px]">
+                        チーム名
+                      </th>
                       {isLeagueFormat(block.phase) && (
                         <>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="font-bold text-sm md:text-lg text-blue-600">{team.points || 0}</span>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="text-xs md:text-base">{team.matches_played || 0}</span>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="text-green-600 font-medium text-xs md:text-base">{team.wins || 0}</span>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="text-yellow-600 font-medium text-xs md:text-base">{team.draws || 0}</span>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <span className="text-red-600 font-medium text-xs md:text-base">{team.losses || 0}</span>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <div className="font-medium text-xs md:text-base">
-                              {(() => {
-                                const multiSportTeam = team as MultiSportTeamStanding;
-                                // サッカーでPK戦情報がある場合の特別表示
-                                if (sportConfig?.supports_pk && multiSportTeam.soccer_data?.is_pk_game) {
-                                  const soccerData = multiSportTeam.soccer_data;
-                                  return (
-                                    <div className="text-center">
-                                      <div>{soccerData.regular_goals_for || 0}</div>
-                                      {soccerData.pk_goals_for !== undefined && (
-                                        <div className="text-xs text-gray-500400">
-                                          +PK{soccerData.pk_goals_for}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                return multiSportTeam.scores_for || team.goals_for || 0;
-                              })()}
-                            </div>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            <div className="font-medium text-xs md:text-base">
-                              {(() => {
-                                const multiSportTeam = team as MultiSportTeamStanding;
-                                // サッカーでPK戦情報がある場合の特別表示
-                                if (sportConfig?.supports_pk && multiSportTeam.soccer_data?.is_pk_game) {
-                                  const soccerData = multiSportTeam.soccer_data;
-                                  return (
-                                    <div className="text-center">
-                                      <div>{soccerData.regular_goals_against || 0}</div>
-                                      {soccerData.pk_goals_against !== undefined && (
-                                        <div className="text-xs text-gray-500400">
-                                          +PK{soccerData.pk_goals_against}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                return multiSportTeam.scores_against || team.goals_against || 0;
-                              })()}
-                            </div>
-                          </td>
-                          <td className="py-2 md:py-3 px-1 md:px-3 text-center">
-                            {(() => {
-                              const multiSportTeam = team as MultiSportTeamStanding;
-                              const scoreDiff = multiSportTeam.score_difference || team.goal_difference || 0;
-                              return (
-                                <span
-                                  className={`font-bold text-xs md:text-base ${
-                                    scoreDiff > 0
-                                      ? 'text-green-600'
-                                      : scoreDiff < 0
-                                      ? 'text-red-600'
-                                      : 'text-gray-600300'
-                                  }`}
-                                >
-                                  {(scoreDiff > 0 ? '+' : '') + scoreDiff}
-                                </span>
-                              );
-                            })()}
-                          </td>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                            <span className="md:hidden">点</span>
+                            <span className="hidden md:inline">勝点</span>
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                            <span className="md:hidden">試</span>
+                            <span className="hidden md:inline">試合数</span>
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">
+                            勝
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">
+                            分
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[30px] md:min-w-[50px]">
+                            敗
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                            <span className="md:hidden">得</span>
+                            <span className="hidden md:inline">総{scoreLabels.scoreFor}</span>
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                            <span className="md:hidden">失</span>
+                            <span className="hidden md:inline">総{scoreLabels.scoreAgainst}</span>
+                          </th>
+                          <th className="text-center py-2 md:py-3 px-1 md:px-3 font-medium text-gray-700200 text-xs md:text-base min-w-[40px] md:min-w-[60px]">
+                            <span className="md:hidden">差</span>
+                            <span className="hidden md:inline">{scoreLabels.scoreDifference}</span>
+                          </th>
                         </>
                       )}
                       {isTournamentFormat(block.phase) && (
-                        <td className="py-2 md:py-3 px-2 md:px-3 text-center">
-                          <span className="text-xs md:text-sm text-gray-600300">
-                            {team.position_note || (() => {
-                              // フォールバック: テンプレートベース順位説明がない場合のレガシー表示
-                              switch (team.position) {
-                                case 1: return '優勝';
-                                case 2: return '準優勝';
-                                case 3: return '3位';
-                                case 4: return '4位';
-                                case 5: return (
-                                  <>
-                                    <span className="md:hidden">準々敗退</span>
-                                    <span className="hidden md:inline">準々決勝敗退</span>
-                                  </>
-                                );
-                                case 9: return (
-                                  <>
-                                    <span className="md:hidden">ベスト16</span>
-                                    <span className="hidden md:inline">ベスト16</span>
-                                  </>
-                                );
-                                case 17: return (
-                                  <>
-                                    <span className="md:hidden">ベスト32</span>
-                                    <span className="hidden md:inline">ベスト32</span>
-                                  </>
-                                );
-                                case 25: return (
-                                  <>
-                                    <span className="md:hidden">1回戦敗退</span>
-                                    <span className="hidden md:inline">1回戦敗退</span>
-                                  </>
-                                );
-                                case 0: return '順位未確定';
-                                default: return `${team.position}位`;
-                              }
-                            })()}
-                          </span>
-                        </td>
+                        <th className="text-center py-2 md:py-3 px-2 md:px-3 font-medium text-gray-700200 text-sm md:text-base min-w-[80px] md:min-w-[100px]">
+                          備考
+                        </th>
                       )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </ScrollableContainer>
+                  </thead>
+                  <tbody>
+                    {block.teams.map((team, teamIndex) => (
+                      <tr
+                        key={`${block.block_name}-${team.tournament_team_id || team.team_id}-${teamIndex}`}
+                        className={`border-b transition-colors ${
+                          team.position === 0
+                            ? "bg-gray-100 hover:bg-gray-200700:bg-gray-600"
+                            : team.position > 0
+                              ? getPositionBgColor(team.position)
+                              : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <td className="py-2 md:py-3 px-2 md:px-3">
+                          <div className="flex items-center">
+                            <span className="hidden md:inline-block mr-2">
+                              {/* トーナメント形式ではmatches_playedに関わらず順位を表示 */}
+                              {isTournamentFormat(block.phase) ? (
+                                team.position > 0 ? (
+                                  getPositionIcon(team.position)
+                                ) : (
+                                  <Hash className="h-4 w-4 text-gray-400" />
+                                )
+                              ) : team.matches_played === 0 ? (
+                                <span className="text-gray-400">-</span>
+                              ) : team.position > 0 ? (
+                                getPositionIcon(team.position)
+                              ) : (
+                                <Hash className="h-4 w-4 text-gray-400" />
+                              )}
+                            </span>
+                            <span className="font-bold text-base md:text-lg">
+                              {/* トーナメント形式ではmatches_playedに関わらず順位を表示 */}
+                              {isTournamentFormat(block.phase)
+                                ? team.position > 0
+                                  ? team.position
+                                  : "-"
+                                : team.matches_played === 0
+                                  ? "-"
+                                  : team.position}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 md:px-3">
+                          <div>
+                            {/* モバイルでは略称優先、デスクトップでは正式名称 */}
+                            <div className="font-medium text-gray-900100 text-sm md:text-base">
+                              <span className="md:hidden">
+                                {(team.team_omission || team.team_name).substring(0, 6)}
+                              </span>
+                              <span className="hidden md:inline">{team.team_name}</span>
+                            </div>
+                            {team.team_omission && (
+                              <div className="text-xs text-gray-500400 hidden md:block">
+                                ({team.team_omission})
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        {isLeagueFormat(block.phase) && (
+                          <>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <span className="font-bold text-sm md:text-lg text-blue-600">
+                                {team.points || 0}
+                              </span>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <span className="text-xs md:text-base">
+                                {team.matches_played || 0}
+                              </span>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <span className="text-green-600 font-medium text-xs md:text-base">
+                                {team.wins || 0}
+                              </span>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <span className="text-yellow-600 font-medium text-xs md:text-base">
+                                {team.draws || 0}
+                              </span>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <span className="text-red-600 font-medium text-xs md:text-base">
+                                {team.losses || 0}
+                              </span>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <div className="font-medium text-xs md:text-base">
+                                {(() => {
+                                  const multiSportTeam = team as MultiSportTeamStanding;
+                                  // サッカーでPK戦情報がある場合の特別表示
+                                  if (
+                                    sportConfig?.supports_pk &&
+                                    multiSportTeam.soccer_data?.is_pk_game
+                                  ) {
+                                    const soccerData = multiSportTeam.soccer_data;
+                                    return (
+                                      <div className="text-center">
+                                        <div>{soccerData.regular_goals_for || 0}</div>
+                                        {soccerData.pk_goals_for !== undefined && (
+                                          <div className="text-xs text-gray-500400">
+                                            +PK{soccerData.pk_goals_for}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return multiSportTeam.scores_for || team.goals_for || 0;
+                                })()}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              <div className="font-medium text-xs md:text-base">
+                                {(() => {
+                                  const multiSportTeam = team as MultiSportTeamStanding;
+                                  // サッカーでPK戦情報がある場合の特別表示
+                                  if (
+                                    sportConfig?.supports_pk &&
+                                    multiSportTeam.soccer_data?.is_pk_game
+                                  ) {
+                                    const soccerData = multiSportTeam.soccer_data;
+                                    return (
+                                      <div className="text-center">
+                                        <div>{soccerData.regular_goals_against || 0}</div>
+                                        {soccerData.pk_goals_against !== undefined && (
+                                          <div className="text-xs text-gray-500400">
+                                            +PK{soccerData.pk_goals_against}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return multiSportTeam.scores_against || team.goals_against || 0;
+                                })()}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-1 md:px-3 text-center">
+                              {(() => {
+                                const multiSportTeam = team as MultiSportTeamStanding;
+                                const scoreDiff =
+                                  multiSportTeam.score_difference || team.goal_difference || 0;
+                                return (
+                                  <span
+                                    className={`font-bold text-xs md:text-base ${
+                                      scoreDiff > 0
+                                        ? "text-green-600"
+                                        : scoreDiff < 0
+                                          ? "text-red-600"
+                                          : "text-gray-600300"
+                                    }`}
+                                  >
+                                    {(scoreDiff > 0 ? "+" : "") + scoreDiff}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                          </>
+                        )}
+                        {isTournamentFormat(block.phase) && (
+                          <td className="py-2 md:py-3 px-2 md:px-3 text-center">
+                            <span className="text-xs md:text-sm text-gray-600300">
+                              {team.position_note ||
+                                (() => {
+                                  // フォールバック: テンプレートベース順位説明がない場合のレガシー表示
+                                  switch (team.position) {
+                                    case 1:
+                                      return "優勝";
+                                    case 2:
+                                      return "準優勝";
+                                    case 3:
+                                      return "3位";
+                                    case 4:
+                                      return "4位";
+                                    case 5:
+                                      return (
+                                        <>
+                                          <span className="md:hidden">準々敗退</span>
+                                          <span className="hidden md:inline">準々決勝敗退</span>
+                                        </>
+                                      );
+                                    case 9:
+                                      return (
+                                        <>
+                                          <span className="md:hidden">ベスト16</span>
+                                          <span className="hidden md:inline">ベスト16</span>
+                                        </>
+                                      );
+                                    case 17:
+                                      return (
+                                        <>
+                                          <span className="md:hidden">ベスト32</span>
+                                          <span className="hidden md:inline">ベスト32</span>
+                                        </>
+                                      );
+                                    case 25:
+                                      return (
+                                        <>
+                                          <span className="md:hidden">1回戦敗退</span>
+                                          <span className="hidden md:inline">1回戦敗退</span>
+                                        </>
+                                      );
+                                    case 0:
+                                      return "順位未確定";
+                                    default:
+                                      return `${team.position}位`;
+                                  }
+                                })()}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollableContainer>
             )}
 
             {/* 備考表示 */}
@@ -764,7 +838,11 @@ export default function TournamentStandings({ tournamentId, initialData }: Tourn
                   <div className="flex items-start">
                     <div className="text-yellow-600 mr-2 mt-0.5">
                       <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                     <div>

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Users, XCircle } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface InviteInfo {
   team_id: string;
@@ -18,7 +18,7 @@ interface InviteInfo {
 function AcceptInviteContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ function AcceptInviteContent() {
 
   const fetchInviteInfo = useCallback(async () => {
     if (!token) {
-      setError('招待トークンが見つかりません');
+      setError("招待トークンが見つかりません");
       setLoading(false);
       return;
     }
@@ -41,7 +41,7 @@ function AcceptInviteContent() {
         setError(result.error);
       }
     } catch {
-      setError('招待情報の取得に失敗しました');
+      setError("招待情報の取得に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -55,9 +55,9 @@ function AcceptInviteContent() {
     setAccepting(true);
     setError(null);
     try {
-      const res = await fetch('/api/my/teams/invite/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/my/teams/invite/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
       const result = await res.json();
@@ -65,12 +65,14 @@ function AcceptInviteContent() {
         setAccepted(true);
       } else if (res.status === 401) {
         // 未ログイン → ログインページへリダイレクト（承認後に戻れるようにURLを渡す）
-        router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        router.push(
+          `/auth/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+        );
       } else {
         setError(result.error);
       }
     } catch {
-      setError('承認処理に失敗しました');
+      setError("承認処理に失敗しました");
     } finally {
       setAccepting(false);
     }
@@ -98,7 +100,7 @@ function AcceptInviteContent() {
             )}
           </div>
           <CardTitle className="text-xl">
-            {accepted ? '招待を承認しました' : error ? '招待エラー' : 'チーム担当者への招待'}
+            {accepted ? "招待を承認しました" : error ? "招待エラー" : "チーム担当者への招待"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -137,7 +139,7 @@ function AcceptInviteContent() {
                   <span className="font-medium">{inviteInfo.invited_email}</span>
                 </div>
                 <div className="text-xs text-gray-500">
-                  有効期限: {new Date(inviteInfo.expires_at).toLocaleString('ja-JP')}
+                  有効期限: {new Date(inviteInfo.expires_at).toLocaleString("ja-JP")}
                 </div>
               </div>
               <p className="text-sm text-gray-500">
@@ -148,7 +150,7 @@ function AcceptInviteContent() {
                 disabled={accepting}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                {accepting ? '処理中...' : '招待を承認する'}
+                {accepting ? "処理中..." : "招待を承認する"}
               </Button>
               <Button asChild variant="outline" className="w-full">
                 <Link href="/my">キャンセル</Link>
@@ -163,11 +165,13 @@ function AcceptInviteContent() {
 
 export default function AcceptInvitePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
       <AcceptInviteContent />
     </Suspense>
   );

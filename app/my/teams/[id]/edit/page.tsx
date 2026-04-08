@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AlertCircle, CheckCircle, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
+import { AlertCircle, CheckCircle, ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 interface Prefecture {
   prefecture_id: number;
@@ -30,9 +30,9 @@ export default function EditTeamPage() {
   const params = useParams();
   const teamId = params.id as string;
 
-  const [teamName, setTeamName] = useState('');
-  const [teamOmission, setTeamOmission] = useState('');
-  const [prefectureId, setPrefectureId] = useState<string>('');
+  const [teamName, setTeamName] = useState("");
+  const [teamOmission, setTeamOmission] = useState("");
+  const [prefectureId, setPrefectureId] = useState<string>("");
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -43,13 +43,13 @@ export default function EditTeamPage() {
   useEffect(() => {
     const fetchPrefectures = async () => {
       try {
-        const res = await fetch('/api/prefectures');
+        const res = await fetch("/api/prefectures");
         const data = await res.json();
         if (data.success) {
           setPrefectures(data.prefectures);
         }
       } catch (err) {
-        console.error('Failed to fetch prefectures:', err);
+        console.error("Failed to fetch prefectures:", err);
       }
     };
     fetchPrefectures();
@@ -61,19 +61,19 @@ export default function EditTeamPage() {
       try {
         const res = await fetch(`/api/my/teams/${teamId}`);
         if (!res.ok) {
-          setError('チーム情報の取得に失敗しました');
+          setError("チーム情報の取得に失敗しました");
           return;
         }
         const result = await res.json();
         if (result.success) {
           setTeamName(result.data.team_name);
-          setTeamOmission(result.data.team_omission ?? '');
-          setPrefectureId(result.data.prefecture_id ? String(result.data.prefecture_id) : '');
+          setTeamOmission(result.data.team_omission ?? "");
+          setPrefectureId(result.data.prefecture_id ? String(result.data.prefecture_id) : "");
         } else {
-          setError(result.error || 'チーム情報の取得に失敗しました');
+          setError(result.error || "チーム情報の取得に失敗しました");
         }
       } catch {
-        setError('チーム情報の取得に失敗しました');
+        setError("チーム情報の取得に失敗しました");
       } finally {
         setLoading(false);
       }
@@ -84,15 +84,15 @@ export default function EditTeamPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teamName.trim()) {
-      setError('チーム名を入力してください');
+      setError("チーム名を入力してください");
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(`/api/my/teams/${teamId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           team_name: teamName.trim(),
           team_omission: teamOmission.trim() || null,
@@ -103,12 +103,12 @@ export default function EditTeamPage() {
       if (result.success) {
         setSuccess(true);
         // 1秒後にマイダッシュボードへ戻る
-        setTimeout(() => router.push('/my?tab=team'), 1000);
+        setTimeout(() => router.push("/my?tab=team"), 1000);
       } else {
-        setError(result.error || 'チーム情報の更新に失敗しました');
+        setError(result.error || "チーム情報の更新に失敗しました");
       }
     } catch {
-      setError('チーム情報の更新に失敗しました');
+      setError("チーム情報の更新に失敗しました");
     } finally {
       setSubmitting(false);
     }
@@ -128,17 +128,28 @@ export default function EditTeamPage() {
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"><Home className="h-3.5 w-3.5" /><span>Home</span></Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=team" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">マイダッシュボード</Link>
+          <Link
+            href="/my?tab=team"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            マイダッシュボード
+          </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">チーム情報を編集</span>
+          <span className="inline-flex items-center px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium">
+            チーム情報を編集
+          </span>
         </nav>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">チーム情報を編集</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            チーム名・略称・活動地域を変更できます
-          </p>
+          <p className="text-sm text-gray-500 mt-1">チーム名・略称・活動地域を変更できます</p>
         </div>
 
         <Card className="border-2">
@@ -154,7 +165,7 @@ export default function EditTeamPage() {
                 <Input
                   id="team_name"
                   value={teamName}
-                  onChange={e => setTeamName(e.target.value)}
+                  onChange={(e) => setTeamName(e.target.value)}
                   placeholder="例: 富山FCジュニア"
                   maxLength={100}
                   disabled={submitting || success}
@@ -169,7 +180,7 @@ export default function EditTeamPage() {
                 <Input
                   id="team_omission"
                   value={teamOmission}
-                  onChange={e => setTeamOmission(e.target.value)}
+                  onChange={(e) => setTeamOmission(e.target.value)}
                   placeholder="例: 富山FC"
                   maxLength={50}
                   disabled={submitting || success}
@@ -187,8 +198,8 @@ export default function EditTeamPage() {
                 <Select
                   value={prefectureId}
                   onValueChange={(value) => {
-                    if (value === 'none') {
-                      setPrefectureId('');
+                    if (value === "none") {
+                      setPrefectureId("");
                     } else {
                       setPrefectureId(value);
                     }
@@ -203,7 +214,11 @@ export default function EditTeamPage() {
                       選択なし
                     </SelectItem>
                     {prefectures.map((pref) => (
-                      <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)} className="bg-white hover:bg-gray-100">
+                      <SelectItem
+                        key={pref.prefecture_id}
+                        value={String(pref.prefecture_id)}
+                        className="bg-white hover:bg-gray-100"
+                      >
                         {pref.prefecture_name}
                       </SelectItem>
                     ))}
@@ -224,7 +239,9 @@ export default function EditTeamPage() {
               {success && (
                 <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
                   <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-green-800">チーム情報を更新しました。ダッシュボードへ戻ります…</p>
+                  <p className="text-sm text-green-800">
+                    チーム情報を更新しました。ダッシュボードへ戻ります…
+                  </p>
                 </div>
               )}
 
@@ -234,7 +251,7 @@ export default function EditTeamPage() {
                   disabled={submitting || success || !teamName.trim()}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
-                  {submitting ? '更新中...' : '変更を保存する'}
+                  {submitting ? "更新中..." : "変更を保存する"}
                 </Button>
                 <Button asChild variant="outline" disabled={submitting || success}>
                   <Link href="/my?tab=team">キャンセル</Link>

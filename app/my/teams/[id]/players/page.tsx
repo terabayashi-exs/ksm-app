@@ -1,10 +1,10 @@
 // app/my/teams/[id]/players/page.tsx
 export const metadata = { title: "選手管理" };
 
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import TeamPlayersClient from "@/components/features/my/TeamPlayersClient";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 export default async function TeamPlayersPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -27,7 +27,7 @@ export default async function TeamPlayersPage({ params }: { params: Promise<{ id
       INNER JOIN m_team_members tm ON t.team_id = tm.team_id
       WHERE t.team_id = ? AND tm.login_user_id = ? AND tm.is_active = 1
     `,
-    args: [teamId, loginUserId]
+    args: [teamId, loginUserId],
   });
 
   if (teamResult.rows.length === 0) {

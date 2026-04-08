@@ -1,10 +1,10 @@
 // app/api/tournaments/[id]/match-overrides/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { checkAndPromoteOnOverrideChange } from '@/lib/tournament-promotion';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { checkAndPromoteOnOverrideChange } from "@/lib/tournament-promotion";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface RouteParams {
@@ -14,18 +14,12 @@ interface RouteParams {
 /**
  * GET: 大会のオーバーライド一覧取得
  */
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -33,25 +27,26 @@ export async function GET(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
     // 大会存在確認
-    const tournamentCheck = await db.execute(`
+    const tournamentCheck = await db.execute(
+      `
       SELECT tournament_id FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (tournamentCheck.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     // オーバーライド一覧取得（元の条件も含めて）
-    const overridesResult = await db.execute(`
+    const overridesResult = await db.execute(
+      `
       SELECT
         mo.override_id,
         mo.tournament_id,
@@ -71,9 +66,11 @@ export async function GET(
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id AND mb.tournament_id = mo.tournament_id
       WHERE mo.tournament_id = ?
       ORDER BY mo.match_code
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
-    const overrides = overridesResult.rows.map(row => ({
+    const overrides = overridesResult.rows.map((row) => ({
       override_id: Number(row.override_id),
       tournament_id: Number(row.tournament_id),
       match_code: String(row.match_code),
@@ -84,25 +81,28 @@ export async function GET(
       overridden_at: row.overridden_at ? String(row.overridden_at) : null,
       original_team1_source: row.original_team1_source ? String(row.original_team1_source) : null,
       original_team2_source: row.original_team2_source ? String(row.original_team2_source) : null,
-      original_team1_display_name: row.original_team1_display_name ? String(row.original_team1_display_name) : null,
-      original_team2_display_name: row.original_team2_display_name ? String(row.original_team2_display_name) : null,
-      round_name: row.round_name ? String(row.round_name) : null
+      original_team1_display_name: row.original_team1_display_name
+        ? String(row.original_team1_display_name)
+        : null,
+      original_team2_display_name: row.original_team2_display_name
+        ? String(row.original_team2_display_name)
+        : null,
+      round_name: row.round_name ? String(row.round_name) : null,
     }));
 
     return NextResponse.json({
       success: true,
-      data: overrides
+      data: overrides,
     });
-
   } catch (error) {
-    console.error('オーバーライド一覧取得エラー:', error);
+    console.error("オーバーライド一覧取得エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'オーバーライド一覧の取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "オーバーライド一覧の取得に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -110,18 +110,12 @@ export async function GET(
 /**
  * POST: オーバーライド新規作成
  */
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -129,8 +123,8 @@ export async function POST(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
@@ -139,16 +133,13 @@ export async function POST(
 
     // バリデーション
     if (!match_code) {
-      return NextResponse.json(
-        { success: false, error: '試合コードは必須です' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "試合コードは必須です" }, { status: 400 });
     }
 
     if (!team1_source_override && !team2_source_override) {
       return NextResponse.json(
-        { success: false, error: '少なくとも1つのオーバーライドが必要です' },
-        { status: 400 }
+        { success: false, error: "少なくとも1つのオーバーライドが必要です" },
+        { status: 400 },
       );
     }
 
@@ -160,12 +151,15 @@ export async function POST(
           const teamId = parseInt(teamMatch[1]);
           const teamCheck = await db.execute(
             `SELECT tournament_team_id FROM t_tournament_teams WHERE tournament_team_id = ? AND tournament_id = ?`,
-            [teamId, tournamentId]
+            [teamId, tournamentId],
           );
           if (teamCheck.rows.length === 0) {
             return NextResponse.json(
-              { success: false, error: `指定されたチーム(ID:${teamId})がこの大会に登録されていません` },
-              { status: 400 }
+              {
+                success: false,
+                error: `指定されたチーム(ID:${teamId})がこの大会に登録されていません`,
+              },
+              { status: 400 },
             );
           }
         }
@@ -173,73 +167,89 @@ export async function POST(
     }
 
     // 試合存在確認（選出条件が設定されている試合のみ対象）
-    const templateCheck = await db.execute(`
+    const templateCheck = await db.execute(
+      `
       SELECT ml.match_code
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ? AND ml.match_code = ?
         AND (ml.team1_source IS NOT NULL OR ml.team2_source IS NOT NULL)
-    `, [tournamentId, match_code]);
+    `,
+      [tournamentId, match_code],
+    );
 
     if (templateCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: '指定された試合コードが見つかりません、または選出条件が設定されていません' },
-        { status: 404 }
+        {
+          success: false,
+          error: "指定された試合コードが見つかりません、または選出条件が設定されていません",
+        },
+        { status: 404 },
       );
     }
 
     // オーバーライド作成（UNIQUE制約により同じtournament_id + match_codeは重複不可）
-    const insertResult = await db.execute(`
+    const insertResult = await db.execute(
+      `
       INSERT INTO t_tournament_match_overrides
         (tournament_id, match_code, team1_source_override, team2_source_override, override_reason, overridden_by)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [
-      tournamentId,
-      match_code,
-      team1_source_override || null,
-      team2_source_override || null,
-      override_reason || null,
-      session.user.email || session.user.id
-    ]);
+    `,
+      [
+        tournamentId,
+        match_code,
+        team1_source_override || null,
+        team2_source_override || null,
+        override_reason || null,
+        session.user.email || session.user.id,
+      ],
+    );
 
-    console.log(`[MATCH_OVERRIDE] Created override for tournament ${tournamentId}, match ${match_code}`);
-    console.log(`[MATCH_OVERRIDE] team1_source_override: ${team1_source_override}, team2_source_override: ${team2_source_override}`);
+    console.log(
+      `[MATCH_OVERRIDE] Created override for tournament ${tournamentId}, match ${match_code}`,
+    );
+    console.log(
+      `[MATCH_OVERRIDE] team1_source_override: ${team1_source_override}, team2_source_override: ${team2_source_override}`,
+    );
 
     // オーバーライド変更後の自動進出処理チェック
     try {
       await checkAndPromoteOnOverrideChange(tournamentId, [match_code]);
     } catch (promoteError) {
-      console.error(`[MATCH_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`, promoteError);
+      console.error(
+        `[MATCH_OVERRIDE] 自動進出処理でエラーが発生しましたが、オーバーライド設定は完了しました:`,
+        promoteError,
+      );
       // エラーが発生してもオーバーライド設定は成功とする
     }
 
     return NextResponse.json({
       success: true,
-      message: 'オーバーライドを作成しました',
-      override_id: Number(insertResult.lastInsertRowid)
+      message: "オーバーライドを作成しました",
+      override_id: Number(insertResult.lastInsertRowid),
     });
-
   } catch (error) {
-    console.error('オーバーライド作成エラー:', error);
+    console.error("オーバーライド作成エラー:", error);
 
     // UNIQUE制約違反のエラーチェック
-    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
       return NextResponse.json(
         {
           success: false,
-          error: 'この試合には既にオーバーライドが設定されています。更新する場合はPUTリクエストを使用してください。'
+          error:
+            "この試合には既にオーバーライドが設定されています。更新する場合はPUTリクエストを使用してください。",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: 'オーバーライドの作成に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "オーバーライドの作成に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -247,18 +257,12 @@ export async function POST(
 /**
  * DELETE: オーバーライド全削除（大会単位）
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック（管理者権限必須）
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -266,33 +270,35 @@ export async function DELETE(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
     // 大会のオーバーライドを全削除
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_tournament_match_overrides
       WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     console.log(`[MATCH_OVERRIDE] Deleted all overrides for tournament ${tournamentId}`);
 
     return NextResponse.json({
       success: true,
-      message: 'オーバーライドを全て削除しました'
+      message: "オーバーライドを全て削除しました",
     });
-
   } catch (error) {
-    console.error('オーバーライド削除エラー:', error);
+    console.error("オーバーライド削除エラー:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'オーバーライドの削除に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "オーバーライドの削除に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

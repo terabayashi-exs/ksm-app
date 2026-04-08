@@ -1,14 +1,25 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import {
+  Calendar,
+  Copy,
+  Edit,
+  Globe,
+  Lock,
+  Search,
+  ShieldCheck,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Copy, Users, Calendar, Lock, Globe, ShieldCheck, Search, X } from "lucide-react";
-import FormatDetailBadges, { getSportIcon } from "./FormatDetailBadges";
 import { FormatAccessModal } from "./FormatAccessModal";
+import FormatDetailBadges, { getSportIcon } from "./FormatDetailBadges";
 
 interface SportType {
   sport_type_id: number;
@@ -30,12 +41,19 @@ interface TournamentFormat {
   template_count?: number;
   matchday_count?: number;
   visibility?: string;
-  phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }>;
+  phase_stats?: Array<{
+    phase: string;
+    phase_name: string;
+    order: number;
+    block_count: number;
+    max_court_number: number | null;
+  }>;
 }
 
 export default function TournamentFormatList() {
   const { data: session } = useSession();
-  const isSuperadmin = (session?.user as { isSuperadmin?: boolean } | undefined)?.isSuperadmin ?? false;
+  const isSuperadmin =
+    (session?.user as { isSuperadmin?: boolean } | undefined)?.isSuperadmin ?? false;
   const [formats, setFormats] = useState<TournamentFormat[]>([]);
   const [sportTypes, setSportTypes] = useState<SportType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,16 +104,17 @@ export default function TournamentFormatList() {
     // フリーワード検索（フォーマット名・説明）
     if (searchKeyword.trim()) {
       const kw = searchKeyword.trim().toLowerCase();
-      result = result.filter(f =>
-        f.format_name.toLowerCase().includes(kw) ||
-        (f.format_description && f.format_description.toLowerCase().includes(kw))
+      result = result.filter(
+        (f) =>
+          f.format_name.toLowerCase().includes(kw) ||
+          (f.format_description && f.format_description.toLowerCase().includes(kw)),
       );
     }
 
     // 競技種別フィルタ
     if (selectedSportTypeId) {
       const sportId = Number(selectedSportTypeId);
-      result = result.filter(f => Number(f.sport_type_id) === sportId);
+      result = result.filter((f) => Number(f.sport_type_id) === sportId);
     }
 
     return result;
@@ -110,7 +129,11 @@ export default function TournamentFormatList() {
 
   // フォーマット削除
   const handleDelete = async (formatId: number, formatName: string) => {
-    if (!confirm(`「${formatName}」を削除しますか？\n\n⚠️ 関連する試合テンプレートも全て削除されます。\nこの操作は元に戻せません。`)) {
+    if (
+      !confirm(
+        `「${formatName}」を削除しますか？\n\n⚠️ 関連する試合テンプレートも全て削除されます。\nこの操作は元に戻せません。`,
+      )
+    ) {
       return;
     }
 
@@ -124,7 +147,7 @@ export default function TournamentFormatList() {
       const data = await response.json();
 
       if (data.success) {
-        setFormats(formats.filter(f => f.format_id !== formatId));
+        setFormats(formats.filter((f) => f.format_id !== formatId));
         alert("フォーマットを削除しました");
       } else {
         alert(`削除エラー: ${data.error}`);
@@ -160,8 +183,8 @@ export default function TournamentFormatList() {
 
   // visibility切替
   const handleToggleVisibility = async (formatId: number, currentVisibility: string) => {
-    const newVisibility = currentVisibility === 'public' ? 'restricted' : 'public';
-    const action = newVisibility === 'restricted' ? '制限' : '公開';
+    const newVisibility = currentVisibility === "public" ? "restricted" : "public";
+    const action = newVisibility === "restricted" ? "制限" : "公開";
 
     if (!confirm(`このフォーマットを「${action}」に変更しますか？`)) return;
 
@@ -176,9 +199,9 @@ export default function TournamentFormatList() {
       const data = await response.json();
 
       if (data.success) {
-        setFormats(formats.map(f =>
-          f.format_id === formatId ? { ...f, visibility: newVisibility } : f
-        ));
+        setFormats(
+          formats.map((f) => (f.format_id === formatId ? { ...f, visibility: newVisibility } : f)),
+        );
       } else {
         alert(`変更エラー: ${data.error}`);
       }
@@ -203,9 +226,7 @@ export default function TournamentFormatList() {
       <div className="text-center py-12">
         <div className="text-gray-500 mb-4">登録されている大会フォーマットがありません</div>
         <Button asChild className="bg-primary hover:bg-primary/90">
-          <Link href="/admin/tournament-formats/create">
-            最初のフォーマットを作成
-          </Link>
+          <Link href="/admin/tournament-formats/create">最初のフォーマットを作成</Link>
         </Button>
       </div>
     );
@@ -233,7 +254,9 @@ export default function TournamentFormatList() {
         {/* 競技種別 */}
         {sportTypes.length > 0 && (
           <div>
-            <label className="text-sm font-medium mb-1.5 block text-gray-700">競技から絞り込み</label>
+            <label className="text-sm font-medium mb-1.5 block text-gray-700">
+              競技から絞り込み
+            </label>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSelectedSportTypeId("")}
@@ -285,132 +308,135 @@ export default function TournamentFormatList() {
         </div>
       ) : (
         filteredFormats.map((format) => {
-          const visibility = format.visibility || 'public';
-          const isRestricted = visibility === 'restricted';
+          const visibility = format.visibility || "public";
+          const isRestricted = visibility === "restricted";
 
           return (
-          <div
-            key={format.format_id}
-            className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>
-                    {format.format_name}
-                  </h3>
-                  <Badge variant="secondary" className="flex items-center space-x-1">
-                    <Users className="h-3 w-3" />
-                    <span>{format.target_team_count}チーム</span>
-                  </Badge>
-                  {format.template_count !== undefined && (
-                    <Badge variant="outline" className="flex items-center space-x-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>{format.template_count}試合</span>
+            <div
+              key={format.format_id}
+              className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>
+                      {format.format_name}
+                    </h3>
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <Users className="h-3 w-3" />
+                      <span>{format.target_team_count}チーム</span>
                     </Badge>
-                  )}
-                  {isRestricted ? (
-                    <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
-                      <Lock className="h-3 w-3" />
-                      <span>制限</span>
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
-                      <Globe className="h-3 w-3" />
-                      <span>公開</span>
-                    </Badge>
-                  )}
+                    {format.template_count !== undefined && (
+                      <Badge variant="outline" className="flex items-center space-x-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{format.template_count}試合</span>
+                      </Badge>
+                    )}
+                    {isRestricted ? (
+                      <Badge className="bg-orange-100 text-orange-800 flex items-center space-x-1">
+                        <Lock className="h-3 w-3" />
+                        <span>制限</span>
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-green-100 text-green-800 flex items-center space-x-1">
+                        <Globe className="h-3 w-3" />
+                        <span>公開</span>
+                      </Badge>
+                    )}
+                  </div>
+
+                  <p className="text-gray-600 mb-3 leading-relaxed">{format.format_description}</p>
+
+                  <FormatDetailBadges
+                    default_match_duration={format.default_match_duration}
+                    default_break_duration={format.default_break_duration}
+                    matchday_count={format.matchday_count}
+                    phase_stats={format.phase_stats}
+                  />
                 </div>
 
-                <p className="text-gray-600 mb-3 leading-relaxed">
-                  {format.format_description}
-                </p>
-
-                <FormatDetailBadges
-                  default_match_duration={format.default_match_duration}
-                  default_break_duration={format.default_break_duration}
-                  matchday_count={format.matchday_count}
-                  phase_stats={format.phase_stats}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2 ml-6">
-                {isSuperadmin && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleVisibility(format.format_id, visibility)}
-                      disabled={togglingVisibilityId === format.format_id}
-                      className={isRestricted
-                        ? "hover:bg-green-50 hover:border-green-300"
-                        : "hover:bg-orange-50 hover:border-orange-300"
-                      }
-                    >
-                      {isRestricted ? (
-                        <><Globe className="h-4 w-4 mr-1" />公開にする</>
-                      ) : (
-                        <><Lock className="h-4 w-4 mr-1" />制限にする</>
-                      )}
-                    </Button>
-                    {isRestricted && (
+                <div className="flex items-center space-x-2 ml-6">
+                  {isSuperadmin && (
+                    <>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setAccessModalFormat(format)}
-                        className="hover:bg-purple-50 hover:border-purple-300"
+                        onClick={() => handleToggleVisibility(format.format_id, visibility)}
+                        disabled={togglingVisibilityId === format.format_id}
+                        className={
+                          isRestricted
+                            ? "hover:bg-green-50 hover:border-green-300"
+                            : "hover:bg-orange-50 hover:border-orange-300"
+                        }
                       >
-                        <ShieldCheck className="h-4 w-4 mr-1" />
-                        アクセス管理
+                        {isRestricted ? (
+                          <>
+                            <Globe className="h-4 w-4 mr-1" />
+                            公開にする
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-4 w-4 mr-1" />
+                            制限にする
+                          </>
+                        )}
                       </Button>
-                    )}
-                  </>
-                )}
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="hover:bg-blue-50 hover:border-blue-300"
-                >
-                  <Link href={`/admin/tournament-formats/${format.format_id}/edit`}>
-                    <Edit className="h-4 w-4 mr-1" />
-                    編集
-                  </Link>
-                </Button>
+                      {isRestricted && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAccessModalFormat(format)}
+                          className="hover:bg-purple-50 hover:border-purple-300"
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-1" />
+                          アクセス管理
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    <Link href={`/admin/tournament-formats/${format.format_id}/edit`}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      編集
+                    </Link>
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDuplicate(format.format_id)}
-                  className="hover:bg-green-50 hover:border-green-300"
-                >
-                  <Copy className="h-4 w-4 mr-1" />
-                  複製
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDuplicate(format.format_id)}
+                    className="hover:bg-green-50 hover:border-green-300"
+                  >
+                    <Copy className="h-4 w-4 mr-1" />
+                    複製
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(format.format_id, format.format_name)}
-                  disabled={deletingId === format.format_id}
-                  className="hover:bg-destructive/5 hover:border-destructive/30 hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  {deletingId === format.format_id ? "削除中..." : "削除"}
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(format.format_id, format.format_name)}
+                    disabled={deletingId === format.format_id}
+                    className="hover:bg-destructive/5 hover:border-destructive/30 hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    {deletingId === format.format_id ? "削除中..." : "削除"}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
           );
         })
       )}
 
       <div className="text-center pt-6">
         <Button asChild variant="outline" className="border-2 border-blue-200 hover:bg-blue-50">
-          <Link href="/admin/tournament-formats/create">
-            + 新しいフォーマットを作成
-          </Link>
+          <Link href="/admin/tournament-formats/create">+ 新しいフォーマットを作成</Link>
         </Button>
       </div>
 

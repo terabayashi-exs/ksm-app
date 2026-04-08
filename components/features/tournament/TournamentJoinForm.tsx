@@ -1,17 +1,17 @@
 // components/features/tournament/TournamentJoinForm.tsx
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Users } from 'lucide-react';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface TeamPlayer {
   player_id: number;
@@ -43,37 +43,57 @@ interface Props {
 
 const playerSchema = z.object({
   player_id: z.number().optional(),
-  player_name: z.string().min(1, '選手名は必須です').max(50, '選手名は50文字以内で入力してください'),
-  jersey_number: z.number().min(1, '背番号は1以上で入力してください').max(99, '背番号は99以下で入力してください').optional(),
+  player_name: z
+    .string()
+    .min(1, "選手名は必須です")
+    .max(50, "選手名は50文字以内で入力してください"),
+  jersey_number: z
+    .number()
+    .min(1, "背番号は1以上で入力してください")
+    .max(99, "背番号は99以下で入力してください")
+    .optional(),
   is_participating: z.boolean(),
   is_selected: z.boolean().optional(), // UI用：既存選手の選択状態
 });
 
 const formSchema = z.object({
-  tournament_team_name: z.string().min(1, '大会参加チーム名は必須です').max(50, 'チーム名は50文字以内で入力してください'),
-  tournament_team_omission: z.string().min(1, 'チーム略称は必須です').max(5, 'チーム略称は5文字以内で入力してください'),
-  players: z.array(playerSchema)
-    .max(100, '選手は最大100人まで登録可能です')
-    .refine((players) => {
-      // 選手名の重複チェック（参加する選手のみ）
-      const participatingPlayers = players.filter(p => p.is_participating);
-      const names = participatingPlayers.map(p => p.player_name);
-      const uniqueNames = new Set(names);
-      return names.length === uniqueNames.size;
-    }, {
-      message: '同じ名前の選手が重複しています'
-    })
-    .refine((players) => {
-      // 背番号の重複チェック（参加する選手で番号が設定されている選手のみ）
-      const participatingPlayers = players.filter(p => p.is_participating);
-      const numbers = participatingPlayers
-        .filter(p => p.jersey_number !== undefined && p.jersey_number !== null)
-        .map(p => p.jersey_number);
-      const uniqueNumbers = new Set(numbers);
-      return numbers.length === uniqueNumbers.size;
-    }, {
-      message: '背番号が重複しています'
-    })
+  tournament_team_name: z
+    .string()
+    .min(1, "大会参加チーム名は必須です")
+    .max(50, "チーム名は50文字以内で入力してください"),
+  tournament_team_omission: z
+    .string()
+    .min(1, "チーム略称は必須です")
+    .max(5, "チーム略称は5文字以内で入力してください"),
+  players: z
+    .array(playerSchema)
+    .max(100, "選手は最大100人まで登録可能です")
+    .refine(
+      (players) => {
+        // 選手名の重複チェック（参加する選手のみ）
+        const participatingPlayers = players.filter((p) => p.is_participating);
+        const names = participatingPlayers.map((p) => p.player_name);
+        const uniqueNames = new Set(names);
+        return names.length === uniqueNames.size;
+      },
+      {
+        message: "同じ名前の選手が重複しています",
+      },
+    )
+    .refine(
+      (players) => {
+        // 背番号の重複チェック（参加する選手で番号が設定されている選手のみ）
+        const participatingPlayers = players.filter((p) => p.is_participating);
+        const numbers = participatingPlayers
+          .filter((p) => p.jersey_number !== undefined && p.jersey_number !== null)
+          .map((p) => p.jersey_number);
+        const uniqueNumbers = new Set(numbers);
+        return numbers.length === uniqueNumbers.size;
+      },
+      {
+        message: "背番号が重複しています",
+      },
+    ),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -85,32 +105,37 @@ export default function TournamentJoinForm({
   existingTournamentTeamInfo = null,
   isEditMode = false,
   isNewTeamMode = false,
-  specificTeamId
+  specificTeamId,
 }: Props) {
-
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // teamPlayersから重複を除外（念のため）
-  const uniqueTeamPlayers = Array.from(
-    new Map(teamPlayers.map(p => [p.player_id, p])).values()
-  );
+  const uniqueTeamPlayers = Array.from(new Map(teamPlayers.map((p) => [p.player_id, p])).values());
 
-  const { control, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      tournament_team_name: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_name,
-      tournament_team_omission: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_omission,
-      players: []
-    }
+      tournament_team_name:
+        isNewTeamMode || !existingTournamentTeamInfo ? "" : existingTournamentTeamInfo.team_name,
+      tournament_team_omission:
+        isNewTeamMode || !existingTournamentTeamInfo
+          ? ""
+          : existingTournamentTeamInfo.team_omission,
+      players: [],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'players'
+    name: "players",
   });
-
 
   // 既存選手の選択状態を管理
   const [selectedExistingPlayers, setSelectedExistingPlayers] = useState<Set<number>>(new Set());
@@ -118,15 +143,19 @@ export default function TournamentJoinForm({
 
   // specificTeamIdやtournamentIdが変わったら初期化フラグと選手データをリセット
   useEffect(() => {
-    console.log('Resetting form due to parameter change');
+    console.log("Resetting form due to parameter change");
     setInitialized(false);
     setSelectedExistingPlayers(new Set());
 
     // フォームの選手データをクリア
     reset({
-      tournament_team_name: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_name,
-      tournament_team_omission: (isNewTeamMode || !existingTournamentTeamInfo) ? '' : existingTournamentTeamInfo.team_omission,
-      players: []
+      tournament_team_name:
+        isNewTeamMode || !existingTournamentTeamInfo ? "" : existingTournamentTeamInfo.team_name,
+      tournament_team_omission:
+        isNewTeamMode || !existingTournamentTeamInfo
+          ? ""
+          : existingTournamentTeamInfo.team_omission,
+      players: [],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId, specificTeamId]);
@@ -138,32 +167,32 @@ export default function TournamentJoinForm({
 
     // 編集モードで既存選手データがある場合のみ初期化
     if (isEditMode && existingTournamentPlayers.length > 0) {
-      console.log('Initializing form with existing players:', existingTournamentPlayers);
+      console.log("Initializing form with existing players:", existingTournamentPlayers);
 
       const existingPlayerIds = new Set<number>();
 
       // 重複を除外しながら追加
       const uniquePlayers = Array.from(
-        new Map(existingTournamentPlayers.map(p => [p.player_id, p])).values()
+        new Map(existingTournamentPlayers.map((p) => [p.player_id, p])).values(),
       );
 
-      console.log('Unique players to add:', uniquePlayers);
+      console.log("Unique players to add:", uniquePlayers);
 
-      uniquePlayers.forEach(player => {
+      uniquePlayers.forEach((player) => {
         existingPlayerIds.add(player.player_id);
         append({
           player_id: player.player_id,
           player_name: player.player_name,
           jersey_number: player.jersey_number || undefined,
           is_participating: true,
-          is_selected: true
+          is_selected: true,
         });
       });
 
       setSelectedExistingPlayers(existingPlayerIds);
       setInitialized(true);
 
-      console.log('Form initialization complete, total fields:', uniquePlayers.length);
+      console.log("Form initialization complete, total fields:", uniquePlayers.length);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, existingTournamentPlayers, initialized]);
@@ -176,7 +205,7 @@ export default function TournamentJoinForm({
       newSelected.add(player.player_id);
 
       // 既にフォームに存在するかチェック
-      const existingIndex = fields.findIndex(f => f.player_id === player.player_id);
+      const existingIndex = fields.findIndex((f) => f.player_id === player.player_id);
       if (existingIndex === -1) {
         // フォームに追加（存在しない場合のみ）
         append({
@@ -184,13 +213,13 @@ export default function TournamentJoinForm({
           player_name: player.player_name,
           jersey_number: player.jersey_number || undefined,
           is_participating: true,
-          is_selected: true
+          is_selected: true,
         });
       }
     } else {
       newSelected.delete(player.player_id);
       // フォームから削除
-      const index = fields.findIndex(f => f.player_id === player.player_id);
+      const index = fields.findIndex((f) => f.player_id === player.player_id);
       if (index !== -1) {
         remove(index);
       }
@@ -202,17 +231,18 @@ export default function TournamentJoinForm({
   // フォーム送信
   const onSubmit = async (data: FormData) => {
     setLoading(true);
-    setError('');
+    setError("");
 
     // デバッグ: 送信データをログ出力
-    console.log('Form submission data:', {
+    console.log("Form submission data:", {
       players: data.players,
-      participatingPlayers: data.players.filter(p => p.is_participating),
-      playerNames: data.players.filter(p => p.is_participating).map(p => p.player_name),
+      participatingPlayers: data.players.filter((p) => p.is_participating),
+      playerNames: data.players.filter((p) => p.is_participating).map((p) => p.player_name),
       duplicateCheck: {
-        total: data.players.filter(p => p.is_participating).length,
-        unique: new Set(data.players.filter(p => p.is_participating).map(p => p.player_name)).size
-      }
+        total: data.players.filter((p) => p.is_participating).length,
+        unique: new Set(data.players.filter((p) => p.is_participating).map((p) => p.player_name))
+          .size,
+      },
     });
 
     try {
@@ -220,74 +250,79 @@ export default function TournamentJoinForm({
       const requestBody = {
         tournament_team_name: data.tournament_team_name,
         tournament_team_omission: data.tournament_team_omission,
-        players: data.players.map(p => ({
+        players: data.players.map((p) => ({
           player_id: p.player_id,
           player_name: p.player_name,
           jersey_number: p.jersey_number,
-          is_participating: p.is_participating
+          is_participating: p.is_participating,
         })),
         isEditMode: isEditMode,
         isNewTeamMode: isNewTeamMode,
-        specificTeamId: specificTeamId
+        specificTeamId: specificTeamId,
       };
 
-      console.log('Submitting tournament join form:', {
+      console.log("Submitting tournament join form:", {
         tournamentId,
         apiUrl,
         tournamentIdType: typeof tournamentId,
-        method: isEditMode ? 'PUT' : 'POST',
+        method: isEditMode ? "PUT" : "POST",
         playersCount: data.players.length,
-        requestBody
+        requestBody,
       });
 
       let response;
       let result;
-      
+
       try {
-        console.log('About to fetch:', apiUrl);
+        console.log("About to fetch:", apiUrl);
         response = await fetch(apiUrl, {
-          method: isEditMode ? 'PUT' : 'POST',
+          method: isEditMode ? "PUT" : "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
         });
 
-        console.log('Response received:', {
+        console.log("Response received:", {
           status: response.status,
           statusText: response.statusText,
           url: response.url,
-          ok: response.ok
+          ok: response.ok,
         });
 
-        console.log('About to parse JSON...');
+        console.log("About to parse JSON...");
         result = await response.json();
-        console.log('JSON parsed successfully:', result);
-        
+        console.log("JSON parsed successfully:", result);
       } catch (fetchError) {
-        console.error('Fetch or JSON parsing error:', fetchError);
-        throw new Error(`ネットワークエラー: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+        console.error("Fetch or JSON parsing error:", fetchError);
+        throw new Error(
+          `ネットワークエラー: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`,
+        );
       }
 
       if (result.success) {
-        router.push(`/team?${isEditMode ? 'updated' : 'joined'}=${tournamentId}`);
+        router.push(`/team?${isEditMode ? "updated" : "joined"}=${tournamentId}`);
       } else {
         // エラーメッセージの組み立て
-        let errorMessage = result.error || (isEditMode ? '参加選手の変更に失敗しました' : '参加申し込みに失敗しました');
+        let errorMessage =
+          result.error ||
+          (isEditMode ? "参加選手の変更に失敗しました" : "参加申し込みに失敗しました");
 
         // detailsがある場合、より分かりやすく表示
         if (result.details && Array.isArray(result.details)) {
-          const detailMessages = result.details.map((detail: { message?: string }) => detail.message).filter(Boolean);
+          const detailMessages = result.details
+            .map((detail: { message?: string }) => detail.message)
+            .filter(Boolean);
           if (detailMessages.length > 0) {
-            errorMessage = detailMessages.join('\n');
+            errorMessage = detailMessages.join("\n");
           }
         }
 
         setError(errorMessage);
       }
     } catch (error) {
-      setError('通信エラーが発生しました');
-      console.error('Tournament join error:', error);
+      setError("通信エラーが発生しました");
+      console.error("Tournament join error:", error);
     } finally {
       setLoading(false);
     }
@@ -306,15 +341,21 @@ export default function TournamentJoinForm({
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-500 mb-4">
             この大会での参加チーム名と略称を入力してください。既存のチームと重複しない名前を指定する必要があります。
-            {isNewTeamMode && <span className="block mt-2 text-green-700 font-medium">複数チーム参加モード: 既存参加チームとは異なる名前・略称を入力してください。</span>}
+            {isNewTeamMode && (
+              <span className="block mt-2 text-green-700 font-medium">
+                複数チーム参加モード: 既存参加チームとは異なる名前・略称を入力してください。
+              </span>
+            )}
           </p>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="tournament_team_name">大会参加チーム名 <span className="text-destructive">*</span></Label>
+              <Label htmlFor="tournament_team_name">
+                大会参加チーム名 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="tournament_team_name"
-                {...control.register('tournament_team_name')}
+                {...control.register("tournament_team_name")}
                 placeholder={isNewTeamMode ? "例: サンプルチームB" : "例: サンプルチームA"}
               />
               {errors.tournament_team_name && (
@@ -323,25 +364,28 @@ export default function TournamentJoinForm({
             </div>
 
             <div>
-              <Label htmlFor="tournament_team_omission">チーム略称 <span className="text-destructive">*</span></Label>
+              <Label htmlFor="tournament_team_omission">
+                チーム略称 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="tournament_team_omission"
                 maxLength={5}
-                {...control.register('tournament_team_omission')}
+                {...control.register("tournament_team_omission")}
                 placeholder={isNewTeamMode ? "例: SPB" : "例: SPA"}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                全角4文字以内で入力してください
-              </p>
+              <p className="text-xs text-gray-500 mt-1">全角4文字以内で入力してください</p>
               {errors.tournament_team_omission && (
-                <p className="text-sm text-red-600 mt-1">{errors.tournament_team_omission.message}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {errors.tournament_team_omission.message}
+                </p>
               )}
             </div>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
-              💡 <strong>重要:</strong> 同じマスターチームから複数エントリーする場合は、それぞれ異なるチーム名・略称を使用してください。
+              💡 <strong>重要:</strong>{" "}
+              同じマスターチームから複数エントリーする場合は、それぞれ異なるチーム名・略称を使用してください。
               星取表などではチーム略称が表示されます。
             </p>
           </div>
@@ -364,13 +408,18 @@ export default function TournamentJoinForm({
             <div className="space-y-3">
               {uniqueTeamPlayers.map((player) => {
                 const isSelected = selectedExistingPlayers.has(player.player_id);
-                const fieldIndex = fields.findIndex(f => f.player_id === player.player_id);
-                
+                const fieldIndex = fields.findIndex((f) => f.player_id === player.player_id);
+
                 return (
-                  <div key={player.player_id} className="flex items-center space-x-4 p-3 border rounded-lg">
+                  <div
+                    key={player.player_id}
+                    className="flex items-center space-x-4 p-3 border rounded-lg"
+                  >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={(checked) => handleExistingPlayerToggle(player, checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        handleExistingPlayerToggle(player, checked as boolean)
+                      }
                     />
                     <div className="flex-1">
                       <p className="font-medium">{player.player_name}</p>
@@ -391,12 +440,12 @@ export default function TournamentJoinForm({
                           className="w-20"
                           {...control.register(`players.${fieldIndex}.jersey_number`, {
                             setValueAs: (value) => {
-                              if (value === '' || value === null || value === undefined) {
+                              if (value === "" || value === null || value === undefined) {
                                 return undefined;
                               }
                               const num = parseInt(value, 10);
                               return isNaN(num) ? undefined : num;
-                            }
+                            },
                           })}
                           placeholder="番号"
                         />
@@ -431,20 +480,23 @@ export default function TournamentJoinForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push('/my')}
+          onClick={() => router.push("/my")}
           disabled={loading}
         >
           キャンセル
         </Button>
-        <Button
-          type="submit"
-          variant="outline"
-          disabled={loading}
-        >
+        <Button type="submit" variant="outline" disabled={loading}>
           {loading
-            ? (isEditMode ? '保存中...' : (isNewTeamMode ? '追加申し込み中...' : '申し込み中...'))
-            : (isEditMode ? '保存' : (isNewTeamMode ? '追加チームで参加申し込み' : '大会に参加申し込み'))
-          }
+            ? isEditMode
+              ? "保存中..."
+              : isNewTeamMode
+                ? "追加申し込み中..."
+                : "申し込み中..."
+            : isEditMode
+              ? "保存"
+              : isNewTeamMode
+                ? "追加チームで参加申し込み"
+                : "大会に参加申し込み"}
         </Button>
       </div>
     </form>

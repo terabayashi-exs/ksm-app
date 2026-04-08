@@ -1,17 +1,17 @@
 // components/features/admin/FileUploader.tsx
 // ファイルアップロードコンポーネント
 
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import { Upload, File, X, CheckCircle, AlertCircle, Link as LinkIcon } from 'lucide-react';
-import { FILE_VALIDATION, type LinkType } from '@/lib/types/tournament-files';
+import { AlertCircle, CheckCircle, File, Link as LinkIcon, Upload, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { FILE_VALIDATION, type LinkType } from "@/lib/types/tournament-files";
 
 interface FileUploaderProps {
   tournamentId: number;
@@ -34,31 +34,43 @@ interface UploadState {
 
 // ファイルサイズを人間が読みやすい形式に変換
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-export default function FileUploader({ tournamentId, onUploadSuccess, defaultLinkType }: FileUploaderProps) {
+export default function FileUploader({
+  tournamentId,
+  onUploadSuccess,
+  defaultLinkType,
+}: FileUploaderProps) {
   const [state, setState] = useState<UploadState>({
-    linkType: defaultLinkType || 'upload',
+    linkType: defaultLinkType || "upload",
     file: null,
-    title: '',
-    description: '',
-    displayDate: '',
-    externalUrl: '',
+    title: "",
+    description: "",
+    displayDate: "",
+    externalUrl: "",
     uploading: false,
     progress: 0,
     error: null,
-    success: false
+    success: false,
   });
 
   // defaultLinkType変更時にlinkTypeを同期
   useEffect(() => {
     if (defaultLinkType) {
-      setState(prev => ({ ...prev, linkType: defaultLinkType, file: null, externalUrl: '', displayDate: '', error: null, success: false }));
+      setState((prev) => ({
+        ...prev,
+        linkType: defaultLinkType,
+        file: null,
+        externalUrl: "",
+        displayDate: "",
+        error: null,
+        success: false,
+      }));
     }
   }, [defaultLinkType]);
 
@@ -67,14 +79,14 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
     const file = acceptedFiles[0];
     if (file) {
       // ファイル名からデフォルトタイトルを生成
-      const defaultTitle = file.name.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-      
-      setState(prev => ({
+      const defaultTitle = file.name.replace(/\.[^/.]+$/, ""); // 拡張子を除去
+
+      setState((prev) => ({
         ...prev,
         file,
         title: defaultTitle,
         error: null,
-        success: false
+        success: false,
       }));
     }
   }, []);
@@ -82,40 +94,40 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      "application/pdf": [".pdf"],
     },
     maxSize: FILE_VALIDATION.maxSize,
     multiple: false,
     onDropRejected: (rejectedFiles) => {
       const rejection = rejectedFiles[0];
-      if (rejection.errors[0]?.code === 'file-too-large') {
-        setState(prev => ({
+      if (rejection.errors[0]?.code === "file-too-large") {
+        setState((prev) => ({
           ...prev,
-          error: `ファイルサイズが大きすぎます（最大: ${formatFileSize(FILE_VALIDATION.maxSize)}）`
+          error: `ファイルサイズが大きすぎます（最大: ${formatFileSize(FILE_VALIDATION.maxSize)}）`,
         }));
-      } else if (rejection.errors[0]?.code === 'file-invalid-type') {
-        setState(prev => ({
+      } else if (rejection.errors[0]?.code === "file-invalid-type") {
+        setState((prev) => ({
           ...prev,
-          error: 'PDFファイルのみアップロード可能です'
+          error: "PDFファイルのみアップロード可能です",
         }));
       } else {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
-          error: 'ファイルアップロードエラーが発生しました'
+          error: "ファイルアップロードエラーが発生しました",
         }));
       }
-    }
+    },
   });
 
   // ファイル削除
   const removeFile = () => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       file: null,
-      title: '',
-      description: '',
+      title: "",
+      description: "",
       error: null,
-      success: false
+      success: false,
     }));
   };
 
@@ -123,66 +135,66 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
   const handleUpload = async () => {
     // バリデーション
     if (!state.title.trim()) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: 'タイトルは必須です'
+        error: "タイトルは必須です",
       }));
       return;
     }
 
-    if (state.linkType === 'upload' && !state.file) {
-      setState(prev => ({
+    if (state.linkType === "upload" && !state.file) {
+      setState((prev) => ({
         ...prev,
-        error: 'ファイルを選択してください'
+        error: "ファイルを選択してください",
       }));
       return;
     }
 
-    if (state.linkType === 'external' && !state.externalUrl.trim()) {
-      setState(prev => ({
+    if (state.linkType === "external" && !state.externalUrl.trim()) {
+      setState((prev) => ({
         ...prev,
-        error: '外部URLを入力してください'
+        error: "外部URLを入力してください",
       }));
       return;
     }
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       uploading: true,
       progress: 0,
       error: null,
-      success: false
+      success: false,
     }));
 
     try {
       const formData = new FormData();
-      formData.append('link_type', state.linkType);
-      formData.append('title', state.title.trim());
+      formData.append("link_type", state.linkType);
+      formData.append("title", state.title.trim());
       if (state.description.trim()) {
-        formData.append('description', state.description.trim());
+        formData.append("description", state.description.trim());
       }
-      formData.append('upload_order', '0');
+      formData.append("upload_order", "0");
       if (state.displayDate.trim()) {
-        formData.append('display_date', state.displayDate.trim());
+        formData.append("display_date", state.displayDate.trim());
       }
 
-      if (state.linkType === 'upload' && state.file) {
-        formData.append('file', state.file);
-      } else if (state.linkType === 'external') {
-        formData.append('external_url', state.externalUrl.trim());
+      if (state.linkType === "upload" && state.file) {
+        formData.append("file", state.file);
+      } else if (state.linkType === "external") {
+        formData.append("external_url", state.externalUrl.trim());
       }
 
       // プログレス更新のシミュレーション
       const progressInterval = setInterval(() => {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
-          progress: Math.min(prev.progress + 10, 90)
+          progress: Math.min(prev.progress + 10, 90),
         }));
       }, 200);
 
       const response = await fetch(`/api/admin/tournaments/${tournamentId}/files/upload`, {
-        method: 'POST',
-        body: formData
+        method: "POST",
+        body: formData,
       });
 
       clearInterval(progressInterval);
@@ -190,19 +202,19 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'アップロードに失敗しました');
+        throw new Error(result.error || "アップロードに失敗しました");
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         uploading: false,
         progress: 100,
         success: true,
         file: null,
-        title: '',
-        description: '',
-        displayDate: '',
-        externalUrl: ''
+        title: "",
+        description: "",
+        displayDate: "",
+        externalUrl: "",
       }));
 
       // 成功コールバック（即座に呼び出し）
@@ -212,19 +224,18 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
 
       // 成功状態をリセット
       setTimeout(() => {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           success: false,
-          progress: 0
+          progress: 0,
         }));
       }, 3000);
-
     } catch (error) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         uploading: false,
         progress: 0,
-        error: error instanceof Error ? error.message : 'アップロードに失敗しました'
+        error: error instanceof Error ? error.message : "アップロードに失敗しました",
       }));
     }
   };
@@ -237,11 +248,13 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
           <Button
             type="button"
             variant="outline"
-            onClick={() => setState(prev => ({ ...prev, linkType: 'upload', externalUrl: '', error: null }))}
+            onClick={() =>
+              setState((prev) => ({ ...prev, linkType: "upload", externalUrl: "", error: null }))
+            }
             className={`flex-1 ${
-              state.linkType === 'upload'
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
-                : 'hover:bg-gray-100'
+              state.linkType === "upload"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+                : "hover:bg-gray-100"
             }`}
           >
             <Upload className="h-4 w-4 mr-2" />
@@ -250,11 +263,13 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
           <Button
             type="button"
             variant="outline"
-            onClick={() => setState(prev => ({ ...prev, linkType: 'external', file: null, error: null }))}
+            onClick={() =>
+              setState((prev) => ({ ...prev, linkType: "external", file: null, error: null }))
+            }
             className={`flex-1 ${
-              state.linkType === 'external'
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
-                : 'hover:bg-gray-100'
+              state.linkType === "external"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+                : "hover:bg-gray-100"
             }`}
           >
             <LinkIcon className="h-4 w-4 mr-2" />
@@ -264,65 +279,70 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
       )}
 
       {/* ファイルアップロードモード */}
-      {state.linkType === 'upload' && (
+      {state.linkType === "upload" && (
         <div
           {...getRootProps()}
           className={`
             border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-            ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-            ${state.file ? 'bg-green-50 border-green-300' : ''}
+            ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400"}
+            ${state.file ? "bg-green-50 border-green-300" : ""}
           `}
         >
-        <input {...getInputProps()} />
-        <div className="flex flex-col items-center space-y-4">
-          {state.file ? (
-            <>
-              <File className="h-12 w-12 text-green-600" />
-              <div>
-                <p className="text-lg font-medium text-green-800">{state.file.name}</p>
-                <p className="text-sm text-green-600">
-                  {formatFileSize(state.file.size)} - {state.file.type}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeFile();
-                }}
-              >
-                <X className="h-4 w-4 mr-2" />
-                ファイルを削除
-              </Button>
-            </>
-          ) : (
-            <>
-              <Upload className="h-12 w-12 text-gray-400" />
-              <div>
-                <p className="text-lg font-medium text-gray-900">
-                  {isDragActive ? 'ファイルをドロップしてください' : 'PDFファイルをドラッグ&ドロップ'}
-                </p>
-                <p className="text-sm text-gray-500">
-                  または、クリックしてファイルを選択（最大 {formatFileSize(FILE_VALIDATION.maxSize)}）
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+          <input {...getInputProps()} />
+          <div className="flex flex-col items-center space-y-4">
+            {state.file ? (
+              <>
+                <File className="h-12 w-12 text-green-600" />
+                <div>
+                  <p className="text-lg font-medium text-green-800">{state.file.name}</p>
+                  <p className="text-sm text-green-600">
+                    {formatFileSize(state.file.size)} - {state.file.type}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile();
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  ファイルを削除
+                </Button>
+              </>
+            ) : (
+              <>
+                <Upload className="h-12 w-12 text-gray-400" />
+                <div>
+                  <p className="text-lg font-medium text-gray-900">
+                    {isDragActive
+                      ? "ファイルをドロップしてください"
+                      : "PDFファイルをドラッグ&ドロップ"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    または、クリックしてファイルを選択（最大{" "}
+                    {formatFileSize(FILE_VALIDATION.maxSize)}）
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
       {/* 外部URLリンクモード */}
-      {state.linkType === 'external' && (
+      {state.linkType === "external" && (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="external-url">外部URL <span className="text-destructive">*</span></Label>
+            <Label htmlFor="external-url">
+              外部URL <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="external-url"
               type="url"
               value={state.externalUrl}
-              onChange={(e) => setState(prev => ({ ...prev, externalUrl: e.target.value }))}
+              onChange={(e) => setState((prev) => ({ ...prev, externalUrl: e.target.value }))}
               placeholder="https://example.com/photos"
               className="mt-1"
             />
@@ -334,14 +354,16 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
       )}
 
       {/* タイトル・説明入力（共通） */}
-      {(state.file || state.linkType === 'external') && (
+      {(state.file || state.linkType === "external") && (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="file-title">タイトル <span className="text-destructive">*</span></Label>
+            <Label htmlFor="file-title">
+              タイトル <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="file-title"
               value={state.title}
-              onChange={(e) => setState(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setState((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="例: 大会写真アルバム、駐車場案内"
               className="mt-1"
             />
@@ -352,7 +374,7 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
             <Textarea
               id="file-description"
               value={state.description}
-              onChange={(e) => setState(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setState((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="内容や注意事項を記載してください"
               className="mt-1"
               rows={3}
@@ -365,12 +387,10 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
               id="file-display-date"
               type="date"
               value={state.displayDate}
-              onChange={(e) => setState(prev => ({ ...prev, displayDate: e.target.value }))}
+              onChange={(e) => setState((prev) => ({ ...prev, displayDate: e.target.value }))}
               className="mt-1 w-48"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              未指定の場合は登録日が表示されます
-            </p>
+            <p className="text-xs text-gray-500 mt-1">未指定の場合は登録日が表示されます</p>
           </div>
         </div>
       )}
@@ -399,32 +419,37 @@ export default function FileUploader({ tournamentId, onUploadSuccess, defaultLin
         <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
           <CheckCircle className="h-5 w-5 text-green-600" />
           <span className="text-sm text-green-800">
-            {state.linkType === 'upload' ? 'ファイルのアップロードが完了しました' : '外部URLリンクの登録が完了しました'}
+            {state.linkType === "upload"
+              ? "ファイルのアップロードが完了しました"
+              : "外部URLリンクの登録が完了しました"}
           </span>
         </div>
       )}
 
       {/* 登録ボタン */}
-      {((state.linkType === 'upload' && state.file) || (state.linkType === 'external' && state.externalUrl.trim())) && !state.uploading && !state.success && (
-        <Button
-          onClick={handleUpload}
-          disabled={!state.title.trim()}
-          className="w-full"
-          size="lg"
-        >
-          {state.linkType === 'upload' ? (
-            <>
-              <Upload className="h-4 w-4 mr-2" />
-              ファイルをアップロード
-            </>
-          ) : (
-            <>
-              <LinkIcon className="h-4 w-4 mr-2" />
-              外部URLを登録
-            </>
-          )}
-        </Button>
-      )}
+      {((state.linkType === "upload" && state.file) ||
+        (state.linkType === "external" && state.externalUrl.trim())) &&
+        !state.uploading &&
+        !state.success && (
+          <Button
+            onClick={handleUpload}
+            disabled={!state.title.trim()}
+            className="w-full"
+            size="lg"
+          >
+            {state.linkType === "upload" ? (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                ファイルをアップロード
+              </>
+            ) : (
+              <>
+                <LinkIcon className="h-4 w-4 mr-2" />
+                外部URLを登録
+              </>
+            )}
+          </Button>
+        )}
     </div>
   );
 }

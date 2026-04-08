@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { Plus, Calendar, Users, MapPin, Trash2, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
+import { Calendar, ChevronRight, Home, MapPin, Plus, Trash2, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TournamentGroup {
   group_id: number;
@@ -33,17 +33,17 @@ export default function TournamentGroupsList() {
   useEffect(() => {
     const fetchTournamentGroups = async () => {
       try {
-        const response = await fetch('/api/tournament-groups?include_inactive=true');
+        const response = await fetch("/api/tournament-groups?include_inactive=true");
         const data = await response.json();
 
         if (data.success) {
           setTournamentGroups(data.data);
         } else {
-          setError(data.error || '大会一覧の取得に失敗しました');
+          setError(data.error || "大会一覧の取得に失敗しました");
         }
       } catch (err) {
-        console.error('大会取得エラー:', err);
-        setError('大会一覧の取得中にエラーが発生しました');
+        console.error("大会取得エラー:", err);
+        setError("大会一覧の取得中にエラーが発生しました");
       } finally {
         setLoading(false);
       }
@@ -53,12 +53,12 @@ export default function TournamentGroupsList() {
   }, []);
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ja-JP');
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("ja-JP");
   };
 
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
-    if (!startDate && !endDate) return '-';
+    if (!startDate && !endDate) return "-";
     if (!endDate) return formatDate(startDate);
     if (startDate === endDate) return formatDate(startDate);
     const start = formatDate(startDate);
@@ -80,23 +80,23 @@ export default function TournamentGroupsList() {
 
     try {
       const response = await fetch(`/api/tournament-groups/${group.group_id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const data = await response.json();
 
       if (data.success) {
         // リストから削除されたグループを除去
-        setTournamentGroups(prev => prev.filter(g => g.group_id !== group.group_id));
+        setTournamentGroups((prev) => prev.filter((g) => g.group_id !== group.group_id));
 
         // 成功メッセージを表示
-        alert(data.message || '大会を削除しました');
+        alert(data.message || "大会を削除しました");
       } else {
-        setError(data.error || '大会の削除に失敗しました');
+        setError(data.error || "大会の削除に失敗しました");
       }
     } catch (err) {
-      console.error('削除エラー:', err);
-      setError('大会の削除中にエラーが発生しました');
+      console.error("削除エラー:", err);
+      setError("大会の削除中にエラーが発生しました");
     } finally {
       setDeletingGroupId(null);
     }
@@ -119,12 +119,18 @@ export default function TournamentGroupsList() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -183,12 +189,10 @@ export default function TournamentGroupsList() {
                     <CardContent className="p-6">
                       <div className="space-y-3">
                         <div className="flex items-start justify-between">
-                          <h3 className="text-lg font-bold text-gray-900">
-                            {group.group_name}
-                          </h3>
+                          <h3 className="text-lg font-bold text-gray-900">{group.group_name}</h3>
                           <div className="flex items-center space-x-2">
-                            <Badge variant={group.visibility === 'open' ? 'default' : 'secondary'}>
-                              {group.visibility === 'open' ? '公開' : '非公開'}
+                            <Badge variant={group.visibility === "open" ? "default" : "secondary"}>
+                              {group.visibility === "open" ? "公開" : "非公開"}
                             </Badge>
                             <Button
                               variant="ghost"
@@ -207,9 +211,7 @@ export default function TournamentGroupsList() {
                         </div>
 
                         {group.organizer && (
-                          <p className="text-sm text-gray-500">
-                            主催: {group.organizer}
-                          </p>
+                          <p className="text-sm text-gray-500">主催: {group.organizer}</p>
                         )}
 
                         {group.venue_name && (

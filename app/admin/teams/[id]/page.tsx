@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Trash2, AlertCircle, CheckCircle, ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
+import { AlertCircle, CheckCircle, ChevronRight, Home, Trash2, Users } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Manager {
   login_user_id: number;
@@ -30,7 +30,7 @@ export default function AdminTeamManagerPage() {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<number | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -41,7 +41,7 @@ export default function AdminTeamManagerPage() {
         setManagers(result.managers);
       }
     } catch (err) {
-      console.error('データ取得エラー:', err);
+      console.error("データ取得エラー:", err);
     } finally {
       setLoading(false);
     }
@@ -51,26 +51,25 @@ export default function AdminTeamManagerPage() {
     fetchData();
   }, [fetchData]);
 
-
   const handleRemoveManager = async (loginUserId: number, displayName: string) => {
     if (!confirm(`「${displayName}」を担当者から削除しますか？`)) return;
     setProcessing(loginUserId);
     setMessage(null);
     try {
       const res = await fetch(`/api/admin/teams/${teamId}/transfer-owner`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ login_user_id: loginUserId }),
       });
       const result = await res.json();
       if (result.success) {
-        setMessage({ type: 'success', text: `「${displayName}」を担当者から削除しました` });
+        setMessage({ type: "success", text: `「${displayName}」を担当者から削除しました` });
         await fetchData();
       } else {
-        setMessage({ type: 'error', text: result.error });
+        setMessage({ type: "error", text: result.error });
       }
     } catch {
-      setMessage({ type: 'error', text: '処理に失敗しました' });
+      setMessage({ type: "error", text: "処理に失敗しました" });
     } finally {
       setProcessing(null);
     }
@@ -90,16 +89,25 @@ export default function AdminTeamManagerPage() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/admin/administrators" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/admin/administrators"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             利用者マスタ管理
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -108,23 +116,23 @@ export default function AdminTeamManagerPage() {
           </span>
         </nav>
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
-            チーム担当者管理
-          </h1>
-          {team && (
-            <p className="text-sm text-gray-500 mt-1">{team.team_name}</p>
-          )}
+          <h1 className="text-2xl font-bold text-gray-900">チーム担当者管理</h1>
+          {team && <p className="text-sm text-gray-500 mt-1">{team.team_name}</p>}
         </div>
 
         {message && (
-          <div className={`flex items-start gap-2 p-4 rounded-lg text-sm ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-destructive/5 border border-destructive/20 text-destructive'
-          }`}>
-            {message.type === 'success'
-              ? <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+          <div
+            className={`flex items-start gap-2 p-4 rounded-lg text-sm ${
+              message.type === "success"
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-destructive/5 border border-destructive/20 text-destructive"
+            }`}
+          >
+            {message.type === "success" ? (
+              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            )}
             <span>{message.text}</span>
           </div>
         )}
@@ -141,8 +149,10 @@ export default function AdminTeamManagerPage() {
               <p className="text-sm text-gray-500">担当者が登録されていません</p>
             ) : (
               managers.map((manager) => (
-                <div key={manager.login_user_id}
-                  className="flex items-center justify-between p-4 bg-gray-50/40 rounded-lg">
+                <div
+                  key={manager.login_user_id}
+                  className="flex items-center justify-between p-4 bg-gray-50/40 rounded-lg"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Users className="w-5 h-5 text-primary" />
@@ -159,9 +169,13 @@ export default function AdminTeamManagerPage() {
                       size="sm"
                       variant="outline"
                       className="border-destructive/30 text-destructive hover:border-destructive/40 hover:bg-destructive/5"
-                      onClick={() => handleRemoveManager(manager.login_user_id, manager.display_name)}
+                      onClick={() =>
+                        handleRemoveManager(manager.login_user_id, manager.display_name)
+                      }
                       disabled={processing === manager.login_user_id || managers.length <= 1}
-                      title={managers.length <= 1 ? '最後の担当者は削除できません' : '担当者から削除'}
+                      title={
+                        managers.length <= 1 ? "最後の担当者は削除できません" : "担当者から削除"
+                      }
                     >
                       <Trash2 className="w-3 h-3 mr-1" />
                       削除
@@ -187,7 +201,6 @@ export default function AdminTeamManagerPage() {
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

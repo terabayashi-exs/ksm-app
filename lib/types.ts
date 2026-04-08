@@ -8,8 +8,8 @@
  * 従来の「大会グループ」を「大会」、「大会」を「部門」として扱います
  */
 
-import type { TournamentStatus } from './tournament-status';
-import type { TournamentPhases } from './types/tournament-phases';
+import type { TournamentStatus } from "./tournament-status";
+import type { TournamentPhases } from "./types/tournament-phases";
 
 /**
  * 部門（旧：大会）
@@ -20,7 +20,7 @@ export interface Tournament {
   tournament_id: number;
   tournament_name: string;
   format_id: number;
-  venue_id: string | null;  // JSON配列 例: "[1, 3]"
+  venue_id: string | null; // JSON配列 例: "[1, 3]"
   team_count: number;
   court_count: number;
   tournament_dates?: string; // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
@@ -121,8 +121,8 @@ export interface TournamentGroup {
 /**
  * 型エイリアス（新しい用語での参照用）
  */
-export type TournamentEvent = TournamentGroup;  // 大会
-export type Division = Tournament;               // 部門
+export type TournamentEvent = TournamentGroup; // 大会
+export type Division = Tournament; // 部門
 
 // 大会開催日程の型
 export interface TournamentDate {
@@ -149,11 +149,11 @@ export interface Player {
 }
 
 // 辞退ステータスの型定義
-export type WithdrawalStatus = 
-  | 'active'                    // 参加中（通常状態）
-  | 'withdrawal_requested'      // 辞退申請中
-  | 'withdrawal_approved'       // 辞退承認済み
-  | 'withdrawal_rejected';      // 辞退却下
+export type WithdrawalStatus =
+  | "active" // 参加中（通常状態）
+  | "withdrawal_requested" // 辞退申請中
+  | "withdrawal_approved" // 辞退承認済み
+  | "withdrawal_rejected"; // 辞退却下
 
 export interface TournamentTeam {
   tournament_team_id: number;
@@ -198,7 +198,7 @@ export interface TournamentPlayer {
   team_id: string;
   player_id: number;
   jersey_number?: number;
-  player_status: 'active' | 'inactive' | 'withdrawn';
+  player_status: "active" | "inactive" | "withdrawn";
   registration_date: string;
   withdrawal_date?: string;
   remarks?: string;
@@ -232,8 +232,8 @@ export interface Match {
   winner_tournament_team_id?: number; // 新規フィールド: 大会内固有の勝者ID
   is_draw: boolean;
   is_walkover: boolean;
-  match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
-  result_status: 'none' | 'pending' | 'confirmed';
+  match_status: "scheduled" | "ongoing" | "completed" | "cancelled";
+  result_status: "none" | "pending" | "confirmed";
   remarks?: string;
   // テンプレート独立化: m_match_templatesからコピーされたフィールド
   phase?: string;
@@ -273,8 +273,8 @@ export function parseVenueIds(venueId: string | null | undefined): number[] {
   if (!venueId) return [];
   try {
     const parsed = JSON.parse(venueId);
-    if (Array.isArray(parsed)) return parsed.map(Number).filter(n => !isNaN(n));
-    if (typeof parsed === 'number') return [parsed];
+    if (Array.isArray(parsed)) return parsed.map(Number).filter((n) => !isNaN(n));
+    if (typeof parsed === "number") return [parsed];
     return [];
   } catch {
     // 単一の数値文字列の場合
@@ -303,16 +303,16 @@ export interface MatchTemplate {
   block_name?: string;
   team1_source?: string;
   team2_source?: string;
-  team1_display_name: string;  // 空文字列許容（不戦勝試合対応）
-  team2_display_name: string;  // 空文字列許容（不戦勝試合対応）
+  team1_display_name: string; // 空文字列許容（不戦勝試合対応）
+  team2_display_name: string; // 空文字列許容（不戦勝試合対応）
   day_number: number;
   execution_priority: number;
   court_number?: number;
   suggested_start_time?: string;
   period_count?: number;
-  is_bye_match: number;  // 0: 通常試合, 1: 不戦勝試合
-  matchday?: number;     // 節番号（リーグ戦用）
-  cycle?: number;        // 巡目（リーグ戦用、デフォルト1）
+  is_bye_match: number; // 0: 通常試合, 1: 不戦勝試合
+  matchday?: number; // 節番号（リーグ戦用）
+  cycle?: number; // 巡目（リーグ戦用、デフォルト1）
   created_at: string;
   updated_at?: string;
 }
@@ -331,7 +331,7 @@ export interface Administrator {
   admin_name: string;
   email: string;
   password_hash: string;
-  role: 'super_admin' | 'tournament_admin';
+  role: "super_admin" | "tournament_admin";
   is_active: boolean;
   created_at: string;
   updated_at: string;

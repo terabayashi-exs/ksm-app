@@ -1,7 +1,11 @@
-import { db } from '@/lib/db';
-import { getTournamentSportCode, getSportScoreConfig, extractSoccerScoreData } from '@/lib/sport-standings-calculator';
-import { parseScoreArray, parseTotalScore } from '@/lib/score-parser';
-import type { BracketMatch, SportScoreConfig } from '@/lib/tournament-bracket/types';
+import { db } from "@/lib/db";
+import { parseScoreArray, parseTotalScore } from "@/lib/score-parser";
+import {
+  extractSoccerScoreData,
+  getSportScoreConfig,
+  getTournamentSportCode,
+} from "@/lib/sport-standings-calculator";
+import type { BracketMatch, SportScoreConfig } from "@/lib/tournament-bracket/types";
 
 export type { BracketMatch };
 
@@ -27,11 +31,11 @@ export { HttpError };
  */
 export async function getTournamentBracketData(
   tournamentId: number,
-  phase: string = 'final'
+  phase: string = "final",
 ): Promise<BracketResult> {
   // phaseのバリデーション（動的フェーズID対応: 英数字・アンダースコアのみ許可）
   if (!/^[a-zA-Z0-9_]+$/.test(phase)) {
-    throw new HttpError('Invalid phase parameter', 400);
+    throw new HttpError("Invalid phase parameter", 400);
   }
 
   // 多競技対応：スポーツ設定を取得
@@ -44,11 +48,11 @@ export async function getTournamentBracketData(
      FROM t_tournaments t
      JOIN m_tournament_formats f ON t.format_id = f.format_id
      WHERE t.tournament_id = ?`,
-    [tournamentId]
+    [tournamentId],
   );
 
   if (!tournamentResult.rows || tournamentResult.rows.length === 0) {
-    throw new HttpError('大会が見つかりません', 404);
+    throw new HttpError("大会が見つかりません", 404);
   }
 
   const targetTeamCount = tournamentResult.rows[0].target_team_count as number;
@@ -99,7 +103,7 @@ export async function getTournamentBracketData(
 
   // トーナメント試合が存在しない場合
   if (!matches.rows || matches.rows.length === 0) {
-    throw new HttpError('この大会にはトーナメント戦がありません', 404);
+    throw new HttpError("この大会にはトーナメント戦がありません", 404);
   }
 
   // execution_groupは現在のスキーマでは利用不可のため、nullに設定
@@ -108,7 +112,7 @@ export async function getTournamentBracketData(
   // BYE試合の勝者を解決するためのマップを作成
   const byeMatchWinners: Record<string, string> = {};
 
-  matches.rows.forEach(row => {
+  matches.rows.forEach((row) => {
     if (row.is_walkover) {
       // BYE試合の勝者を特定（空でない方のチーム）
       const winner = row.team1_display_name || row.team2_display_name;
@@ -119,10 +123,10 @@ export async function getTournamentBracketData(
     }
   });
 
-  console.log('[bracket] BYE試合勝者マップ全体:', byeMatchWinners);
+  console.log("[bracket] BYE試合勝者マップ全体:", byeMatchWinners);
 
   // データを整形（多競技対応）
-  const bracketData: BracketMatch[] = matches.rows.map(row => {
+  const bracketData: BracketMatch[] = matches.rows.map((row) => {
     // スコアデータをパース（確定済みスコアを優先）
     const team1GoalsData = row.team1_goals as string | null;
     const team2GoalsData = row.team2_goals as string | null;
@@ -136,11 +140,15 @@ export async function getTournamentBracketData(
     // 【S1】勝のような表記をBYE試合の勝者名に置き換え
     if (byeMatchWinners[team1DisplayName]) {
       team1DisplayName = byeMatchWinners[team1DisplayName];
-      console.log(`[bracket] ${row.match_code}: team1 ${row.team1_display_name} → ${team1DisplayName}`);
+      console.log(
+        `[bracket] ${row.match_code}: team1 ${row.team1_display_name} → ${team1DisplayName}`,
+      );
     }
     if (byeMatchWinners[team2DisplayName]) {
       team2DisplayName = byeMatchWinners[team2DisplayName];
-      console.log(`[bracket] ${row.match_code}: team2 ${row.team2_display_name} → ${team2DisplayName}`);
+      console.log(
+        `[bracket] ${row.match_code}: team2 ${row.team2_display_name} → ${team2DisplayName}`,
+      );
     }
 
     const baseData: BracketMatch = {
@@ -155,7 +163,7 @@ export async function getTournamentBracketData(
       winner_tournament_team_id: row.winner_tournament_team_id as number | null,
       is_draw: Boolean(row.is_draw),
       is_walkover: isWalkover,
-      match_status: row.match_status as 'scheduled' | 'ongoing' | 'completed' | 'cancelled',
+      match_status: row.match_status as "scheduled" | "ongoing" | "completed" | "cancelled",
       is_confirmed: Boolean(row.is_confirmed),
       execution_priority: row.execution_priority as number,
       start_time: (row.start_time as string | null) ?? undefined,
@@ -172,7 +180,9 @@ export async function getTournamentBracketData(
 
     // デバッグログ
     if (isWalkover) {
-      console.log(`[bracket] Bye match detected: ${row.match_code as string} - winner: ${row.team1_display_name || row.team2_display_name}`);
+      console.log(
+        `[bracket] Bye match detected: ${row.match_code as string} - winner: ${row.team1_display_name || row.team2_display_name}`,
+      );
     }
 
     // 多競技対応の拡張データを追加
@@ -197,7 +207,12 @@ export async function getTournamentBracketData(
         baseData.active_periods = activePeriods;
 
         // サッカーの場合はPKデータを抽出
-        if (sportCode === 'soccer' && baseData.is_confirmed && baseData.team1_tournament_team_id && baseData.team2_tournament_team_id) {
+        if (
+          sportCode === "soccer" &&
+          baseData.is_confirmed &&
+          baseData.team1_tournament_team_id &&
+          baseData.team2_tournament_team_id
+        ) {
           const team1SoccerData = extractSoccerScoreData(
             team1Scores,
             team2Scores,
@@ -205,14 +220,17 @@ export async function getTournamentBracketData(
             baseData.team1_tournament_team_id,
             baseData.team2_tournament_team_id,
             baseData.winner_tournament_team_id ?? null,
-            activePeriods
+            activePeriods,
           );
 
           baseData.soccer_data = team1SoccerData;
         }
       }
     } catch (error) {
-      console.warn(`[BRACKET_API] Failed to parse multi-sport data for match ${baseData.match_id}:`, error);
+      console.warn(
+        `[BRACKET_API] Failed to parse multi-sport data for match ${baseData.match_id}:`,
+        error,
+      );
       // エラーの場合は基本データのみ使用
     }
 

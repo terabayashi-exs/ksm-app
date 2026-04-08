@@ -1,16 +1,35 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, Search, ChevronRight, ChevronLeft, CheckCircle, XCircle, Users, X, Plus, Building2, Trash2, Home } from 'lucide-react';
-import Link from 'next/link';
-import Header from '@/components/layout/Header';
+import {
+  Building2,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Home,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  X,
+  XCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import Header from "@/components/layout/Header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface SportType {
   sport_type_id: number;
@@ -73,20 +92,29 @@ interface TournamentDateEntry {
 
 const getSportIcon = (sportCode: string | null) => {
   switch (sportCode) {
-    case 'soccer': return '\u26BD';
-    case 'futsal': return '\u{1F3C3}';
-    case 'basketball': return '\u{1F3C0}';
-    default: return '\u{1F3C6}';
+    case "soccer":
+      return "\u26BD";
+    case "futsal":
+      return "\u{1F3C3}";
+    case "basketball":
+      return "\u{1F3C0}";
+    default:
+      return "\u{1F3C6}";
   }
 };
 
 const getStatusLabel = (status: string) => {
   switch (status) {
-    case 'planning': return '準備中';
-    case 'recruiting': return '募集中';
-    case 'ongoing': return '開催中';
-    case 'completed': return '完了';
-    default: return status;
+    case "planning":
+      return "準備中";
+    case "recruiting":
+      return "募集中";
+    case "ongoing":
+      return "開催中";
+    case "completed":
+      return "完了";
+    default:
+      return status;
   }
 };
 
@@ -97,7 +125,7 @@ function hasMultipleDays(tournamentDatesJson: string | null): boolean {
   if (!tournamentDatesJson) return false;
   try {
     const parsed = JSON.parse(tournamentDatesJson);
-    if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+    if (typeof parsed === "object" && !Array.isArray(parsed)) {
       return Object.keys(parsed).length > 1;
     }
     return false;
@@ -110,40 +138,43 @@ export default function TournamentDuplicatePage() {
   const [step, setStep] = useState(1);
 
   // Step 1: 検索・選択
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedPrefecture, setSelectedPrefecture] = useState('');
-  const [selectedSportType, setSelectedSportType] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedPrefecture, setSelectedPrefecture] = useState("");
+  const [selectedSportType, setSelectedSportType] = useState("");
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [sportTypes, setSportTypes] = useState<SportType[]>([]);
   const [searchResults, setSearchResults] = useState<SearchGroup[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedDivision, setSelectedDivision] = useState<Division | null>(null);
-  const [selectedGroupName, setSelectedGroupName] = useState('');
+  const [selectedGroupName, setSelectedGroupName] = useState("");
 
   // Step 2: 複製先設定
-  const [destinationType, setDestinationType] = useState<'new' | 'existing'>('new');
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupOrganizer, setNewGroupOrganizer] = useState('');
+  const [destinationType, setDestinationType] = useState<"new" | "existing">("new");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupOrganizer, setNewGroupOrganizer] = useState("");
   const [existingGroupId, setExistingGroupId] = useState<number | null>(null);
   const [existingGroups, setExistingGroups] = useState<TournamentGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
-  const [newTournamentName, setNewTournamentName] = useState('');
+  const [newTournamentName, setNewTournamentName] = useState("");
 
   // 開催日程
   const [tournamentDates, setTournamentDates] = useState<TournamentDateEntry[]>([
-    { dayNumber: 1, date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+    {
+      dayNumber: 1,
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    },
   ]);
 
   // 公開設定
   const [publicStartDate, setPublicStartDate] = useState(
-    new Date().toISOString().split('T')[0] + 'T00:00'
+    new Date().toISOString().split("T")[0] + "T00:00",
   );
   const [recruitmentStartDate, setRecruitmentStartDate] = useState(
-    new Date().toISOString().split('T')[0] + 'T00:00'
+    new Date().toISOString().split("T")[0] + "T00:00",
   );
   const [recruitmentEndDate, setRecruitmentEndDate] = useState(
-    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00'
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] + "T00:00",
   );
   const [isPublic, setIsPublic] = useState(false);
   const [showPlayersPublic, setShowPlayersPublic] = useState(false);
@@ -153,22 +184,24 @@ export default function TournamentDuplicatePage() {
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
 
   // 複製元が節設定を持つかどうか
-  const sourceHasMultipleDays = selectedDivision ? hasMultipleDays(selectedDivision.tournament_dates) : false;
+  const sourceHasMultipleDays = selectedDivision
+    ? hasMultipleDays(selectedDivision.tournament_dates)
+    : false;
 
   // マスタデータ取得
   useEffect(() => {
     const fetchMasters = async () => {
       try {
         const [prefRes, sportRes] = await Promise.all([
-          fetch('/api/prefectures'),
-          fetch('/api/sport-types'),
+          fetch("/api/prefectures"),
+          fetch("/api/sport-types"),
         ]);
         const prefData = await prefRes.json();
         const sportData = await sportRes.json();
         if (prefData.success) setPrefectures(prefData.prefectures || []);
         if (sportData.success) setSportTypes(sportData.data || sportData.sport_types || []);
       } catch (error) {
-        console.error('マスタデータ取得エラー:', error);
+        console.error("マスタデータ取得エラー:", error);
       }
     };
     fetchMasters();
@@ -180,9 +213,9 @@ export default function TournamentDuplicatePage() {
     setHasSearched(true);
     try {
       const params = new URLSearchParams();
-      if (searchKeyword) params.set('keyword', searchKeyword);
-      if (selectedPrefecture) params.set('prefecture_id', selectedPrefecture);
-      if (selectedSportType) params.set('sport_type_id', selectedSportType);
+      if (searchKeyword) params.set("keyword", searchKeyword);
+      if (selectedPrefecture) params.set("prefecture_id", selectedPrefecture);
+      if (selectedSportType) params.set("sport_type_id", selectedSportType);
 
       const res = await fetch(`/api/admin/tournaments/search?${params}`);
       const data = await res.json();
@@ -190,7 +223,7 @@ export default function TournamentDuplicatePage() {
         setSearchResults(data.data || []);
       }
     } catch (error) {
-      console.error('検索エラー:', error);
+      console.error("検索エラー:", error);
     } finally {
       setSearching(false);
     }
@@ -198,9 +231,9 @@ export default function TournamentDuplicatePage() {
 
   // 検索クリア
   const handleClearSearch = () => {
-    setSearchKeyword('');
-    setSelectedPrefecture('');
-    setSelectedSportType('');
+    setSearchKeyword("");
+    setSelectedPrefecture("");
+    setSelectedSportType("");
     setSearchResults([]);
     setHasSearched(false);
   };
@@ -217,33 +250,37 @@ export default function TournamentDuplicatePage() {
   const fetchExistingGroups = useCallback(async () => {
     setLoadingGroups(true);
     try {
-      const res = await fetch('/api/tournament-groups?include_inactive=true');
+      const res = await fetch("/api/tournament-groups?include_inactive=true");
       const data = await res.json();
       if (data.success) {
         setExistingGroups(data.data || []);
       }
     } catch (error) {
-      console.error('大会グループ取得エラー:', error);
+      console.error("大会グループ取得エラー:", error);
     } finally {
       setLoadingGroups(false);
     }
   }, []);
 
   useEffect(() => {
-    if (step === 2 && destinationType === 'existing') {
+    if (step === 2 && destinationType === "existing") {
       fetchExistingGroups();
     }
   }, [step, destinationType, fetchExistingGroups]);
 
   // 日程追加
   const addTournamentDate = () => {
-    const nextDayNumber = Math.max(...tournamentDates.map(d => d.dayNumber), 0) + 1;
-    const lastDate = tournamentDates.length > 0
-      ? new Date(Math.max(...tournamentDates.map(d => new Date(d.date).getTime())))
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const nextDayNumber = Math.max(...tournamentDates.map((d) => d.dayNumber), 0) + 1;
+    const lastDate =
+      tournamentDates.length > 0
+        ? new Date(Math.max(...tournamentDates.map((d) => new Date(d.date).getTime())))
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const nextDate = new Date(lastDate);
     nextDate.setDate(lastDate.getDate() + 1);
-    setTournamentDates([...tournamentDates, { dayNumber: nextDayNumber, date: nextDate.toISOString().split('T')[0] }]);
+    setTournamentDates([
+      ...tournamentDates,
+      { dayNumber: nextDayNumber, date: nextDate.toISOString().split("T")[0] },
+    ]);
   };
 
   // 日程削除
@@ -252,9 +289,13 @@ export default function TournamentDuplicatePage() {
   };
 
   // 日程更新
-  const updateTournamentDate = (index: number, field: 'date' | 'dayNumber', value: string | number) => {
+  const updateTournamentDate = (
+    index: number,
+    field: "date" | "dayNumber",
+    value: string | number,
+  ) => {
     const updated = [...tournamentDates];
-    if (field === 'date') {
+    if (field === "date") {
       updated[index] = { ...updated[index], date: value as string };
     } else {
       updated[index] = { ...updated[index], dayNumber: value as number };
@@ -298,7 +339,7 @@ export default function TournamentDuplicatePage() {
         body.event_end_date = eventEndDate;
       }
 
-      if (destinationType === 'new') {
+      if (destinationType === "new") {
         body.new_group = {
           group_name: newGroupName.trim(),
           organizer: newGroupOrganizer.trim() || undefined,
@@ -309,9 +350,9 @@ export default function TournamentDuplicatePage() {
         body.group_id = existingGroupId;
       }
 
-      const res = await fetch('/api/admin/tournaments/duplicate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/tournaments/duplicate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
@@ -321,11 +362,11 @@ export default function TournamentDuplicatePage() {
         setStep(3);
       }
     } catch (error) {
-      console.error('複製エラー:', error);
+      console.error("複製エラー:", error);
       setDuplicateResult({
         success: false,
-        message: '複製処理中にエラーが発生しました',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        message: "複製処理中にエラーが発生しました",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     } finally {
       setDuplicating(false);
@@ -336,11 +377,11 @@ export default function TournamentDuplicatePage() {
   const canProceedToStep3 =
     selectedDivision &&
     newTournamentName.trim() &&
-    (destinationType === 'new' ? newGroupName.trim() : existingGroupId) &&
+    (destinationType === "new" ? newGroupName.trim() : existingGroupId) &&
     publicStartDate &&
     recruitmentStartDate &&
     recruitmentEndDate &&
-    (sourceHasMultipleDays || tournamentDates.every(d => d.date && d.dayNumber > 0));
+    (sourceHasMultipleDays || tournamentDates.every((d) => d.date && d.dayNumber > 0));
 
   return (
     <div className="min-h-screen bg-white">
@@ -348,12 +389,18 @@ export default function TournamentDuplicatePage() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -370,19 +417,21 @@ export default function TournamentDuplicatePage() {
         {/* ステップインジケーター */}
         <div className="flex items-center justify-center mb-8 gap-2">
           {[
-            { num: 1, label: '複製元を選択' },
-            { num: 2, label: '複製先と設定' },
-            { num: 3, label: '確認・完了' },
+            { num: 1, label: "複製元を選択" },
+            { num: 2, label: "複製先と設定" },
+            { num: 3, label: "確認・完了" },
           ].map((s, i) => (
             <div key={s.num} className="flex items-center">
               {i > 0 && <ChevronRight className="w-4 h-4 text-gray-500 mx-1" />}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-                step === s.num
-                  ? 'bg-primary text-primary-foreground'
-                  : step > s.num
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-50 text-gray-500'
-              }`}>
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                  step === s.num
+                    ? "bg-primary text-primary-foreground"
+                    : step > s.num
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-50 text-gray-500"
+                }`}
+              >
                 <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">
                   {step > s.num ? <CheckCircle className="w-4 h-4" /> : s.num}
                 </span>
@@ -412,14 +461,17 @@ export default function TournamentDuplicatePage() {
                     placeholder="大会名・部門名で検索"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   />
                 </div>
 
                 {/* 地域 */}
                 <div>
                   <Label className="text-sm font-medium mb-2 block">地域で絞り込み</Label>
-                  <Select value={selectedPrefecture || 'all'} onValueChange={(value) => setSelectedPrefecture(value === 'all' ? '' : value)}>
+                  <Select
+                    value={selectedPrefecture || "all"}
+                    onValueChange={(value) => setSelectedPrefecture(value === "all" ? "" : value)}
+                  >
                     <SelectTrigger className="bg-white">
                       <SelectValue placeholder="都道府県を選択" />
                     </SelectTrigger>
@@ -440,11 +492,11 @@ export default function TournamentDuplicatePage() {
                     <Label className="text-sm font-medium mb-2 block">競技から絞り込み</Label>
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setSelectedSportType('')}
+                        onClick={() => setSelectedSportType("")}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm ${
-                          selectedSportType === ''
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                          selectedSportType === ""
+                            ? "border-blue-600 bg-blue-50 text-blue-700"
+                            : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
                         }`}
                       >
                         <span>&#x1F3C6;</span>
@@ -456,8 +508,8 @@ export default function TournamentDuplicatePage() {
                           onClick={() => setSelectedSportType(String(sport.sport_type_id))}
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                             selectedSportType === String(sport.sport_type_id)
-                              ? 'border-blue-600 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                              ? "border-blue-600 bg-blue-50 text-blue-700"
+                              : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
                           }`}
                         >
                           <span>{getSportIcon(sport.sport_code)}</span>
@@ -472,7 +524,7 @@ export default function TournamentDuplicatePage() {
                 <div className="flex gap-2 pt-2">
                   <Button onClick={handleSearch} disabled={searching} className="flex-1">
                     <Search className="w-4 h-4 mr-1" />
-                    {searching ? '検索中...' : '検索'}
+                    {searching ? "検索中..." : "検索"}
                   </Button>
                   <Button variant="outline" onClick={handleClearSearch} className="flex-1">
                     <X className="w-4 h-4 mr-1" />
@@ -499,13 +551,17 @@ export default function TournamentDuplicatePage() {
                           <div>
                             <CardTitle className="text-base">{group.group_name}</CardTitle>
                             {group.organizer && (
-                              <p className="text-sm text-gray-500 mt-0.5">主催: {group.organizer}</p>
+                              <p className="text-sm text-gray-500 mt-0.5">
+                                主催: {group.organizer}
+                              </p>
                             )}
                           </div>
                           {group.event_start_date && (
                             <Badge variant="outline" className="text-xs">
                               {group.event_start_date}
-                              {group.event_end_date && group.event_end_date !== group.event_start_date && ` 〜 ${group.event_end_date}`}
+                              {group.event_end_date &&
+                                group.event_end_date !== group.event_start_date &&
+                                ` 〜 ${group.event_end_date}`}
                             </Badge>
                           )}
                         </div>
@@ -518,8 +574,8 @@ export default function TournamentDuplicatePage() {
                               onClick={() => handleSelectDivision(division, group.group_name)}
                               className={`w-full text-left p-3 border rounded-lg transition-colors hover:border-primary hover:bg-primary/5 ${
                                 selectedDivision?.tournament_id === division.tournament_id
-                                  ? 'border-primary bg-primary/5'
-                                  : 'border-gray-200'
+                                  ? "border-primary bg-primary/5"
+                                  : "border-gray-200"
                               }`}
                             >
                               <div className="flex items-center justify-between">
@@ -576,16 +632,18 @@ export default function TournamentDuplicatePage() {
             {/* 複製先選択 */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">複製先 <span className="text-destructive">*</span></CardTitle>
+                <CardTitle className="text-base">
+                  複製先 <span className="text-destructive">*</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => setDestinationType('new')}
+                    onClick={() => setDestinationType("new")}
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      destinationType === 'new'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-primary/50'
+                      destinationType === "new"
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 hover:border-primary/50"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -596,13 +654,13 @@ export default function TournamentDuplicatePage() {
                   </button>
                   <button
                     onClick={() => {
-                      setDestinationType('existing');
+                      setDestinationType("existing");
                       fetchExistingGroups();
                     }}
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      destinationType === 'existing'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-primary/50'
+                      destinationType === "existing"
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 hover:border-primary/50"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -614,10 +672,12 @@ export default function TournamentDuplicatePage() {
                 </div>
 
                 {/* 新規大会の場合 */}
-                {destinationType === 'new' && (
+                {destinationType === "new" && (
                   <div className="space-y-3 pt-2">
                     <div>
-                      <Label htmlFor="new-group-name">大会名 <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="new-group-name">
+                        大会名 <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         id="new-group-name"
                         value={newGroupName}
@@ -640,12 +700,14 @@ export default function TournamentDuplicatePage() {
                 )}
 
                 {/* 既存大会の場合 */}
-                {destinationType === 'existing' && (
+                {destinationType === "existing" && (
                   <div className="pt-2">
                     {loadingGroups ? (
                       <p className="text-sm text-gray-500 text-center py-4">読込中...</p>
                     ) : existingGroups.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">既存の大会がありません</p>
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        既存の大会がありません
+                      </p>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {existingGroups.map((group) => (
@@ -654,8 +716,8 @@ export default function TournamentDuplicatePage() {
                             onClick={() => setExistingGroupId(group.group_id)}
                             className={`w-full text-left p-3 border rounded-lg transition-colors ${
                               existingGroupId === group.group_id
-                                ? 'border-primary bg-primary/5'
-                                : 'border-gray-200 hover:border-primary/50'
+                                ? "border-primary bg-primary/5"
+                                : "border-gray-200 hover:border-primary/50"
                             }`}
                           >
                             <p className="font-medium text-sm">{group.group_name}</p>
@@ -679,7 +741,9 @@ export default function TournamentDuplicatePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="new-tournament-name">部門名 <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="new-tournament-name">
+                    部門名 <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="new-tournament-name"
                     value={newTournamentName}
@@ -692,8 +756,8 @@ export default function TournamentDuplicatePage() {
                 <div className="bg-gray-50/50 rounded-lg p-3 text-sm text-gray-500">
                   <p className="font-medium mb-1">複製元から引き継がれる設定:</p>
                   <ul className="list-disc list-inside space-y-0.5 text-xs">
-                    <li>フォーマット設定（{selectedDivision.format_name || '未設定'}）</li>
-                    <li>競技種別（{selectedDivision.sport_name || '未設定'}）</li>
+                    <li>フォーマット設定（{selectedDivision.format_name || "未設定"}）</li>
+                    <li>競技種別（{selectedDivision.sport_name || "未設定"}）</li>
                     <li>チーム数、コート数、試合時間等</li>
                     <li>ルール設定（ポイントシステム、タイブレーク等）</li>
                   </ul>
@@ -707,13 +771,10 @@ export default function TournamentDuplicatePage() {
                 <CardContent className="pt-6">
                   <div className="border rounded-lg p-4 space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold">開催日程 <span className="text-destructive">*</span></h3>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addTournamentDate}
-                      >
+                      <h3 className="text-sm font-semibold">
+                        開催日程 <span className="text-destructive">*</span>
+                      </h3>
+                      <Button type="button" variant="outline" size="sm" onClick={addTournamentDate}>
                         <Plus className="w-4 h-4 mr-1" />
                         日程追加
                       </Button>
@@ -725,7 +786,7 @@ export default function TournamentDuplicatePage() {
                           <Input
                             type="date"
                             value={entry.date}
-                            onChange={(e) => updateTournamentDate(index, 'date', e.target.value)}
+                            onChange={(e) => updateTournamentDate(index, "date", e.target.value)}
                           />
                         </div>
                         <div className="w-24 space-y-1">
@@ -734,7 +795,13 @@ export default function TournamentDuplicatePage() {
                             type="number"
                             min="1"
                             value={entry.dayNumber}
-                            onChange={(e) => updateTournamentDate(index, 'dayNumber', parseInt(e.target.value) || 1)}
+                            onChange={(e) =>
+                              updateTournamentDate(
+                                index,
+                                "dayNumber",
+                                parseInt(e.target.value) || 1,
+                              )
+                            }
                           />
                         </div>
                         {tournamentDates.length > 1 && (
@@ -772,7 +839,9 @@ export default function TournamentDuplicatePage() {
                   <h3 className="text-sm font-semibold">公開設定</h3>
 
                   <div className="space-y-2">
-                    <Label htmlFor="public_start_date">公開開始日時 <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="public_start_date">
+                      公開開始日時 <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="public_start_date"
                       type="datetime-local"
@@ -782,7 +851,9 @@ export default function TournamentDuplicatePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="recruitment_start_date">募集開始日時 <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="recruitment_start_date">
+                      募集開始日時 <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="recruitment_start_date"
                       type="datetime-local"
@@ -792,7 +863,9 @@ export default function TournamentDuplicatePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="recruitment_end_date">募集終了日時 <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="recruitment_end_date">
+                      募集終了日時 <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="recruitment_end_date"
                       type="datetime-local"
@@ -802,17 +875,17 @@ export default function TournamentDuplicatePage() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="is_public" className="cursor-pointer">公開する</Label>
-                    <Switch
-                      id="is_public"
-                      checked={isPublic}
-                      onCheckedChange={setIsPublic}
-                    />
+                    <Label htmlFor="is_public" className="cursor-pointer">
+                      公開する
+                    </Label>
+                    <Switch id="is_public" checked={isPublic} onCheckedChange={setIsPublic} />
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="show_players_public" className="cursor-pointer">選手情報を一般公開する</Label>
+                      <Label htmlFor="show_players_public" className="cursor-pointer">
+                        選手情報を一般公開する
+                      </Label>
                       <Switch
                         id="show_players_public"
                         checked={showPlayersPublic}
@@ -834,11 +907,7 @@ export default function TournamentDuplicatePage() {
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 戻る
               </Button>
-              <Button
-                onClick={() => setStep(3)}
-                disabled={!canProceedToStep3}
-                className="flex-1"
-              >
+              <Button onClick={() => setStep(3)} disabled={!canProceedToStep3} className="flex-1">
                 確認へ
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
@@ -866,10 +935,10 @@ export default function TournamentDuplicatePage() {
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-sm text-gray-500">複製先</span>
                     <span className="text-sm font-medium">
-                      {destinationType === 'new'
+                      {destinationType === "new"
                         ? `${newGroupName}（新規作成）`
-                        : existingGroups.find(g => g.group_id === existingGroupId)?.group_name || ''
-                      }
+                        : existingGroups.find((g) => g.group_id === existingGroupId)?.group_name ||
+                          ""}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
@@ -880,32 +949,36 @@ export default function TournamentDuplicatePage() {
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-sm text-gray-500">開催日程</span>
                       <span className="text-sm font-medium">
-                        {tournamentDates.map(d => `Day${d.dayNumber}: ${d.date}`).join('、')}
+                        {tournamentDates.map((d) => `Day${d.dayNumber}: ${d.date}`).join("、")}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-sm text-gray-500">公開開始日時</span>
-                    <span className="text-sm font-medium">{publicStartDate.replace('T', ' ')}</span>
+                    <span className="text-sm font-medium">{publicStartDate.replace("T", " ")}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-sm text-gray-500">募集開始日時</span>
-                    <span className="text-sm font-medium">{recruitmentStartDate.replace('T', ' ')}</span>
+                    <span className="text-sm font-medium">
+                      {recruitmentStartDate.replace("T", " ")}
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-sm text-gray-500">募集終了日時</span>
-                    <span className="text-sm font-medium">{recruitmentEndDate.replace('T', ' ')}</span>
+                    <span className="text-sm font-medium">
+                      {recruitmentEndDate.replace("T", " ")}
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-sm text-gray-500">公開設定</span>
-                    <Badge variant={isPublic ? 'default' : 'secondary'}>
-                      {isPublic ? '公開' : '非公開'}
+                    <Badge variant={isPublic ? "default" : "secondary"}>
+                      {isPublic ? "公開" : "非公開"}
                     </Badge>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-sm text-gray-500">選手情報の一般公開</span>
-                    <Badge variant={showPlayersPublic ? 'default' : 'secondary'}>
-                      {showPlayersPublic ? '公開' : '非公開'}
+                    <Badge variant={showPlayersPublic ? "default" : "secondary"}>
+                      {showPlayersPublic ? "公開" : "非公開"}
                     </Badge>
                   </div>
                 </div>
@@ -921,13 +994,9 @@ export default function TournamentDuplicatePage() {
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 戻る
               </Button>
-              <Button
-                onClick={handleDuplicate}
-                disabled={duplicating}
-                className="flex-1"
-              >
+              <Button onClick={handleDuplicate} disabled={duplicating} className="flex-1">
                 <Copy className="w-4 h-4 mr-1" />
-                {duplicating ? '複製中...' : '複製を実行'}
+                {duplicating ? "複製中..." : "複製を実行"}
               </Button>
             </div>
           </div>
@@ -935,15 +1004,25 @@ export default function TournamentDuplicatePage() {
 
         {/* 結果表示 */}
         {duplicateResult && (
-          <Card className={`${duplicateResult.success ? 'border-green-200 bg-green-50' : 'border-destructive/20 bg-destructive/5'}`}>
+          <Card
+            className={`${duplicateResult.success ? "border-green-200 bg-green-50" : "border-destructive/20 bg-destructive/5"}`}
+          >
             <CardHeader>
-              <CardTitle className={`flex items-center gap-2 ${duplicateResult.success ? 'text-green-800' : 'text-destructive'}`}>
-                {duplicateResult.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                {duplicateResult.success ? '複製完了' : '複製失敗'}
+              <CardTitle
+                className={`flex items-center gap-2 ${duplicateResult.success ? "text-green-800" : "text-destructive"}`}
+              >
+                {duplicateResult.success ? (
+                  <CheckCircle className="w-5 h-5" />
+                ) : (
+                  <XCircle className="w-5 h-5" />
+                )}
+                {duplicateResult.success ? "複製完了" : "複製失敗"}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className={`mb-4 ${duplicateResult.success ? 'text-green-700' : 'text-destructive'}`}>
+              <p
+                className={`mb-4 ${duplicateResult.success ? "text-green-700" : "text-destructive"}`}
+              >
                 {duplicateResult.message}
               </p>
               {duplicateResult.success && duplicateResult.details && (
@@ -957,7 +1036,9 @@ export default function TournamentDuplicatePage() {
                   </div>
                   <div className="flex gap-2 pt-2">
                     <Button asChild variant="outline" size="sm">
-                      <Link href={`/admin/tournaments/${duplicateResult.details.new_tournament_id}`}>
+                      <Link
+                        href={`/admin/tournaments/${duplicateResult.details.new_tournament_id}`}
+                      >
                         新しい部門を開く
                       </Link>
                     </Button>
@@ -967,16 +1048,25 @@ export default function TournamentDuplicatePage() {
                       onClick={() => {
                         setDuplicateResult(null);
                         setSelectedDivision(null);
-                        setNewTournamentName('');
-                        setNewGroupName('');
-                        setNewGroupOrganizer('');
+                        setNewTournamentName("");
+                        setNewGroupName("");
+                        setNewGroupOrganizer("");
                         setExistingGroupId(null);
                         setTournamentDates([
-                          { dayNumber: 1, date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+                          {
+                            dayNumber: 1,
+                            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                              .toISOString()
+                              .split("T")[0],
+                          },
                         ]);
-                        setPublicStartDate(new Date().toISOString().split('T')[0] + 'T00:00');
-                        setRecruitmentStartDate(new Date().toISOString().split('T')[0] + 'T00:00');
-                        setRecruitmentEndDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00');
+                        setPublicStartDate(new Date().toISOString().split("T")[0] + "T00:00");
+                        setRecruitmentStartDate(new Date().toISOString().split("T")[0] + "T00:00");
+                        setRecruitmentEndDate(
+                          new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+                            .toISOString()
+                            .split("T")[0] + "T00:00",
+                        );
                         setIsPublic(false);
                         setShowPlayersPublic(false);
                         setStep(1);

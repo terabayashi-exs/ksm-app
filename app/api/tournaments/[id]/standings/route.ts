@@ -1,21 +1,15 @@
 // app/api/tournaments/[id]/standings/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getTournamentStandings } from '@/lib/standings-calculator';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getTournamentStandings } from "@/lib/standings-calculator";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const resolvedParams = await params;
     const tournamentId = parseInt(resolvedParams.id, 10);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     // 順位表を取得（team_rankingsから）
@@ -31,7 +25,7 @@ export async function GET(
         WHERE tt.tournament_id = ?
         AND tt.withdrawal_status = 'active'
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
     // 実施済み試合数を計算（確定済み試合数）
@@ -43,35 +37,37 @@ export async function GET(
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ?
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
-    const totalTeams = totalTeamsResult.rows[0]?.total_teams as number || 0;
-    const totalMatches = totalMatchesResult.rows[0]?.total_matches as number || 0;
+    const totalTeams = (totalTeamsResult.rows[0]?.total_teams as number) || 0;
+    const totalMatches = (totalMatchesResult.rows[0]?.total_matches as number) || 0;
 
-    return new Response(JSON.stringify({
-      success: true,
-      data: standings,
-      total_matches: totalMatches,
-      total_teams: totalTeams,
-      message: '順位表を正常に取得しました'
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: standings,
+        total_matches: totalMatches,
+        total_teams: totalTeams,
+        message: "順位表を正常に取得しました",
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
       },
-    });
-
+    );
   } catch (error) {
-    console.error('順位表取得API エラー:', error);
-    
+    console.error("順位表取得API エラー:", error);
+
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : '順位表の取得に失敗しました',
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "順位表の取得に失敗しました",
+        details: process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

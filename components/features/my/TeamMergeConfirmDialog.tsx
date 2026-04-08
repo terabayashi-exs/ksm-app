@@ -1,9 +1,12 @@
-'use client';
+"use client";
 
 // components/features/my/TeamMergeConfirmDialog.tsx
 // チーム統合確認ダイアログ
 
-import React, { useState } from 'react';
+import { AlertTriangle, ArrowRight, CheckCircle, Shield, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle, ArrowRight, Trash2, Shield } from 'lucide-react';
+} from "@/components/ui/dialog";
 
 interface TeamInfo {
   team_id: string;
@@ -49,9 +49,9 @@ export default function TeamMergeConfirmDialog({
 
       // 吸収対象チームを1つずつ統合
       for (const absorbed of absorbedTeams) {
-        const res = await fetch('/api/my/teams/merge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/api/my/teams/merge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             mainTeamId: mainTeam.team_id,
             absorbedTeamId: absorbed.team_id,
@@ -60,18 +60,18 @@ export default function TeamMergeConfirmDialog({
 
         const data = await res.json();
         if (!data.success) {
-          setError(data.error || '統合に失敗しました');
+          setError(data.error || "統合に失敗しました");
           return;
         }
       }
 
-      setSuccess('チーム統合が完了しました');
+      setSuccess("チーム統合が完了しました");
       setTimeout(() => {
         onSuccess();
         onClose();
       }, 1500);
     } catch {
-      setError('チーム統合中にエラーが発生しました');
+      setError("チーム統合中にエラーが発生しました");
     } finally {
       setMerging(false);
     }
@@ -108,7 +108,9 @@ export default function TeamMergeConfirmDialog({
             <p className="text-lg font-bold text-green-900">
               {mainTeam.team_name}
               {mainTeam.team_omission && (
-                <span className="text-sm font-normal text-green-700 ml-2">（{mainTeam.team_omission}）</span>
+                <span className="text-sm font-normal text-green-700 ml-2">
+                  （{mainTeam.team_omission}）
+                </span>
               )}
             </p>
             <p className="text-xs text-green-700 mt-1">ID: {mainTeam.team_id}</p>
@@ -128,7 +130,9 @@ export default function TeamMergeConfirmDialog({
               <p className="text-lg font-bold text-red-900">
                 {team.team_name}
                 {team.team_omission && (
-                  <span className="text-sm font-normal text-red-700 ml-2">（{team.team_omission}）</span>
+                  <span className="text-sm font-normal text-red-700 ml-2">
+                    （{team.team_omission}）
+                  </span>
                 )}
               </p>
               <p className="text-xs text-red-700 mt-1">ID: {team.team_id}</p>
@@ -140,10 +144,18 @@ export default function TeamMergeConfirmDialog({
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800 text-sm">
               <ul className="list-disc list-inside space-y-1.5 ml-2">
-                <li>統合されるチームのマスターデータ（チーム情報・選手情報）は<strong>削除</strong>されます</li>
-                <li>大会参加記録のチーム名は<strong>そのまま残ります</strong>（参加履歴は失われません）</li>
+                <li>
+                  統合されるチームのマスターデータ（チーム情報・選手情報）は<strong>削除</strong>
+                  されます
+                </li>
+                <li>
+                  大会参加記録のチーム名は<strong>そのまま残ります</strong>
+                  （参加履歴は失われません）
+                </li>
                 <li>統合後、大会参加記録はメインチームに紐づきます</li>
-                <li>この操作は<strong>取り消せません</strong></li>
+                <li>
+                  この操作は<strong>取り消せません</strong>
+                </li>
               </ul>
             </AlertDescription>
           </Alert>
@@ -179,7 +191,7 @@ export default function TeamMergeConfirmDialog({
             disabled={merging || !!success}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {merging ? '統合中...' : success ? '統合完了' : '統合する'}
+            {merging ? "統合中..." : success ? "統合完了" : "統合する"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,12 +1,12 @@
 // app/tournaments/[id]/schedule/page.tsx
 // 日程・結果タブ（全データSSR）
-import type { Metadata } from 'next';
-import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
-import { getBannersForTab } from '@/lib/sponsor-banner-loader';
-import { getTournamentPublicMatches } from '@/lib/tournament-public-matches';
-import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
-import TournamentSchedule from '@/components/features/tournament/TournamentSchedule';
-import { db } from '@/lib/db';
+import type { Metadata } from "next";
+import TournamentSchedule from "@/components/features/tournament/TournamentSchedule";
+import TabContentWithSidebarSSR from "@/components/public/TabContentWithSidebarSSR";
+import { db } from "@/lib/db";
+import { getTournamentNameForMetadata } from "@/lib/metadata-helpers";
+import { getBannersForTab } from "@/lib/sponsor-banner-loader";
+import { getTournamentPublicMatches } from "@/lib/tournament-public-matches";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,7 +15,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const name = await getTournamentNameForMetadata(id);
-  return { title: name ? `日程・結果 - ${name}` : '日程・結果' };
+  return { title: name ? `日程・結果 - ${name}` : "日程・結果" };
 }
 
 async function getTournamentVenues(tournamentId: number) {
@@ -24,43 +24,51 @@ async function getTournamentVenues(tournamentId: number) {
     const venueIds = new Set<number>();
 
     // 1. 部門に設定された会場
-    const tournamentRow = await db.execute(`SELECT venue_id FROM t_tournaments WHERE tournament_id = ?`, [tournamentId]);
+    const tournamentRow = await db.execute(
+      `SELECT venue_id FROM t_tournaments WHERE tournament_id = ?`,
+      [tournamentId],
+    );
     const venueIdJson = tournamentRow.rows[0]?.venue_id;
     if (venueIdJson) {
       const venueIdStr = String(venueIdJson);
-      const normalizedJson = venueIdStr.startsWith('[') ? venueIdStr : `[${venueIdStr}]`;
+      const normalizedJson = venueIdStr.startsWith("[") ? venueIdStr : `[${venueIdStr}]`;
       try {
         const ids = JSON.parse(normalizedJson) as number[];
-        ids.forEach(id => venueIds.add(id));
-      } catch { /* ignore parse error */ }
+        ids.forEach((id) => venueIds.add(id));
+      } catch {
+        /* ignore parse error */
+      }
     }
 
     // 2. 試合に設定された会場
-    const matchVenueResult = await db.execute(`
+    const matchVenueResult = await db.execute(
+      `
       SELECT DISTINCT ml.venue_id
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ? AND ml.venue_id IS NOT NULL
-    `, [tournamentId]);
-    matchVenueResult.rows.forEach(r => {
+    `,
+      [tournamentId],
+    );
+    matchVenueResult.rows.forEach((r) => {
       if (r.venue_id) venueIds.add(Number(r.venue_id));
     });
 
     if (venueIds.size === 0) return [];
 
-    const idList = Array.from(venueIds).join(',');
+    const idList = Array.from(venueIds).join(",");
     const venueResult = await db.execute(`
       SELECT venue_id, venue_name, google_maps_url
       FROM m_venues WHERE venue_id IN (${idList})
     `);
 
-    return venueResult.rows.map(r => ({
+    return venueResult.rows.map((r) => ({
       venue_id: Number(r.venue_id),
       venue_name: String(r.venue_name),
       google_maps_url: r.google_maps_url ? String(r.google_maps_url) : null,
     }));
   } catch (err) {
-    console.error('会場情報取得エラー:', err);
+    console.error("会場情報取得エラー:", err);
     return [];
   }
 }
@@ -70,7 +78,7 @@ export default async function TournamentSchedulePage({ params }: PageProps) {
   const tournamentId = parseInt(resolvedParams.id);
 
   const [banners, matches, venues] = await Promise.all([
-    getBannersForTab(tournamentId, 'schedule'),
+    getBannersForTab(tournamentId, "schedule"),
     getTournamentPublicMatches(tournamentId),
     getTournamentVenues(tournamentId),
   ]);

@@ -1,11 +1,11 @@
 import {
+  FINAL_CODES,
+  PLACEMENT_MATCH_PATTERN,
   QUARTER_FINAL_CODES,
   SEMI_FINAL_CODES,
   THIRD_PLACE_CODES,
-  FINAL_CODES,
-  PLACEMENT_MATCH_PATTERN,
 } from "./constants";
-import type { BracketMatch, BracketGroup, BracketStructure } from "./types";
+import type { BracketGroup, BracketMatch, BracketStructure } from "./types";
 
 /**
  * match_codeを自然順でソートする比較関数
@@ -29,31 +29,23 @@ export function compareMatchCode(a: string, b: string): number {
 export function organizeBracket(matches: BracketMatch[]): BracketStructure {
   // execution_groupがない場合のフォールバック: 従来のロジック使用
   const hasExecutionGroup = matches.some(
-    (m) => m.execution_group !== null && m.execution_group !== undefined
+    (m) => m.execution_group !== null && m.execution_group !== undefined,
   );
 
   if (!hasExecutionGroup) {
     // フォールバック: 従来の試合コードベースのグループ化
     const groups: BracketGroup[] = [];
 
-    const quarterFinals = matches.filter((m) =>
-      QUARTER_FINAL_CODES.includes(m.match_code)
-    );
-    const semiFinals = matches.filter((m) =>
-      SEMI_FINAL_CODES.includes(m.match_code)
-    );
-    const thirdPlace = matches.find((m) =>
-      THIRD_PLACE_CODES.includes(m.match_code)
-    );
+    const quarterFinals = matches.filter((m) => QUARTER_FINAL_CODES.includes(m.match_code));
+    const semiFinals = matches.filter((m) => SEMI_FINAL_CODES.includes(m.match_code));
+    const thirdPlace = matches.find((m) => THIRD_PLACE_CODES.includes(m.match_code));
     const final = matches.find((m) => FINAL_CODES.includes(m.match_code));
 
     if (quarterFinals.length > 0) {
       groups.push({
         groupId: 1,
         groupName: "準々決勝",
-        matches: quarterFinals.sort((a, b) =>
-          compareMatchCode(a.match_code, b.match_code)
-        ),
+        matches: quarterFinals.sort((a, b) => compareMatchCode(a.match_code, b.match_code)),
       });
     }
 
@@ -61,9 +53,7 @@ export function organizeBracket(matches: BracketMatch[]): BracketStructure {
       groups.push({
         groupId: 2,
         groupName: "準決勝",
-        matches: semiFinals.sort((a, b) =>
-          compareMatchCode(a.match_code, b.match_code)
-        ),
+        matches: semiFinals.sort((a, b) => compareMatchCode(a.match_code, b.match_code)),
       });
     }
 
@@ -98,27 +88,18 @@ export function organizeBracket(matches: BracketMatch[]): BracketStructure {
   });
 
   // グループ名を決定
-  const getGroupName = (
-    groupId: number,
-    matchCount: number,
-    matches: BracketMatch[]
-  ): string => {
+  const getGroupName = (groupId: number, matchCount: number, matches: BracketMatch[]): string => {
     // 試合コードから判定
-    if (matches.some((m) => QUARTER_FINAL_CODES.includes(m.match_code)))
-      return "準々決勝";
-    if (matches.some((m) => SEMI_FINAL_CODES.includes(m.match_code)))
-      return "準決勝";
-    if (matches.some((m) => THIRD_PLACE_CODES.includes(m.match_code)))
-      return "3位決定戦";
+    if (matches.some((m) => QUARTER_FINAL_CODES.includes(m.match_code))) return "準々決勝";
+    if (matches.some((m) => SEMI_FINAL_CODES.includes(m.match_code))) return "準決勝";
+    if (matches.some((m) => THIRD_PLACE_CODES.includes(m.match_code))) return "3位決定戦";
     if (matches.some((m) => FINAL_CODES.includes(m.match_code))) return "決勝";
 
     // フォールバック: 試合数から推測
     if (matchCount >= 4) return "準々決勝";
     if (matchCount === 2) return "準決勝";
     if (matchCount === 1) {
-      const hasThirdPlace = matches.some((m) =>
-        THIRD_PLACE_CODES.includes(m.match_code)
-      );
+      const hasThirdPlace = matches.some((m) => THIRD_PLACE_CODES.includes(m.match_code));
       return hasThirdPlace ? "3位決定戦" : "決勝";
     }
     return `グループ${groupId}`;
@@ -130,9 +111,7 @@ export function organizeBracket(matches: BracketMatch[]): BracketStructure {
     .map(([groupId, matches]) => ({
       groupId,
       groupName: getGroupName(groupId, matches.length, matches),
-      matches: matches.sort((a, b) =>
-        compareMatchCode(a.match_code, b.match_code)
-      ),
+      matches: matches.sort((a, b) => compareMatchCode(a.match_code, b.match_code)),
     }));
 
   return {
@@ -159,7 +138,7 @@ export function organizeMatchesByMatchType(matches: BracketMatch[]): {
   const placementMatchIds = new Set<number>();
 
   // Step 1: position_noteで順位決定戦を抽出
-  matches.forEach(m => {
+  matches.forEach((m) => {
     if (m.position_note) {
       const noteMatch = m.position_note.match(PLACEMENT_MATCH_PATTERN);
       if (noteMatch) {
@@ -170,7 +149,11 @@ export function organizeMatchesByMatchType(matches: BracketMatch[]): {
     }
     // フォールバック: THIRD_PLACE_CODES（M7, T7）にマッチ → 3位決定戦
     // ただしposition_noteが別の値（"準決勝"等）で設定されている場合はスキップ
-    if (THIRD_PLACE_CODES.includes(m.match_code) && !m.position_note && !placementMatchIds.has(m.match_id)) {
+    if (
+      THIRD_PLACE_CODES.includes(m.match_code) &&
+      !m.position_note &&
+      !placementMatchIds.has(m.match_id)
+    ) {
       placementMatches.push({ position: 3, match: m });
       placementMatchIds.add(m.match_id);
     }
@@ -194,10 +177,13 @@ export function organizeMatchesByMatchType(matches: BracketMatch[]): {
 
   // 両方のソースが_loserで、かつ順位決定戦のソースになっている試合を分離
   const loserSemifinalMatches: BracketMatch[] = [];
-  matches.forEach(m => {
+  matches.forEach((m) => {
     if (placementMatchIds.has(m.match_id)) return;
-    const isLoserMatch = m.team1_source && m.team2_source &&
-      /_loser$/.test(m.team1_source) && /_loser$/.test(m.team2_source);
+    const isLoserMatch =
+      m.team1_source &&
+      m.team2_source &&
+      /_loser$/.test(m.team1_source) &&
+      /_loser$/.test(m.team2_source);
     if (isLoserMatch && placementMatchSources.has(m.match_code)) {
       loserSemifinalMatches.push(m);
       placementMatchIds.add(m.match_id);
@@ -209,15 +195,15 @@ export function organizeMatchesByMatchType(matches: BracketMatch[]): {
   placementMatches.sort((a, b) => a.position - b.position);
 
   // メイン試合（順位決定戦・敗者側試合以外）を抽出
-  const mainMatches = matches.filter(m => !placementMatchIds.has(m.match_id));
+  const mainMatches = matches.filter((m) => !placementMatchIds.has(m.match_id));
 
   // ラウンドラベルを生成
   const roundLabels: string[] = [];
 
   // 試合コードベースで判定
-  const hasQuarterFinal = mainMatches.some(m => QUARTER_FINAL_CODES.includes(m.match_code));
-  const hasSemiFinal = mainMatches.some(m => SEMI_FINAL_CODES.includes(m.match_code));
-  const hasFinal = mainMatches.some(m => FINAL_CODES.includes(m.match_code));
+  const hasQuarterFinal = mainMatches.some((m) => QUARTER_FINAL_CODES.includes(m.match_code));
+  const hasSemiFinal = mainMatches.some((m) => SEMI_FINAL_CODES.includes(m.match_code));
+  const hasFinal = mainMatches.some((m) => FINAL_CODES.includes(m.match_code));
 
   if (hasQuarterFinal) roundLabels.push("準々決勝");
   if (hasSemiFinal) roundLabels.push("準決勝");
@@ -225,7 +211,7 @@ export function organizeMatchesByMatchType(matches: BracketMatch[]): {
 
   // 試合を match_code でソート
   const sortedMainMatches = [...mainMatches].sort((a, b) =>
-    compareMatchCode(a.match_code, b.match_code)
+    compareMatchCode(a.match_code, b.match_code),
   );
 
   return {

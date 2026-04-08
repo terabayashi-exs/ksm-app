@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bell, Edit, Eye, EyeOff, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Plus, Trash2, Save, Loader2, Eye, EyeOff, Edit } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Notice {
   tournament_notice_id: number;
@@ -22,7 +22,10 @@ interface Props {
   tournamentName: string;
 }
 
-export default function TournamentNoticeManagement({ tournamentId, tournamentName: _tournamentName }: Props) {
+export default function TournamentNoticeManagement({
+  tournamentId,
+  tournamentName: _tournamentName,
+}: Props) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -100,7 +103,10 @@ export default function TournamentNoticeManagement({ tournamentId, tournamentNam
       const res = await fetch(`/api/admin/tournaments/${tournamentId}/notices`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notice_id: notice.tournament_notice_id, is_active: !notice.is_active }),
+        body: JSON.stringify({
+          notice_id: notice.tournament_notice_id,
+          is_active: !notice.is_active,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -161,9 +167,15 @@ export default function TournamentNoticeManagement({ tournamentId, tournamentNam
             <div className="flex justify-end">
               <Button onClick={handleAdd} disabled={saving || !newContent.trim()} size="sm">
                 {saving ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-1" />追加中...</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    追加中...
+                  </>
                 ) : (
-                  <><Plus className="h-4 w-4 mr-1" />追加</>
+                  <>
+                    <Plus className="h-4 w-4 mr-1" />
+                    追加
+                  </>
                 )}
               </Button>
             </div>
@@ -194,10 +206,21 @@ export default function TournamentNoticeManagement({ tournamentId, tournamentNam
                         rows={3}
                       />
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditingId(null); setEditContent(""); }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditContent("");
+                          }}
+                        >
                           キャンセル
                         </Button>
-                        <Button size="sm" onClick={() => handleUpdate(notice.tournament_notice_id)} disabled={saving}>
+                        <Button
+                          size="sm"
+                          onClick={() => handleUpdate(notice.tournament_notice_id)}
+                          disabled={saving}
+                        >
                           <Save className="h-4 w-4 mr-1" />
                           保存
                         </Button>
@@ -236,7 +259,10 @@ export default function TournamentNoticeManagement({ tournamentId, tournamentNam
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => { setEditingId(notice.tournament_notice_id); setEditContent(notice.content); }}
+                          onClick={() => {
+                            setEditingId(notice.tournament_notice_id);
+                            setEditContent(notice.content);
+                          }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

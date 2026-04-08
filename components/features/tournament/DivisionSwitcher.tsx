@@ -1,7 +1,13 @@
-'use client';
+"use client";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Division {
   tournament_id: number;
@@ -17,7 +23,7 @@ interface DivisionSwitcherProps {
 export default function DivisionSwitcher({
   currentDivisionId,
   currentDivisionName,
-  siblingDivisions
+  siblingDivisions,
 }: DivisionSwitcherProps) {
   const router = useRouter();
 
@@ -34,14 +40,9 @@ export default function DivisionSwitcher({
         <SelectValue placeholder="部門を選択" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={currentDivisionId.toString()}>
-          {currentDivisionName} (現在)
-        </SelectItem>
+        <SelectItem value={currentDivisionId.toString()}>{currentDivisionName} (現在)</SelectItem>
         {siblingDivisions.map((division) => (
-          <SelectItem
-            key={division.tournament_id}
-            value={division.tournament_id.toString()}
-          >
+          <SelectItem key={division.tournament_id} value={division.tournament_id.toString()}>
             {division.tournament_name}
           </SelectItem>
         ))}

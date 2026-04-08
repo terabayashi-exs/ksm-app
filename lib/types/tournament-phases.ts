@@ -6,7 +6,7 @@
 /**
  * フェーズの形式タイプ
  */
-export type PhaseFormatType = 'league' | 'tournament';
+export type PhaseFormatType = "league" | "tournament";
 
 /**
  * 個別フェーズの定義

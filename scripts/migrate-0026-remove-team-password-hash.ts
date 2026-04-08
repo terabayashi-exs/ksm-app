@@ -25,7 +25,9 @@ const url = process.env[`DATABASE_URL${envSuffix}`] || process.env.DATABASE_URL;
 const authToken = process.env[`DATABASE_AUTH_TOKEN${envSuffix}`] || process.env.DATABASE_AUTH_TOKEN;
 
 if (!url || !authToken) {
-  console.error(`❌ 環境変数が見つかりません: DATABASE_URL${envSuffix}, DATABASE_AUTH_TOKEN${envSuffix}`);
+  console.error(
+    `❌ 環境変数が見つかりません: DATABASE_URL${envSuffix}, DATABASE_AUTH_TOKEN${envSuffix}`,
+  );
   process.exit(1);
 }
 
@@ -38,34 +40,34 @@ async function migrate() {
   // ========================================
   // Step 1: t_password_reset_tokens テーブル再作成
   // ========================================
-  console.log('\n--- Step 1: t_password_reset_tokens テーブル再作成 ---');
+  console.log("\n--- Step 1: t_password_reset_tokens テーブル再作成 ---");
 
   // 1a. login_user_id カラムが既にあるか確認
   const colCheck = await client.execute(
-    `SELECT COUNT(*) as cnt FROM pragma_table_info('t_password_reset_tokens') WHERE name = 'login_user_id'`
+    `SELECT COUNT(*) as cnt FROM pragma_table_info('t_password_reset_tokens') WHERE name = 'login_user_id'`,
   );
   const hasLoginUserId = Number(colCheck.rows[0].cnt) > 0;
 
   // team_id カラムがまだあるか確認
   const teamColCheck = await client.execute(
-    `SELECT COUNT(*) as cnt FROM pragma_table_info('t_password_reset_tokens') WHERE name = 'team_id'`
+    `SELECT COUNT(*) as cnt FROM pragma_table_info('t_password_reset_tokens') WHERE name = 'team_id'`,
   );
   const hasTeamId = Number(teamColCheck.rows[0].cnt) > 0;
 
   if (!hasTeamId && hasLoginUserId) {
-    console.log('   ⏭️ t_password_reset_tokens は既に移行済み');
+    console.log("   ⏭️ t_password_reset_tokens は既に移行済み");
   } else {
     // 1b. login_user_id がなければ追加（データ移行のため一時的に）
     if (!hasLoginUserId) {
       try {
         await client.execute(
-          `ALTER TABLE t_password_reset_tokens ADD COLUMN login_user_id INTEGER`
+          `ALTER TABLE t_password_reset_tokens ADD COLUMN login_user_id INTEGER`,
         );
-        console.log('   ✅ login_user_id カラム追加');
+        console.log("   ✅ login_user_id カラム追加");
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        if (msg.includes('duplicate column')) {
-          console.log('   ⏭️ login_user_id カラムは既に存在');
+        if (msg.includes("duplicate column")) {
+          console.log("   ⏭️ login_user_id カラムは既に存在");
         } else {
           throw error;
         }
@@ -85,11 +87,11 @@ async function migrate() {
         )
         WHERE team_id IS NOT NULL AND login_user_id IS NULL
       `);
-      console.log('   ✅ 既存トークンデータのマイグレーション完了');
+      console.log("   ✅ 既存トークンデータのマイグレーション完了");
 
       // 紐付けできなかったトークンを削除
       const deleteResult = await client.execute(
-        `DELETE FROM t_password_reset_tokens WHERE login_user_id IS NULL`
+        `DELETE FROM t_password_reset_tokens WHERE login_user_id IS NULL`,
       );
       console.log(`   ✅ 紐付けできなかったトークンを削除: ${deleteResult.rowsAffected}件`);
     }
@@ -106,7 +108,7 @@ async function migrate() {
           created_at NUMERIC DEFAULT (datetime('now', '+9 hours'))
         )
       `);
-      console.log('   ✅ 新テーブル作成');
+      console.log("   ✅ 新テーブル作成");
 
       await client.execute(`
         INSERT INTO t_password_reset_tokens_new (token_id, login_user_id, reset_token, expires_at, used_at, created_at)
@@ -114,42 +116,50 @@ async function migrate() {
         FROM t_password_reset_tokens
         WHERE login_user_id IS NOT NULL
       `);
-      console.log('   ✅ データコピー完了');
+      console.log("   ✅ データコピー完了");
 
       await client.execute(`DROP TABLE t_password_reset_tokens`);
-      console.log('   ✅ 旧テーブル削除');
+      console.log("   ✅ 旧テーブル削除");
 
-      await client.execute(`ALTER TABLE t_password_reset_tokens_new RENAME TO t_password_reset_tokens`);
-      console.log('   ✅ テーブルリネーム完了');
+      await client.execute(
+        `ALTER TABLE t_password_reset_tokens_new RENAME TO t_password_reset_tokens`,
+      );
+      console.log("   ✅ テーブルリネーム完了");
 
       // インデックス作成
-      await client.execute(`CREATE INDEX IF NOT EXISTS idx_login_user_reset_tokens ON t_password_reset_tokens(login_user_id)`);
-      await client.execute(`CREATE INDEX IF NOT EXISTS idx_reset_token ON t_password_reset_tokens(reset_token)`);
-      await client.execute(`CREATE INDEX IF NOT EXISTS idx_expires_at ON t_password_reset_tokens(expires_at)`);
-      console.log('   ✅ インデックス作成完了');
+      await client.execute(
+        `CREATE INDEX IF NOT EXISTS idx_login_user_reset_tokens ON t_password_reset_tokens(login_user_id)`,
+      );
+      await client.execute(
+        `CREATE INDEX IF NOT EXISTS idx_reset_token ON t_password_reset_tokens(reset_token)`,
+      );
+      await client.execute(
+        `CREATE INDEX IF NOT EXISTS idx_expires_at ON t_password_reset_tokens(expires_at)`,
+      );
+      console.log("   ✅ インデックス作成完了");
     }
   }
 
   // ========================================
   // Step 2: m_teams.password_hash カラム削除
   // ========================================
-  console.log('\n--- Step 2: m_teams.password_hash カラム削除 ---');
+  console.log("\n--- Step 2: m_teams.password_hash カラム削除 ---");
 
   const pwColCheck = await client.execute(
-    `SELECT COUNT(*) as cnt FROM pragma_table_info('m_teams') WHERE name = 'password_hash'`
+    `SELECT COUNT(*) as cnt FROM pragma_table_info('m_teams') WHERE name = 'password_hash'`,
   );
   const hasPasswordHash = Number(pwColCheck.rows[0].cnt) > 0;
 
   if (!hasPasswordHash) {
-    console.log('   ⏭️ password_hash は既に削除済み');
+    console.log("   ⏭️ password_hash は既に削除済み");
   } else {
     try {
       await client.execute(`ALTER TABLE m_teams DROP COLUMN password_hash`);
-      console.log('   ✅ m_teams.password_hash カラム削除完了');
+      console.log("   ✅ m_teams.password_hash カラム削除完了");
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('no such column')) {
-        console.log('   ⏭️ password_hash は既に削除済み');
+      if (msg.includes("no such column")) {
+        console.log("   ⏭️ password_hash は既に削除済み");
       } else {
         console.error(`   ❌ エラー: ${msg}`);
         throw error;

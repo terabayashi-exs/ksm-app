@@ -1,53 +1,49 @@
 // app/api/tournaments/[id]/recalculate-standings/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { getTournamentSportCode } from '@/lib/sport-standings-calculator';
-import { calculateBlockStandings, calculateMultiSportBlockStandings } from '@/lib/standings-calculator';
-import { validateFinalTournamentPromotions, autoFixPromotionIssues } from '@/lib/tournament-promotion';
-import { buildPhaseFormatMap } from '@/lib/tournament-phases';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getTournamentSportCode } from "@/lib/sport-standings-calculator";
+import {
+  calculateBlockStandings,
+  calculateMultiSportBlockStandings,
+} from "@/lib/standings-calculator";
+import { buildPhaseFormatMap } from "@/lib/tournament-phases";
+import {
+  autoFixPromotionIssues,
+  validateFinalTournamentPromotions,
+} from "@/lib/tournament-promotion";
 
 /**
  * 大会の全ブロックの順位表を強制的に再計算するAPI
  * 認証されたユーザー（チーム代表者や管理者）が実行可能
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // 認証確認（管理者でなくても認証済みユーザーならOK）
     const session = await auth();
     if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'ログインが必要です' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "ログインが必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
     const tournamentId = parseInt(resolvedParams.id, 10);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
-    console.log(`[RECALCULATE_STANDINGS] 順位表再計算開始: Tournament ${tournamentId}, User: ${session.user.email}`);
+    console.log(
+      `[RECALCULATE_STANDINGS] 順位表再計算開始: Tournament ${tournamentId}, User: ${session.user.email}`,
+    );
 
     // 大会の存在確認
     const tournamentCheck = await db.execute({
-      sql: 'SELECT tournament_id, tournament_name FROM t_tournaments WHERE tournament_id = ?',
-      args: [tournamentId]
+      sql: "SELECT tournament_id, tournament_name FROM t_tournaments WHERE tournament_id = ?",
+      args: [tournamentId],
     });
 
     if (!tournamentCheck.rows || tournamentCheck.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     const tournamentName = tournamentCheck.rows[0].tournament_name as string;
@@ -60,13 +56,13 @@ export async function POST(
         WHERE tournament_id = ?
         ORDER BY match_block_id
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
     if (!blocks.rows || blocks.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'ブロックが見つかりません' },
-        { status: 404 }
+        { success: false, error: "ブロックが見つかりません" },
+        { status: 404 },
       );
     }
 
@@ -75,7 +71,7 @@ export async function POST(
     // phasesからフォーマットタイプマップを取得
     const formatResult = await db.execute({
       sql: `SELECT t.phases FROM t_tournaments t WHERE t.tournament_id = ?`,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
     const recalcPhaseFormatMap = buildPhaseFormatMap(formatResult.rows[0]?.phases as string | null);
@@ -87,7 +83,7 @@ export async function POST(
     const results: Array<{
       block_name: string;
       phase: string;
-      status: 'success' | 'skipped' | 'error';
+      status: "success" | "skipped" | "error";
       message: string;
       teams_count?: number;
     }> = [];
@@ -105,13 +101,13 @@ export async function POST(
         const currentFormatType = recalcPhaseFormatMap.get(phase) || null;
 
         // トーナメント形式の場合は専用の処理
-        if (currentFormatType === 'tournament') {
+        if (currentFormatType === "tournament") {
           console.log(`[RECALCULATE_STANDINGS] ${blockName}はトーナメント形式のためスキップ`);
           results.push({
             block_name: blockName,
             phase,
-            status: 'skipped',
-            message: 'トーナメント形式は自動計算対象外です'
+            status: "skipped",
+            message: "トーナメント形式は自動計算対象外です",
           });
           continue;
         }
@@ -119,12 +115,15 @@ export async function POST(
         // リーグ形式の場合は順位表を計算
         let blockStandings;
 
-        if (sportCode === 'soccer') {
+        if (sportCode === "soccer") {
           console.log(`[RECALCULATE_STANDINGS] サッカー競技用計算を使用`);
-          const multiSportStandings = await calculateMultiSportBlockStandings(blockId, tournamentId);
+          const multiSportStandings = await calculateMultiSportBlockStandings(
+            blockId,
+            tournamentId,
+          );
 
           // 従来形式に変換
-          blockStandings = multiSportStandings.map(team => ({
+          blockStandings = multiSportStandings.map((team) => ({
             tournament_team_id: team.tournament_team_id,
             team_id: team.team_id,
             team_name: team.team_name,
@@ -137,7 +136,7 @@ export async function POST(
             losses: team.losses,
             goals_for: team.scores_for,
             goals_against: team.scores_against,
-            goal_difference: team.score_difference
+            goal_difference: team.score_difference,
           }));
         } else {
           console.log(`[RECALCULATE_STANDINGS] 標準計算を使用`);
@@ -151,37 +150,40 @@ export async function POST(
             SET team_rankings = ?, updated_at = datetime('now', '+9 hours')
             WHERE match_block_id = ?
           `,
-          args: [JSON.stringify(blockStandings), blockId]
+          args: [JSON.stringify(blockStandings), blockId],
         });
 
-        console.log(`[RECALCULATE_STANDINGS] ブロック ${blockName} 更新完了: ${blockStandings.length}チーム`);
+        console.log(
+          `[RECALCULATE_STANDINGS] ブロック ${blockName} 更新完了: ${blockStandings.length}チーム`,
+        );
 
         results.push({
           block_name: blockName,
           phase,
-          status: 'success',
-          message: '順位表を再計算しました',
-          teams_count: blockStandings.length
+          status: "success",
+          message: "順位表を再計算しました",
+          teams_count: blockStandings.length,
         });
-
       } catch (error) {
         console.error(`[RECALCULATE_STANDINGS] ブロック ${blockName} でエラー:`, error);
 
         results.push({
           block_name: blockName,
           phase,
-          status: 'error',
-          message: error instanceof Error ? error.message : '計算中にエラーが発生しました'
+          status: "error",
+          message: error instanceof Error ? error.message : "計算中にエラーが発生しました",
         });
       }
     }
 
     // 成功・失敗の集計
-    const successCount = results.filter(r => r.status === 'success').length;
-    const errorCount = results.filter(r => r.status === 'error').length;
-    const skippedCount = results.filter(r => r.status === 'skipped').length;
+    const successCount = results.filter((r) => r.status === "success").length;
+    const errorCount = results.filter((r) => r.status === "error").length;
+    const skippedCount = results.filter((r) => r.status === "skipped").length;
 
-    console.log(`[RECALCULATE_STANDINGS] 完了: 成功=${successCount}, エラー=${errorCount}, スキップ=${skippedCount}`);
+    console.log(
+      `[RECALCULATE_STANDINGS] 完了: 成功=${successCount}, エラー=${errorCount}, スキップ=${skippedCount}`,
+    );
 
     // 決勝トーナメント進出条件の検証と自動修正
     let validationResult;
@@ -191,10 +193,14 @@ export async function POST(
       validationResult = await validateFinalTournamentPromotions(tournamentId);
 
       if (!validationResult.isValid && validationResult.issues.length > 0) {
-        console.log(`[RECALCULATE_STANDINGS] ${validationResult.issues.length}件の問題を検出、自動修正を実行...`);
+        console.log(
+          `[RECALCULATE_STANDINGS] ${validationResult.issues.length}件の問題を検出、自動修正を実行...`,
+        );
         autoFixResult = await autoFixPromotionIssues(tournamentId, validationResult.issues);
 
-        console.log(`[RECALCULATE_STANDINGS] 自動修正完了: 成功=${autoFixResult.fixedCount}件, 失敗=${autoFixResult.failedCount}件`);
+        console.log(
+          `[RECALCULATE_STANDINGS] 自動修正完了: 成功=${autoFixResult.fixedCount}件, 失敗=${autoFixResult.failedCount}件`,
+        );
       } else {
         console.log(`[RECALCULATE_STANDINGS] 決勝トーナメント進出条件: 問題なし`);
       }
@@ -232,8 +238,8 @@ export async function POST(
         total_blocks: blocks.rows.length,
         success: successCount,
         error: errorCount,
-        skipped: skippedCount
-      }
+        skipped: skippedCount,
+      },
     };
 
     // 進出条件チェック結果を追加
@@ -244,30 +250,29 @@ export async function POST(
         issues_found: validationResult.issues.length,
         auto_fixed: autoFixResult?.fixedCount || 0,
         fix_failed: autoFixResult?.failedCount || 0,
-        details: validationResult
+        details: validationResult,
       };
 
       // 問題が検出された場合はメッセージを更新
       if (!validationResult.isValid) {
         const fixedMsg = autoFixResult?.fixedCount
           ? ` ${autoFixResult.fixedCount}件の進出条件を自動修正しました。`
-          : '';
+          : "";
         response.message += fixedMsg;
       }
     }
 
     return NextResponse.json(response);
-
   } catch (error) {
-    console.error('[RECALCULATE_STANDINGS] エラー:', error);
+    console.error("[RECALCULATE_STANDINGS] エラー:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : '順位表の再計算に失敗しました',
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        error: error instanceof Error ? error.message : "順位表の再計算に失敗しました",
+        details: process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

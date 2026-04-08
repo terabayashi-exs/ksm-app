@@ -1,22 +1,38 @@
 // app/tournaments/[id]/page.tsx
 // 概要タブ（SSR）
-import type { Metadata } from 'next';
-import { getTournamentNameForMetadata } from '@/lib/metadata-helpers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { Calendar, MapPin, Trophy, Users, Clock, Target, BarChart3, FileText, ExternalLink } from 'lucide-react';
-import { formatDateOnly } from '@/lib/utils';
-import { calculateTournamentStatus, getStatusLabel, getStatusColor, type TournamentStatus } from '@/lib/tournament-status';
-import { getTournamentWithGroupInfo } from '@/lib/tournament-detail';
-import { checkTournamentPdfFiles } from '@/lib/pdf-utils';
-import { getBannersForTab } from '@/lib/sponsor-banner-loader';
-import TabContentWithSidebarSSR from '@/components/public/TabContentWithSidebarSSR';
-import PublicFilesList from '@/components/features/tournament/PublicFilesList';
-import type { Tournament } from '@/lib/types';
-import { parseVenueIds } from '@/lib/types';
-import { db } from '@/lib/db';
+
+import {
+  BarChart3,
+  Calendar,
+  Clock,
+  ExternalLink,
+  FileText,
+  MapPin,
+  Target,
+  Trophy,
+  Users,
+} from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import PublicFilesList from "@/components/features/tournament/PublicFilesList";
+import TabContentWithSidebarSSR from "@/components/public/TabContentWithSidebarSSR";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { db } from "@/lib/db";
+import { getTournamentNameForMetadata } from "@/lib/metadata-helpers";
+import { checkTournamentPdfFiles } from "@/lib/pdf-utils";
+import { getBannersForTab } from "@/lib/sponsor-banner-loader";
+import { getTournamentWithGroupInfo } from "@/lib/tournament-detail";
+import {
+  calculateTournamentStatus,
+  getStatusColor,
+  getStatusLabel,
+  type TournamentStatus,
+} from "@/lib/tournament-status";
+import type { Tournament } from "@/lib/types";
+import { parseVenueIds } from "@/lib/types";
+import { formatDateOnly } from "@/lib/utils";
 
 interface VenueInfo {
   venue_id: number;
@@ -28,12 +44,12 @@ async function getVenuesForTournament(venueIdJson: string | null): Promise<Venue
   const venueIds = parseVenueIds(venueIdJson);
   if (venueIds.length === 0) return [];
   try {
-    const placeholders = venueIds.map(() => '?').join(',');
+    const placeholders = venueIds.map(() => "?").join(",");
     const result = await db.execute(
       `SELECT venue_id, venue_name, google_maps_url FROM m_venues WHERE venue_id IN (${placeholders})`,
-      venueIds
+      venueIds,
     );
-    return (result.rows || []).map(r => ({
+    return (result.rows || []).map((r) => ({
       venue_id: Number(r.venue_id),
       venue_name: String(r.venue_name),
       google_maps_url: r.google_maps_url ? String(r.google_maps_url) : null,
@@ -50,7 +66,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const name = await getTournamentNameForMetadata(id);
-  return { title: name ? `${name} 概要` : '大会概要' };
+  return { title: name ? `${name} 概要` : "大会概要" };
 }
 
 export default async function TournamentOverviewPage({ params }: PageProps) {
@@ -60,7 +76,7 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
   const [data, pdfFiles, banners] = await Promise.all([
     getTournamentWithGroupInfo(tournamentId),
     checkTournamentPdfFiles(tournamentId),
-    getBannersForTab(tournamentId, 'overview'),
+    getBannersForTab(tournamentId, "overview"),
   ]);
 
   const { tournament, group } = data;
@@ -76,56 +92,73 @@ export default async function TournamentOverviewPage({ params }: PageProps) {
   // 実際のコート数を試合データから集計
   let actualCourtCount = tournament.court_count;
   try {
-    const courtResult = await db.execute(`
+    const courtResult = await db.execute(
+      `
       SELECT COUNT(DISTINCT COALESCE(ml.court_name, CAST(ml.court_number AS TEXT))) as court_count
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ? AND (ml.court_number IS NOT NULL OR ml.court_name IS NOT NULL)
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
     const count = Number(courtResult.rows[0]?.court_count ?? 0);
     if (count > 0) actualCourtCount = count;
-  } catch { /* フォールバック: tournament.court_count */ }
+  } catch {
+    /* フォールバック: tournament.court_count */
+  }
 
   // 節設定の有無を判定
   const matchdayResult = await db.execute(
     `SELECT 1 FROM t_matches_live ml JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id WHERE mb.tournament_id = ? AND ml.matchday IS NOT NULL LIMIT 1`,
-    [tournamentId]
+    [tournamentId],
   );
   const hasMatchdays = matchdayResult.rows.length > 0;
 
   // 開催期間を算出: tournament_dates → 試合日付フォールバック
-  let eventStartDate = '';
-  let eventEndDate = '';
+  let eventStartDate = "";
+  let eventEndDate = "";
   if (tournament.tournament_dates) {
     try {
       const dates = JSON.parse(tournament.tournament_dates);
-      const sortedDates = (Object.values(dates) as string[]).filter((d): d is string => typeof d === 'string' && d.trim() !== '').sort();
-      eventStartDate = sortedDates[0] || '';
-      eventEndDate = sortedDates[sortedDates.length - 1] || '';
-    } catch { /* ignore */ }
+      const sortedDates = (Object.values(dates) as string[])
+        .filter((d): d is string => typeof d === "string" && d.trim() !== "")
+        .sort();
+      eventStartDate = sortedDates[0] || "";
+      eventEndDate = sortedDates[sortedDates.length - 1] || "";
+    } catch {
+      /* ignore */
+    }
   }
   if (!eventStartDate) {
     try {
-      const matchDatesResult = await db.execute(`
+      const matchDatesResult = await db.execute(
+        `
         SELECT MIN(ml.tournament_date) as earliest, MAX(ml.tournament_date) as latest
         FROM t_matches_live ml
         JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ? AND ml.tournament_date IS NOT NULL AND ml.tournament_date != ''
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
       if (matchDatesResult.rows.length > 0 && matchDatesResult.rows[0].earliest) {
         eventStartDate = String(matchDatesResult.rows[0].earliest);
         eventEndDate = String(matchDatesResult.rows[0].latest || matchDatesResult.rows[0].earliest);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
-  const calculatedStatus = await calculateTournamentStatus({
-    status: tournament.status,
-    tournament_dates: tournament.tournament_dates || '{}',
-    recruitment_start_date: tournament.recruitment_start_date || null,
-    recruitment_end_date: tournament.recruitment_end_date || null,
-    public_start_date: tournament.public_start_date,
-  }, tournamentId);
+  const calculatedStatus = await calculateTournamentStatus(
+    {
+      status: tournament.status,
+      tournament_dates: tournament.tournament_dates || "{}",
+      recruitment_start_date: tournament.recruitment_start_date || null,
+      recruitment_end_date: tournament.recruitment_end_date || null,
+      public_start_date: tournament.public_start_date,
+    },
+    tournamentId,
+  );
 
   return (
     <TabContentWithSidebarSSR banners={banners}>
@@ -168,17 +201,26 @@ function TournamentOverview({
   calculatedStatus: TournamentStatus;
   hasMatchdays: boolean;
 }) {
-
-  const tournamentDates = tournament.tournament_dates ? JSON.parse(tournament.tournament_dates) : {};
+  const tournamentDates = tournament.tournament_dates
+    ? JSON.parse(tournament.tournament_dates)
+    : {};
   // 有効な日付のみフィルタリング（空文字列や不正な値を除外）
   const dateEntries = Object.entries(tournamentDates)
-    .filter(([, date]) => date && typeof date === 'string' && (date as string).trim() !== '' && !isNaN(new Date(date as string).getTime()))
+    .filter(
+      ([, date]) =>
+        date &&
+        typeof date === "string" &&
+        (date as string).trim() !== "" &&
+        !isNaN(new Date(date as string).getTime()),
+    )
     .sort(([a], [b]) => Number(a) - Number(b));
 
   return (
     <div className="space-y-6">
       {(bracketPdfExists || resultsPdfExists) && (
-        <div className={`grid grid-cols-1 ${bracketPdfExists && resultsPdfExists ? 'lg:grid-cols-2' : ''} gap-6`}>
+        <div
+          className={`grid grid-cols-1 ${bracketPdfExists && resultsPdfExists ? "lg:grid-cols-2" : ""} gap-6`}
+        >
           {bracketPdfExists && (
             <Card>
               <CardHeader>
@@ -196,8 +238,14 @@ function TournamentOverview({
                     </p>
                   </div>
                   <div className="flex justify-center">
-                    <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                      <Link href={`/tournaments/${tournament.tournament_id}/bracket-pdf`} className="flex items-center gap-2">
+                    <Button
+                      asChild
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      <Link
+                        href={`/tournaments/${tournament.tournament_id}/bracket-pdf`}
+                        className="flex items-center gap-2"
+                      >
                         <FileText className="h-4 w-4" />
                         PDF表示
                         <ExternalLink className="h-3 w-3" />
@@ -226,7 +274,10 @@ function TournamentOverview({
                   </div>
                   <div className="flex justify-center">
                     <Button asChild className="bg-primary hover:bg-primary/90">
-                      <Link href={`/tournaments/${tournament.tournament_id}/results-pdf`} className="flex items-center gap-2">
+                      <Link
+                        href={`/tournaments/${tournament.tournament_id}/results-pdf`}
+                        className="flex items-center gap-2"
+                      >
                         <BarChart3 className="h-4 w-4" />
                         PDF表示
                         <ExternalLink className="h-3 w-3" />
@@ -241,11 +292,7 @@ function TournamentOverview({
       )}
 
       <div id="public-files">
-        <PublicFilesList
-          tournamentId={tournament.tournament_id}
-          showTitle={true}
-          layout="card"
-        />
+        <PublicFilesList tournamentId={tournament.tournament_id} showTitle={true} layout="card" />
       </div>
 
       {dateEntries.length > 0 && (
@@ -282,14 +329,20 @@ function TournamentOverview({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className={`grid ${hasMatchdays ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+          <div className={`grid ${hasMatchdays ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
             <div className="text-center p-4 bg-primary/5 rounded-lg">
-              <p className="text-2xl font-bold text-primary">{tournament.display_match_duration || tournament.match_duration_minutes}</p>
-              <p className="text-sm text-gray-500">試合時間{tournament.display_match_duration ? '' : '（分）'}</p>
+              <p className="text-2xl font-bold text-primary">
+                {tournament.display_match_duration || tournament.match_duration_minutes}
+              </p>
+              <p className="text-sm text-gray-500">
+                試合時間{tournament.display_match_duration ? "" : "（分）"}
+              </p>
             </div>
             {!hasMatchdays && (
               <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{tournament.break_duration_minutes}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {tournament.break_duration_minutes}
+                </p>
                 <p className="text-sm text-gray-500">休憩時間（分）</p>
               </div>
             )}
@@ -338,7 +391,9 @@ function TournamentOverview({
             </div>
             <div>
               <h4 className="font-medium text-gray-500 mb-2">ステータス</h4>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(calculatedStatus)}`}>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(calculatedStatus)}`}
+              >
                 {getStatusLabel(calculatedStatus)}
               </span>
             </div>
@@ -349,13 +404,16 @@ function TournamentOverview({
                   {tournament.phases.phases
                     .sort((a, b) => a.order - b.order)
                     .map((phase) => (
-                      <span key={phase.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <span
+                        key={phase.id}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                      >
                         {phase.display_name || phase.name}
                       </span>
                     ))}
                 </div>
               ) : (
-                <p className="text-gray-900">{tournament.format_name || '未設定'}</p>
+                <p className="text-gray-900">{tournament.format_name || "未設定"}</p>
               )}
             </div>
             <div>
@@ -365,7 +423,7 @@ function TournamentOverview({
               </h4>
               {venues.length > 0 ? (
                 <div className="space-y-1">
-                  {venues.map(v => (
+                  {venues.map((v) => (
                     <div key={v.venue_id}>
                       {v.google_maps_url ? (
                         <a

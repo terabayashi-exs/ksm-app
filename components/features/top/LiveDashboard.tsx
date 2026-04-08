@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Radio } from 'lucide-react';
+import { Radio } from "lucide-react";
 
 interface LiveDashboardProps {
   ongoingCount: number;
@@ -8,7 +8,7 @@ interface LiveDashboardProps {
   recentUpdates: {
     tournamentName: string;
     description: string;
-    badge: 'live' | 'finished' | 'updated';
+    badge: "live" | "finished" | "updated";
     homeTeam?: string;
     awayTeam?: string;
     homeScore?: number;
@@ -17,16 +17,12 @@ interface LiveDashboardProps {
 }
 
 const badgeConfig = {
-  live: { label: 'LIVE', className: 'bg-green-500' },
-  finished: { label: '終了', className: 'bg-red-500' },
-  updated: { label: '更新', className: 'bg-blue-500' },
+  live: { label: "LIVE", className: "bg-green-500" },
+  finished: { label: "終了", className: "bg-red-500" },
+  updated: { label: "更新", className: "bg-blue-500" },
 } as const;
 
-export function LiveDashboard({
-  ongoingCount,
-  totalMatches,
-  recentUpdates,
-}: LiveDashboardProps) {
+export function LiveDashboard({ ongoingCount, totalMatches, recentUpdates }: LiveDashboardProps) {
   const isLive = ongoingCount > 0;
 
   if (!isLive) {
@@ -82,7 +78,9 @@ export function LiveDashboard({
                   </div>
                   {update.homeTeam && update.awayTeam && (
                     <div className="mt-1.5 pl-14 flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[160px]">{update.homeTeam}</span>
+                      <span className="font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[160px]">
+                        {update.homeTeam}
+                      </span>
                       {update.homeScore != null && update.awayScore != null ? (
                         <span className="font-bold text-primary tabular-nums">
                           {update.homeScore} - {update.awayScore}
@@ -90,7 +88,9 @@ export function LiveDashboard({
                       ) : (
                         <span className="text-gray-400 font-medium">vs</span>
                       )}
-                      <span className="font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[160px]">{update.awayTeam}</span>
+                      <span className="font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[160px]">
+                        {update.awayTeam}
+                      </span>
                     </div>
                   )}
                 </div>

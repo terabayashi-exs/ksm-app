@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { randomUUID } from 'crypto';
-import { sendEmail } from '@/lib/email/mailer';
+import { randomUUID } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email/mailer";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -12,20 +12,26 @@ interface RouteContext {
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
-    if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json({ success: false, error: '権限がありません' }, { status: 401 });
+    if (!session?.user || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "権限がありません" }, { status: 401 });
     }
 
     const { id: teamId } = await context.params;
     const { email } = await request.json();
 
     if (!email || !email.trim()) {
-      return NextResponse.json({ success: false, error: 'メールアドレスを入力してください' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "メールアドレスを入力してください" },
+        { status: 400 },
+      );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      return NextResponse.json({ success: false, error: '有効なメールアドレスを入力してください' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "有効なメールアドレスを入力してください" },
+        { status: 400 },
+      );
     }
 
     const trimmedEmail = email.trim().toLowerCase();
@@ -33,10 +39,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // チーム存在確認
     const teamResult = await db.execute(
       `SELECT team_id, team_name FROM m_teams WHERE team_id = ?`,
-      [teamId]
+      [teamId],
     );
     if (teamResult.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'チームが見つかりません' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: "チームが見つかりません" },
+        { status: 404 },
+      );
     }
     const teamName = String(teamResult.rows[0].team_name);
 
@@ -45,17 +54,23 @@ export async function POST(request: NextRequest, context: RouteContext) {
       `SELECT tm.id FROM m_team_members tm
        INNER JOIN m_login_users u ON tm.login_user_id = u.login_user_id
        WHERE tm.team_id = ? AND u.email = ? AND tm.is_active = 1`,
-      [teamId, trimmedEmail]
+      [teamId, trimmedEmail],
     );
     if (existingMember.rows.length > 0) {
-      return NextResponse.json({ success: false, error: 'このメールアドレスは既にこのチームの担当者として登録されています' }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "このメールアドレスは既にこのチームの担当者として登録されています",
+        },
+        { status: 400 },
+      );
     }
 
     // 既存の未処理招待を無効化
     await db.execute(
       `UPDATE t_team_invitations SET status = 'cancelled'
        WHERE team_id = ? AND invited_email = ? AND status = 'pending'`,
-      [teamId, trimmedEmail]
+      [teamId, trimmedEmail],
     );
 
     // トークン生成・招待レコード作成
@@ -65,11 +80,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     await db.execute(
       `INSERT INTO t_team_invitations (team_id, invited_by_login_user_id, invited_email, token, status, expires_at, created_at)
        VALUES (?, ?, ?, ?, 'pending', datetime('now', '+9 hours', '+7 days'), datetime('now', '+9 hours'))`,
-      [teamId, adminLoginUserId, trimmedEmail, token]
+      [teamId, adminLoginUserId, trimmedEmail, token],
     );
 
     // 認証メール送信
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl =
+      process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const acceptUrl = `${baseUrl}/my/teams/invite/accept-manager?token=${token}`;
 
     await sendEmail({
@@ -99,7 +115,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       message: `${trimmedEmail} に認証メールを送信しました`,
     });
   } catch (error) {
-    console.error('担当者招待エラー:', error);
-    return NextResponse.json({ success: false, error: '担当者招待の処理に失敗しました' }, { status: 500 });
+    console.error("担当者招待エラー:", error);
+    return NextResponse.json(
+      { success: false, error: "担当者招待の処理に失敗しました" },
+      { status: 500 },
+    );
   }
 }

@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ScrollableContainer } from "@/components/ui/scrollable-container";
-import {
-  TournamentBlock,
-  MultiBlockBracket,
-  organizeMatchesByMatchType,
-  compareMatchCode,
-  getPatternByMatchCount,
-  getPatternByTeamCount,
-  getPatternConfig,
-  getP6PatternConfig,
-} from "@/lib/tournament-bracket";
 import type {
   BracketMatch,
   BracketProps,
-  SportScoreConfig,
-  PatternType,
   PatternConfig,
+  PatternType,
+  SportScoreConfig,
+} from "@/lib/tournament-bracket";
+import {
+  compareMatchCode,
+  getP6PatternConfig,
+  getPatternByMatchCount,
+  getPatternByTeamCount,
+  getPatternConfig,
+  MultiBlockBracket,
+  organizeMatchesByMatchType,
+  TournamentBlock,
 } from "@/lib/tournament-bracket";
 import { isUnifiedBlockName } from "@/lib/tournament-phases";
 
@@ -39,7 +39,9 @@ export default function TournamentBracket({
   initialSportConfig,
 }: TournamentBracketProps) {
   const [matches, setMatches] = useState<BracketMatch[]>(initialMatches || []);
-  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(initialSportConfig || null);
+  const [sportConfig, setSportConfig] = useState<SportScoreConfig | null>(
+    initialSportConfig || null,
+  );
   const [loading, setLoading] = useState(!initialMatches);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,9 +51,7 @@ export default function TournamentBracket({
     const fetchMatches = async () => {
       try {
         setLoading(true);
-const response = await fetch(
-          `/api/tournaments/${tournamentId}/bracket?phase=${phase}`
-        );
+        const response = await fetch(`/api/tournaments/${tournamentId}/bracket?phase=${phase}`);
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -85,9 +85,7 @@ const response = await fetch(
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-500">
-          トーナメント表を読み込み中...
-        </span>
+        <span className="ml-3 text-gray-500">トーナメント表を読み込み中...</span>
       </div>
     );
   }
@@ -97,40 +95,42 @@ const response = await fetch(
       <div className="text-center py-16">
         <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
         <p className="text-gray-500 text-lg mb-2">{error}</p>
-        <p className="text-gray-500 text-sm">
-          この大会は予選リーグ戦のみで構成されています。
-        </p>
+        <p className="text-gray-500 text-sm">この大会は予選リーグ戦のみで構成されています。</p>
       </div>
     );
   }
 
-  const { mainMatches, placementMatches: allPlacementMatches, loserSemifinalMatches } = organizeMatchesByMatchType(matches);
+  const {
+    mainMatches,
+    placementMatches: allPlacementMatches,
+    loserSemifinalMatches,
+  } = organizeMatchesByMatchType(matches);
 
   // 下位決定準決勝が2試合以上ある場合、4チームの山を構成
   const loserBracketGroups: {
-    matches: BracketMatch[];       // 下位決定準決勝2試合 + 勝者決定戦1試合
-    title: string;                  // e.g. "5位決定戦"
-    remainingPlacements: { position: number; match: BracketMatch }[];  // 敗者決定戦（7位決定戦など）
+    matches: BracketMatch[]; // 下位決定準決勝2試合 + 勝者決定戦1試合
+    title: string; // e.g. "5位決定戦"
+    remainingPlacements: { position: number; match: BracketMatch }[]; // 敗者決定戦（7位決定戦など）
   }[] = [];
 
   // 下位の山に含まれなかった順位決定戦
   let regularPlacementMatches = allPlacementMatches;
 
   if (loserSemifinalMatches.length >= 2) {
-    const loserSfCodes = new Set(loserSemifinalMatches.map(m => m.match_code));
+    const loserSfCodes = new Set(loserSemifinalMatches.map((m) => m.match_code));
 
     const winnerPlacements: BracketMatch[] = [];
     const loserPlacements: { position: number; match: BracketMatch }[] = [];
     const otherPlacements: { position: number; match: BracketMatch }[] = [];
 
     for (const pm of allPlacementMatches) {
-      const src1 = pm.match.team1_source || '';
-      const src2 = pm.match.team2_source || '';
-      const isWinnerDest = [...loserSfCodes].some(code =>
-        src1 === `${code}_winner` || src2 === `${code}_winner`
+      const src1 = pm.match.team1_source || "";
+      const src2 = pm.match.team2_source || "";
+      const isWinnerDest = [...loserSfCodes].some(
+        (code) => src1 === `${code}_winner` || src2 === `${code}_winner`,
       );
-      const isLoserDest = [...loserSfCodes].some(code =>
-        src1 === `${code}_loser` || src2 === `${code}_loser`
+      const isLoserDest = [...loserSfCodes].some(
+        (code) => src1 === `${code}_loser` || src2 === `${code}_loser`,
       );
 
       if (isWinnerDest) {
@@ -158,9 +158,7 @@ const response = await fetch(
     return (
       <div className="text-center py-16">
         <Trophy className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-        <p className="text-gray-500 text-lg">
-          トーナメント表データがありません
-        </p>
+        <p className="text-gray-500 text-lg">トーナメント表データがありません</p>
       </div>
     );
   }
@@ -180,9 +178,10 @@ const response = await fetch(
 
         if (match.winner_team_id) {
           // winner_team_idが設定されている場合
-          winnerName = match.winner_team_id === match.team1_id
-            ? match.team1_display_name
-            : match.team2_display_name;
+          winnerName =
+            match.winner_team_id === match.team1_id
+              ? match.team1_display_name
+              : match.team2_display_name;
         } else if (match.team1_id && !match.team2_id) {
           // team1のみ設定されている（team1が勝者）
           winnerName = match.team1_display_name;
@@ -232,11 +231,17 @@ const response = await fetch(
     const { actualMatches, seedTeams } = separateByeMatches(matches);
 
     // 試合をmatch_codeでソート（BYE試合除外後）
-    const sortedMatches = actualMatches.sort((a, b) => compareMatchCode(a.match_code, b.match_code));
+    const sortedMatches = actualMatches.sort((a, b) =>
+      compareMatchCode(a.match_code, b.match_code),
+    );
 
-    console.log(`[${blockName}] sortedMatches (BYE除外後):`, sortedMatches.map(m =>
-      `${m.match_code}(${m.position_note}): ${m.team1_source || 'initial'} vs ${m.team2_source || 'initial'}`
-    ));
+    console.log(
+      `[${blockName}] sortedMatches (BYE除外後):`,
+      sortedMatches.map(
+        (m) =>
+          `${m.match_code}(${m.position_note}): ${m.team1_source || "initial"} vs ${m.team2_source || "initial"}`,
+      ),
+    );
     console.log(`[${blockName}] seedTeams:`, seedTeams);
 
     // ブロック内のラウンドラベルを生成（position_noteベース）
@@ -253,7 +258,10 @@ const response = await fetch(
     // 2. または、予選ブロックの順位参照（例: "A_1", "B_2"）の試合
     const isFirstRoundMatch = (m: BracketMatch) => {
       // sourceが空の場合は第1ラウンド
-      if ((!m.team1_source || m.team1_source === '') && (!m.team2_source || m.team2_source === '')) {
+      if (
+        (!m.team1_source || m.team1_source === "") &&
+        (!m.team2_source || m.team2_source === "")
+      ) {
         return true;
       }
 
@@ -273,7 +281,7 @@ const response = await fetch(
 
     // 各第1ラウンド試合のチーム数をカウント
     let blockTeamCount = 0;
-    firstRoundMatches.forEach(m => {
+    firstRoundMatches.forEach((m) => {
       if (m.is_bye_match) {
         // BYE試合は1チーム（シード）
         blockTeamCount += 1;
@@ -283,7 +291,9 @@ const response = await fetch(
       }
     });
 
-    console.log(`[${blockName}] チーム数計算: 第1ラウンド試合=${firstRoundMatches.length}件 (BYE=${matches.filter(m => m.is_bye_match).length}) → 合計${blockTeamCount}チーム`);
+    console.log(
+      `[${blockName}] チーム数計算: 第1ラウンド試合=${firstRoundMatches.length}件 (BYE=${matches.filter((m) => m.is_bye_match).length}) → 合計${blockTeamCount}チーム`,
+    );
 
     if (blockTeamCount >= 2 && blockTeamCount <= 8) {
       // ブロック内のチーム数を使用
@@ -316,7 +326,9 @@ const response = await fetch(
           const team2IsSeed = team2SourceMatch && byeMatchCodes.has(team2SourceMatch[1]);
 
           if (team1IsSeed || team2IsSeed) {
-            console.log(`[P6判定] ${match.match_code}: team1=${team1Source}(${team1IsSeed}), team2=${team2Source}(${team2IsSeed})`);
+            console.log(
+              `[P6判定] ${match.match_code}: team1=${team1Source}(${team1IsSeed}), team2=${team2Source}(${team2IsSeed})`,
+            );
           }
 
           return team1IsSeed && team2IsSeed;
@@ -341,13 +353,13 @@ const response = await fetch(
 
     // position_noteの優先度定義（数値が小さいほど優先）
     const labelPriority: Record<string, number> = {
-      '決勝戦': 1,
-      '決勝': 1,
-      '3位決定戦': 2,
-      '3位決定': 2,
-      '準決勝': 3,
-      '準々決勝': 4,
-      '1回戦': 5,
+      決勝戦: 1,
+      決勝: 1,
+      "3位決定戦": 2,
+      "3位決定": 2,
+      準決勝: 3,
+      準々決勝: 4,
+      "1回戦": 5,
     };
 
     let matchIndex = 0;
@@ -357,20 +369,20 @@ const response = await fetch(
 
       // このラウンドの試合からposition_noteを収集
       const positionNotes = roundMatches
-        .map(m => m.position_note)
-        .filter((note): note is string => note !== null && note !== undefined && note !== '');
+        .map((m) => m.position_note)
+        .filter((note): note is string => note !== null && note !== undefined && note !== "");
 
       if (positionNotes.length > 0) {
         // 優先度でソートして最も優先度の高いラベルを選択
-        const bestLabel = positionNotes.sort((a, b) =>
-          (labelPriority[a] || 99) - (labelPriority[b] || 99)
+        const bestLabel = positionNotes.sort(
+          (a, b) => (labelPriority[a] || 99) - (labelPriority[b] || 99),
         )[0];
 
         // 末尾の「戦」を除去
         blockRoundLabels.push(bestLabel);
       } else {
         // position_noteがない場合は空文字
-        blockRoundLabels.push('');
+        blockRoundLabels.push("");
       }
 
       matchIndex += round.matchCount;
@@ -391,7 +403,7 @@ const response = await fetch(
   // - ブロック数が2以上: MultiBlockBracket使用
   // - いずれかのブロックの試合数が8以上: MultiBlockBracket使用（大規模トーナメント対応）
   // - それ以外: TournamentBlock使用
-  const hasLargeBlock = blockData.some(block => block.matches.length >= 8);
+  const hasLargeBlock = blockData.some((block) => block.matches.length >= 8);
   const shouldUseMultiBlock = blockData.length >= 2 || hasLargeBlock;
 
   return (
@@ -451,28 +463,27 @@ const response = await fetch(
           {/* 試合数に応じて表示方法を切り替え */}
           {shouldUseMultiBlock ? (
             // 8試合以上: MultiBlockBracket使用
-            <MultiBlockBracket
-              blocks={blockData}
-              sportConfig={sportConfig || undefined}
-            />
+            <MultiBlockBracket blocks={blockData} sportConfig={sportConfig || undefined} />
           ) : (
             // 7試合以下: TournamentBlock使用
             (() => {
               const { actualMatches, seedTeams } = separateByeMatches(mainMatches);
 
               // ラウンドラベルを生成（position_noteベース）
-              const sortedMatches = actualMatches.sort((a, b) => compareMatchCode(a.match_code, b.match_code));
+              const sortedMatches = actualMatches.sort((a, b) =>
+                compareMatchCode(a.match_code, b.match_code),
+              );
               const pattern = getPatternByMatchCount(sortedMatches.length);
               const config = getPatternConfig(pattern);
 
               const labelPriority: Record<string, number> = {
-                '決勝戦': 1,
-                '決勝': 1,
-                '3位決定戦': 2,
-                '3位決定': 2,
-                '準決勝': 3,
-                '準々決勝': 4,
-                '1回戦': 5,
+                決勝戦: 1,
+                決勝: 1,
+                "3位決定戦": 2,
+                "3位決定": 2,
+                準決勝: 3,
+                準々決勝: 4,
+                "1回戦": 5,
               };
 
               const singleBlockRoundLabels: string[] = [];
@@ -481,16 +492,18 @@ const response = await fetch(
               for (const round of config.rounds) {
                 const roundMatches = sortedMatches.slice(matchIndex, matchIndex + round.matchCount);
                 const positionNotes = roundMatches
-                  .map(m => m.position_note)
-                  .filter((note): note is string => note !== null && note !== undefined && note !== '');
+                  .map((m) => m.position_note)
+                  .filter(
+                    (note): note is string => note !== null && note !== undefined && note !== "",
+                  );
 
                 if (positionNotes.length > 0) {
-                  const bestLabel = positionNotes.sort((a, b) =>
-                    (labelPriority[a] || 99) - (labelPriority[b] || 99)
+                  const bestLabel = positionNotes.sort(
+                    (a, b) => (labelPriority[a] || 99) - (labelPriority[b] || 99),
                   )[0];
                   singleBlockRoundLabels.push(bestLabel);
                 } else {
-                  singleBlockRoundLabels.push('');
+                  singleBlockRoundLabels.push("");
                 }
 
                 matchIndex += round.matchCount;
@@ -524,7 +537,9 @@ const response = await fetch(
 
           {/* 下位4チームの山（下位決定準決勝→5位決定戦など） */}
           {loserBracketGroups.map((group, idx) => {
-            const sortedGroupMatches = [...group.matches].sort((a, b) => compareMatchCode(a.match_code, b.match_code));
+            const sortedGroupMatches = [...group.matches].sort((a, b) =>
+              compareMatchCode(a.match_code, b.match_code),
+            );
             const finalLabel = group.title;
             return (
               <div key={`loser-bracket-${idx}`} className="third-place-section">
@@ -539,30 +554,33 @@ const response = await fetch(
           })}
 
           {/* 下位の山から漏れた順位決定戦（7位決定戦など） */}
-          {loserBracketGroups.flatMap(g => g.remainingPlacements).map(({ position, match }) => (
-            <div key={`loser-placement-${position}`} className="third-place-section">
-              <TournamentBlock
-                blockId={`loser-placement-${position}`}
-                matches={[match]}
-                sportConfig={sportConfig || undefined}
-                title={`${position}位決定戦`}
-                roundLabels={[`${position}位決定戦`]}
-              />
-            </div>
-          ))}
+          {loserBracketGroups
+            .flatMap((g) => g.remainingPlacements)
+            .map(({ position, match }) => (
+              <div key={`loser-placement-${position}`} className="third-place-section">
+                <TournamentBlock
+                  blockId={`loser-placement-${position}`}
+                  matches={[match]}
+                  sportConfig={sportConfig || undefined}
+                  title={`${position}位決定戦`}
+                  roundLabels={[`${position}位決定戦`]}
+                />
+              </div>
+            ))}
 
           {/* 敗者側準決勝（山を構成できなかった場合の個別表示） */}
-          {loserBracketGroups.length === 0 && loserSemifinalMatches.map((match) => (
-            <div key={`loser-sf-${match.match_code}`} className="third-place-section">
-              <TournamentBlock
-                blockId={`loser-sf-${match.match_code}`}
-                matches={[match]}
-                sportConfig={sportConfig || undefined}
-                title={match.position_note || "下位決定準決勝"}
-                roundLabels={[match.position_note || "下位決定準決勝"]}
-              />
-            </div>
-          ))}
+          {loserBracketGroups.length === 0 &&
+            loserSemifinalMatches.map((match) => (
+              <div key={`loser-sf-${match.match_code}`} className="third-place-section">
+                <TournamentBlock
+                  blockId={`loser-sf-${match.match_code}`}
+                  matches={[match]}
+                  sportConfig={sportConfig || undefined}
+                  title={match.position_note || "下位決定準決勝"}
+                  roundLabels={[match.position_note || "下位決定準決勝"]}
+                />
+              </div>
+            ))}
         </div>
       </ScrollableContainer>
     </>

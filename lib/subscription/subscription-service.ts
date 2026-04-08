@@ -1,5 +1,5 @@
 // サブスクリプション関連のビジネスロジック
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 export interface SubscriptionPlan {
   plan_id: number;
@@ -40,7 +40,7 @@ export async function getCurrentPlan(adminLoginId: string): Promise<Subscription
      FROM m_subscription_plans p
      INNER JOIN m_administrators a ON a.current_plan_id = p.plan_id
      WHERE a.admin_login_id = ?`,
-    [adminLoginId]
+    [adminLoginId],
   );
 
   if (result.rows.length > 0) {
@@ -55,7 +55,7 @@ export async function getCurrentPlan(adminLoginId: string): Promise<Subscription
        FROM m_subscription_plans p
        INNER JOIN m_login_users u ON u.current_plan_id = p.plan_id
        WHERE u.login_user_id = ?`,
-      [loginUserId]
+      [loginUserId],
     );
 
     if (loginUserResult.rows.length > 0) {
@@ -64,7 +64,7 @@ export async function getCurrentPlan(adminLoginId: string): Promise<Subscription
 
     // current_plan_id 未設定の場合はフリープランを返す
     const freePlan = await db.execute(
-      `SELECT * FROM m_subscription_plans WHERE plan_code = 'free' LIMIT 1`
+      `SELECT * FROM m_subscription_plans WHERE plan_code = 'free' LIMIT 1`,
     );
     if (freePlan.rows.length > 0) {
       return freePlan.rows[0] as unknown as SubscriptionPlan;
@@ -84,7 +84,7 @@ export async function getUsage(adminLoginId: string): Promise<SubscriptionUsage 
     `SELECT current_tournament_groups_count, current_tournaments_count, last_calculated_at
      FROM t_subscription_usage
      WHERE admin_login_id = ?`,
-    [adminLoginId]
+    [adminLoginId],
   );
 
   if (result.rows.length > 0) {
@@ -101,7 +101,7 @@ export async function getUsage(adminLoginId: string): Promise<SubscriptionUsage 
        FROM m_administrators a
        INNER JOIN m_login_users u ON a.email = u.email
        WHERE u.login_user_id = ?`,
-      [loginUserId]
+      [loginUserId],
     );
 
     if (adminResult.rows.length > 0) {
@@ -111,7 +111,7 @@ export async function getUsage(adminLoginId: string): Promise<SubscriptionUsage 
         `SELECT current_tournament_groups_count, current_tournaments_count, last_calculated_at
          FROM t_subscription_usage
          WHERE admin_login_id = ?`,
-        [adminLoginId2]
+        [adminLoginId2],
       );
       if (usageResult.rows.length > 0) {
         return usageResult.rows[0] as unknown as SubscriptionUsage;
@@ -131,7 +131,7 @@ export async function getUsage(adminLoginId: string): Promise<SubscriptionUsage 
          WHERE t.group_id = tg.group_id
          AND (t.is_archived IS NULL OR t.is_archived = 0)
        )`,
-      [loginUserId]
+      [loginUserId],
     );
 
     const tournamentsResult = await db.execute(
@@ -143,7 +143,7 @@ export async function getUsage(adminLoginId: string): Promise<SubscriptionUsage 
        )
        WHERE u.login_user_id = ?
        AND (t.is_archived IS NULL OR t.is_archived = 0)`,
-      [loginUserId]
+      [loginUserId],
     );
 
     return {
@@ -186,7 +186,7 @@ export function isTrialExpired(trialEndDate: string | null): boolean {
  * 現在のサブスクリプション情報を全て取得
  */
 export async function getCurrentSubscriptionInfo(
-  adminLoginId: string
+  adminLoginId: string,
 ): Promise<CurrentSubscriptionInfo | null> {
   // プラン情報取得
   const plan = await getCurrentPlan(adminLoginId);
@@ -199,7 +199,7 @@ export async function getCurrentSubscriptionInfo(
   // 管理者のトライアル期限取得（m_administrators → m_login_users フォールバック）
   let adminResult = await db.execute(
     `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-    [adminLoginId]
+    [adminLoginId],
   );
 
   // m_login_users 経由で m_administrators を検索
@@ -211,14 +211,14 @@ export async function getCurrentSubscriptionInfo(
          FROM m_administrators a
          INNER JOIN m_login_users u ON a.email = u.email
          WHERE u.login_user_id = ?`,
-        [loginUserId]
+        [loginUserId],
       );
     }
   }
 
   const freeTrialEndDate = adminResult.rows[0]?.free_trial_end_date as string | null;
-  const trialExpired = plan.plan_code === 'free' ? isTrialExpired(freeTrialEndDate) : false;
-  const remainingDays = plan.plan_code === 'free' ? calculateRemainingDays(freeTrialEndDate) : null;
+  const trialExpired = plan.plan_code === "free" ? isTrialExpired(freeTrialEndDate) : false;
+  const remainingDays = plan.plan_code === "free" ? calculateRemainingDays(freeTrialEndDate) : null;
 
   // 大会作成可能かチェック
   const canCreateTournament =
@@ -251,11 +251,11 @@ export async function getCurrentSubscriptionInfo(
  * 期限切れ後の操作権限
  */
 export interface TrialExpiredPermissions {
-  canView: boolean;          // 閲覧
-  canArchive: boolean;       // アーカイブ化
-  canDelete: boolean;        // 削除
-  canEdit: boolean;          // 編集（基本情報含む）
-  canCreateNew: boolean;     // 新規作成
+  canView: boolean; // 閲覧
+  canArchive: boolean; // アーカイブ化
+  canDelete: boolean; // 削除
+  canEdit: boolean; // 編集（基本情報含む）
+  canCreateNew: boolean; // 新規作成
   canManageResults: boolean; // 試合結果入力
 }
 
@@ -264,11 +264,11 @@ export interface TrialExpiredPermissions {
  */
 export function getTrialExpiredPermissions(): TrialExpiredPermissions {
   return {
-    canView: true,        // ✓ 閲覧のみ可能
-    canArchive: true,     // ✓ アーカイブ化可能
-    canDelete: true,      // ✓ 削除可能
-    canEdit: false,       // ✗ 編集不可
-    canCreateNew: false,  // ✗ 新規作成不可
+    canView: true, // ✓ 閲覧のみ可能
+    canArchive: true, // ✓ アーカイブ化可能
+    canDelete: true, // ✓ 削除可能
+    canEdit: false, // ✗ 編集不可
+    canCreateNew: false, // ✗ 新規作成不可
     canManageResults: false, // ✗ 試合結果入力不可
   };
 }
@@ -278,17 +278,17 @@ export function getTrialExpiredPermissions(): TrialExpiredPermissions {
  */
 export async function checkTrialExpiredPermission(
   adminLoginId: string,
-  action: keyof TrialExpiredPermissions
+  action: keyof TrialExpiredPermissions,
 ): Promise<{ allowed: boolean; reason?: string; isTrialExpired?: boolean }> {
   const plan = await getCurrentPlan(adminLoginId);
 
-  if (!plan || plan.plan_code !== 'free') {
+  if (!plan || plan.plan_code !== "free") {
     return { allowed: true }; // 有料プランは制限なし
   }
 
   let adminResult = await db.execute(
     `SELECT free_trial_end_date FROM m_administrators WHERE admin_login_id = ?`,
-    [adminLoginId]
+    [adminLoginId],
   );
 
   // m_login_users フォールバック（新プロバイダー）
@@ -300,7 +300,7 @@ export async function checkTrialExpiredPermission(
          FROM m_administrators a
          INNER JOIN m_login_users u ON a.email = u.email
          WHERE u.login_user_id = ?`,
-        [loginUserId]
+        [loginUserId],
       );
     }
   }
@@ -318,7 +318,8 @@ export async function checkTrialExpiredPermission(
     return {
       allowed: false,
       isTrialExpired: true,
-      reason: '無料トライアル期間が終了しました。この操作を行うにはプランをアップグレードしてください。'
+      reason:
+        "無料トライアル期間が終了しました。この操作を行うにはプランをアップグレードしてください。",
     };
   }
 
@@ -354,7 +355,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
          WHERE t.group_id = tg.group_id
          AND (t.is_archived IS NULL OR t.is_archived = 0)
        )`,
-      [loginUserId, loginUserId]
+      [loginUserId, loginUserId],
     );
     groupsCount = Number(groupsResult.rows[0]?.count || 0);
 
@@ -371,7 +372,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
          ))
        )
        AND (t.is_archived IS NULL OR t.is_archived = 0)`,
-      [loginUserId, loginUserId]
+      [loginUserId, loginUserId],
     );
     tournamentsCount = Number(tournamentsResult.rows[0]?.count || 0);
 
@@ -380,7 +381,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
       `SELECT a.admin_login_id FROM m_administrators a
        INNER JOIN m_login_users u ON a.email = u.email
        WHERE u.login_user_id = ? LIMIT 1`,
-      [loginUserId]
+      [loginUserId],
     );
 
     if (adminResult.rows.length > 0) {
@@ -392,7 +393,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
              last_calculated_at = datetime('now', '+9 hours'),
              updated_at = datetime('now', '+9 hours')
          WHERE admin_login_id = ?`,
-        [groupsCount, tournamentsCount, adminLoginId]
+        [groupsCount, tournamentsCount, adminLoginId],
       );
     }
     // m_administrators に対応レコードがない新規ユーザーの場合は t_subscription_usage 更新をスキップ
@@ -410,7 +411,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
          WHERE t.group_id = tg.group_id
          AND (t.is_archived IS NULL OR t.is_archived = 0)
        )`,
-      [adminLoginId]
+      [adminLoginId],
     );
     groupsCount = Number(groupsResult.rows[0]?.count || 0);
 
@@ -420,7 +421,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
        INNER JOIN t_tournament_groups g ON t.group_id = g.group_id
        WHERE g.admin_login_id = ?
        AND (t.is_archived IS NULL OR t.is_archived = 0)`,
-      [adminLoginId]
+      [adminLoginId],
     );
     tournamentsCount = Number(tournamentsResult.rows[0]?.count || 0);
 
@@ -431,7 +432,7 @@ export async function recalculateUsage(sessionId: string): Promise<void> {
            last_calculated_at = datetime('now', '+9 hours'),
            updated_at = datetime('now', '+9 hours')
        WHERE admin_login_id = ?`,
-      [groupsCount, tournamentsCount, adminLoginId]
+      [groupsCount, tournamentsCount, adminLoginId],
     );
   }
 }

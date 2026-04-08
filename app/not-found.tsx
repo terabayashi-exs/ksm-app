@@ -1,8 +1,8 @@
-import Link from "next/link";
-import Image from "next/image";
 import { Home, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import Link from "next/link";
 import BackButton from "@/components/ui/back-button";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
@@ -41,12 +41,7 @@ export default function NotFound() {
                 トップページへ
               </Link>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="w-full"
-            >
+            <Button asChild size="lg" variant="outline" className="w-full">
               <Link href="/#search">
                 <Search className="mr-2 h-4 w-4" />
                 大会を検索する
@@ -58,9 +53,7 @@ export default function NotFound() {
           </div>
         </div>
 
-        <p className="text-xs text-white/60 mt-8">
-          &copy; 大会GO - スポーツ大会管理システム
-        </p>
+        <p className="text-xs text-white/60 mt-8">&copy; 大会GO - スポーツ大会管理システム</p>
       </div>
     </div>
   );

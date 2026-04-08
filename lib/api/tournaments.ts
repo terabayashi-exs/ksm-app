@@ -1,7 +1,7 @@
 // lib/api/tournaments.ts
 import { db } from "@/lib/db";
-import type { Tournament } from "@/lib/types";
 import { calculateTournamentStatus, type TournamentStatus } from "@/lib/tournament-status";
+import type { Tournament } from "@/lib/types";
 
 export async function getPublicTournaments(teamId?: string): Promise<Tournament[]> {
   try {
@@ -34,12 +34,12 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         g.event_description as group_description,
         NULL as group_color,
         0 as display_order,
-        ${teamId ? 'CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
+        ${teamId ? "CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined" : "0 as is_joined"}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
-      ${teamId ? 'LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?' : ''}
+      ${teamId ? "LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?" : ""}
       WHERE t.visibility = 'open'
         AND date(t.public_start_date) <= date('now')
       ORDER BY t.group_order, t.created_at DESC
@@ -49,69 +49,74 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
     const result = await db.execute(query, teamId ? [teamId] : []);
 
     // 非同期でステータス計算を実行
-    const tournaments = await Promise.all(result.rows.map(async (row) => {
-      // tournament_datesからevent_start_dateとevent_end_dateを計算
-      let eventStartDate = '';
-      let eventEndDate = '';
-      
-      if (row.tournament_dates) {
-        try {
-          const dates = JSON.parse(row.tournament_dates as string);
-          const dateValues = Object.values(dates) as string[];
-          const sortedDates = dateValues.sort();
-          eventStartDate = sortedDates[0] || '';
-          eventEndDate = sortedDates[sortedDates.length - 1] || '';
-        } catch (error) {
-          console.error('Error parsing tournament_dates:', error);
+    const tournaments = await Promise.all(
+      result.rows.map(async (row) => {
+        // tournament_datesからevent_start_dateとevent_end_dateを計算
+        let eventStartDate = "";
+        let eventEndDate = "";
+
+        if (row.tournament_dates) {
+          try {
+            const dates = JSON.parse(row.tournament_dates as string);
+            const dateValues = Object.values(dates) as string[];
+            const sortedDates = dateValues.sort();
+            eventStartDate = sortedDates[0] || "";
+            eventEndDate = sortedDates[sortedDates.length - 1] || "";
+          } catch (error) {
+            console.error("Error parsing tournament_dates:", error);
+          }
         }
-      }
 
-      // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
-      const calculatedStatus = await calculateTournamentStatus({
-        status: (row.status as string) || 'planning',
-        recruitment_start_date: row.recruitment_start_date as string | null,
-        recruitment_end_date: row.recruitment_end_date as string | null,
-        tournament_dates: (row.tournament_dates as string) || '{}'
-      }, Number(row.tournament_id)); // tournamentIdを渡して試合進行状況もチェック
+        // 新しい非同期版ステータス計算を使用（大会開始日 OR 試合進行状況で判定）
+        const calculatedStatus = await calculateTournamentStatus(
+          {
+            status: (row.status as string) || "planning",
+            recruitment_start_date: row.recruitment_start_date as string | null,
+            recruitment_end_date: row.recruitment_end_date as string | null,
+            tournament_dates: (row.tournament_dates as string) || "{}",
+          },
+          Number(row.tournament_id),
+        ); // tournamentIdを渡して試合進行状況もチェック
 
-      return {
-        tournament_id: Number(row.tournament_id),
-        tournament_name: String(row.tournament_name),
-        format_id: Number(row.format_id),
-        venue_id: row.venue_id ? String(row.venue_id) : null,
-        team_count: Number(row.team_count),
-        court_count: Number(row.court_count),
-        tournament_dates: row.tournament_dates as string,
-        match_duration_minutes: Number(row.match_duration_minutes),
-        break_duration_minutes: Number(row.break_duration_minutes),
-        status: calculatedStatus as TournamentStatus,
-        visibility: row.visibility === 'open' ? 1 : 0,
-        public_start_date: row.public_start_date as string,
-        recruitment_start_date: row.recruitment_start_date as string,
-        recruitment_end_date: row.recruitment_end_date as string,
-        created_at: String(row.created_at),
-        updated_at: String(row.updated_at),
-        created_by: row.created_by as string,
-        venue_name: row.venue_name as string,
-        format_name: row.format_name as string,
-        // 管理者ロゴ情報
-        logo_blob_url: row.logo_blob_url as string | null,
-        organization_name: row.organization_name as string | null,
-        // グループ情報
-        group_id: row.group_id ? Number(row.group_id) : null,
-        group_order: Number(row.group_order) || 0,
-        category_name: row.tournament_name as string, // tournament_nameを部門名として使用
-        group_name: row.group_name as string | null,
-        group_description: row.group_description as string | null,
-        group_color: row.group_color as string | null,
-        group_display_order: Number(row.display_order) || 0,
-        // 互換性のため
-        event_start_date: eventStartDate,
-        event_end_date: eventEndDate,
-        // 参加状況
-        is_joined: Boolean(row.is_joined)
-      };
-    }));
+        return {
+          tournament_id: Number(row.tournament_id),
+          tournament_name: String(row.tournament_name),
+          format_id: Number(row.format_id),
+          venue_id: row.venue_id ? String(row.venue_id) : null,
+          team_count: Number(row.team_count),
+          court_count: Number(row.court_count),
+          tournament_dates: row.tournament_dates as string,
+          match_duration_minutes: Number(row.match_duration_minutes),
+          break_duration_minutes: Number(row.break_duration_minutes),
+          status: calculatedStatus as TournamentStatus,
+          visibility: row.visibility === "open" ? 1 : 0,
+          public_start_date: row.public_start_date as string,
+          recruitment_start_date: row.recruitment_start_date as string,
+          recruitment_end_date: row.recruitment_end_date as string,
+          created_at: String(row.created_at),
+          updated_at: String(row.updated_at),
+          created_by: row.created_by as string,
+          venue_name: row.venue_name as string,
+          format_name: row.format_name as string,
+          // 管理者ロゴ情報
+          logo_blob_url: row.logo_blob_url as string | null,
+          organization_name: row.organization_name as string | null,
+          // グループ情報
+          group_id: row.group_id ? Number(row.group_id) : null,
+          group_order: Number(row.group_order) || 0,
+          category_name: row.tournament_name as string, // tournament_nameを部門名として使用
+          group_name: row.group_name as string | null,
+          group_description: row.group_description as string | null,
+          group_color: row.group_color as string | null,
+          group_display_order: Number(row.display_order) || 0,
+          // 互換性のため
+          event_start_date: eventStartDate,
+          event_end_date: eventEndDate,
+          // 参加状況
+          is_joined: Boolean(row.is_joined),
+        };
+      }),
+    );
 
     return tournaments;
   } catch (error) {
@@ -142,16 +147,19 @@ export async function getTournamentStats() {
     let scheduledCount = 0; // 開催予定の大会数
 
     for (const tournament of tournaments) {
-      const calculatedStatus = await calculateTournamentStatus({
-        status: (tournament.status as string) || 'planning',
-        recruitment_start_date: tournament.recruitment_start_date as string | null,
-        recruitment_end_date: tournament.recruitment_end_date as string | null,
-        tournament_dates: (tournament.tournament_dates as string) || '{}'
-      }, Number(tournament.tournament_id));
+      const calculatedStatus = await calculateTournamentStatus(
+        {
+          status: (tournament.status as string) || "planning",
+          recruitment_start_date: tournament.recruitment_start_date as string | null,
+          recruitment_end_date: tournament.recruitment_end_date as string | null,
+          tournament_dates: (tournament.tournament_dates as string) || "{}",
+        },
+        Number(tournament.tournament_id),
+      );
 
-      if (calculatedStatus === 'ongoing') {
+      if (calculatedStatus === "ongoing") {
         ongoingCount++;
-      } else if (calculatedStatus === 'completed') {
+      } else if (calculatedStatus === "completed") {
         completedCount++;
       } else {
         // planning, recruiting, before_event のステータスは開催予定とカウント
@@ -162,7 +170,7 @@ export async function getTournamentStats() {
     return {
       total: scheduledCount, // 開催予定の大会数に変更
       ongoing: ongoingCount,
-      completed: completedCount
+      completed: completedCount,
     };
   } catch (error) {
     console.error("Failed to fetch tournament stats:", error);

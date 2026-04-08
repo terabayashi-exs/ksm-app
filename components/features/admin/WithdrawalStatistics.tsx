@@ -1,30 +1,36 @@
-'use client';
+"use client";
 
 // components/features/admin/WithdrawalStatistics.tsx
 // 辞退申請統計レポートコンポーネント
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  Clock, 
-  AlertTriangle,
-  Download,
-  Calendar,
-  Target,
+import {
   Activity,
+  AlertTriangle,
   Award,
-  MessageSquare,
-  Timer,
+  BarChart3,
+  Calendar,
+  Clock,
+  Download,
   Layers,
-  RefreshCw
-} from 'lucide-react';
+  MessageSquare,
+  RefreshCw,
+  Target,
+  Timer,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface WithdrawalStatistics {
   overview: {
@@ -74,7 +80,7 @@ export default function WithdrawalStatistics() {
   const [statistics, setStatistics] = useState<WithdrawalStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState('all');
+  const [period, setPeriod] = useState("all");
   // const [tournamentFilter, setTournamentFilter] = useState('all'); // 未使用のため削除
 
   // 統計データの取得
@@ -82,20 +88,20 @@ export default function WithdrawalStatistics() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (period !== 'all') params.append('period', period);
+      if (period !== "all") params.append("period", period);
       // if (tournamentFilter !== 'all') params.append('tournament_id', tournamentFilter); // 未実装のため削除
-      
+
       const response = await fetch(`/api/admin/withdrawal-statistics?${params}`);
       const result = await response.json();
-      
+
       if (result.success) {
         setStatistics(result.data);
       } else {
-        setError(result.error || '統計データの取得に失敗しました');
+        setError(result.error || "統計データの取得に失敗しました");
       }
     } catch (err) {
-      setError('統計データの取得中にエラーが発生しました');
-      console.error('統計データ取得エラー:', err);
+      setError("統計データの取得中にエラーが発生しました");
+      console.error("統計データ取得エラー:", err);
     } finally {
       setLoading(false);
     }
@@ -110,38 +116,47 @@ export default function WithdrawalStatistics() {
     if (!statistics) return;
 
     const csvData = [
-      ['辞退申請統計レポート'],
-      [''],
-      ['期間', period === 'all' ? '全期間' : `過去${period === '3months' ? '3ヶ月' : period === '6months' ? '6ヶ月' : '1年'}`],
-      ['生成日時', new Date().toLocaleString('ja-JP')],
-      [''],
-      ['■ 概要統計'],
-      ['総申請数', statistics.overview.total_requests],
-      ['申請中', statistics.overview.pending_requests],
-      ['承認済み', statistics.overview.approved_requests],
-      ['却下', statistics.overview.rejected_requests],
-      ['承認率', `${statistics.overview.approval_rate}%`],
-      [''],
-      ['■ 辞退理由別統計'],
-      ['理由', '件数', '割合'],
-      ...statistics.reasons.map(reason => [reason.category, reason.count, `${reason.percentage}%`]),
-      [''],
-      ['■ 処理時間統計'],
-      ['平均処理日数', `${statistics.processing_times.average_days}日`],
-      ['最速処理', `${statistics.processing_times.fastest_hours}時間`],
-      ['最遅処理', `${statistics.processing_times.slowest_days}日`],
-      ['24時間以内', statistics.processing_times.within_24h],
-      ['72時間以内', statistics.processing_times.within_72h],
-      ['1週間超過', statistics.processing_times.over_week]
+      ["辞退申請統計レポート"],
+      [""],
+      [
+        "期間",
+        period === "all"
+          ? "全期間"
+          : `過去${period === "3months" ? "3ヶ月" : period === "6months" ? "6ヶ月" : "1年"}`,
+      ],
+      ["生成日時", new Date().toLocaleString("ja-JP")],
+      [""],
+      ["■ 概要統計"],
+      ["総申請数", statistics.overview.total_requests],
+      ["申請中", statistics.overview.pending_requests],
+      ["承認済み", statistics.overview.approved_requests],
+      ["却下", statistics.overview.rejected_requests],
+      ["承認率", `${statistics.overview.approval_rate}%`],
+      [""],
+      ["■ 辞退理由別統計"],
+      ["理由", "件数", "割合"],
+      ...statistics.reasons.map((reason) => [
+        reason.category,
+        reason.count,
+        `${reason.percentage}%`,
+      ]),
+      [""],
+      ["■ 処理時間統計"],
+      ["平均処理日数", `${statistics.processing_times.average_days}日`],
+      ["最速処理", `${statistics.processing_times.fastest_hours}時間`],
+      ["最遅処理", `${statistics.processing_times.slowest_days}日`],
+      ["24時間以内", statistics.processing_times.within_24h],
+      ["72時間以内", statistics.processing_times.within_72h],
+      ["1週間超過", statistics.processing_times.over_week],
     ];
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const csvContent = csvData.map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `辞退申請統計_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute("download", `辞退申請統計_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -177,9 +192,7 @@ export default function WithdrawalStatistics() {
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center py-8 text-gray-500">
-            統計データがありません
-          </div>
+          <div className="text-center py-8 text-gray-500">統計データがありません</div>
         </CardContent>
       </Card>
     );
@@ -220,11 +233,7 @@ export default function WithdrawalStatistics() {
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              onClick={fetchStatistics}
-              variant="outline"
-              size="sm"
-            >
+            <Button onClick={fetchStatistics} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
               更新
             </Button>
@@ -236,35 +245,45 @@ export default function WithdrawalStatistics() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-blue-600">{statistics.overview.total_requests}</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {statistics.overview.total_requests}
+            </div>
             <p className="text-sm text-gray-600">総申請数</p>
             <Users className="w-8 h-8 mx-auto mt-2 text-blue-400" />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-yellow-600">{statistics.overview.pending_requests}</div>
+            <div className="text-3xl font-bold text-yellow-600">
+              {statistics.overview.pending_requests}
+            </div>
             <p className="text-sm text-gray-600">申請中</p>
             <Clock className="w-8 h-8 mx-auto mt-2 text-yellow-400" />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-green-600">{statistics.overview.approved_requests}</div>
+            <div className="text-3xl font-bold text-green-600">
+              {statistics.overview.approved_requests}
+            </div>
             <p className="text-sm text-gray-600">承認済み</p>
             <Award className="w-8 h-8 mx-auto mt-2 text-green-400" />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-red-600">{statistics.overview.rejected_requests}</div>
+            <div className="text-3xl font-bold text-red-600">
+              {statistics.overview.rejected_requests}
+            </div>
             <p className="text-sm text-gray-600">却下</p>
             <AlertTriangle className="w-8 h-8 mx-auto mt-2 text-red-400" />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold text-purple-600">{statistics.overview.approval_rate}%</div>
+            <div className="text-3xl font-bold text-purple-600">
+              {statistics.overview.approval_rate}%
+            </div>
             <p className="text-sm text-gray-600">承認率</p>
             <Target className="w-8 h-8 mx-auto mt-2 text-purple-400" />
           </CardContent>
@@ -283,18 +302,25 @@ export default function WithdrawalStatistics() {
           <CardContent>
             <div className="space-y-3">
               {statistics.reasons.map((reason, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
                   <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full ${{
-                      '怪我・体調不良': 'bg-red-400',
-                      '仕事・業務都合': 'bg-blue-400',
-                      '家庭・家族の事情': 'bg-green-400',
-                      'コロナ・感染症': 'bg-purple-400',
-                      '天候理由': 'bg-yellow-400',
-                      '交通・移動問題': 'bg-pink-400',
-                      'メンバー不足': 'bg-indigo-400',
-                      'その他': 'bg-gray-400'
-                    }[reason.category] || 'bg-gray-400'}`}></div>
+                    <div
+                      className={`w-4 h-4 rounded-full ${
+                        {
+                          "怪我・体調不良": "bg-red-400",
+                          "仕事・業務都合": "bg-blue-400",
+                          "家庭・家族の事情": "bg-green-400",
+                          "コロナ・感染症": "bg-purple-400",
+                          天候理由: "bg-yellow-400",
+                          "交通・移動問題": "bg-pink-400",
+                          メンバー不足: "bg-indigo-400",
+                          その他: "bg-gray-400",
+                        }[reason.category] || "bg-gray-400"
+                      }`}
+                    ></div>
                     <span className="font-medium">{reason.category}</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -304,9 +330,7 @@ export default function WithdrawalStatistics() {
                 </div>
               ))}
               {statistics.reasons.length === 0 && (
-                <div className="text-center py-6 text-gray-500">
-                  辞退理由のデータがありません
-                </div>
+                <div className="text-center py-6 text-gray-500">辞退理由のデータがありません</div>
               )}
             </div>
           </CardContent>
@@ -324,52 +348,68 @@ export default function WithdrawalStatistics() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-blue-50 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-blue-600">{statistics.processing_times.average_days}日</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {statistics.processing_times.average_days}日
+                  </div>
                   <div className="text-sm text-blue-700">平均処理時間</div>
                 </div>
                 <div className="p-3 bg-green-50 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-green-600">{statistics.processing_times.fastest_hours}h</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {statistics.processing_times.fastest_hours}h
+                  </div>
                   <div className="text-sm text-green-700">最速処理</div>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">24時間以内</span>
                   <div className="flex items-center gap-2">
                     <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full" 
-                        style={{ width: `${Math.min((statistics.processing_times.within_24h / (statistics.overview.approved_requests + statistics.overview.rejected_requests)) * 100, 100)}%` }}
+                      <div
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{
+                          width: `${Math.min((statistics.processing_times.within_24h / (statistics.overview.approved_requests + statistics.overview.rejected_requests)) * 100, 100)}%`,
+                        }}
                       ></div>
                     </div>
-                    <span className="text-sm text-gray-600">{statistics.processing_times.within_24h}件</span>
+                    <span className="text-sm text-gray-600">
+                      {statistics.processing_times.within_24h}件
+                    </span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">72時間以内</span>
                   <div className="flex items-center gap-2">
                     <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-yellow-500 h-2 rounded-full" 
-                        style={{ width: `${Math.min((statistics.processing_times.within_72h / (statistics.overview.approved_requests + statistics.overview.rejected_requests)) * 100, 100)}%` }}
+                      <div
+                        className="bg-yellow-500 h-2 rounded-full"
+                        style={{
+                          width: `${Math.min((statistics.processing_times.within_72h / (statistics.overview.approved_requests + statistics.overview.rejected_requests)) * 100, 100)}%`,
+                        }}
                       ></div>
                     </div>
-                    <span className="text-sm text-gray-600">{statistics.processing_times.within_72h}件</span>
+                    <span className="text-sm text-gray-600">
+                      {statistics.processing_times.within_72h}件
+                    </span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">1週間超過</span>
                   <div className="flex items-center gap-2">
                     <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-red-500 h-2 rounded-full" 
-                        style={{ width: `${Math.min((statistics.processing_times.over_week / (statistics.overview.approved_requests + statistics.overview.rejected_requests)) * 100, 100)}%` }}
+                      <div
+                        className="bg-red-500 h-2 rounded-full"
+                        style={{
+                          width: `${Math.min((statistics.processing_times.over_week / (statistics.overview.approved_requests + statistics.overview.rejected_requests)) * 100, 100)}%`,
+                        }}
                       ></div>
                     </div>
-                    <span className="text-sm text-gray-600">{statistics.processing_times.over_week}件</span>
+                    <span className="text-sm text-gray-600">
+                      {statistics.processing_times.over_week}件
+                    </span>
                   </div>
                 </div>
               </div>
@@ -408,9 +448,15 @@ export default function WithdrawalStatistics() {
                       <td className="text-center p-2">{tournament.total_teams}</td>
                       <td className="text-center p-2">{tournament.withdrawal_requests}</td>
                       <td className="text-center p-2">
-                        <Badge 
-                          variant="outline" 
-                          className={tournament.withdrawal_rate > 20 ? 'text-red-600 border-red-200' : tournament.withdrawal_rate > 10 ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200'}
+                        <Badge
+                          variant="outline"
+                          className={
+                            tournament.withdrawal_rate > 20
+                              ? "text-red-600 border-red-200"
+                              : tournament.withdrawal_rate > 10
+                                ? "text-yellow-600 border-yellow-200"
+                                : "text-green-600 border-green-200"
+                          }
                         >
                           {tournament.withdrawal_rate}%
                         </Badge>
@@ -444,7 +490,9 @@ export default function WithdrawalStatistics() {
                     <div className="text-2xl font-bold text-purple-600">{block.block_name}</div>
                     <div className="text-sm text-purple-700 mb-2">ブロック</div>
                     <div className="space-y-1">
-                      <div className="text-lg font-semibold text-gray-700">{block.affected_teams}チーム</div>
+                      <div className="text-lg font-semibold text-gray-700">
+                        {block.affected_teams}チーム
+                      </div>
                       <div className="text-sm text-gray-600">{block.affected_matches}試合影響</div>
                     </div>
                   </div>
@@ -467,8 +515,13 @@ export default function WithdrawalStatistics() {
           <CardContent>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {statistics.timeline.map((day, index) => (
-                <div key={index} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
-                  <div className="text-sm font-medium">{new Date(day.date).toLocaleDateString('ja-JP')}</div>
+                <div
+                  key={index}
+                  className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded"
+                >
+                  <div className="text-sm font-medium">
+                    {new Date(day.date).toLocaleDateString("ja-JP")}
+                  </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-blue-600">申請: {day.requests}</span>
                     <span className="text-green-600">承認: {day.approvals}</span>

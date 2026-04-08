@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 // GET: アクセス付与一覧取得
 export async function GET(request: NextRequest) {
@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
 
     // ユーザー検索モード（admin/operatorロールを持つユーザーのみ）
     if (searchUsers) {
-      const userResult = await db.execute(`
+      const userResult = await db.execute(
+        `
         SELECT DISTINCT u.login_user_id, u.display_name, u.email
         FROM m_login_users u
         INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
@@ -33,7 +34,9 @@ export async function GET(request: NextRequest) {
           AND (u.display_name LIKE ? OR u.email LIKE ?)
         ORDER BY u.display_name
         LIMIT 20
-      `, [`%${searchUsers}%`, `%${searchUsers}%`]);
+      `,
+        [`%${searchUsers}%`, `%${searchUsers}%`],
+      );
 
       return NextResponse.json({
         success: true,
@@ -103,48 +106,54 @@ export async function POST(request: NextRequest) {
     const { format_id, login_user_id, expires_at, notes } = body;
 
     if (!format_id || !login_user_id) {
-      return NextResponse.json(
-        { error: "format_id と login_user_id は必須です" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "format_id と login_user_id は必須です" }, { status: 400 });
     }
 
     // フォーマット存在確認
     const formatResult = await db.execute(
       `SELECT format_id FROM m_tournament_formats WHERE format_id = ?`,
-      [format_id]
+      [format_id],
     );
     if (formatResult.rows.length === 0) {
       return NextResponse.json({ error: "フォーマットが見つかりません" }, { status: 404 });
     }
 
     // ユーザー存在確認（admin/operatorロールを持つユーザーのみ）
-    const userResult = await db.execute(`
+    const userResult = await db.execute(
+      `
       SELECT DISTINCT u.login_user_id, u.display_name
       FROM m_login_users u
       INNER JOIN m_login_user_roles r ON u.login_user_id = r.login_user_id
       WHERE u.login_user_id = ? AND u.is_active = 1 AND r.role = 'admin'
-    `, [login_user_id]);
+    `,
+      [login_user_id],
+    );
     if (userResult.rows.length === 0) {
-      return NextResponse.json({ error: "対象ユーザーが見つからないか、大会管理者ではありません" }, { status: 404 });
+      return NextResponse.json(
+        { error: "対象ユーザーが見つからないか、大会管理者ではありません" },
+        { status: 404 },
+      );
     }
 
     // 重複チェック
     const existingResult = await db.execute(
       `SELECT grant_id FROM t_format_access_grants WHERE format_id = ? AND login_user_id = ?`,
-      [format_id, login_user_id]
+      [format_id, login_user_id],
     );
     if (existingResult.rows.length > 0) {
       return NextResponse.json(
         { error: "このユーザーには既にアクセス権が付与されています" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       INSERT INTO t_format_access_grants (format_id, login_user_id, granted_by_login_user_id, expires_at, notes)
       VALUES (?, ?, ?, ?, ?)
-    `, [format_id, login_user_id, session.user.loginUserId, expires_at || null, notes || null]);
+    `,
+      [format_id, login_user_id, session.user.loginUserId, expires_at || null, notes || null],
+    );
 
     return NextResponse.json({
       success: true,
@@ -177,10 +186,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "grant_id は必須です" }, { status: 400 });
     }
 
-    const result = await db.execute(
-      `DELETE FROM t_format_access_grants WHERE grant_id = ?`,
-      [grant_id]
-    );
+    const result = await db.execute(`DELETE FROM t_format_access_grants WHERE grant_id = ?`, [
+      grant_id,
+    ]);
 
     if (!result.rowsAffected || result.rowsAffected === 0) {
       return NextResponse.json({ error: "指定されたgrantが見つかりません" }, { status: 404 });

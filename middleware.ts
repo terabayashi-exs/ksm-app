@@ -1,6 +1,7 @@
 // middleware.ts
-import { NextResponse } from "next/server";
+
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export default async function middleware(req: NextRequest) {
@@ -24,15 +25,18 @@ export default async function middleware(req: NextRequest) {
   const roles: string[] = Array.isArray(token?.roles) ? token.roles : [];
   const userRole = token?.role as string | undefined;
 
-  const hasAdminAccess = roles.includes("admin") || roles.includes("operator")
-    || userRole === "admin" || userRole === "operator";
+  const hasAdminAccess =
+    roles.includes("admin") ||
+    roles.includes("operator") ||
+    userRole === "admin" ||
+    userRole === "operator";
   // Edge browser localStorage fix headers
   const response = NextResponse.next();
-  const userAgent = req.headers.get('user-agent') || '';
+  const userAgent = req.headers.get("user-agent") || "";
 
-  if (userAgent.includes('Edg') && process.env.NODE_ENV === 'development') {
-    response.headers.set('X-Edge-Fix', 'true');
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  if (userAgent.includes("Edg") && process.env.NODE_ENV === "development") {
+    response.headers.set("X-Edge-Fix", "true");
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   }
 
   // 認証が必要なルートの定義
@@ -51,7 +55,7 @@ export default async function middleware(req: NextRequest) {
       // パスとクエリパラメータの両方を保持
       const fullPath = nextUrl.pathname + nextUrl.search;
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl)
+        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl),
       );
     }
     if (!hasAdminAccess) {
@@ -65,7 +69,7 @@ export default async function middleware(req: NextRequest) {
       // パスとクエリパラメータの両方を保持
       const fullPath = nextUrl.pathname + nextUrl.search;
       return NextResponse.redirect(
-        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl)
+        new URL(`/auth/login?callbackUrl=${encodeURIComponent(fullPath)}`, nextUrl),
       );
     }
   }
@@ -83,6 +87,6 @@ export const config = {
     // 審判ルートも明示的に追加（middlewareで除外処理を行う）
     "/referee/:path*",
     // 旧システムURLのリダイレクト
-    "/tournaments"
-  ]
+    "/tournaments",
+  ],
 };

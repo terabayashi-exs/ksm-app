@@ -1,11 +1,11 @@
 "use client";
 
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle, Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, ArrowRight, ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 interface OwnerInfo {
   login_user_id: number;
@@ -116,10 +116,7 @@ export default function TransferTournamentOwner() {
     if (selectedGroup?.current_owner?.login_user_id === u.login_user_id) return false;
     const term = ownerSearch.toLowerCase();
     if (!term) return true;
-    return (
-      u.display_name.toLowerCase().includes(term) ||
-      u.email.toLowerCase().includes(term)
-    );
+    return u.display_name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term);
   });
 
   if (loading) {
@@ -150,7 +147,9 @@ export default function TransferTournamentOwner() {
 
       {/* 成功・エラーメッセージ */}
       {result && (
-        <div className={`p-4 rounded-lg flex items-start gap-3 ${result.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+        <div
+          className={`p-4 rounded-lg flex items-start gap-3 ${result.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}
+        >
           {result.success ? (
             <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
           ) : (
@@ -246,7 +245,14 @@ export default function TransferTournamentOwner() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>新しいオーナーを選択</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => { setStep("select-group"); setSelectedNewOwner(null); }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStep("select-group");
+                  setSelectedNewOwner(null);
+                }}
+              >
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 戻る
               </Button>
@@ -255,7 +261,11 @@ export default function TransferTournamentOwner() {
               <span className="text-gray-500">移管対象:</span>{" "}
               <span className="font-medium">{selectedGroup.group_name}</span>
               <span className="text-gray-400 ml-2">
-                （現オーナー: {selectedGroup.current_owner?.display_name || selectedGroup.legacy_admin_login_id || "未設定"}）
+                （現オーナー:{" "}
+                {selectedGroup.current_owner?.display_name ||
+                  selectedGroup.legacy_admin_login_id ||
+                  "未設定"}
+                ）
               </span>
             </div>
           </CardHeader>
@@ -298,7 +308,14 @@ export default function TransferTournamentOwner() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>移管内容の確認</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => { setStep("select-owner"); setSelectedNewOwner(null); }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStep("select-owner");
+                  setSelectedNewOwner(null);
+                }}
+              >
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 戻る
               </Button>
@@ -310,7 +327,9 @@ export default function TransferTournamentOwner() {
               <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                 <p className="text-xs text-red-600 font-medium mb-1">移管元（現オーナー）</p>
                 <p className="font-medium">
-                  {selectedGroup.current_owner?.display_name || selectedGroup.legacy_admin_login_id || "未設定"}
+                  {selectedGroup.current_owner?.display_name ||
+                    selectedGroup.legacy_admin_login_id ||
+                    "未設定"}
                 </p>
                 {selectedGroup.current_owner?.email && (
                   <p className="text-sm text-gray-500">{selectedGroup.current_owner.email}</p>
@@ -361,7 +380,11 @@ export default function TransferTournamentOwner() {
               <Button variant="outline" onClick={resetSelection} disabled={transferring}>
                 キャンセル
               </Button>
-              <Button onClick={handleTransfer} disabled={transferring} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button
+                onClick={handleTransfer}
+                disabled={transferring}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 {transferring ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />

@@ -1,8 +1,8 @@
 // lib/tie-breaking-calculator.ts
 // 順位決定計算エンジン - カスタムルールによる順位決定
 
-import { db } from '@/lib/db';
-import { TieBreakingRule, parseTieBreakingRules } from '@/lib/tie-breaking-rules';
+import { db } from "@/lib/db";
+import { parseTieBreakingRules, TieBreakingRule } from "@/lib/tie-breaking-rules";
 
 /**
  * チーム成績データの型定義
@@ -69,7 +69,7 @@ export interface TieBreakingCalculation {
   rule_type: string;
   teams_affected: string[];
   description: string;
-  result: 'resolved' | 'unresolved' | 'lottery_required';
+  result: "resolved" | "unresolved" | "lottery_required";
 }
 
 /**
@@ -77,8 +77,8 @@ export interface TieBreakingCalculation {
  */
 type TieBreakingCalculator = (
   teams: TeamStandingData[],
-  context: TieBreakingContext
-) => Promise<{ teams: TeamStandingData[]; resolved: boolean; }>;
+  context: TieBreakingContext,
+) => Promise<{ teams: TeamStandingData[]; resolved: boolean }>;
 
 /**
  * 順位決定計算エンジンクラス
@@ -97,30 +97,30 @@ export class TieBreakingEngine {
     const calculators = new Map<string, TieBreakingCalculator>();
 
     // 共通ルール
-    calculators.set('points', this.calculateByPoints.bind(this));
-    calculators.set('head_to_head', this.calculateByHeadToHead.bind(this)); // 後方互換
-    calculators.set('h2h_points', this.calculateByH2HPoints.bind(this));
-    calculators.set('h2h_goal_difference', this.calculateByH2HGoalDifference.bind(this));
-    calculators.set('h2h_goals_for', this.calculateByH2HGoalsFor.bind(this));
-    calculators.set('lottery', this.calculateByLottery.bind(this));
+    calculators.set("points", this.calculateByPoints.bind(this));
+    calculators.set("head_to_head", this.calculateByHeadToHead.bind(this)); // 後方互換
+    calculators.set("h2h_points", this.calculateByH2HPoints.bind(this));
+    calculators.set("h2h_goal_difference", this.calculateByH2HGoalDifference.bind(this));
+    calculators.set("h2h_goals_for", this.calculateByH2HGoalsFor.bind(this));
+    calculators.set("lottery", this.calculateByLottery.bind(this));
 
     // 競技種別固有ルール
-    if (sportCode === 'soccer' || sportCode === 'pk_championship') {
-      calculators.set('goal_difference', this.calculateByGoalDifference.bind(this));
-      calculators.set('goals_for', this.calculateByGoalsFor.bind(this));
-      calculators.set('fair_play', this.calculateByFairPlay.bind(this));
-    } else if (sportCode === 'baseball') {
-      calculators.set('win_rate', this.calculateByWinRate.bind(this));
-      calculators.set('run_difference', this.calculateByGoalDifference.bind(this)); // 同じロジック
-      calculators.set('runs_scored', this.calculateByGoalsFor.bind(this)); // 同じロジック
-    } else if (sportCode === 'track_and_field') {
-      calculators.set('best_time', this.calculateByBestTime.bind(this));
-      calculators.set('win_count', this.calculateByWinCount.bind(this));
-      calculators.set('podium_count', this.calculateByPodiumCount.bind(this));
-    } else if (sportCode === 'basketball') {
-      calculators.set('win_rate', this.calculateByWinRate.bind(this));
-      calculators.set('point_difference', this.calculateByGoalDifference.bind(this)); // 同じロジック
-      calculators.set('points_scored', this.calculateByGoalsFor.bind(this)); // 同じロジック
+    if (sportCode === "soccer" || sportCode === "pk_championship") {
+      calculators.set("goal_difference", this.calculateByGoalDifference.bind(this));
+      calculators.set("goals_for", this.calculateByGoalsFor.bind(this));
+      calculators.set("fair_play", this.calculateByFairPlay.bind(this));
+    } else if (sportCode === "baseball") {
+      calculators.set("win_rate", this.calculateByWinRate.bind(this));
+      calculators.set("run_difference", this.calculateByGoalDifference.bind(this)); // 同じロジック
+      calculators.set("runs_scored", this.calculateByGoalsFor.bind(this)); // 同じロジック
+    } else if (sportCode === "track_and_field") {
+      calculators.set("best_time", this.calculateByBestTime.bind(this));
+      calculators.set("win_count", this.calculateByWinCount.bind(this));
+      calculators.set("podium_count", this.calculateByPodiumCount.bind(this));
+    } else if (sportCode === "basketball") {
+      calculators.set("win_rate", this.calculateByWinRate.bind(this));
+      calculators.set("point_difference", this.calculateByGoalDifference.bind(this)); // 同じロジック
+      calculators.set("points_scored", this.calculateByGoalsFor.bind(this)); // 同じロジック
     }
 
     return calculators;
@@ -140,7 +140,7 @@ export class TieBreakingEngine {
       if (a.points !== b.points) return b.points - a.points;
       if (a.goal_difference !== b.goal_difference) return b.goal_difference - a.goal_difference;
       if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
-      return a.team_name.localeCompare(b.team_name, 'ja');
+      return a.team_name.localeCompare(b.team_name, "ja");
     });
 
     // 統計値の同一性で同着グループを特定
@@ -164,9 +164,9 @@ export class TieBreakingEngine {
 
           calculations.push({
             rule_type: rule.type,
-            teams_affected: group.teams.map(t => t.team_id),
+            teams_affected: group.teams.map((t) => t.team_id),
             description: this.getCalculationDescription(rule.type, group.teams.length),
-            result: resolved ? 'resolved' : 'unresolved'
+            result: resolved ? "resolved" : "unresolved",
           });
 
           if (resolved) {
@@ -177,21 +177,21 @@ export class TieBreakingEngine {
           console.error(`計算エラー (${rule.type}):`, error);
           calculations.push({
             rule_type: rule.type,
-            teams_affected: group.teams.map(t => t.team_id),
+            teams_affected: group.teams.map((t) => t.team_id),
             description: `計算エラー: ${error instanceof Error ? error.message : String(error)}`,
-            result: 'unresolved'
+            result: "unresolved",
           });
         }
       }
 
       // 抽選が必要な場合
       if (!resolved && groupTeams.length > 1) {
-        lotteriesRequired.push(groupTeams.map(t => t.team_id).join(','));
+        lotteriesRequired.push(groupTeams.map((t) => t.team_id).join(","));
         calculations.push({
-          rule_type: 'lottery',
-          teams_affected: groupTeams.map(t => t.team_id),
-          description: '抽選による順位決定が必要です',
-          result: 'lottery_required'
+          rule_type: "lottery",
+          teams_affected: groupTeams.map((t) => t.team_id),
+          description: "抽選による順位決定が必要です",
+          result: "lottery_required",
         });
       }
 
@@ -203,7 +203,7 @@ export class TieBreakingEngine {
       teams: tieBreakingApplied ? teams : this.assignFinalPositions(teams),
       tieBreakingApplied,
       lotteriesRequired,
-      calculations
+      calculations,
     };
   }
 
@@ -212,8 +212,8 @@ export class TieBreakingEngine {
    */
   private async calculateByPoints(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     const sorted = [...teams].sort((a, b) => b.points - a.points);
     const resolved = this.hasUniqueRanking(sorted, (team) => team.points);
     return { teams: sorted, resolved };
@@ -224,8 +224,8 @@ export class TieBreakingEngine {
    */
   private async calculateByGoalDifference(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     const sorted = [...teams].sort((a, b) => b.goal_difference - a.goal_difference);
     const resolved = this.hasUniqueRanking(sorted, (team) => team.goal_difference);
     return { teams: sorted, resolved };
@@ -236,8 +236,8 @@ export class TieBreakingEngine {
    */
   private async calculateByGoalsFor(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     const sorted = [...teams].sort((a, b) => b.goals_for - a.goals_for);
     const resolved = this.hasUniqueRanking(sorted, (team) => team.goals_for);
     return { teams: sorted, resolved };
@@ -248,13 +248,13 @@ export class TieBreakingEngine {
    */
   private async calculateByWinRate(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
-    const teamsWithRate = teams.map(team => ({
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
+    const teamsWithRate = teams.map((team) => ({
       ...team,
-      win_rate: team.matches_played > 0 ? team.wins / team.matches_played : 0
+      win_rate: team.matches_played > 0 ? team.wins / team.matches_played : 0,
     }));
-    
+
     const sorted = teamsWithRate.sort((a, b) => (b.win_rate || 0) - (a.win_rate || 0));
     const resolved = this.hasUniqueRanking(sorted, (team) => team.win_rate || 0);
     return { teams: sorted, resolved };
@@ -265,8 +265,8 @@ export class TieBreakingEngine {
    */
   private async calculateByHeadToHead(
     teams: TeamStandingData[],
-    context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     if (teams.length !== 2) {
       // 3チーム以上の場合は複雑になるため、現在は2チームのみ対応
       return { teams, resolved: false };
@@ -276,9 +276,10 @@ export class TieBreakingEngine {
     const team2 = teams[1];
 
     // 直接対決の試合を検索
-    const headToHeadMatches = context.matches.filter(match =>
-      (match.team1_id === team1.team_id && match.team2_id === team2.team_id) ||
-      (match.team1_id === team2.team_id && match.team2_id === team1.team_id)
+    const headToHeadMatches = context.matches.filter(
+      (match) =>
+        (match.team1_id === team1.team_id && match.team2_id === team2.team_id) ||
+        (match.team1_id === team2.team_id && match.team2_id === team1.team_id),
     );
 
     if (headToHeadMatches.length === 0) {
@@ -331,10 +332,16 @@ export class TieBreakingEngine {
    */
   private calculateH2HStats(
     teams: TeamStandingData[],
-    matches: MatchData[]
-  ): Map<string, { points: number; goalsFor: number; goalsAgainst: number; goalDifference: number }> {
-    const stats = new Map<string, { points: number; goalsFor: number; goalsAgainst: number; goalDifference: number }>();
-    const teamIds = new Set(teams.map(t => t.team_id));
+    matches: MatchData[],
+  ): Map<
+    string,
+    { points: number; goalsFor: number; goalsAgainst: number; goalDifference: number }
+  > {
+    const stats = new Map<
+      string,
+      { points: number; goalsFor: number; goalsAgainst: number; goalDifference: number }
+    >();
+    const teamIds = new Set(teams.map((t) => t.team_id));
 
     // 初期化
     for (const team of teams) {
@@ -342,9 +349,7 @@ export class TieBreakingEngine {
     }
 
     // 対象チーム間の試合のみ抽出
-    const h2hMatches = matches.filter(m =>
-      teamIds.has(m.team1_id) && teamIds.has(m.team2_id)
-    );
+    const h2hMatches = matches.filter((m) => teamIds.has(m.team1_id) && teamIds.has(m.team2_id));
 
     for (const match of h2hMatches) {
       const s1 = stats.get(match.team1_id)!;
@@ -378,8 +383,8 @@ export class TieBreakingEngine {
    */
   private async calculateByH2HPoints(
     teams: TeamStandingData[],
-    context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     if (teams.length < 2) return { teams, resolved: false };
 
     const stats = this.calculateH2HStats(teams, context.matches);
@@ -390,7 +395,9 @@ export class TieBreakingEngine {
     });
 
     // 全チームの勝点が同じなら未解決
-    const allSame = sorted.every(t => stats.get(t.team_id)!.points === stats.get(sorted[0].team_id)!.points);
+    const allSame = sorted.every(
+      (t) => stats.get(t.team_id)!.points === stats.get(sorted[0].team_id)!.points,
+    );
     return { teams: sorted, resolved: !allSame };
   }
 
@@ -399,8 +406,8 @@ export class TieBreakingEngine {
    */
   private async calculateByH2HGoalDifference(
     teams: TeamStandingData[],
-    context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     if (teams.length < 2) return { teams, resolved: false };
 
     const stats = this.calculateH2HStats(teams, context.matches);
@@ -410,7 +417,9 @@ export class TieBreakingEngine {
       return sb.goalDifference - sa.goalDifference;
     });
 
-    const allSame = sorted.every(t => stats.get(t.team_id)!.goalDifference === stats.get(sorted[0].team_id)!.goalDifference);
+    const allSame = sorted.every(
+      (t) => stats.get(t.team_id)!.goalDifference === stats.get(sorted[0].team_id)!.goalDifference,
+    );
     return { teams: sorted, resolved: !allSame };
   }
 
@@ -419,8 +428,8 @@ export class TieBreakingEngine {
    */
   private async calculateByH2HGoalsFor(
     teams: TeamStandingData[],
-    context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     if (teams.length < 2) return { teams, resolved: false };
 
     const stats = this.calculateH2HStats(teams, context.matches);
@@ -430,7 +439,9 @@ export class TieBreakingEngine {
       return sb.goalsFor - sa.goalsFor;
     });
 
-    const allSame = sorted.every(t => stats.get(t.team_id)!.goalsFor === stats.get(sorted[0].team_id)!.goalsFor);
+    const allSame = sorted.every(
+      (t) => stats.get(t.team_id)!.goalsFor === stats.get(sorted[0].team_id)!.goalsFor,
+    );
     return { teams: sorted, resolved: !allSame };
   }
 
@@ -439,15 +450,19 @@ export class TieBreakingEngine {
    */
   private async calculateByBestTime(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     // best_timeが設定されている場合のみ（少ない方が上位）
-    const teamsWithTime = teams.filter(team => team.best_time !== undefined && team.best_time > 0);
-    const teamsWithoutTime = teams.filter(team => team.best_time === undefined || team.best_time <= 0);
+    const teamsWithTime = teams.filter(
+      (team) => team.best_time !== undefined && team.best_time > 0,
+    );
+    const teamsWithoutTime = teams.filter(
+      (team) => team.best_time === undefined || team.best_time <= 0,
+    );
 
     const sortedWithTime = teamsWithTime.sort((a, b) => (a.best_time || 0) - (b.best_time || 0));
     const sorted = [...sortedWithTime, ...teamsWithoutTime];
-    
+
     const resolved = this.hasUniqueRanking(sortedWithTime, (team) => team.best_time || 0);
     return { teams: sorted, resolved };
   }
@@ -457,8 +472,8 @@ export class TieBreakingEngine {
    */
   private async calculateByWinCount(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     const sorted = [...teams].sort((a, b) => b.wins - a.wins);
     const resolved = this.hasUniqueRanking(sorted, (team) => team.wins);
     return { teams: sorted, resolved };
@@ -469,8 +484,8 @@ export class TieBreakingEngine {
    */
   private async calculateByPodiumCount(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     // 仮実装（実際にはpodium_countフィールドが必要）
     const sorted = [...teams].sort((a, b) => b.wins - a.wins); // 暫定的に勝利数を使用
     const resolved = this.hasUniqueRanking(sorted, (team) => team.wins);
@@ -482,8 +497,8 @@ export class TieBreakingEngine {
    */
   private async calculateByFairPlay(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     // 仮実装（実際にはfair_play_pointsフィールドが必要）
     // 少ない方が上位
     const sorted = [...teams].sort((a, b) => (a.fair_play_points || 0) - (b.fair_play_points || 0));
@@ -496,8 +511,8 @@ export class TieBreakingEngine {
    */
   private async calculateByLottery(
     teams: TeamStandingData[],
-    _context: TieBreakingContext
-  ): Promise<{ teams: TeamStandingData[]; resolved: boolean; }> {
+    _context: TieBreakingContext,
+  ): Promise<{ teams: TeamStandingData[]; resolved: boolean }> {
     // 抽選は手動設定が必要なため、解決されない
     return { teams, resolved: false };
   }
@@ -506,9 +521,11 @@ export class TieBreakingEngine {
    * ユーティリティ関数群
    */
 
-  private groupByPosition(teams: TeamStandingData[]): Array<{ position: number; teams: TeamStandingData[] }> {
+  private groupByPosition(
+    teams: TeamStandingData[],
+  ): Array<{ position: number; teams: TeamStandingData[] }> {
     const groups = new Map<number, TeamStandingData[]>();
-    
+
     for (const team of teams) {
       if (!groups.has(team.position)) {
         groups.set(team.position, []);
@@ -522,14 +539,16 @@ export class TieBreakingEngine {
   /**
    * 統計値（勝点・得失点差・総得点）の同一性でグループ化
    */
-  private groupByStatistics(teams: TeamStandingData[]): Array<{ position: number; teams: TeamStandingData[] }> {
+  private groupByStatistics(
+    teams: TeamStandingData[],
+  ): Array<{ position: number; teams: TeamStandingData[] }> {
     const groups: Array<{ position: number; teams: TeamStandingData[] }> = [];
     let currentPosition = 1;
-    
+
     for (let i = 0; i < teams.length; i++) {
       const currentTeam = teams[i];
       const group: TeamStandingData[] = [currentTeam];
-      
+
       // 同じ統計値を持つ後続チームを探す
       for (let j = i + 1; j < teams.length; j++) {
         const nextTeam = teams[j];
@@ -543,18 +562,18 @@ export class TieBreakingEngine {
           break; // 統計値が異なる場合は終了
         }
       }
-      
+
       groups.push({ position: currentPosition, teams: group });
       currentPosition += group.length; // 次のグループの開始順位
       i += group.length - 1; // 処理済みチームをスキップ
     }
-    
+
     return groups;
   }
 
   private hasUniqueRanking<T>(teams: T[], getValue: (team: T) => number): boolean {
     if (teams.length <= 1) return true;
-    
+
     const values = teams.map(getValue);
     return new Set(values).size === values.length;
   }
@@ -563,10 +582,10 @@ export class TieBreakingEngine {
     allTeams: TeamStandingData[],
     groupTeams: TeamStandingData[],
     startPosition: number,
-    resolved: boolean = false
+    resolved: boolean = false,
   ): TeamStandingData[] {
-    const groupTeamIds = new Set(groupTeams.map(t => t.team_id));
-    const otherTeams = allTeams.filter(t => !groupTeamIds.has(t.team_id));
+    const groupTeamIds = new Set(groupTeams.map((t) => t.team_id));
+    const otherTeams = allTeams.filter((t) => !groupTeamIds.has(t.team_id));
 
     // グループ内の順位を再設定
     const updatedGroupTeams: TeamStandingData[] = [];
@@ -601,26 +620,26 @@ export class TieBreakingEngine {
   private assignFinalPositions(teams: TeamStandingData[]): TeamStandingData[] {
     const result: TeamStandingData[] = [];
     let currentPosition = 1;
-    
+
     for (let i = 0; i < teams.length; i++) {
       const currentTeam = teams[i];
       result.push({ ...currentTeam, position: currentPosition });
-      
+
       // 次のチームと統計値が同じかチェック
       if (i < teams.length - 1) {
         const nextTeam = teams[i + 1];
-        const isNextTeamTied = 
+        const isNextTeamTied =
           currentTeam.points === nextTeam.points &&
           currentTeam.goal_difference === nextTeam.goal_difference &&
           currentTeam.goals_for === nextTeam.goals_for;
-        
+
         if (!isNextTeamTied) {
           currentPosition = i + 2; // 次の順位は現在のインデックス + 2
         }
         // 同着の場合はcurrentPositionを変更しない
       }
     }
-    
+
     return result;
   }
 
@@ -637,7 +656,7 @@ export class TieBreakingEngine {
       best_time: `ベストタイムによる順位決定（${teamsCount}チーム）`,
       win_count: `勝利数による順位決定（${teamsCount}チーム）`,
       fair_play: `フェアプレーポイントによる順位決定（${teamsCount}チーム）`,
-      lottery: `抽選による順位決定（${teamsCount}チーム）`
+      lottery: `抽選による順位決定（${teamsCount}チーム）`,
     };
 
     return descriptions[ruleType] || `${ruleType}による順位決定（${teamsCount}チーム）`;
@@ -649,14 +668,17 @@ export class TieBreakingEngine {
  */
 export async function getTournamentTieBreakingRules(
   tournamentId: number,
-  phase: string
+  phase: string,
 ): Promise<TieBreakingRule[]> {
   try {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT tie_breaking_rules, tie_breaking_enabled
       FROM t_tournament_rules
       WHERE tournament_id = ? AND phase = ?
-    `, [tournamentId, phase]);
+    `,
+      [tournamentId, phase],
+    );
 
     if (result.rows.length === 0 || !result.rows[0].tie_breaking_enabled) {
       return [];
@@ -665,7 +687,7 @@ export async function getTournamentTieBreakingRules(
     const rulesJson = result.rows[0].tie_breaking_rules;
     return parseTieBreakingRules(rulesJson ? String(rulesJson) : null);
   } catch (error) {
-    console.error('順位決定ルール取得エラー:', error);
+    console.error("順位決定ルール取得エラー:", error);
     return [];
   }
 }

@@ -1,21 +1,34 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Building2,
+  Check,
+  ChevronsUpDown,
+  Info,
+  Loader2,
+  Lock,
+  Plus,
+  Sparkles,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
+import SchedulePreview from "@/components/features/tournament/SchedulePreview";
+import FormatDetailBadges, {
+  getSportIcon,
+} from "@/components/features/tournament-format/FormatDetailBadges";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Users, Sparkles, Plus, Trash2, Info, Loader2, Building2, X, ChevronsUpDown, Check, Lock } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import SchedulePreview from "@/components/features/tournament/SchedulePreview";
-import FormatDetailBadges, { getSportIcon } from "@/components/features/tournament-format/FormatDetailBadges";
-import React from "react";
+import { Switch } from "@/components/ui/switch";
 
 // 型定義
 interface TournamentGroup {
@@ -42,7 +55,13 @@ interface Format {
   default_match_duration?: number | null;
   default_break_duration?: number | null;
   matchday_count?: number;
-  phase_stats?: Array<{ phase: string; phase_name: string; order: number; block_count: number; max_court_number: number | null }>;
+  phase_stats?: Array<{
+    phase: string;
+    phase_name: string;
+    order: number;
+    block_count: number;
+    max_court_number: number | null;
+  }>;
   visibility?: string;
   isAccessible?: boolean;
 }
@@ -62,7 +81,7 @@ interface SportType {
 
 interface RecommendedFormat extends Format {
   recommendationReason: string;
-  matchType: 'exact' | 'close' | 'alternative';
+  matchType: "exact" | "close" | "alternative";
 }
 
 interface FormatRecommendation {
@@ -84,15 +103,25 @@ interface CustomScheduleMatch {
 // フォームスキーマ定義
 const tournamentCreateSchema = z.object({
   group_id: z.number().min(1, "所属する大会を選択してください"),
-  tournament_name: z.string().min(1, "部門名は必須です").max(100, "部門名は100文字以内で入力してください"),
+  tournament_name: z
+    .string()
+    .min(1, "部門名は必須です")
+    .max(100, "部門名は100文字以内で入力してください"),
   sport_type_id: z.number().min(1, "競技種別を選択してください"),
   format_id: z.number().min(1, "大会フォーマットを選択してください"),
   venue_ids: z.array(z.number()).min(1, "会場を1つ以上選択してください"),
-  team_count: z.number().min(2, "チーム数は2以上で入力してください").max(128, "チーム数は128以下で入力してください"),
-  tournament_dates: z.array(z.object({
-    dayNumber: z.number(),
-    date: z.string()
-  })).min(1, "開催日程は必須です"),
+  team_count: z
+    .number()
+    .min(2, "チーム数は2以上で入力してください")
+    .max(128, "チーム数は128以下で入力してください"),
+  tournament_dates: z
+    .array(
+      z.object({
+        dayNumber: z.number(),
+        date: z.string(),
+      }),
+    )
+    .min(1, "開催日程は必須です"),
   match_duration_minutes: z.number().min(5, "試合時間は5分以上").max(120, "試合時間は120分以下"),
   break_duration_minutes: z.number().min(0, "休憩時間は0分以上").max(30, "休憩時間は30分以下"),
   display_match_duration: z.string().max(50),
@@ -113,7 +142,9 @@ export default function TournamentCreateNewForm() {
   const [sportTypes, setSportTypes] = useState<SportType[]>([]);
   const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
   const [loadingTournamentGroups, setLoadingTournamentGroups] = useState(true);
-  const [step, setStep] = useState<'sport-selection' | 'team-count' | 'format-selection' | 'details'>('sport-selection');
+  const [step, setStep] = useState<
+    "sport-selection" | "team-count" | "format-selection" | "details"
+  >("sport-selection");
   const [selectedSportType, setSelectedSportType] = useState<SportType | null>(null);
   const [teamCount, setTeamCount] = useState<number>(2);
   const [recommendation, setRecommendation] = useState<FormatRecommendation | null>(null);
@@ -125,7 +156,7 @@ export default function TournamentCreateNewForm() {
   const [selectedVenues, setSelectedVenues] = useState<Venue[]>([]);
   const [derivedCourtCount, setDerivedCourtCount] = useState<number>(4);
   const [venuePopoverOpen, setVenuePopoverOpen] = useState(false);
-  const [venueSearchQuery, setVenueSearchQuery] = useState('');
+  const [venueSearchQuery, setVenueSearchQuery] = useState("");
 
   const {
     register,
@@ -133,45 +164,53 @@ export default function TournamentCreateNewForm() {
     formState: { errors },
     setValue,
     watch,
-    getValues
+    getValues,
   } = useForm<TournamentCreateForm>({
     resolver: zodResolver(tournamentCreateSchema),
     defaultValues: {
       sport_type_id: 1,
       team_count: 8,
       venue_ids: [],
-      tournament_dates: [{
-        dayNumber: 1,
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      }],
+      tournament_dates: [
+        {
+          dayNumber: 1,
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        },
+      ],
       match_duration_minutes: 15,
       break_duration_minutes: 5,
       display_match_duration: "",
       is_public: true,
       show_players_public: false,
-      public_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
-      recruitment_start_date: new Date().toISOString().split('T')[0] + 'T00:00',
-      recruitment_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00',
+      public_start_date: new Date().toISOString().split("T")[0] + "T00:00",
+      recruitment_start_date: new Date().toISOString().split("T")[0] + "T00:00",
+      recruitment_end_date:
+        new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] + "T00:00",
     },
   });
 
   // スケジュール変更ハンドラ
-  const handleScheduleChange = useCallback((customMatches: Array<{
-    match_id: number;
-    start_time: string;
-    court_number: number;
-  }>) => {
-    // SchedulePreviewから渡される簡略データを拡張データに変換
-    const extendedCustomMatches = customMatches.map(match => ({
-      match_id: match.match_id,
-      match_code: `M${match.match_id}`,
-      start_time: match.start_time,
-      court_number: match.court_number,
-      team1_display_name: '',
-      team2_display_name: ''
-    }));
-    setCustomSchedule(extendedCustomMatches);
-  }, []);
+  const handleScheduleChange = useCallback(
+    (
+      customMatches: Array<{
+        match_id: number;
+        start_time: string;
+        court_number: number;
+      }>,
+    ) => {
+      // SchedulePreviewから渡される簡略データを拡張データに変換
+      const extendedCustomMatches = customMatches.map((match) => ({
+        match_id: match.match_id,
+        match_code: `M${match.match_id}`,
+        start_time: match.start_time,
+        court_number: match.court_number,
+        team1_display_name: "",
+        team2_display_name: "",
+      }));
+      setCustomSchedule(extendedCustomMatches);
+    },
+    [],
+  );
 
   // 会場データ、競技種別データ、大会データの取得
   useEffect(() => {
@@ -183,11 +222,11 @@ export default function TournamentCreateNewForm() {
           setVenues(data.data || data.venues);
 
           // URLパラメータからvenue_idを取得して設定
-          const venueIdParam = searchParams.get('venue_id');
+          const venueIdParam = searchParams.get("venue_id");
           if (venueIdParam) {
             const venueId = parseInt(venueIdParam);
             if (!isNaN(venueId)) {
-              setValue('venue_ids', [venueId]);
+              setValue("venue_ids", [venueId]);
               const venuesList = data.data || data.venues;
               const venue = venuesList.find((v: Venue) => v.venue_id === venueId);
               if (venue) setSelectedVenues([venue]);
@@ -223,11 +262,11 @@ export default function TournamentCreateNewForm() {
           setTournamentGroups(data.data || []);
 
           // URLパラメータからgroup_idを取得して設定
-          const groupIdParam = searchParams.get('group_id');
+          const groupIdParam = searchParams.get("group_id");
           if (groupIdParam) {
             const groupId = parseInt(groupIdParam);
             if (!isNaN(groupId)) {
-              setValue('group_id', groupId);
+              setValue("group_id", groupId);
             }
           }
         }
@@ -247,24 +286,27 @@ export default function TournamentCreateNewForm() {
   const fetchRecommendation = async (count: number, sportTypeId?: number) => {
     setLoadingRecommendation(true);
     try {
-      const currentSportTypeId = sportTypeId || selectedSportType?.sport_type_id || watch('sport_type_id');
-      
+      const currentSportTypeId =
+        sportTypeId || selectedSportType?.sport_type_id || watch("sport_type_id");
+
       if (!currentSportTypeId) {
-        console.warn('競技種別が選択されていません');
+        console.warn("競技種別が選択されていません");
         setLoadingRecommendation(false);
         return;
       }
-      
-      const response = await fetch(`/api/tournaments/formats/recommend?teamCount=${count}&sportTypeId=${currentSportTypeId}`);
+
+      const response = await fetch(
+        `/api/tournaments/formats/recommend?teamCount=${count}&sportTypeId=${currentSportTypeId}`,
+      );
       const result = await response.json();
       if (result.success) {
         setRecommendation(result.data);
-        setValue('team_count', count);
+        setValue("team_count", count);
       } else {
-        console.error('フォーマット推奨エラー:', result.error);
+        console.error("フォーマット推奨エラー:", result.error);
       }
     } catch (error) {
-      console.error('推奨取得エラー:', error);
+      console.error("推奨取得エラー:", error);
     } finally {
       setLoadingRecommendation(false);
     }
@@ -274,34 +316,37 @@ export default function TournamentCreateNewForm() {
   const handleSportTypeSelect = (sportType: SportType) => {
     setSelectedSportType(sportType);
     setValue("sport_type_id", sportType.sport_type_id);
-    
+
     // 競技種別に応じてデフォルト値を設定
     setValue("match_duration_minutes", sportType.default_match_duration);
-    
+
     // 競技がサッカーの場合は試合時間を90分、その他は既存のデフォルト
-    if (sportType.sport_code === 'soccer') {
+    if (sportType.sport_code === "soccer") {
       setValue("match_duration_minutes", 90);
       setValue("break_duration_minutes", 10);
-    } else if (sportType.sport_code === 'pk') {
+    } else if (sportType.sport_code === "pk") {
       setValue("match_duration_minutes", 15);
       setValue("break_duration_minutes", 5);
     }
-    
-    setStep('team-count');
+
+    setStep("team-count");
   };
 
   // チーム数確定
   const handleTeamCountSubmit = () => {
     if (teamCount >= 2) {
       fetchRecommendation(teamCount, selectedSportType?.sport_type_id);
-      setStep('format-selection');
+      setStep("format-selection");
     }
   };
 
   // フォーマット選択
   const handleFormatSelect = async (formatId: number) => {
-    const allFormats = [...(recommendation?.recommendedFormats || []), ...(recommendation?.allFormats || [])];
-    const format = allFormats.find(f => f.format_id === formatId);
+    const allFormats = [
+      ...(recommendation?.recommendedFormats || []),
+      ...(recommendation?.allFormats || []),
+    ];
+    const format = allFormats.find((f) => f.format_id === formatId);
 
     // アクセス不可のフォーマットは選択不可
     if (format && format.isAccessible === false) return;
@@ -325,31 +370,40 @@ export default function TournamentCreateNewForm() {
       if (result.success && result.data.statistics) {
         // テンプレートからコート数を自動算出
         if (result.data.templates && result.data.templates.length > 0) {
-          const maxCourt = Math.max(...result.data.templates.map((t: { court_number?: number }) => t.court_number || 0), 1);
+          const maxCourt = Math.max(
+            ...result.data.templates.map((t: { court_number?: number }) => t.court_number || 0),
+            1,
+          );
           setDerivedCourtCount(maxCourt);
         }
 
         // matchdayがあるフォーマットはリーグ戦作成画面へリダイレクト
         if (result.data.statistics.hasMatchdays) {
-          const allFormats = [...(recommendation?.recommendedFormats || []), ...(recommendation?.allFormats || [])];
-          const format = allFormats.find(f => f.format_id === formatId);
-          const currentGroupId = getValues('group_id');
-          const currentGroup = tournamentGroups.find(g => g.group_id === currentGroupId);
-          sessionStorage.setItem('create-league-context', JSON.stringify({
-            sport_type_id: selectedSportType?.sport_type_id,
-            sport_name: selectedSportType?.sport_name,
-            team_count: teamCount,
-            format_id: formatId,
-            format_name: format?.format_name || '',
-            default_match_duration: format?.default_match_duration ?? null,
-            default_break_duration: format?.default_break_duration ?? null,
-            group_id: currentGroupId || null,
-            group_name: currentGroup?.group_name || '',
-            matchday_count: result.data.statistics.maxMatchday,
-            matches_by_matchday: result.data.statistics.matchesByMatchday,
-            templates: result.data.templates || [],
-          }));
-          router.push('/admin/tournaments/create-league');
+          const allFormats = [
+            ...(recommendation?.recommendedFormats || []),
+            ...(recommendation?.allFormats || []),
+          ];
+          const format = allFormats.find((f) => f.format_id === formatId);
+          const currentGroupId = getValues("group_id");
+          const currentGroup = tournamentGroups.find((g) => g.group_id === currentGroupId);
+          sessionStorage.setItem(
+            "create-league-context",
+            JSON.stringify({
+              sport_type_id: selectedSportType?.sport_type_id,
+              sport_name: selectedSportType?.sport_name,
+              team_count: teamCount,
+              format_id: formatId,
+              format_name: format?.format_name || "",
+              default_match_duration: format?.default_match_duration ?? null,
+              default_break_duration: format?.default_break_duration ?? null,
+              group_id: currentGroupId || null,
+              group_name: currentGroup?.group_name || "",
+              matchday_count: result.data.statistics.maxMatchday,
+              matches_by_matchday: result.data.statistics.matchesByMatchday,
+              templates: result.data.templates || [],
+            }),
+          );
+          router.push("/admin/tournaments/create-league");
           return;
         }
 
@@ -365,34 +419,38 @@ export default function TournamentCreateNewForm() {
           date.setDate(baseDate.getDate() + (i - 1));
           baseDates.push({
             dayNumber: i,
-            date: date.toISOString().split('T')[0]
+            date: date.toISOString().split("T")[0],
           });
         }
 
-        setValue('tournament_dates', baseDates);
+        setValue("tournament_dates", baseDates);
 
         if (requiredDays > 1) {
           console.log(`フォーマットID ${formatId} は ${requiredDays}日間の開催が必要です`);
         }
       } else {
         // テンプレート情報が取得できない場合は1日のみ
-        const baseDates = [{
-          dayNumber: 1,
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }];
-        setValue('tournament_dates', baseDates);
+        const baseDates = [
+          {
+            dayNumber: 1,
+            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          },
+        ];
+        setValue("tournament_dates", baseDates);
       }
     } catch (error) {
-      console.error('テンプレート情報の取得に失敗:', error);
+      console.error("テンプレート情報の取得に失敗:", error);
       // エラー時は1日のみ
-      const baseDates = [{
-        dayNumber: 1,
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      }];
-      setValue('tournament_dates', baseDates);
+      const baseDates = [
+        {
+          dayNumber: 1,
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        },
+      ];
+      setValue("tournament_dates", baseDates);
     }
 
-    setStep('details');
+    setStep("details");
   };
 
   // フォーム送信処理
@@ -409,14 +467,14 @@ export default function TournamentCreateNewForm() {
         const requiredDays = templateResult.data.statistics.requiredDays || 1;
 
         // 開催日数の検証
-        const providedDayNumbers = data.tournament_dates.map(d => d.dayNumber);
+        const providedDayNumbers = data.tournament_dates.map((d) => d.dayNumber);
         const maxProvidedDay = Math.max(...providedDayNumbers);
 
         if (maxProvidedDay < maxDayNumber) {
           alert(
             `選択したフォーマットは${requiredDays}日間の開催が必要です（day ${maxDayNumber}まで）。\n` +
-            `現在の開催日程は${maxProvidedDay}日分しか登録されていません。\n\n` +
-            `開催日程を追加してください。`
+              `現在の開催日程は${maxProvidedDay}日分しか登録されていません。\n\n` +
+              `開催日程を追加してください。`,
           );
           setIsSubmitting(false);
           return;
@@ -427,7 +485,7 @@ export default function TournamentCreateNewForm() {
           if (!providedDayNumbers.includes(i)) {
             alert(
               `開催日程にday ${i}が登録されていません。\n` +
-              `フォーマットに必要な全ての日程（day 1〜${maxDayNumber}）を登録してください。`
+                `フォーマットに必要な全ての日程（day 1〜${maxDayNumber}）を登録してください。`,
             );
             setIsSubmitting(false);
             return;
@@ -475,14 +533,12 @@ export default function TournamentCreateNewForm() {
   };
 
   // 競技種別選択ステップ
-  if (step === 'sport-selection') {
+  if (step === "sport-selection") {
     return (
       <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">競技種別を選択</h2>
-          <p className="text-gray-600">
-            大会で実施する競技を選択してください
-          </p>
+          <p className="text-gray-600">大会で実施する競技を選択してください</p>
         </div>
 
         {loadingSportTypes ? (
@@ -496,14 +552,20 @@ export default function TournamentCreateNewForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sportTypes.map((sportType) => {
               const periods = JSON.parse(sportType.period_definitions);
-              const scoreIcon = sportType.sport_code === 'soccer' ? '⚽' :
-                               sportType.sport_code === 'baseball' ? '⚾' :
-                               sportType.sport_code === 'basketball' ? '🏀' :
-                               sportType.sport_code === 'pk' ? '🥅' : '⚽';
-              
+              const scoreIcon =
+                sportType.sport_code === "soccer"
+                  ? "⚽"
+                  : sportType.sport_code === "baseball"
+                    ? "⚾"
+                    : sportType.sport_code === "basketball"
+                      ? "🏀"
+                      : sportType.sport_code === "pk"
+                        ? "🥅"
+                        : "⚽";
+
               return (
-                <Card 
-                  key={sportType.sport_type_id} 
+                <Card
+                  key={sportType.sport_type_id}
                   className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-300"
                   onClick={() => handleSportTypeSelect(sportType)}
                 >
@@ -535,15 +597,25 @@ export default function TournamentCreateNewForm() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">ピリオド構成:</p>
                       <div className="flex flex-wrap gap-1">
-                        {periods.slice(0, 3).map((period: { period_id: number; period_name: string; type: string }) => (
-                          <Badge 
-                            key={period.period_id}
-                            variant={period.type === 'extra' ? 'secondary' : period.type === 'penalty' ? 'destructive' : 'default'}
-                            className="text-xs"
-                          >
-                            {period.period_name}
-                          </Badge>
-                        ))}
+                        {periods
+                          .slice(0, 3)
+                          .map(
+                            (period: { period_id: number; period_name: string; type: string }) => (
+                              <Badge
+                                key={period.period_id}
+                                variant={
+                                  period.type === "extra"
+                                    ? "secondary"
+                                    : period.type === "penalty"
+                                      ? "destructive"
+                                      : "default"
+                                }
+                                className="text-xs"
+                              >
+                                {period.period_name}
+                              </Badge>
+                            ),
+                          )}
                         {periods.length > 3 && (
                           <Badge variant="outline" className="text-xs">
                             +{periods.length - 3}個
@@ -572,25 +644,22 @@ export default function TournamentCreateNewForm() {
   }
 
   // チーム数入力ステップ
-  if (step === 'team-count') {
+  if (step === "team-count") {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">参加チーム数を入力</h2>
             <p className="text-sm text-gray-600">
-              選択した競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span>
+              選択した競技:{" "}
+              <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span>
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setStep('sport-selection')}
-          >
+          <Button type="button" variant="outline" onClick={() => setStep("sport-selection")}>
             競技種別を変更
           </Button>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-lg">
@@ -601,47 +670,46 @@ export default function TournamentCreateNewForm() {
               参加予定のチーム数を入力してください。おすすめの大会フォーマットを提案します。
             </p>
           </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="team_count_input">参加チーム数</Label>
-            <Input
-              id="team_count_input"
-              type="number"
-              min={2}
-              max={128}
-              value={teamCount}
-              onChange={(e) => setTeamCount(parseInt(e.target.value) || 2)}
-              placeholder="例: 16"
-              className="text-center text-xl font-semibold"
-            />
-            <p className="text-xs text-gray-500">
-              2チーム以上、128チーム以下で入力してください
-            </p>
-          </div>
-          
-          <Button
-            type="button"
-            onClick={handleTeamCountSubmit}
-            disabled={teamCount < 2 || teamCount > 128}
-            className="w-full"
-          >
-            おすすめフォーマットを表示
-          </Button>
-        </CardContent>
-      </Card>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="team_count_input">参加チーム数</Label>
+              <Input
+                id="team_count_input"
+                type="number"
+                min={2}
+                max={128}
+                value={teamCount}
+                onChange={(e) => setTeamCount(parseInt(e.target.value) || 2)}
+                placeholder="例: 16"
+                className="text-center text-xl font-semibold"
+              />
+              <p className="text-xs text-gray-500">2チーム以上、128チーム以下で入力してください</p>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleTeamCountSubmit}
+              disabled={teamCount < 2 || teamCount > 128}
+              className="w-full"
+            >
+              おすすめフォーマットを表示
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   // フォーマット選択ステップ
-  if (step === 'format-selection') {
+  if (step === "format-selection") {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">{teamCount}チーム向けのおすすめフォーマット</h2>
             <p className="text-sm text-gray-600">
-              競技: <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span> | 
+              競技:{" "}
+              <span className="font-medium text-blue-600">{selectedSportType?.sport_name}</span> |
               参加チーム数に最適な大会フォーマットを選択してください
             </p>
           </div>
@@ -651,18 +719,13 @@ export default function TournamentCreateNewForm() {
               variant="outline"
               size="sm"
               onClick={() => {
-                setStep('sport-selection');
+                setStep("sport-selection");
                 setRecommendation(null); // 推奨をクリア
               }}
             >
               競技を変更
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setStep('team-count')}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => setStep("team-count")}>
               チーム数を変更
             </Button>
           </div>
@@ -686,46 +749,61 @@ export default function TournamentCreateNewForm() {
                 {recommendation.recommendedFormats.map((format) => {
                   const locked = format.isAccessible === false;
                   return (
-                  <Card key={format.format_id} className={`${locked ? 'opacity-50 cursor-not-allowed' : 'border-green-200 hover:border-green-300 cursor-pointer'}`} onClick={() => !locked && handleFormatSelect(format.format_id)}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h4 className="font-medium">
-                              {format.sport_code && <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>}
-                              {format.format_name}
-                            </h4>
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              {format.matchType === 'exact' ? '完全一致' : format.matchType === 'close' ? '近似' : '代替案'}
-                            </Badge>
-                            {locked && (
-                              <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
-                                <Lock className="h-3 w-3 mr-1" />
-                                利用するには購入が必要です
+                    <Card
+                      key={format.format_id}
+                      className={`${locked ? "opacity-50 cursor-not-allowed" : "border-green-200 hover:border-green-300 cursor-pointer"}`}
+                      onClick={() => !locked && handleFormatSelect(format.format_id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h4 className="font-medium">
+                                {format.sport_code && (
+                                  <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>
+                                )}
+                                {format.format_name}
+                              </h4>
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                {format.matchType === "exact"
+                                  ? "完全一致"
+                                  : format.matchType === "close"
+                                    ? "近似"
+                                    : "代替案"}
                               </Badge>
-                            )}
+                              {locked && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-300 text-xs"
+                                >
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  利用するには購入が必要です
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">{format.format_description}</p>
+                            <p className="text-xs text-green-600 mt-1">
+                              {format.recommendationReason}
+                            </p>
+                            <div className="mt-2">
+                              <FormatDetailBadges
+                                default_match_duration={format.default_match_duration}
+                                default_break_duration={format.default_break_duration}
+                                matchday_count={format.matchday_count}
+                                phase_stats={format.phase_stats}
+                              />
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600">{format.format_description}</p>
-                          <p className="text-xs text-green-600 mt-1">{format.recommendationReason}</p>
-                          <div className="mt-2">
-                            <FormatDetailBadges
-                              default_match_duration={format.default_match_duration}
-                              default_break_duration={format.default_break_duration}
-                              matchday_count={format.matchday_count}
-                              phase_stats={format.phase_stats}
-                            />
-                          </div>
+                          {locked ? (
+                            <Lock className="h-5 w-5 text-gray-400 ml-4" />
+                          ) : (
+                            <Button size="sm" className="ml-4">
+                              選択
+                            </Button>
+                          )}
                         </div>
-                        {locked ? (
-                          <Lock className="h-5 w-5 text-gray-400 ml-4" />
-                        ) : (
-                          <Button size="sm" className="ml-4">
-                            選択
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>
@@ -734,47 +812,60 @@ export default function TournamentCreateNewForm() {
             {recommendation?.allFormats && recommendation.allFormats.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-lg font-medium text-gray-700">その他のフォーマット</h3>
-                {recommendation.allFormats.filter(f => !f.isRecommended).map((format) => {
-                  const locked = format.isAccessible === false;
-                  return (
-                  <Card key={format.format_id} className={`${locked ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 cursor-pointer'}`} onClick={() => !locked && handleFormatSelect(format.format_id)}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="font-medium">
-                              {format.sport_code && <span className="mr-1.5">{getSportIcon(format.sport_code)}</span>}
-                              {format.format_name}
-                            </h4>
-                            {locked && (
-                              <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
-                                <Lock className="h-3 w-3 mr-1" />
-                                利用するには購入が必要です
-                              </Badge>
+                {recommendation.allFormats
+                  .filter((f) => !f.isRecommended)
+                  .map((format) => {
+                    const locked = format.isAccessible === false;
+                    return (
+                      <Card
+                        key={format.format_id}
+                        className={`${locked ? "opacity-50 cursor-not-allowed" : "hover:border-gray-300 cursor-pointer"}`}
+                        onClick={() => !locked && handleFormatSelect(format.format_id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <h4 className="font-medium">
+                                  {format.sport_code && (
+                                    <span className="mr-1.5">
+                                      {getSportIcon(format.sport_code)}
+                                    </span>
+                                  )}
+                                  {format.format_name}
+                                </h4>
+                                {locked && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-orange-600 border-orange-300 text-xs"
+                                  >
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    利用するには購入が必要です
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">{format.format_description}</p>
+                              <div className="mt-2">
+                                <FormatDetailBadges
+                                  default_match_duration={format.default_match_duration}
+                                  default_break_duration={format.default_break_duration}
+                                  matchday_count={format.matchday_count}
+                                  phase_stats={format.phase_stats}
+                                />
+                              </div>
+                            </div>
+                            {locked ? (
+                              <Lock className="h-5 w-5 text-gray-400 ml-4" />
+                            ) : (
+                              <Button variant="outline" size="sm" className="ml-4">
+                                選択
+                              </Button>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">{format.format_description}</p>
-                          <div className="mt-2">
-                            <FormatDetailBadges
-                              default_match_duration={format.default_match_duration}
-                              default_break_duration={format.default_break_duration}
-                              matchday_count={format.matchday_count}
-                              phase_stats={format.phase_stats}
-                            />
-                          </div>
-                        </div>
-                        {locked ? (
-                          <Lock className="h-5 w-5 text-gray-400 ml-4" />
-                        ) : (
-                          <Button variant="outline" size="sm" className="ml-4">
-                            選択
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -796,10 +887,20 @@ export default function TournamentCreateNewForm() {
             フォーマット情報
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setStep('sport-selection')}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setStep("sport-selection")}
+            >
               競技を変更
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => setStep('format-selection')}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setStep("format-selection")}
+            >
               フォーマットを変更
             </Button>
           </div>
@@ -831,25 +932,34 @@ export default function TournamentCreateNewForm() {
         ) : (
           <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Building2 className="w-4 h-4 text-gray-500" />
-            <span>{tournamentGroups.find(g => g.group_id === watch('group_id'))?.group_name || '未選択'}</span>
+            <span>
+              {tournamentGroups.find((g) => g.group_id === watch("group_id"))?.group_name ||
+                "未選択"}
+            </span>
           </div>
         )}
       </div>
 
       {/* 部門名 */}
       <div className="space-y-2">
-        <Label htmlFor="tournament_name">部門名 <span className="text-destructive">*</span></Label>
+        <Label htmlFor="tournament_name">
+          部門名 <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="tournament_name"
           {...register("tournament_name")}
           placeholder="例: 小学2年生の部"
         />
-        {errors.tournament_name && <p className="text-sm text-destructive">{errors.tournament_name.message}</p>}
+        {errors.tournament_name && (
+          <p className="text-sm text-destructive">{errors.tournament_name.message}</p>
+        )}
       </div>
 
       {/* 会場（複数選択） */}
       <div className="space-y-2">
-        <Label>会場 <span className="text-destructive">*</span></Label>
+        <Label>
+          会場 <span className="text-destructive">*</span>
+        </Label>
         {loadingVenues ? (
           <div className="flex items-center gap-2 rounded-md border bg-gray-50/30 px-3 py-2 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -861,15 +971,24 @@ export default function TournamentCreateNewForm() {
             {selectedVenues.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedVenues.map((venue) => (
-                  <Badge key={venue.venue_id} variant="secondary" className="text-sm py-1 px-2 gap-1">
+                  <Badge
+                    key={venue.venue_id}
+                    variant="secondary"
+                    className="text-sm py-1 px-2 gap-1"
+                  >
                     {venue.venue_name}（{venue.available_courts}コート）
                     <button
                       type="button"
                       className="ml-1 hover:text-destructive"
                       onClick={() => {
-                        const newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                        const newVenues = selectedVenues.filter(
+                          (v) => v.venue_id !== venue.venue_id,
+                        );
                         setSelectedVenues(newVenues);
-                        setValue('venue_ids', newVenues.map(v => v.venue_id));
+                        setValue(
+                          "venue_ids",
+                          newVenues.map((v) => v.venue_id),
+                        );
                       }}
                     >
                       <X className="h-3 w-3" />
@@ -904,32 +1023,47 @@ export default function TournamentCreateNewForm() {
                 />
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {venues
-                    .filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                    .filter((v) =>
+                      v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()),
+                    )
                     .map((venue) => {
-                      const isSelected = selectedVenues.some(sv => sv.venue_id === venue.venue_id);
+                      const isSelected = selectedVenues.some(
+                        (sv) => sv.venue_id === venue.venue_id,
+                      );
                       return (
                         <button
                           key={venue.venue_id}
                           type="button"
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? 'bg-gray-100/50' : ''}`}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left hover:bg-gray-100 ${isSelected ? "bg-gray-100/50" : ""}`}
                           onClick={() => {
                             let newVenues: Venue[];
                             if (isSelected) {
-                              newVenues = selectedVenues.filter(v => v.venue_id !== venue.venue_id);
+                              newVenues = selectedVenues.filter(
+                                (v) => v.venue_id !== venue.venue_id,
+                              );
                             } else {
                               newVenues = [...selectedVenues, venue];
                             }
                             setSelectedVenues(newVenues);
-                            setValue('venue_ids', newVenues.map(v => v.venue_id));
+                            setValue(
+                              "venue_ids",
+                              newVenues.map((v) => v.venue_id),
+                            );
                           }}
                         >
-                          <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                          <Check
+                            className={`h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                          />
                           <span>{venue.venue_name}</span>
-                          <span className="text-gray-500 ml-auto text-xs">{venue.available_courts}コート</span>
+                          <span className="text-gray-500 ml-auto text-xs">
+                            {venue.available_courts}コート
+                          </span>
                         </button>
                       );
                     })}
-                  {venues.filter(v => v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase())).length === 0 && (
+                  {venues.filter((v) =>
+                    v.venue_name.toLowerCase().includes(venueSearchQuery.toLowerCase()),
+                  ).length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-2">会場が見つかりません</p>
                   )}
                 </div>
@@ -958,16 +1092,17 @@ export default function TournamentCreateNewForm() {
             variant="outline"
             size="sm"
             onClick={() => {
-              const currentDates = getValues('tournament_dates') || [];
-              const nextDayNumber = Math.max(...currentDates.map(d => d.dayNumber), 0) + 1;
-              const lastDate = currentDates.length > 0
-                ? new Date(Math.max(...currentDates.map(d => new Date(d.date).getTime())))
-                : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+              const currentDates = getValues("tournament_dates") || [];
+              const nextDayNumber = Math.max(...currentDates.map((d) => d.dayNumber), 0) + 1;
+              const lastDate =
+                currentDates.length > 0
+                  ? new Date(Math.max(...currentDates.map((d) => new Date(d.date).getTime())))
+                  : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
               const nextDate = new Date(lastDate);
               nextDate.setDate(lastDate.getDate() + 1);
-              setValue('tournament_dates', [
+              setValue("tournament_dates", [
                 ...currentDates,
-                { dayNumber: nextDayNumber, date: nextDate.toISOString().split('T')[0] }
+                { dayNumber: nextDayNumber, date: nextDate.toISOString().split("T")[0] },
               ]);
             }}
           >
@@ -975,14 +1110,11 @@ export default function TournamentCreateNewForm() {
             日程追加
           </Button>
         </div>
-        {(watch('tournament_dates') || []).map((_, index) => (
+        {(watch("tournament_dates") || []).map((_, index) => (
           <div key={index} className="flex items-end gap-3">
             <div className="flex-1 space-y-1">
               <Label className="text-xs text-gray-500">開催日 {index + 1}</Label>
-              <Input
-                type="date"
-                {...register(`tournament_dates.${index}.date`)}
-              />
+              <Input type="date" {...register(`tournament_dates.${index}.date`)} />
             </div>
             <div className="w-24 space-y-1">
               <Label className="text-xs text-gray-500">Day番号</Label>
@@ -992,15 +1124,18 @@ export default function TournamentCreateNewForm() {
                 {...register(`tournament_dates.${index}.dayNumber`, { valueAsNumber: true })}
               />
             </div>
-            {(watch('tournament_dates')?.length || 0) > 1 && (
+            {(watch("tournament_dates")?.length || 0) > 1 && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="h-9 px-2"
                 onClick={() => {
-                  const dates = getValues('tournament_dates') || [];
-                  setValue('tournament_dates', dates.filter((_, i) => i !== index));
+                  const dates = getValues("tournament_dates") || [];
+                  setValue(
+                    "tournament_dates",
+                    dates.filter((_, i) => i !== index),
+                  );
                 }}
               >
                 <Trash2 className="w-4 h-4" />
@@ -1008,7 +1143,9 @@ export default function TournamentCreateNewForm() {
             )}
           </div>
         ))}
-        {errors.tournament_dates && <p className="text-sm text-destructive">{errors.tournament_dates.message}</p>}
+        {errors.tournament_dates && (
+          <p className="text-sm text-destructive">{errors.tournament_dates.message}</p>
+        )}
       </div>
 
       {/* 公開設定 */}
@@ -1016,37 +1153,47 @@ export default function TournamentCreateNewForm() {
         <h3 className="text-sm font-semibold">公開設定</h3>
 
         <div className="space-y-2">
-          <Label htmlFor="public_start_date">公開開始日時 <span className="text-destructive">*</span></Label>
-          <Input
-            id="public_start_date"
-            type="datetime-local"
-            {...register("public_start_date")}
-          />
-          {errors.public_start_date && <p className="text-sm text-destructive">{errors.public_start_date.message}</p>}
+          <Label htmlFor="public_start_date">
+            公開開始日時 <span className="text-destructive">*</span>
+          </Label>
+          <Input id="public_start_date" type="datetime-local" {...register("public_start_date")} />
+          {errors.public_start_date && (
+            <p className="text-sm text-destructive">{errors.public_start_date.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recruitment_start_date">募集開始日時 <span className="text-destructive">*</span></Label>
+          <Label htmlFor="recruitment_start_date">
+            募集開始日時 <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="recruitment_start_date"
             type="datetime-local"
             {...register("recruitment_start_date")}
           />
-          {errors.recruitment_start_date && <p className="text-sm text-destructive">{errors.recruitment_start_date.message}</p>}
+          {errors.recruitment_start_date && (
+            <p className="text-sm text-destructive">{errors.recruitment_start_date.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recruitment_end_date">募集終了日時 <span className="text-destructive">*</span></Label>
+          <Label htmlFor="recruitment_end_date">
+            募集終了日時 <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="recruitment_end_date"
             type="datetime-local"
             {...register("recruitment_end_date")}
           />
-          {errors.recruitment_end_date && <p className="text-sm text-destructive">{errors.recruitment_end_date.message}</p>}
+          {errors.recruitment_end_date && (
+            <p className="text-sm text-destructive">{errors.recruitment_end_date.message}</p>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
-          <Label htmlFor="is_public" className="cursor-pointer">公開する</Label>
+          <Label htmlFor="is_public" className="cursor-pointer">
+            公開する
+          </Label>
           <Switch
             id="is_public"
             checked={isPublic}
@@ -1056,7 +1203,9 @@ export default function TournamentCreateNewForm() {
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <Label htmlFor="show_players_public" className="cursor-pointer">選手情報を一般公開する</Label>
+            <Label htmlFor="show_players_public" className="cursor-pointer">
+              選手情報を一般公開する
+            </Label>
             <Switch
               id="show_players_public"
               checked={watch("show_players_public")}
@@ -1073,7 +1222,9 @@ export default function TournamentCreateNewForm() {
       {/* 時間設定 */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="match_duration_minutes">試合時間(分) <span className="text-destructive">*</span></Label>
+          <Label htmlFor="match_duration_minutes">
+            試合時間(分) <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="match_duration_minutes"
             type="number"
@@ -1086,10 +1237,14 @@ export default function TournamentCreateNewForm() {
           {selectedFormat?.default_match_duration != null && (
             <p className="text-xs text-gray-500">フォーマットで設定済み</p>
           )}
-          {errors.match_duration_minutes && <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>}
+          {errors.match_duration_minutes && (
+            <p className="text-sm text-destructive">{errors.match_duration_minutes.message}</p>
+          )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="break_duration_minutes">休憩時間(分) <span className="text-destructive">*</span></Label>
+          <Label htmlFor="break_duration_minutes">
+            休憩時間(分) <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="break_duration_minutes"
             type="number"
@@ -1102,7 +1257,9 @@ export default function TournamentCreateNewForm() {
           {selectedFormat?.default_break_duration != null && (
             <p className="text-xs text-gray-500">フォーマットで設定済み</p>
           )}
-          {errors.break_duration_minutes && <p className="text-sm text-destructive">{errors.break_duration_minutes.message}</p>}
+          {errors.break_duration_minutes && (
+            <p className="text-sm text-destructive">{errors.break_duration_minutes.message}</p>
+          )}
         </div>
       </div>
       <div className="space-y-2">
@@ -1114,7 +1271,9 @@ export default function TournamentCreateNewForm() {
           placeholder="例: 80, 40-10-40"
           {...register("display_match_duration")}
         />
-        <p className="text-xs text-gray-500">概要ページに表示する試合時間（未入力時はシステム値を表示）</p>
+        <p className="text-xs text-gray-500">
+          概要ページに表示する試合時間（未入力時はシステム値を表示）
+        </p>
       </div>
 
       {/* スケジュールプレビュー */}
@@ -1122,17 +1281,19 @@ export default function TournamentCreateNewForm() {
         <div className="border rounded-lg p-4 space-y-4">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold">スケジュールプレビュー</h3>
-            <Badge variant="secondary" className="text-xs">個別編集可能</Badge>
+            <Badge variant="secondary" className="text-xs">
+              個別編集可能
+            </Badge>
           </div>
           <p className="text-xs text-gray-500">各試合の時間とコート番号を個別に調整できます</p>
           <SchedulePreview
             settings={{
               courtCount: derivedCourtCount,
-              availableCourts: Array.from({length: derivedCourtCount}, (_, i) => i + 1),
-              matchDurationMinutes: watch('match_duration_minutes') || 15,
-              breakDurationMinutes: watch('break_duration_minutes') || 5,
-              startTime: '09:00',
-              tournamentDates: watch('tournament_dates') || []
+              availableCourts: Array.from({ length: derivedCourtCount }, (_, i) => i + 1),
+              matchDurationMinutes: watch("match_duration_minutes") || 15,
+              breakDurationMinutes: watch("break_duration_minutes") || 5,
+              startTime: "09:00",
+              tournamentDates: watch("tournament_dates") || [],
             }}
             formatId={selectedFormat.format_id}
             editMode={false}
@@ -1144,7 +1305,10 @@ export default function TournamentCreateNewForm() {
       {/* 送信ボタン */}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? (
-          <><Loader2 className="w-4 h-4 animate-spin mr-2" />作成中...</>
+          <>
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            作成中...
+          </>
         ) : (
           "作成する"
         )}

@@ -1,15 +1,15 @@
 // app/api/my/teams/[id]/tournaments/past/route.ts
 // チームが過去に参加した大会一覧を返す（完了した大会のみ）
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.loginUserId || session.user.loginUserId === 0) {
-    return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
+    return NextResponse.json({ success: false, error: "認証が必要です" }, { status: 401 });
   }
 
   const { id: teamId } = await context.params;
@@ -18,14 +18,15 @@ export async function GET(_request: Request, context: RouteContext) {
   // 担当者チェック
   const memberCheck = await db.execute(
     `SELECT id FROM m_team_members WHERE team_id = ? AND login_user_id = ? AND is_active = 1`,
-    [teamId, loginUserId]
+    [teamId, loginUserId],
   );
   if (memberCheck.rows.length === 0) {
-    return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 });
+    return NextResponse.json({ success: false, error: "権限がありません" }, { status: 403 });
   }
 
   // 過去に参加した大会（完了ステータスのもの）
-  const pastRes = await db.execute(`
+  const pastRes = await db.execute(
+    `
     SELECT
       t.tournament_id,
       t.tournament_name,
@@ -48,11 +49,13 @@ export async function GET(_request: Request, context: RouteContext) {
       AND t.is_archived = 0
     GROUP BY t.tournament_id
     ORDER BY tg.event_end_date DESC, t.tournament_id DESC
-  `, [teamId]);
+  `,
+    [teamId],
+  );
 
   return NextResponse.json({
     success: true,
-    data: pastRes.rows.map(row => ({
+    data: pastRes.rows.map((row) => ({
       tournament_id: Number(row.tournament_id),
       tournament_name: String(row.tournament_name),
       event_start_date: row.event_start_date ? String(row.event_start_date) : null,

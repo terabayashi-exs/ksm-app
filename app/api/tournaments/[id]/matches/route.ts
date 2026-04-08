@@ -1,11 +1,11 @@
 // app/api/tournaments/[id]/matches/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { parsePhasesJson } from '@/lib/tournament-phases';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { parsePhasesJson } from "@/lib/tournament-phases";
 
 // キャッシュを無効化
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface RouteParams {
@@ -13,25 +13,19 @@ interface RouteParams {
 }
 
 // 大会の試合一覧を取得
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック
     const session = await auth();
-    console.log('API /tournaments/[id]/matches - Session check:', {
+    console.log("API /tournaments/[id]/matches - Session check:", {
       hasSession: !!session,
       userRole: session?.user?.role,
-      userId: session?.user?.id
+      userId: session?.user?.id,
     });
 
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      console.log('Authentication failed:', { session: !!session, role: session?.user?.role });
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      console.log("Authentication failed:", { session: !!session, role: session?.user?.role });
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -39,25 +33,25 @@ export async function GET(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
     // クエリパラメータからincludeByeフラグを取得（組合せ作成画面用）
     const { searchParams } = new URL(request.url);
-    const includeBye = searchParams.get('includeBye') === 'true';
+    const includeBye = searchParams.get("includeBye") === "true";
 
     // 大会の存在確認（フェーズ構成も取得）
-    const tournamentResult = await db.execute(`
+    const tournamentResult = await db.execute(
+      `
       SELECT tournament_id, phases FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (tournamentResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     // フェーズ構成からphase順序マップとformat_typeマップを構築
@@ -72,36 +66,45 @@ export async function GET(
     }
 
     // 組み合わせ作成状況を判定
-    console.log('Checking team assignment status...');
-    const teamAssignmentResult = await db.execute(`
+    console.log("Checking team assignment status...");
+    const teamAssignmentResult = await db.execute(
+      `
       SELECT COUNT(*) as total_matches,
              COUNT(CASE WHEN team1_tournament_team_id IS NOT NULL AND team2_tournament_team_id IS NOT NULL THEN 1 END) as assigned_matches
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
-    `, [tournamentId]);
-    
-    const teamAssignment = teamAssignmentResult.rows[0] as unknown as { total_matches: number; assigned_matches: number };
+    `,
+      [tournamentId],
+    );
+
+    const teamAssignment = teamAssignmentResult.rows[0] as unknown as {
+      total_matches: number;
+      assigned_matches: number;
+    };
     const isTeamAssignmentComplete = teamAssignment.assigned_matches > 0;
-    
-    console.log(`[ADMIN] Team assignment status: ${teamAssignment.assigned_matches}/${teamAssignment.total_matches} matches assigned`);
+
+    console.log(
+      `[ADMIN] Team assignment status: ${teamAssignment.assigned_matches}/${teamAssignment.total_matches} matches assigned`,
+    );
     console.log(`[ADMIN] Is assignment complete: ${isTeamAssignmentComplete}`);
 
     // 試合データを取得（試合状態と確定結果も含む）
     console.log(`Fetching matches for tournament ${tournamentId}...`);
     // 全ての試合を取得（不戦勝試合のフィルタリングはフロントエンド側で実施）
-    const teamFilter = '';
+    const teamFilter = "";
 
     // フェーズ順序のCASE文を動的に構築
-    let phaseOrderSql = 'mb.block_order';
+    let phaseOrderSql = "mb.block_order";
     if (phaseOrderMap.size > 0) {
       const caseParts = Array.from(phaseOrderMap.entries())
         .map(([phaseId, order]) => `WHEN mb.phase = '${phaseId}' THEN ${order}`)
-        .join(' ');
+        .join(" ");
       phaseOrderSql = `CASE ${caseParts} ELSE 999 END`;
     }
 
-    const matchesResult = await db.execute(`
+    const matchesResult = await db.execute(
+      `
       SELECT
         ml.match_id,
         ml.match_block_id,
@@ -169,7 +172,9 @@ export async function GET(
         ${phaseOrderSql},
         ml.round_name ASC,
         ml.match_number ASC
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     console.log(`Found ${matchesResult.rows.length} matches for tournament ${tournamentId}`);
 
@@ -178,28 +183,31 @@ export async function GET(
     const blockPositionToTeamMap: Record<string, { block_name: string; team_name: string }> = {};
 
     // assigned_blockとblock_positionから実チーム名を取得してマップ化
-    const teamBlockAssignments = await db.execute(`
+    const teamBlockAssignments = await db.execute(
+      `
       SELECT
         assigned_block,
         block_position,
         COALESCE(team_omission, team_name) as team_name
       FROM t_tournament_teams
       WHERE tournament_id = ? AND assigned_block IS NOT NULL AND block_position IS NOT NULL
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     teamBlockAssignments.rows.forEach((row) => {
       const key = `${row.assigned_block}-${row.block_position}`;
       blockPositionToTeamMap[key] = {
         block_name: String(row.assigned_block),
-        team_name: String(row.team_name)
+        team_name: String(row.team_name),
       };
     });
 
-    console.log('[Matches API] Block position to team map:', blockPositionToTeamMap);
+    console.log("[Matches API] Block position to team map:", blockPositionToTeamMap);
 
-    const matches = matchesResult.rows.map(row => {
+    const matches = matchesResult.rows.map((row) => {
       // 試合状態の決定（t_match_statusを優先、なければt_matches_liveから）
-      const matchStatus = row.match_status || row.live_match_status || 'scheduled';
+      const matchStatus = row.match_status || row.live_match_status || "scheduled";
 
       // 現在のピリオド（t_match_statusを優先）
       const currentPeriod = row.status_current_period || 1;
@@ -217,8 +225,8 @@ export async function GET(
       const team2ScoresStr = isConfirmed ? row.final_team2_scores : row.team2_scores;
 
       // BYE試合でチーム名が取得できない場合、プレースホルダーから実チーム名を解決
-      let resolvedTeam1Name = String(row.team1_real_name || row.team1_display_name || '');
-      let resolvedTeam2Name = String(row.team2_real_name || row.team2_display_name || '');
+      let resolvedTeam1Name = String(row.team1_real_name || row.team1_display_name || "");
+      let resolvedTeam2Name = String(row.team2_real_name || row.team2_display_name || "");
 
       if (row.is_bye_match === 1) {
         // プレースホルダー（例: "A1チーム", "A2チーム", "B1チーム"）からポジション番号を抽出
@@ -237,7 +245,9 @@ export async function GET(
             const teamData = blockPositionToTeamMap[key];
             if (teamData) {
               resolvedTeam1Name = teamData.team_name;
-              console.log(`[BYE Match] Resolved team1: ${row.team1_display_name} (block=${row.block_name}, pos=${position}) → ${teamData.team_name}`);
+              console.log(
+                `[BYE Match] Resolved team1: ${row.team1_display_name} (block=${row.block_name}, pos=${position}) → ${teamData.team_name}`,
+              );
             }
           }
         }
@@ -250,24 +260,30 @@ export async function GET(
             const teamData = blockPositionToTeamMap[key];
             if (teamData) {
               resolvedTeam2Name = teamData.team_name;
-              console.log(`[BYE Match] Resolved team2: ${row.team2_display_name} (block=${row.block_name}, pos=${position}) → ${teamData.team_name}`);
+              console.log(
+                `[BYE Match] Resolved team2: ${row.team2_display_name} (block=${row.block_name}, pos=${position}) → ${teamData.team_name}`,
+              );
             }
           }
         }
       }
-      
+
       return {
         match_id: Number(row.match_id),
         match_block_id: Number(row.match_block_id),
-        tournament_date: String(row.tournament_date || ''),
+        tournament_date: String(row.tournament_date || ""),
         match_number: Number(row.match_number),
         match_code: String(row.match_code),
-        team1_tournament_team_id: row.team1_tournament_team_id ? Number(row.team1_tournament_team_id) : null,
-        team2_tournament_team_id: row.team2_tournament_team_id ? Number(row.team2_tournament_team_id) : null,
+        team1_tournament_team_id: row.team1_tournament_team_id
+          ? Number(row.team1_tournament_team_id)
+          : null,
+        team2_tournament_team_id: row.team2_tournament_team_id
+          ? Number(row.team2_tournament_team_id)
+          : null,
         team1_name: resolvedTeam1Name, // BYE試合対応：プレースホルダーから実チーム名に解決
         team2_name: resolvedTeam2Name, // BYE試合対応：プレースホルダーから実チーム名に解決
-        team1_omission: row.team1_omission ? String(row.team1_omission) : '',
-        team2_omission: row.team2_omission ? String(row.team2_omission) : '',
+        team1_omission: row.team1_omission ? String(row.team1_omission) : "",
+        team2_omission: row.team2_omission ? String(row.team2_omission) : "",
         court_number: row.court_number ? Number(row.court_number) : null,
         court_name: row.court_name ? String(row.court_name) : null,
         scheduled_time: row.start_time ? String(row.start_time) : null, // scheduled_timeに統一
@@ -291,7 +307,7 @@ export async function GET(
         remarks: row.remarks ? String(row.remarks) : null,
         // ブロック情報
         phase: String(row.phase),
-        format_type: phaseFormatTypeMap.get(String(row.phase)) || 'league',
+        format_type: phaseFormatTypeMap.get(String(row.phase)) || "league",
         display_round_name: String(row.round_name || row.display_round_name),
         round_name: row.round_name ? String(row.round_name) : null,
         block_name: row.block_name ? String(row.block_name) : null,
@@ -301,11 +317,11 @@ export async function GET(
         team1_source: row.team1_source ? String(row.team1_source) : null,
         team2_source: row.team2_source ? String(row.team2_source) : null,
         is_bye_match: row.is_bye_match ? Number(row.is_bye_match) : 0,
-        team1_display_name: String(row.team1_display_name || ''),
-        team2_display_name: String(row.team2_display_name || ''),
+        team1_display_name: String(row.team1_display_name || ""),
+        team2_display_name: String(row.team2_display_name || ""),
         matchday: row.matchday ? Number(row.matchday) : null,
         cycle: row.cycle ? Number(row.cycle) : null,
-        venue_name: row.venue_name ? String(row.venue_name) : null
+        venue_name: row.venue_name ? String(row.venue_name) : null,
       };
     });
 
@@ -340,36 +356,37 @@ export async function GET(
         team2_name: resolvedTeam2,
         // display_nameも同期（後方互換性のため）
         team1_display_name: resolvedTeam1,
-        team2_display_name: resolvedTeam2
+        team2_display_name: resolvedTeam2,
       };
     });
 
     // BYE試合（is_bye_match=1）を除外（組合せ作成画面ではincludeBye=trueで含める）
-    const finalMatches = includeBye ? resolvedMatches : resolvedMatches.filter(m => m.is_bye_match !== 1);
+    const finalMatches = includeBye
+      ? resolvedMatches
+      : resolvedMatches.filter((m) => m.is_bye_match !== 1);
 
     return NextResponse.json({
       success: true,
-      data: finalMatches
+      data: finalMatches,
     });
-
   } catch (error) {
     const resolvedParams = await params;
     const tournamentId = parseInt(resolvedParams.id);
-    
-    console.error('試合データ取得エラー:', error);
-    console.error('Tournament ID:', tournamentId);
-    console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-    
+
+    console.error("試合データ取得エラー:", error);
+    console.error("Tournament ID:", tournamentId);
+    console.error("Error name:", error instanceof Error ? error.name : "Unknown");
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '試合データの取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        tournamentId: tournamentId
+      {
+        success: false,
+        error: "試合データの取得に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
+        tournamentId: tournamentId,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,8 +1,8 @@
 // lib/public-tournaments.ts
 // TOPページ用: 公開大会をグループ化して取得するサーバーサイド関数
 
-import { db } from '@/lib/db';
-import { calculateTournamentStatus } from '@/lib/tournament-status';
+import { db } from "@/lib/db";
+import { calculateTournamentStatus } from "@/lib/tournament-status";
 
 export interface PublicDivision {
   tournament_id: number;
@@ -51,7 +51,9 @@ export interface CategorizedTournaments {
   completed: GroupedTournament[];
 }
 
-export async function fetchGroupedPublicTournaments(teamId?: string): Promise<CategorizedTournaments> {
+export async function fetchGroupedPublicTournaments(
+  teamId?: string,
+): Promise<CategorizedTournaments> {
   // 大会グループ一覧を取得
   const groupsResult = await db.execute(`
     SELECT
@@ -77,10 +79,11 @@ export async function fetchGroupedPublicTournaments(teamId?: string): Promise<Ca
   `);
 
   // 各大会グループの所属部門を取得
-  const groupedData = await Promise.all(groupsResult.rows.map(async (groupRow) => {
-    const groupId = Number(groupRow.group_id);
+  const groupedData = await Promise.all(
+    groupsResult.rows.map(async (groupRow) => {
+      const groupId = Number(groupRow.group_id);
 
-    const divisionsQuery = `
+      const divisionsQuery = `
       SELECT
         t.tournament_id,
         t.tournament_name,
@@ -108,107 +111,115 @@ export async function fetchGroupedPublicTournaments(teamId?: string): Promise<Ca
           THEN tt.tournament_team_id
         END) as registered_teams,
         (SELECT COUNT(*) FROM t_tournament_teams tt2 WHERE tt2.tournament_id = t.tournament_id AND (tt2.withdrawal_status = 'active' OR tt2.withdrawal_status IS NULL)) as applied_count,
-        ${teamId ? 'CASE WHEN utt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined' : '0 as is_joined'}
+        ${teamId ? "CASE WHEN utt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined" : "0 as is_joined"}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
       LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id
-      ${teamId ? 'LEFT JOIN t_tournament_teams utt ON t.tournament_id = utt.tournament_id AND utt.team_id = ?' : ''}
+      ${teamId ? "LEFT JOIN t_tournament_teams utt ON t.tournament_id = utt.tournament_id AND utt.team_id = ?" : ""}
       WHERE t.group_id = ?
         AND t.visibility = 'open'
       GROUP BY t.tournament_id
       ORDER BY t.created_at DESC
     `;
 
-    const divisionsResult = await db.execute(
-      divisionsQuery,
-      teamId ? [teamId, groupId] : [groupId]
-    );
+      const divisionsResult = await db.execute(
+        divisionsQuery,
+        teamId ? [teamId, groupId] : [groupId],
+      );
 
-    // ステータス計算
-    const divisions: PublicDivision[] = await Promise.all(divisionsResult.rows.map(async (divRow) => {
-      let eventStartDate = '';
-      let eventEndDate = '';
+      // ステータス計算
+      const divisions: PublicDivision[] = await Promise.all(
+        divisionsResult.rows.map(async (divRow) => {
+          let eventStartDate = "";
+          let eventEndDate = "";
 
-      if (divRow.tournament_dates) {
-        try {
-          const dates = JSON.parse(divRow.tournament_dates as string);
-          const dateValues = Object.values(dates) as string[];
-          const sortedDates = dateValues.sort();
-          eventStartDate = sortedDates[0] || '';
-          eventEndDate = sortedDates[sortedDates.length - 1] || '';
-        } catch (error) {
-          console.error('Error parsing tournament_dates:', error);
-        }
-      }
+          if (divRow.tournament_dates) {
+            try {
+              const dates = JSON.parse(divRow.tournament_dates as string);
+              const dateValues = Object.values(dates) as string[];
+              const sortedDates = dateValues.sort();
+              eventStartDate = sortedDates[0] || "";
+              eventEndDate = sortedDates[sortedDates.length - 1] || "";
+            } catch (error) {
+              console.error("Error parsing tournament_dates:", error);
+            }
+          }
 
-      const calculatedStatus = await calculateTournamentStatus({
-        status: (divRow.status as string) || 'planning',
-        recruitment_start_date: divRow.recruitment_start_date as string | null,
-        recruitment_end_date: divRow.recruitment_end_date as string | null,
-        tournament_dates: (divRow.tournament_dates as string) || '{}',
-        public_start_date: divRow.public_start_date as string | null
-      }, Number(divRow.tournament_id));
+          const calculatedStatus = await calculateTournamentStatus(
+            {
+              status: (divRow.status as string) || "planning",
+              recruitment_start_date: divRow.recruitment_start_date as string | null,
+              recruitment_end_date: divRow.recruitment_end_date as string | null,
+              tournament_dates: (divRow.tournament_dates as string) || "{}",
+              public_start_date: divRow.public_start_date as string | null,
+            },
+            Number(divRow.tournament_id),
+          );
+
+          return {
+            tournament_id: Number(divRow.tournament_id),
+            tournament_name: String(divRow.tournament_name),
+            format_id: Number(divRow.format_id),
+            format_name: divRow.format_name as string | null,
+            venue_id: Number(divRow.venue_id),
+            venue_name: divRow.venue_name as string | null,
+            team_count: Number(divRow.team_count),
+            registered_teams: Number(divRow.registered_teams),
+            applied_count: Number(divRow.applied_count) || 0,
+            status: calculatedStatus,
+            recruitment_start_date: divRow.recruitment_start_date as string | null,
+            recruitment_end_date: divRow.recruitment_end_date as string | null,
+            event_start_date: eventStartDate,
+            event_end_date: eventEndDate,
+            logo_blob_url: divRow.logo_blob_url as string | null,
+            organization_name: divRow.organization_name as string | null,
+            is_joined: Boolean(divRow.is_joined),
+          };
+        }),
+      );
 
       return {
-        tournament_id: Number(divRow.tournament_id),
-        tournament_name: String(divRow.tournament_name),
-        format_id: Number(divRow.format_id),
-        format_name: divRow.format_name as string | null,
-        venue_id: Number(divRow.venue_id),
-        venue_name: divRow.venue_name as string | null,
-        team_count: Number(divRow.team_count),
-        registered_teams: Number(divRow.registered_teams),
-        applied_count: Number(divRow.applied_count) || 0,
-        status: calculatedStatus,
-        recruitment_start_date: divRow.recruitment_start_date as string | null,
-        recruitment_end_date: divRow.recruitment_end_date as string | null,
-        event_start_date: eventStartDate,
-        event_end_date: eventEndDate,
-        logo_blob_url: divRow.logo_blob_url as string | null,
-        organization_name: divRow.organization_name as string | null,
-        is_joined: Boolean(divRow.is_joined)
+        group: {
+          group_id: Number(groupRow.group_id),
+          group_name: String(groupRow.group_name),
+          organizer: groupRow.organizer as string | null,
+          venue_id: groupRow.venue_id ? Number(groupRow.venue_id) : null,
+          venue_name: groupRow.venue_name as string | null,
+          venue_address: groupRow.venue_address as string | null,
+          event_start_date: groupRow.event_start_date as string | null,
+          event_end_date: groupRow.event_end_date as string | null,
+          recruitment_start_date: groupRow.recruitment_start_date as string | null,
+          recruitment_end_date: groupRow.recruitment_end_date as string | null,
+          event_description: groupRow.event_description as string | null,
+          division_count: Number(groupRow.division_count),
+        },
+        divisions: divisions,
       };
-    }));
-
-    return {
-      group: {
-        group_id: Number(groupRow.group_id),
-        group_name: String(groupRow.group_name),
-        organizer: groupRow.organizer as string | null,
-        venue_id: groupRow.venue_id ? Number(groupRow.venue_id) : null,
-        venue_name: groupRow.venue_name as string | null,
-        venue_address: groupRow.venue_address as string | null,
-        event_start_date: groupRow.event_start_date as string | null,
-        event_end_date: groupRow.event_end_date as string | null,
-        recruitment_start_date: groupRow.recruitment_start_date as string | null,
-        recruitment_end_date: groupRow.recruitment_end_date as string | null,
-        event_description: groupRow.event_description as string | null,
-        division_count: Number(groupRow.division_count)
-      },
-      divisions: divisions
-    };
-  }));
+    }),
+  );
 
   // planningの部門を除外
-  const publicGroupedData = groupedData.map(group => ({
-    ...group,
-    divisions: group.divisions.filter(div => div.status !== 'planning')
-  })).filter(group => group.divisions.length > 0);
+  const publicGroupedData = groupedData
+    .map((group) => ({
+      ...group,
+      divisions: group.divisions.filter((div) => div.status !== "planning"),
+    }))
+    .filter((group) => group.divisions.length > 0);
 
   // ステータス別にグループ化
   const categorizedData: CategorizedTournaments = {
     recruiting: [],
     before_event: [],
     ongoing: [],
-    completed: []
+    completed: [],
   };
 
-  publicGroupedData.forEach(group => {
-    const hasOngoing = group.divisions.some(div => div.status === 'ongoing');
-    const hasRecruiting = group.divisions.some(div => div.status === 'recruiting');
-    const hasBeforeEvent = group.divisions.some(div => div.status === 'before_event');
+  publicGroupedData.forEach((group) => {
+    const hasOngoing = group.divisions.some((div) => div.status === "ongoing");
+    const hasRecruiting = group.divisions.some((div) => div.status === "recruiting");
+    const hasBeforeEvent = group.divisions.some((div) => div.status === "before_event");
 
     if (hasOngoing) {
       categorizedData.ongoing.push(group);

@@ -1,10 +1,10 @@
 // app/api/tournaments/[id]/teams/[teamId]/players/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getTeamPlayers } from '@/lib/tournament-teams-calculator';
+import { NextRequest, NextResponse } from "next/server";
+import { getTeamPlayers } from "@/lib/tournament-teams-calculator";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; teamId: string }> }
+  { params }: { params: Promise<{ id: string; teamId: string }> },
 ) {
   try {
     const resolvedParams = await params;
@@ -12,16 +12,13 @@ export async function GET(
     const tournamentTeamId = parseInt(resolvedParams.teamId, 10);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     if (isNaN(tournamentTeamId)) {
       return NextResponse.json(
-        { success: false, error: '無効な大会参加チームIDです' },
-        { status: 400 }
+        { success: false, error: "無効な大会参加チームIDです" },
+        { status: 400 },
       );
     }
 
@@ -31,19 +28,18 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: players,
-      message: '選手一覧を正常に取得しました'
+      message: "選手一覧を正常に取得しました",
     });
-
   } catch (error) {
-    console.error('選手一覧取得API エラー:', error);
+    console.error("選手一覧取得API エラー:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : '選手一覧の取得に失敗しました',
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+        error: error instanceof Error ? error.message : "選手一覧の取得に失敗しました",
+        details: process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

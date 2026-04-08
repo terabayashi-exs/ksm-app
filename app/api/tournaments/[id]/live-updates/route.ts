@@ -1,7 +1,7 @@
 // app/api/tournaments/[id]/live-updates/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { getTournamentSportCode, getSportScoreConfig } from '@/lib/sport-standings-calculator';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getSportScoreConfig, getTournamentSportCode } from "@/lib/sport-standings-calculator";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -14,10 +14,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const tournamentId = parseInt(resolvedParams.id);
 
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な大会IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な大会IDです" }, { status: 400 });
     }
 
     // Create a readable stream for SSE
@@ -32,7 +29,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             try {
               controller.enqueue(data);
             } catch (error) {
-              console.error('Failed to enqueue data:', error);
+              console.error("Failed to enqueue data:", error);
               isClosed = true;
             }
           }
@@ -45,7 +42,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             const sportCode = await getTournamentSportCode(tournamentId);
             const sportConfig = getSportScoreConfig(sportCode);
 
-            const matches = await db.execute(`
+            const matches = await db.execute(
+              `
               SELECT
                 ml.match_id,
                 ml.match_code,
@@ -64,13 +62,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
               LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
               WHERE mb.tournament_id = ?
               ORDER BY ml.match_number
-            `, [tournamentId]);
+            `,
+              [tournamentId],
+            );
 
             const data = {
-              type: 'initial',
+              type: "initial",
               // 多競技対応：スポーツ設定を追加
               sport_config: sportConfig,
-              matches: matches.rows.map(row => ({
+              matches: matches.rows.map((row) => ({
                 match_id: row.match_id,
                 match_code: row.match_code,
                 team1_name: row.team1_display_name,
@@ -79,17 +79,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
                 scheduled_time: row.start_time,
                 current_period: row.current_period,
                 period_count: row.period_count,
-                match_status: row.match_status || 'scheduled',
+                match_status: row.match_status || "scheduled",
                 actual_start_time: row.actual_start_time,
                 actual_end_time: row.actual_end_time,
-                updated_at: row.updated_at
-              }))
+                updated_at: row.updated_at,
+              })),
             };
 
             const message = `data: ${JSON.stringify(data)}\n\n`;
             safeEnqueue(encoder.encode(message));
           } catch (error) {
-            console.error('Initial data send error:', error);
+            console.error("Initial data send error:", error);
           }
         };
 
@@ -104,7 +104,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
           }
 
           try {
-            const recentUpdates = await db.execute(`
+            const recentUpdates = await db.execute(
+              `
               SELECT
                 ml.match_id,
                 ml.match_code,
@@ -122,12 +123,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
               WHERE mb.tournament_id = ?
                 AND ms.updated_at > datetime('now', '-10 seconds')
               ORDER BY ms.updated_at DESC
-            `, [tournamentId]);
+            `,
+              [tournamentId],
+            );
 
             if (recentUpdates.rows.length > 0) {
               const data = {
-                type: 'status_update',
-                updates: recentUpdates.rows.map(row => ({
+                type: "status_update",
+                updates: recentUpdates.rows.map((row) => ({
                   match_id: row.match_id,
                   match_code: row.match_code,
                   team1_name: row.team1_display_name,
@@ -137,9 +140,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
                   match_status: row.match_status,
                   actual_start_time: row.actual_start_time,
                   actual_end_time: row.actual_end_time,
-                  updated_at: row.updated_at
+                  updated_at: row.updated_at,
                 })),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               };
 
               const message = `data: ${JSON.stringify(data)}\n\n`;
@@ -147,16 +150,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
             }
 
             // Send heartbeat
-            const heartbeat = `data: ${JSON.stringify({ type: 'heartbeat', timestamp: new Date().toISOString() })}\n\n`;
+            const heartbeat = `data: ${JSON.stringify({ type: "heartbeat", timestamp: new Date().toISOString() })}\n\n`;
             safeEnqueue(encoder.encode(heartbeat));
-
           } catch (error) {
-            console.error('SSE update error:', error);
+            console.error("SSE update error:", error);
           }
         }, 5000);
 
         // Cleanup on close
-        request.signal.addEventListener('abort', () => {
+        request.signal.addEventListener("abort", () => {
           isClosed = true;
           clearInterval(intervalId);
           try {
@@ -165,24 +167,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
             // Controller already closed, ignore
           }
         });
-      }
+      },
     });
 
     return new Response(stream, {
       headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control'
-      }
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Cache-Control",
+      },
     });
-
   } catch (error) {
-    console.error('SSE setup error:', error);
+    console.error("SSE setup error:", error);
     return NextResponse.json(
-      { success: false, error: 'リアルタイム更新の設定に失敗しました' },
-      { status: 500 }
+      { success: false, error: "リアルタイム更新の設定に失敗しました" },
+      { status: 500 },
     );
   }
 }

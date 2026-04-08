@@ -1,20 +1,26 @@
 // app/page.tsx
-import { auth } from "@/lib/auth";
+
+import {
+  ArrowRight,
+  BarChart3,
+  DollarSign,
+  Megaphone,
+  Smartphone,
+  Trophy,
+  Zap,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import AnnouncementList from "@/components/features/announcements/AnnouncementList";
+import { LiveDashboard } from "@/components/features/top/LiveDashboard";
+import TournamentSearchSection from "@/components/features/top/TournamentSearchSection";
 import Footer from "@/components/layout/Footer";
 import InitialFooterBanner from "@/components/layout/InitialFooterBanner";
 import TopNavBar from "@/components/layout/TopNavBar";
-import AnnouncementList from "@/components/features/announcements/AnnouncementList";
-import TournamentSearchSection from "@/components/features/top/TournamentSearchSection";
-import { LiveDashboard } from "@/components/features/top/LiveDashboard";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import Image from "next/image";
-import {
-  Trophy, ArrowRight,
-  Smartphone, Zap, Megaphone, BarChart3, DollarSign
-} from "lucide-react";
-import { fetchGroupedPublicTournaments, CategorizedTournaments } from "@/lib/public-tournaments";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { CategorizedTournaments, fetchGroupedPublicTournaments } from "@/lib/public-tournaments";
 import { calculateTournamentStatus, formatTournamentPeriod } from "@/lib/tournament-status";
 
 async function fetchSportTypes() {
@@ -29,20 +35,27 @@ async function fetchSportTypes() {
       ORDER BY st.sport_type_id
     `);
     const sportCodeToIcon: Record<string, string> = {
-      soccer: '⚽', baseball: '⚾', basketball: '🏀', volleyball: '🏐',
-      futsal: '⚽', tennis: '🎾', badminton: '🏸', handball: '🤾',
-      tabletennis: '🏓', pk: '🥅',
+      soccer: "⚽",
+      baseball: "⚾",
+      basketball: "🏀",
+      volleyball: "🏐",
+      futsal: "⚽",
+      tennis: "🎾",
+      badminton: "🏸",
+      handball: "🤾",
+      tabletennis: "🏓",
+      pk: "🥅",
     };
     const sportNameShort: Record<string, string> = {
-      'バスケットボール': 'バスケ',
-      'バレーボール': 'バレー',
+      バスケットボール: "バスケ",
+      バレーボール: "バレー",
     };
-    return result.rows.map(row => {
+    return result.rows.map((row) => {
       const name = String(row.sport_name);
       return {
         sport_type_id: Number(row.sport_type_id),
         sport_type_name: sportNameShort[name] || name,
-        icon: sportCodeToIcon[String(row.sport_code)] || '🏆',
+        icon: sportCodeToIcon[String(row.sport_code)] || "🏆",
       };
     });
   } catch {
@@ -71,7 +84,7 @@ async function fetchFeaturedOrganizers() {
       ORDER BY ongoing_count DESC, open_count DESC
       LIMIT 8
     `);
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       login_user_id: Number(row.login_user_id),
       organization_name: String(row.organization_name),
       logo_blob_url: row.logo_blob_url as string | null,
@@ -87,23 +100,39 @@ async function fetchFeaturedOrganizers() {
 /** 動的ステータスで開催中と判定された大会IDリストからライブ情報を取得 */
 async function fetchLiveStats(ongoingTournamentIds: number[]) {
   if (ongoingTournamentIds.length === 0) {
-    return { ongoingCount: 0, totalMatches: 0, recentUpdates: [] as { tournamentName: string; description: string; badge: 'live' | 'finished' | 'updated'; homeTeam?: string; awayTeam?: string; homeScore?: number; awayScore?: number }[] };
+    return {
+      ongoingCount: 0,
+      totalMatches: 0,
+      recentUpdates: [] as {
+        tournamentName: string;
+        description: string;
+        badge: "live" | "finished" | "updated";
+        homeTeam?: string;
+        awayTeam?: string;
+        homeScore?: number;
+        awayScore?: number;
+      }[],
+    };
   }
 
   const ongoingCount = ongoingTournamentIds.length;
-  const placeholders = ongoingTournamentIds.map(() => '?').join(',');
+  const placeholders = ongoingTournamentIds.map(() => "?").join(",");
 
   try {
-    const matchResult = await db.execute(`
+    const matchResult = await db.execute(
+      `
       SELECT COUNT(DISTINCT ml.match_id) as cnt
       FROM t_matches_live ml
       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id IN (${placeholders})
         AND ml.tournament_date = strftime('%Y-%m-%d', 'now', '+9 hours')
-    `, ongoingTournamentIds);
+    `,
+      ongoingTournamentIds,
+    );
     const totalMatches = Number(matchResult.rows[0]?.cnt) || 0;
 
-    const recentResult = await db.execute(`
+    const recentResult = await db.execute(
+      `
       SELECT
         tg.group_name,
         t.tournament_name,
@@ -124,25 +153,36 @@ async function fetchLiveStats(ongoingTournamentIds: number[]) {
         AND ms.match_status != 'scheduled'
       ORDER BY ms.updated_at DESC
       LIMIT 5
-    `, ongoingTournamentIds);
+    `,
+      ongoingTournamentIds,
+    );
 
     const sumScores = (scoresJson: unknown): number | undefined => {
       if (!scoresJson) return undefined;
       try {
         const arr = JSON.parse(String(scoresJson));
         if (Array.isArray(arr)) return arr.reduce((s: number, v: number) => s + (v || 0), 0);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return undefined;
     };
 
-    const recentUpdates = recentResult.rows.map(row => ({
+    const recentUpdates = recentResult.rows.map((row) => ({
       tournamentName: row.group_name
         ? `${String(row.group_name)} / ${String(row.tournament_name)}`
         : String(row.tournament_name),
-      description: row.match_status === 'ongoing' ? '試合進行中' :
-                   row.match_status === 'completed' ? '試合終了' : '結果更新',
-      badge: (row.match_status === 'ongoing' ? 'live' :
-              row.match_status === 'completed' ? 'finished' : 'updated') as 'live' | 'finished' | 'updated',
+      description:
+        row.match_status === "ongoing"
+          ? "試合進行中"
+          : row.match_status === "completed"
+            ? "試合終了"
+            : "結果更新",
+      badge: (row.match_status === "ongoing"
+        ? "live"
+        : row.match_status === "completed"
+          ? "finished"
+          : "updated") as "live" | "finished" | "updated",
       homeTeam: row.team1_name ? String(row.team1_name) : undefined,
       awayTeam: row.team2_name ? String(row.team2_name) : undefined,
       homeScore: sumScores(row.team1_scores),
@@ -151,7 +191,19 @@ async function fetchLiveStats(ongoingTournamentIds: number[]) {
 
     return { ongoingCount, totalMatches, recentUpdates };
   } catch {
-    return { ongoingCount, totalMatches: 0, recentUpdates: [] as { tournamentName: string; description: string; badge: 'live' | 'finished' | 'updated'; homeTeam?: string; awayTeam?: string; homeScore?: number; awayScore?: number }[] };
+    return {
+      ongoingCount,
+      totalMatches: 0,
+      recentUpdates: [] as {
+        tournamentName: string;
+        description: string;
+        badge: "live" | "finished" | "updated";
+        homeTeam?: string;
+        awayTeam?: string;
+        homeScore?: number;
+        awayScore?: number;
+      }[],
+    };
   }
 }
 
@@ -159,9 +211,16 @@ async function fetchLiveStats(ongoingTournamentIds: number[]) {
 async function fetchInitialTournaments() {
   try {
     const sportCodeToIcon: Record<string, string> = {
-      soccer: '⚽', baseball: '⚾', basketball: '🏀', volleyball: '🏐',
-      futsal: '⚽', tennis: '🎾', badminton: '🏸', handball: '🤾',
-      tabletennis: '🏓', pk: '🥅',
+      soccer: "⚽",
+      baseball: "⚾",
+      basketball: "🏀",
+      volleyball: "🏐",
+      futsal: "⚽",
+      tennis: "🎾",
+      badminton: "🏸",
+      handball: "🤾",
+      tabletennis: "🏓",
+      pk: "🥅",
     };
 
     const result = await db.execute(`
@@ -190,93 +249,107 @@ async function fetchInitialTournaments() {
       ORDER BY t.created_at DESC
     `);
 
-    const tournaments = await Promise.all(result.rows.map(async (row) => {
-      const calculatedStatus = await calculateTournamentStatus({
-        status: String(row.status),
-        tournament_dates: String(row.tournament_dates || '{}'),
-        recruitment_start_date: row.recruitment_start_date as string | null,
-        recruitment_end_date: row.recruitment_end_date as string | null,
-        public_start_date: row.public_start_date as string | null,
-      }, Number(row.tournament_id));
+    const tournaments = await Promise.all(
+      result.rows.map(async (row) => {
+        const calculatedStatus = await calculateTournamentStatus(
+          {
+            status: String(row.status),
+            tournament_dates: String(row.tournament_dates || "{}"),
+            recruitment_start_date: row.recruitment_start_date as string | null,
+            recruitment_end_date: row.recruitment_end_date as string | null,
+            public_start_date: row.public_start_date as string | null,
+          },
+          Number(row.tournament_id),
+        );
 
-      let tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates || '{}'));
+        let tournamentPeriod = formatTournamentPeriod(String(row.tournament_dates || "{}"));
 
-      // tournament_datesが空の場合、match_blocksの試合日程から期間を取得
-      if (tournamentPeriod === '未設定') {
-        try {
-          const blockDatesResult = await db.execute(`
+        // tournament_datesが空の場合、match_blocksの試合日程から期間を取得
+        if (tournamentPeriod === "未設定") {
+          try {
+            const blockDatesResult = await db.execute(
+              `
             SELECT DISTINCT ml.tournament_date
             FROM t_matches_live ml
             INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
             WHERE mb.tournament_id = ?
             AND ml.tournament_date IS NOT NULL AND ml.tournament_date != ''
             ORDER BY ml.tournament_date
-          `, [Number(row.tournament_id)]);
-          const blockDates = blockDatesResult.rows
-            .map(r => String(r.tournament_date))
-            .filter(Boolean)
-            .sort();
-          if (blockDates.length === 1) {
-            tournamentPeriod = blockDates[0];
-          } else if (blockDates.length > 1) {
-            tournamentPeriod = `${blockDates[0]} - ${blockDates[blockDates.length - 1]}`;
-          }
-        } catch { /* ignore */ }
-      }
-
-      let eventStartDate = '';
-      let eventEndDate = '';
-      if (row.tournament_dates) {
-        try {
-          const dates = JSON.parse(row.tournament_dates as string);
-          const dateValues = (Object.values(dates) as string[]).filter(Boolean).sort();
-          eventStartDate = dateValues[0] || '';
-          eventEndDate = dateValues[dateValues.length - 1] || '';
-        } catch { /* ignore */ }
-      }
-
-      // 全会場名を取得
-      let venueNames = '未設定';
-      if (row.venue_id_json) {
-        try {
-          const venueIds = JSON.parse(row.venue_id_json as string);
-          if (Array.isArray(venueIds) && venueIds.length > 0) {
-            const placeholders = venueIds.map(() => '?').join(',');
-            const venueResult = await db.execute(
-              `SELECT venue_name FROM m_venues WHERE venue_id IN (${placeholders}) ORDER BY venue_id`,
-              venueIds
+          `,
+              [Number(row.tournament_id)],
             );
-            const names = venueResult.rows.map(r => String(r.venue_name)).filter(Boolean);
-            if (names.length > 0) venueNames = names.join(' / ');
+            const blockDates = blockDatesResult.rows
+              .map((r) => String(r.tournament_date))
+              .filter(Boolean)
+              .sort();
+            if (blockDates.length === 1) {
+              tournamentPeriod = blockDates[0];
+            } else if (blockDates.length > 1) {
+              tournamentPeriod = `${blockDates[0]} - ${blockDates[blockDates.length - 1]}`;
+            }
+          } catch {
+            /* ignore */
           }
-        } catch { /* ignore */ }
-      }
+        }
 
-      const sportIcon = row.sport_code ? (sportCodeToIcon[String(row.sport_code)] || '🏆') : '🏆';
+        let eventStartDate = "";
+        let eventEndDate = "";
+        if (row.tournament_dates) {
+          try {
+            const dates = JSON.parse(row.tournament_dates as string);
+            const dateValues = (Object.values(dates) as string[]).filter(Boolean).sort();
+            eventStartDate = dateValues[0] || "";
+            eventEndDate = dateValues[dateValues.length - 1] || "";
+          } catch {
+            /* ignore */
+          }
+        }
 
-      return {
-        tournament_id: Number(row.tournament_id),
-        tournament_name: String(row.tournament_name),
-        group_id: row.group_id ? Number(row.group_id) : null,
-        group_name: row.group_name ? String(row.group_name) : null,
-        status: calculatedStatus,
-        format_name: String(row.format_name || '未設定'),
-        venue_name: venueNames,
-        sport_icon: sportIcon,
-        team_count: Number(row.team_count),
-        event_start_date: eventStartDate,
-        event_end_date: eventEndDate,
-        tournament_period: tournamentPeriod,
-        recruitment_start_date: String(row.recruitment_start_date || ''),
-        recruitment_end_date: String(row.recruitment_end_date || ''),
-        logo_blob_url: row.logo_blob_url as string | null,
-        organization_name: row.organizer_name as string | null,
-        is_joined: false,
-      };
-    }));
+        // 全会場名を取得
+        let venueNames = "未設定";
+        if (row.venue_id_json) {
+          try {
+            const venueIds = JSON.parse(row.venue_id_json as string);
+            if (Array.isArray(venueIds) && venueIds.length > 0) {
+              const placeholders = venueIds.map(() => "?").join(",");
+              const venueResult = await db.execute(
+                `SELECT venue_name FROM m_venues WHERE venue_id IN (${placeholders}) ORDER BY venue_id`,
+                venueIds,
+              );
+              const names = venueResult.rows.map((r) => String(r.venue_name)).filter(Boolean);
+              if (names.length > 0) venueNames = names.join(" / ");
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        const sportIcon = row.sport_code ? sportCodeToIcon[String(row.sport_code)] || "🏆" : "🏆";
+
+        return {
+          tournament_id: Number(row.tournament_id),
+          tournament_name: String(row.tournament_name),
+          group_id: row.group_id ? Number(row.group_id) : null,
+          group_name: row.group_name ? String(row.group_name) : null,
+          status: calculatedStatus,
+          format_name: String(row.format_name || "未設定"),
+          venue_name: venueNames,
+          sport_icon: sportIcon,
+          team_count: Number(row.team_count),
+          event_start_date: eventStartDate,
+          event_end_date: eventEndDate,
+          tournament_period: tournamentPeriod,
+          recruitment_start_date: String(row.recruitment_start_date || ""),
+          recruitment_end_date: String(row.recruitment_end_date || ""),
+          logo_blob_url: row.logo_blob_url as string | null,
+          organization_name: row.organizer_name as string | null,
+          is_joined: false,
+        };
+      }),
+    );
 
     // planning を除外
-    return tournaments.filter(t => t.status !== 'planning');
+    return tournaments.filter((t) => t.status !== "planning");
   } catch {
     return [];
   }
@@ -284,12 +357,18 @@ async function fetchInitialTournaments() {
 
 export default async function Home() {
   const session = await auth();
-  const teamId = session?.user?.role === 'team' ? session.user.teamId : undefined;
+  const teamId = session?.user?.role === "team" ? session.user.teamId : undefined;
 
   const [groupedData, sportTypes, organizers, initialTournaments] = await Promise.all([
-    fetchGroupedPublicTournaments(teamId).catch(() => ({
-      ongoing: [], recruiting: [], before_event: [], completed: []
-    } as CategorizedTournaments)),
+    fetchGroupedPublicTournaments(teamId).catch(
+      () =>
+        ({
+          ongoing: [],
+          recruiting: [],
+          before_event: [],
+          completed: [],
+        }) as CategorizedTournaments,
+    ),
     fetchSportTypes(),
     fetchFeaturedOrganizers(),
     fetchInitialTournaments(),
@@ -297,9 +376,13 @@ export default async function Home() {
 
   // 動的ステータスで開催中と判定された大会IDを抽出
   const ongoingTournamentIds = groupedData.ongoing.flatMap(
-    (g: any) => g.divisions // eslint-disable-line @typescript-eslint/no-explicit-any
-      .filter((d: any) => d.status === 'ongoing') // eslint-disable-line @typescript-eslint/no-explicit-any
-      .map((d: any) => d.tournament_id as number) // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (g: any) =>
+      g.divisions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((d: any) => d.status === "ongoing")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((d: any) => d.tournament_id as number),
   );
   const liveStats = await fetchLiveStats(ongoingTournamentIds);
 
@@ -319,7 +402,7 @@ export default async function Home() {
                 width={500}
                 height={176}
                 className="mx-auto w-full h-auto max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl"
-                style={{ objectFit: 'contain' }}
+                style={{ objectFit: "contain" }}
                 priority
               />
             </div>
@@ -334,17 +417,25 @@ export default async function Home() {
           {/* ログイン/ダッシュボードリンク */}
           <div className="flex justify-center gap-3 mb-6">
             {session?.user ? (
-              <Button asChild size="sm" variant="outline" className="group border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="group border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white"
+              >
                 <Link href="/my">
                   ダッシュボード
                   <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             ) : (
-              <Button asChild size="sm" variant="outline" className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white">
-                <Link href="/auth/login">
-                  ログイン / 新規登録
-                </Link>
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="border-white/40 text-white bg-transparent hover:bg-white/10 hover:text-white"
+              >
+                <Link href="/auth/login">ログイン / 新規登録</Link>
               </Button>
             )}
           </div>
@@ -384,7 +475,9 @@ export default async function Home() {
       <section className="py-12 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">大会GOだからできること</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+              大会GOだからできること
+            </h2>
             <p className="text-sm text-gray-500 max-w-2xl mx-auto leading-relaxed">
               大会運営を効率化する、次世代の大会管理システム
             </p>
@@ -392,14 +485,47 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: <Smartphone className="h-7 w-7 text-primary" />, title: "スマホ1つで結果入力", description: "審判がQRコードを読み取るだけ。重い機材も専用端末も不要。雨の日でもスムーズに運営できます。" },
-              { icon: <Trophy className="h-7 w-7 text-primary" />, title: "トーナメント表の完全自動生成", description: "参加チーム数に応じて、最適な対戦表を自動作成。変更も即座に反映されます。" },
-              { icon: <Megaphone className="h-7 w-7 text-primary" />, title: "緊急お知らせ機能", description: "雨天中止や会場変更を、全参加者のスマホに一斉通知。電話連絡の手間が激減します。" },
-              { icon: <Zap className="h-7 w-7 text-primary" />, title: "リアルタイム更新", description: "試合結果が入力された瞬間、全ユーザーの画面に反映。現地にいなくても子供の活躍をすぐに知れます。" },
-              { icon: <DollarSign className="h-7 w-7 text-primary" />, title: "スポンサー管理機能", description: "協賛企業のバナーを大会ページに表示。スポンサー獲得を支援し、大会運営の収益化をサポート。" },
-              { icon: <BarChart3 className="h-7 w-7 text-primary" />, title: "参加データの自動集計", description: "チーム数、選手数、試合数を自動で集計。報告書作成の時間を大幅に削減します。" },
+              {
+                icon: <Smartphone className="h-7 w-7 text-primary" />,
+                title: "スマホ1つで結果入力",
+                description:
+                  "審判がQRコードを読み取るだけ。重い機材も専用端末も不要。雨の日でもスムーズに運営できます。",
+              },
+              {
+                icon: <Trophy className="h-7 w-7 text-primary" />,
+                title: "トーナメント表の完全自動生成",
+                description:
+                  "参加チーム数に応じて、最適な対戦表を自動作成。変更も即座に反映されます。",
+              },
+              {
+                icon: <Megaphone className="h-7 w-7 text-primary" />,
+                title: "緊急お知らせ機能",
+                description:
+                  "雨天中止や会場変更を、全参加者のスマホに一斉通知。電話連絡の手間が激減します。",
+              },
+              {
+                icon: <Zap className="h-7 w-7 text-primary" />,
+                title: "リアルタイム更新",
+                description:
+                  "試合結果が入力された瞬間、全ユーザーの画面に反映。現地にいなくても子供の活躍をすぐに知れます。",
+              },
+              {
+                icon: <DollarSign className="h-7 w-7 text-primary" />,
+                title: "スポンサー管理機能",
+                description:
+                  "協賛企業のバナーを大会ページに表示。スポンサー獲得を支援し、大会運営の収益化をサポート。",
+              },
+              {
+                icon: <BarChart3 className="h-7 w-7 text-primary" />,
+                title: "参加データの自動集計",
+                description:
+                  "チーム数、選手数、試合数を自動で集計。報告書作成の時間を大幅に削減します。",
+              },
             ].map((feature, i) => (
-              <div key={i} className="bg-white border-2 border-gray-200 rounded-xl p-6 text-center hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div
+                key={i}
+                className="bg-white border-2 border-gray-200 rounded-xl p-6 text-center hover:border-primary hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+              >
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   {feature.icon}
                 </div>
@@ -423,11 +549,29 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { image: "bg-hero-gradient", title: "富山市サッカー協会様", result: "運営スタッフ大幅削減！", text: "年間を通じ複数大会の運営に関与する当協会にとって、革命的でした。管理側での結果入力機能や、一般閲覧側での日程・結果速報表示により、当日スタッフ業務を大幅に削減できました。" },
-              { image: "bg-live-gradient", title: "PK選手権実行委員会様", result: "保護者満足度大幅向上", text: "リアルタイム更新により、会場に来られない保護者も子供の試合をスマホで追えるようになりました。参加者の「次いつ？」の問い合わせがゼロに。" },
-              { image: "bg-gradient-to-br from-emerald-400 to-cyan-500", title: "イベント企画担当者様", result: "準備時間が1/3に短縮", text: "従来はExcelでトーナメント表を手作業で作成していましたが、自動生成機能で準備時間が劇的に短縮。複数カテゴリーの同時運営も非常に楽になりました。" },
+              {
+                image: "bg-hero-gradient",
+                title: "富山市サッカー協会様",
+                result: "運営スタッフ大幅削減！",
+                text: "年間を通じ複数大会の運営に関与する当協会にとって、革命的でした。管理側での結果入力機能や、一般閲覧側での日程・結果速報表示により、当日スタッフ業務を大幅に削減できました。",
+              },
+              {
+                image: "bg-live-gradient",
+                title: "PK選手権実行委員会様",
+                result: "保護者満足度大幅向上",
+                text: "リアルタイム更新により、会場に来られない保護者も子供の試合をスマホで追えるようになりました。参加者の「次いつ？」の問い合わせがゼロに。",
+              },
+              {
+                image: "bg-gradient-to-br from-emerald-400 to-cyan-500",
+                title: "イベント企画担当者様",
+                result: "準備時間が1/3に短縮",
+                text: "従来はExcelでトーナメント表を手作業で作成していましたが、自動生成機能で準備時間が劇的に短縮。複数カテゴリーの同時運営も非常に楽になりました。",
+              },
             ].map((study, i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+              <div
+                key={i}
+                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100"
+              >
                 <div className={`h-36 ${study.image} flex items-center justify-center`}>
                   <Trophy className="h-12 w-12 text-white/60" />
                 </div>

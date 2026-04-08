@@ -1,15 +1,15 @@
 // app/api/matches/[id]/extended-info/route.ts
 // サッカー対応の拡張試合情報を取得するAPI
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { SPORT_RULE_CONFIGS } from '@/lib/tournament-rules';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { SPORT_RULE_CONFIGS } from "@/lib/tournament-rules";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
 // 動的ルートの設定（静的生成を無効化）
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
@@ -17,15 +17,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const matchId = parseInt(resolvedParams.id);
 
     if (isNaN(matchId)) {
-      return NextResponse.json(
-        { success: false, error: '無効な試合IDです' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "無効な試合IDです" }, { status: 400 });
     }
 
     // 試合の拡張情報を取得（競技種別・ルール設定含む）
     // 試合のphaseに対応するルール設定を動的にJOIN
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT
         ml.match_id,
         ml.match_code,
@@ -49,21 +47,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
       LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
       LEFT JOIN t_tournament_rules tr ON tour.tournament_id = tr.tournament_id AND tr.phase = mb.phase
       WHERE ml.match_id = ?
-    `, [matchId]);
+    `,
+      [matchId],
+    );
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '試合が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "試合が見つかりません" }, { status: 404 });
     }
 
     const match = result.rows[0];
 
     // 競技種別設定を取得（インライン化でWebpackエラー回避）
-    const sportConfig = Object.values(SPORT_RULE_CONFIGS).find(config =>
-      config.sport_type_id === Number(match.sport_type_id)
-    ) || null;
+    const sportConfig =
+      Object.values(SPORT_RULE_CONFIGS).find(
+        (config) => config.sport_type_id === Number(match.sport_type_id),
+      ) || null;
 
     // 試合フェーズに対応するルール設定を使用
     const activePeriodsJson = match.rule_periods;
@@ -73,10 +71,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     try {
       if (activePeriodsJson) {
         const periods = JSON.parse(String(activePeriodsJson));
-        activePeriods = Array.isArray(periods) ? periods.map(p => parseInt(p)) : [1];
+        activePeriods = Array.isArray(periods) ? periods.map((p) => parseInt(p)) : [1];
       }
     } catch (error) {
-      console.warn('Active periods parse error:', error);
+      console.warn("Active periods parse error:", error);
       activePeriods = [1]; // フォールバック
     }
 
@@ -101,20 +99,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
         phase: match.match_phase,
         use_extra_time: match.rule_use_extra_time,
         use_penalty: match.rule_use_penalty,
-        active_periods_json: activePeriodsJson
-      }
+        active_periods_json: activePeriodsJson,
+      },
     };
 
     return NextResponse.json({
       success: true,
-      data: responseData
+      data: responseData,
     });
-
   } catch (error) {
-    console.error('Extended match info error:', error);
+    console.error("Extended match info error:", error);
     return NextResponse.json(
-      { success: false, error: '拡張試合情報の取得に失敗しました' },
-      { status: 500 }
+      { success: false, error: "拡張試合情報の取得に失敗しました" },
+      { status: 500 },
     );
   }
 }

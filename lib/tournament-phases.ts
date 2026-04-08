@@ -3,7 +3,7 @@
  * トーナメントフェーズ管理のユーティリティ関数
  */
 
-import type { TournamentPhases, PhaseFormatType } from './types/tournament-phases';
+import type { PhaseFormatType, TournamentPhases } from "./types/tournament-phases";
 
 /**
  * レガシーの preliminary_format_type / final_format_type から
@@ -11,27 +11,27 @@ import type { TournamentPhases, PhaseFormatType } from './types/tournament-phase
  */
 export function generatePhasesFromLegacy(
   preliminaryType: string | null,
-  finalType: string | null
+  finalType: string | null,
 ): TournamentPhases {
   const phases: TournamentPhases = { phases: [] };
 
   // 予選フェーズを追加
-  if (preliminaryType && preliminaryType !== 'none') {
+  if (preliminaryType && preliminaryType !== "none") {
     phases.phases.push({
-      id: 'preliminary',
+      id: "preliminary",
       order: 1,
-      name: '予選',
-      format_type: preliminaryType as PhaseFormatType
+      name: "予選",
+      format_type: preliminaryType as PhaseFormatType,
     });
   }
 
   // 決勝フェーズを追加
-  if (finalType && finalType !== 'none') {
+  if (finalType && finalType !== "none") {
     phases.phases.push({
-      id: 'final',
+      id: "final",
       order: phases.phases.length + 1,
-      name: '決勝トーナメント',
-      format_type: finalType as PhaseFormatType
+      name: "決勝トーナメント",
+      format_type: finalType as PhaseFormatType,
     });
   }
 
@@ -46,7 +46,7 @@ export function validatePhases(phases: TournamentPhases): { valid: boolean; erro
 
   // フェーズが空でないことを確認
   if (!phases.phases || phases.phases.length === 0) {
-    errors.push('少なくとも1つのフェーズが必要です');
+    errors.push("少なくとも1つのフェーズが必要です");
     return { valid: false, errors };
   }
 
@@ -54,42 +54,47 @@ export function validatePhases(phases: TournamentPhases): { valid: boolean; erro
   for (let i = 0; i < phases.phases.length; i++) {
     const phase = phases.phases[i];
 
-    if (!phase.id || phase.id.trim() === '') {
+    if (!phase.id || phase.id.trim() === "") {
       errors.push(`フェーズ${i + 1}: IDが必要です`);
     }
 
-    if (!phase.name || phase.name.trim() === '') {
+    if (!phase.name || phase.name.trim() === "") {
       errors.push(`フェーズ${i + 1}: 名前が必要です`);
     }
 
-    if (!phase.format_type || (phase.format_type !== 'league' && phase.format_type !== 'tournament')) {
+    if (
+      !phase.format_type ||
+      (phase.format_type !== "league" && phase.format_type !== "tournament")
+    ) {
       errors.push(`フェーズ${i + 1}: format_typeは'league'または'tournament'である必要があります`);
     }
 
-    if (typeof phase.order !== 'number' || phase.order < 1) {
+    if (typeof phase.order !== "number" || phase.order < 1) {
       errors.push(`フェーズ${i + 1}: orderは1以上の数値である必要があります`);
     }
   }
 
   // ID重複チェック
-  const ids = phases.phases.map(p => p.id);
+  const ids = phases.phases.map((p) => p.id);
   const uniqueIds = new Set(ids);
   if (ids.length !== uniqueIds.size) {
-    errors.push('フェーズIDが重複しています');
+    errors.push("フェーズIDが重複しています");
   }
 
   // order連続性チェック
-  const orders = phases.phases.map(p => p.order).sort((a, b) => a - b);
+  const orders = phases.phases.map((p) => p.order).sort((a, b) => a - b);
   for (let i = 0; i < orders.length; i++) {
     if (orders[i] !== i + 1) {
-      errors.push(`フェーズのorder値は1から連続している必要があります（現在: ${orders.join(', ')}）`);
+      errors.push(
+        `フェーズのorder値は1から連続している必要があります（現在: ${orders.join(", ")}）`,
+      );
       break;
     }
   }
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -97,25 +102,30 @@ export function validatePhases(phases: TournamentPhases): { valid: boolean; erro
  * フェーズIDから表示名を取得
  */
 export function getPhaseDisplayName(phases: TournamentPhases, phaseId: string): string | null {
-  const phase = phases.phases.find(p => p.id === phaseId);
+  const phase = phases.phases.find((p) => p.id === phaseId);
   return phase ? phase.name : null;
 }
 
 /**
  * フェーズIDから形式タイプを取得
  */
-export function getPhaseFormatType(phases: TournamentPhases, phaseId: string): PhaseFormatType | null {
-  const phase = phases.phases.find(p => p.id === phaseId);
+export function getPhaseFormatType(
+  phases: TournamentPhases,
+  phaseId: string,
+): PhaseFormatType | null {
+  const phase = phases.phases.find((p) => p.id === phaseId);
   return phase ? phase.format_type : null;
 }
 
 /**
  * phases JSON文字列またはオブジェクトをパースしてTournamentPhasesを取得
  */
-export function parsePhasesJson(phases: string | object | null | undefined): TournamentPhases | null {
+export function parsePhasesJson(
+  phases: string | object | null | undefined,
+): TournamentPhases | null {
   if (!phases) return null;
   try {
-    const data = typeof phases === 'string' ? JSON.parse(phases) : phases;
+    const data = typeof phases === "string" ? JSON.parse(phases) : phases;
     if (data?.phases && Array.isArray(data.phases) && data.phases.length > 0) {
       return data as TournamentPhases;
     }
@@ -129,7 +139,9 @@ export function parsePhasesJson(phases: string | object | null | undefined): Tou
  * phases JSON文字列からフェーズID→format_typeのマップを構築する
  * DB取得値（string | object）を直接渡せる
  */
-export function buildPhaseFormatMap(phases: string | object | null | undefined): Map<string, PhaseFormatType> {
+export function buildPhaseFormatMap(
+  phases: string | object | null | undefined,
+): Map<string, PhaseFormatType> {
   const map = new Map<string, PhaseFormatType>();
   const parsed = parsePhasesJson(phases);
   if (parsed) {
@@ -165,14 +177,14 @@ export function buildPhaseNameMap(phases: string | object | null | undefined): M
  */
 export function buildTemplatePhaseMapping(
   templatePhases: string[],
-  phases: string | object | null | undefined
+  phases: string | object | null | undefined,
 ): Map<string, string> {
   const mapping = new Map<string, string>();
   const parsed = parsePhasesJson(phases);
   if (!parsed) return mapping;
 
   const sortedPhases = [...parsed.phases].sort((a, b) => a.order - b.order);
-  const phaseIds = new Set(sortedPhases.map(p => p.id));
+  const phaseIds = new Set(sortedPhases.map((p) => p.id));
   const uniqueTemplatePhases = [...new Set(templatePhases)];
 
   // まず直接一致するものをマッピング
@@ -190,8 +202,8 @@ export function buildTemplatePhaseMapping(
     const phaseOrder: Record<string, number> = { preliminary: 1, final: 2 };
     unmapped.sort((a, b) => (phaseOrder[a] || 99) - (phaseOrder[b] || 99));
 
-    const availablePhases = sortedPhases.filter(p =>
-      !Array.from(mapping.values()).includes(p.id)
+    const availablePhases = sortedPhases.filter(
+      (p) => !Array.from(mapping.values()).includes(p.id),
     );
 
     for (let i = 0; i < unmapped.length && i < availablePhases.length; i++) {
@@ -208,9 +220,9 @@ export function buildTemplatePhaseMapping(
 export function generateStandardTwoPhaseConfiguration(): TournamentPhases {
   return {
     phases: [
-      { id: 'preliminary', order: 1, name: '予選', format_type: 'league' },
-      { id: 'final', order: 2, name: '決勝トーナメント', format_type: 'tournament' }
-    ]
+      { id: "preliminary", order: 1, name: "予選", format_type: "league" },
+      { id: "final", order: 2, name: "決勝トーナメント", format_type: "tournament" },
+    ],
   };
 }
 
@@ -225,7 +237,7 @@ export function buildUnifiedBlockName(phaseId: string): string {
  * 統合ブロック名かどうかを判定する
  */
 export function isUnifiedBlockName(blockName: string): boolean {
-  return blockName.endsWith('_unified');
+  return blockName.endsWith("_unified");
 }
 
 /**
@@ -233,17 +245,14 @@ export function isUnifiedBlockName(blockName: string): boolean {
  * format_typeが'tournament'なら'決勝'系、'league'なら'予選'系のラベルを返す
  * phases情報がない場合はphaseIdからフォールバック
  */
-export function getPhaseLabel(
-  phases: string | object | null | undefined,
-  phaseId: string
-): string {
+export function getPhaseLabel(phases: string | object | null | undefined, phaseId: string): string {
   const parsed = parsePhasesJson(phases);
   if (parsed) {
-    const phase = parsed.phases.find(p => p.id === phaseId);
+    const phase = parsed.phases.find((p) => p.id === phaseId);
     if (phase) return phase.name;
   }
   // フォールバック: phaseIdベースのラベル
-  return phaseId === 'final' ? '決勝' : phaseId === 'preliminary' ? '予選' : phaseId;
+  return phaseId === "final" ? "決勝" : phaseId === "preliminary" ? "予選" : phaseId;
 }
 
 /**
@@ -252,13 +261,13 @@ export function getPhaseLabel(
  */
 export function getNextPhaseId(
   phases: string | object | null | undefined,
-  currentPhaseId: string
+  currentPhaseId: string,
 ): string | null {
   const parsed = parsePhasesJson(phases);
   if (!parsed) return null;
 
   const sorted = [...parsed.phases].sort((a, b) => a.order - b.order);
-  const currentIndex = sorted.findIndex(p => p.id === currentPhaseId);
+  const currentIndex = sorted.findIndex((p) => p.id === currentPhaseId);
   if (currentIndex < 0 || currentIndex >= sorted.length - 1) return null;
   return sorted[currentIndex + 1].id;
 }
@@ -266,10 +275,7 @@ export function getNextPhaseId(
 /**
  * 指定されたフェーズが最後のフェーズかどうかを判定する
  */
-export function isLastPhase(
-  phases: string | object | null | undefined,
-  phaseId: string
-): boolean {
+export function isLastPhase(phases: string | object | null | undefined, phaseId: string): boolean {
   const parsed = parsePhasesJson(phases);
   if (!parsed) return true;
 
@@ -283,19 +289,19 @@ export function isLastPhase(
  */
 export function getSourcePhasesForPromotion(
   phases: string | object | null | undefined,
-  targetPhaseId: string
+  targetPhaseId: string,
 ): string[] {
   const parsed = parsePhasesJson(phases);
   if (!parsed) return [];
 
   const sorted = [...parsed.phases].sort((a, b) => a.order - b.order);
-  const targetIndex = sorted.findIndex(p => p.id === targetPhaseId);
+  const targetIndex = sorted.findIndex((p) => p.id === targetPhaseId);
   if (targetIndex <= 0) return [];
 
   return sorted
     .slice(0, targetIndex)
-    .filter(p => p.format_type === 'league')
-    .map(p => p.id);
+    .filter((p) => p.format_type === "league")
+    .map((p) => p.id);
 }
 
 /**
@@ -304,58 +310,52 @@ export function getSourcePhasesForPromotion(
  */
 export function getPhaseFormatTypeFromJson(
   phases: string | object | null | undefined,
-  phaseId: string
+  phaseId: string,
 ): PhaseFormatType {
   const parsed = parsePhasesJson(phases);
   if (parsed) {
-    const phase = parsed.phases.find(p => p.id === phaseId);
+    const phase = parsed.phases.find((p) => p.id === phaseId);
     if (phase) return phase.format_type;
   }
   // フォールバック: phaseIdベースの推定
-  if (phaseId === 'final') return 'tournament';
-  return 'league';
+  if (phaseId === "final") return "tournament";
+  return "league";
 }
 
 /**
  * tournament形式のフェーズIDリストを取得する
  */
-export function getTournamentFormatPhases(
-  phases: string | object | null | undefined
-): string[] {
+export function getTournamentFormatPhases(phases: string | object | null | undefined): string[] {
   const parsed = parsePhasesJson(phases);
-  if (!parsed) return ['final'];
+  if (!parsed) return ["final"];
   return parsed.phases
-    .filter(p => p.format_type === 'tournament')
+    .filter((p) => p.format_type === "tournament")
     .sort((a, b) => a.order - b.order)
-    .map(p => p.id);
+    .map((p) => p.id);
 }
 
 /**
  * league形式のフェーズIDリストを取得する
  */
-export function getLeagueFormatPhases(
-  phases: string | object | null | undefined
-): string[] {
+export function getLeagueFormatPhases(phases: string | object | null | undefined): string[] {
   const parsed = parsePhasesJson(phases);
-  if (!parsed) return ['preliminary'];
+  if (!parsed) return ["preliminary"];
   return parsed.phases
-    .filter(p => p.format_type === 'league')
+    .filter((p) => p.format_type === "league")
     .sort((a, b) => a.order - b.order)
-    .map(p => p.id);
+    .map((p) => p.id);
 }
 
 /**
  * 最初のフェーズより後の全フェーズIDリストを取得する（format_type不問）
  * リーグ→リーグ、リーグ→トーナメント両方の進出に対応
  */
-export function getSubsequentPhases(
-  phases: string | object | null | undefined
-): string[] {
+export function getSubsequentPhases(phases: string | object | null | undefined): string[] {
   const parsed = parsePhasesJson(phases);
-  if (!parsed) return ['final'];
+  if (!parsed) return ["final"];
   const sorted = [...parsed.phases].sort((a, b) => a.order - b.order);
   // 最初のフェーズを除外して、2つ目以降のフェーズを返す
-  return sorted.slice(1).map(p => p.id);
+  return sorted.slice(1).map((p) => p.id);
 }
 
 /**
@@ -365,12 +365,12 @@ export function getSubsequentPhases(
  */
 export function getNextPhase(
   phases: string | object | null | undefined,
-  currentPhaseId: string
+  currentPhaseId: string,
 ): string | null {
   const parsed = parsePhasesJson(phases);
   if (!parsed) return null;
   const sorted = [...parsed.phases].sort((a, b) => a.order - b.order);
-  const currentIndex = sorted.findIndex(p => p.id === currentPhaseId);
+  const currentIndex = sorted.findIndex((p) => p.id === currentPhaseId);
   if (currentIndex === -1 || currentIndex >= sorted.length - 1) return null;
   return sorted[currentIndex + 1].id;
 }

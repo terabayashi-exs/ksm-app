@@ -1,18 +1,18 @@
 "use client";
 
 import { useRef } from "react";
-import { MatchCard } from "./MatchCard";
-import { SeedCard } from "./SeedCard";
 import { ConnectionLayer, getConnectionsForPattern } from "./BracketConnectors";
-import { CARD_HEIGHT, CARD_GAP, HEADER_HEIGHT, PADDING_BOTTOM } from "./constants";
+import { CARD_GAP, CARD_HEIGHT, HEADER_HEIGHT, PADDING_BOTTOM } from "./constants";
+import { MatchCard } from "./MatchCard";
 import {
+  getP6PatternConfig,
   getPatternByMatchCount,
   getPatternConfig,
-  getP6PatternConfig,
   getRoundColor,
-  type PatternType,
   type P6SeedLayout,
+  type PatternType,
 } from "./patterns";
+import { SeedCard } from "./SeedCard";
 import type { BracketMatch, SportScoreConfig } from "./types";
 
 interface TournamentBlockProps {
@@ -80,9 +80,7 @@ export function TournamentBlock({
   if (pattern === "P1") {
     return (
       <div className="relative tournament-block">
-        {title && (
-          <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
-        )}
+        {title && <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>}
         <div className="flex items-center justify-center p-8 bg-white border border-gray-200 rounded-lg">
           <div className="text-center">
             <div className="text-sm text-gray-500 mb-2">不戦勝</div>
@@ -148,7 +146,7 @@ export function TournamentBlock({
               <div
                 className={`text-sm font-medium text-center mb-2 px-3 py-1 rounded-full ${getRoundColor(
                   columnIndex,
-                  config.rounds.length
+                  config.rounds.length,
                 )}`}
               >
                 {label}
@@ -176,11 +174,7 @@ export function TournamentBlock({
                 const top = position * (CARD_HEIGHT + CARD_GAP) + HEADER_HEIGHT;
 
                 return (
-                  <div
-                    key={match.match_id}
-                    className="absolute w-full"
-                    style={{ top: `${top}px` }}
-                  >
+                  <div key={match.match_id} className="absolute w-full" style={{ top: `${top}px` }}>
                     <MatchCard
                       match={match}
                       sportConfig={sportConfig}
@@ -202,7 +196,7 @@ export function TournamentBlock({
  */
 function distributeMatchesToRounds(
   matches: BracketMatch[],
-  config: ReturnType<typeof getPatternConfig>
+  config: ReturnType<typeof getPatternConfig>,
 ): BracketMatch[][] {
   const result: BracketMatch[][] = [];
   let matchIndex = 0;

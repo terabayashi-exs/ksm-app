@@ -1,14 +1,14 @@
 // app/auth/reset-password/page.tsx
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState("");
@@ -122,9 +122,7 @@ function ResetPasswordForm() {
       <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              大会GO
-            </h2>
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">大会GO</h2>
           </div>
 
           <Card>
@@ -136,9 +134,7 @@ function ResetPasswordForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
-                <p className="text-sm text-destructive">
-                  {tokenError}
-                </p>
+                <p className="text-sm text-destructive">{tokenError}</p>
               </div>
 
               <div className="space-y-2 text-sm text-gray-500">
@@ -151,10 +147,7 @@ function ResetPasswordForm() {
               </div>
 
               <div className="space-y-2">
-                <Button
-                  onClick={() => router.push("/auth/forgot-password")}
-                  className="w-full"
-                >
+                <Button onClick={() => router.push("/auth/forgot-password")} className="w-full">
                   再度パスワードリセットを申請
                 </Button>
                 <Button
@@ -176,12 +169,8 @@ function ResetPasswordForm() {
     <div className="min-h-screen flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            大会GO
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            新しいパスワードの設定
-          </p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">大会GO</h2>
+          <p className="mt-2 text-sm text-gray-500">新しいパスワードの設定</p>
         </div>
 
         <Card>
@@ -189,7 +178,9 @@ function ResetPasswordForm() {
             <CardTitle className="text-2xl">パスワードリセット</CardTitle>
             {userInfo && (
               <div className="mt-2 text-sm text-gray-500">
-                <div><strong>アカウント:</strong> {userInfo.displayName}</div>
+                <div>
+                  <strong>アカウント:</strong> {userInfo.displayName}
+                </div>
               </div>
             )}
           </CardHeader>
@@ -219,9 +210,7 @@ function ResetPasswordForm() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    8文字以上で設定してください
-                  </p>
+                  <p className="text-xs text-gray-500">8文字以上で設定してください</p>
                 </div>
 
                 <div className="space-y-2">
@@ -243,7 +232,11 @@ function ResetPasswordForm() {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900"
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -268,17 +261,13 @@ function ResetPasswordForm() {
                         パスワードを変更しました
                       </h3>
                       <p className="mt-2 text-sm text-green-700">
-                        新しいパスワードでログインできます。
-                        3秒後にログイン画面に移動します...
+                        新しいパスワードでログインできます。 3秒後にログイン画面に移動します...
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <Button
-                  onClick={() => router.push("/auth/login")}
-                  className="w-full"
-                >
+                <Button onClick={() => router.push("/auth/login")} className="w-full">
                   今すぐログイン画面へ
                 </Button>
               </div>
@@ -303,11 +292,13 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <ResetPasswordForm />
     </Suspense>
   );

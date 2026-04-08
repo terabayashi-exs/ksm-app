@@ -1,34 +1,32 @@
 // app/api/tournaments/[id]/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { auth } from '@/lib/auth';
-import { tournamentEditSchema } from '@/lib/validations';
-import { Tournament, MatchTemplate } from '@/lib/types';
-import { calculateTournamentSchedule, ScheduleSettings } from '@/lib/schedule-calculator';
-import { calculateTournamentStatusSync, type TournamentStatus } from '@/lib/tournament-status';
-import { checkTrialExpiredPermission } from '@/lib/subscription/subscription-service';
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { calculateTournamentSchedule, ScheduleSettings } from "@/lib/schedule-calculator";
+import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
+import { calculateTournamentStatusSync, type TournamentStatus } from "@/lib/tournament-status";
+import { MatchTemplate, Tournament } from "@/lib/types";
+import { tournamentEditSchema } from "@/lib/validations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 // 個別大会の取得
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const resolvedParams = await params;
     const tournamentId = parseInt(resolvedParams.id);
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT
         t.tournament_id,
         t.tournament_name,
@@ -54,13 +52,12 @@ export async function GET(
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     const row = result.rows[0];
@@ -75,7 +72,7 @@ export async function GET(
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
       status: row.status as TournamentStatus,
-      visibility: row.visibility === 'open' ? 1 : 0,
+      visibility: row.visibility === "open" ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
@@ -85,61 +82,58 @@ export async function GET(
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
       format_name: row.format_name as string,
-      phases: row.phases ? (typeof row.phases === 'string' ? JSON.parse(row.phases as string) : row.phases) : undefined
+      phases: row.phases
+        ? typeof row.phases === "string"
+          ? JSON.parse(row.phases as string)
+          : row.phases
+        : undefined,
     };
 
-    return new Response(JSON.stringify({
-      success: true,
-      data: tournament
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: tournament,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
       },
-    });
-
+    );
   } catch (error) {
-    console.error('大会取得エラー:', error);
+    console.error("大会取得エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '大会データの取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: "大会データの取得に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // 大会の更新
-export async function PUT(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     // 期限切れチェック（編集）
-    const permissionCheck = await checkTrialExpiredPermission(
-      session.user.id,
-      'canEdit'
-    );
+    const permissionCheck = await checkTrialExpiredPermission(session.user.id, "canEdit");
 
     if (!permissionCheck.allowed) {
       return NextResponse.json(
         {
           success: false,
           error: permissionCheck.reason,
-          trialExpired: true
+          trialExpired: true,
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -148,63 +142,66 @@ export async function PUT(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
     // リクエストボディの取得と検証
     const body = await request.json();
-    console.log('[TOURNAMENT_EDIT] 受信データ:', {
+    console.log("[TOURNAMENT_EDIT] 受信データ:", {
       tournamentId,
       bodyKeys: Object.keys(body),
       tournament_name: body.tournament_name,
       format_id: body.format_id,
       venue_id: body.venue_id,
       is_public: body.is_public,
-      tournament_dates: body.tournament_dates
+      tournament_dates: body.tournament_dates,
     });
-    
+
     const validationResult = tournamentEditSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
-      console.error('[TOURNAMENT_EDIT] バリデーションエラー:', {
+      console.error("[TOURNAMENT_EDIT] バリデーションエラー:", {
         tournamentId,
         errors: validationResult.error.issues,
-        receivedData: body
+        receivedData: body,
       });
-      
+
       return NextResponse.json(
-        { 
-          success: false, 
-          error: '入力データが不正です',
+        {
+          success: false,
+          error: "入力データが不正です",
           details: validationResult.error.issues,
-          message: `バリデーションエラー: ${validationResult.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ')}`
+          message: `バリデーションエラー: ${validationResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const data = validationResult.data;
 
     // 大会が存在するかチェック
-    const existingTournament = await db.execute(`
+    const existingTournament = await db.execute(
+      `
       SELECT tournament_id, status FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (existingTournament.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     // tournament_datesをJSONに変換
     const tournamentDatesJson = JSON.stringify(
-      data.tournament_dates.reduce((acc, td) => {
-        acc[td.dayNumber.toString()] = td.date;
-        return acc;
-      }, {} as Record<string, string>)
+      data.tournament_dates.reduce(
+        (acc, td) => {
+          acc[td.dayNumber.toString()] = td.date;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     );
 
     // 現在のstatusを取得（管理者が手動で設定した場合は優先）
@@ -213,7 +210,7 @@ export async function PUT(
     // ステータスを動的に計算
     // ただし、管理者が明示的にongoing/completedに設定した場合はそれを優先
     let newStatus: string;
-    if (currentStatus === 'ongoing' || currentStatus === 'completed') {
+    if (currentStatus === "ongoing" || currentStatus === "completed") {
       newStatus = currentStatus; // 管理者の手動設定を優先
       console.log(`📊 大会ID:${tournamentId} ステータス維持（管理者設定）: ${newStatus}`);
     } else {
@@ -222,18 +219,22 @@ export async function PUT(
         tournament_dates: tournamentDatesJson,
         recruitment_start_date: data.recruitment_start_date,
         recruitment_end_date: data.recruitment_end_date,
-        public_start_date: data.public_start_date
+        public_start_date: data.public_start_date,
       });
       console.log(`📊 大会ID:${tournamentId} ステータス再計算: ${currentStatus} → ${newStatus}`);
     }
 
     // venue_idsをJSON配列文字列に変換
-    const venueIdJson = data.venue_ids && Array.isArray(data.venue_ids) && data.venue_ids.length > 0
-      ? JSON.stringify(data.venue_ids)
-      : data.venue_id != null ? String(data.venue_id) : null;
+    const venueIdJson =
+      data.venue_ids && Array.isArray(data.venue_ids) && data.venue_ids.length > 0
+        ? JSON.stringify(data.venue_ids)
+        : data.venue_id != null
+          ? String(data.venue_id)
+          : null;
 
     // 大会情報を更新
-    await db.execute(`
+    await db.execute(
+      `
       UPDATE t_tournaments SET
         tournament_name = ?,
         venue_id = ?,
@@ -250,44 +251,55 @@ export async function PUT(
         show_players_public = ?,
         updated_at = datetime('now', 'localtime')
       WHERE tournament_id = ?
-    `, [
-      data.tournament_name,
-      venueIdJson,
-      data.team_count,
-      tournamentDatesJson,
-      data.match_duration_minutes,
-      data.break_duration_minutes,
-      data.display_match_duration?.trim() || null,
-      newStatus,  // 動的に計算したステータス
-      data.is_public ? 'open' : 'preparing',
-      data.public_start_date,
-      data.recruitment_start_date,
-      data.recruitment_end_date,
-      data.show_players_public ? 1 : 0,
-      tournamentId
-    ]);
+    `,
+      [
+        data.tournament_name,
+        venueIdJson,
+        data.team_count,
+        tournamentDatesJson,
+        data.match_duration_minutes,
+        data.break_duration_minutes,
+        data.display_match_duration?.trim() || null,
+        newStatus, // 動的に計算したステータス
+        data.is_public ? "open" : "preparing",
+        data.public_start_date,
+        data.recruitment_start_date,
+        data.recruitment_end_date,
+        data.show_players_public ? 1 : 0,
+        tournamentId,
+      ],
+    );
 
     // 試合日付の再計算（開催日程変更に対応）
     try {
       // フォーマットIDを取得
-      const formatResult = await db.execute(`
+      const formatResult = await db.execute(
+        `
         SELECT format_id FROM t_tournaments WHERE tournament_id = ?
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       if (formatResult.rows.length > 0) {
         // 日付マッピングを作成
-        const dateMapping = data.tournament_dates.reduce((acc, td) => {
-          acc[td.dayNumber] = td.date;
-          return acc;
-        }, {} as Record<number, string>);
+        const dateMapping = data.tournament_dates.reduce(
+          (acc, td) => {
+            acc[td.dayNumber] = td.date;
+            return acc;
+          },
+          {} as Record<number, string>,
+        );
 
         // すべての試合のtournament_dateを再計算
-        const matchesResult = await db.execute(`
+        const matchesResult = await db.execute(
+          `
           SELECT ml.match_id, ml.match_code, ml.day_number
           FROM t_matches_live ml
           INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
           WHERE mb.tournament_id = ?
-        `, [tournamentId]);
+        `,
+          [tournamentId],
+        );
 
         let updatedCount = 0;
         for (const match of matchesResult.rows) {
@@ -295,11 +307,14 @@ export async function PUT(
           const tournamentDate = dateMapping[dayNumber];
 
           if (tournamentDate) {
-            await db.execute(`
+            await db.execute(
+              `
               UPDATE t_matches_live
               SET tournament_date = ?
               WHERE match_id = ?
-            `, [tournamentDate, match.match_id]);
+            `,
+              [tournamentDate, match.match_id],
+            );
             updatedCount++;
           }
         }
@@ -307,18 +322,25 @@ export async function PUT(
         console.log(`[TOURNAMENT_EDIT] 試合日付を再計算: ${updatedCount}件更新`);
       }
     } catch (dateUpdateError) {
-      console.error('[TOURNAMENT_EDIT] 試合日付の再計算エラー:', dateUpdateError);
+      console.error("[TOURNAMENT_EDIT] 試合日付の再計算エラー:", dateUpdateError);
       // エラーが発生しても処理は続行（試合日付の更新は補助的な処理）
     }
 
     // スケジュール再計算と更新
     try {
-      const customMatches = (body as { customMatches?: Array<{ match_id: number; start_time: string; court_number: number; }> }).customMatches || [];
-      const typedCustomMatches = customMatches as Array<{
-        match_id: number;
-        start_time: string;
-        court_number: number;
-      }> | undefined;
+      const customMatches =
+        (
+          body as {
+            customMatches?: Array<{ match_id: number; start_time: string; court_number: number }>;
+          }
+        ).customMatches || [];
+      const typedCustomMatches = customMatches as
+        | Array<{
+            match_id: number;
+            start_time: string;
+            court_number: number;
+          }>
+        | undefined;
 
       // Custom match data received for tournament update
 
@@ -329,17 +351,18 @@ export async function PUT(
         // Custom schedule applied successfully
       } else {
         // カスタムスケジュールがない場合でも既存の試合時間を保持する
-        console.log('[TOURNAMENT_EDIT] カスタムスケジュールなし - 既存の試合時間を保持');
+        console.log("[TOURNAMENT_EDIT] カスタムスケジュールなし - 既存の試合時間を保持");
         // スケジュール再計算をスキップして既存データを維持
         // 必要に応じて、コート数や時間設定のみを更新
       }
     } catch (scheduleError) {
-      console.error('スケジュール更新エラー（大会更新は継続）:', scheduleError);
+      console.error("スケジュール更新エラー（大会更新は継続）:", scheduleError);
       // スケジュール更新に失敗しても大会更新は成功とする
     }
 
     // 更新された大会の詳細を取得
-    const updatedResult = await db.execute(`
+    const updatedResult = await db.execute(
+      `
       SELECT
         t.tournament_id,
         t.tournament_name,
@@ -363,7 +386,9 @@ export async function PUT(
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
       WHERE t.tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     const row = updatedResult.rows[0];
     const tournament: Tournament = {
@@ -377,7 +402,7 @@ export async function PUT(
       match_duration_minutes: Number(row.match_duration_minutes),
       break_duration_minutes: Number(row.break_duration_minutes),
       status: row.status as TournamentStatus,
-      visibility: row.visibility === 'open' ? 1 : 0,
+      visibility: row.visibility === "open" ? 1 : 0,
       public_start_date: row.public_start_date as string,
       recruitment_start_date: row.recruitment_start_date as string,
       recruitment_end_date: row.recruitment_end_date as string,
@@ -385,41 +410,34 @@ export async function PUT(
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       venue_name: row.venue_name as string,
-      format_name: row.format_name as string
+      format_name: row.format_name as string,
     };
 
     return NextResponse.json({
       success: true,
       data: tournament,
-      message: '大会情報が正常に更新されました'
+      message: "大会情報が正常に更新されました",
     });
-
   } catch (error) {
-    console.error('大会更新エラー:', error);
+    console.error("大会更新エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '大会の更新に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: "大会の更新に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // 大会の削除
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     // 認証チェック
     const session = await auth();
-    if (!session || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-      return NextResponse.json(
-        { success: false, error: '管理者権限が必要です' },
-        { status: 401 }
-      );
+    if (!session || (session.user.role !== "admin" && session.user.role !== "operator")) {
+      return NextResponse.json({ success: false, error: "管理者権限が必要です" }, { status: 401 });
     }
 
     const resolvedParams = await params;
@@ -427,164 +445,197 @@ export async function DELETE(
 
     if (isNaN(tournamentId)) {
       return NextResponse.json(
-        { success: false, error: '有効な大会IDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効な大会IDを指定してください" },
+        { status: 400 },
       );
     }
 
     // 大会が存在するかチェック
-    const existingTournament = await db.execute(`
+    const existingTournament = await db.execute(
+      `
       SELECT tournament_id, status FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (existingTournament.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '大会が見つかりません' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "大会が見つかりません" }, { status: 404 });
     }
 
     // 大会削除処理：正しい順序で依存データを削除
     console.log(`大会削除開始 (ID: ${tournamentId})`);
-    
+
     try {
       // Step 1: 試合関連データを削除（match_block_idへの依存）
-      console.log('Step 1: 試合関連データ削除中...');
-      
+      console.log("Step 1: 試合関連データ削除中...");
+
       // t_match_status から削除（テーブルが存在する場合のみ）
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_match_status 
           WHERE match_block_id IN (
             SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
           )
-        `, [tournamentId]);
-        console.log('✓ t_match_status削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_match_status削除完了");
       } catch {
-        console.log('t_match_status テーブルが存在しないか、データがありません');
+        console.log("t_match_status テーブルが存在しないか、データがありません");
       }
-      
+
       // t_matches_final から削除（テーブルが存在する場合のみ）
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_matches_final 
           WHERE match_block_id IN (
             SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
           )
-        `, [tournamentId]);
-        console.log('✓ t_matches_final削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_matches_final削除完了");
       } catch {
-        console.log('t_matches_final テーブルが存在しないか、データがありません');
+        console.log("t_matches_final テーブルが存在しないか、データがありません");
       }
-      
+
       // t_matches_live から削除
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_matches_live 
           WHERE match_block_id IN (
             SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
           )
-        `, [tournamentId]);
-        console.log('✓ t_matches_live削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_matches_live削除完了");
       } catch (err) {
-        console.log('t_matches_live削除エラー:', err);
+        console.log("t_matches_live削除エラー:", err);
         // t_matches_liveは重要なので、エラーの場合は処理を続行しない
         throw err;
       }
 
       // t_match_status から削除（match_block_id外部キー制約のため）
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_match_status 
           WHERE match_block_id IN (
             SELECT match_block_id FROM t_match_blocks WHERE tournament_id = ?
           )
-        `, [tournamentId]);
-        console.log('✓ t_match_status削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_match_status削除完了");
       } catch (err) {
-        console.log('t_match_status削除エラー:', err);
+        console.log("t_match_status削除エラー:", err);
         // このテーブルは外部キー制約があるため重要
         throw err;
       }
 
       // Step 2: 大会直接依存データを削除（tournament_idへの依存）
-      console.log('Step 2: 大会関連データ削除中...');
-      
+      console.log("Step 2: 大会関連データ削除中...");
+
       // t_tournament_notifications から削除
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_tournament_notifications WHERE tournament_id = ?
-        `, [tournamentId]);
-        console.log('✓ t_tournament_notifications削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_tournament_notifications削除完了");
       } catch (err) {
-        console.log('t_tournament_notifications削除エラー（テーブルが存在しない可能性）:', err);
+        console.log("t_tournament_notifications削除エラー（テーブルが存在しない可能性）:", err);
       }
-      
+
       // t_tournament_rules から削除
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_tournament_rules WHERE tournament_id = ?
-        `, [tournamentId]);
-        console.log('✓ t_tournament_rules削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_tournament_rules削除完了");
       } catch (err) {
-        console.log('t_tournament_rules削除エラー（テーブルが存在しない可能性）:', err);
+        console.log("t_tournament_rules削除エラー（テーブルが存在しない可能性）:", err);
       }
-      
+
       // t_tournament_players から削除
-      await db.execute(`
+      await db.execute(
+        `
         DELETE FROM t_tournament_players WHERE tournament_id = ?
-      `, [tournamentId]);
-      console.log('✓ t_tournament_players削除完了');
+      `,
+        [tournamentId],
+      );
+      console.log("✓ t_tournament_players削除完了");
 
       // t_email_send_history から削除（tournament_team_id外部キー制約のため）
       try {
-        await db.execute(`
+        await db.execute(
+          `
           DELETE FROM t_email_send_history WHERE tournament_id = ?
-        `, [tournamentId]);
-        console.log('✓ t_email_send_history削除完了');
+        `,
+          [tournamentId],
+        );
+        console.log("✓ t_email_send_history削除完了");
       } catch (err) {
-        console.log('t_email_send_history削除エラー（テーブルが存在しない可能性）:', err);
+        console.log("t_email_send_history削除エラー（テーブルが存在しない可能性）:", err);
       }
 
       // t_tournament_teams から削除
-      await db.execute(`
+      await db.execute(
+        `
         DELETE FROM t_tournament_teams WHERE tournament_id = ?
-      `, [tournamentId]);
-      console.log('✓ t_tournament_teams削除完了');
+      `,
+        [tournamentId],
+      );
+      console.log("✓ t_tournament_teams削除完了");
 
       // Step 3: マッチブロックを削除（依存が解消された後）
-      console.log('Step 3: マッチブロック削除中...');
-      await db.execute(`
+      console.log("Step 3: マッチブロック削除中...");
+      await db.execute(
+        `
         DELETE FROM t_match_blocks WHERE tournament_id = ?
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // Step 4: 大会本体を削除
-      console.log('Step 4: 大会本体削除中...');
-      await db.execute(`
+      console.log("Step 4: 大会本体削除中...");
+      await db.execute(
+        `
         DELETE FROM t_tournaments WHERE tournament_id = ?
-      `, [tournamentId]);
-      
-      console.log('大会削除完了');
-      
+      `,
+        [tournamentId],
+      );
+
+      console.log("大会削除完了");
     } catch (deleteError) {
-      console.error('大会削除処理中にエラーが発生:', deleteError);
-      throw new Error(`大会削除に失敗しました: ${deleteError instanceof Error ? deleteError.message : 'Unknown error'}`);
+      console.error("大会削除処理中にエラーが発生:", deleteError);
+      throw new Error(
+        `大会削除に失敗しました: ${deleteError instanceof Error ? deleteError.message : "Unknown error"}`,
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: '大会が正常に削除されました'
+      message: "大会が正常に削除されました",
     });
-
   } catch (error) {
-    console.error('大会削除エラー:', error);
+    console.error("大会削除エラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: '大会の削除に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: "大会の削除に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -596,26 +647,25 @@ async function applyCustomSchedule(
     match_id: number;
     start_time: string;
     court_number: number;
-  }>
+  }>,
 ) {
   try {
     // Starting custom schedule application
-    
+
     for (const match of customMatches) {
-      await db.execute(`
+      await db.execute(
+        `
         UPDATE t_matches_live 
         SET court_number = ?, start_time = ?, updated_at = datetime('now', 'localtime')
         WHERE match_id = ?
-      `, [
-        match.court_number,
-        match.start_time,
-        match.match_id
-      ]);
+      `,
+        [match.court_number, match.start_time, match.match_id],
+      );
     }
 
     // Custom schedule application completed
   } catch (error) {
-    console.error('カスタムスケジュール適用エラー:', error);
+    console.error("カスタムスケジュール適用エラー:", error);
     throw error;
   }
 }
@@ -626,19 +676,22 @@ async function updateTournamentSchedule(
   tournamentId: number,
   formatId: number,
   tournamentDates: Array<{ dayNumber: number; date: string }>,
-  scheduleSettings: ScheduleSettings
+  scheduleSettings: ScheduleSettings,
 ) {
   try {
     // t_matches_liveから試合テンプレート相当データを取得
-    const templatesResult = await db.execute(`
+    const templatesResult = await db.execute(
+      `
       SELECT ml.*, mb.phase
       FROM t_matches_live ml
       JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
       WHERE mb.tournament_id = ?
       ORDER BY ml.execution_priority ASC
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
-    const templates: MatchTemplate[] = templatesResult.rows.map(row => ({
+    const templates: MatchTemplate[] = templatesResult.rows.map((row) => ({
       template_id: Number(row.match_id),
       format_id: 0,
       match_number: Number(row.match_number),
@@ -657,7 +710,7 @@ async function updateTournamentSchedule(
       suggested_start_time: row.suggested_start_time ? String(row.suggested_start_time) : undefined,
       period_count: row.period_count ? Number(row.period_count) : undefined,
       is_bye_match: Number(row.is_bye_match || 0),
-      created_at: String(row.created_at)
+      created_at: String(row.created_at),
     }));
 
     if (templates.length === 0) {
@@ -667,14 +720,14 @@ async function updateTournamentSchedule(
 
     // スケジュール計算を実行
     const schedule = calculateTournamentSchedule(templates, scheduleSettings);
-    
+
     // スケジュール計算結果をマップに保存
     const scheduleMap = new Map<number, { courtNumber: number; startTime: string }>();
-    schedule.days.forEach(day => {
-      day.matches.forEach(match => {
+    schedule.days.forEach((day) => {
+      day.matches.forEach((match) => {
         scheduleMap.set(match.template.match_number, {
           courtNumber: match.courtNumber,
-          startTime: match.startTime
+          startTime: match.startTime,
         });
       });
     });
@@ -683,7 +736,8 @@ async function updateTournamentSchedule(
 
     // 既存の試合データのコート番号と開始時刻を更新
     for (const [matchNumber, scheduleInfo] of scheduleMap.entries()) {
-      await db.execute(`
+      await db.execute(
+        `
         UPDATE t_matches_live 
         SET court_number = ?, start_time = ?
         WHERE match_block_id IN (
@@ -691,18 +745,14 @@ async function updateTournamentSchedule(
           FROM t_match_blocks mb 
           WHERE mb.tournament_id = ?
         ) AND match_number = ?
-      `, [
-        scheduleInfo.courtNumber,
-        scheduleInfo.startTime,
-        tournamentId,
-        matchNumber
-      ]);
+      `,
+        [scheduleInfo.courtNumber, scheduleInfo.startTime, tournamentId, matchNumber],
+      );
     }
 
     // Schedule updates completed for tournament
-
   } catch (error) {
-    console.error('スケジュール更新エラー:', error);
+    console.error("スケジュール更新エラー:", error);
     throw error;
   }
 }

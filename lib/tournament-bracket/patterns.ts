@@ -99,9 +99,9 @@ export const PATTERNS: Record<PatternType, PatternConfig> = {
       // Seed1, Seed2: マージ中心がSF1(M2)の中心に合うように配置
       // SF1 position=0.25, match center offset=48, seed offset=28
       // offset差20px ÷ 164px = 0.122 → シードを下にずらす
-      { position: 0.125, connectTo: "R1M0" },   // Seed1 → SF1
-      { position: 0.625, connectTo: "R1M0" },   // Seed2 → SF1
-      { position: 1.5, connectTo: "R1M1" },     // Seed3 → SF2 (M1と近接配置)
+      { position: 0.125, connectTo: "R1M0" }, // Seed1 → SF1
+      { position: 0.625, connectTo: "R1M0" }, // Seed2 → SF1
+      { position: 1.5, connectTo: "R1M1" }, // Seed3 → SF2 (M1と近接配置)
     ],
   },
   P6: {
@@ -163,15 +163,15 @@ export const P6_ADJACENT_CONFIG: PatternConfig = {
   totalMatches: 5,
   rounds: [
     { matchCount: 2, positions: [1.5, 2.5] }, // M1, M2（下側に配置）
-    { matchCount: 2, positions: [0.25, 2] },  // SF1（シード間）, SF2（試合間）
-    { matchCount: 1, positions: [1.125] },    // Final
+    { matchCount: 2, positions: [0.25, 2] }, // SF1（シード間）, SF2（試合間）
+    { matchCount: 1, positions: [1.125] }, // Final
   ],
   columnCount: 3,
   seedSlots: [
     // Seed1, Seed2: マージ中心がSF1の中心に合うように配置
     // SF1 position=0.25, offset差20px ÷ 164px = 0.122 → シードを下にずらす
-    { position: 0.125, connectTo: "R1M0" },   // Seed1 → SF1
-    { position: 0.625, connectTo: "R1M0" },   // Seed2 → SF1
+    { position: 0.125, connectTo: "R1M0" }, // Seed1 → SF1
+    { position: 0.625, connectTo: "R1M0" }, // Seed2 → SF1
   ],
 };
 
@@ -182,9 +182,7 @@ export function getPatternByMatchCount(matchCount: number): PatternType {
   switch (matchCount) {
     case 0:
       // 1チームのみのケースは想定外
-      throw new Error(
-        "Match count 0 (1 team only) is not supported. Use at least 2 teams."
-      );
+      throw new Error("Match count 0 (1 team only) is not supported. Use at least 2 teams.");
     case 1:
       return "P2";
     case 2:
@@ -202,7 +200,7 @@ export function getPatternByMatchCount(matchCount: number): PatternType {
     default:
       // 8試合以上は複数ブロックに分割すべき
       throw new Error(
-        `Invalid match count: ${matchCount}. Use MultiBlockBracket for larger tournaments.`
+        `Invalid match count: ${matchCount}. Use MultiBlockBracket for larger tournaments.`,
       );
   }
 }

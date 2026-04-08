@@ -10,9 +10,9 @@
  * - sidebar: サイドバー（PC表示時のみ、右側）
  */
 export const BANNER_POSITIONS = {
-  TOP: 'top',
-  BOTTOM: 'bottom',
-  SIDEBAR: 'sidebar',
+  TOP: "top",
+  BOTTOM: "bottom",
+  SIDEBAR: "sidebar",
 } as const;
 
 export type BannerPosition = (typeof BANNER_POSITIONS)[keyof typeof BANNER_POSITIONS];
@@ -28,13 +28,13 @@ export type BannerPosition = (typeof BANNER_POSITIONS)[keyof typeof BANNER_POSIT
  * - teams: 参加チームタブ
  */
 export const TARGET_TABS = {
-  ALL: 'all',
-  OVERVIEW: 'overview',
-  SCHEDULE: 'schedule',
-  PRELIMINARY: 'preliminary',
-  FINAL: 'final',
-  STANDINGS: 'standings',
-  TEAMS: 'teams',
+  ALL: "all",
+  OVERVIEW: "overview",
+  SCHEDULE: "schedule",
+  PRELIMINARY: "preliminary",
+  FINAL: "final",
+  STANDINGS: "standings",
+  TEAMS: "teams",
 } as const;
 
 export type TargetTab = (typeof TARGET_TABS)[keyof typeof TARGET_TABS] | (string & {});
@@ -45,8 +45,8 @@ export type TargetTab = (typeof TARGET_TABS)[keyof typeof TARGET_TABS] | (string
  * - small: 小バナー（250×64px）- タブ上部・タブ下部のみ
  */
 export const BANNER_SIZES = {
-  LARGE: 'large',
-  SMALL: 'small',
+  LARGE: "large",
+  SMALL: "small",
 } as const;
 
 export type BannerSize = (typeof BANNER_SIZES)[keyof typeof BANNER_SIZES];
@@ -60,20 +60,20 @@ export const BANNER_SIZE_SPECS = {
     [BANNER_POSITIONS.TOP]: {
       width: 1200,
       height: 200,
-      aspectRatio: '6:1',
-      description: '大バナー（タブ上部用）',
+      aspectRatio: "6:1",
+      description: "大バナー（タブ上部用）",
     },
     [BANNER_POSITIONS.BOTTOM]: {
       width: 1200,
       height: 200,
-      aspectRatio: '6:1',
-      description: '大バナー（ページ下部用）',
+      aspectRatio: "6:1",
+      description: "大バナー（ページ下部用）",
     },
     [BANNER_POSITIONS.SIDEBAR]: {
       width: 300,
       height: 600,
-      aspectRatio: '1:2',
-      description: '大バナー（サイドバー用）',
+      aspectRatio: "1:2",
+      description: "大バナー（サイドバー用）",
     },
   },
   // 小バナー
@@ -81,14 +81,14 @@ export const BANNER_SIZE_SPECS = {
     [BANNER_POSITIONS.TOP]: {
       width: 250,
       height: 64,
-      aspectRatio: '3.9:1',
-      description: '小バナー（タブ上部用）',
+      aspectRatio: "3.9:1",
+      description: "小バナー（タブ上部用）",
     },
     [BANNER_POSITIONS.BOTTOM]: {
       width: 250,
       height: 64,
-      aspectRatio: '3.9:1',
-      description: '小バナー（ページ下部用）',
+      aspectRatio: "3.9:1",
+      description: "小バナー（ページ下部用）",
     },
   },
 } as const;
@@ -101,7 +101,12 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 /**
  * 対応画像形式
  */
-export const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+export const SUPPORTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+] as const;
 
 /**
  * バナーデータ型定義
@@ -177,13 +182,16 @@ export interface BannerDisplayFilter {
 /**
  * バナーが現在表示可能かチェック
  */
-export function isBannerDisplayable(banner: SponsorBanner, currentDate: Date = new Date()): boolean {
+export function isBannerDisplayable(
+  banner: SponsorBanner,
+  currentDate: Date = new Date(),
+): boolean {
   // 非アクティブの場合は表示しない
   if (banner.is_active === 0) {
     return false;
   }
 
-  const now = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD形式に変換
+  const now = currentDate.toISOString().split("T")[0]; // YYYY-MM-DD形式に変換
 
   // 開始日が設定されている場合、現在日付が開始日以降かチェック
   if (banner.start_date && banner.start_date > now) {
@@ -216,9 +224,9 @@ export function sortBannersByDisplayOrder(banners: SponsorBanner[]): SponsorBann
  */
 export function getPositionLabel(position: BannerPosition): string {
   const labels: Record<BannerPosition, string> = {
-    top: 'タブ上部',
-    bottom: 'ページ下部',
-    sidebar: 'サイドバー',
+    top: "タブ上部",
+    bottom: "ページ下部",
+    sidebar: "サイドバー",
   };
   return labels[position];
 }
@@ -228,13 +236,13 @@ export function getPositionLabel(position: BannerPosition): string {
  */
 export function getTargetTabLabel(tab: TargetTab): string {
   const labels: Record<string, string> = {
-    all: '全タブ共通',
-    overview: '概要',
-    schedule: '日程・結果',
-    preliminary: '予選',
-    final: '決勝',
-    standings: '順位表',
-    teams: '参加チーム',
+    all: "全タブ共通",
+    overview: "概要",
+    schedule: "日程・結果",
+    preliminary: "予選",
+    final: "決勝",
+    standings: "順位表",
+    teams: "参加チーム",
   };
   return labels[tab] || tab;
 }
@@ -244,8 +252,8 @@ export function getTargetTabLabel(tab: TargetTab): string {
  */
 export function getBannerSizeLabel(size: BannerSize): string {
   const labels: Record<BannerSize, string> = {
-    large: '大バナー',
-    small: '小バナー',
+    large: "大バナー",
+    small: "小バナー",
   };
   return labels[size];
 }

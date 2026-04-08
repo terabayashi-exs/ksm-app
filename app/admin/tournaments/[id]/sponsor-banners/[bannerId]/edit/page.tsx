@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ChevronRight, Home } from 'lucide-react';
-import Header from '@/components/layout/Header';
-import SponsorBannerForm from '@/components/admin/SponsorBannerForm';
-import type { SponsorBanner } from '@/lib/sponsor-banner-specs';
+import { ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import SponsorBannerForm from "@/components/admin/SponsorBannerForm";
+import Header from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import type { SponsorBanner } from "@/lib/sponsor-banner-specs";
 
 export default function EditSponsorBannerPage() {
   const params = useParams();
@@ -21,27 +21,25 @@ export default function EditSponsorBannerPage() {
   useEffect(() => {
     const fetchBanner = async () => {
       try {
-        const response = await fetch(
-          `/api/admin/sponsor-banners?tournament_id=${tournamentId}`
-        );
+        const response = await fetch(`/api/admin/sponsor-banners?tournament_id=${tournamentId}`);
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'バナーの取得に失敗しました');
+          throw new Error(data.error || "バナーの取得に失敗しました");
         }
 
         const targetBanner = data.banners.find(
-          (b: SponsorBanner) => b.banner_id === parseInt(bannerId)
+          (b: SponsorBanner) => b.banner_id === parseInt(bannerId),
         );
 
         if (!targetBanner) {
-          throw new Error('バナーが見つかりません');
+          throw new Error("バナーが見つかりません");
         }
 
         setBanner(targetBanner);
       } catch (err) {
-        console.error('バナー取得エラー:', err);
-        setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+        console.error("バナー取得エラー:", err);
+        setError(err instanceof Error ? err.message : "不明なエラーが発生しました");
       } finally {
         setLoading(false);
       }
@@ -64,12 +62,10 @@ export default function EditSponsorBannerPage() {
     return (
       <div className="container mx-auto py-8">
         <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
-          <p className="text-destructive">{error || 'バナーが見つかりません'}</p>
+          <p className="text-destructive">{error || "バナーが見つかりません"}</p>
         </div>
         <Button asChild className="mt-4">
-          <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`}>
-            バナー一覧に戻る
-          </Link>
+          <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`}>バナー一覧に戻る</Link>
         </Button>
       </div>
     );
@@ -80,16 +76,25 @@ export default function EditSponsorBannerPage() {
       <Header />
       <div className="container mx-auto py-8 px-4">
         <nav className="flex flex-wrap items-center gap-1.5 text-sm mb-6">
-          <Link href="/" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             <Home className="h-3.5 w-3.5" />
             <span>Home</span>
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href="/my?tab=admin" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href="/my?tab=admin"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             マイダッシュボード
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <Link href={`/admin/tournaments/${tournamentId}/sponsor-banners`} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap">
+          <Link
+            href={`/admin/tournaments/${tournamentId}/sponsor-banners`}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
             スポンサーバナー管理
           </Link>
           <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />

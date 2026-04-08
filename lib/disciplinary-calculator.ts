@@ -1,8 +1,8 @@
 // lib/disciplinary-calculator.ts
 // 懲罰機能のビジネスロジック
 
-import { db } from '@/lib/db';
-import { PENALTY_POINTS, type CardType } from '@/lib/disciplinary-constants';
+import { db } from "@/lib/db";
+import { type CardType, PENALTY_POINTS } from "@/lib/disciplinary-constants";
 
 // ============================================================
 // 型定義
@@ -58,10 +58,9 @@ export interface DisciplinarySettings {
  * 大会グループの懲罰設定を取得（なければデフォルト値を返す）
  */
 export async function getDisciplinarySettings(groupId: number): Promise<DisciplinarySettings> {
-  const result = await db.execute(
-    `SELECT * FROM t_disciplinary_settings WHERE group_id = ?`,
-    [groupId]
-  );
+  const result = await db.execute(`SELECT * FROM t_disciplinary_settings WHERE group_id = ?`, [
+    groupId,
+  ]);
   if (result.rows.length > 0) {
     const row = result.rows[0];
     return {
@@ -90,13 +89,13 @@ export async function getDisciplinarySettings(groupId: number): Promise<Discipli
  */
 export async function getPlayerAccumulatedYellows(
   groupId: number,
-  playerName: string
+  playerName: string,
 ): Promise<number> {
   const result = await db.execute(
     `SELECT COUNT(*) as count FROM t_disciplinary_actions
      WHERE group_id = ? AND player_name = ? AND card_type = 'yellow'
      AND is_void = 0`,
-    [groupId, playerName]
+    [groupId, playerName],
   );
   return Number(result.rows[0]?.count ?? 0);
 }
@@ -111,9 +110,9 @@ export async function getPlayerAccumulatedYellows(
 export async function getPlayerSuspensionStatus(
   groupId: number,
   playerName: string,
-  settings?: DisciplinarySettings
+  settings?: DisciplinarySettings,
 ): Promise<PlayerSuspensionStatus> {
-  const s = settings ?? await getDisciplinarySettings(groupId);
+  const s = settings ?? (await getDisciplinarySettings(groupId));
 
   // 1. イエロー累積による停止チェック
   const totalYellows = await getPlayerAccumulatedYellows(groupId, playerName);
@@ -124,7 +123,7 @@ export async function getPlayerSuspensionStatus(
     `SELECT SUM(suspension_matches) as total_suspension FROM t_disciplinary_actions
      WHERE group_id = ? AND player_name = ? AND card_type IN ('red', 'second_yellow')
      AND is_void = 0 AND suspension_matches > 0`,
-    [groupId, playerName]
+    [groupId, playerName],
   );
   const totalRedSuspension = Number(redResult.rows[0]?.total_suspension ?? 0);
 
@@ -142,7 +141,7 @@ export async function getPlayerSuspensionStatus(
       isSuspended: true,
       remainingMatches: totalRemaining,
       totalYellows,
-      reason: reasons.join('、'),
+      reason: reasons.join("、"),
     };
   }
 
@@ -150,7 +149,7 @@ export async function getPlayerSuspensionStatus(
     isSuspended: false,
     remainingMatches: 0,
     totalYellows,
-    reason: '',
+    reason: "",
   };
 }
 
@@ -164,13 +163,13 @@ export async function getPlayerSuspensionStatus(
  */
 export async function getTeamPenaltyPoints(
   tournamentId: number,
-  tournamentTeamId: number
+  tournamentTeamId: number,
 ): Promise<number> {
   const result = await db.execute(
     `SELECT card_type, COUNT(*) as count FROM t_disciplinary_actions
      WHERE tournament_id = ? AND tournament_team_id = ? AND is_void = 0
      GROUP BY card_type`,
-    [tournamentId, tournamentTeamId]
+    [tournamentId, tournamentTeamId],
   );
 
   let total = 0;
@@ -185,15 +184,13 @@ export async function getTeamPenaltyPoints(
 /**
  * 部門全チームのフェアプレーポイントをMapで返す
  */
-export async function getTeamFairPlayPoints(
-  tournamentId: number
-): Promise<Map<number, number>> {
+export async function getTeamFairPlayPoints(tournamentId: number): Promise<Map<number, number>> {
   const result = await db.execute(
     `SELECT tournament_team_id, card_type, COUNT(*) as count
      FROM t_disciplinary_actions
      WHERE tournament_id = ? AND is_void = 0
      GROUP BY tournament_team_id, card_type`,
-    [tournamentId]
+    [tournamentId],
   );
 
   const pointsMap = new Map<number, number>();
@@ -215,7 +212,7 @@ export async function getTeamFairPlayPoints(
  * 部門の全懲罰データをチームごとにグループ化して返す
  */
 export async function getDivisionDisciplinaryData(
-  tournamentId: number
+  tournamentId: number,
 ): Promise<TeamDisciplinaryData[]> {
   const result = await db.execute(
     `SELECT da.*, tt.team_name,
@@ -225,7 +222,7 @@ export async function getDivisionDisciplinaryData(
      LEFT JOIN t_matches_live ml ON da.match_id = ml.match_id
      WHERE da.tournament_id = ? AND da.is_void = 0
      ORDER BY tt.team_name, da.created_at`,
-    [tournamentId]
+    [tournamentId],
   );
 
   const teamMap = new Map<number, TeamDisciplinaryData>();
@@ -287,7 +284,7 @@ export interface CreateDisciplinaryActionInput {
 }
 
 export async function createDisciplinaryAction(
-  input: CreateDisciplinaryActionInput
+  input: CreateDisciplinaryActionInput,
 ): Promise<number> {
   const result = await db.execute(
     `INSERT INTO t_disciplinary_actions
@@ -305,7 +302,7 @@ export async function createDisciplinaryAction(
       input.reasonText ?? null,
       input.suspensionMatches,
       input.recordedBy ?? null,
-    ]
+    ],
   );
   return Number(result.lastInsertRowid);
 }
@@ -321,7 +318,7 @@ export async function voidDisciplinaryAction(actionId: number): Promise<void> {
   await db.execute(
     `UPDATE t_disciplinary_actions SET is_void = 1, updated_at = datetime('now', '+9 hours')
      WHERE action_id = ?`,
-    [actionId]
+    [actionId],
   );
 }
 
@@ -345,17 +342,14 @@ export async function voidDisciplinaryAction(actionId: number): Promise<void> {
  * → 実装: 累積リセットを記録するため、特殊なアクション（card_type='reset'）を挿入
  *   リセット後のイエロー累積は、最後のリセット以降のイエローのみカウントする
  */
-export async function resetPlayerAccumulation(
-  groupId: number,
-  playerName: string
-): Promise<void> {
+export async function resetPlayerAccumulation(groupId: number, playerName: string): Promise<void> {
   // リセットマーカーを挿入（card_type='reset'、ダミーの値で記録）
   await db.execute(
     `INSERT INTO t_disciplinary_actions
      (group_id, tournament_id, match_id, tournament_team_id, player_name,
       card_type, reason_code, suspension_matches, is_void, recorded_by)
      VALUES (?, 0, 0, 0, ?, 'reset', 0, 0, 0, 'system')`,
-    [groupId, playerName]
+    [groupId, playerName],
   );
 }
 
@@ -365,13 +359,13 @@ export async function resetPlayerAccumulation(
  */
 export async function getPlayerAccumulatedYellowsSinceReset(
   groupId: number,
-  playerName: string
+  playerName: string,
 ): Promise<number> {
   // 最後のリセットマーカーの日時を取得
   const resetResult = await db.execute(
     `SELECT MAX(created_at) as last_reset FROM t_disciplinary_actions
      WHERE group_id = ? AND player_name = ? AND card_type = 'reset'`,
-    [groupId, playerName]
+    [groupId, playerName],
   );
   const lastReset = resetResult.rows[0]?.last_reset;
 
@@ -381,7 +375,7 @@ export async function getPlayerAccumulatedYellowsSinceReset(
       `SELECT COUNT(*) as count FROM t_disciplinary_actions
        WHERE group_id = ? AND player_name = ? AND card_type = 'yellow'
        AND is_void = 0 AND created_at > ?`,
-      [groupId, playerName, lastReset]
+      [groupId, playerName, lastReset],
     );
     return Number(result.rows[0]?.count ?? 0);
   }
@@ -397,9 +391,9 @@ export async function getPlayerAccumulatedYellowsSinceReset(
 export async function getPlayerSuspensionStatusWithReset(
   groupId: number,
   playerName: string,
-  settings?: DisciplinarySettings
+  settings?: DisciplinarySettings,
 ): Promise<PlayerSuspensionStatus> {
-  const s = settings ?? await getDisciplinarySettings(groupId);
+  const s = settings ?? (await getDisciplinarySettings(groupId));
 
   // リセット考慮済みの累積イエロー数
   const totalYellows = await getPlayerAccumulatedYellowsSinceReset(groupId, playerName);
@@ -410,7 +404,7 @@ export async function getPlayerSuspensionStatusWithReset(
     `SELECT SUM(suspension_matches) as total_suspension FROM t_disciplinary_actions
      WHERE group_id = ? AND player_name = ? AND card_type IN ('red', 'second_yellow')
      AND is_void = 0 AND suspension_matches > 0`,
-    [groupId, playerName]
+    [groupId, playerName],
   );
   const totalRedSuspension = Number(redResult.rows[0]?.total_suspension ?? 0);
 
@@ -426,7 +420,7 @@ export async function getPlayerSuspensionStatusWithReset(
       isSuspended: true,
       remainingMatches: totalRemaining,
       totalYellows,
-      reason: reasons.join('、'),
+      reason: reasons.join("、"),
     };
   }
 
@@ -434,6 +428,6 @@ export async function getPlayerSuspensionStatusWithReset(
     isSuspended: false,
     remainingMatches: 0,
     totalYellows,
-    reason: '',
+    reason: "",
   };
 }

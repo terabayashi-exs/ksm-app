@@ -1,31 +1,40 @@
 // app/auth/register/page.tsx
-'use client';
+"use client";
 
-import { useState, Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, ArrowLeft, UserPlus, AlertCircle, CheckCircle, Eye, EyeOff, Mail } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Loader2,
+  Mail,
+  UserPlus,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // ─── メールアドレス入力フォーム（トークンなし） ───────────────────────────────
 function EmailInputForm() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const response = await fetch('/api/auth/request-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/request-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
@@ -34,11 +43,11 @@ function EmailInputForm() {
       if (data.success) {
         setSuccess(true);
       } else {
-        setError(data.error || 'メール送信に失敗しました');
+        setError(data.error || "メール送信に失敗しました");
       }
     } catch (err) {
-      console.error('Email submission error:', err);
-      setError('エラーが発生しました。もう一度お試しください。');
+      console.error("Email submission error:", err);
+      setError("エラーが発生しました。もう一度お試しください。");
     } finally {
       setLoading(false);
     }
@@ -54,9 +63,7 @@ function EmailInputForm() {
                 <Mail className="h-12 w-12 text-green-600" />
               </div>
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              メールを送信しました
-            </h2>
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">メールを送信しました</h2>
           </div>
 
           <Card>
@@ -68,9 +75,7 @@ function EmailInputForm() {
                 <p className="text-gray-500 text-sm">
                   メールボックスをご確認いただき、メール内のリンクをクリックして登録を完了してください。
                 </p>
-                <p className="text-gray-500 text-sm">
-                  リンクの有効期限は10分です。
-                </p>
+                <p className="text-gray-500 text-sm">リンクの有効期限は10分です。</p>
                 <div className="pt-4">
                   <Button variant="outline" asChild>
                     <Link href="/">
@@ -96,12 +101,8 @@ function EmailInputForm() {
               <Mail className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            アカウント登録申請
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            メールアドレスを入力してください
-          </p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">アカウント登録申請</h2>
+          <p className="mt-2 text-sm text-gray-500">メールアドレスを入力してください</p>
         </div>
 
         <Card>
@@ -139,17 +140,14 @@ function EmailInputForm() {
               )}
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? '送信中...' : '認証メールを送信'}
+                {loading ? "送信中..." : "認証メールを送信"}
               </Button>
             </form>
 
             <div className="mt-6 text-center space-y-2">
               <p className="text-sm text-gray-500">
-                既にアカウントをお持ちの方は{' '}
-                <Link
-                  href="/auth/login"
-                  className="font-medium text-primary hover:text-primary/80"
-                >
+                既にアカウントをお持ちの方は{" "}
+                <Link href="/auth/login" className="font-medium text-primary hover:text-primary/80">
                   こちらからログイン
                 </Link>
               </p>
@@ -158,10 +156,7 @@ function EmailInputForm() {
         </Card>
 
         <div className="text-center">
-          <Link
-            href="/"
-            className="text-sm font-medium text-primary hover:text-primary/80"
-          >
+          <Link href="/" className="text-sm font-medium text-primary hover:text-primary/80">
             ← トップページに戻る
           </Link>
         </div>
@@ -173,24 +168,24 @@ function EmailInputForm() {
 // ─── アカウント登録フォーム（トークンあり） ───────────────────────────────────
 function AccountRegisterForm({ token }: { token: string }) {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   // トークン検証
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        const response = await fetch('/api/auth/verify-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/auth/verify-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
         });
 
@@ -200,16 +195,16 @@ function AccountRegisterForm({ token }: { token: string }) {
           setEmail(data.email);
           setIsVerifying(false);
         } else {
-          setError(data.error || 'トークンの検証に失敗しました');
+          setError(data.error || "トークンの検証に失敗しました");
           setTimeout(() => {
-            router.push('/auth/register');
+            router.push("/auth/register");
           }, 3000);
         }
       } catch (err) {
-        console.error('Token verification error:', err);
-        setError('トークンの検証中にエラーが発生しました');
+        console.error("Token verification error:", err);
+        setError("トークンの検証中にエラーが発生しました");
         setTimeout(() => {
-          router.push('/auth/register');
+          router.push("/auth/register");
         }, 3000);
       }
     };
@@ -239,7 +234,8 @@ function AccountRegisterForm({ token }: { token: string }) {
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900">登録完了</h2>
           <p className="text-gray-500">
-            アカウントの登録が完了しました。<br />
+            アカウントの登録が完了しました。
+            <br />
             ログインページからログインしてください。
           </p>
           <Button asChild className="w-full">
@@ -252,22 +248,22 @@ function AccountRegisterForm({ token }: { token: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (password !== passwordConfirmation) {
-      setError('パスワードが一致しません');
+      setError("パスワードが一致しません");
       return;
     }
     if (password.length < 6) {
-      setError('パスワードは6文字以上で入力してください');
+      setError("パスワードは6文字以上で入力してください");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/register-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, display_name: displayName, password }),
       });
 
@@ -276,11 +272,11 @@ function AccountRegisterForm({ token }: { token: string }) {
       if (data.success) {
         setSuccess(true);
       } else {
-        setError(data.error || '登録に失敗しました');
+        setError(data.error || "登録に失敗しました");
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setError('エラーが発生しました。もう一度お試しください。');
+      console.error("Registration error:", err);
+      setError("エラーが発生しました。もう一度お試しください。");
     } finally {
       setIsLoading(false);
     }
@@ -295,20 +291,14 @@ function AccountRegisterForm({ token }: { token: string }) {
               <UserPlus className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            アカウント登録
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            表示名とパスワードを設定してください
-          </p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">アカウント登録</h2>
+          <p className="mt-2 text-sm text-gray-500">表示名とパスワードを設定してください</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>アカウント情報入力</CardTitle>
-            <CardDescription>
-              以下の情報を入力してアカウントを作成してください
-            </CardDescription>
+            <CardDescription>以下の情報を入力してアカウントを作成してください</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -323,14 +313,14 @@ function AccountRegisterForm({ token }: { token: string }) {
                   disabled
                   className="bg-gray-50"
                 />
-                <p className="text-xs text-gray-500">
-                  ※ メール認証済みのアドレスです（変更不可）
-                </p>
+                <p className="text-xs text-gray-500">※ メール認証済みのアドレスです（変更不可）</p>
               </div>
 
               {/* 表示名 */}
               <div className="space-y-2">
-                <Label htmlFor="display_name">表示名 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="display_name">
+                  表示名 <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="display_name"
                   type="text"
@@ -347,11 +337,13 @@ function AccountRegisterForm({ token }: { token: string }) {
 
               {/* パスワード */}
               <div className="space-y-2">
-                <Label htmlFor="password">パスワード <span className="text-destructive">*</span></Label>
+                <Label htmlFor="password">
+                  パスワード <span className="text-destructive">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required
                     placeholder="6文字以上で入力してください"
                     value={password}
@@ -372,11 +364,13 @@ function AccountRegisterForm({ token }: { token: string }) {
 
               {/* パスワード確認 */}
               <div className="space-y-2">
-                <Label htmlFor="password_confirmation">パスワード（確認） <span className="text-destructive">*</span></Label>
+                <Label htmlFor="password_confirmation">
+                  パスワード（確認） <span className="text-destructive">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="password_confirmation"
-                    type={showPasswordConfirmation ? 'text' : 'password'}
+                    type={showPasswordConfirmation ? "text" : "password"}
                     required
                     placeholder="パスワードを再度入力してください"
                     value={passwordConfirmation}
@@ -390,7 +384,11 @@ function AccountRegisterForm({ token }: { token: string }) {
                     className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-900"
                     tabIndex={-1}
                   >
-                    {showPasswordConfirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPasswordConfirmation ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -419,7 +417,7 @@ function AccountRegisterForm({ token }: { token: string }) {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
-                既にアカウントをお持ちの方は{' '}
+                既にアカウントをお持ちの方は{" "}
                 <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
                   こちらからログイン
                 </Link>
@@ -442,7 +440,7 @@ function AccountRegisterForm({ token }: { token: string }) {
 // ─── ルーティングコンポーネント ────────────────────────────────────────────────
 function RegisterPage() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
   if (token) {
     return <AccountRegisterForm token={token} />;

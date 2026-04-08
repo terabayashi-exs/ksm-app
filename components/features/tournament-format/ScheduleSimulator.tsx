@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 // ============================================================
 // CORE ENGINE: Tournament Schedule Generator
@@ -90,7 +90,7 @@ function generateRoundRobin(blockLabel: string, teamCount: number) {
 function buildSchedule(
   blocks: Array<{ size: number; label: string }>,
   courtCount: number,
-  mode: string
+  mode: string,
 ): Array<ScheduleSlot> {
   const blockRounds: Record<string, Array<Array<[string, string]>>> = {};
 
@@ -117,7 +117,7 @@ function buildSchedule(
     rawSchedule = buildFixedCourtSchedule(blocks, blockRounds, courtCount);
   }
 
-  return rawSchedule.map(matches => ({ matches }));
+  return rawSchedule.map((matches) => ({ matches }));
 }
 
 type ScheduleSlot = {
@@ -128,12 +128,12 @@ type ScheduleSlot = {
 function buildLeagueModeSchedule(
   blocks: Array<{ size: number; label: string }>,
   blockRounds: Record<string, Array<Array<[string, string]>>>,
-  courtCount: number
+  courtCount: number,
 ): Array<ScheduleSlot> {
   const schedule: Array<ScheduleSlot> = [];
 
   // 最大ラウンド数を取得
-  const maxRounds = Math.max(...Object.values(blockRounds).map(r => r.length));
+  const maxRounds = Math.max(...Object.values(blockRounds).map((r) => r.length));
 
   // 各節（ラウンド）ごとに処理
   for (let roundIdx = 0; roundIdx < maxRounds; roundIdx++) {
@@ -167,7 +167,7 @@ function buildLeagueModeSchedule(
 function buildFixedCourtSchedule(
   blocks: Array<{ size: number; label: string }>,
   blockRounds: Record<string, Array<Array<[string, string]>>>,
-  courtCount: number
+  courtCount: number,
 ): Array<Array<[string, string] | null>> {
   const schedule: Array<Array<[string, string] | null>> = [];
 
@@ -179,7 +179,7 @@ function buildFixedCourtSchedule(
 
   // 試合を配置
   let slotIdx = 0;
-  const maxRounds = Math.max(...Object.values(blockRounds).map(r => r.length));
+  const maxRounds = Math.max(...Object.values(blockRounds).map((r) => r.length));
 
   for (let roundIdx = 0; roundIdx < maxRounds; roundIdx++) {
     const courtMatches: Record<number, Array<[string, string]>> = {};
@@ -218,7 +218,7 @@ function buildFixedCourtSchedule(
   }
 
   // 空のスロットを削除
-  while (schedule.length > 0 && schedule[schedule.length - 1].every(m => m === null)) {
+  while (schedule.length > 0 && schedule[schedule.length - 1].every((m) => m === null)) {
     schedule.pop();
   }
 
@@ -228,14 +228,20 @@ function buildFixedCourtSchedule(
 function buildRotationSchedule(
   blocks: Array<{ size: number; label: string }>,
   blockRounds: Record<string, Array<Array<[string, string]>>>,
-  courtCount: number
+  courtCount: number,
 ): Array<Array<[string, string] | null>> {
   // Rotation: each block rotates courts across rounds
-  const allMatches: Array<{ match: [string, string]; block: string; court: number; roundIdx: number; blockIdx: number }> = [];
+  const allMatches: Array<{
+    match: [string, string];
+    block: string;
+    court: number;
+    roundIdx: number;
+    blockIdx: number;
+  }> = [];
 
   for (const block of blocks) {
     const rounds = blockRounds[block.label];
-    const blockIdx = blocks.findIndex(b => b.label === block.label);
+    const blockIdx = blocks.findIndex((b) => b.label === block.label);
 
     rounds.forEach((round, roundIdx) => {
       // Rotate court assignment by round
@@ -296,7 +302,7 @@ function hasConflict(slot: Array<[string, string] | null>, match: [string, strin
 function buildOptimizedSchedule(
   blocks: Array<{ size: number; label: string }>,
   blockRounds: Record<string, Array<Array<[string, string]>>>,
-  courtCount: number
+  courtCount: number,
 ): Array<Array<[string, string] | null>> {
   // Start with rotation schedule, then optimize with simulated annealing
   const initial = buildRotationSchedule(blocks, blockRounds, courtCount);
@@ -306,11 +312,11 @@ function buildOptimizedSchedule(
 function simulatedAnnealing(
   schedule: Array<Array<[string, string] | null>>,
   courtCount: number,
-  iterations: number
+  iterations: number,
 ): Array<Array<[string, string] | null>> {
-  let current = schedule.map(slot => [...slot]);
+  let current = schedule.map((slot) => [...slot]);
   let currentScore = evaluateSchedule(current, courtCount);
-  let best = current.map(slot => [...slot]);
+  let best = current.map((slot) => [...slot]);
   let bestScore = currentScore;
 
   let temp = 15.0;
@@ -328,7 +334,7 @@ function simulatedAnnealing(
     if (!current[s1][c1] && !current[s2][c2]) continue;
 
     // Check conflict
-    const newSchedule = current.map(slot => [...slot]);
+    const newSchedule = current.map((slot) => [...slot]);
     const tmp = newSchedule[s1][c1];
     newSchedule[s1][c1] = newSchedule[s2][c2];
     newSchedule[s2][c2] = tmp;
@@ -343,7 +349,7 @@ function simulatedAnnealing(
       current = newSchedule;
       currentScore = newScore;
       if (currentScore < bestScore) {
-        best = current.map(slot => [...slot]);
+        best = current.map((slot) => [...slot]);
         bestScore = currentScore;
       }
     }
@@ -356,11 +362,11 @@ function simulatedAnnealing(
 
 function mulberry32(seed: number) {
   let a = seed;
-  return function() {
+  return function () {
     a |= 0;
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
@@ -377,7 +383,10 @@ function hasSlotConflict(slot: Array<[string, string] | null>): boolean {
   return false;
 }
 
-function evaluateSchedule(schedule: Array<Array<[string, string] | null>>, courtCount: number): number {
+function evaluateSchedule(
+  schedule: Array<Array<[string, string] | null>>,
+  courtCount: number,
+): number {
   const teamCourts: Record<string, number[]> = {};
   const teamSlots: Record<string, number[]> = {};
 
@@ -416,7 +425,7 @@ function evaluateSchedule(schedule: Array<Array<[string, string] | null>>, court
       }
       const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
       intervalPenalty += intervals.reduce((sum, iv) => sum + (iv - avg) ** 2, 0);
-      minIntervalPenalty += intervals.filter(iv => iv <= 1).length * 10;
+      minIntervalPenalty += intervals.filter((iv) => iv <= 1).length * 10;
     }
   }
 
@@ -440,7 +449,7 @@ interface ScheduleSimulatorProps {
     schedule: Array<Array<[string, string] | null>>,
     blocks: Array<{ label: string; size: number }>,
     courtCount: number,
-    slotRounds?: Array<number | undefined>
+    slotRounds?: Array<number | undefined>,
   ) => void;
 }
 
@@ -480,8 +489,8 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
 
   const handleExport = () => {
     if (schedule) {
-      const plainSchedule = schedule.map(slot => slot.matches);
-      const slotRounds = schedule.map(slot => slot.round);
+      const plainSchedule = schedule.map((slot) => slot.matches);
+      const slotRounds = schedule.map((slot) => slot.round);
       onExportSchedule(plainSchedule, blocks, courtCount, slotRounds);
     }
   };
@@ -492,20 +501,20 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
     fixed: "コート固定",
     rotation: "ラウンドローテーション",
     optimized: "AI最適化",
-    league: "リーグ戦モード"
+    league: "リーグ戦モード",
   };
 
   const modeDescriptions = {
     fixed: "ブロックをコートに固定配置。運営がシンプル。",
     rotation: "ラウンドごとにコートを回転。公平性とシンプルさのバランス。",
     optimized: "焼きなまし法で最適配置を探索。最高の公平性。",
-    league: "節単位で穴あきなしのスケジュール。公式リーグ戦向け。"
+    league: "節単位で穴あきなしのスケジュール。公式リーグ戦向け。",
   };
 
   const handleAddBlock = () => {
     const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-    const usedLabels = blocks.map(b => b.label);
-    const availableLabel = labels.find(l => !usedLabels.includes(l));
+    const usedLabels = blocks.map((b) => b.label);
+    const availableLabel = labels.find((l) => !usedLabels.includes(l));
     if (availableLabel) {
       setBlocks([...blocks, { size: 4, label: availableLabel }]);
       setSchedule(null);
@@ -544,7 +553,7 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
                 <input
                   type="number"
                   value={teamCount}
-                  onChange={e => handleTeamCountChange(parseInt(e.target.value) || 4)}
+                  onChange={(e) => handleTeamCountChange(parseInt(e.target.value) || 4)}
                   className="w-16 h-8 bg-white rounded-lg text-center text-sm font-bold border border-gray-300 focus:border-blue-500 outline-none"
                 />
                 <Button
@@ -562,7 +571,7 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
             <div>
               <label className="text-xs text-gray-600 mb-1 block">コート数</label>
               <div className="flex gap-1.5">
-                {[1, 2, 3, 4, 5].map(n => (
+                {[1, 2, 3, 4, 5].map((n) => (
                   <Button
                     key={n}
                     type="button"
@@ -582,16 +591,23 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
         {/* Block Configuration */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">ブロック構成</h3>
-            <span className="text-xs text-gray-600">{blocks.length}ブロック / {totalTeamsFromBlocks}チーム</span>
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              ブロック構成
+            </h3>
+            <span className="text-xs text-gray-600">
+              {blocks.length}ブロック / {totalTeamsFromBlocks}チーム
+            </span>
           </div>
           <div className="flex flex-wrap gap-2">
             {blocks.map((block, i) => (
-              <div key={i} className="flex items-center gap-1 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+              <div
+                key={i}
+                className="flex items-center gap-1 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200"
+              >
                 <span className="text-sm font-bold text-blue-600">{block.label}</span>
                 <select
                   value={block.size}
-                  onChange={e => {
+                  onChange={(e) => {
                     const newBlocks = [...blocks];
                     newBlocks[i] = { ...block, size: parseInt(e.target.value) };
                     setBlocks(newBlocks);
@@ -599,8 +615,10 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
                   }}
                   className="bg-white text-gray-800 text-sm rounded px-1.5 py-0.5 border border-gray-300 outline-none cursor-pointer"
                 >
-                  {[3, 4, 5, 6, 7, 8].map(n => (
-                    <option key={n} value={n}>{n}チーム</option>
+                  {[3, 4, 5, 6, 7, 8].map((n) => (
+                    <option key={n} value={n}>
+                      {n}チーム
+                    </option>
                   ))}
                 </select>
                 {blocks.length > 1 && (
@@ -639,7 +657,9 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
             </button>
           </div>
           {totalTeamsFromBlocks !== teamCount && (
-            <p className="text-xs text-yellow-600">⚠ チーム数合計が{totalTeamsFromBlocks}です（設定: {teamCount}）</p>
+            <p className="text-xs text-yellow-600">
+              ⚠ チーム数合計が{totalTeamsFromBlocks}です（設定: {teamCount}）
+            </p>
           )}
         </div>
 
@@ -647,7 +667,7 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">生成モード</h3>
           <div className="space-y-2">
-            {(["fixed", "rotation", "optimized", "league"] as const).map(m => (
+            {(["fixed", "rotation", "optimized", "league"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
@@ -692,7 +712,10 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
           {schedule && (
             <div className="ml-auto text-sm text-gray-700 space-y-1">
               <p>生成完了: {schedule.length}スロット</p>
-              <p>試合数: {schedule.reduce((sum, slot) => sum + slot.matches.filter(Boolean).length, 0)}試合</p>
+              <p>
+                試合数:{" "}
+                {schedule.reduce((sum, slot) => sum + slot.matches.filter(Boolean).length, 0)}試合
+              </p>
             </div>
           )}
         </div>
@@ -707,9 +730,13 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
               <thead>
                 <tr>
                   {mode === "league" && (
-                    <th className="px-3 py-3 text-left text-gray-700 text-sm font-semibold border-b-2 border-gray-300 w-16">節</th>
+                    <th className="px-3 py-3 text-left text-gray-700 text-sm font-semibold border-b-2 border-gray-300 w-16">
+                      節
+                    </th>
                   )}
-                  <th className="px-3 py-3 text-left text-gray-700 text-sm font-semibold border-b-2 border-gray-300 w-16">#</th>
+                  <th className="px-3 py-3 text-left text-gray-700 text-sm font-semibold border-b-2 border-gray-300 w-16">
+                    #
+                  </th>
                   {Array.from({ length: courtCount }, (_, i) => (
                     <th
                       key={i}
@@ -733,14 +760,18 @@ export default function ScheduleSimulator({ onExportSchedule }: ScheduleSimulato
                       {slotIdx + 1}
                     </td>
                     {slot.matches.map((match, courtIdx) => (
-                      <td key={courtIdx} className="px-2 py-2.5 text-center border-b border-gray-200">
+                      <td
+                        key={courtIdx}
+                        className="px-2 py-2.5 text-center border-b border-gray-200"
+                      >
                         {match ? (
                           <span
                             className="inline-block px-3 py-1.5 rounded text-sm font-mono font-medium"
                             style={{
-                              backgroundColor: COURT_COLORS[courtIdx % COURT_COLORS.length].light + "18",
+                              backgroundColor:
+                                COURT_COLORS[courtIdx % COURT_COLORS.length].light + "18",
                               color: COURT_COLORS[courtIdx % COURT_COLORS.length].border,
-                              border: `1px solid ${COURT_COLORS[courtIdx % COURT_COLORS.length].border}30`
+                              border: `1px solid ${COURT_COLORS[courtIdx % COURT_COLORS.length].border}30`,
                             }}
                           >
                             {match[0]} vs {match[1]}

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -15,12 +15,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
      FROM t_tournament_notices
      WHERE tournament_id = ? AND is_active = 1
      ORDER BY display_order DESC, tournament_notice_id DESC`,
-    [tournamentId]
+    [tournamentId],
   );
 
   return NextResponse.json({
     success: true,
-    notices: result.rows.map(row => ({
+    notices: result.rows.map((row) => ({
       tournament_notice_id: Number(row.tournament_notice_id),
       content: String(row.content),
       display_order: Number(row.display_order),

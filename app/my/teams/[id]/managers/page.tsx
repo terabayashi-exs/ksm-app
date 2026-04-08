@@ -1,10 +1,10 @@
 // app/my/teams/[id]/managers/page.tsx
 export const metadata = { title: "担当者管理" };
 
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
 import TeamManagersClient from "@/components/features/my/TeamManagersClient";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 export default async function TeamManagersPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -27,7 +27,7 @@ export default async function TeamManagersPage({ params }: { params: Promise<{ i
       INNER JOIN m_team_members tm ON t.team_id = tm.team_id
       WHERE t.team_id = ? AND tm.login_user_id = ? AND tm.is_active = 1
     `,
-    args: [teamId, loginUserId]
+    args: [teamId, loginUserId],
   });
 
   if (teamResult.rows.length === 0) {

@@ -1,28 +1,29 @@
 // app/api/tournaments/formats/[formatId]/templates/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { MatchTemplate } from '@/lib/types';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { MatchTemplate } from "@/lib/types";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ formatId: string }> }
+  { params }: { params: Promise<{ formatId: string }> },
 ) {
   try {
     const resolvedParams = await params;
     const formatId = parseInt(resolvedParams.formatId);
-    
+
     console.log(`[TEMPLATES] フォーマットIDでテンプレート取得開始: ${formatId}`);
-    
+
     if (isNaN(formatId)) {
       console.log(`[TEMPLATES] 無効なフォーマットID: ${resolvedParams.formatId}`);
       return NextResponse.json(
-        { success: false, error: '有効なフォーマットIDを指定してください' },
-        { status: 400 }
+        { success: false, error: "有効なフォーマットIDを指定してください" },
+        { status: 400 },
       );
     }
 
     // 指定されたフォーマットの試合テンプレートと競技種別情報を取得
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT
         mt.template_id,
         mt.format_id,
@@ -50,11 +51,13 @@ export async function GET(
       LEFT JOIN m_sport_types st ON tf.sport_type_id = st.sport_type_id
       WHERE mt.format_id = ?
       ORDER BY mt.day_number ASC, mt.execution_priority ASC, mt.match_number ASC
-    `, [formatId]);
+    `,
+      [formatId],
+    );
 
     console.log(`[TEMPLATES] クエリ実行完了: ${result.rows.length}件のテンプレートを取得`);
 
-    const templates = result.rows.map(row => ({
+    const templates = result.rows.map((row) => ({
       template_id: Number(row.template_id),
       format_id: Number(row.format_id),
       match_number: Number(row.match_number),
@@ -75,62 +78,71 @@ export async function GET(
       is_bye_match: Number(row.is_bye_match || 0),
       matchday: row.matchday ? Number(row.matchday) : undefined,
       cycle: row.cycle ? Number(row.cycle) : undefined,
-      created_at: String(row.created_at)
+      created_at: String(row.created_at),
     })) as MatchTemplate[];
 
     // 競技種別コードを取得（全テンプレートで同じはずなので最初のものを使用）
     const sportCode = result.rows.length > 0 ? result.rows[0].sport_code : null;
-    
+
     console.log(`[TEMPLATES] 処理完了:`, {
       formatId,
       templatesCount: templates.length,
       sportCode,
-      firstTemplate: templates[0] ? templates[0].match_code : null
+      firstTemplate: templates[0] ? templates[0].match_code : null,
     });
-    
+
     if (templates.length === 0) {
       console.log(`[TEMPLATES] 警告: フォーマットID ${formatId} にはテンプレートが存在しません`);
-      return NextResponse.json({
-        success: false,
-        error: `フォーマットID ${formatId} に対応する試合テンプレートが見つかりません`
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `フォーマットID ${formatId} に対応する試合テンプレートが見つかりません`,
+        },
+        { status: 404 },
+      );
     }
 
     // 日程別に分類
-    const templatesByDay = templates.reduce((acc, template) => {
-      const dayKey = template.day_number.toString();
-      if (!acc[dayKey]) {
-        acc[dayKey] = [];
-      }
-      acc[dayKey].push(template);
-      return acc;
-    }, {} as Record<string, MatchTemplate[]>);
+    const templatesByDay = templates.reduce(
+      (acc, template) => {
+        const dayKey = template.day_number.toString();
+        if (!acc[dayKey]) {
+          acc[dayKey] = [];
+        }
+        acc[dayKey].push(template);
+        return acc;
+      },
+      {} as Record<string, MatchTemplate[]>,
+    );
 
     // 統計情報の計算
     const totalMatches = templates.length;
-    const matchesByDay = Object.keys(templatesByDay).map(day => ({
+    const matchesByDay = Object.keys(templatesByDay).map((day) => ({
       day: parseInt(day),
-      matchCount: templatesByDay[day].length
+      matchCount: templatesByDay[day].length,
     }));
-    
+
     // day_numberの最大値と最小値を計算
-    const dayNumbers = templates.map(t => t.day_number);
+    const dayNumbers = templates.map((t) => t.day_number);
     const minDayNumber = Math.min(...dayNumbers, 1);
     const maxDayNumber = Math.max(...dayNumbers, 1);
 
     // execution_priorityでグループ化（同時進行可能な試合数を計算）
     const maxSimultaneousMatches = Math.max(
-      ...Object.values(templatesByDay).map(dayTemplates => {
-        const priorityGroups = dayTemplates.reduce((acc, template) => {
-          if (!acc[template.execution_priority]) {
-            acc[template.execution_priority] = 0;
-          }
-          acc[template.execution_priority]++;
-          return acc;
-        }, {} as Record<number, number>);
+      ...Object.values(templatesByDay).map((dayTemplates) => {
+        const priorityGroups = dayTemplates.reduce(
+          (acc, template) => {
+            if (!acc[template.execution_priority]) {
+              acc[template.execution_priority] = 0;
+            }
+            acc[template.execution_priority]++;
+            return acc;
+          },
+          {} as Record<number, number>,
+        );
         return Math.max(...Object.values(priorityGroups));
       }),
-      1
+      1,
     );
 
     return NextResponse.json({
@@ -148,35 +160,34 @@ export async function GET(
           minDayNumber,
           maxDayNumber,
           requiredDays: maxDayNumber - minDayNumber + 1,
-          phases: [...new Set(templates.map(t => t.phase))],
-          matchTypes: [...new Set(templates.map(t => t.match_type))],
-          hasMatchdays: templates.some(t => t.matchday != null),
+          phases: [...new Set(templates.map((t) => t.phase))],
+          matchTypes: [...new Set(templates.map((t) => t.match_type))],
+          hasMatchdays: templates.some((t) => t.matchday != null),
           maxMatchday: templates.reduce((max, t) => Math.max(max, t.matchday || 0), 0),
           matchesByMatchday: (() => {
             const byMatchday: Record<number, number> = {};
-            templates.forEach(t => {
+            templates.forEach((t) => {
               if (t.matchday != null) {
                 byMatchday[t.matchday] = (byMatchday[t.matchday] || 0) + 1;
               }
             });
             return Object.entries(byMatchday).map(([matchday, matchCount]) => ({
               matchday: Number(matchday),
-              matchCount
+              matchCount,
             }));
-          })()
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('試合テンプレート取得エラー:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '試合テンプレートの取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
+          })(),
+        },
       },
-      { status: 500 }
+    });
+  } catch (error) {
+    console.error("試合テンプレート取得エラー:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "試合テンプレートの取得に失敗しました",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }

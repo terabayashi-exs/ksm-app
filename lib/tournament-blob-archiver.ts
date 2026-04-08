@@ -1,8 +1,9 @@
 // lib/tournament-blob-archiver.ts
-import { BlobStorage } from './blob-storage';
-import { db } from './db';
-import { ArchiveVersionManager } from './archive-version-manager';
-import { parseScoreArray } from './score-parser';
+
+import { ArchiveVersionManager } from "./archive-version-manager";
+import { BlobStorage } from "./blob-storage";
+import { db } from "./db";
+import { parseScoreArray } from "./score-parser";
 
 /**
  * アーカイブインデックスの型定義
@@ -58,15 +59,15 @@ export interface TournamentArchive {
  * Blob ベースの大会アーカイブ管理クラス
  */
 export class TournamentBlobArchiver {
-  private static readonly INDEX_PATH = 'tournaments/index.json';
-  private static readonly ARCHIVE_VERSION = '1.0';
+  private static readonly INDEX_PATH = "tournaments/index.json";
+  private static readonly ARCHIVE_VERSION = "1.0";
 
   /**
    * 大会データをBlobにアーカイブ
    */
   static async archiveTournament(
     tournamentId: number,
-    archivedBy: string
+    archivedBy: string,
   ): Promise<{
     success: boolean;
     error?: string;
@@ -83,18 +84,18 @@ export class TournamentBlobArchiver {
 
       // 1. 大会データを収集（既存のロジックを使用）
       const archiveData = await this.collectTournamentData(tournamentId);
-      
+
       if (!archiveData) {
         return {
           success: false,
-          error: '大会データの収集に失敗しました'
+          error: "大会データの収集に失敗しました",
         };
       }
 
       // 2. アーカイブオブジェクトを構築
       const currentTime = new Date().toISOString();
       const currentVersion = ArchiveVersionManager.getCurrentVersion();
-      
+
       const archive: TournamentArchive = {
         version: this.ARCHIVE_VERSION,
         archived_at: currentTime,
@@ -108,16 +109,16 @@ export class TournamentBlobArchiver {
         metadata: {
           ...archiveData.metadata,
           archive_ui_version: currentVersion,
-        }
+        },
       };
 
       // 3. Blobに保存
       const archivePath = `tournaments/${tournamentId}/archive.json`;
       const jsonString = JSON.stringify(archive, null, 2);
-      const fileSize = Buffer.byteLength(jsonString, 'utf8');
-      
+      const fileSize = Buffer.byteLength(jsonString, "utf8");
+
       archive.metadata.file_size = fileSize;
-      
+
       await BlobStorage.putJson(archivePath, archive as unknown as Record<string, unknown>);
 
       // 4. インデックスを更新
@@ -132,20 +133,23 @@ export class TournamentBlobArchiver {
         metadata: {
           total_teams: archiveData.metadata.total_teams,
           total_matches: archiveData.metadata.total_matches,
-          archive_ui_version: currentVersion
-        }
+          archive_ui_version: currentVersion,
+        },
       });
       console.log(`✅ インデックス更新完了: ${archiveData.tournament.tournament_name}`);
 
       // 5. データベースのアーカイブフラグを更新
-      await db.execute(`
+      await db.execute(
+        `
         UPDATE t_tournaments 
         SET is_archived = 1,
             archive_ui_version = ?,
             archived_at = datetime('now', '+9 hours'),
             archived_by = ?
         WHERE tournament_id = ?
-      `, [currentVersion, archivedBy, tournamentId]);
+      `,
+        [currentVersion, archivedBy, tournamentId],
+      );
 
       console.log(`✅ Blobアーカイブ完了: ${archiveData.tournament.tournament_name}`);
       console.log(`   保存先: ${archivePath}`);
@@ -158,15 +162,14 @@ export class TournamentBlobArchiver {
           tournament_name: archiveData.tournament.tournament_name,
           file_size: fileSize,
           archived_at: currentTime,
-          blob_url: archivePath
-        }
+          blob_url: archivePath,
+        },
       };
-
     } catch (error) {
       console.error(`🔥 Blobアーカイブエラー (大会ID: ${tournamentId}):`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'アーカイブ処理中にエラーが発生しました'
+        error: error instanceof Error ? error.message : "アーカイブ処理中にエラーが発生しました",
       };
     }
   }
@@ -178,7 +181,7 @@ export class TournamentBlobArchiver {
     try {
       const archivePath = `tournaments/${tournamentId}/archive.json`;
       const archive = await BlobStorage.getJson<TournamentArchive>(archivePath);
-      
+
       console.log(`✅ アーカイブ取得成功: 大会ID ${tournamentId}`);
       return archive;
     } catch (error) {
@@ -192,25 +195,25 @@ export class TournamentBlobArchiver {
    */
   static async getArchiveIndex(retryCount = 0): Promise<ArchiveEntry[]> {
     const maxRetries = 3;
-    
+
     try {
       const index = await BlobStorage.getJson<ArchiveIndex>(this.INDEX_PATH);
       console.log(`📋 インデックス取得成功: ${index.archives?.length || 0}件のアーカイブ`);
       return index.archives || [];
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      if (errorMessage.includes('404') || errorMessage.includes('does not exist')) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      if (errorMessage.includes("404") || errorMessage.includes("does not exist")) {
         // 404エラーの場合、リトライを試行（ログなし）
         if (retryCount < maxRetries) {
           const delay = Math.pow(2, retryCount) * 500; // 指数バックオフ: 500ms, 1s, 2s
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
           return this.getArchiveIndex(retryCount + 1);
         } else {
-          console.log('📄 インデックスファイル未存在（最終確認後）');
+          console.log("📄 インデックスファイル未存在（最終確認後）");
         }
       } else {
-        console.warn('⚠️ インデックス取得エラー:', errorMessage);
+        console.warn("⚠️ インデックス取得エラー:", errorMessage);
       }
       return [];
     }
@@ -225,14 +228,14 @@ export class TournamentBlobArchiver {
       version: this.ARCHIVE_VERSION,
       updated_at: new Date().toISOString(),
       total_archives: 0,
-      archives: []
+      archives: [],
     };
 
     await BlobStorage.updateJsonWithLock<ArchiveIndex>(
       this.INDEX_PATH,
       (current) => {
         console.log(`    📝 現在のインデックス状態:`, current);
-        
+
         // current が空の場合や不正な場合は初期化
         if (!current || !current.version || !Array.isArray(current.archives)) {
           console.log(`    🆕 インデックス初期化中...`);
@@ -240,7 +243,7 @@ export class TournamentBlobArchiver {
             version: this.ARCHIVE_VERSION,
             updated_at: new Date().toISOString(),
             total_archives: 0,
-            archives: []
+            archives: [],
           };
         }
 
@@ -249,7 +252,7 @@ export class TournamentBlobArchiver {
 
         // 既存のエントリを更新または新規追加
         const existingIndex = current.archives.findIndex(
-          a => a.tournament_id === newEntry.tournament_id
+          (a) => a.tournament_id === newEntry.tournament_id,
         );
 
         if (existingIndex >= 0) {
@@ -261,8 +264,8 @@ export class TournamentBlobArchiver {
         }
 
         // ソート（新しい順）
-        current.archives.sort((a, b) => 
-          new Date(b.archived_at).getTime() - new Date(a.archived_at).getTime()
+        current.archives.sort(
+          (a, b) => new Date(b.archived_at).getTime() - new Date(a.archived_at).getTime(),
         );
 
         // メタデータ更新
@@ -270,14 +273,16 @@ export class TournamentBlobArchiver {
         current.total_archives = current.archives.length;
 
         console.log(`    ✅ 更新後の件数: ${current.total_archives}`);
-        console.log(`    📋 更新後のアーカイブIDs: [${current.archives.map(a => a.tournament_id).join(', ')}]`);
+        console.log(
+          `    📋 更新後のアーカイブIDs: [${current.archives.map((a) => a.tournament_id).join(", ")}]`,
+        );
 
         return current;
       },
       {
         maxRetries: 5,
-        defaultValue: defaultIndex
-      }
+        defaultValue: defaultIndex,
+      },
     );
   }
 
@@ -287,14 +292,15 @@ export class TournamentBlobArchiver {
   static async collectTournamentData(tournamentId: number) {
     try {
       // 1. 大会基本情報（アーカイブフラグに関係なく生データを取得）
-      const { getRawTournamentById } = await import('@/lib/tournament-detail');
+      const { getRawTournamentById } = await import("@/lib/tournament-detail");
       const tournament = await getRawTournamentById(tournamentId);
       if (!tournament) {
         return null;
       }
 
       // 2. 参加チーム情報
-      const teamsResult = await db.execute(`
+      const teamsResult = await db.execute(
+        `
         SELECT 
           tt.team_id,
           tt.team_name,
@@ -308,12 +314,15 @@ export class TournamentBlobArchiver {
         LEFT JOIN m_teams t ON tt.team_id = t.team_id
         WHERE tt.tournament_id = ?
         ORDER BY tt.assigned_block, tt.block_position
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // 2.1. 各チームの選手情報を取得
       const teamsWithPlayers = await Promise.all(
         teamsResult.rows.map(async (team: Record<string, unknown>) => {
-          const playersResult = await db.execute(`
+          const playersResult = await db.execute(
+            `
             SELECT 
               mp.player_name,
               tp.jersey_number
@@ -321,20 +330,23 @@ export class TournamentBlobArchiver {
             LEFT JOIN m_players mp ON tp.player_id = mp.player_id
             WHERE tp.team_id = ? AND tp.tournament_id = ?
             ORDER BY tp.jersey_number
-          `, [team.team_id as string, tournamentId]);
+          `,
+            [team.team_id as string, tournamentId],
+          );
 
           return {
             ...team,
             players: playersResult.rows.map((player: Record<string, unknown>) => ({
               player_name: player.player_name,
-              jersey_number: player.jersey_number
-            }))
+              jersey_number: player.jersey_number,
+            })),
           };
-        })
+        }),
       );
 
       // 3. 試合データ（チーム略称をJOINで取得）
-      const matchesResult = await db.execute(`
+      const matchesResult = await db.execute(
+        `
         SELECT
           ml.match_id,
           ml.match_block_id,
@@ -371,10 +383,13 @@ export class TournamentBlobArchiver {
         LEFT JOIN t_tournament_teams tt2 ON ml.team2_tournament_team_id = tt2.tournament_team_id
         WHERE mb.tournament_id = ?
         ORDER BY ml.tournament_date, ml.match_number
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // 4. 順位表データ（フェーズ順はblock_orderで制御）
-      const standingsResult = await db.execute(`
+      const standingsResult = await db.execute(
+        `
         SELECT
           mb.block_name,
           mb.phase,
@@ -384,10 +399,13 @@ export class TournamentBlobArchiver {
         FROM t_match_blocks mb
         WHERE mb.tournament_id = ?
         ORDER BY mb.block_order, mb.block_name
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // 5. 戦績表データ
-      const resultsResult = await db.execute(`
+      const resultsResult = await db.execute(
+        `
         SELECT
           ml.match_code,
           COALESCE(tt1.team_name, ml.team1_display_name) as team1_name,
@@ -404,27 +422,35 @@ export class TournamentBlobArchiver {
         LEFT JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
         WHERE mb.tournament_id = ? AND mf.match_id IS NOT NULL
         ORDER BY ml.match_code
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       // 6. PDF情報
-      const { checkTournamentBracketPdfExists, checkTournamentResultsPdfExists } = await import('@/lib/pdf-utils');
+      const { checkTournamentBracketPdfExists, checkTournamentResultsPdfExists } = await import(
+        "@/lib/pdf-utils"
+      );
       const bracketPdfExists = await checkTournamentBracketPdfExists(tournamentId);
       const resultsPdfExists = await checkTournamentResultsPdfExists(tournamentId);
 
       // 競技設定を取得（PK戦分離のため）
       let sportConfig: { supports_pk?: boolean } | null = null;
       try {
-        const { getTournamentSportCode, getSportScoreConfig } = await import('@/lib/sport-standings-calculator');
+        const { getTournamentSportCode, getSportScoreConfig } = await import(
+          "@/lib/sport-standings-calculator"
+        );
         const sportCode = await getTournamentSportCode(tournamentId);
         sportConfig = getSportScoreConfig(sportCode);
       } catch {
-        console.warn('⚠️ 競技設定取得スキップ');
+        console.warn("⚠️ 競技設定取得スキップ");
       }
 
       // データをまとめて返す
       // スコアの計算処理を追加（PK分離対応）
-      const processedMatches = matchesResult.rows.map(match => {
-        const calculateDisplayScore = (scores: string | null): { goals: number; pkGoals: number | null } => {
+      const processedMatches = matchesResult.rows.map((match) => {
+        const calculateDisplayScore = (
+          scores: string | null,
+        ): { goals: number; pkGoals: number | null } => {
           const scoreArray = parseScoreArray(scores);
           // サッカーでPK戦がある場合の特別処理
           if (sportConfig?.supports_pk && scoreArray.length >= 5) {
@@ -454,25 +480,26 @@ export class TournamentBlobArchiver {
         tournament,
         teams: teamsWithPlayers,
         matches: processedMatches,
-        standings: standingsResult.rows.map(row => ({
+        standings: standingsResult.rows.map((row) => ({
           ...row,
-          team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : []
+          team_rankings: row.team_rankings ? JSON.parse(row.team_rankings as string) : [],
         })),
         results: resultsResult.rows,
         pdf_info: {
           bracketPdfExists,
-          resultsPdfExists
+          resultsPdfExists,
         },
         metadata: {
           total_teams: teamsWithPlayers.length,
           total_matches: processedMatches.length,
-          completed_matches: matchesResult.rows.filter(m => m.has_result === 1).length,
-          blocks_count: new Set(standingsResult.rows.map((s: Record<string, unknown>) => s.block_name)).size
-        }
+          completed_matches: matchesResult.rows.filter((m) => m.has_result === 1).length,
+          blocks_count: new Set(
+            standingsResult.rows.map((s: Record<string, unknown>) => s.block_name),
+          ).size,
+        },
       };
-
     } catch (error) {
-      console.error('大会データ収集エラー:', error);
+      console.error("大会データ収集エラー:", error);
       return null;
     }
   }
@@ -491,7 +518,7 @@ export class TournamentBlobArchiver {
         version: this.ARCHIVE_VERSION,
         updated_at: new Date().toISOString(),
         total_archives: 0,
-        archives: []
+        archives: [],
       };
 
       await BlobStorage.updateJsonWithLock<ArchiveIndex>(
@@ -503,32 +530,33 @@ export class TournamentBlobArchiver {
               version: this.ARCHIVE_VERSION,
               updated_at: new Date().toISOString(),
               total_archives: 0,
-              archives: []
+              archives: [],
             };
           }
 
-          current.archives = current.archives.filter(
-            a => a.tournament_id !== tournamentId
-          );
+          current.archives = current.archives.filter((a) => a.tournament_id !== tournamentId);
           current.updated_at = new Date().toISOString();
           current.total_archives = current.archives.length;
           return current;
         },
         {
           maxRetries: 5,
-          defaultValue: defaultIndex
-        }
+          defaultValue: defaultIndex,
+        },
       );
 
       // 3. DBフラグを更新
-      await db.execute(`
+      await db.execute(
+        `
         UPDATE t_tournaments 
         SET is_archived = 0,
             archive_ui_version = NULL,
             archived_at = NULL,
             archived_by = NULL
         WHERE tournament_id = ?
-      `, [tournamentId]);
+      `,
+        [tournamentId],
+      );
 
       console.log(`✅ アーカイブ削除完了: 大会ID ${tournamentId}`);
       return true;

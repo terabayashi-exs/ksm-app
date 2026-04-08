@@ -1,5 +1,5 @@
-import { db } from '@/lib/db';
-import type { OperatorPermissions } from '@/lib/types/operator';
+import { db } from "@/lib/db";
+import type { OperatorPermissions } from "@/lib/types/operator";
 
 /**
  * 運営者が特定の権限を持っているか確認
@@ -7,11 +7,11 @@ import type { OperatorPermissions } from '@/lib/types/operator';
  */
 export async function hasOperatorPermission(
   loginUserId: number,
-  permission: keyof OperatorPermissions
+  permission: keyof OperatorPermissions,
 ): Promise<boolean> {
   const result = await db.execute(
     `SELECT permissions FROM t_operator_tournament_access WHERE operator_id = ?`,
-    [loginUserId]
+    [loginUserId],
   );
 
   for (const row of result.rows) {
@@ -29,11 +29,11 @@ export async function hasOperatorPermission(
  * 運営者のすべての部門権限をマージして返す（全部門の権限のOR）
  */
 export async function getMergedOperatorPermissions(
-  loginUserId: number
+  loginUserId: number,
 ): Promise<Partial<OperatorPermissions>> {
   const result = await db.execute(
     `SELECT permissions FROM t_operator_tournament_access WHERE operator_id = ?`,
-    [loginUserId]
+    [loginUserId],
   );
 
   const merged: Partial<OperatorPermissions> = {};
@@ -62,9 +62,9 @@ export async function getOperatorGroupIds(loginUserId: number): Promise<number[]
      FROM t_operator_tournament_access ota
      INNER JOIN t_tournaments t ON ota.tournament_id = t.tournament_id
      WHERE ota.operator_id = ?`,
-    [loginUserId]
+    [loginUserId],
   );
-  return result.rows.map(row => Number(row.group_id));
+  return result.rows.map((row) => Number(row.group_id));
 }
 
 /**
@@ -73,7 +73,7 @@ export async function getOperatorGroupIds(loginUserId: number): Promise<number[]
  */
 export function validatePermissionScope(
   myPermissions: Partial<OperatorPermissions>,
-  targetPermissions: Partial<OperatorPermissions>
+  targetPermissions: Partial<OperatorPermissions>,
 ): string[] {
   const violations: string[] = [];
   for (const [key, value] of Object.entries(targetPermissions)) {

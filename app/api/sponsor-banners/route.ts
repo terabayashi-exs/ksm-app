@@ -1,23 +1,20 @@
 // app/api/sponsor-banners/route.ts
 // 公開用スポンサーバナー取得API
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 // バナー一覧取得（公開用）
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tournamentId = searchParams.get('tournament_id');
-    const position = searchParams.get('position');
-    const tab = searchParams.get('tab');
-    const size = searchParams.get('size'); // 'large' or 'small'
+    const tournamentId = searchParams.get("tournament_id");
+    const position = searchParams.get("position");
+    const tab = searchParams.get("tab");
+    const size = searchParams.get("size"); // 'large' or 'small'
 
     if (!tournamentId) {
-      return NextResponse.json(
-        { error: 'tournament_idが必要です' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "tournament_idが必要です" }, { status: 400 });
     }
 
     // 基本クエリ
@@ -45,24 +42,24 @@ export async function GET(request: NextRequest) {
 
     // 表示位置でフィルタリング
     if (position) {
-      sql += ' AND display_position = ?';
+      sql += " AND display_position = ?";
       args.push(position);
     }
 
     // バナーサイズでフィルタリング
     if (size) {
-      sql += ' AND banner_size = ?';
+      sql += " AND banner_size = ?";
       args.push(size);
     }
 
     // ターゲットタブでフィルタリング
     if (tab) {
-      sql += ' AND (target_tab = ? OR target_tab = ?)';
+      sql += " AND (target_tab = ? OR target_tab = ?)";
       args.push(tab);
-      args.push('all');
+      args.push("all");
     }
 
-    sql += ' ORDER BY display_order, banner_id';
+    sql += " ORDER BY display_order, banner_id";
 
     const result = await db.execute({
       sql,
@@ -73,10 +70,7 @@ export async function GET(request: NextRequest) {
       banners: result.rows,
     });
   } catch (error) {
-    console.error('バナー取得エラー:', error);
-    return NextResponse.json(
-      { error: 'バナーの取得に失敗しました' },
-      { status: 500 }
-    );
+    console.error("バナー取得エラー:", error);
+    return NextResponse.json({ error: "バナーの取得に失敗しました" }, { status: 500 });
   }
 }

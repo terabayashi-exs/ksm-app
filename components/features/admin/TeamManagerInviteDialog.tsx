@@ -1,9 +1,8 @@
 "use client";
 
+import { AlertCircle, CheckCircle, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   teamId: string;
@@ -21,7 +21,13 @@ interface Props {
   onSuccess?: () => void;
 }
 
-export default function TeamManagerInviteDialog({ teamId, teamName, open, onOpenChange, onSuccess }: Props) {
+export default function TeamManagerInviteDialog({
+  teamId,
+  teamName,
+  open,
+  onOpenChange,
+  onSuccess,
+}: Props) {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -65,19 +71,24 @@ export default function TeamManagerInviteDialog({ teamId, teamName, open, onOpen
             担当者登録（メール認証）
           </DialogTitle>
           <DialogDescription>
-            {teamName} の担当者として登録するメールアドレスを入力してください。認証メールが送信されます。
+            {teamName}{" "}
+            の担当者として登録するメールアドレスを入力してください。認証メールが送信されます。
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           {result ? (
-            <div className={`flex items-start gap-3 p-4 rounded-lg ${result.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+            <div
+              className={`flex items-start gap-3 p-4 rounded-lg ${result.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}
+            >
               {result.success ? (
                 <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
               ) : (
                 <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
               )}
-              <p className={`text-sm ${result.success ? "text-green-800" : "text-red-800"}`}>{result.message}</p>
+              <p className={`text-sm ${result.success ? "text-green-800" : "text-red-800"}`}>
+                {result.message}
+              </p>
             </div>
           ) : null}
 
@@ -92,7 +103,9 @@ export default function TeamManagerInviteDialog({ teamId, teamName, open, onOpen
                   placeholder="example@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSend();
+                  }}
                   disabled={sending}
                 />
               </div>
@@ -102,7 +115,10 @@ export default function TeamManagerInviteDialog({ teamId, teamName, open, onOpen
                 </Button>
                 <Button onClick={handleSend} disabled={sending || !email.trim()}>
                   {sending ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-1" />送信中...</>
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      送信中...
+                    </>
                   ) : (
                     "認証メール送信"
                   )}
@@ -113,7 +129,9 @@ export default function TeamManagerInviteDialog({ teamId, teamName, open, onOpen
 
           {result?.success && (
             <div className="flex justify-end">
-              <Button variant="outline" onClick={handleClose}>閉じる</Button>
+              <Button variant="outline" onClick={handleClose}>
+                閉じる
+              </Button>
             </div>
           )}
         </div>

@@ -1,27 +1,27 @@
-'use client';
+"use client";
 
 // components/features/tournament/WithdrawalForm.tsx
 // 大会エントリー辞退申請フォーム
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React, { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // バリデーションスキーマ
 const withdrawalSchema = z.object({
   withdrawal_reason: z
     .string()
-    .min(10, '辞退理由は10文字以上で入力してください')
-    .max(500, '辞退理由は500文字以内で入力してください')
+    .min(10, "辞退理由は10文字以上で入力してください")
+    .max(500, "辞退理由は500文字以内で入力してください"),
 });
 
 type WithdrawalFormData = z.infer<typeof withdrawalSchema>;
@@ -56,9 +56,9 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
   } = useForm<WithdrawalFormData>({
-    resolver: zodResolver(withdrawalSchema)
+    resolver: zodResolver(withdrawalSchema),
   });
 
   const fetchWithdrawalInfo = useCallback(async () => {
@@ -67,7 +67,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
 
       // URLパラメータからtournament_team_idを取得
       const urlParams = new URLSearchParams(window.location.search);
-      const teamParam = urlParams.get('team');
+      const teamParam = urlParams.get("team");
 
       // APIリクエストURLを構築
       const apiUrl = teamParam
@@ -75,20 +75,20 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
         : `/api/tournaments/${tournamentId}/withdrawal`;
 
       const response = await fetch(apiUrl);
-      
+
       if (!response.ok) {
-        throw new Error('辞退情報の取得に失敗しました');
+        throw new Error("辞退情報の取得に失敗しました");
       }
 
       const data = await response.json();
       if (data.success) {
         setWithdrawalInfo(data.data);
       } else {
-        setError(data.error || '辞退情報の取得に失敗しました');
+        setError(data.error || "辞退情報の取得に失敗しました");
       }
     } catch (err) {
-      setError('辞退情報の取得中にエラーが発生しました');
-      console.error('辞退情報取得エラー:', err);
+      setError("辞退情報の取得中にエラーが発生しました");
+      console.error("辞退情報取得エラー:", err);
     } finally {
       setLoading(false);
     }
@@ -109,13 +109,13 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
       setSuccess(null);
 
       const response = await fetch(`/api/tournaments/${tournamentId}/withdrawal`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           tournament_team_id: withdrawalInfo.tournament_team_id,
-          withdrawal_reason: data.withdrawal_reason
+          withdrawal_reason: data.withdrawal_reason,
         }),
       });
 
@@ -125,18 +125,18 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
         setSuccess(result.message);
         reset();
         await fetchWithdrawalInfo(); // 最新状況を再取得
-        
+
         // 成功時にチームページに戻る（遅延をつけてメッセージを表示）
         setTimeout(() => {
           router.refresh();
-          router.push('/my');
+          router.push("/my");
         }, 2000);
       } else {
-        setError(result.error || '辞退申請に失敗しました');
+        setError(result.error || "辞退申請に失敗しました");
       }
     } catch (err) {
-      setError('辞退申請中にエラーが発生しました');
-      console.error('辞退申請エラー:', err);
+      setError("辞退申請中にエラーが発生しました");
+      console.error("辞退申請エラー:", err);
     } finally {
       setSubmitting(false);
     }
@@ -145,23 +145,42 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
   // 辞退ステータスのバッジ表示
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">参加中</Badge>;
-      case 'withdrawal_requested':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          辞退申請中
-        </Badge>;
-      case 'withdrawal_approved':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
-          <CheckCircle className="w-3 h-3" />
-          辞退承認済み
-        </Badge>;
-      case 'withdrawal_rejected':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
-          <XCircle className="w-3 h-3" />
-          辞退却下
-        </Badge>;
+      case "active":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            参加中
+          </Badge>
+        );
+      case "withdrawal_requested":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center gap-1"
+          >
+            <Clock className="w-3 h-3" />
+            辞退申請中
+          </Badge>
+        );
+      case "withdrawal_approved":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 flex items-center gap-1"
+          >
+            <CheckCircle className="w-3 h-3" />
+            辞退承認済み
+          </Badge>
+        );
+      case "withdrawal_rejected":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1"
+          >
+            <XCircle className="w-3 h-3" />
+            辞退却下
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -233,7 +252,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
       </Card>
 
       {/* 辞退申請中/承認済み/却下の場合の詳細表示 */}
-      {withdrawalInfo.withdrawal_status !== 'active' && (
+      {withdrawalInfo.withdrawal_status !== "active" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">辞退申請詳細</CardTitle>
@@ -251,7 +270,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
               <div>
                 <Label className="text-sm font-medium text-gray-600">申請日時</Label>
                 <div className="text-sm">
-                  {new Date(withdrawalInfo.withdrawal_requested_at).toLocaleString('ja-JP')}
+                  {new Date(withdrawalInfo.withdrawal_requested_at).toLocaleString("ja-JP")}
                 </div>
               </div>
             )}
@@ -259,7 +278,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
               <div>
                 <Label className="text-sm font-medium text-gray-600">処理日時</Label>
                 <div className="text-sm">
-                  {new Date(withdrawalInfo.withdrawal_processed_at).toLocaleString('ja-JP')}
+                  {new Date(withdrawalInfo.withdrawal_processed_at).toLocaleString("ja-JP")}
                 </div>
               </div>
             )}
@@ -291,12 +310,10 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
                   placeholder="辞退理由を詳しく入力してください（10文字以上500文字以内）"
                   className="mt-1"
                   rows={4}
-                  {...register('withdrawal_reason')}
+                  {...register("withdrawal_reason")}
                 />
                 {errors.withdrawal_reason && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.withdrawal_reason.message}
-                  </p>
+                  <p className="text-sm text-red-600 mt-1">{errors.withdrawal_reason.message}</p>
                 )}
               </div>
 
@@ -316,12 +333,12 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
               )}
 
               <div className="flex justify-end">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={submitting}
                   className="bg-red-600 hover:bg-red-700 text-white border border-red-600"
                 >
-                  {submitting ? '申請中...' : '辞退申請を送信'}
+                  {submitting ? "申請中..." : "辞退申請を送信"}
                 </Button>
               </div>
             </form>
@@ -330,7 +347,7 @@ export default function WithdrawalForm({ tournamentId }: WithdrawalFormProps) {
       )}
 
       {/* 辞退不可の場合のメッセージ */}
-      {!withdrawalInfo.can_withdraw && withdrawalInfo.withdrawal_status === 'active' && (
+      {!withdrawalInfo.can_withdraw && withdrawalInfo.withdrawal_status === "active" && (
         <Card>
           <CardContent className="pt-6">
             <Alert>

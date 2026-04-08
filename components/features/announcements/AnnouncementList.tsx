@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, AlertCircle } from 'lucide-react';
+import { AlertCircle, Bell } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Announcement {
   announcement_id: number;
@@ -20,15 +20,15 @@ export default function AnnouncementList() {
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const response = await fetch('/api/announcements');
+        const response = await fetch("/api/announcements");
         if (!response.ok) {
-          throw new Error('お知らせの取得に失敗しました');
+          throw new Error("お知らせの取得に失敗しました");
         }
         const result = await response.json();
         setAnnouncements(result.announcements);
       } catch (err) {
-        console.error('Error fetching announcements:', err);
-        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+        console.error("Error fetching announcements:", err);
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
       } finally {
         setLoading(false);
       }
@@ -95,16 +95,14 @@ export default function AnnouncementList() {
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
                   <span className="text-xs text-gray-500 whitespace-nowrap">
-                    {new Date(announcement.created_at).toLocaleDateString('ja-JP', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
+                    {new Date(announcement.created_at).toLocaleDateString("ja-JP", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
                     })}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 whitespace-pre-wrap">
-                  {announcement.content}
-                </p>
+                <p className="text-sm text-gray-500 whitespace-pre-wrap">{announcement.content}</p>
               </div>
             </div>
           ))}

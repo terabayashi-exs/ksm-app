@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { AlertCircle, AlertTriangle, Check, CheckCircle, Crown, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -16,7 +14,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, Crown, Zap, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Plan {
   plan_id: number;
@@ -40,7 +47,9 @@ interface CurrentSubscriptionInfo {
 export default function PlanComparisonCards() {
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscriptionInfo | null>(null);
+  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscriptionInfo | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [changingPlanId, setChangingPlanId] = useState<number | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -153,7 +162,8 @@ export default function PlanComparisonCards() {
 
     // 無制限 → 制限あり
     if (current.max_tournaments === -1 && plan.max_tournaments !== -1) return true;
-    if (current.max_divisions_per_tournament === -1 && plan.max_divisions_per_tournament !== -1) return true;
+    if (current.max_divisions_per_tournament === -1 && plan.max_divisions_per_tournament !== -1)
+      return true;
 
     // 上限が減る場合
     if (
@@ -172,9 +182,12 @@ export default function PlanComparisonCards() {
     const { usage } = currentSubscription;
     const warnings = [];
 
-    if (plan.max_tournaments !== -1 && usage.current_tournament_groups_count > plan.max_tournaments) {
+    if (
+      plan.max_tournaments !== -1 &&
+      usage.current_tournament_groups_count > plan.max_tournaments
+    ) {
       warnings.push(
-        `現在${usage.current_tournament_groups_count}大会作成中ですが、このプランでは${plan.max_tournaments}大会までです。`
+        `現在${usage.current_tournament_groups_count}大会作成中ですが、このプランでは${plan.max_tournaments}大会までです。`,
       );
     }
 
@@ -217,9 +230,7 @@ export default function PlanComparisonCards() {
       {successMessage && (
         <Alert className="mb-6 border-green-500 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            {successMessage}
-          </AlertDescription>
+          <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
         </Alert>
       )}
 
@@ -264,7 +275,8 @@ export default function PlanComparisonCards() {
                       <div className="text-3xl font-bold">無料</div>
                       {plan.plan_code === "free" && freeTrialEndDate && isCurrent && (
                         <div className="text-sm text-gray-500 mt-2">
-                          有効期限: {new Date(freeTrialEndDate).toLocaleDateString("ja-JP", {
+                          有効期限:{" "}
+                          {new Date(freeTrialEndDate).toLocaleDateString("ja-JP", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
@@ -274,7 +286,9 @@ export default function PlanComparisonCards() {
                     </>
                   ) : (
                     <>
-                      <div className="text-3xl font-bold">¥{plan.monthly_price.toLocaleString()}</div>
+                      <div className="text-3xl font-bold">
+                        ¥{plan.monthly_price.toLocaleString()}
+                      </div>
                       <div className="text-sm text-gray-500">/月</div>
                       {plan.yearly_price > 0 && (
                         <div className="text-sm text-gray-500">
@@ -290,7 +304,8 @@ export default function PlanComparisonCards() {
                   <div className="flex items-start gap-2">
                     <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <span className="text-sm">
-                      大会数: {plan.max_tournaments === -1 ? "無制限" : `${plan.max_tournaments}大会`}
+                      大会数:{" "}
+                      {plan.max_tournaments === -1 ? "無制限" : `${plan.max_tournaments}大会`}
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
@@ -318,8 +333,8 @@ export default function PlanComparisonCards() {
                   {isCurrent
                     ? "利用中"
                     : changingPlanId === plan.plan_id
-                    ? "変更中..."
-                    : "プラン変更"}
+                      ? "変更中..."
+                      : "プラン変更"}
                 </Button>
               </CardFooter>
             </Card>
@@ -331,9 +346,7 @@ export default function PlanComparisonCards() {
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900">
-              プラン変更の確認
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-gray-900">プラン変更の確認</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-700">
               {selectedPlan && (
                 <>
@@ -389,46 +402,55 @@ export default function PlanComparisonCards() {
               {/* 大会数超過の場合 */}
               {planChangeBlockers.excessGroups > 0 && (
                 <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-                  <p className="font-semibold text-yellow-900 mb-2">
-                    大会数が上限を超えています
-                  </p>
+                  <p className="font-semibold text-yellow-900 mb-2">大会数が上限を超えています</p>
                   <div className="text-sm text-yellow-800 space-y-1">
-                    <p>現在のアクティブ大会数: <strong>{planChangeBlockers.activeGroups}</strong></p>
-                    <p>新プランの上限: <strong>{planChangeBlockers.maxGroupsInNewPlan}</strong></p>
-                    <p>超過数: <strong className="text-destructive">{planChangeBlockers.excessGroups}大会</strong></p>
+                    <p>
+                      現在のアクティブ大会数: <strong>{planChangeBlockers.activeGroups}</strong>
+                    </p>
+                    <p>
+                      新プランの上限: <strong>{planChangeBlockers.maxGroupsInNewPlan}</strong>
+                    </p>
+                    <p>
+                      超過数:{" "}
+                      <strong className="text-destructive">
+                        {planChangeBlockers.excessGroups}大会
+                      </strong>
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* 部門数超過の場合 */}
-              {planChangeBlockers.excessDivisions && planChangeBlockers.excessDivisions.length > 0 && (
-                <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-                  <p className="font-semibold text-yellow-900 mb-3">
-                    以下の大会で部門数が上限を超えています
-                  </p>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {planChangeBlockers.excessDivisions.map((item) => (
-                      <div
-                        key={item.group_id}
-                        className="flex items-center justify-between p-2 bg-white rounded border-2 border-yellow-400"
-                      >
-                        <span className="text-sm text-gray-900">{item.group_name}</span>
-                        <span className="text-sm font-semibold text-destructive">
-                          {item.division_count}部門 (上限: {planChangeBlockers.maxDivisionsPerTournamentInNewPlan})
-                        </span>
-                      </div>
-                    ))}
+              {planChangeBlockers.excessDivisions &&
+                planChangeBlockers.excessDivisions.length > 0 && (
+                  <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                    <p className="font-semibold text-yellow-900 mb-3">
+                      以下の大会で部門数が上限を超えています
+                    </p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {planChangeBlockers.excessDivisions.map((item) => (
+                        <div
+                          key={item.group_id}
+                          className="flex items-center justify-between p-2 bg-white rounded border-2 border-yellow-400"
+                        >
+                          <span className="text-sm text-gray-900">{item.group_name}</span>
+                          <span className="text-sm font-semibold text-destructive">
+                            {item.division_count}部門 (上限:{" "}
+                            {planChangeBlockers.maxDivisionsPerTournamentInNewPlan})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* 対応方法の案内 */}
               <div className="p-4 bg-primary/5 border-2 border-primary/30 rounded-lg">
-                <p className="font-semibold text-primary mb-2">
-                  📋 対応方法
-                </p>
+                <p className="font-semibold text-primary mb-2">📋 対応方法</p>
                 <ol className="text-sm text-primary space-y-2 list-decimal list-inside">
-                  <li>完了済みの大会を<strong>アーカイブ化</strong>してください</li>
+                  <li>
+                    完了済みの大会を<strong>アーカイブ化</strong>してください
+                  </li>
                   <li>アーカイブ化した大会は制限のカウントから除外されます</li>
                   <li>必要に応じて不要な大会を削除してください</li>
                   <li>プラン上限内に収まったら、再度プラン変更を試してください</li>

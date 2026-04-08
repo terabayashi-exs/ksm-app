@@ -4,9 +4,18 @@
  * SVGコネクタ線の描画を含む
  */
 
-import { PATTERNS, getPatternByMatchCount, type PatternConfig } from '@/lib/tournament-bracket/patterns';
-import { CARD_HEIGHT, CARD_GAP, MATCH_TYPE_LABELS, ROUND_ORDER } from '@/lib/tournament-bracket/constants';
-import type { BracketMatch, SportScoreConfig } from '@/lib/tournament-bracket/types';
+import {
+  CARD_GAP,
+  CARD_HEIGHT,
+  MATCH_TYPE_LABELS,
+  ROUND_ORDER,
+} from "@/lib/tournament-bracket/constants";
+import {
+  getPatternByMatchCount,
+  PATTERNS,
+  type PatternConfig,
+} from "@/lib/tournament-bracket/patterns";
+import type { BracketMatch, SportScoreConfig } from "@/lib/tournament-bracket/types";
 
 // レイアウト定数
 const COLUMN_WIDTH = 200;
@@ -20,44 +29,50 @@ const TEAM2_CENTER_Y = CARD_TOP_PADDING + 42; // team1 + border + padding + 行�
 const SEED_CENTER_Y = 20; // シードカードの中央
 
 // 色定義
-const WINNER_COLOR = '#22c55e';
-const DEFAULT_COLOR = '#cbd5e1';
+const WINNER_COLOR = "#22c55e";
+const DEFAULT_COLOR = "#cbd5e1";
 
 // HTML escape utility
 function esc(str: string | number | null | undefined): string {
-  if (str == null) return '';
+  if (str == null) return "";
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /**
  * 個々の試合カードをHTML文字列で生成
  */
 function renderMatchCard(match: BracketMatch, _sportConfig?: SportScoreConfig): string {
-  const isCompleted = match.is_confirmed || match.match_status === 'completed';
-  const hasResult = isCompleted && (match.team1_goals > 0 || match.team2_goals > 0 || match.is_walkover || match.is_draw);
+  const isCompleted = match.is_confirmed || match.match_status === "completed";
+  const hasResult =
+    isCompleted &&
+    (match.team1_goals > 0 || match.team2_goals > 0 || match.is_walkover || match.is_draw);
 
   // 勝者判定
-  const team1IsWinner = match.winner_tournament_team_id != null &&
+  const team1IsWinner =
+    match.winner_tournament_team_id != null &&
     match.team1_tournament_team_id != null &&
     match.winner_tournament_team_id === match.team1_tournament_team_id;
-  const team2IsWinner = match.winner_tournament_team_id != null &&
+  const team2IsWinner =
+    match.winner_tournament_team_id != null &&
     match.team2_tournament_team_id != null &&
     match.winner_tournament_team_id === match.team2_tournament_team_id;
 
   // PK検出（soccer_data または team1_scores配列から）
   let team1Regular = match.team1_goals;
   let team2Regular = match.team2_goals;
-  let team1PkScore = '';
-  let team2PkScore = '';
+  let team1PkScore = "";
+  let team2PkScore = "";
   if (match.soccer_data?.is_pk_game) {
     team1Regular = match.soccer_data.regular_goals_for;
     team2Regular = match.soccer_data.regular_goals_against;
-    team1PkScore = match.soccer_data.pk_goals_for != null ? `PK${match.soccer_data.pk_goals_for}` : '';
-    team2PkScore = match.soccer_data.pk_goals_against != null ? `PK${match.soccer_data.pk_goals_against}` : '';
+    team1PkScore =
+      match.soccer_data.pk_goals_for != null ? `PK${match.soccer_data.pk_goals_for}` : "";
+    team2PkScore =
+      match.soccer_data.pk_goals_against != null ? `PK${match.soccer_data.pk_goals_against}` : "";
   } else if (match.team1_scores && match.team1_scores.length >= 5) {
     // 配列から直接PK検出
     const t1Reg = match.team1_scores.slice(0, 4).reduce((s, v) => s + v, 0);
@@ -74,25 +89,25 @@ function renderMatchCard(match: BracketMatch, _sportConfig?: SportScoreConfig): 
   }
 
   // match code badge color
-  const matchType = match.match_type || '';
-  let codeBadgeClass = 'badge-gray';
-  if (matchType === 'final') codeBadgeClass = 'badge-red';
-  else if (matchType === 'semifinal') codeBadgeClass = 'badge-purple';
-  else if (matchType === 'quarterfinal') codeBadgeClass = 'badge-blue';
-  else if (matchType === 'third_place') codeBadgeClass = 'badge-yellow';
-  else if (matchType === 'first_round') codeBadgeClass = 'badge-green';
+  const matchType = match.match_type || "";
+  let codeBadgeClass = "badge-gray";
+  if (matchType === "final") codeBadgeClass = "badge-red";
+  else if (matchType === "semifinal") codeBadgeClass = "badge-purple";
+  else if (matchType === "quarterfinal") codeBadgeClass = "badge-blue";
+  else if (matchType === "third_place") codeBadgeClass = "badge-yellow";
+  else if (matchType === "first_round") codeBadgeClass = "badge-green";
 
   // Team row class
-  const team1Class = hasResult ? (team1IsWinner ? 'winner' : (match.is_draw ? 'draw' : 'loser')) : '';
-  const team2Class = hasResult ? (team2IsWinner ? 'winner' : (match.is_draw ? 'draw' : 'loser')) : '';
+  const team1Class = hasResult ? (team1IsWinner ? "winner" : match.is_draw ? "draw" : "loser") : "";
+  const team2Class = hasResult ? (team2IsWinner ? "winner" : match.is_draw ? "draw" : "loser") : "";
 
   // Status text
-  let statusText = '';
-  if (match.is_confirmed) statusText = '結果確定';
-  else if (match.match_status === 'ongoing') statusText = '試合中';
-  else if (match.match_status === 'completed') statusText = '試合完了';
-  else if (match.match_status === 'cancelled') statusText = '中止';
-  else statusText = '未実施';
+  let statusText = "";
+  if (match.is_confirmed) statusText = "結果確定";
+  else if (match.match_status === "ongoing") statusText = "試合中";
+  else if (match.match_status === "completed") statusText = "試合完了";
+  else if (match.match_status === "cancelled") statusText = "中止";
+  else statusText = "未実施";
 
   // Walkover display
   if (match.is_walkover) {
@@ -110,14 +125,14 @@ function renderMatchCard(match: BracketMatch, _sportConfig?: SportScoreConfig): 
   return `<div class="match-card">
     <span class="match-code ${codeBadgeClass}">${esc(match.match_code)}</span>
     <div class="match-team ${team1Class}">
-      <span class="match-team-name">${esc(match.team1_display_name) || '---'}</span>
-      ${team1IsWinner ? '<span style="font-size:0.7rem;">&#x1F451;</span>' : ''}
-      ${hasResult ? `<span class="match-team-score">${team1Regular}</span>${team1PkScore ? `<span class="pk-score">${esc(team1PkScore)}</span>` : ''}` : ''}
+      <span class="match-team-name">${esc(match.team1_display_name) || "---"}</span>
+      ${team1IsWinner ? '<span style="font-size:0.7rem;">&#x1F451;</span>' : ""}
+      ${hasResult ? `<span class="match-team-score">${team1Regular}</span>${team1PkScore ? `<span class="pk-score">${esc(team1PkScore)}</span>` : ""}` : ""}
     </div>
     <div class="match-team ${team2Class}">
-      <span class="match-team-name">${esc(match.team2_display_name) || '---'}</span>
-      ${team2IsWinner ? '<span style="font-size:0.7rem;">&#x1F451;</span>' : ''}
-      ${hasResult ? `<span class="match-team-score">${team2Regular}</span>${team2PkScore ? `<span class="pk-score">${esc(team2PkScore)}</span>` : ''}` : ''}
+      <span class="match-team-name">${esc(match.team2_display_name) || "---"}</span>
+      ${team2IsWinner ? '<span style="font-size:0.7rem;">&#x1F451;</span>' : ""}
+      ${hasResult ? `<span class="match-team-score">${team2Regular}</span>${team2PkScore ? `<span class="pk-score">${esc(team2PkScore)}</span>` : ""}` : ""}
     </div>
     <div class="match-status">${esc(statusText)}</div>
   </div>`;
@@ -127,7 +142,7 @@ function renderMatchCard(match: BracketMatch, _sportConfig?: SportScoreConfig): 
  * シードカードを生成
  */
 function renderSeedCard(teamName: string): string {
-  return `<div class="seed-card">${esc(teamName) || 'シード'}</div>`;
+  return `<div class="seed-card">${esc(teamName) || "シード"}</div>`;
 }
 
 // ===== SVGコネクタ線の生成 =====
@@ -163,7 +178,10 @@ function getWinnerIndex(match: BracketMatch): number | null {
 }
 
 interface SvgLine {
-  x1: number; y1: number; x2: number; y2: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
   color: string;
 }
 
@@ -171,10 +189,10 @@ interface SvgLine {
 function generateConnectorSvg(
   patternConfig: PatternConfig,
   roundMatches: BracketMatch[][],
-  _matches: BracketMatch[]
+  _matches: BracketMatch[],
 ): string {
   const numRounds = patternConfig.rounds.length;
-  if (numRounds < 2) return '';
+  if (numRounds < 2) return "";
 
   const lines: SvgLine[] = [];
 
@@ -217,7 +235,13 @@ function generateConnectorSvg(
               const seedSourceX = getColumnEndX(0) + 4;
 
               // シードからmergeXまでの水平線
-              lines.push({ x1: seedSourceX, y1: seedY, x2: mergeX, y2: seedY, color: WINNER_COLOR });
+              lines.push({
+                x1: seedSourceX,
+                y1: seedY,
+                x2: mergeX,
+                y2: seedY,
+                color: WINNER_COLOR,
+              });
               outputYs.push(seedY);
             }
           }
@@ -225,7 +249,11 @@ function generateConnectorSvg(
       }
 
       // 試合からの接続
-      for (let fromIdx = sourceStartIdx; fromIdx < sourceEndIdx && fromIdx < fromMatches.length; fromIdx++) {
+      for (
+        let fromIdx = sourceStartIdx;
+        fromIdx < sourceEndIdx && fromIdx < fromMatches.length;
+        fromIdx++
+      ) {
         const fromPosition = fromRound.positions[fromIdx] ?? fromIdx;
         const fromCardTop = getCardTopY(fromPosition);
         const fromTeam1Y = fromCardTop + TEAM1_CENTER_Y;
@@ -241,33 +269,43 @@ function generateConnectorSvg(
 
         // チーム1からmidXまでの水平線
         lines.push({
-          x1: sourceX, y1: fromTeam1Y,
-          x2: midX, y2: fromTeam1Y,
-          color: winner === 0 ? WINNER_COLOR : DEFAULT_COLOR
+          x1: sourceX,
+          y1: fromTeam1Y,
+          x2: midX,
+          y2: fromTeam1Y,
+          color: winner === 0 ? WINNER_COLOR : DEFAULT_COLOR,
         });
         // チーム2からmidXまでの水平線
         lines.push({
-          x1: sourceX, y1: fromTeam2Y,
-          x2: midX, y2: fromTeam2Y,
-          color: winner === 1 ? WINNER_COLOR : DEFAULT_COLOR
+          x1: sourceX,
+          y1: fromTeam2Y,
+          x2: midX,
+          y2: fromTeam2Y,
+          color: winner === 1 ? WINNER_COLOR : DEFAULT_COLOR,
         });
         // ブラケット縦線（team1 → center）
         lines.push({
-          x1: midX, y1: fromTeam1Y,
-          x2: midX, y2: fromCenterY,
-          color: winner === 0 ? WINNER_COLOR : DEFAULT_COLOR
+          x1: midX,
+          y1: fromTeam1Y,
+          x2: midX,
+          y2: fromCenterY,
+          color: winner === 0 ? WINNER_COLOR : DEFAULT_COLOR,
         });
         // ブラケット縦線（center → team2）
         lines.push({
-          x1: midX, y1: fromCenterY,
-          x2: midX, y2: fromTeam2Y,
-          color: winner === 1 ? WINNER_COLOR : DEFAULT_COLOR
+          x1: midX,
+          y1: fromCenterY,
+          x2: midX,
+          y2: fromTeam2Y,
+          color: winner === 1 ? WINNER_COLOR : DEFAULT_COLOR,
         });
         // 中央からmergeXまでの水平線
         lines.push({
-          x1: midX, y1: fromCenterY,
-          x2: mergeX, y2: fromCenterY,
-          color: winColor
+          x1: midX,
+          y1: fromCenterY,
+          x2: mergeX,
+          y2: fromCenterY,
+          color: winColor,
         });
         outputYs.push(fromCenterY);
       }
@@ -281,17 +319,21 @@ function generateConnectorSvg(
 
         if (maxY - minY > 1) {
           lines.push({
-            x1: mergeX, y1: minY,
-            x2: mergeX, y2: maxY,
-            color: hasWinner ? DEFAULT_COLOR : DEFAULT_COLOR
+            x1: mergeX,
+            y1: minY,
+            x2: mergeX,
+            y2: maxY,
+            color: hasWinner ? DEFAULT_COLOR : DEFAULT_COLOR,
           });
         }
 
         // ターゲットへの水平線
         lines.push({
-          x1: mergeX, y1: toCenterY,
-          x2: targetX, y2: toCenterY,
-          color: DEFAULT_COLOR
+          x1: mergeX,
+          y1: toCenterY,
+          x2: targetX,
+          y2: toCenterY,
+          color: DEFAULT_COLOR,
         });
       }
     }
@@ -303,18 +345,21 @@ function generateConnectorSvg(
   // シードからの直接接続（同一ラウンド内のシード→試合接続も対応）
   // 上のループ内で処理済み
 
-  if (lines.length === 0) return '';
+  if (lines.length === 0) return "";
 
   // SVG全体のサイズ計算
   const totalWidth = numRounds * COLUMN_WIDTH + (numRounds - 1) * COLUMN_GAP;
-  const allPositions = patternConfig.rounds.flatMap(r => r.positions);
-  const seedPositions = patternConfig.seedSlots?.map(s => s.position) || [];
+  const allPositions = patternConfig.rounds.flatMap((r) => r.positions);
+  const seedPositions = patternConfig.seedSlots?.map((s) => s.position) || [];
   const maxPos = Math.max(...allPositions, ...seedPositions, 0);
   const totalHeight = getCardTopY(maxPos) + CARD_HEIGHT + 40;
 
-  const svgLines = lines.map(l =>
-    `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${l.color}" stroke-width="2" fill="none"/>`
-  ).join('\n    ');
+  const svgLines = lines
+    .map(
+      (l) =>
+        `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="${l.color}" stroke-width="2" fill="none"/>`,
+    )
+    .join("\n    ");
 
   return `<svg class="bracket-svg" width="${totalWidth}" height="${totalHeight}" style="position:absolute;top:0;left:0;pointer-events:none;z-index:1;">
     ${svgLines}
@@ -328,13 +373,13 @@ function generateConnectorSvg(
 export function renderStaticBracketBlock(
   blockName: string,
   matches: BracketMatch[],
-  sportConfig?: SportScoreConfig
+  sportConfig?: SportScoreConfig,
 ): string {
-  if (matches.length === 0) return '';
+  if (matches.length === 0) return "";
 
   // 3位決定戦を分離
-  const thirdPlaceMatches = matches.filter(m => m.match_type === 'third_place');
-  const mainMatches = matches.filter(m => m.match_type !== 'third_place');
+  const thirdPlaceMatches = matches.filter((m) => m.match_type === "third_place");
+  const mainMatches = matches.filter((m) => m.match_type !== "third_place");
 
   // パターン検出
   let patternConfig: PatternConfig;
@@ -374,9 +419,9 @@ export function renderStaticBracketBlock(
 
   const getRoundLabelClass = (roundIdx: number): string => {
     const totalRounds = patternConfig.rounds.length;
-    if (roundIdx === totalRounds - 1) return 'badge-red';
-    if (roundIdx === 0) return 'badge-green';
-    return 'badge-purple';
+    if (roundIdx === totalRounds - 1) return "badge-red";
+    if (roundIdx === 0) return "badge-green";
+    return "badge-purple";
   };
 
   // 各カラム生成
@@ -391,15 +436,15 @@ export function renderStaticBracketBlock(
     });
 
     // シードスロット (only in first round)
-    let seedHtml = '';
+    let seedHtml = "";
     if (roundIdx === 0 && patternConfig.seedSlots) {
       for (const slot of patternConfig.seedSlots) {
         const topPx = slot.position * (CARD_HEIGHT + CARD_GAP);
         // Find BYE match winner for this seed slot
-        const byeMatch = matches.find(m => m.is_walkover || m.is_bye_match);
+        const byeMatch = matches.find((m) => m.is_walkover || m.is_bye_match);
         const seedTeamName = byeMatch
-          ? (byeMatch.team1_display_name || byeMatch.team2_display_name)
-          : 'シード';
+          ? byeMatch.team1_display_name || byeMatch.team2_display_name
+          : "シード";
         seedHtml += `<div style="position:absolute;top:${topPx}px;width:100%;">
           ${renderSeedCard(seedTeamName)}
         </div>`;
@@ -409,7 +454,7 @@ export function renderStaticBracketBlock(
     return `<div style="position:relative;min-width:${COLUMN_WIDTH}px;min-height:${getColumnHeight(positions)}px;z-index:2;">
       <div class="round-label ${getRoundLabelClass(roundIdx)}">${esc(getRoundLabel(roundIdx))}</div>
       ${seedHtml}
-      ${cards.join('\n')}
+      ${cards.join("\n")}
     </div>`;
   });
 
@@ -417,11 +462,11 @@ export function renderStaticBracketBlock(
   const svgHtml = generateConnectorSvg(patternConfig, roundMatches, matches);
 
   // 3位決定戦
-  let thirdPlaceHtml = '';
+  let thirdPlaceHtml = "";
   if (thirdPlaceMatches.length > 0) {
     thirdPlaceHtml = `<div class="card mt-2">
       <div class="card-header"><span class="badge badge-yellow">3位決定戦</span></div>
-      <div class="card-body">${thirdPlaceMatches.map(m => renderMatchCard(m, sportConfig)).join('')}</div>
+      <div class="card-body">${thirdPlaceMatches.map((m) => renderMatchCard(m, sportConfig)).join("")}</div>
     </div>`;
   }
 
@@ -436,7 +481,7 @@ export function renderStaticBracketBlock(
         <div class="bracket-container">
           <div class="bracket-grid" style="position:relative;">
             ${svgHtml}
-            ${columns.join('\n')}
+            ${columns.join("\n")}
           </div>
         </div>
       </div>
@@ -448,9 +493,13 @@ export function renderStaticBracketBlock(
 /**
  * 簡易リスト表示（パターンに収まらない場合のフォールバック）
  */
-function renderMatchList(blockName: string, matches: BracketMatch[], sportConfig?: SportScoreConfig): string {
+function renderMatchList(
+  blockName: string,
+  matches: BracketMatch[],
+  sportConfig?: SportScoreConfig,
+): string {
   const blockBadgeClass = getBlockBadgeClass(blockName);
-  const cards = matches.map(m => renderMatchCard(m, sportConfig)).join('\n');
+  const cards = matches.map((m) => renderMatchCard(m, sportConfig)).join("\n");
   return `<div class="card">
     <div class="card-header"><span class="badge ${blockBadgeClass}">${esc(blockName)}</span></div>
     <div class="card-body" style="display:flex;flex-wrap:wrap;gap:12px;">
@@ -467,12 +516,12 @@ function getColumnHeight(positions: number[]): number {
 
 function getBlockBadgeClass(blockName: string): string {
   const name = blockName.toUpperCase();
-  if (name === 'A' || name.includes('A')) return 'bg-block-a';
-  if (name === 'B' || name.includes('B')) return 'bg-block-b';
-  if (name === 'C' || name.includes('C')) return 'bg-block-c';
-  if (name === 'D' || name.includes('D')) return 'bg-block-d';
-  if (name.includes('決勝') || name.includes('FINAL')) return 'bg-block-final';
-  return 'badge-gray';
+  if (name === "A" || name.includes("A")) return "bg-block-a";
+  if (name === "B" || name.includes("B")) return "bg-block-b";
+  if (name === "C" || name.includes("C")) return "bg-block-c";
+  if (name === "D" || name.includes("D")) return "bg-block-d";
+  if (name.includes("決勝") || name.includes("FINAL")) return "bg-block-final";
+  return "badge-gray";
 }
 
 /**
@@ -481,7 +530,7 @@ function getBlockBadgeClass(blockName: string): string {
  */
 export function renderStaticBracket(
   bracketData: Record<string, BracketMatch[]>,
-  sportConfig?: SportScoreConfig
+  sportConfig?: SportScoreConfig,
 ): string {
   const blocks = Object.entries(bracketData);
   if (blocks.length === 0) return '<p class="text-muted">ブラケットデータがありません</p>';
@@ -489,7 +538,7 @@ export function renderStaticBracket(
   // _unified ブロックを分割
   const expandedBlocks: [string, BracketMatch[]][] = [];
   for (const [blockName, matches] of blocks) {
-    if (blockName.endsWith('_unified')) {
+    if (blockName.endsWith("_unified")) {
       // match_code の先頭文字でサブブロックに分割 (A1→A, B1→B等)
       const subBlocks = new Map<string, BracketMatch[]>();
       for (const m of matches) {
@@ -507,7 +556,7 @@ export function renderStaticBracket(
     }
   }
 
-  return expandedBlocks.map(([blockName, matches]) =>
-    renderStaticBracketBlock(blockName, matches, sportConfig)
-  ).join('\n');
+  return expandedBlocks
+    .map(([blockName, matches]) => renderStaticBracketBlock(blockName, matches, sportConfig))
+    .join("\n");
 }

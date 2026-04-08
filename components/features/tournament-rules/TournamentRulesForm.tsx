@@ -1,27 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  AlertTriangle,
+  Award,
+  Clock,
+  Move,
+  Plus,
+  RotateCcw,
+  Save,
+  Settings,
+  Target,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Settings, Clock, Target, AlertTriangle, RotateCcw, Save, Trophy, Plus, Trash2, Move, Award } from "lucide-react";
-import { TournamentRule, SportRuleConfig, PeriodConfig, parseActivePeriods, stringifyActivePeriods } from "@/lib/tournament-rules";
 import {
-  TieBreakingRule,
-  TieBreakingRuleType,
   getAvailableTieBreakingRules,
   getDefaultTieBreakingRules,
+  TIE_BREAKING_PRESETS,
+  TieBreakingRule,
+  TieBreakingRuleType,
   validateTieBreakingRules,
-  TIE_BREAKING_PRESETS
 } from "@/lib/tie-breaking-rules";
-import {
-  validateSoccerPeriodSettings,
-  generatePeriodDisplayLabel
-} from "@/lib/tournament-rule-validator";
 import { parsePhasesJson } from "@/lib/tournament-phases";
+import {
+  generatePeriodDisplayLabel,
+  validateSoccerPeriodSettings,
+} from "@/lib/tournament-rule-validator";
+import {
+  PeriodConfig,
+  parseActivePeriods,
+  SportRuleConfig,
+  stringifyActivePeriods,
+  TournamentRule,
+} from "@/lib/tournament-rules";
 
 interface TournamentInfo {
   tournament_id: number;
@@ -61,12 +79,12 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   const [sportConfig, setSportConfig] = useState<SportRuleConfig | null>(null);
   const [rules, setRules] = useState<Record<string, FormRule>>({
     preliminary: {
-      phase: 'preliminary',
+      phase: "preliminary",
       active_periods: [1],
-      notes: ''
+      notes: "",
     },
   });
-  
+
   // 順位決定ルール関連の状態
   const [availableRuleTypes, setAvailableRuleTypes] = useState<TieBreakingRuleType[]>([]);
   const [tieBreakingRules, setTieBreakingRules] = useState<TieBreakingRule[]>([]);
@@ -74,34 +92,36 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   const [pointSystem, setPointSystem] = useState<PointSystem>({
     win: 3,
     draw: 1,
-    loss: 0
+    loss: 0,
   });
-  
+
   // 不戦勝設定関連の状態
   const [walkoverSettings, setWalkoverSettings] = useState<WalkoverSettings>({
     winner_goals: 3,
     loser_goals: 0,
-    draw_goals: 0
+    draw_goals: 0,
   });
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // バリデーション関連の状態
   const [validationErrors, setValidationErrors] = useState<Record<string, string | undefined>>({});
-  const [validationWarnings, setValidationWarnings] = useState<Record<string, string | undefined>>({});
+  const [validationWarnings, setValidationWarnings] = useState<Record<string, string | undefined>>(
+    {},
+  );
 
   // 競技種別別の表示制御ロジック
-  const sportCode = tournament?.sport_code || 'pk_championship';
-  const supportsPointSystem = ['soccer', 'pk_championship', 'futsal'].includes(sportCode);
-  const supportsDraws = ['soccer', 'pk_championship', 'futsal', 'handball'].includes(sportCode);
-  const rankingMethod = sportCode === 'baseball' ? 'win_rate' : 'points';
+  const sportCode = tournament?.sport_code || "pk_championship";
+  const supportsPointSystem = ["soccer", "pk_championship", "futsal"].includes(sportCode);
+  const supportsDraws = ["soccer", "pk_championship", "futsal", "handball"].includes(sportCode);
+  const rankingMethod = sportCode === "baseball" ? "win_rate" : "points";
 
   // フェーズリスト（phasesから動的取得、未定義時は予選のみ）
   const parsedPhases = tournament?.phases ? parsePhasesJson(tournament.phases) : null;
   const phaseList = parsedPhases?.phases?.length
     ? [...parsedPhases.phases].sort((a, b) => a.order - b.order)
-    : [{ id: 'preliminary', order: 1, name: '予選', format_type: 'league' as const }];
+    : [{ id: "preliminary", order: 1, name: "予選", format_type: "league" as const }];
 
   // データ取得
   useEffect(() => {
@@ -110,39 +130,41 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
         // 通常のルール取得
         const rulesResponse = await fetch(`/api/tournaments/${tournamentId}/rules`);
         const rulesResult = await rulesResponse.json();
-        
+
         // 順位決定ルール取得
         const tieRulesResponse = await fetch(`/api/tournaments/${tournamentId}/tie-breaking-rules`);
         const tieRulesResult = await tieRulesResponse.json();
-        
+
         if (rulesResult.success) {
           setTournament(rulesResult.tournament);
           setSportConfig(rulesResult.sport_config);
-          
+
           // ルールデータをフォーム用に変換（全フェーズ対応）
           const rulesMap: Record<string, FormRule> = {};
           for (const r of rulesResult.rules as TournamentRule[]) {
             rulesMap[r.phase] = {
               phase: r.phase,
               active_periods: parseActivePeriods(r.active_periods),
-              notes: r.notes || ''
+              notes: r.notes || "",
             };
           }
           // parsedPhasesから全フェーズのデフォルトを補完
-          const phasesData = rulesResult.tournament?.phases ? parsePhasesJson(rulesResult.tournament.phases) : null;
+          const phasesData = rulesResult.tournament?.phases
+            ? parsePhasesJson(rulesResult.tournament.phases)
+            : null;
           const allPhases = phasesData?.phases?.length
             ? phasesData.phases
-            : [{ id: 'preliminary', order: 1, name: '予選', format_type: 'league' as const }];
+            : [{ id: "preliminary", order: 1, name: "予選", format_type: "league" as const }];
           for (const p of allPhases) {
             if (!rulesMap[p.id]) {
-              rulesMap[p.id] = { phase: p.id, active_periods: [1], notes: '' };
+              rulesMap[p.id] = { phase: p.id, active_periods: [1], notes: "" };
             }
           }
           setRules(rulesMap);
 
           // 勝点・不戦勝設定は最初のフェーズから読み込み
           const firstRule = rulesResult.rules[0] as TournamentRule | undefined;
-          
+
           // 勝点システムデータを読み込み
           if (firstRule?.point_system) {
             try {
@@ -150,10 +172,10 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
               setPointSystem({
                 win: savedPointSystem.win || 3,
                 draw: savedPointSystem.draw || 1,
-                loss: savedPointSystem.loss || 0
+                loss: savedPointSystem.loss || 0,
               });
             } catch (error) {
-              console.error('勝点システム解析エラー:', error);
+              console.error("勝点システム解析エラー:", error);
             }
           }
 
@@ -164,20 +186,22 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
               setWalkoverSettings({
                 winner_goals: savedWalkoverSettings.winner_goals || 3,
                 loser_goals: savedWalkoverSettings.loser_goals || 0,
-                draw_goals: savedWalkoverSettings.draw_goals || 0
+                draw_goals: savedWalkoverSettings.draw_goals || 0,
               });
             } catch (error) {
-              console.error('不戦勝設定解析エラー:', error);
+              console.error("不戦勝設定解析エラー:", error);
             }
           }
         } else {
-          console.error('ルール取得エラー:', rulesResult.error);
+          console.error("ルール取得エラー:", rulesResult.error);
         }
 
         if (tieRulesResult.success) {
-          const sportCode = String(tieRulesResult.tournament?.sport_code || 'pk_championship');
-          setAvailableRuleTypes(tieRulesResult.available_rule_types || getAvailableTieBreakingRules(sportCode));
-          
+          const sportCode = String(tieRulesResult.tournament?.sport_code || "pk_championship");
+          setAvailableRuleTypes(
+            tieRulesResult.available_rule_types || getAvailableTieBreakingRules(sportCode),
+          );
+
           // 統一ルール（最初のフェーズを基準に復元）
           const phaseRules = tieRulesResult.phase_rules;
           const firstPhaseId = phaseRules ? Object.keys(phaseRules)[0] : null;
@@ -188,10 +212,10 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             setTieBreakingRules(getDefaultTieBreakingRules(sportCode));
           }
         } else {
-          console.error('順位決定ルール取得エラー:', tieRulesResult.error);
+          console.error("順位決定ルール取得エラー:", tieRulesResult.error);
         }
       } catch (error) {
-        console.error('ルール取得エラー:', error);
+        console.error("ルール取得エラー:", error);
       } finally {
         setLoading(false);
       }
@@ -203,7 +227,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   // 順位決定ルール操作関数
   const addTieBreakingRule = (ruleType: string) => {
     if (tieBreakingRules.length >= 8) return;
-    if (tieBreakingRules.some(rule => rule.type === ruleType)) return;
+    if (tieBreakingRules.some((rule) => rule.type === ruleType)) return;
 
     const newRules = [...tieBreakingRules, { type: ruleType, order: tieBreakingRules.length + 1 }];
     setTieBreakingRules(newRules);
@@ -224,81 +248,81 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   };
 
   const getRuleTypeLabel = (ruleType: string): string => {
-    const rule = availableRuleTypes.find(r => r.type === ruleType);
+    const rule = availableRuleTypes.find((r) => r.type === ruleType);
     return rule?.label || ruleType;
   };
 
   const getRuleTypeDescription = (ruleType: string): string => {
-    const rule = availableRuleTypes.find(r => r.type === ruleType);
-    return rule?.description || '';
+    const rule = availableRuleTypes.find((r) => r.type === ruleType);
+    return rule?.description || "";
   };
 
   // ピリオド設定のバリデーション（サッカー競技用）
   const validatePeriodSettings = (activePeriods: number[], phase: string) => {
     // サッカー競技系のみバリデーション
-    if (!['soccer', 'pk_championship', 'futsal'].includes(sportCode)) {
+    if (!["soccer", "pk_championship", "futsal"].includes(sportCode)) {
       return;
     }
 
-    const periodStrings = activePeriods.map(p => p.toString());
+    const periodStrings = activePeriods.map((p) => p.toString());
     const validation = validateSoccerPeriodSettings(periodStrings);
 
     // エラー・警告の設定
-    setValidationErrors(prev => ({
+    setValidationErrors((prev) => ({
       ...prev,
-      [phase]: validation.valid ? undefined : validation.error
+      [phase]: validation.valid ? undefined : validation.error,
     }));
 
-    setValidationWarnings(prev => ({
+    setValidationWarnings((prev) => ({
       ...prev,
-      [phase]: validation.warning
+      [phase]: validation.warning,
     }));
 
     // デバッグログ（開発時のみ）
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.log(`🔍 ${phase} フェーズバリデーション:`, {
         activePeriods,
         periodStrings,
         validation,
-        displayLabel: generatePeriodDisplayLabel(periodStrings)
+        displayLabel: generatePeriodDisplayLabel(periodStrings),
       });
     }
   };
 
   // ピリオドの切り替え
   const togglePeriod = (phase: string, periodNumber: number) => {
-    setRules(prev => {
+    setRules((prev) => {
       const currentPeriods = prev[phase].active_periods;
       const newPeriods = currentPeriods.includes(periodNumber)
-        ? currentPeriods.filter(p => p !== periodNumber)
+        ? currentPeriods.filter((p) => p !== periodNumber)
         : [...currentPeriods, periodNumber].sort((a, b) => a - b);
-      
+
       // バリデーション実行
       setTimeout(() => validatePeriodSettings(newPeriods, phase), 0);
-      
+
       return {
         ...prev,
         [phase]: {
           ...prev[phase],
-          active_periods: newPeriods
-        }
+          active_periods: newPeriods,
+        },
       };
     });
   };
 
   // デフォルト設定の復元
   const restoreDefaults = async () => {
-    if (!confirm('デフォルト設定に戻しますか？\n現在の設定内容は失われます。')) {
+    if (!confirm("デフォルト設定に戻しますか？\n現在の設定内容は失われます。")) {
       return;
     }
 
     try {
       const response = await fetch(`/api/tournaments/${tournamentId}/rules`, {
-        method: 'POST'
+        method: "POST",
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         // データを再取得
         window.location.reload();
@@ -306,7 +330,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
         alert(`デフォルト設定の復元に失敗しました: ${result.error}`);
       }
     } catch (error) {
-      alert('デフォルト設定の復元中にエラーが発生しました');
+      alert("デフォルト設定の復元中にエラーが発生しました");
       console.error(error);
     }
   };
@@ -314,15 +338,15 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   // 保存
   const handleSave = async () => {
     setSaving(true);
-    
+
     try {
       // バリデーションチェック（サッカー競技系のみ）
-      if (['soccer', 'pk_championship', 'futsal'].includes(sportCode)) {
+      if (["soccer", "pk_championship", "futsal"].includes(sportCode)) {
         for (const p of phaseList) {
           const phaseRule = rules[p.id];
           if (!phaseRule) continue;
           const validation = validateSoccerPeriodSettings(
-            phaseRule.active_periods.map(n => n.toString())
+            phaseRule.active_periods.map((n) => n.toString()),
           );
           if (!validation.valid) {
             alert(`${p.name}ルールに問題があります:\n${validation.error}`);
@@ -332,49 +356,52 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
         }
       }
       // 通常のルール保存（全フェーズ分）
-      const rulesData = phaseList.map(p => ({
+      const rulesData = phaseList.map((p) => ({
         phase: p.id,
         use_extra_time: false,
         use_penalty: false,
         active_periods: stringifyActivePeriods(rules[p.id]?.active_periods || [1]),
-        notes: rules[p.id]?.notes || ''
+        notes: rules[p.id]?.notes || "",
       }));
 
       const response = await fetch(`/api/tournaments/${tournamentId}/rules`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           rules: rulesData,
           point_system: supportsPointSystem ? pointSystem : null,
-          walkover_settings: walkoverSettings
-        })
+          walkover_settings: walkoverSettings,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         // 順位決定ルールも保存（統一ルール：全フェーズに同じ設定、常に有効）
         const tieRulesPayload = { rules: tieBreakingRules, enabled: true };
 
-        if (validateTieBreakingRules(tieBreakingRules, tournament?.sport_code || 'pk_championship').isValid) {
+        if (
+          validateTieBreakingRules(tieBreakingRules, tournament?.sport_code || "pk_championship")
+            .isValid
+        ) {
           for (const p of phaseList) {
             await fetch(`/api/tournaments/${tournamentId}/tie-breaking-rules`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phase: p.id, ...tieRulesPayload })
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phase: p.id, ...tieRulesPayload }),
             });
           }
         }
 
-        alert('大会ルール（順位決定ルールを含む）を更新しました');
+        alert("大会ルール（順位決定ルールを含む）を更新しました");
         // マイダッシュボード（管理者タブ）に遷移
         router.refresh();
-        router.push('/my?tab=admin');
+        router.push("/my?tab=admin");
       } else {
         alert(`更新に失敗しました: ${result.error}`);
       }
     } catch (error) {
-      alert('更新中にエラーが発生しました');
+      alert("更新中にエラーが発生しました");
       console.error(error);
     } finally {
       setSaving(false);
@@ -409,7 +436,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
   ];
 
   const renderPhaseRules = (phase: string, title: string, iconIndex: number) => {
-    const phaseRule = rules[phase] || { phase, active_periods: [1], notes: '' };
+    const phaseRule = rules[phase] || { phase, active_periods: [1], notes: "" };
 
     return (
       <Card key={phase}>
@@ -427,21 +454,29 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
               {sportConfig.default_periods.map((period: PeriodConfig) => {
                 const isActive = phaseRule.active_periods.includes(period.period_number);
                 const isRequired = period.is_required;
-                
+
                 return (
                   <div
                     key={period.period_number}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      isActive 
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    } ${isRequired ? 'border-green-500 bg-green-50' : ''}`}
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 hover:border-gray-300"
+                    } ${isRequired ? "border-green-500 bg-green-50" : ""}`}
                     onClick={() => !isRequired && togglePeriod(phase, period.period_number)}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{period.period_name}</span>
-                      {isActive && <Badge variant="default" className="text-xs">使用</Badge>}
-                      {isRequired && <Badge variant="secondary" className="text-xs">必須</Badge>}
+                      {isActive && (
+                        <Badge variant="default" className="text-xs">
+                          使用
+                        </Badge>
+                      )}
+                      {isRequired && (
+                        <Badge variant="secondary" className="text-xs">
+                          必須
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 );
@@ -450,7 +485,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             <p className="text-sm text-gray-600">
               ※ 緑色のピリオドは必須項目です。クリックで使用するピリオドを選択できます。
             </p>
-            
+
             {/* バリデーションメッセージ表示 */}
             {validationErrors[phase] && (
               <div className="flex items-start space-x-2 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
@@ -460,7 +495,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                 </div>
               </div>
             )}
-            
+
             {validationWarnings[phase] && !validationErrors[phase] && (
               <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
@@ -469,14 +504,16 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                 </div>
               </div>
             )}
-            
-            {!validationErrors[phase] && !validationWarnings[phase] && sportCode === 'pk_championship' && (
-              <div className="text-sm text-green-600">
-                ✅ 設定: {generatePeriodDisplayLabel(phaseRule.active_periods.map(p => p.toString()))}
-              </div>
-            )}
-          </div>
 
+            {!validationErrors[phase] &&
+              !validationWarnings[phase] &&
+              sportCode === "pk_championship" && (
+                <div className="text-sm text-green-600">
+                  ✅ 設定:{" "}
+                  {generatePeriodDisplayLabel(phaseRule.active_periods.map((p) => p.toString()))}
+                </div>
+              )}
+          </div>
 
           {/* 備考 */}
           <div className="space-y-2">
@@ -484,10 +521,10 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             <Textarea
               id={`${phase}-notes`}
               value={phaseRule.notes}
-              onChange={(e) => 
-                setRules(prev => ({
+              onChange={(e) =>
+                setRules((prev) => ({
                   ...prev,
-                  [phase]: { ...prev[phase], notes: e.target.value }
+                  [phase]: { ...prev[phase], notes: e.target.value },
                 }))
               }
               placeholder="特別なルールや注意事項があれば記載してください"
@@ -512,11 +549,10 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             {tournament.tournament_name} - {tournament.sport_name}
           </p>
         </div>
-        
       </div>
 
       {/* ルール設定フォーム */}
-      <div className={`grid grid-cols-1 ${phaseList.length >= 2 ? 'lg:grid-cols-2' : ''} gap-6`}>
+      <div className={`grid grid-cols-1 ${phaseList.length >= 2 ? "lg:grid-cols-2" : ""} gap-6`}>
         {phaseList.map((p, i) => renderPhaseRules(p.id, p.name, i))}
       </div>
 
@@ -532,147 +568,152 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="space-y-4">
-              {/* プリセット選択 */}
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(TIE_BREAKING_PRESETS).map(([key, preset]) => (
-                  <Button
-                    key={key}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const rules = preset.getRules(tournament?.sport_code || 'pk_championship');
-                      setTieBreakingRules(rules);
-                    }}
-                    title={preset.description}
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
+          <div className="space-y-4">
+            {/* プリセット選択 */}
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(TIE_BREAKING_PRESETS).map(([key, preset]) => (
                 <Button
+                  key={key}
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const defaults = getDefaultTieBreakingRules(tournament?.sport_code || 'pk_championship');
-                    setTieBreakingRules(defaults);
+                    const rules = preset.getRules(tournament?.sport_code || "pk_championship");
+                    setTieBreakingRules(rules);
                   }}
+                  title={preset.description}
                 >
-                  <RotateCcw className="h-3 w-3 mr-1" />
-                  デフォルトに戻す
+                  {preset.label}
                 </Button>
-              </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const defaults = getDefaultTieBreakingRules(
+                    tournament?.sport_code || "pk_championship",
+                  );
+                  setTieBreakingRules(defaults);
+                }}
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                デフォルトに戻す
+              </Button>
+            </div>
 
-              {/* 現在のルール一覧 */}
-              <div className="space-y-2">
-                {tieBreakingRules.map((rule, index) => (
-                  <div
-                    key={`${rule.type}-${index}`}
-                    className="flex items-center gap-3 p-3 border rounded-lg bg-white hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      {/* 順序変更ボタン */}
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => moveTieBreakingRule(index, Math.max(0, index - 1))}
-                          disabled={index === 0}
-                          className="h-4 w-6 p-0"
-                        >
-                          <Move className="h-3 w-3 rotate-180" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => moveTieBreakingRule(index, Math.min(tieBreakingRules.length - 1, index + 1))}
-                          disabled={index === tieBreakingRules.length - 1}
-                          className="h-4 w-6 p-0"
-                        >
-                          <Move className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm bg-primary/10 text-primary px-2 py-1 rounded">
-                          {index + 1}
-                        </span>
-                        <span className="font-medium">
-                          {getRuleTypeLabel(rule.type)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {getRuleTypeDescription(rule.type)}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {rule.type === 'lottery' && (
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                          手動設定必要
-                        </Badge>
-                      )}
+            {/* 現在のルール一覧 */}
+            <div className="space-y-2">
+              {tieBreakingRules.map((rule, index) => (
+                <div
+                  key={`${rule.type}-${index}`}
+                  className="flex items-center gap-3 p-3 border rounded-lg bg-white hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-2">
+                    {/* 順序変更ボタン */}
+                    <div className="flex flex-col gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeTieBreakingRule(index)}
-                        className="text-destructive hover:text-destructive/80"
+                        onClick={() => moveTieBreakingRule(index, Math.max(0, index - 1))}
+                        disabled={index === 0}
+                        className="h-4 w-6 p-0"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Move className="h-3 w-3 rotate-180" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          moveTieBreakingRule(
+                            index,
+                            Math.min(tieBreakingRules.length - 1, index + 1),
+                          )
+                        }
+                        disabled={index === tieBreakingRules.length - 1}
+                        className="h-4 w-6 p-0"
+                      >
+                        <Move className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-              
-              {/* ルール追加セクション */}
-              {tieBreakingRules.length < 8 && (
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-sm text-gray-700 mb-3">
-                    利用可能なルールを追加:
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {availableRuleTypes
-                      .filter(ruleType => !tieBreakingRules.some(rule => rule.type === ruleType.type))
-                      .map(ruleType => (
-                        <Button
-                          key={ruleType.type}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addTieBreakingRule(ruleType.type)}
-                          className="justify-start text-left h-auto p-2"
-                        >
-                          <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{ruleType.label}</div>
-                            <div className="text-xs text-gray-500 truncate">
-                              {ruleType.description}
-                            </div>
-                          </div>
-                        </Button>
-                      ))}
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm bg-primary/10 text-primary px-2 py-1 rounded">
+                        {index + 1}
+                      </span>
+                      <span className="font-medium">{getRuleTypeLabel(rule.type)}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {getRuleTypeDescription(rule.type)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {rule.type === "lottery" && (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+                        手動設定必要
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTieBreakingRule(index)}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              )}
-              
-              {tieBreakingRules.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="mb-4">順位決定ルールが設定されていません</p>
-                  <p className="text-sm">上記から利用可能なルールを選択して追加してください</p>
-                </div>
-              )}
-
-              {tieBreakingRules.length >= 8 && (
-                <div className="text-center py-2">
-                  <Badge variant="outline" className="text-orange-600 border-orange-300">
-                    最大8つまでのルールが設定されています
-                  </Badge>
-                </div>
-              )}
+              ))}
             </div>
+
+            {/* ルール追加セクション */}
+            {tieBreakingRules.length < 8 && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-sm text-gray-700 mb-3">利用可能なルールを追加:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {availableRuleTypes
+                    .filter(
+                      (ruleType) => !tieBreakingRules.some((rule) => rule.type === ruleType.type),
+                    )
+                    .map((ruleType) => (
+                      <Button
+                        key={ruleType.type}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addTieBreakingRule(ruleType.type)}
+                        className="justify-start text-left h-auto p-2"
+                      >
+                        <Plus className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{ruleType.label}</div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {ruleType.description}
+                          </div>
+                        </div>
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {tieBreakingRules.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-4">順位決定ルールが設定されていません</p>
+                <p className="text-sm">上記から利用可能なルールを選択して追加してください</p>
+              </div>
+            )}
+
+            {tieBreakingRules.length >= 8 && (
+              <div className="text-center py-2">
+                <Badge variant="outline" className="text-orange-600 border-orange-300">
+                  最大8つまでのルールが設定されています
+                </Badge>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -684,9 +725,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
               <Award className="h-5 w-5 text-green-600" />
               <span>勝点設定</span>
             </CardTitle>
-            <p className="text-sm text-gray-600">
-              試合結果に応じて与えられる勝点を設定します
-            </p>
+            <p className="text-sm text-gray-600">試合結果に応じて与えられる勝点を設定します</p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -703,7 +742,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                   min="0"
                   max="10"
                   value={pointSystem.win}
-                  onChange={(e) => setPointSystem({...pointSystem, win: parseInt(e.target.value) || 0})}
+                  onChange={(e) =>
+                    setPointSystem({ ...pointSystem, win: parseInt(e.target.value) || 0 })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500">通常は3点</p>
@@ -723,7 +764,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                     min="0"
                     max="10"
                     value={pointSystem.draw}
-                    onChange={(e) => setPointSystem({...pointSystem, draw: parseInt(e.target.value) || 0})}
+                    onChange={(e) =>
+                      setPointSystem({ ...pointSystem, draw: parseInt(e.target.value) || 0 })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500">通常は1点</p>
@@ -743,7 +786,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                   min="0"
                   max="10"
                   value={pointSystem.loss}
-                  onChange={(e) => setPointSystem({...pointSystem, loss: parseInt(e.target.value) || 0})}
+                  onChange={(e) =>
+                    setPointSystem({ ...pointSystem, loss: parseInt(e.target.value) || 0 })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500">通常は0点</p>
@@ -752,14 +797,12 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
 
             {/* プリセット設定ボタン */}
             <div className="mt-6 pt-4 border-t">
-              <h4 className="font-medium text-sm text-gray-700 mb-3">
-                プリセット設定:
-              </h4>
+              <h4 className="font-medium text-sm text-gray-700 mb-3">プリセット設定:</h4>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPointSystem({win: 3, draw: 1, loss: 0})}
+                  onClick={() => setPointSystem({ win: 3, draw: 1, loss: 0 })}
                   className="text-sm"
                 >
                   FIFA標準 (3-1-0)
@@ -767,7 +810,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPointSystem({win: 2, draw: 1, loss: 0})}
+                  onClick={() => setPointSystem({ win: 2, draw: 1, loss: 0 })}
                   className="text-sm"
                 >
                   クラシック (2-1-0)
@@ -776,7 +819,7 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setPointSystem({win: 5, draw: 2, loss: 0})}
+                    onClick={() => setPointSystem({ win: 5, draw: 2, loss: 0 })}
                     className="text-sm"
                   >
                     ハイスコア (5-2-0)
@@ -788,8 +831,8 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
             {/* 競技種別に応じた説明 */}
             <div className="mt-4 p-3 bg-primary/5 rounded-lg">
               <p className="text-sm text-primary">
-                <strong>{tournament?.sport_name || 'この競技'}</strong>では勝点システムを使用します。
-                設定した勝点に基づいて順位表が計算されます。
+                <strong>{tournament?.sport_name || "この競技"}</strong>
+                では勝点システムを使用します。 設定した勝点に基づいて順位表が計算されます。
               </p>
             </div>
           </CardContent>
@@ -822,10 +865,12 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                 min="0"
                 max="99"
                 value={walkoverSettings.winner_goals}
-                onChange={(e) => setWalkoverSettings({
-                  ...walkoverSettings, 
-                  winner_goals: parseInt(e.target.value) || 0
-                })}
+                onChange={(e) =>
+                  setWalkoverSettings({
+                    ...walkoverSettings,
+                    winner_goals: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-500">相手チームが不参加の場合の勝者得点</p>
@@ -844,10 +889,12 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                 min="0"
                 max="99"
                 value={walkoverSettings.loser_goals}
-                onChange={(e) => setWalkoverSettings({
-                  ...walkoverSettings, 
-                  loser_goals: parseInt(e.target.value) || 0
-                })}
+                onChange={(e) =>
+                  setWalkoverSettings({
+                    ...walkoverSettings,
+                    loser_goals: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-500">試合に参加できないチームの得点</p>
@@ -866,10 +913,12 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
                 min="0"
                 max="99"
                 value={walkoverSettings.draw_goals}
-                onChange={(e) => setWalkoverSettings({
-                  ...walkoverSettings,
-                  draw_goals: parseInt(e.target.value) || 0
-                })}
+                onChange={(e) =>
+                  setWalkoverSettings({
+                    ...walkoverSettings,
+                    draw_goals: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-gray-500">両チームとも参加できない場合の各チーム得点</p>
@@ -878,14 +927,14 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
 
           {/* プリセット設定ボタン */}
           <div className="mt-6 pt-4 border-t">
-            <h4 className="font-medium text-sm text-gray-700 mb-3">
-              プリセット設定:
-            </h4>
+            <h4 className="font-medium text-sm text-gray-700 mb-3">プリセット設定:</h4>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setWalkoverSettings({winner_goals: 3, loser_goals: 0, draw_goals: 0})}
+                onClick={() =>
+                  setWalkoverSettings({ winner_goals: 3, loser_goals: 0, draw_goals: 0 })
+                }
                 className="text-sm"
               >
                 標準設定 (3-0)
@@ -893,7 +942,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setWalkoverSettings({winner_goals: 5, loser_goals: 0, draw_goals: 0})}
+                onClick={() =>
+                  setWalkoverSettings({ winner_goals: 5, loser_goals: 0, draw_goals: 0 })
+                }
                 className="text-sm"
               >
                 大差設定 (5-0)
@@ -901,7 +952,9 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setWalkoverSettings({winner_goals: 1, loser_goals: 0, draw_goals: 0})}
+                onClick={() =>
+                  setWalkoverSettings({ winner_goals: 1, loser_goals: 0, draw_goals: 0 })
+                }
                 className="text-sm"
               >
                 最小設定 (1-0)
@@ -912,7 +965,8 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           {/* 説明 */}
           <div className="mt-4 p-3 bg-orange-50 rounded-lg">
             <p className="text-sm text-orange-800">
-              <strong>不戦勝・不戦敗とは:</strong> チームが怪我、交通事情、人数不足などの理由で試合に参加できない場合の処理です。
+              <strong>不戦勝・不戦敗とは:</strong>{" "}
+              チームが怪我、交通事情、人数不足などの理由で試合に参加できない場合の処理です。
               不戦勝チームには設定した得点が与えられ、不戦敗チームには敗戦が記録されます。
             </p>
           </div>
@@ -931,10 +985,11 @@ export default function TournamentRulesForm({ tournamentId }: TournamentRulesFor
           <CardContent>
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-700">
-                <strong>{tournament?.sport_name || 'この競技'}</strong>では{rankingMethod === 'win_rate' ? '勝率' : '記録'}による順位決定を使用します。
+                <strong>{tournament?.sport_name || "この競技"}</strong>では
+                {rankingMethod === "win_rate" ? "勝率" : "記録"}による順位決定を使用します。
                 勝点システムは適用されません。
               </p>
-              {rankingMethod === 'win_rate' && (
+              {rankingMethod === "win_rate" && (
                 <p className="text-xs text-gray-600 mt-2">
                   順位は勝率（勝利数 ÷ 試合数）で決定されます。
                 </p>

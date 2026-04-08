@@ -1,10 +1,10 @@
 "use client";
 
+import { AlertCircle, Crown, Zap } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { AlertCircle, Crown, Zap } from "lucide-react";
 
 interface CurrentSubscriptionInfo {
   plan: {
@@ -29,7 +29,10 @@ interface PlanBadgeProps {
   showChangeButton?: boolean;
 }
 
-export default function PlanBadge({ apiUrl = "/api/admin/subscription/current", showChangeButton = true }: PlanBadgeProps) {
+export default function PlanBadge({
+  apiUrl = "/api/admin/subscription/current",
+  showChangeButton = true,
+}: PlanBadgeProps) {
   const router = useRouter();
   const [subscriptionInfo, setSubscriptionInfo] = useState<CurrentSubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,39 +89,43 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current", 
       ? 0
       : Math.round((usage.current_tournament_groups_count / plan.max_tournaments) * 100);
 
-  const showWarning = isTrialExpired || !canCreateTournament || (remainingDays !== null && remainingDays <= 7);
+  const showWarning =
+    isTrialExpired || !canCreateTournament || (remainingDays !== null && remainingDays <= 7);
 
   return (
     <div className="flex items-center gap-3 flex-nowrap">
       {/* 期限切れ・警告アラート */}
       {showWarning && (
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border whitespace-nowrap ${
-          isTrialExpired
-            ? "bg-destructive/10 border-destructive/30 text-destructive"
-            : "bg-blue-50 border-blue-200 text-blue-800"
-        }`}>
+        <div
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md border whitespace-nowrap ${
+            isTrialExpired
+              ? "bg-destructive/10 border-destructive/30 text-destructive"
+              : "bg-blue-50 border-blue-200 text-blue-800"
+          }`}
+        >
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span className="text-xs font-medium">
             {isTrialExpired
               ? "無料期間が終了しました"
               : !canCreateTournament
-              ? "大会数が上限に達しています"
-              : `無料期間残り${remainingDays}日`}
+                ? "大会数が上限に達しています"
+                : `無料期間残り${remainingDays}日`}
           </span>
         </div>
       )}
 
       {/* プラン情報 */}
       <div className="flex items-center gap-2 flex-nowrap">
-        <Badge variant={getBadgeVariant()} className="flex items-center gap-1 text-sm px-3 py-1.5 whitespace-nowrap">
+        <Badge
+          variant={getBadgeVariant()}
+          className="flex items-center gap-1 text-sm px-3 py-1.5 whitespace-nowrap"
+        >
           {getPlanIcon()}
           {plan.plan_name}
         </Badge>
 
         {isFree && remainingDays !== null && remainingDays > 0 && !isTrialExpired && (
-          <span className="text-sm text-gray-500 whitespace-nowrap">
-            残り{remainingDays}日
-          </span>
+          <span className="text-sm text-gray-500 whitespace-nowrap">残り{remainingDays}日</span>
         )}
 
         {!isFree && plan.max_tournaments !== -1 && (
@@ -135,7 +142,11 @@ export default function PlanBadge({ apiUrl = "/api/admin/subscription/current", 
 
       {/* プラン変更ボタン */}
       {showChangeButton && (
-        <Button variant="outline" className="whitespace-nowrap" onClick={() => router.push("/admin/subscription/plans")}>
+        <Button
+          variant="outline"
+          className="whitespace-nowrap"
+          onClick={() => router.push("/admin/subscription/plans")}
+        >
           プラン変更
         </Button>
       )}

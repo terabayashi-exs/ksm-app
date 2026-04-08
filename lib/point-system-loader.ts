@@ -1,7 +1,7 @@
 // lib/point-system-loader.ts
 // 大会ルール設定から勝点システムを取得するユーティリティ
 
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 /**
  * 勝点システム設定
@@ -18,7 +18,7 @@ export interface PointSystem {
 export const DEFAULT_POINT_SYSTEM: PointSystem = {
   win: 3,
   draw: 1,
-  loss: 0
+  loss: 0,
 };
 
 /**
@@ -27,7 +27,8 @@ export const DEFAULT_POINT_SYSTEM: PointSystem = {
  */
 export async function getTournamentPointSystem(tournamentId: number): Promise<PointSystem> {
   try {
-    const rulesResult = await db.execute(`
+    const rulesResult = await db.execute(
+      `
       SELECT tr.point_system, st.supports_point_system, st.ranking_method
       FROM t_tournament_rules tr
       JOIN t_tournaments t ON tr.tournament_id = t.tournament_id
@@ -35,7 +36,9 @@ export async function getTournamentPointSystem(tournamentId: number): Promise<Po
       WHERE tr.tournament_id = ?
       ORDER BY tr.tournament_rule_id
       LIMIT 1
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (rulesResult.rows.length > 0) {
       const row = rulesResult.rows[0];
@@ -49,32 +52,32 @@ export async function getTournamentPointSystem(tournamentId: number): Promise<Po
           return {
             win: Number(parsedPointSystem.win) || DEFAULT_POINT_SYSTEM.win,
             draw: Number(parsedPointSystem.draw) || DEFAULT_POINT_SYSTEM.draw,
-            loss: Number(parsedPointSystem.loss) || DEFAULT_POINT_SYSTEM.loss
+            loss: Number(parsedPointSystem.loss) || DEFAULT_POINT_SYSTEM.loss,
           };
         } catch (parseError) {
-          console.error('勝点システムJSON解析エラー:', parseError);
+          console.error("勝点システムJSON解析エラー:", parseError);
         }
       }
 
       // 勝点システム非対応の競技の場合はフォールバック
       if (!supportsPointSystem) {
         const rankingMethod = row.ranking_method as string;
-        
+
         // 勝率ベースの競技では勝利=1点、敗北=0点として扱う
-        if (rankingMethod === 'win_rate') {
+        if (rankingMethod === "win_rate") {
           return {
             win: 1,
             draw: 0.5, // 引き分けは0.5勝として計算
-            loss: 0
+            loss: 0,
           };
         }
-        
+
         // タイムベースの競技では勝点システムを使用しない
-        if (rankingMethod === 'time') {
+        if (rankingMethod === "time") {
           return {
             win: 0,
             draw: 0,
-            loss: 0
+            loss: 0,
           };
         }
       }
@@ -83,10 +86,9 @@ export async function getTournamentPointSystem(tournamentId: number): Promise<Po
     // 大会ルール設定がない場合、レガシー方式でt_tournamentsテーブルから取得
     console.warn(`大会ID:${tournamentId} - ルール設定未検出、レガシー方式で取得中...`);
     return await getLegacyPointSystem(tournamentId);
-
   } catch (error) {
-    console.error('勝点システム取得エラー:', error);
-    
+    console.error("勝点システム取得エラー:", error);
+
     // エラー時はレガシー方式にフォールバック
     return await getLegacyPointSystem(tournamentId);
   }
@@ -98,22 +100,25 @@ export async function getTournamentPointSystem(tournamentId: number): Promise<Po
  */
 async function getLegacyPointSystem(tournamentId: number): Promise<PointSystem> {
   try {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT win_points, draw_points, loss_points
       FROM t_tournaments 
       WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (result.rows.length > 0) {
       const row = result.rows[0];
       return {
         win: Number(row.win_points) || DEFAULT_POINT_SYSTEM.win,
         draw: Number(row.draw_points) || DEFAULT_POINT_SYSTEM.draw,
-        loss: Number(row.loss_points) || DEFAULT_POINT_SYSTEM.loss
+        loss: Number(row.loss_points) || DEFAULT_POINT_SYSTEM.loss,
       };
     }
   } catch (error) {
-    console.error('レガシー勝点システム取得エラー:', error);
+    console.error("レガシー勝点システム取得エラー:", error);
   }
 
   // 最終フォールバック：デフォルト値
@@ -126,18 +131,21 @@ async function getLegacyPointSystem(tournamentId: number): Promise<PointSystem> 
  */
 export async function tournamentSupportsPointSystem(tournamentId: number): Promise<boolean> {
   try {
-    const result = await db.execute(`
+    const result = await db.execute(
+      `
       SELECT st.supports_point_system
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       WHERE t.tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     if (result.rows.length > 0) {
       return Boolean(result.rows[0].supports_point_system);
     }
   } catch (error) {
-    console.error('勝点システム対応チェックエラー:', error);
+    console.error("勝点システム対応チェックエラー:", error);
   }
 
   // デフォルトは対応しているものとして扱う（後方互換性）
@@ -150,12 +158,13 @@ export async function tournamentSupportsPointSystem(tournamentId: number): Promi
  */
 export async function getTournamentPointSystemInfo(tournamentId: number): Promise<{
   pointSystem: PointSystem;
-  source: 'rules' | 'legacy' | 'default';
+  source: "rules" | "legacy" | "default";
   supportsPointSystem: boolean;
   rankingMethod: string;
 }> {
   try {
-    const rulesResult = await db.execute(`
+    const rulesResult = await db.execute(
+      `
       SELECT
         tr.point_system,
         st.supports_point_system,
@@ -167,39 +176,41 @@ export async function getTournamentPointSystemInfo(tournamentId: number): Promis
       WHERE tr.tournament_id = ?
       ORDER BY tr.tournament_rule_id
       LIMIT 1
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     const pointSystem = await getTournamentPointSystem(tournamentId);
-    
+
     if (rulesResult.rows.length > 0) {
       const row = rulesResult.rows[0];
       const supportsPointSystem = Boolean(row.supports_point_system);
-      const rankingMethod = String(row.ranking_method || 'points');
-      
+      const rankingMethod = String(row.ranking_method || "points");
+
       if (supportsPointSystem && row.point_system) {
         return {
           pointSystem,
-          source: 'rules',
+          source: "rules",
           supportsPointSystem,
-          rankingMethod
+          rankingMethod,
         };
       }
-      
+
       return {
         pointSystem,
-        source: 'legacy',
+        source: "legacy",
         supportsPointSystem,
-        rankingMethod
+        rankingMethod,
       };
     }
   } catch (error) {
-    console.error('勝点システム詳細情報取得エラー:', error);
+    console.error("勝点システム詳細情報取得エラー:", error);
   }
 
   return {
     pointSystem: DEFAULT_POINT_SYSTEM,
-    source: 'default',
+    source: "default",
     supportsPointSystem: true,
-    rankingMethod: 'points'
+    rankingMethod: "points",
   };
 }

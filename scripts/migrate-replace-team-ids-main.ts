@@ -9,11 +9,11 @@
  *   npx tsx scripts/migrate-replace-team-ids-main.ts
  */
 
-import { createClient, type InStatement } from '@libsql/client';
-import { randomUUID } from 'crypto';
-import * as dotenv from 'dotenv';
+import { createClient, type InStatement } from "@libsql/client";
+import { randomUUID } from "crypto";
+import * as dotenv from "dotenv";
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 
 const db = createClient({
   url: process.env.DATABASE_URL_MAIN!,
@@ -21,12 +21,12 @@ const db = createClient({
 });
 
 async function main() {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  team_id UUID化 (main環境)');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("  team_id UUID化 (main環境)");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // STEP 1: 現在のteam_idを取得
-  const teams = await db.execute('SELECT team_id FROM m_teams ORDER BY team_id');
+  const teams = await db.execute("SELECT team_id FROM m_teams ORDER BY team_id");
   console.log(`[STEP 1] m_teams: ${teams.rows.length}件\n`);
 
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -40,31 +40,31 @@ async function main() {
   console.log(`  UUID化対象: ${mapping.size}件\n`);
 
   if (mapping.size === 0) {
-    console.log('✅ 全て既にUUID形式です。\n');
+    console.log("✅ 全て既にUUID形式です。\n");
     return;
   }
 
   // STEP 2: マッピングテーブル作成
-  console.log('[STEP 2] マッピングテーブル作成\n');
-  await db.execute('DROP TABLE IF EXISTS _team_id_mapping');
-  await db.execute('CREATE TABLE _team_id_mapping (old_id TEXT PRIMARY KEY, new_id TEXT NOT NULL)');
+  console.log("[STEP 2] マッピングテーブル作成\n");
+  await db.execute("DROP TABLE IF EXISTS _team_id_mapping");
+  await db.execute("CREATE TABLE _team_id_mapping (old_id TEXT PRIMARY KEY, new_id TEXT NOT NULL)");
 
   const entries = Array.from(mapping.entries());
   for (let i = 0; i < entries.length; i += 50) {
     const chunk = entries.slice(i, i + 50);
     const stmts: InStatement[] = chunk.map(([oldId, newId]) => ({
-      sql: 'INSERT INTO _team_id_mapping (old_id, new_id) VALUES (?, ?)',
-      args: [oldId, newId]
+      sql: "INSERT INTO _team_id_mapping (old_id, new_id) VALUES (?, ?)",
+      args: [oldId, newId],
     }));
-    await db.batch(stmts, 'write');
+    await db.batch(stmts, "write");
   }
   console.log(`  ✓ ${mapping.size}件のマッピング登録完了\n`);
 
   // STEP 3: FK制約なしの _new テーブルを作成し、UUID変換済みデータを投入
-  console.log('[STEP 3] 新テーブル作成＆UUID変換データ投入\n');
+  console.log("[STEP 3] 新テーブル作成＆UUID変換データ投入\n");
 
   // m_teams_new
-  await db.execute('DROP TABLE IF EXISTS m_teams_new');
+  await db.execute("DROP TABLE IF EXISTS m_teams_new");
   await db.execute(`CREATE TABLE m_teams_new (
     team_id TEXT PRIMARY KEY,
     team_name TEXT NOT NULL,
@@ -89,11 +89,11 @@ async function main() {
     FROM m_teams t
     LEFT JOIN _team_id_mapping m ON t.team_id = m.old_id
   `);
-  const mtCount = await db.execute('SELECT COUNT(*) as cnt FROM m_teams_new');
+  const mtCount = await db.execute("SELECT COUNT(*) as cnt FROM m_teams_new");
   console.log(`  m_teams_new: ${mtCount.rows[0].cnt}件`);
 
   // m_players_new
-  await db.execute('DROP TABLE IF EXISTS m_players_new');
+  await db.execute("DROP TABLE IF EXISTS m_players_new");
   await db.execute(`CREATE TABLE m_players_new (
     player_id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_name TEXT NOT NULL,
@@ -111,11 +111,11 @@ async function main() {
     FROM m_players p
     LEFT JOIN _team_id_mapping m ON p.current_team_id = m.old_id
   `);
-  const mpCount = await db.execute('SELECT COUNT(*) as cnt FROM m_players_new');
+  const mpCount = await db.execute("SELECT COUNT(*) as cnt FROM m_players_new");
   console.log(`  m_players_new: ${mpCount.rows[0].cnt}件`);
 
   // t_tournament_teams_new
-  await db.execute('DROP TABLE IF EXISTS t_tournament_teams_new');
+  await db.execute("DROP TABLE IF EXISTS t_tournament_teams_new");
   await db.execute(`CREATE TABLE t_tournament_teams_new (
     tournament_team_id INTEGER PRIMARY KEY AUTOINCREMENT,
     tournament_id INTEGER NOT NULL,
@@ -148,13 +148,13 @@ async function main() {
     FROM t_tournament_teams tt
     LEFT JOIN _team_id_mapping m ON tt.team_id = m.old_id
   `);
-  const ttCount = await db.execute('SELECT COUNT(*) as cnt FROM t_tournament_teams_new');
+  const ttCount = await db.execute("SELECT COUNT(*) as cnt FROM t_tournament_teams_new");
   console.log(`  t_tournament_teams_new: ${ttCount.rows[0].cnt}件`);
 
   // t_tournament_players_new
   // 前回team_idがUUIDに変換されているレコードがある
   // → m1: 旧IDからの直接マッピング, m2: player経由の間接マッピング
-  await db.execute('DROP TABLE IF EXISTS t_tournament_players_new');
+  await db.execute("DROP TABLE IF EXISTS t_tournament_players_new");
   await db.execute(`CREATE TABLE t_tournament_players_new (
     tournament_player_id INTEGER PRIMARY KEY AUTOINCREMENT,
     tournament_id INTEGER NOT NULL,
@@ -188,11 +188,11 @@ async function main() {
     LEFT JOIN m_players p ON tp.player_id = p.player_id
     LEFT JOIN _team_id_mapping m2 ON p.current_team_id = m2.old_id
   `);
-  const tpCount = await db.execute('SELECT COUNT(*) as cnt FROM t_tournament_players_new');
+  const tpCount = await db.execute("SELECT COUNT(*) as cnt FROM t_tournament_players_new");
   console.log(`  t_tournament_players_new: ${tpCount.rows[0].cnt}件`);
 
   // t_password_reset_tokens_new
-  await db.execute('DROP TABLE IF EXISTS t_password_reset_tokens_new');
+  await db.execute("DROP TABLE IF EXISTS t_password_reset_tokens_new");
   await db.execute(`CREATE TABLE t_password_reset_tokens_new (
     token_id INTEGER PRIMARY KEY AUTOINCREMENT,
     team_id TEXT NOT NULL,
@@ -211,11 +211,11 @@ async function main() {
     LEFT JOIN _team_id_mapping m ON prt.team_id = m.old_id
     WHERE COALESCE(m.new_id, prt.team_id) IN (SELECT team_id FROM m_teams_new)
   `);
-  const prtCount = await db.execute('SELECT COUNT(*) as cnt FROM t_password_reset_tokens_new');
+  const prtCount = await db.execute("SELECT COUNT(*) as cnt FROM t_password_reset_tokens_new");
   console.log(`  t_password_reset_tokens_new: ${prtCount.rows[0].cnt}件`);
 
   // t_team_invitations_new
-  await db.execute('DROP TABLE IF EXISTS t_team_invitations_new');
+  await db.execute("DROP TABLE IF EXISTS t_team_invitations_new");
   await db.execute(`CREATE TABLE t_team_invitations_new (
     id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
     team_id text NOT NULL,
@@ -236,71 +236,85 @@ async function main() {
     FROM t_team_invitations ti
     LEFT JOIN _team_id_mapping m ON ti.team_id = m.old_id
   `);
-  const tiCount = await db.execute('SELECT COUNT(*) as cnt FROM t_team_invitations_new');
+  const tiCount = await db.execute("SELECT COUNT(*) as cnt FROM t_team_invitations_new");
   console.log(`  t_team_invitations_new: ${tiCount.rows[0].cnt}件`);
 
   // STEP 4: 旧テーブルDROP→新テーブルRENAMEをバッチで一括実行
-  console.log('\n[STEP 4] 旧テーブル削除＆リネーム (バッチ実行)\n');
+  console.log("\n[STEP 4] 旧テーブル削除＆リネーム (バッチ実行)\n");
 
-  await db.batch([
-    // 子テーブルを先に削除
-    'DROP TABLE IF EXISTS t_tournament_players',
-    'DROP TABLE IF EXISTS t_tournament_teams',
-    'DROP TABLE IF EXISTS t_password_reset_tokens',
-    'DROP TABLE IF EXISTS t_team_invitations',
-    'DROP TABLE IF EXISTS m_players',
-    // 親テーブルを削除
-    'DROP TABLE IF EXISTS m_teams',
-    // 親テーブルから先にリネーム
-    'ALTER TABLE m_teams_new RENAME TO m_teams',
-    'ALTER TABLE m_players_new RENAME TO m_players',
-    'ALTER TABLE t_tournament_teams_new RENAME TO t_tournament_teams',
-    'ALTER TABLE t_tournament_players_new RENAME TO t_tournament_players',
-    'ALTER TABLE t_password_reset_tokens_new RENAME TO t_password_reset_tokens',
-    'ALTER TABLE t_team_invitations_new RENAME TO t_team_invitations',
-  ], 'write');
+  await db.batch(
+    [
+      // 子テーブルを先に削除
+      "DROP TABLE IF EXISTS t_tournament_players",
+      "DROP TABLE IF EXISTS t_tournament_teams",
+      "DROP TABLE IF EXISTS t_password_reset_tokens",
+      "DROP TABLE IF EXISTS t_team_invitations",
+      "DROP TABLE IF EXISTS m_players",
+      // 親テーブルを削除
+      "DROP TABLE IF EXISTS m_teams",
+      // 親テーブルから先にリネーム
+      "ALTER TABLE m_teams_new RENAME TO m_teams",
+      "ALTER TABLE m_players_new RENAME TO m_players",
+      "ALTER TABLE t_tournament_teams_new RENAME TO t_tournament_teams",
+      "ALTER TABLE t_tournament_players_new RENAME TO t_tournament_players",
+      "ALTER TABLE t_password_reset_tokens_new RENAME TO t_password_reset_tokens",
+      "ALTER TABLE t_team_invitations_new RENAME TO t_team_invitations",
+    ],
+    "write",
+  );
 
-  console.log('  ✓ バッチ実行完了');
+  console.log("  ✓ バッチ実行完了");
 
   // STEP 5: クリーンアップ
-  await db.execute('DROP TABLE IF EXISTS _team_id_mapping');
-  console.log('  ✓ マッピングテーブル削除');
+  await db.execute("DROP TABLE IF EXISTS _team_id_mapping");
+  console.log("  ✓ マッピングテーブル削除");
 
   // STEP 6: 整合性チェック
-  console.log('\n[STEP 5] 整合性チェック\n');
+  console.log("\n[STEP 5] 整合性チェック\n");
 
-  const nonUuid = await db.execute("SELECT COUNT(*) as cnt FROM m_teams WHERE length(team_id) != 36");
+  const nonUuid = await db.execute(
+    "SELECT COUNT(*) as cnt FROM m_teams WHERE length(team_id) != 36",
+  );
   console.log(`  UUID形式でないteam_id: ${nonUuid.rows[0].cnt}件`);
 
   for (const [table, col] of [
-    ['t_tournament_teams', 'team_id'],
-    ['t_tournament_players', 'team_id'],
-    ['m_players', 'current_team_id'],
+    ["t_tournament_teams", "team_id"],
+    ["t_tournament_players", "team_id"],
+    ["m_players", "current_team_id"],
   ] as const) {
-    const orphans = await db.execute(`SELECT COUNT(*) as cnt FROM ${table} WHERE ${col} IS NOT NULL AND ${col} NOT IN (SELECT team_id FROM m_teams)`);
+    const orphans = await db.execute(
+      `SELECT COUNT(*) as cnt FROM ${table} WHERE ${col} IS NOT NULL AND ${col} NOT IN (SELECT team_id FROM m_teams)`,
+    );
     console.log(`  ${table}.${col} 孤立: ${orphans.rows[0].cnt}件`);
   }
 
   // 件数確認
-  console.log('\n  --- 件数確認 ---');
-  for (const table of ['m_teams', 'm_players', 't_tournament_teams', 't_tournament_players', 't_password_reset_tokens', 't_team_invitations']) {
+  console.log("\n  --- 件数確認 ---");
+  for (const table of [
+    "m_teams",
+    "m_players",
+    "t_tournament_teams",
+    "t_tournament_players",
+    "t_password_reset_tokens",
+    "t_team_invitations",
+  ]) {
     const cnt = await db.execute(`SELECT COUNT(*) as cnt FROM ${table}`);
     console.log(`  ${table}: ${cnt.rows[0].cnt}件`);
   }
 
   // サンプル表示
-  console.log('\n[STEP 6] サンプル確認\n');
-  const sample = await db.execute('SELECT team_id, team_name FROM m_teams LIMIT 5');
-  sample.rows.forEach(r => console.log('  ' + r.team_id + ' → ' + r.team_name));
+  console.log("\n[STEP 6] サンプル確認\n");
+  const sample = await db.execute("SELECT team_id, team_name FROM m_teams LIMIT 5");
+  sample.rows.forEach((r) => console.log("  " + r.team_id + " → " + r.team_name));
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`  ✅ 完了: ${mapping.size}件のteam_idをUUID化`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   db.close();
 }
 
-main().catch(e => {
-  console.error('❌ エラー:', e);
+main().catch((e) => {
+  console.error("❌ エラー:", e);
   process.exit(1);
 });

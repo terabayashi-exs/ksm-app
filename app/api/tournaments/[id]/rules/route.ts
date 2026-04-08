@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  TournamentRule,
-  SPORT_RULE_CONFIGS,
-  generateDefaultRules,
-  isLegacyTournament,
-  getLegacyDefaultRules
-} from "@/lib/tournament-rules";
 import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
+import {
+  generateDefaultRules,
+  getLegacyDefaultRules,
+  isLegacyTournament,
+  SPORT_RULE_CONFIGS,
+  TournamentRule,
+} from "@/lib/tournament-rules";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // GET: 大会ルール取得
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   try {
     const session = await auth();
-    
+
     if (!session) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
     const tournamentId = parseInt(resolvedParams.id);
-    
+
     // 大会情報を取得（競技種別とフォーマットを含む）
-    const tournamentResult = await db.execute(`
+    const tournamentResult = await db.execute(
+      `
       SELECT
         t.tournament_id,
         t.tournament_name,
@@ -41,30 +42,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       FROM t_tournaments t
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
       WHERE t.tournament_id = ?
-    `, [tournamentId]);
-    
+    `,
+      [tournamentId],
+    );
+
     if (tournamentResult.rows.length === 0) {
       return NextResponse.json({ error: "大会が見つかりません" }, { status: 404 });
     }
-    
+
     const tournament = tournamentResult.rows[0];
-    
+
     // 既存のルール設定を取得
-    const rulesResult = await db.execute(`
+    const rulesResult = await db.execute(
+      `
       SELECT
         tournament_rule_id, tournament_id, phase, use_extra_time, use_penalty,
         active_periods, notes, point_system, walkover_settings, created_at, updated_at
       FROM t_tournament_rules
       WHERE tournament_id = ?
       ORDER BY phase
-    `, [tournamentId]);
-    
+    `,
+      [tournamentId],
+    );
+
     let rules: TournamentRule[] = [];
-    
+
     if (rulesResult.rows.length === 0) {
       // ルールが設定されていない場合、デフォルトルールを生成
       const sportTypeId = Number(tournament.sport_type_id);
-      
+
       if (isLegacyTournament(tournamentId, sportTypeId)) {
         // 既存のPK戦大会の場合は互換性を保持
         rules = getLegacyDefaultRules(tournamentId);
@@ -79,7 +85,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     } else {
       // 既存ルールをマッピング
-      rules = rulesResult.rows.map(row => ({
+      rules = rulesResult.rows.map((row) => ({
         tournament_rule_id: Number(row.tournament_rule_id),
         tournament_id: Number(row.tournament_id),
         phase: String(row.phase),
@@ -90,10 +96,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         point_system: row.point_system ? String(row.point_system) : undefined,
         walkover_settings: row.walkover_settings ? String(row.walkover_settings) : undefined,
         created_at: String(row.created_at),
-        updated_at: String(row.updated_at)
+        updated_at: String(row.updated_at),
       }));
     }
-    
+
     // 競技種別の設定情報も取得（配列形式でWebpackエラー回避）
     const sportConfigs = [
       SPORT_RULE_CONFIGS.pk,
@@ -101,12 +107,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       SPORT_RULE_CONFIGS.futsal,
       SPORT_RULE_CONFIGS.basketball,
       SPORT_RULE_CONFIGS.handball,
-      SPORT_RULE_CONFIGS.rugby
+      SPORT_RULE_CONFIGS.rugby,
     ];
-    const sportConfig = sportConfigs.find(config =>
-      config && config.sport_type_id === Number(tournament.sport_type_id)
-    ) || null;
-    
+    const sportConfig =
+      sportConfigs.find(
+        (config) => config && config.sport_type_id === Number(tournament.sport_type_id),
+      ) || null;
+
     return NextResponse.json({
       success: true,
       tournament: {
@@ -119,12 +126,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         supports_draws: Boolean(tournament.supports_draws),
         ranking_method: String(tournament.ranking_method),
         format_id: tournament.format_id ? Number(tournament.format_id) : null,
-        phases: tournament.phases ? String(tournament.phases) : null
+        phases: tournament.phases ? String(tournament.phases) : null,
       },
       rules,
-      sport_config: sportConfig
+      sport_config: sportConfig,
     });
-
   } catch (error) {
     console.error("大会ルール取得エラー:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });
@@ -142,18 +148,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 期限切れチェック（編集）
-    const permissionCheck = await checkTrialExpiredPermission(
-      session.user.id,
-      'canEdit'
-    );
+    const permissionCheck = await checkTrialExpiredPermission(session.user.id, "canEdit");
 
     if (!permissionCheck.allowed) {
       return NextResponse.json(
         {
           error: permissionCheck.reason,
-          trialExpired: true
+          trialExpired: true,
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -166,38 +169,43 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 既存ルールを削除
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_tournament_rules WHERE tournament_id = ?
-    `, [tournamentId]);
+    `,
+      [tournamentId],
+    );
 
     // 新しいルールを挿入
     const pointSystemJson = point_system ? JSON.stringify(point_system) : null;
     const walkoverSettingsJson = walkover_settings ? JSON.stringify(walkover_settings) : null;
-    
+
     for (const rule of rules) {
-      await db.execute(`
+      await db.execute(
+        `
         INSERT INTO t_tournament_rules (
           tournament_id, phase, use_extra_time, use_penalty,
           active_periods, notes, point_system, walkover_settings,
           created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [
-        tournamentId,
-        rule.phase,
-        rule.use_extra_time ? 1 : 0,
-        rule.use_penalty ? 1 : 0,
-        rule.active_periods,
-        rule.notes || null,
-        pointSystemJson,
-        walkoverSettingsJson
-      ]);
+      `,
+        [
+          tournamentId,
+          rule.phase,
+          rule.use_extra_time ? 1 : 0,
+          rule.use_penalty ? 1 : 0,
+          rule.active_periods,
+          rule.notes || null,
+          pointSystemJson,
+          walkoverSettingsJson,
+        ],
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: "大会ルールを更新しました"
+      message: "大会ルールを更新しました",
     });
-
   } catch (error) {
     console.error("大会ルール更新エラー:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });
@@ -215,80 +223,85 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     }
 
     // 期限切れチェック（編集）
-    const permissionCheck = await checkTrialExpiredPermission(
-      session.user.id,
-      'canEdit'
-    );
+    const permissionCheck = await checkTrialExpiredPermission(session.user.id, "canEdit");
 
     if (!permissionCheck.allowed) {
       return NextResponse.json(
         {
           error: permissionCheck.reason,
-          trialExpired: true
+          trialExpired: true,
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const tournamentId = parseInt(resolvedParams.id);
-    
+
     // 大会の競技種別を取得
-    const tournamentResult = await db.execute(`
+    const tournamentResult = await db.execute(
+      `
       SELECT sport_type_id FROM t_tournaments WHERE tournament_id = ?
-    `, [tournamentId]);
-    
+    `,
+      [tournamentId],
+    );
+
     if (tournamentResult.rows.length === 0) {
       return NextResponse.json({ error: "大会が見つかりません" }, { status: 404 });
     }
-    
+
     const sportTypeId = Number(tournamentResult.rows[0].sport_type_id);
-    
+
     // 既存ルールを削除
-    await db.execute(`
+    await db.execute(
+      `
       DELETE FROM t_tournament_rules WHERE tournament_id = ?
-    `, [tournamentId]);
-    
+    `,
+      [tournamentId],
+    );
+
     // デフォルトルールを生成・保存
     const defaultRules = generateDefaultRules(tournamentId, sportTypeId);
-    
+
     // デフォルト勝点システム（勝点対応競技の場合）
     const defaultPointSystem = JSON.stringify({
       win: 3,
       draw: 1,
-      loss: 0
+      loss: 0,
     });
-    
+
     // デフォルト不戦勝設定
     const defaultWalkoverSettings = JSON.stringify({
       winner_goals: 3,
-      loser_goals: 0
+      loser_goals: 0,
     });
-    
+
     for (const rule of defaultRules) {
-      await db.execute(`
+      await db.execute(
+        `
         INSERT INTO t_tournament_rules (
           tournament_id, phase, use_extra_time, use_penalty,
           active_periods, notes, point_system, walkover_settings,
           created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+9 hours'), datetime('now', '+9 hours'))
-      `, [
-        rule.tournament_id,
-        rule.phase,
-        rule.use_extra_time ? 1 : 0,
-        rule.use_penalty ? 1 : 0,
-        rule.active_periods,
-        rule.notes || null,
-        defaultPointSystem,
-        defaultWalkoverSettings
-      ]);
+      `,
+        [
+          rule.tournament_id,
+          rule.phase,
+          rule.use_extra_time ? 1 : 0,
+          rule.use_penalty ? 1 : 0,
+          rule.active_periods,
+          rule.notes || null,
+          defaultPointSystem,
+          defaultWalkoverSettings,
+        ],
+      );
     }
 
     return NextResponse.json({
       success: true,
       message: "デフォルトルールを設定しました",
-      rules: defaultRules
+      rules: defaultRules,
     });
-
   } catch (error) {
     console.error("デフォルトルール設定エラー:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });

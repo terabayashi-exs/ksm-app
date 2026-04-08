@@ -22,7 +22,9 @@ const url = process.env[`DATABASE_URL${envSuffix}`] || process.env.DATABASE_URL;
 const authToken = process.env[`DATABASE_AUTH_TOKEN${envSuffix}`] || process.env.DATABASE_AUTH_TOKEN;
 
 if (!url || !authToken) {
-  console.error(`❌ 環境変数が見つかりません: DATABASE_URL${envSuffix}, DATABASE_AUTH_TOKEN${envSuffix}`);
+  console.error(
+    `❌ 環境変数が見つかりません: DATABASE_URL${envSuffix}, DATABASE_AUTH_TOKEN${envSuffix}`,
+  );
   process.exit(1);
 }
 
@@ -34,10 +36,10 @@ async function migrate() {
 
   // 1. バックフィル確認
   const formatsCheck = await client.execute(
-    `SELECT COUNT(*) as count FROM m_tournament_formats WHERE phases IS NULL`
+    `SELECT COUNT(*) as count FROM m_tournament_formats WHERE phases IS NULL`,
   );
   const tournamentsCheck = await client.execute(
-    `SELECT COUNT(*) as count FROM t_tournaments WHERE phases IS NULL`
+    `SELECT COUNT(*) as count FROM t_tournaments WHERE phases IS NULL`,
   );
 
   if (Number(formatsCheck.rows[0].count) > 0 || Number(tournamentsCheck.rows[0].count) > 0) {

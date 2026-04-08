@@ -1,6 +1,6 @@
 // lib/tournament-teams-simple.ts
-import { db } from '@/lib/db';
-import { getTournamentFormatPhases } from '@/lib/tournament-phases';
+import { db } from "@/lib/db";
+import { getTournamentFormatPhases } from "@/lib/tournament-phases";
 
 export interface SimpleTournamentTeam {
   tournament_team_id: number;
@@ -10,7 +10,7 @@ export interface SimpleTournamentTeam {
   display_name: string;
   assigned_block?: string;
   block_position?: number;
-  display_block?: string;  // 表示用ブロック名（決勝進出チームは1位リーグ等、予選チームはassigned_block）
+  display_block?: string; // 表示用ブロック名（決勝進出チームは1位リーグ等、予選チームはassigned_block）
   contact_phone?: string;
   player_count: number;
 }
@@ -26,18 +26,20 @@ export interface SimpleTournamentTeamsData {
 /**
  * 決勝フェーズのチームを試合データから正しい順序で取得する
  */
-async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<string, { order: number; leagueName: string }>> {
+async function getFinalPhaseTeamsInOrder(
+  tournamentId: number,
+): Promise<Map<string, { order: number; leagueName: string }>> {
   const teamOrderMap = new Map<string, { order: number; leagueName: string }>();
 
   try {
     // トーナメント形式フェーズのIDを取得
     const phasesResult = await db.execute({
-      sql: 'SELECT phases FROM t_tournaments WHERE tournament_id = ?',
-      args: [tournamentId]
+      sql: "SELECT phases FROM t_tournaments WHERE tournament_id = ?",
+      args: [tournamentId],
     });
     const phasesJson = phasesResult.rows[0]?.phases as string | null;
     const tournamentPhaseIds = getTournamentFormatPhases(phasesJson);
-    const phasePlaceholders = tournamentPhaseIds.map(() => '?').join(',');
+    const phasePlaceholders = tournamentPhaseIds.map(() => "?").join(",");
 
     // トーナメント形式フェーズの試合からround_name・team_source・チームIDを一括取得
     // t_matches_live に phase, round_name, team1_source, team2_source が直接格納されている
@@ -55,7 +57,7 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
         WHERE mb.tournament_id = ? AND mb.phase IN (${phasePlaceholders})
         ORDER BY ml.match_number
       `,
-      args: [tournamentId, ...tournamentPhaseIds]
+      args: [tournamentId, ...tournamentPhaseIds],
     });
 
     // チームソースと順序のマッピングを構築（例: A_1 → {round: "1位リーグ", position: 1}）
@@ -65,7 +67,7 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
     const roundOrderMap = new Map<string, number>();
     let currentRoundOrder = 0;
 
-    matchesResult.rows.forEach(row => {
+    matchesResult.rows.forEach((row) => {
       const roundName = row.round_name as string;
       const team1Source = row.team1_source as string;
       const team2Source = row.team2_source as string;
@@ -77,22 +79,22 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
 
       const assignSource = (source: string) => {
         if (source && source.match(/^[A-Z]_\d+$/)) {
-          const [block] = source.split('_');
+          const [block] = source.split("_");
           // A=1, B=2, C=3, D=4, E=5, F=6
-          const position = block.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+          const position = block.charCodeAt(0) - "A".charCodeAt(0) + 1;
 
           if (!sourceOrderMap.has(source)) {
             sourceOrderMap.set(source, {
               round: roundName,
-              position: position
+              position: position,
             });
           }
         } else if (source && source.match(/^BEST_\d+_\d+$/)) {
-          const [, , rankStr] = source.split('_');
+          const [, , rankStr] = source.split("_");
           if (!sourceOrderMap.has(source)) {
             sourceOrderMap.set(source, {
               round: roundName,
-              position: 100 + parseInt(rankStr) // 既存ブロック順序の後に配置
+              position: 100 + parseInt(rankStr), // 既存ブロック順序の後に配置
             });
           }
         }
@@ -115,7 +117,10 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
         const roundOrder = roundOrderMap.get(order.round) || 0;
         const roundBase = (roundOrder + 1) * 1000;
         const leagueName = order.round; // round_nameをそのまま使用
-        teamOrderMap.set(String(team1TournamentTeamId), { order: roundBase + order.position, leagueName });
+        teamOrderMap.set(String(team1TournamentTeamId), {
+          order: roundBase + order.position,
+          leagueName,
+        });
       }
 
       if (team2TournamentTeamId && team2Source && sourceOrderMap.has(team2Source)) {
@@ -124,12 +129,14 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
         const roundOrder = roundOrderMap.get(order.round) || 0;
         const roundBase = (roundOrder + 1) * 1000;
         const leagueName = order.round; // round_nameをそのまま使用
-        teamOrderMap.set(String(team2TournamentTeamId), { order: roundBase + order.position, leagueName });
+        teamOrderMap.set(String(team2TournamentTeamId), {
+          order: roundBase + order.position,
+          leagueName,
+        });
       }
     }
-
   } catch (error) {
-    console.error('決勝チーム順序取得エラー:', error);
+    console.error("決勝チーム順序取得エラー:", error);
   }
 
   return teamOrderMap;
@@ -138,22 +145,24 @@ async function getFinalPhaseTeamsInOrder(tournamentId: number): Promise<Map<stri
 /**
  * 大会の参加チーム情報を簡単に取得する
  */
-export async function getSimpleTournamentTeams(tournamentId: number): Promise<SimpleTournamentTeamsData> {
+export async function getSimpleTournamentTeams(
+  tournamentId: number,
+): Promise<SimpleTournamentTeamsData> {
   try {
-    console.log('getSimpleTournamentTeams called with ID:', tournamentId);
+    console.log("getSimpleTournamentTeams called with ID:", tournamentId);
 
     // 大会情報を取得
     const tournamentResult = await db.execute({
-      sql: 'SELECT tournament_name FROM t_tournaments WHERE tournament_id = ?',
-      args: [tournamentId]
+      sql: "SELECT tournament_name FROM t_tournaments WHERE tournament_id = ?",
+      args: [tournamentId],
     });
 
     if (!tournamentResult.rows || tournamentResult.rows.length === 0) {
-      throw new Error('大会が見つかりません');
+      throw new Error("大会が見つかりません");
     }
 
     const tournamentName = tournamentResult.rows[0].tournament_name as string;
-    console.log('Tournament found:', tournamentName);
+    console.log("Tournament found:", tournamentName);
 
     // 決勝フェーズのチーム順序マップを取得
     const finalTeamOrderMap = await getFinalPhaseTeamsInOrder(tournamentId);
@@ -175,10 +184,10 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
           AND tt.participation_status = 'confirmed'
           AND tt.withdrawal_status = 'active'
       `,
-      args: [tournamentId]
+      args: [tournamentId],
     });
 
-    console.log('Teams found:', teamsResult.rows?.length || 0);
+    console.log("Teams found:", teamsResult.rows?.length || 0);
 
     const teams: SimpleTournamentTeam[] = [];
     let totalPlayers = 0;
@@ -193,7 +202,7 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
             WHERE tp.tournament_team_id = ?
             AND tp.player_status = 'active'
           `,
-          args: [teamRow.tournament_team_id]
+          args: [teamRow.tournament_team_id],
         });
 
         const playerCount = (playerCountResult.rows?.[0]?.player_count as number) || 0;
@@ -203,47 +212,52 @@ export async function getSimpleTournamentTeams(tournamentId: number): Promise<Si
         const finalOrderInfo = finalTeamOrderMap.get(teamRow.team_id as string);
         const displayBlock = finalOrderInfo
           ? finalOrderInfo.leagueName
-          : (teamRow.assigned_block ? String(teamRow.assigned_block) : undefined);
+          : teamRow.assigned_block
+            ? String(teamRow.assigned_block)
+            : undefined;
 
         teams.push({
           tournament_team_id: teamRow.tournament_team_id as number,
           team_id: teamRow.team_id as string,
           team_name: teamRow.team_name as string,
           team_omission: teamRow.team_omission ? String(teamRow.team_omission) : undefined,
-          display_name: (teamRow.team_omission ? String(teamRow.team_omission) : String(teamRow.team_name)),
+          display_name: teamRow.team_omission
+            ? String(teamRow.team_omission)
+            : String(teamRow.team_name),
           assigned_block: teamRow.assigned_block ? String(teamRow.assigned_block) : undefined,
           block_position: teamRow.block_position ? Number(teamRow.block_position) : undefined,
           display_block: displayBlock,
           contact_phone: teamRow.contact_phone ? String(teamRow.contact_phone) : undefined,
-          player_count: playerCount
+          player_count: playerCount,
         });
       }
 
       // ソート: チーム名の昇順（日本語対応）
       teams.sort((a, b) => {
-        return a.team_name.localeCompare(b.team_name, 'ja');
+        return a.team_name.localeCompare(b.team_name, "ja");
       });
 
       // ソート後の順序を確認
-      console.log('\n=== ソート後のチーム順序 ===');
+      console.log("\n=== ソート後のチーム順序 ===");
       teams.forEach((team, index) => {
         const finalOrderInfo = finalTeamOrderMap.get(team.team_id);
-        console.log(`${index + 1}. ${team.display_name} (display_block: ${team.display_block}, order: ${finalOrderInfo?.order || 'N/A'})`);
+        console.log(
+          `${index + 1}. ${team.display_name} (display_block: ${team.display_block}, order: ${finalOrderInfo?.order || "N/A"})`,
+        );
       });
     }
 
-    console.log('Result compiled:', { teams: teams.length, totalPlayers });
+    console.log("Result compiled:", { teams: teams.length, totalPlayers });
 
     return {
       tournament_id: tournamentId,
       tournament_name: tournamentName,
       teams,
       total_teams: teams.length,
-      total_players: totalPlayers
+      total_players: totalPlayers,
     };
-
   } catch (error) {
-    console.error('getSimpleTournamentTeams error:', error);
+    console.error("getSimpleTournamentTeams error:", error);
     throw error;
   }
 }

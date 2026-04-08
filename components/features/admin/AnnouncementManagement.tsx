@@ -1,26 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Edit, Trash2, Plus, Bell, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Bell, Edit, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Announcement {
   announcement_id: number;
   title: string;
   content: string;
-  status: 'draft' | 'published';
+  status: "draft" | "published";
   display_order: number;
   created_by: string;
   created_at: string;
@@ -30,7 +30,7 @@ interface Announcement {
 interface AnnouncementFormData {
   title: string;
   content: string;
-  status: 'draft' | 'published';
+  status: "draft" | "published";
   display_order: number;
 }
 
@@ -41,9 +41,9 @@ export default function AnnouncementManagement() {
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<AnnouncementFormData>({
-    title: '',
-    content: '',
-    status: 'draft',
+    title: "",
+    content: "",
+    status: "draft",
     display_order: 0,
   });
   const [saving, setSaving] = useState(false);
@@ -52,15 +52,15 @@ export default function AnnouncementManagement() {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/announcements');
+      const response = await fetch("/api/admin/announcements");
       if (!response.ok) {
-        throw new Error('お知らせの取得に失敗しました');
+        throw new Error("お知らせの取得に失敗しました");
       }
       const result = await response.json();
       setAnnouncements(result.announcements);
     } catch (err) {
-      console.error('Error fetching announcements:', err);
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      console.error("Error fetching announcements:", err);
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setLoading(false);
     }
@@ -73,9 +73,9 @@ export default function AnnouncementManagement() {
   // フォームリセット
   const resetForm = () => {
     setFormData({
-      title: '',
-      content: '',
-      status: 'draft',
+      title: "",
+      content: "",
+      status: "draft",
       display_order: 0,
     });
     setEditingAnnouncement(null);
@@ -107,7 +107,7 @@ export default function AnnouncementManagement() {
     e.preventDefault();
 
     if (!formData.title.trim() || !formData.content.trim()) {
-      setError('タイトルと本文は必須です');
+      setError("タイトルと本文は必須です");
       return;
     }
 
@@ -117,14 +117,14 @@ export default function AnnouncementManagement() {
 
       const url = editingAnnouncement
         ? `/api/admin/announcements/${editingAnnouncement.announcement_id}`
-        : '/api/admin/announcements';
+        : "/api/admin/announcements";
 
-      const method = editingAnnouncement ? 'PATCH' : 'POST';
+      const method = editingAnnouncement ? "PATCH" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -132,14 +132,14 @@ export default function AnnouncementManagement() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '保存に失敗しました');
+        throw new Error(result.error || "保存に失敗しました");
       }
 
       await fetchAnnouncements();
       resetForm();
     } catch (err) {
-      console.error('Error saving announcement:', err);
-      setError(err instanceof Error ? err.message : '保存に失敗しました');
+      console.error("Error saving announcement:", err);
+      setError(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -147,26 +147,26 @@ export default function AnnouncementManagement() {
 
   // 削除処理
   const handleDelete = async (announcementId: number) => {
-    if (!confirm('このお知らせを削除してもよろしいですか？')) {
+    if (!confirm("このお知らせを削除してもよろしいですか？")) {
       return;
     }
 
     try {
       setError(null);
       const response = await fetch(`/api/admin/announcements/${announcementId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '削除に失敗しました');
+        throw new Error(result.error || "削除に失敗しました");
       }
 
       await fetchAnnouncements();
     } catch (err) {
-      console.error('Error deleting announcement:', err);
-      setError(err instanceof Error ? err.message : '削除に失敗しました');
+      console.error("Error deleting announcement:", err);
+      setError(err instanceof Error ? err.message : "削除に失敗しました");
     }
   };
 
@@ -204,13 +204,15 @@ export default function AnnouncementManagement() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              {editingAnnouncement ? 'お知らせ編集' : '新規お知らせ作成'}
+              {editingAnnouncement ? "お知らせ編集" : "新規お知らせ作成"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">タイトル <span className="text-destructive">*</span></Label>
+                <Label htmlFor="title">
+                  タイトル <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="title"
                   value={formData.title}
@@ -221,7 +223,9 @@ export default function AnnouncementManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">本文 <span className="text-destructive">*</span></Label>
+                <Label htmlFor="content">
+                  本文 <span className="text-destructive">*</span>
+                </Label>
                 <Textarea
                   id="content"
                   value={formData.content}
@@ -234,10 +238,12 @@ export default function AnnouncementManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="status">公開状態 <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="status">
+                    公開状態 <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value: 'draft' | 'published') =>
+                    onValueChange={(value: "draft" | "published") =>
                       setFormData({ ...formData, status: value })
                     }
                   >
@@ -269,16 +275,11 @@ export default function AnnouncementManagement() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={resetForm}
-                  disabled={saving}
-                >
+                <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>
                   キャンセル
                 </Button>
                 <Button type="submit" disabled={saving}>
-                  {saving ? '保存中...' : '保存'}
+                  {saving ? "保存中..." : "保存"}
                 </Button>
               </div>
             </form>
@@ -307,8 +308,10 @@ export default function AnnouncementManagement() {
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold">{announcement.title}</h3>
-                        <Badge variant={announcement.status === 'published' ? 'default' : 'secondary'}>
-                          {announcement.status === 'published' ? (
+                        <Badge
+                          variant={announcement.status === "published" ? "default" : "secondary"}
+                        >
+                          {announcement.status === "published" ? (
                             <>
                               <Eye className="h-3 w-3 mr-1" />
                               公開中
@@ -327,8 +330,12 @@ export default function AnnouncementManagement() {
                       </p>
                       <div className="text-xs text-gray-500 flex gap-4">
                         <span>作成者: {announcement.created_by}</span>
-                        <span>作成: {new Date(announcement.created_at).toLocaleString('ja-JP')}</span>
-                        <span>更新: {new Date(announcement.updated_at).toLocaleString('ja-JP')}</span>
+                        <span>
+                          作成: {new Date(announcement.created_at).toLocaleString("ja-JP")}
+                        </span>
+                        <span>
+                          更新: {new Date(announcement.updated_at).toLocaleString("ja-JP")}
+                        </span>
                       </div>
                     </div>
                     <div className="flex gap-2">

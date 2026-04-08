@@ -1,16 +1,16 @@
 // components/features/admin/AdminLogoUpload.tsx
 // 管理者ロゴアップロード・管理コンポーネント
 
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, X, Image as ImageIcon, Building2, CheckCircle, AlertTriangle } from 'lucide-react';
-import Image from 'next/image';
+import { AlertTriangle, Building2, CheckCircle, Image as ImageIcon, Upload, X } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface LogoData {
   has_logo: boolean;
@@ -31,29 +31,29 @@ export default function AdminLogoUpload() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [organizationName, setOrganizationName] = useState('');
+  const [organizationName, setOrganizationName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  
+  const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 現在のロゴ情報を取得
   const fetchLogoData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/profile/logo');
+      const response = await fetch("/api/admin/profile/logo");
       const result: ApiResponse = await response.json();
 
       if (result.success && result.data) {
         setLogoData(result.data);
-        setOrganizationName(result.data.organization_name || '');
+        setOrganizationName(result.data.organization_name || "");
       } else {
-        console.error('ロゴ情報取得失敗:', result.error);
+        console.error("ロゴ情報取得失敗:", result.error);
       }
     } catch (error) {
-      console.error('ロゴ情報取得エラー:', error);
-      setAlert({ type: 'error', message: 'ロゴ情報の取得に失敗しました' });
+      console.error("ロゴ情報取得エラー:", error);
+      setAlert({ type: "error", message: "ロゴ情報の取得に失敗しました" });
     } finally {
       setIsLoading(false);
     }
@@ -65,16 +65,16 @@ export default function AdminLogoUpload() {
     if (!file) return;
 
     // ファイル形式チェック
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      setAlert({ type: 'error', message: 'JPEG、PNG、WebPファイルのみアップロード可能です' });
+      setAlert({ type: "error", message: "JPEG、PNG、WebPファイルのみアップロード可能です" });
       return;
     }
 
     // ファイルサイズチェック（1MB）
     const maxSize = 1 * 1024 * 1024;
     if (file.size > maxSize) {
-      setAlert({ type: 'error', message: 'ファイルサイズは1MB以下にしてください' });
+      setAlert({ type: "error", message: "ファイルサイズは1MB以下にしてください" });
       return;
     }
 
@@ -98,32 +98,32 @@ export default function AdminLogoUpload() {
       setIsUploading(true);
 
       const formData = new FormData();
-      formData.append('logo', selectedFile);
-      formData.append('organization_name', organizationName);
+      formData.append("logo", selectedFile);
+      formData.append("organization_name", organizationName);
 
-      const response = await fetch('/api/admin/profile/logo', {
-        method: 'POST',
+      const response = await fetch("/api/admin/profile/logo", {
+        method: "POST",
         body: formData,
       });
 
       const result: ApiResponse = await response.json();
 
       if (result.success) {
-        setAlert({ type: 'success', message: 'ロゴが正常にアップロードされました' });
+        setAlert({ type: "success", message: "ロゴが正常にアップロードされました" });
         await fetchLogoData(); // 最新情報を再取得
-        
+
         // 状態をリセット
         setSelectedFile(null);
         setPreviewUrl(null);
         if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          fileInputRef.current.value = "";
         }
       } else {
-        setAlert({ type: 'error', message: result.error || 'アップロードに失敗しました' });
+        setAlert({ type: "error", message: result.error || "アップロードに失敗しました" });
       }
     } catch (error) {
-      console.error('アップロードエラー:', error);
-      setAlert({ type: 'error', message: 'アップロードに失敗しました' });
+      console.error("アップロードエラー:", error);
+      setAlert({ type: "error", message: "アップロードに失敗しました" });
     } finally {
       setIsUploading(false);
     }
@@ -133,28 +133,28 @@ export default function AdminLogoUpload() {
   const handleDelete = async () => {
     if (!logoData?.has_logo) return;
 
-    if (!confirm('現在のロゴを削除してもよろしいですか？')) {
+    if (!confirm("現在のロゴを削除してもよろしいですか？")) {
       return;
     }
 
     try {
       setIsDeleting(true);
 
-      const response = await fetch('/api/admin/profile/logo', {
-        method: 'DELETE',
+      const response = await fetch("/api/admin/profile/logo", {
+        method: "DELETE",
       });
 
       const result: ApiResponse = await response.json();
 
       if (result.success) {
-        setAlert({ type: 'success', message: 'ロゴが正常に削除されました' });
+        setAlert({ type: "success", message: "ロゴが正常に削除されました" });
         await fetchLogoData(); // 最新情報を再取得
       } else {
-        setAlert({ type: 'error', message: result.error || '削除に失敗しました' });
+        setAlert({ type: "error", message: result.error || "削除に失敗しました" });
       }
     } catch (error) {
-      console.error('削除エラー:', error);
-      setAlert({ type: 'error', message: '削除に失敗しました' });
+      console.error("削除エラー:", error);
+      setAlert({ type: "error", message: "削除に失敗しました" });
     } finally {
       setIsDeleting(false);
     }
@@ -164,9 +164,9 @@ export default function AdminLogoUpload() {
   const handleCancel = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
-    setOrganizationName(logoData?.organization_name || '');
+    setOrganizationName(logoData?.organization_name || "");
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
     setAlert(null);
   };
@@ -217,13 +217,19 @@ export default function AdminLogoUpload() {
       <CardContent className="space-y-6">
         {/* アラート表示 */}
         {alert && (
-          <Alert className={alert.type === 'success' ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
-            {alert.type === 'success' ? (
+          <Alert
+            className={
+              alert.type === "success" ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"
+            }
+          >
+            {alert.type === "success" ? (
               <CheckCircle className="h-4 w-4 text-green-600" />
             ) : (
               <AlertTriangle className="h-4 w-4 text-red-600" />
             )}
-            <AlertDescription className={alert.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+            <AlertDescription
+              className={alert.type === "success" ? "text-green-800" : "text-red-800"}
+            >
               {alert.message}
             </AlertDescription>
           </Alert>
@@ -342,7 +348,7 @@ export default function AdminLogoUpload() {
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                {logoData?.has_logo ? 'ロゴを更新' : 'ロゴをアップロード'}
+                {logoData?.has_logo ? "ロゴを更新" : "ロゴをアップロード"}
               </Button>
               <Button variant="outline" onClick={handleCancel} className="border-2">
                 キャンセル

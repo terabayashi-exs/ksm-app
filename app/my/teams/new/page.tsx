@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Users, AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 interface Prefecture {
   prefecture_id: number;
@@ -26,9 +26,9 @@ interface Prefecture {
 
 export default function NewTeamPage() {
   const router = useRouter();
-  const [teamName, setTeamName] = useState('');
-  const [teamOmission, setTeamOmission] = useState('');
-  const [prefectureId, setPrefectureId] = useState<string>('');
+  const [teamName, setTeamName] = useState("");
+  const [teamOmission, setTeamOmission] = useState("");
+  const [prefectureId, setPrefectureId] = useState<string>("");
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +36,13 @@ export default function NewTeamPage() {
   useEffect(() => {
     const fetchPrefectures = async () => {
       try {
-        const res = await fetch('/api/prefectures');
+        const res = await fetch("/api/prefectures");
         const data = await res.json();
         if (data.success) {
           setPrefectures(data.prefectures);
         }
       } catch (err) {
-        console.error('Failed to fetch prefectures:', err);
+        console.error("Failed to fetch prefectures:", err);
       }
     };
     fetchPrefectures();
@@ -51,15 +51,15 @@ export default function NewTeamPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teamName.trim()) {
-      setError('チーム名を入力してください');
+      setError("チーム名を入力してください");
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/my/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/my/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           team_name: teamName.trim(),
           team_omission: teamOmission.trim() || undefined,
@@ -70,10 +70,10 @@ export default function NewTeamPage() {
       if (result.success) {
         router.push(`/my?tab=team`);
       } else {
-        setError(result.error || 'チームの登録に失敗しました');
+        setError(result.error || "チームの登録に失敗しました");
       }
     } catch {
-      setError('チームの登録に失敗しました');
+      setError("チームの登録に失敗しました");
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +113,7 @@ export default function NewTeamPage() {
                 <Input
                   id="team_name"
                   value={teamName}
-                  onChange={e => setTeamName(e.target.value)}
+                  onChange={(e) => setTeamName(e.target.value)}
                   placeholder="例: 富山FCジュニア"
                   maxLength={100}
                   disabled={submitting}
@@ -128,7 +128,7 @@ export default function NewTeamPage() {
                 <Input
                   id="team_omission"
                   value={teamOmission}
-                  onChange={e => setTeamOmission(e.target.value)}
+                  onChange={(e) => setTeamOmission(e.target.value)}
                   placeholder="例: 富山FC"
                   maxLength={50}
                   disabled={submitting}
@@ -146,8 +146,8 @@ export default function NewTeamPage() {
                 <Select
                   value={prefectureId}
                   onValueChange={(value) => {
-                    if (value === 'none') {
-                      setPrefectureId('');
+                    if (value === "none") {
+                      setPrefectureId("");
                     } else {
                       setPrefectureId(value);
                     }
@@ -162,7 +162,11 @@ export default function NewTeamPage() {
                       選択なし
                     </SelectItem>
                     {prefectures.map((pref) => (
-                      <SelectItem key={pref.prefecture_id} value={String(pref.prefecture_id)} className="bg-white hover:bg-gray-100">
+                      <SelectItem
+                        key={pref.prefecture_id}
+                        value={String(pref.prefecture_id)}
+                        className="bg-white hover:bg-gray-100"
+                      >
                         {pref.prefecture_name}
                       </SelectItem>
                     ))}
@@ -186,7 +190,7 @@ export default function NewTeamPage() {
                   disabled={submitting || !teamName.trim()}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
-                  {submitting ? '登録中...' : 'チームを登録する'}
+                  {submitting ? "登録中..." : "チームを登録する"}
                 </Button>
                 <Button asChild variant="outline" disabled={submitting}>
                   <Link href="/my?tab=team">キャンセル</Link>

@@ -423,9 +423,10 @@ input[name="tab"] { display: none; }
  * フェーズIDに応じたタブ表示ルールを生成する
  */
 export function generatePhaseTabCss(phaseIds: string[]): string {
-  return phaseIds.map(id => {
-    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '');
-    return `
+  return phaseIds
+    .map((id) => {
+      const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "");
+      return `
 #tab-phase-${safeId}:checked ~ .tab-nav label[for="tab-phase-${safeId}"] {
   color: #2563eb;
   border-bottom-color: #2563eb;
@@ -434,5 +435,6 @@ export function generatePhaseTabCss(phaseIds: string[]): string {
 #tab-phase-${safeId}:checked ~ .tab-panels .panel-phase-${safeId} {
   display: block;
 }`;
-  }).join('\n');
+    })
+    .join("\n");
 }

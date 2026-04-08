@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -29,14 +29,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (!visibility || !["public", "restricted"].includes(visibility)) {
       return NextResponse.json(
         { error: "visibilityは 'public' または 'restricted' を指定してください" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // フォーマット存在確認
     const formatResult = await db.execute(
       `SELECT format_id, format_name FROM m_tournament_formats WHERE format_id = ?`,
-      [formatId]
+      [formatId],
     );
 
     if (formatResult.rows.length === 0) {
@@ -45,12 +45,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     await db.execute(
       `UPDATE m_tournament_formats SET visibility = ?, updated_at = datetime('now', '+9 hours') WHERE format_id = ?`,
-      [visibility, formatId]
+      [visibility, formatId],
     );
 
     return NextResponse.json({
       success: true,
-      message: `フォーマットの公開設定を「${visibility === 'public' ? '公開' : '制限'}」に変更しました`,
+      message: `フォーマットの公開設定を「${visibility === "public" ? "公開" : "制限"}」に変更しました`,
       format_id: formatId,
       visibility,
     });

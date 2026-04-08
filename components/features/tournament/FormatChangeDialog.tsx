@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react';
-import { FormatChangeCheckResponse } from '@/lib/format-change';
+import { AlertTriangle, CheckCircle, Info, XCircle } from "lucide-react";
+import { FormatChangeCheckResponse } from "@/lib/format-change";
 
 interface FormatChangeDialogProps {
-  checkResult: FormatChangeCheckResponse['data'];
+  checkResult: FormatChangeCheckResponse["data"];
   newFormatName: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -16,7 +16,7 @@ export function FormatChangeDialog({
   newFormatName,
   onConfirm,
   onCancel,
-  isProcessing = false
+  isProcessing = false,
 }: FormatChangeDialogProps) {
   if (!checkResult) return null;
 
@@ -26,7 +26,7 @@ export function FormatChangeDialog({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* ヘッダー */}
-        <div className={`p-6 border-b ${canChange ? 'bg-orange-50' : 'bg-red-50'}`}>
+        <div className={`p-6 border-b ${canChange ? "bg-orange-50" : "bg-red-50"}`}>
           <div className="flex items-start gap-3">
             {canChange ? (
               <AlertTriangle className="h-6 w-6 text-orange-500 flex-shrink-0 mt-1" />
@@ -35,11 +35,9 @@ export function FormatChangeDialog({
             )}
             <div>
               <h3 className="font-bold text-xl text-gray-900">
-                {canChange ? 'フォーマット変更の確認' : 'フォーマット変更不可'}
+                {canChange ? "フォーマット変更の確認" : "フォーマット変更不可"}
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {checkResult.tournament_name}
-              </p>
+              <p className="text-sm text-gray-600 mt-1">{checkResult.tournament_name}</p>
             </div>
           </div>
         </div>
@@ -100,9 +98,7 @@ export function FormatChangeDialog({
                 <div className="flex items-center gap-3 ml-2">
                   <div className="flex-1">
                     <p className="text-xs text-purple-600">現在のフォーマット</p>
-                    <p className="font-bold text-purple-900">
-                      {checkResult.current_format_name}
-                    </p>
+                    <p className="font-bold text-purple-900">{checkResult.current_format_name}</p>
                   </div>
                   <div className="text-purple-400 text-2xl">→</div>
                   <div className="flex-1">
@@ -141,9 +137,7 @@ export function FormatChangeDialog({
                   </li>
                 </ul>
                 <div className="mt-3 p-3 bg-red-100 rounded border border-red-300">
-                  <p className="text-sm font-bold text-red-900">
-                    ⚠️ この操作は元に戻せません
-                  </p>
+                  <p className="text-sm font-bold text-red-900">⚠️ この操作は元に戻せません</p>
                 </div>
               </div>
 
@@ -202,7 +196,7 @@ export function FormatChangeDialog({
             disabled={isProcessing}
             className="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {canChange ? 'キャンセル' : '閉じる'}
+            {canChange ? "キャンセル" : "閉じる"}
           </button>
           {canChange && (
             <button

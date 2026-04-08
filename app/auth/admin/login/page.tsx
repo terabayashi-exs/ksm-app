@@ -1,15 +1,15 @@
 // app/auth/admin/login/page.tsx
 "use client";
 
-import { useState, Suspense } from "react";
-import { signIn, getSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Shield } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getSession, signIn } from "next-auth/react";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield } from "lucide-react";
 
 function AdminLoginForm() {
   const [loading, setLoading] = useState(false);
@@ -73,12 +73,8 @@ function AdminLoginForm() {
               <Shield className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            管理者・運営者ログイン
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            管理者・運営者専用ログインページ
-          </p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">管理者・運営者ログイン</h2>
+          <p className="mt-2 text-sm text-gray-500">管理者・運営者専用ログインページ</p>
         </div>
 
         <Card>
@@ -123,15 +119,11 @@ function AdminLoginForm() {
                 {loading ? "ログイン中..." : "ログイン"}
               </Button>
             </form>
-
           </CardContent>
         </Card>
 
         <div className="text-center">
-          <Link
-            href="/"
-            className="text-sm font-medium text-primary hover:text-primary/80"
-          >
+          <Link href="/" className="text-sm font-medium text-primary hover:text-primary/80">
             ← トップページに戻る
           </Link>
         </div>
