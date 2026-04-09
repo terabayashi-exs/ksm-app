@@ -2,7 +2,7 @@
 
 このドキュメントでは、KSM-Appプロジェクトのデータベース設計について詳述します。
 
-> **最終更新**: 2026年2月5日
+> **最終更新**: 2026年4月9日
 > **重要な変更**: `team_id` → `tournament_team_id` 移行完了（複数エントリーチーム対応）
 
 ## 📊 データベース設計概要
@@ -11,41 +11,50 @@
 
 ### 主要テーブル構成
 
-#### マスタテーブル (9テーブル)
+#### マスタテーブル (13テーブル)
+- `m_prefectures` - 都道府県マスター
 - `m_venues` - 会場マスター
 - `m_teams` - チームマスター
 - `m_players` - 選手マスター
 - `m_administrators` - 管理者マスター
+- `m_login_users` - 統合ログインユーザーマスター
+- `m_login_user_roles` - ログインユーザーロール（admin/operator/team）
+- `m_login_user_authority` - 大会別権限設定
+- `m_team_members` - チームメンバー管理
 - `m_tournament_formats` - 大会フォーマットマスター
 - `m_match_templates` - 試合テンプレートマスター
 - `m_subscription_plans` - サブスクリプションプランマスター
 - `m_sport_types` - 競技種別マスター（PK戦、ハンドボール等）
-- `m_tournament_groups` - 大会グループマスター（大会分類用）
 
-#### トランザクションテーブル (23テーブル)
+#### トランザクションテーブル (28テーブル)
 - `t_tournaments` - 大会情報
-- `t_tournament_teams` - 大会参加チーム（UNIQUE制約削除: 2026-01-08）
+- `t_tournament_groups` - 大会グループ（大会分類用）
+- `t_tournament_teams` - 大会参加チーム
 - `t_tournament_players` - 大会参加選手
 - `t_match_blocks` - 試合ブロック（予選グループ、決勝トーナメントなど）
 - `t_matches_live` - 進行中試合情報
 - `t_matches_final` - 確定済み試合結果
 - `t_match_status` - 試合状態管理
-- `t_tournament_rules` - 大会ルール設定
-- `t_tournament_courts` - 大会コート情報
+- `t_tournament_rules` - 大会ルール設定（フェーズ別）
 - `t_tournament_files` - 大会関連ファイル（Blob Storage連携）
-- `t_tournament_groups` - 大会グループ
 - `t_tournament_match_overrides` - 試合進出条件オーバーライド
 - `t_tournament_notifications` - 大会通知情報
+- `t_tournament_notices` - 大会別お知らせ
+- `t_sponsor_banners` - スポンサーバナー管理
 - `t_email_send_history` - メール送信履歴
 - `t_email_verification_tokens` - メール認証トークン
 - `t_password_reset_tokens` - パスワードリセットトークン
+- `t_team_invitations` - チームメンバー招待
+- `t_operator_invitations` - オペレーター招待
+- `t_operator_tournament_access` - オペレーター大会アクセス権限
+- `t_format_access_grants` - フォーマットアクセス付与
+- `t_disciplinary_settings` - 懲罰設定（グループ別）
+- `t_disciplinary_actions` - 懲罰記録（カード管理）
 - `t_administrator_subscriptions` - 管理者サブスクリプション
 - `t_subscription_usage` - サブスクリプション使用状況
 - `t_payment_history` - 決済履歴
 - `t_archived_tournament_json` - アーカイブ済み大会データ（JSON形式）
-- `t_announcements` - お知らせ情報（新規追加: 2026-01-08）
-- `t_sponsor_banners` - スポンサーバナー管理（新規追加: 2026-01-13）
-- `sqlite_sequence` - SQLite内部シーケンステーブル
+- `t_announcements` - お知らせ情報
 
 詳細な設計については[../database/KSM.md](../database/KSM.md)を参照してください。
 
@@ -80,9 +89,9 @@
 
 #### **実装の注意点**
 
-- SQL WHERE句: `team1_id IS NOT NULL` → `team1_tournament_team_id IS NOT NULL`
+- SQL WHERE句: `team1_tournament_team_id IS NOT NULL` で参加チームの存在確認
 - JOIN: `t_tournament_teams` を使用してチーム名を解決
-- 勝者判定: `winner_tournament_team_id` を優先、`winner_team_id` はフォールバック
+- 勝者判定: `winner_tournament_team_id` を使用（旧 `team1_id` / `team2_id` / `winner_team_id` カラムは削除済み）
 
 ### スコアシステムの拡張（複数ピリオド対応）
 
@@ -346,24 +355,20 @@ INSERT INTO table_name (created_at) VALUES (datetime('now'));
 
 ### テーブル: `t_password_reset_tokens`
 
-チーム代表者のパスワードリセット機能で使用するワンタイムトークンを管理します。
+ログインユーザーのパスワードリセット機能で使用するワンタイムトークンを管理します。
 
 #### テーブル定義
 
 ```sql
 CREATE TABLE t_password_reset_tokens (
     token_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    team_id TEXT NOT NULL,
+    login_user_id INTEGER NOT NULL,
     reset_token TEXT NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    used_at DATETIME,
-    created_at DATETIME DEFAULT (datetime('now', '+9 hours')),
-    FOREIGN KEY (team_id) REFERENCES m_teams(team_id) ON DELETE CASCADE
+    expires_at NUMERIC NOT NULL,
+    used_at NUMERIC,
+    created_at NUMERIC DEFAULT (datetime('now', '+9 hours')),
+    FOREIGN KEY (login_user_id) REFERENCES m_login_users(login_user_id) ON DELETE CASCADE
 );
-
-CREATE INDEX idx_reset_token ON t_password_reset_tokens(reset_token);
-CREATE INDEX idx_team_reset_tokens ON t_password_reset_tokens(team_id);
-CREATE INDEX idx_expires_at ON t_password_reset_tokens(expires_at);
 ```
 
 #### カラム説明
@@ -371,11 +376,11 @@ CREATE INDEX idx_expires_at ON t_password_reset_tokens(expires_at);
 | カラム名 | 型 | 制約 | 説明 |
 |---------|-----|------|------|
 | token_id | INTEGER | PRIMARY KEY | トークンID（自動採番） |
-| team_id | TEXT | NOT NULL, FK | チームID（`m_teams.team_id`参照） |
+| login_user_id | INTEGER | NOT NULL, FK | ログインユーザーID（`m_login_users.login_user_id`参照） |
 | reset_token | TEXT | NOT NULL, UNIQUE | リセットトークン（64文字のランダムハッシュ） |
-| expires_at | DATETIME | NOT NULL | トークン有効期限（JST、発行から1時間） |
-| used_at | DATETIME | NULL | トークン使用日時（JST、未使用の場合はNULL） |
-| created_at | DATETIME | DEFAULT | トークン作成日時（JST、自動設定） |
+| expires_at | NUMERIC | NOT NULL | トークン有効期限（JST、発行から1時間） |
+| used_at | NUMERIC | NULL | トークン使用日時（JST、未使用の場合はNULL） |
+| created_at | NUMERIC | DEFAULT | トークン作成日時（JST、自動設定） |
 
 #### 機能仕様
 
@@ -391,11 +396,11 @@ CREATE INDEX idx_expires_at ON t_password_reset_tokens(expires_at);
 **セキュリティ:**
 - ワンタイムトークン（1回使用後は`used_at`に使用時刻を記録）
 - 有効期限切れトークンは自動的に無効化
-- チーム削除時にトークンも連動削除（`ON DELETE CASCADE`）
+- ユーザー削除時にトークンも連動削除（`ON DELETE CASCADE`）
 
 **クリーンアップ:**
-- 同一チームの未使用トークンは新規発行時に自動削除
-- 期限切れトークンは定期的にクリーンアップ可能（`idx_expires_at`で高速検索）
+- 同一ユーザーの未使用トークンは新規発行時に自動削除
+- 期限切れトークンは定期的にクリーンアップ可能
 
 #### 実装ファイル
 

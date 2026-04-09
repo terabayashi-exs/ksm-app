@@ -52,8 +52,13 @@
 - [archive-system.md](./features/archive-system.md) — 大会アーカイブシステム
 
 ### [開発ガイド (guides/)](./guides/)
-- **[onboarding.md](./guides/onboarding.md)** — 新規開発者向けセットアップ
+- **[system-overview.md](./guides/system-overview.md)** — システム全体像（業務フロー、ユーザーロール、画面構成）
+- **[glossary.md](./guides/glossary.md)** — 用語集（業務用語・技術用語・DB名と画面表示の対応）
+- **[onboarding.md](./guides/onboarding.md)** — 新規開発者向けセットアップ（Git初期設定から）
 - **[development.md](./guides/development.md)** — 環境設定、開発コマンド
+- **[development-recipes.md](./guides/development-recipes.md)** — よくある開発タスクの手順書
+- **[testing.md](./guides/testing.md)** — テスト方針（Vitest / Playwright / Storybook）
+- **[troubleshooting.md](./guides/troubleshooting.md)** — トラブルシューティング / FAQ
 - **[database-migration.md](./guides/database-migration.md)** — マイグレーション手順
 - **[drizzle-orm-guide.md](./guides/drizzle-orm-guide.md)** — Drizzle ORM入門
 - **[drizzle-seeder-guide.md](./guides/drizzle-seeder-guide.md)** — マスターデータ投入
@@ -65,10 +70,20 @@
 ### [データベース (database/)](./database/)
 - **[KSM.md](./database/KSM.md)** — ER図（Mermaid形式）
 
+## 新メンバーの学習パス（推奨する読み順）
+
+| Day | ドキュメント | 目的 |
+|-----|------------|------|
+| **Day 1** | [1. システム全体像](./guides/system-overview.md) → [2. 用語集](./guides/glossary.md) | 全体像と用語を掴む |
+| **Day 1〜2** | [3. オンボーディング](./guides/onboarding.md) | 環境構築（Git設定〜開発サーバー起動） |
+| **Day 2〜3** | [4. アーキテクチャ](./specs/architecture.md) → [5. ER図](./database/KSM.md) | 技術面を理解 |
+| **Day 3〜** | [6. 開発レシピ集](./guides/development-recipes.md) → [7. トラブルシューティング](./guides/troubleshooting.md) | コードを書き始める |
+
 ## クイックナビゲーション
 
-- **はじめて読む方**: [../CLAUDE.md](../CLAUDE.md) → [onboarding.md](./guides/onboarding.md)
+- **はじめて読む方**: 上の学習パスに従ってください
 - **機能を知りたい**: [implemented-features.md](./features/implemented-features.md)
-- **開発を始める**: [onboarding.md](./guides/onboarding.md)
-- **データベース設計**: [database.md](./specs/database.md)
+- **開発を始める**: [onboarding.md](./guides/onboarding.md) → [開発レシピ集](./guides/development-recipes.md)
+- **データベース設計**: [database.md](./specs/database.md) → [ER図](./database/KSM.md)
+- **困ったとき**: [トラブルシューティング](./guides/troubleshooting.md)
 - **実装状況**: [implementation-status.md](./specs/implementation-status.md)

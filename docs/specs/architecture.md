@@ -2,7 +2,7 @@
 
 このドキュメントでは、KSM-Appプロジェクトの技術スタック、アーキテクチャ、コーディング規約について詳述します。
 
-## 🔧 使用技術（2025年12月12日時点）
+## 🔧 使用技術（2026年4月時点）
 
 ### **フロントエンド**
 - **Next.js**: 15.5.7（App Router）
@@ -89,28 +89,55 @@
 - データベース: snake_case
 
 ### TypeScript 型定義例
+
+型定義の全体は `lib/types.ts` を参照してください。以下は主要な型の抜粋です。
+
 ```typescript
 // lib/types.ts
+/**
+ * 用語マッピング:
+ * - 大会 (Tournament Event) = t_tournament_groups テーブル → TournamentGroup
+ * - 部門/コース (Division/Category) = t_tournaments テーブル → Tournament
+ */
+
 export interface Tournament {
   tournament_id: number;
   tournament_name: string;
   format_id: number;
-  venue_id: number;
+  venue_id: string | null;         // JSON配列 例: "[1, 3]"
   team_count: number;
-  status: 'planning' | 'ongoing' | 'completed';
-  is_public: boolean;
+  court_count: number;
+  tournament_dates?: string;       // JSON形式: {"1": "2024-02-01", "2": "2024-02-03"}
+  match_duration_minutes: number;
+  break_duration_minutes: number;
+  display_match_duration?: string;
+  status: TournamentStatus;
+  visibility: number;
+  sport_type_id?: number;
+  created_by?: string;
   created_at: string;
   updated_at: string;
+  // ... 他多数（joined fields, グループ関連 等）
 }
 
 export interface Team {
   team_id: string;
   team_name: string;
   team_omission?: string;
-  contact_person: string;
-  contact_email: string;
   contact_phone?: string;
   is_active: boolean;
+}
+
+export interface TournamentTeam {
+  tournament_team_id: number;      // 大会内固有のチームID
+  tournament_id: number;
+  team_id: string;                 // マスターチームID
+  team_name: string;               // 大会エントリー時のチーム名
+  team_omission: string;
+  assigned_block?: string;
+  block_position?: number;
+  withdrawal_status: WithdrawalStatus;
+  // ... 辞退関連フィールド等
 }
 
 export interface Match {
@@ -119,291 +146,159 @@ export interface Match {
   tournament_date: string;
   match_number: number;
   match_code: string;
-  team1_id?: string;
-  team2_id?: string;
+  // tournament_team_id ベース（team1_id/team2_id は後方互換用）
+  team1_tournament_team_id?: number;
+  team2_tournament_team_id?: number;
+  winner_tournament_team_id?: number;
   team1_display_name: string;
   team2_display_name: string;
   court_number?: number;
   start_time?: string;
-  team1_goals: number;
+  team1_goals: number;             // 合計得点（scores は JSON配列で管理）
   team2_goals: number;
-  winner_team_id?: string;
   is_draw: boolean;
   is_walkover: boolean;
   match_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   result_status: 'none' | 'pending' | 'confirmed';
-  remarks?: string;
+  // テンプレート独立化フィールド
+  phase?: string;
+  match_type?: string;
+  round_name?: string;
+  block_name?: string;
+  // ... 他多数
 }
 ```
 
-### ファイル・フォルダ構成（2025年12月12日時点）
+### ファイル・フォルダ構成（2026年4月時点）
+
+> 主要なディレクトリのみ記載。各ディレクトリ内の詳細はソースコードを参照してください。
+
 ```
 ksm-app/
-├── README.md
-├── CLAUDE.md                     # プロジェクト仕様書（メインドキュメント）
-├── next.config.ts
+├── CLAUDE.md                     # プロジェクト仕様書（Claude Code用）
+├── MIGRATION_HISTORY.md          # マイグレーション履歴
 ├── package.json
-├── package-lock.json
 ├── tsconfig.json
-├── eslint.config.mjs
+├── next.config.ts
+├── drizzle.config.ts             # Drizzle ORM設定
+├── biome.json                    # Biomeフォーマッター設定
+├── eslint.config.mjs             # ESLint設定
+├── vitest.config.ts              # Vitestテスト設定
+├── tailwind.config.ts
 ├── postcss.config.mjs
+├── vercel.json                   # Vercelデプロイ設定
 ├── middleware.ts                 # 認証ミドルウェア
-├── .gitignore
+├── .mise.toml                    # Node.jsバージョン管理（v22.17.1）
+├── Brewfile                      # macOS開発ツール定義
 │
-├── docs/                         # ドキュメント（分割構成）
-│   ├── specs/                    # 技術仕様
-│   │   ├── architecture.md       # アーキテクチャ設計
-│   │   ├── database.md           # データベース設計
-│   │   └── implementation-status.md  # 実装状況
-│   ├── features/                 # 機能仕様
-│   │   ├── implemented-features.md   # 実装済み機能一覧（索引）
-│   │   ├── subscription-system.md    # サブスクリプション課金
-│   │   ├── standings-system.md       # 順位表システム
-│   │   ├── manual-rankings.md        # 手動順位設定
-│   │   ├── match-management.md       # 試合管理
-│   │   ├── withdrawal-system.md      # 辞退管理
-│   │   └── archive-system.md         # アーカイブシステム
-│   ├── guides/                   # 開発ガイド
-│   │   └── development.md        # 開発環境セットアップ
-│   └── database/                 # データベース設計
-│       ├── KSM.md                # ER図（Mermaid記法）
-│       └── schema.sql            # DDL定義
-│
-├── data/                         # マスターデータ
-│   ├── venues.json               # 会場マスター
-│   ├── tournament_formats.json   # 大会フォーマット
-│   └── match_templates.json      # 試合テンプレート
-│
-├── scripts/                      # データベース・マイグレーションスクリプト（50+ファイル）
-│   ├── init-db.ts                # データベース初期化
-│   ├── seed-master-data.js       # マスターデータ投入
-│   ├── migrate-*.js              # 各種マイグレーション
-│   └── create-admin.js           # 管理者作成
+├── src/                          # データベーススキーマ
+│   └── db/
+│       ├── schema.ts             # Drizzle ORMスキーマ定義（41テーブル）
+│       ├── relations.ts          # テーブル間リレーション定義
+│       └── index.ts              # DB接続・エクスポート
 │
 ├── app/                          # App Router (Next.js 15)
 │   ├── layout.tsx                # ルートレイアウト
 │   ├── page.tsx                  # トップページ
-│   │
-│   ├── auth/                     # 認証関連ルート
-│   │   ├── login/page.tsx        # ログインページ
-│   │   └── register/page.tsx     # チーム登録ページ
-│   │
-│   ├── admin/                    # 管理者画面（20+ページ）
-│   │   ├── page.tsx              # 管理者ダッシュボード
-│   │   ├── profile/page.tsx      # プロフィール管理（ロゴアップロード等）
-│   │   ├── administrators/page.tsx   # 管理者一覧
-│   │   ├── venues/page.tsx       # 会場管理
-│   │   ├── teams/page.tsx        # チーム管理
-│   │   ├── sport-types/          # 競技種別管理
-│   │   │   ├── page.tsx
-│   │   │   └── create/page.tsx
-│   │   ├── tournament-formats/   # 大会フォーマット管理
-│   │   │   ├── page.tsx
-│   │   │   ├── create/page.tsx
-│   │   │   └── [id]/edit/page.tsx
-│   │   ├── tournament-groups/    # 大会グループ管理
-│   │   │   ├── page.tsx
-│   │   │   ├── create/page.tsx
-│   │   │   ├── [id]/page.tsx
-│   │   │   └── [id]/edit/page.tsx
-│   │   ├── tournaments/          # 大会管理
-│   │   │   ├── page.tsx          # 大会一覧
-│   │   │   ├── create-new/page.tsx   # 新規大会作成
-│   │   │   ├── duplicate/page.tsx    # 大会複製
-│   │   │   └── [id]/             # 個別大会管理
-│   │   │       ├── page.tsx      # 大会詳細
-│   │   │       ├── edit/page.tsx # 大会編集
-│   │   │       ├── teams/page.tsx    # チーム管理
-│   │   │       ├── draw/page.tsx     # 組合せ抽選
-│   │   │       ├── rules/page.tsx    # ルール設定
-│   │   │       ├── courts/page.tsx   # コート管理
-│   │   │       ├── matches/page.tsx  # 試合管理
-│   │   │       ├── results/page.tsx  # 結果確認
-│   │   │       ├── manual-rankings/page.tsx  # 手動順位設定
-│   │   │       ├── match-overrides/page.tsx  # 試合進出条件調整
-│   │   │       ├── files/page.tsx    # ファイル管理（Blob Storage）
-│   │   │       └── qr-list/page.tsx  # QRコード一覧
-│   │   ├── matches/[id]/qr/page.tsx  # 試合QRコード
-│   │   ├── withdrawal-requests/page.tsx      # 辞退申請一覧
-│   │   ├── withdrawal-statistics/page.tsx    # 辞退統計
-│   │   └── blob-migration/page.tsx   # Blobマイグレーション管理
-│   │
-│   ├── team/                     # チーム向け画面
-│   │   └── page.tsx              # チームダッシュボード
-│   │
-│   ├── tournaments/              # 大会関連ページ
-│   │   ├── page.tsx              # 大会一覧（ログイン後）
-│   │   └── [id]/
-│   │       ├── join/page.tsx     # 大会参加登録
-│   │       ├── teams/page.tsx    # チーム一覧
-│   │       └── withdrawal/page.tsx   # 辞退申請
-│   │
-│   ├── public/tournaments/       # 一般公開画面
-│   │   ├── groups/[id]/page.tsx  # グループ別大会一覧
-│   │   └── [id]/
-│   │       ├── page.tsx          # 公開大会詳細
-│   │       ├── bracket/page.tsx  # トーナメント表
-│   │       ├── bracket-pdf/page.tsx  # トーナメント表PDF
-│   │       ├── results-pdf/page.tsx  # 結果表PDF
-│   │       └── archived/page.tsx     # アーカイブ表示
-│   │
-│   ├── referee/match/[id]/page.tsx   # 審判用結果入力（QR認証）
-│   │
-│   ├── test/page.tsx             # テストページ
-│   │
-│   └── api/                      # API Routes（180エンドポイント）
-│       ├── auth/[...nextauth]/route.ts   # NextAuth設定
-│       ├── debug/                # デバッグAPI
-│       │   ├── session/route.ts
-│       │   └── db-info/route.ts
-│       ├── administrators/       # 管理者API
-│       │   ├── route.ts
-│       │   └── [id]/route.ts
-│       ├── venues/               # 会場API
-│       │   ├── route.ts
-│       │   └── [id]/route.ts
-│       ├── teams/                # チームAPI
-│       │   ├── register/route.ts
-│       │   ├── profile/route.ts
-│       │   ├── tournaments/route.ts
-│       │   └── players/route.ts
-│       ├── sport-types/route.ts  # 競技種別API
-│       ├── tournament-groups/    # 大会グループAPI
-│       │   ├── route.ts
-│       │   ├── incomplete/route.ts
-│       │   └── [id]/route.ts
-│       ├── tournaments/          # 大会API（50+エンドポイント）
-│       │   ├── route.ts
-│       │   ├── dashboard/route.ts
-│       │   ├── search/route.ts
-│       │   ├── public/route.ts
-│       │   ├── public-grouped/route.ts
-│       │   ├── public-groups/[id]/route.ts
-│       │   ├── create-new/route.ts
-│       │   ├── formats/
-│       │   │   ├── route.ts
-│       │   │   ├── recommend/route.ts
-│       │   │   └── [formatId]/templates/route.ts
-│       │   └── [id]/             # 個別大会API
-│       │       ├── route.ts
-│       │       ├── delete/route.ts
-│       │       ├── teams/route.ts
-│       │       ├── draw/route.ts
-│       │       ├── rules/route.ts
-│       │       ├── courts/route.ts
-│       │       ├── matches/route.ts
-│       │       ├── public-matches/route.ts
-│       │       ├── match-news/route.ts
-│       │       ├── results/route.ts
-│       │       ├── results-enhanced/route.ts
-│       │       ├── standings/route.ts
-│       │       ├── manual-rankings/route.ts
-│       │       ├── bracket/route.ts
-│       │       ├── match-overrides/
-│       │       │   ├── route.ts
-│       │       │   ├── bulk/route.ts
-│       │       │   ├── affected/route.ts
-│       │       │   └── [overrideId]/route.ts
-│       │       ├── files/route.ts
-│       │       ├── public-files/route.ts
-│       │       ├── qr-list/route.ts
-│       │       ├── live-updates/route.ts
-│       │       ├── archive/route.ts
-│       │       ├── archived-view/route.ts
-│       │       ├── withdrawal/route.ts
-│       │       └── recalculate-standings/route.ts
-│       ├── matches/              # 試合API
-│       │   ├── confirm/route.ts
-│       │   └── [id]/
-│       │       ├── status/route.ts
-│       │       ├── confirm/route.ts
-│       │       ├── unconfirm/route.ts
-│       │       ├── cancel/route.ts
-│       │       ├── uncancel/route.ts
-│       │       ├── qr/route.ts
-│       │       ├── scores-extended/route.ts
-│       │       └── extended-info/route.ts
-│       ├── admin/                # 管理者専用API
-│       │   ├── sport-types/route.ts
-│       │   ├── tournament-formats/
-│       │   │   ├── route.ts
-│       │   │   └── [id]/
-│       │   │       ├── route.ts
-│       │   │       └── duplicate/route.ts
-│       │   ├── tournaments/
-│       │   │   ├── route.ts
-│       │   │   ├── active/route.ts
-│       │   │   ├── duplicate/route.ts
-│       │   │   └── [id]/
-│       │   │       ├── teams/route.ts
-│       │   │       ├── teams/delete/route.ts
-│       │   │       ├── files/
-│       │   │       │   ├── route.ts
-│       │   │       │   ├── upload/route.ts
-│       │   │       │   └── [fileId]/route.ts
-│       │   │       ├── delete-data/route.ts
-│       │   │       └── archive-cleanup/route.ts
-│       │   ├── withdrawal-requests/
-│       │   │   ├── route.ts
-│       │   │   ├── bulk-process/route.ts
-│       │   │   └── [id]/
-│       │   │       ├── process/route.ts
-│       │   │       └── impact/route.ts
-│       │   ├── withdrawal-statistics/route.ts
-│       │   ├── notifications/
-│       │   │   ├── route.ts
-│       │   │   ├── counts/route.ts
-│       │   │   └── [id]/resolve/route.ts
-│       │   ├── archived-tournaments/route.ts
-│       │   ├── profile/logo/route.ts
-│       │   ├── blob-statistics/route.ts
-│       │   ├── migrate-to-blob/route.ts
-│       │   ├── migration-status/route.ts
-│       │   └── migration-verify/route.ts
-│       └── test/                 # テストAPI
-│           ├── blob/route.ts
-│           └── blob-performance/route.ts
+│   ├── admin/                    # 管理者画面（18セクション）
+│   │   ├── tournaments/          #   大会管理
+│   │   ├── tournament-groups/    #   大会グループ管理
+│   │   ├── tournament-formats/   #   フォーマット管理
+│   │   ├── teams/                #   チーム管理
+│   │   ├── venues/               #   会場管理
+│   │   ├── operators/            #   オペレーター管理
+│   │   ├── sport-types/          #   競技種別管理
+│   │   ├── matches/              #   試合管理
+│   │   ├── results/              #   結果確認
+│   │   └── ...                   #   その他（辞退管理、サブスクリプション等）
+│   ├── auth/                     # 認証関連（ログイン/登録/パスワードリセット）
+│   ├── my/                       # チーム代表者向け画面
+│   ├── operators/                # オペレーター向け画面
+│   ├── tournaments/              # 大会関連（参加登録、辞退申請等）
+│   ├── qr/                       # QRコード関連
+│   ├── referee/                  # 審判用結果入力（QR認証）
+│   └── api/                      # API Routes（180+エンドポイント）
+│       ├── auth/                 #   認証API（NextAuth）
+│       ├── admin/                #   管理者専用API
+│       ├── tournaments/          #   大会API（50+エンドポイント）
+│       ├── matches/              #   試合API
+│       ├── operators/            #   オペレーターAPI
+│       ├── venues/               #   会場API
+│       ├── sport-types/          #   競技種別API
+│       ├── tournament-groups/    #   大会グループAPI
+│       ├── sponsor-banners/      #   スポンサーバナーAPI
+│       └── ...                   #   その他
 │
-├── components/                   # 共通コンポーネント（100+ファイル）
-│   └── ui/                       # shadcn/ui コンポーネント
-│       ├── alert-dialog.tsx
-│       ├── badge.tsx
-│       ├── button.tsx
-│       ├── card.tsx
-│       ├── checkbox.tsx
-│       ├── dialog.tsx
-│       ├── dropdown-menu.tsx
-│       ├── input.tsx
-│       ├── label.tsx
-│       ├── progress.tsx
-│       ├── select.tsx
-│       ├── switch.tsx
-│       ├── tabs.tsx
-│       └── textarea.tsx
+├── components/                   # Reactコンポーネント
+│   ├── ui/                       # shadcn/ui ベースコンポーネント
+│   ├── admin/                    # 管理者画面用コンポーネント
+│   ├── features/                 # 機能別コンポーネント（18カテゴリ）
+│   ├── forms/                    # フォームコンポーネント
+│   ├── layout/                   # レイアウトコンポーネント
+│   ├── providers/                # Reactプロバイダー
+│   ├── public/                   # 公開画面用コンポーネント
+│   └── tables/                   # テーブルコンポーネント
 │
-├── lib/                          # ユーティリティ・設定
+├── lib/                          # ユーティリティ・ビジネスロジック（60+ファイル）
 │   ├── auth.ts                   # NextAuth設定
 │   ├── db.ts                     # Turso接続
-│   ├── blob.ts                   # Vercel Blob設定
-│   ├── utils.ts                  # 共通ユーティリティ
-│   ├── types.ts                  # TypeScript型定義
-│   ├── constants.ts              # 定数定義
-│   ├── score-parser.ts           # スコアデータ解析（JSON配列形式統一）⭐
+│   ├── types.ts                  # TypeScript型定義（主要）
+│   ├── score-parser.ts           # スコアデータ解析（JSON配列形式）
 │   ├── standings-calculator.ts   # 順位表計算
-│   ├── match-result-handler.ts   # 試合結果処理
-│   └── email.ts                  # メール送信
+│   ├── match-results-calculator.ts # 試合結果計算
+│   ├── tournament-progression.ts # トーナメント進行ロジック
+│   ├── tournament-promotion.ts   # 昇格・進出処理
+│   ├── tie-breaking-calculator.ts # タイブレーク計算
+│   ├── disciplinary-calculator.ts # 懲罰計算
+│   ├── withdrawal-processor.ts   # 辞退処理
+│   ├── schedule-calculator.ts    # スケジュール計算
+│   ├── types/                    # 追加型定義（フェーズ、オペレーター等）
+│   ├── api/                      # API共通ユーティリティ
+│   ├── email/                    # メール送信
+│   ├── subscription/             # サブスクリプション
+│   ├── tournament-bracket/       # トーナメント表ロジック
+│   └── archive-html/             # HTMLアーカイブ
 │
-├── types/                        # 型定義
+├── hooks/                        # カスタムReact Hooks
+├── types/                        # グローバル型定義
 │   └── next-auth.d.ts            # NextAuth型拡張
 │
-├── src/                          # 旧構造（Next.js移行前の残存ファイル）
-│   └── app/
-│       ├── layout.tsx
-│       └── page.tsx
+├── data/                         # マスターデータ（JSON）
+│   ├── venues.json               # 会場マスター
+│   ├── tournament_formats.json   # 大会フォーマット
+│   └── match_templates.json      # 試合テンプレート
 │
+├── scripts/                      # ユーティリティスクリプト（24ファイル）
+│   ├── seed-master-data.js       # マスターデータ投入
+│   ├── seed-prefectures.mjs      # 都道府県データ投入
+│   └── migrate-*.ts              # 各種データマイグレーション
+│
+├── drizzle/                      # マイグレーションファイル（0000〜0034）
+│
+├── docs/                         # ドキュメント
+│   ├── specs/                    # 技術仕様
+│   │   ├── architecture.md       #   アーキテクチャ設計（本ファイル）
+│   │   ├── database.md           #   データベース設計
+│   │   ├── implementation-status.md  #   実装状況
+│   │   └── tournament-bracket-logic.md  # トーナメント表ロジック
+│   ├── features/                 # 機能仕様（28+ファイル）
+│   │   └── implemented-features.md   # 実装済み機能一覧（索引）
+│   ├── guides/                   # 開発ガイド
+│   │   ├── onboarding.md         #   新規開発者ガイド
+│   │   ├── development.md        #   開発環境セットアップ
+│   │   ├── database-migration.md #   マイグレーションガイド
+│   │   ├── drizzle-orm-guide.md  #   Drizzle ORM入門
+│   │   ├── drizzle-seeder-guide.md  # Seederガイド
+│   │   └── blob-setup-guide.md   #   Blob Storageセットアップ
+│   ├── database/                 # データベース図
+│   │   └── KSM.md                #   ER図（Mermaid記法、41テーブル）
+│   └── design/                   # デザイン
+│       └── uidesign-basic-policy.md  # UI設計方針
+│
+├── .github/                      # GitHub Actions CI設定
+├── .husky/                       # Git hooks
+├── .storybook/                   # Storybook設定
+├── stories/                      # Storybookストーリー
 └── public/                       # 静的ファイル
-    ├── next.svg
-    └── vercel.svg
-
 ```
 

@@ -2,39 +2,146 @@
 
 KSM-Appプロジェクトに参加する新規メンバー向けのセットアップガイドです。
 
-## 前提条件
+## 学習パス（推奨する読み順）
 
-以下がインストールされていることを確認してください：
+### Day 1: 全体像を掴む（読むだけ、30分程度）
+1. **[システム全体像](./system-overview.md)** — 「このシステムは何をするのか」を理解（業務フロー・ユーザーロール・画面構成）
+2. **[用語集](./glossary.md)** — 「大会」と「部門」の違いなど、コードを読む前に知っておくべき用語
+
+### Day 1〜2: 環境構築（本ドキュメントの手順に沿って進める、1〜2時間）
+3. **本ドキュメント（onboarding.md）** — Git設定 → クローン → npm install → 開発サーバー起動まで
+
+### Day 2〜3: 技術面を理解（読む＋コードを追う）
+4. **[アーキテクチャ](../specs/architecture.md)** — 技術スタック・フォルダ構成・コーディング規約
+5. **[ER図](../database/KSM.md)** — テーブル全体像をビジュアルで把握
+
+### Day 3〜: コードを書き始めるとき
+6. **[開発レシピ集](./development-recipes.md)** — API追加・画面追加・カラム追加の具体的な手順
+7. **[トラブルシューティング](./troubleshooting.md)** — 困ったときに都度参照
+
+## Step 0: Gitの初期設定とGitHub接続
+
+PCを新しくセットアップする場合、まずGitとGitHubの接続を行います。
+既にGitとSSH鍵の設定が完了している場合は [Step 1](#step-1-前提ツールのインストール) に進んでください。
+
+### 0-1. Gitのインストール
+
+#### macOS
+
+```bash
+# Xcodeコマンドラインツール（Gitを含む）をインストール
+xcode-select --install
+
+# または Homebrew 経由
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install git
+```
+
+#### WSL（Ubuntu）/ Linux
+
+```bash
+sudo apt update
+sudo apt install git curl
+```
+
+### 0-2. Gitの基本設定
+
+```bash
+# ユーザー名とメールアドレスを設定（GitHubアカウントと同じものを使用）
+git config --global user.name "あなたの名前"
+git config --global user.email "your-email@example.com"
+
+# デフォルトブランチ名をmainに設定
+git config --global init.defaultBranch main
+```
+
+### 0-3. SSH鍵の作成とGitHubへの登録
+
+```bash
+# SSH鍵を生成（メールアドレスはGitHubと同じもの）
+ssh-keygen -t ed25519 -C "your-email@example.com"
+# → すべてEnterでOK（パスフレーズは任意）
+
+# SSH agentを起動して鍵を登録
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+
+# 公開鍵をコピー
+cat ~/.ssh/id_ed25519.pub
+# → 表示された内容をすべてコピー
+```
+
+**GitHubに公開鍵を登録**:
+1. [GitHub → Settings → SSH and GPG keys](https://github.com/settings/keys) にアクセス
+2. 「New SSH key」をクリック
+3. Title に任意の名前（例: `MacBook Pro`）を入力
+4. Key にコピーした公開鍵を貼り付け
+5. 「Add SSH key」をクリック
+
+**接続テスト**:
+```bash
+ssh -T git@github.com
+# → "Hi username! You've been successfully authenticated..." と表示されればOK
+```
+
+### 0-4. GitHubアカウントへのアクセス確認
+
+チームリーダーから以下を確認してください:
+- リポジトリへのアクセス権限が付与されていること
+- リポジトリのSSH URLを共有してもらうこと
+
+---
+
+## Step 1: 前提ツールのインストール
+
+### macOS の場合
 
 | ツール | 用途 | インストール方法 |
 |--------|------|-----------------|
 | **Homebrew** | パッケージ管理 | https://brew.sh |
-| **Git** | バージョン管理 | `brew install git` |
+| **Git** | バージョン管理 | `brew install git`（Step 0で済み） |
 | **mise** | Node.jsバージョン管理 | `brew install mise` |
+
+### WSL（Ubuntu）/ Linux の場合
+
+| ツール | 用途 | インストール方法 |
+|--------|------|-----------------|
+| **Git** | バージョン管理 | `sudo apt install git`（Step 0で済み） |
+| **mise** | Node.jsバージョン管理 | `curl https://mise.run \| sh` |
+| **curl** | 通信ツール | `sudo apt install curl`（未インストールの場合） |
 
 ## セットアップ手順
 
 ### 1. リポジトリのクローン
 
 ```bash
-git clone <repository-url>
+# SSH URL でクローン（チームリーダーからURLを確認）
+git clone git@github.com:<organization>/<repository>.git
 cd ksm-app
+
+# devブランチに切り替え
+git checkout dev
 ```
 
 ### 2. 開発ツールのインストール
+
+#### macOS
 
 ```bash
 # Brewfileに定義された開発ツールを一括インストール
 brew bundle
 
-# mise の有効化（シェルに応じて設定）
-# bash の場合:
-echo 'eval "$(mise activate bash)"' >> ~/.bashrc
-# zsh の場合:
+# mise の有効化（zsh の場合）
 echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+source ~/.zshrc
+```
 
-# シェルを再起動するか、設定を読み込み
-source ~/.bashrc  # または source ~/.zshrc
+#### WSL（Ubuntu）/ Linux
+
+```bash
+# mise の有効化（bash の場合）
+echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ### 3. Node.js のインストール
@@ -55,31 +162,41 @@ npm install
 
 ### 5. 環境変数の設定
 
-チームリーダーから以下の情報を取得し、`.env.local`ファイルを作成してください：
+**チームリーダーから `.env.local` ファイルを受け取り**、プロジェクトルートに配置してください。
+
+> **受け渡し方法**: `.env.local` にはデータベースの認証情報が含まれるため、Slackやメール本文での共有は避けてください。パスワードマネージャーの共有機能、または直接のファイル受け渡しを推奨します。
+>
+> **Claude Codeで環境構築する場合**: Claude Codeは環境変数を自動取得できません。`.env.local` ファイルを**事前に手動で配置**してから、Claude Codeに残りのセットアップを依頼してください。
+
+#### 必須（開発サーバーの起動に必要）
 
 ```bash
 # Turso Database（開発環境）
-DATABASE_URL="<チームから取得>"
-DATABASE_AUTH_TOKEN="<チームから取得>"
+DATABASE_URL="libsql://ksm-dev-..."        # dev環境のTurso DB URL
+DATABASE_AUTH_TOKEN="eyJ..."               # dev環境の認証トークン
 
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="<チームから取得>"
+# NextAuth（認証）
+NEXTAUTH_URL="http://localhost:3000"       # この値は固定
+NEXTAUTH_SECRET="..."                      # セッション暗号化キー
+```
 
-# 環境別DB接続（必要に応じて）
-DATABASE_URL_DEV="<チームから取得>"
-DATABASE_AUTH_TOKEN_DEV="<チームから取得>"
-DATABASE_URL_STAG="<チームから取得>"
-DATABASE_AUTH_TOKEN_STAG="<チームから取得>"
-DATABASE_URL_MAIN="<チームから取得>"
-DATABASE_AUTH_TOKEN_MAIN="<チームから取得>"
+#### オプション（該当機能の開発時に必要）
 
-# メール送信（開発時は任意）
-GMAIL_USER="<チームから取得>"
-GMAIL_APP_PASSWORD="<チームから取得>"
+```bash
+# 環境別DB接続（マイグレーション実行時のみ必要）
+DATABASE_URL_DEV="..."
+DATABASE_AUTH_TOKEN_DEV="..."
+DATABASE_URL_STAG="..."                    # ステージング環境
+DATABASE_AUTH_TOKEN_STAG="..."
+DATABASE_URL_MAIN="..."                    # 本番環境
+DATABASE_AUTH_TOKEN_MAIN="..."
 
-# Vercel Blob Storage（開発時は任意）
-BLOB_READ_WRITE_TOKEN="<チームから取得>"
+# メール送信（メール機能の開発時に必要）
+GMAIL_USER="..."
+GMAIL_APP_PASSWORD="..."
+
+# Vercel Blob Storage（ファイルアップロード機能の開発時に必要）
+BLOB_READ_WRITE_TOKEN="..."
 ```
 
 ### 6. データベースの初期化
@@ -238,12 +355,23 @@ git commit -m "..."   # 7. コミット
 
 ## 主要ドキュメント
 
+### まず読むべきもの（推奨順）
+
+| # | ドキュメント | 内容 |
+|---|------------|------|
+| 1 | [システム全体像](./system-overview.md) | 業務フロー、ユーザーロール、画面構成の全体像 |
+| 2 | [用語集](./glossary.md) | 業務用語・技術用語・DB名と画面表示の対応 |
+| 3 | [アーキテクチャ](../specs/architecture.md) | 技術スタック、フォルダ構成、コーディング規約 |
+| 4 | [データベース設計](../specs/database.md) / [ER図](../database/KSM.md) | テーブル設計、制約、リレーション |
+
+### 開発時に参照するもの
+
 | ドキュメント | 内容 |
 |------------|------|
-| [CLAUDE.md](../../CLAUDE.md) | プロジェクト仕様書（全体概要） |
-| [アーキテクチャ](../specs/architecture.md) | 技術スタック、コーディング規約 |
-| [データベース設計](../specs/database.md) | テーブル設計、制約 |
-| [実装済み機能一覧](../features/implemented-features.md) | 全機能の詳細仕様 |
+| [開発レシピ集](./development-recipes.md) | API追加・画面追加・カラム追加の手順 |
 | [開発環境](./development.md) | コマンド一覧、環境設定 |
 | [マイグレーション](./database-migration.md) | DB変更手順 |
+| [テスト方針](./testing.md) | Vitest / Playwright / Storybook |
+| [トラブルシューティング](./troubleshooting.md) | よくあるエラーと対処法 |
+| [実装済み機能一覧](../features/implemented-features.md) | 全機能の詳細仕様 |
 | [UI設計方針](../design/uidesign-basic-policy.md) | デザインガイドライン |
