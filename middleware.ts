@@ -14,7 +14,9 @@ export default async function middleware(req: NextRequest) {
 
   // 審判用ルート（/referee/*）は認証不要で通過させる
   const isRefereeRoute = nextUrl.pathname.startsWith("/referee");
-  if (isRefereeRoute) {
+  // 新QR結果入力ルート（/tournament/[id]/match/[id]/result）も認証不要
+  const isTournamentResultRoute = /^\/tournament\/\d+\/match\/\d+\/result/.test(nextUrl.pathname);
+  if (isRefereeRoute || isTournamentResultRoute) {
     return NextResponse.next();
   }
 
@@ -84,8 +86,9 @@ export const config = {
     "/my/:path*",
     "/my",
     "/auth/:path*",
-    // 審判ルートも明示的に追加（middlewareで除外処理を行う）
+    // 審判ルート・QR結果入力ルートも明示的に追加（middlewareで除外処理を行う）
     "/referee/:path*",
+    "/tournament/:path*",
     // 旧システムURLのリダイレクト
     "/tournaments",
   ],

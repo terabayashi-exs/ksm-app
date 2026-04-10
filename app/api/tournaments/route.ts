@@ -750,6 +750,15 @@ async function generateMatchesFromTemplate(
 
     console.log("[TOURNAMENT_CREATE] BYE match winners propagation completed");
 
+    // 試合結果QR用トークンを一括作成
+    try {
+      const { createTokensForTournament } = await import("@/lib/match-result-token");
+      const tokensCreated = await createTokensForTournament(Number(tournamentId));
+      console.log(`[TOURNAMENT_CREATE] ${tokensCreated}個の結果QRトークンを作成しました`);
+    } catch (tokenError) {
+      console.error("QRトークン作成エラー（試合作成は成功）:", tokenError);
+    }
+
     // 大会ルールのデフォルト設定を作成（未作成のフェーズのみ）
     try {
       const sportResult = await db.execute(

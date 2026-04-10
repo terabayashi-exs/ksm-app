@@ -9,6 +9,7 @@
 - **[database.md](./specs/database.md)** — データベース設計、制約、タイムゾーン仕様
 - **[implementation-status.md](./specs/implementation-status.md)** — 実装状況、運用実績、将来計画
 - **[tournament-bracket-logic.md](./specs/tournament-bracket-logic.md)** — トーナメント表描画ロジック
+- **[cron-jobs.md](./specs/cron-jobs.md)** — 定期バッチ処理（Vercel Cron）仕様
 
 ### [機能仕様 (features/)](./features/)
 機能の詳細仕様については、[implemented-features.md](./features/implemented-features.md)をご覧ください。

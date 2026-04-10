@@ -9,6 +9,7 @@ import {
   Home,
   MapPin,
   Printer,
+  RefreshCw,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -42,6 +43,8 @@ interface QRMatch {
   venue_name: string | null;
   matchday: number | null;
   period_labels: string[];
+  input_window_start: string | null;
+  input_window_end: string | null;
 }
 
 interface TournamentPhaseInfo {
@@ -62,8 +65,10 @@ export default function QRListPage() {
   const [filterMatchday, setFilterMatchday] = useState<string>("all");
   const [includeCompleted, setIncludeCompleted] = useState(false);
   const [validity, setValidity] = useState<{ validFrom: string; validUntil: string } | null>(null);
+  const [hasDbTokens, setHasDbTokens] = useState(false);
   const [phaseList, setPhaseList] = useState<TournamentPhaseInfo[]>([]);
   const [loadedQrIds, setLoadedQrIds] = useState<Set<number>>(new Set());
+  const [resetting, setResetting] = useState(false);
   const loadedQrCount = filteredMatches.filter((m) => loadedQrIds.has(m.match_id)).length;
   const allQrLoaded = filteredMatches.length > 0 && loadedQrCount >= filteredMatches.length;
 
@@ -87,8 +92,11 @@ export default function QRListPage() {
 
       if (data.success) {
         setMatches(data.matches);
+        setHasDbTokens(!!data.hasDbTokens);
         if (data.validity) {
           setValidity(data.validity);
+        } else {
+          setValidity(null);
         }
       } else {
         setError("データの取得に失敗しました");
@@ -130,6 +138,75 @@ export default function QRListPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // QRトークン一括リセット
+  const handleResetAllTokens = async () => {
+    if (
+      !window.confirm(
+        "部門内の全QRコードをリセットします。\n\n既に印刷済みのQRコードは無効になり、新しいQRコードの印刷が必要になります。\n\nよろしいですか？",
+      )
+    ) {
+      return;
+    }
+
+    setResetting(true);
+    try {
+      const res = await fetch(`/api/admin/tournaments/${tournamentId}/reset-tokens`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "tournament" }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`${data.tokensReset}件のQRトークンをリセットしました。\nQRコードが再生成されます。`);
+        setLoadedQrIds(new Set());
+        await fetchMatches();
+      } else {
+        alert(`エラー: ${data.error || "リセットに失敗しました"}`);
+      }
+    } catch (err) {
+      console.error("トークンリセットエラー:", err);
+      alert("QRトークンのリセットに失敗しました");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // 個別試合のQRトークンリセット
+  const handleResetMatchToken = async (matchId: number, matchCode: string) => {
+    if (
+      !window.confirm(
+        `試合「${matchCode}」のQRコードをリセットします。\n\n既に印刷済みのQRコードは無効になります。\n\nよろしいですか？`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/tournaments/${tournamentId}/reset-tokens`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "match", matchId }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`試合「${matchCode}」のQRトークンをリセットしました。`);
+        setLoadedQrIds((prev) => {
+          const next = new Set(prev);
+          next.delete(matchId);
+          return next;
+        });
+        await fetchMatches();
+      } else {
+        alert(`エラー: ${data.error || "リセットに失敗しました"}`);
+      }
+    } catch (err) {
+      console.error("トークンリセットエラー:", err);
+      alert("QRトークンのリセットに失敗しました");
+    }
   };
 
   // 日付の短縮フォーマット（M/d）
@@ -228,7 +305,13 @@ export default function QRListPage() {
           </p>
         </div>
 
-        {validity && (
+        {hasDbTokens ? (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm font-medium mb-6 no-print">
+            <Clock className="h-4 w-4 shrink-0" />
+            入力可能期間:
+            各試合の開始時刻1時間前から12時間有効（QRコード自体は永続的にアクセス可能）
+          </div>
+        ) : validity ? (
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium mb-6 no-print">
             <Clock className="h-4 w-4 shrink-0" />
             QRコード有効期限:{" "}
@@ -241,10 +324,19 @@ export default function QRListPage() {
             })}{" "}
             まで
           </div>
-        )}
+        ) : null}
 
         <div className="no-print mb-6">
-          <div className="flex items-center justify-end mb-4">
+          <div className="flex items-center justify-end gap-3 mb-4">
+            <Button
+              variant="outline"
+              onClick={handleResetAllTokens}
+              disabled={resetting || matches.length === 0}
+              className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${resetting ? "animate-spin" : ""}`} />
+              {resetting ? "リセット中..." : "QRコード一括リセット"}
+            </Button>
             <Button
               variant="outline"
               onClick={handlePrint}
@@ -353,9 +445,21 @@ export default function QRListPage() {
                     <Card key={match.match_id} className="print-card">
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-2xl font-bold text-primary match-title">
-                            {match.match_code}
-                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-2xl font-bold text-primary match-title">
+                              {match.match_code}
+                            </CardTitle>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleResetMatchToken(match.match_id, match.match_code)
+                              }
+                              className="no-print p-1 text-gray-400 hover:text-red-500 transition-colors"
+                              title="このQRコードをリセット"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                           <div className="flex items-center gap-3 text-base font-semibold text-gray-700 court-info">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
@@ -449,7 +553,17 @@ export default function QRListPage() {
                                 setLoadedQrIds((prev) => new Set(prev).add(match.match_id))
                               }
                             />
-                            {validity && (
+                            {match.input_window_end ? (
+                              <p className="text-sm text-gray-500 mt-1 text-center qr-validity">
+                                入力期限：
+                                {new Date(match.input_window_end).toLocaleString("ja-JP", {
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            ) : validity ? (
                               <p className="text-sm text-gray-500 mt-1 text-center qr-validity">
                                 期限：
                                 {new Date(validity.validUntil).toLocaleString("ja-JP", {
@@ -460,7 +574,7 @@ export default function QRListPage() {
                                   minute: "2-digit",
                                 })}
                               </p>
-                            )}
+                            ) : null}
                           </div>
                           <div className="flex-1 border border-gray-300 rounded-md p-1 remarks-box flex flex-col">
                             <div className="text-xs text-gray-400 mb-1 remarks-title">

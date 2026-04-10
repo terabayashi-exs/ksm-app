@@ -3,6 +3,7 @@
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getTimeWindowStatus, verifyDbToken } from "@/lib/match-result-token";
 import { parseScoreArray } from "@/lib/score-parser";
 import { getSportScoreConfig } from "@/lib/sport-standings-calculator";
 
@@ -66,40 +67,65 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const sportCode = String(match.sport_code || "pk_championship");
     const sportConfig = getSportScoreConfig(sportCode);
 
-    // JWTトークン生成（試合開始30分前から終了30分後まで有効）
-    const now = new Date();
-
-    // トークン有効期限の設定
-    // QRコード発行時点から48時間有効（前日のQRコード一覧作成に対応）
-    const validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 発行1時間前から有効
-    const validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 発行から48時間後まで有効
-
-    const payload = {
-      match_id: matchId,
-      match_code: match.match_code,
-      tournament_id: match.tournament_id,
-      iat: Math.floor(now.getTime() / 1000),
-      nbf: Math.floor(validFrom.getTime() / 1000), // Not Before
-      exp: Math.floor(validUntil.getTime() / 1000), // Expires
-    };
-
-    const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
-    console.log("Generating JWT token with payload:", payload);
-    console.log("Using secret length:", secret.length);
-    const token = jwt.sign(payload, secret);
-    console.log("Generated token length:", token.length);
-
-    // QRコード用URL生成（QRコード経由であることを示すパラメータを追加）
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const qrUrl = `${baseUrl}/referee/match/${matchId}?token=${token}&from=qr`;
+    const tournamentId = match.tournament_id;
+
+    // DBトークンがあるか確認（新方式）
+    const dbTokenResult = await db.execute(
+      `SELECT token FROM t_match_result_tokens WHERE match_id = ?`,
+      [matchId],
+    );
+
+    let qrUrl: string;
+    let token: string;
+    let validFrom: Date;
+    let validUntil: Date;
+
+    if (dbTokenResult.rows.length > 0) {
+      // 新方式: DBトークンを使用
+      token = String(dbTokenResult.rows[0].token);
+      qrUrl = `${baseUrl}/tournament/${tournamentId}/match/${matchId}/result?token=${token}&from=qr`;
+      // 入力可能期間: start_timeの1時間前〜11時間後（計12時間）
+      if (match.start_time && match.tournament_date) {
+        const timeParts = String(match.start_time).split(":");
+        const hours = parseInt(timeParts[0], 10);
+        const minutes = parseInt(timeParts[1] || "0", 10);
+        const matchDateTime = new Date(`${match.tournament_date}T00:00:00+09:00`);
+        matchDateTime.setHours(hours, minutes, 0, 0);
+        validFrom = new Date(matchDateTime.getTime() - 60 * 60 * 1000);
+        validUntil = new Date(matchDateTime.getTime() + 11 * 60 * 60 * 1000);
+      } else {
+        // start_time未設定の場合は期間未定
+        validFrom = new Date(0);
+        validUntil = new Date(0);
+      }
+    } else {
+      // 旧方式: JWTトークンを生成（後方互換）
+      const now = new Date();
+      validFrom = new Date(now.getTime() - 60 * 60 * 1000);
+      validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+      const payload = {
+        match_id: matchId,
+        match_code: match.match_code,
+        tournament_id: tournamentId,
+        iat: Math.floor(now.getTime() / 1000),
+        nbf: Math.floor(validFrom.getTime() / 1000),
+        exp: Math.floor(validUntil.getTime() / 1000),
+      };
+
+      const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
+      token = jwt.sign(payload, secret);
+      qrUrl = `${baseUrl}/referee/match/${matchId}?token=${token}&from=qr`;
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         match_id: matchId,
         match_code: match.match_code,
-        team1_name: match.team1_real_name || match.team1_display_name, // 実チーム名を優先
-        team2_name: match.team2_real_name || match.team2_display_name, // 実チーム名を優先
+        team1_name: match.team1_real_name || match.team1_display_name,
+        team2_name: match.team2_real_name || match.team2_display_name,
         court_number: match.court_number,
         court_name: match.court_name ? String(match.court_name) : null,
         scheduled_time: match.start_time,
@@ -107,7 +133,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         token: token,
         valid_from: validFrom.toISOString(),
         valid_until: validUntil.toISOString(),
-        // 多競技対応：スポーツ設定を追加
         sport_config: sportConfig,
         qr_data: {
           url: qrUrl,
@@ -142,56 +167,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // 管理者用特別トークンの処理
     if (token === "admin") {
-      // 簡易的な管理者認証（セッション確認は省略）
-      // 試合情報を取得（実チーム名と略称も含む）
-      const result = await db.execute(
-        `
-        SELECT
-          ml.match_id,
-          ml.match_code,
-          ml.team1_tournament_team_id,
-          ml.team2_tournament_team_id,
-          ml.team1_display_name,
-          ml.team2_display_name,
-          ml.court_number,
-          ml.court_name,
-          ml.start_time,
-          ml.period_count,
-          ml.team1_scores,
-          ml.team2_scores,
-          ml.winner_tournament_team_id,
-          ml.remarks,
-          ms.match_status,
-          ms.current_period,
-          mb.tournament_id,
-          mb.block_name,
-          -- 確定済み試合の情報
-          mf.match_id as is_confirmed,
-          mf.team1_scores as final_team1_scores,
-          mf.team2_scores as final_team2_scores,
-          mf.winner_tournament_team_id as final_winner_tournament_team_id,
-          -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
-          t1.team_name as team1_real_name,
-          t2.team_name as team2_real_name,
-          COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
-          COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
-          -- BYE試合の勝者解決用
-          ml.team1_source,
-          ml.team2_source
-        FROM t_matches_live ml
-        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
-        LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
-        LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
-          LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        WHERE ml.match_id = ?
-      `,
-        [matchId],
-      );
-
+      const result = await fetchMatchData(matchId);
       if (result.rows.length === 0) {
         return NextResponse.json(
           { success: false, error: "試合が見つかりません" },
@@ -200,8 +176,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       const match = result.rows[0];
-
-      // BYE試合の勝者を解決するためのマップを構築
       const { resolvedTeam1Name, resolvedTeam1Omission, resolvedTeam2Name, resolvedTeam2Omission } =
         await resolveByeMatchWinners(
           match.tournament_id as number,
@@ -220,113 +194,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
         success: true,
         message: "管理者アクセスが承認されました",
         data: {
-          match_id: match.match_id,
-          match_code: match.match_code,
-          team1_tournament_team_id: match.team1_tournament_team_id,
-          team2_tournament_team_id: match.team2_tournament_team_id,
-          team1_name: resolvedTeam1Name,
-          team2_name: resolvedTeam2Name,
-          team1_omission: resolvedTeam1Omission,
-          team2_omission: resolvedTeam2Omission,
-          court_number: match.court_number,
-          court_name: match.court_name ? String(match.court_name) : null,
-          scheduled_time: match.start_time,
-          period_count: match.period_count,
-          current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
-          match_status: match.match_status || "scheduled",
-          team1_scores: match.is_confirmed
-            ? match.final_team1_scores
-              ? parseScoreArray(match.final_team1_scores)
-              : null
-            : match.team1_scores
-              ? parseScoreArray(match.team1_scores)
-              : null,
-          team2_scores: match.is_confirmed
-            ? match.final_team2_scores
-              ? parseScoreArray(match.final_team2_scores)
-              : null
-            : match.team2_scores
-              ? parseScoreArray(match.team2_scores)
-              : null,
-          winner_tournament_team_id: match.is_confirmed
-            ? match.final_winner_tournament_team_id
-            : match.winner_tournament_team_id,
-          is_confirmed: !!match.is_confirmed,
-          remarks: match.remarks,
-          tournament_id: match.tournament_id,
+          ...buildMatchResponse(
+            match,
+            resolvedTeam1Name,
+            resolvedTeam1Omission,
+            resolvedTeam2Name,
+            resolvedTeam2Omission,
+          ),
           referee_access: true,
           admin_access: true,
+          can_input: true,
+          input_disabled_reason: null,
         },
       });
     }
 
-    try {
-      const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
-      console.log("Attempting JWT verification with secret length:", secret.length);
-      console.log("Token to verify:", token?.substring(0, 50) + "...");
-      console.log("Expected match ID:", matchId);
+    // === 新方式: DBトークン検証を先に試行 ===
+    const isDbTokenValid = await verifyDbToken(token, matchId);
 
-      const decoded = jwt.verify(token, secret) as jwt.JwtPayload & { match_id: number };
-      console.log("JWT decoded successfully:", {
-        match_id: decoded.match_id,
-        exp: decoded.exp,
-        iat: decoded.iat,
-      });
-
-      // トークンの試合IDが一致するかチェック
-      if (decoded.match_id !== matchId) {
-        return NextResponse.json({ success: false, error: "トークンが無効です" }, { status: 401 });
-      }
-
-      // 試合情報を取得（実チーム名も含む）
-      const result = await db.execute(
-        `
-        SELECT
-          ml.match_id,
-          ml.match_code,
-          ml.team1_tournament_team_id,
-          ml.team2_tournament_team_id,
-          ml.team1_display_name,
-          ml.team2_display_name,
-          ml.court_number,
-          ml.court_name,
-          ml.start_time,
-          ml.period_count,
-          ml.team1_scores,
-          ml.team2_scores,
-          ml.winner_tournament_team_id,
-          ml.remarks,
-          ms.match_status,
-          ms.current_period,
-          mb.tournament_id,
-          mb.block_name,
-          -- 確定済み試合の情報
-          mf.match_id as is_confirmed,
-          mf.team1_scores as final_team1_scores,
-          mf.team2_scores as final_team2_scores,
-          mf.winner_tournament_team_id as final_winner_tournament_team_id,
-          -- 実際のチーム名と略称を取得（t_tournament_teamsの略称を優先）
-          t1.team_name as team1_real_name,
-          t2.team_name as team2_real_name,
-          COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
-          COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
-          -- BYE試合の勝者解決用
-          ml.team1_source,
-          ml.team2_source
-        FROM t_matches_live ml
-        INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
-        INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
-        LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
-        LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
-        LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
-        LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
-          LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
-        LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
-        WHERE ml.match_id = ?
-      `,
-        [matchId],
-      );
-
+    if (isDbTokenValid) {
+      // DBトークンが有効 → 試合情報取得 + 時間制限チェック
+      const result = await fetchMatchData(matchId);
       if (result.rows.length === 0) {
         return NextResponse.json(
           { success: false, error: "試合が見つかりません" },
@@ -335,8 +223,67 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       const match = result.rows[0];
+      const { resolvedTeam1Name, resolvedTeam1Omission, resolvedTeam2Name, resolvedTeam2Omission } =
+        await resolveByeMatchWinners(
+          match.tournament_id as number,
+          match.block_name as string | null,
+          match.team1_real_name as string | null,
+          match.team1_display_name as string | null,
+          match.team1_omission as string | null,
+          match.team1_source as string | null,
+          match.team2_real_name as string | null,
+          match.team2_display_name as string | null,
+          match.team2_omission as string | null,
+          match.team2_source as string | null,
+        );
 
-      // BYE試合の勝者を解決するためのマップを構築
+      // 時間制限チェック
+      const timeWindow = getTimeWindowStatus(
+        match.start_time as string | null,
+        match.tournament_date as string | null,
+        !!match.is_confirmed,
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: "トークンが有効です",
+        data: {
+          ...buildMatchResponse(
+            match,
+            resolvedTeam1Name,
+            resolvedTeam1Omission,
+            resolvedTeam2Name,
+            resolvedTeam2Omission,
+          ),
+          referee_access: true,
+          can_input: timeWindow.canInput,
+          input_disabled_reason: timeWindow.canInput ? null : timeWindow.reason,
+          window_start: timeWindow.windowStart || null,
+          window_end: timeWindow.windowEnd || null,
+        },
+      });
+    }
+
+    // === 旧方式: JWT検証（後方互換） ===
+    try {
+      const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
+
+      const decoded = jwt.verify(token, secret) as jwt.JwtPayload & { match_id: number };
+
+      // トークンの試合IDが一致するかチェック
+      if (decoded.match_id !== matchId) {
+        return NextResponse.json({ success: false, error: "トークンが無効です" }, { status: 401 });
+      }
+
+      const result = await fetchMatchData(matchId);
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "試合が見つかりません" },
+          { status: 404 },
+        );
+      }
+
+      const match = result.rows[0];
       const { resolvedTeam1Name, resolvedTeam1Omission, resolvedTeam2Name, resolvedTeam2Omission } =
         await resolveByeMatchWinners(
           match.tournament_id as number,
@@ -355,60 +302,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
         success: true,
         message: "トークンが有効です",
         data: {
-          match_id: match.match_id,
-          match_code: match.match_code,
-          team1_tournament_team_id: match.team1_tournament_team_id,
-          team2_tournament_team_id: match.team2_tournament_team_id,
-          team1_name: resolvedTeam1Name,
-          team2_name: resolvedTeam2Name,
-          team1_omission: resolvedTeam1Omission,
-          team2_omission: resolvedTeam2Omission,
-          court_number: match.court_number,
-          court_name: match.court_name ? String(match.court_name) : null,
-          scheduled_time: match.start_time,
-          period_count: match.period_count,
-          current_period: match.current_period || 1, // t_match_statusから取得、なければデフォルト1
-          match_status: match.match_status || "scheduled",
-          team1_scores: match.is_confirmed
-            ? match.final_team1_scores
-              ? parseScoreArray(match.final_team1_scores)
-              : null
-            : match.team1_scores
-              ? parseScoreArray(match.team1_scores)
-              : null,
-          team2_scores: match.is_confirmed
-            ? match.final_team2_scores
-              ? parseScoreArray(match.final_team2_scores)
-              : null
-            : match.team2_scores
-              ? parseScoreArray(match.team2_scores)
-              : null,
-          winner_tournament_team_id: match.is_confirmed
-            ? match.final_winner_tournament_team_id
-            : match.winner_tournament_team_id,
-          is_confirmed: !!match.is_confirmed,
-          remarks: match.remarks,
-          tournament_id: match.tournament_id,
+          ...buildMatchResponse(
+            match,
+            resolvedTeam1Name,
+            resolvedTeam1Omission,
+            resolvedTeam2Name,
+            resolvedTeam2Omission,
+          ),
           referee_access: true,
+          // 旧方式では時間制限なし（JWT期限のみ）
+          can_input: !match.is_confirmed,
+          input_disabled_reason: match.is_confirmed ? "confirmed" : null,
         },
       });
     } catch (jwtError) {
       console.error("JWT verification error:", jwtError);
-      console.error("Token that failed:", token);
-      console.error("Match ID:", matchId);
       return NextResponse.json(
         {
           success: false,
           error: "トークンの有効期限が切れているか、無効です",
           details: process.env.NODE_ENV === "development" ? String(jwtError) : undefined,
-          debug:
-            process.env.NODE_ENV === "development"
-              ? {
-                  tokenLength: token?.length,
-                  tokenStart: token?.substring(0, 20),
-                  matchId: matchId,
-                }
-              : undefined,
         },
         { status: 401 },
       );
@@ -420,6 +333,105 @@ export async function POST(request: NextRequest, context: RouteContext) {
       { status: 500 },
     );
   }
+}
+
+/**
+ * 試合データを取得する共通クエリ
+ */
+async function fetchMatchData(matchId: number) {
+  return db.execute(
+    `
+    SELECT
+      ml.match_id,
+      ml.match_code,
+      ml.team1_tournament_team_id,
+      ml.team2_tournament_team_id,
+      ml.team1_display_name,
+      ml.team2_display_name,
+      ml.court_number,
+      ml.court_name,
+      ml.start_time,
+      ml.tournament_date,
+      ml.period_count,
+      ml.team1_scores,
+      ml.team2_scores,
+      ml.winner_tournament_team_id,
+      ml.remarks,
+      ms.match_status,
+      ms.current_period,
+      mb.tournament_id,
+      mb.block_name,
+      mf.match_id as is_confirmed,
+      mf.team1_scores as final_team1_scores,
+      mf.team2_scores as final_team2_scores,
+      mf.winner_tournament_team_id as final_winner_tournament_team_id,
+      t1.team_name as team1_real_name,
+      t2.team_name as team2_real_name,
+      COALESCE(t1.team_omission, mt1.team_omission) as team1_omission,
+      COALESCE(t2.team_omission, mt2.team_omission) as team2_omission,
+      ml.team1_source,
+      ml.team2_source
+    FROM t_matches_live ml
+    INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+    INNER JOIN t_tournaments tour ON mb.tournament_id = tour.tournament_id
+    LEFT JOIN t_tournament_teams t1 ON ml.team1_tournament_team_id = t1.tournament_team_id
+    LEFT JOIN t_tournament_teams t2 ON ml.team2_tournament_team_id = t2.tournament_team_id
+    LEFT JOIN m_teams mt1 ON t1.team_id = mt1.team_id
+    LEFT JOIN m_teams mt2 ON t2.team_id = mt2.team_id
+    LEFT JOIN t_match_status ms ON ml.match_id = ms.match_id
+    LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+    WHERE ml.match_id = ?
+  `,
+    [matchId],
+  );
+}
+
+/**
+ * 試合レスポンスデータを構築する共通関数
+ */
+function buildMatchResponse(
+  match: Record<string, unknown>,
+  team1Name: string,
+  team1Omission: string,
+  team2Name: string,
+  team2Omission: string,
+) {
+  return {
+    match_id: match.match_id,
+    match_code: match.match_code,
+    team1_tournament_team_id: match.team1_tournament_team_id,
+    team2_tournament_team_id: match.team2_tournament_team_id,
+    team1_name: team1Name,
+    team2_name: team2Name,
+    team1_omission: team1Omission,
+    team2_omission: team2Omission,
+    court_number: match.court_number,
+    court_name: match.court_name ? String(match.court_name) : null,
+    scheduled_time: match.start_time,
+    period_count: match.period_count,
+    current_period: (match.current_period as number) || 1,
+    match_status: (match.match_status as string) || "scheduled",
+    team1_scores: match.is_confirmed
+      ? match.final_team1_scores
+        ? parseScoreArray(match.final_team1_scores as string)
+        : null
+      : match.team1_scores
+        ? parseScoreArray(match.team1_scores as string)
+        : null,
+    team2_scores: match.is_confirmed
+      ? match.final_team2_scores
+        ? parseScoreArray(match.final_team2_scores as string)
+        : null
+      : match.team2_scores
+        ? parseScoreArray(match.team2_scores as string)
+        : null,
+    winner_tournament_team_id: match.is_confirmed
+      ? match.final_winner_tournament_team_id
+      : match.winner_tournament_team_id,
+    is_confirmed: !!match.is_confirmed,
+    remarks: match.remarks,
+    tournament_id: match.tournament_id,
+  };
 }
 
 /**

@@ -628,6 +628,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ ${matchesCreated}個の試合を作成しました`);
 
+    // 試合結果QR用トークンを一括作成
+    try {
+      const { createTokensForTournament } = await import("@/lib/match-result-token");
+      const tokensCreated = await createTokensForTournament(Number(tournamentId));
+      console.log(`✅ ${tokensCreated}個の結果QRトークンを作成しました`);
+    } catch (tokenError) {
+      console.error("QRトークン作成エラー（試合作成は成功）:", tokenError);
+    }
+
     // 大会ルールのデフォルト設定を作成
     try {
       // 実際のフェーズIDリストを使用してルールを生成

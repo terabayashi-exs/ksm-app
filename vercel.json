@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/update-tournament-status",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-expired-tokens",
+      "schedule": "0 18 * * *"
     }
   ]
 }

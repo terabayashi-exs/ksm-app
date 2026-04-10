@@ -216,10 +216,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     });
 
+    // 部門内全試合のDBトークンを一括取得
+    const dbTokensResult = await db.execute(
+      `SELECT mrt.match_id, mrt.token
+       FROM t_match_result_tokens mrt
+       INNER JOIN t_matches_live ml ON mrt.match_id = ml.match_id
+       INNER JOIN t_match_blocks mb ON ml.match_block_id = mb.match_block_id
+       WHERE mb.tournament_id = ?`,
+      [tournamentId],
+    );
+    const dbTokenMap = new Map<number, string>();
+    for (const row of dbTokensResult.rows) {
+      dbTokenMap.set(Number(row.match_id), String(row.token));
+    }
+
     // 各試合のQRコード用トークンとURLを生成
     const now = new Date();
-    const validFrom = new Date(now.getTime() - 60 * 60 * 1000); // 1時間前から有効
-    const validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48時間後まで有効
+    const validFrom = new Date(now.getTime() - 60 * 60 * 1000);
+    const validUntil = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    const hasDbTokens = dbTokenMap.size > 0;
 
     const matches = matchesResult.rows.map((match) => {
       // team1の解決
@@ -282,23 +297,30 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         console.log(`[QR-List] Resolved team2 from BYE: ${team2Source} → ${resolvedTeam2Omission}`);
       }
 
-      // JWTトークン生成
-      const payload = {
-        match_id: match.match_id,
-        match_code: match.match_code,
-        tournament_id: tournamentId,
-        iat: Math.floor(now.getTime() / 1000),
-        nbf: Math.floor(validFrom.getTime() / 1000),
-        exp: Math.floor(validUntil.getTime() / 1000),
-      };
-
-      const token = jwt.sign(payload, process.env.NEXTAUTH_SECRET || "fallback-secret", {
-        algorithm: "HS256",
-      });
-
-      // 審判用URLを生成（QRコード経由であることを示すパラメータを追加）
+      // トークンとURL生成（DBトークン優先、なければJWTフォールバック）
       const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-      const refereeUrl = `${baseUrl}/referee/match/${match.match_id}?token=${token}&from=qr`;
+      const matchIdNum = Number(match.match_id);
+      const dbToken = dbTokenMap.get(matchIdNum);
+
+      let refereeUrl: string;
+      if (dbToken) {
+        // 新方式: DBトークンで新URL
+        refereeUrl = `${baseUrl}/tournament/${tournamentId}/match/${matchIdNum}/result?token=${dbToken}&from=qr`;
+      } else {
+        // 旧方式: JWTトークンで旧URL（後方互換）
+        const payload = {
+          match_id: match.match_id,
+          match_code: match.match_code,
+          tournament_id: tournamentId,
+          iat: Math.floor(now.getTime() / 1000),
+          nbf: Math.floor(validFrom.getTime() / 1000),
+          exp: Math.floor(validUntil.getTime() / 1000),
+        };
+        const jwtToken = jwt.sign(payload, process.env.NEXTAUTH_SECRET || "fallback-secret", {
+          algorithm: "HS256",
+        });
+        refereeUrl = `${baseUrl}/referee/match/${matchIdNum}?token=${jwtToken}&from=qr`;
+      }
 
       // QRコード画像URLを生成
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(refereeUrl)}`;
@@ -340,6 +362,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const matchPhase = String(match.phase);
       const periodLabels = phasePeriodsMap[matchPhase] || [];
 
+      // 入力可能期間の計算（DBトークン方式の場合）
+      let inputWindowStart: string | null = null;
+      let inputWindowEnd: string | null = null;
+      if (dbToken && match.start_time && match.tournament_date) {
+        const timeParts = String(match.start_time).split(":");
+        const h = parseInt(timeParts[0], 10);
+        const min = parseInt(timeParts[1] || "0", 10);
+        const matchDateTime = new Date(`${match.tournament_date}T00:00:00+09:00`);
+        matchDateTime.setHours(h, min, 0, 0);
+        const wStart = new Date(matchDateTime.getTime() - 60 * 60 * 1000);
+        const wEnd = new Date(matchDateTime.getTime() + 11 * 60 * 60 * 1000);
+        inputWindowStart = wStart.toISOString();
+        inputWindowEnd = wEnd.toISOString();
+      }
+
       return {
         match_id: match.match_id,
         match_code: match.match_code,
@@ -366,6 +403,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         venue_name: venueName,
         matchday: match.matchday ? Number(match.matchday) : null,
         period_labels: periodLabels,
+        input_window_start: inputWindowStart,
+        input_window_end: inputWindowEnd,
       };
     });
 
@@ -373,10 +412,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       success: true,
       matches,
       total: matches.length,
-      validity: {
-        validFrom: validFrom.toISOString(),
-        validUntil: validUntil.toISOString(),
-      },
+      hasDbTokens,
+      validity: hasDbTokens
+        ? null
+        : {
+            validFrom: validFrom.toISOString(),
+            validUntil: validUntil.toISOString(),
+          },
     });
   } catch (error) {
     console.error("QR一覧取得エラー:", error);

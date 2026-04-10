@@ -285,6 +285,16 @@ npm run format
 
 Biomeが自動でコードを整形します。
 
+> **注意**: `npm run format`（`biome format`）はインデント・空白・改行などのスタイルのみ修正します。
+> `format:check` で **import の並び順（organizeImports）** の違反が検出された場合は、`npm run format` では修正されません。
+> その場合は以下のコマンドを使ってください:
+>
+> ```bash
+> npx biome check --fix .
+> ```
+>
+> このコマンドはスタイル修正 + import並び順 + lint自動修正をまとめて実行します。
+
 #### ステップ3: 変更内容の確認
 
 ```bash
@@ -306,13 +316,14 @@ npm run build
 #### まとめ（コミット前の一連の流れ）
 
 ```bash
-npm run format:check  # 1. 違反ファイルの確認
-npm run format        # 2. フォーマット適用
-git diff --stat       # 3. 変更内容の確認
-npm run lint          # 4. ESLintチェック
-npm run build         # 5. ビルド確認
-git add .             # 6. ステージング
-git commit -m "..."   # 7. コミット
+npm run format:check       # 1. 違反ファイルの確認
+npm run format             # 2. スタイルのフォーマット適用
+npx biome check --fix .    # 3. import並び順 + lint自動修正（format で直らない場合）
+git diff --stat            # 4. 変更内容の確認
+npm run lint               # 5. ESLintチェック
+npm run build              # 6. ビルド確認
+git add .                  # 7. ステージング
+git commit -m "..."        # 8. コミット
 ```
 
 ### マイグレーション
@@ -336,7 +347,7 @@ git commit -m "..."   # 7. コミット
         "hooks": [
           {
             "type": "command",
-            "command": "npx biome format --write $CLAUDE_FILE_PATH 2>/dev/null || true"
+            "command": "npx biome check --fix $CLAUDE_FILE_PATH 2>/dev/null || true"
           }
         ]
       }
@@ -346,8 +357,8 @@ git commit -m "..."   # 7. コミット
 ```
 
 ### この設定の効果
-- Claude Codeがファイルを編集・作成するたびに、Biomeフォーマットが自動で適用されます
-- 手動でフォーマットを実行する手間が省けます
+- Claude Codeがファイルを編集・作成するたびに、Biomeによるフォーマット・import並び順の整理・lint自動修正がまとめて適用されます
+- 手動で `npm run format` や `npx biome check --fix` を実行する手間が省けます
 
 ### 注意
 - `.claude/`ディレクトリは`.gitignore`対象のため、**各開発者がローカルで設定する必要があります**

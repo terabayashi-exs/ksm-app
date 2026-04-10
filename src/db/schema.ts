@@ -1520,3 +1520,20 @@ export const tDisciplinaryActions = sqliteTable(
     index("idx_disciplinary_player").on(_table.tournamentTeamId, _table.playerName),
   ],
 );
+
+// 試合結果QRコード用トークン
+export const tMatchResultTokens = sqliteTable(
+  "t_match_result_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    matchId: integer("match_id")
+      .notNull()
+      .references(() => tMatchesLive.matchId, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    createdAt: numeric("created_at").default(sql`(datetime('now', '+9 hours'))`),
+  },
+  (_table) => [
+    index("idx_match_result_tokens_token").on(_table.token),
+    index("idx_match_result_tokens_match_id").on(_table.matchId),
+  ],
+);

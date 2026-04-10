@@ -16,6 +16,46 @@
 
 ---
 
+## 0035: 試合結果QRトークンテーブル（t_match_result_tokens）（2026-04-09）
+
+### 基本情報
+- **日付**: 2026年4月9日
+- **環境**: dev / stag / main（全環境適用済み）
+- **方法**: db:migrate（カスタムマイグレーター）
+- **実行者**: Claude Code
+
+### 変更内容
+- `t_match_result_tokens` テーブル新設（QRコード用DBトークン管理）
+  - `id` (PK, AUTOINCREMENT)
+  - `match_id` (INTEGER, NOT NULL, FK → t_matches_live ON DELETE CASCADE)
+  - `token` (TEXT, NOT NULL, UNIQUE)
+  - `created_at` (NUMERIC, DEFAULT datetime JST)
+- インデックス: `idx_match_result_tokens_token`, `idx_match_result_tokens_match_id`
+
+### 理由
+- QRコード認証をJWT方式からDB管理トークン方式に移行するため
+- セキュリティ強化（トークンリセット機能、時間制限の導入）
+- 印刷期間の柔軟性確保（JWTの48時間制限を撤廃）
+
+### 影響ファイル
+- `src/db/schema.ts` — テーブル定義追加
+- `drizzle/0035_add_match_result_tokens.sql` — マイグレーションSQL
+- `drizzle/meta/_journal.json` — エントリ追加
+- `lib/match-result-token.ts` — トークン生成・検証・リセットユーティリティ（新規）
+- `app/api/matches/[id]/qr/route.ts` — DB/JWT二重検証対応
+- `app/api/tournaments/[id]/qr-list/route.ts` — 新URL対応
+- `app/api/tournaments/create-new/route.ts` — トークン自動生成追加
+- `app/api/tournaments/route.ts` — トークン自動生成追加
+- `app/api/tournaments/create-league/route.ts` — トークン自動生成追加
+- `app/api/admin/tournaments/[id]/change-format/route.ts` — トークン自動生成追加
+- `app/api/admin/tournaments/[id]/reset-tokens/route.ts` — リセットAPI（新規）
+- `app/api/matches/[id]/status/route.ts` — 時間制限サーバーサイド検証追加
+- `app/tournament/[tournament_id]/match/[match_id]/result/page.tsx` — 新URL結果入力ページ（新規）
+- `app/admin/tournaments/[id]/qr-list/page.tsx` — リセットUI追加
+- `middleware.ts` — 新ルートパススルー追加
+
+---
+
 ## 0030: 部門お知らせテーブル（t_tournament_notices）（2026-03-26）
 
 ### 基本情報

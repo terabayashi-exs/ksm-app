@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getTimeWindowStatus } from "@/lib/match-result-token";
 import { formatScoreArray, parseScoreArray } from "@/lib/score-parser";
 import { checkTrialExpiredPermission } from "@/lib/subscription/subscription-service";
 
@@ -154,6 +155,38 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       winner_team_id,
       remarks,
     });
+
+    // DBトークン方式の審判アクセス時: 時間制限をサーバーサイドで検証
+    // 管理者セッションがある場合はバイパス
+    if (updated_by === "referee" && !session) {
+      const matchInfo = await db.execute(
+        `SELECT ml.start_time, ml.tournament_date, mf.match_id as is_confirmed
+         FROM t_matches_live ml
+         LEFT JOIN t_matches_final mf ON ml.match_id = mf.match_id
+         WHERE ml.match_id = ?`,
+        [matchId],
+      );
+
+      if (matchInfo.rows.length > 0) {
+        const row = matchInfo.rows[0];
+        const timeWindow = getTimeWindowStatus(
+          row.start_time as string | null,
+          row.tournament_date as string | null,
+          !!row.is_confirmed,
+        );
+
+        if (!timeWindow.canInput) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "現在この試合の結果入力はできません",
+              reason: timeWindow.reason,
+            },
+            { status: 403 },
+          );
+        }
+      }
+    }
 
     // アクション別処理
     switch (action) {

@@ -593,6 +593,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     console.log(`   ✅ Recreated ${createdBlocks} blocks and ${createdMatches} matches`);
 
+    // 試合結果QR用トークンを一括作成（旧トークンはCASCADE削除で自動削除済み）
+    try {
+      const { createTokensForTournament } = await import("@/lib/match-result-token");
+      const tokensCreated = await createTokensForTournament(tournamentId);
+      console.log(`   ✅ ${tokensCreated}個の結果QRトークンを作成しました`);
+    } catch (tokenError) {
+      console.error("QRトークン作成エラー（フォーマット変更は成功）:", tokenError);
+    }
+
     // === Step 8: 新しいフェーズ構成に合わせてルール設定を更新 ===
     try {
       const sportTypeId = Number(tournament.sport_type_id);
