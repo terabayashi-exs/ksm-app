@@ -248,7 +248,7 @@ PK選手権大会を運営するためのWebアプリケーションです。大
 - `feature/*` — 機能開発ブランチ（devから分岐、devへPR）
 - `fix/*` — バグ修正ブランチ（devから分岐、devへPR）
 
-### 開発の流れ
+### 開発の流れ（機能開発）
 
 ```bash
 # 1. devから作業ブランチを作成
@@ -263,6 +263,80 @@ git push -u origin feature/my-feature
 # GitHub上でdev宛のPRを作成
 
 # 4. CIが通り、レビュー完了後にマージ
+```
+
+### 不具合修正の流れ
+
+不具合を修正する場合は `fix/*` ブランチを使います。基本的な流れは機能開発と同じですが、以下に具体例を示します。
+
+#### 1. Issueの確認
+
+修正対象のIssueがGitHub Issuesに登録されていることを確認します。なければ先に作成してください。
+
+#### 2. fixブランチの作成
+
+```bash
+# devブランチを最新にする
+git checkout dev
+git pull origin dev
+
+# fixブランチを作成（ブランチ名は修正内容がわかる名前にする）
+git checkout -b fix/qr-validity-display
+```
+
+> **命名例**: `fix/qr-validity-display`, `fix/score-calculation-error`, `fix/login-redirect-loop`
+
+#### 3. 修正・動作確認
+
+```bash
+# 開発サーバーを起動して修正・確認
+npm run dev
+```
+
+修正が完了したら、コード品質チェック（次のセクション参照）を実行します。
+
+#### 4. コミット
+
+```bash
+# 修正したファイルをステージング（対象ファイルを個別に指定）
+git add app/api/matches/[id]/qr/route.ts
+git add app/admin/matches/[id]/qr/page.tsx
+
+# コミット（Issue番号を含める）
+git commit -m "fix: QR画面の有効期限表示を修正 (#85)"
+```
+
+> **コミットメッセージのポイント**:
+> - `fix:` プレフィックスを付ける
+> - 何を修正したか簡潔に書く
+> - 関連するIssue番号を `(#番号)` で付ける
+
+#### 5. プッシュ・PR作成
+
+```bash
+# リモートにプッシュ
+git push -u origin fix/qr-validity-display
+```
+
+GitHub上で **dev宛** のPRを作成します。PRの説明には以下を含めてください:
+- 何が問題だったか（再現手順があれば記載）
+- どう修正したか
+- 関連Issue（`Closes #85` と書くとマージ時にIssueが自動で閉じます）
+
+#### 6. CI・レビュー・マージ
+
+PRを作成すると、GitHub ActionsのCI（Biome + ESLint + ビルド）が自動で実行されます。
+CIが通り、レビューが完了したらdevにマージします。
+
+#### 7. ローカルの後片付け
+
+```bash
+# devに戻って最新を取得
+git checkout dev
+git pull origin dev
+
+# マージ済みのfixブランチを削除
+git branch -d fix/qr-validity-display
 ```
 
 ### コード品質チェック
