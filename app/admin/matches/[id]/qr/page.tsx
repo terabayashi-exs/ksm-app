@@ -18,6 +18,7 @@ interface QRData {
   token: string;
   valid_from: string;
   valid_until: string;
+  has_db_token: boolean;
   // 多競技対応のスポーツ設定
   sport_config?: {
     sport_code: string;
@@ -211,28 +212,45 @@ export default function MatchQRCodePage() {
           <CardContent className="p-4">
             <h3 className="font-medium text-gray-500 mb-2">アクセス情報</h3>
             <div className="text-sm text-gray-500 space-y-1">
-              {new Date(qrData.valid_from).getTime() > 0 ? (
+              {qrData.has_db_token ? (
+                // 新方式（DBトークン）: 試合開始時刻ベースの入力可能期間
+                new Date(qrData.valid_from).getTime() > 0 ? (
+                  <>
+                    <p>
+                      • 入力可能期間:{" "}
+                      {new Date(qrData.valid_from).toLocaleString("ja-JP", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      ～{" "}
+                      {new Date(qrData.valid_until).toLocaleString("ja-JP", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      （試合開始1時間前から12時間有効）
+                    </p>
+                    <p>• QRコードのURLは永続的にアクセス可能です</p>
+                  </>
+                ) : (
+                  <p>• 入力可能期間: 試合開始時刻が未設定のため未定</p>
+                )
+              ) : (
+                // 旧方式（JWT）: QR発行時点から48時間有効
                 <p>
-                  • 入力可能期間:{" "}
-                  {new Date(qrData.valid_from).toLocaleString("ja-JP", {
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}{" "}
-                  ～{" "}
+                  • QRコード有効期限:{" "}
                   {new Date(qrData.valid_until).toLocaleString("ja-JP", {
                     month: "2-digit",
                     day: "2-digit",
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                  （試合開始1時間前から12時間有効）
+                  まで（発行から48時間有効）
                 </p>
-              ) : (
-                <p>• 入力可能期間: 試合開始時刻が未設定のため未定</p>
               )}
-              <p>• QRコードのURLは永続的にアクセス可能です</p>
               <p>
                 • QRコードまたはURLから審判用{qrData.sport_config?.score_label || "得点"}
                 結果入力画面にアクセスできます

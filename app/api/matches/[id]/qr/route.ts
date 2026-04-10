@@ -80,9 +80,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
     let token: string;
     let validFrom: Date;
     let validUntil: Date;
+    let hasDbToken = false;
 
     if (dbTokenResult.rows.length > 0) {
       // 新方式: DBトークンを使用
+      hasDbToken = true;
       token = String(dbTokenResult.rows[0].token);
       qrUrl = `${baseUrl}/tournament/${tournamentId}/match/${matchId}/result?token=${token}&from=qr`;
       // 入力可能期間: start_timeの1時間前〜11時間後（計12時間）
@@ -133,6 +135,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         token: token,
         valid_from: validFrom.toISOString(),
         valid_until: validUntil.toISOString(),
+        has_db_token: hasDbToken,
         sport_config: sportConfig,
         qr_data: {
           url: qrUrl,
