@@ -251,13 +251,13 @@ async function getWithdrawalTeamInfo(tournamentTeamId: number) {
       tg.group_name,
       t.tournament_dates,
       v.venue_name,
-      a.email as admin_email,
-      a.organization_name
+      lu.email as admin_email,
+      COALESCE(lu.display_name, lu.organization_name) as organization_name
     FROM t_tournament_teams tt
     INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
     LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
     LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-    LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+    LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
     WHERE tt.tournament_team_id = ?
   `,
     [tournamentTeamId],

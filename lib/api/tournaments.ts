@@ -28,8 +28,8 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         t.group_order,
         v.venue_name,
         t.format_name,
-        a.logo_blob_url,
-        a.organization_name,
+        lu.logo_blob_url,
+        COALESCE(lu.display_name, lu.organization_name) as organization_name,
         g.group_name,
         g.event_description as group_description,
         NULL as group_color,
@@ -37,8 +37,8 @@ export async function getPublicTournaments(teamId?: string): Promise<Tournament[
         ${teamId ? "CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined" : "0 as is_joined"}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
+      LEFT JOIN m_login_users lu ON g.login_user_id = lu.login_user_id
       ${teamId ? "LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?" : ""}
       WHERE t.visibility = 'open'
         AND date(t.public_start_date) <= date('now')

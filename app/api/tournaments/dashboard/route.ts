@@ -51,9 +51,9 @@ export async function GET() {
         t.group_order,
         v.venue_name,
         t.format_name,
-        a.logo_blob_url,
-        a.logo_filename,
-        a.organization_name,
+        lu.logo_blob_url,
+        lu.logo_filename,
+        COALESCE(lu.display_name, lu.organization_name) as organization_name,
         g.group_name,
         g.event_description as group_description,
         NULL as group_color,
@@ -64,8 +64,8 @@ export async function GET() {
         (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'cancelled') as cancelled_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
+      LEFT JOIN m_login_users lu ON g.login_user_id = lu.login_user_id
       WHERE t.status != 'completed'
         AND (
           t.created_by = ? OR ? = 1
@@ -120,9 +120,9 @@ export async function GET() {
         t.group_order,
         v.venue_name,
         t.format_name,
-        a.logo_blob_url,
-        a.logo_filename,
-        a.organization_name,
+        lu.logo_blob_url,
+        lu.logo_filename,
+        COALESCE(lu.display_name, lu.organization_name) as organization_name,
         g.group_name,
         g.event_description as group_description,
         NULL as group_color,
@@ -133,8 +133,8 @@ export async function GET() {
         (SELECT COUNT(*) FROM t_tournament_teams tt WHERE tt.tournament_id = t.tournament_id AND tt.participation_status = 'cancelled') as cancelled_count
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups g ON t.group_id = g.group_id
+      LEFT JOIN m_login_users lu ON g.login_user_id = lu.login_user_id
       WHERE t.status = 'completed'
         AND (
           t.created_by = ? OR ? = 1

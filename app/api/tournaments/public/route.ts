@@ -28,14 +28,15 @@ export async function GET() {
         t.created_by,
         t.format_name,
         v.venue_name,
-        a.logo_blob_url,
-        a.organization_name
+        lu.logo_blob_url,
+        COALESCE(lu.display_name, lu.organization_name) as organization_name
         ${teamId ? `,
           CASE WHEN tt.team_id IS NOT NULL THEN 1 ELSE 0 END as is_joined
         ` : ', 0 as is_joined'}
       FROM t_tournaments t
       LEFT JOIN m_venues v ON v.venue_id = CAST(JSON_EXTRACT(t.venue_id, '$[0]') AS INTEGER)
-      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
+      LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
       ${teamId ? `
         LEFT JOIN t_tournament_teams tt ON t.tournament_id = tt.tournament_id AND tt.team_id = ?
       ` : ''}

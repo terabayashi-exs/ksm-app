@@ -58,15 +58,14 @@ export async function GET(request: NextRequest) {
         t.group_id,
         COALESCE(t.format_name, '未設定') as format_name,
         tg.group_name,
-        COALESCE(lu.logo_blob_url, a.logo_blob_url) as logo_blob_url,
-        COALESCE(lu.display_name, a.organization_name) as organization_name,
+        lu.logo_blob_url,
+        COALESCE(lu.display_name, lu.organization_name) as organization_name,
         tg.login_user_id,
         t.sport_type_id,
         st.sport_code,
         0 as registered_teams
         ${teamId ? ", 0 as is_joined" : ", 0 as is_joined"}
       FROM t_tournaments t
-      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
       LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
       LEFT JOIN m_sport_types st ON t.sport_type_id = st.sport_type_id
