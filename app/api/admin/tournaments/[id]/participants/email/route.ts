@@ -72,12 +72,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         tt.participation_status,
         t.tournament_name,
         tg.group_name,
-        a.organization_name
+        COALESCE(lu.display_name, lu.organization_name) as organization_name
       FROM t_tournament_teams tt
       INNER JOIN m_teams m ON tt.team_id = m.team_id
       INNER JOIN t_tournaments t ON tt.tournament_id = t.tournament_id
       LEFT JOIN t_tournament_groups tg ON t.group_id = tg.group_id
-      LEFT JOIN m_administrators a ON t.created_by = a.admin_login_id
+      LEFT JOIN m_login_users lu ON tg.login_user_id = lu.login_user_id
       WHERE tt.tournament_id = ? AND tt.tournament_team_id IN (${placeholders})
       `,
       [tournamentId, ...tournamentTeamIds],
